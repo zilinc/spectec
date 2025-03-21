@@ -13,3 +13,6 @@
     debugger
     )
 )
+
+(env (dev (flags (:standard -warn-error -32))))
+
