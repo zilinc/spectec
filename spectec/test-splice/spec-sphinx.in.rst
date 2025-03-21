@@ -50,6 +50,12 @@ $${definition: default_}
 $${definition: {funcinst} {func table}}
 
 
+**TEST: Nondet functions**
+
+$${definition: iclz_}
+$${definition-prose: iclz_}
+
+
 **Reduction** ${relation: Step_pure}
 
 The relation ${Step: config ~> config} checks that a function type is well-formed.

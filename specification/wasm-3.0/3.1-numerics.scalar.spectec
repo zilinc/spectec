@@ -122,7 +122,7 @@ def $ineg_(N, i_1) = $invsigned_(N, $(- $signed_(N, i_1)))
 def $iabs_(N, i_1) = i_1             -- if $signed_(N, i_1) >= 0
 def $iabs_(N, i_1) = $ineg_(N, i_1)  -- otherwise
 
-;;def $iclz_(N, i_1) = k               -- if $ibits_(N, i_1) = (0)^k 1 d*
+def $iclz_(N, i_1) = k               -- if $ibits_(N, i_1) = (0)^k 1 d*
 
 ;;def $ictz_(N, i_1) = k               -- if $ibits_(N, i_1) = d* 1 (0)^k
 
