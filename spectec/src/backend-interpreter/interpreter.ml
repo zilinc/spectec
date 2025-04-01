@@ -257,7 +257,7 @@ and eval_expr env expr =
     let el = remove_typargs al in
     (* TODO: refactor numerics function name *)
     let args = List.map (eval_arg env) el in
-    (match call_func ("inverse_of_"^fname') args  with
+    (match call_func ("inverse_of_"^fname') args with
     | Some v -> v
     | _ -> raise (Exception.MissingReturnValue fname)
     )

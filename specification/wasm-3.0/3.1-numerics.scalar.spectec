@@ -2,6 +2,11 @@
 ;; Numeric Primitives
 ;;
 
+
+var j: int  ;; HACK??? for type inference
+
+
+
 ;; Conversions
 
 def $s33_to_u32(s33) : u32  hint(show %)
@@ -11,7 +16,7 @@ def $s33_to_u32(s33) : u32  hint(show %)
 
 def $rev_bits(bit*) : bit*  hint(show $rev__bits(%))
 def $rev_bits(eps) = eps
-def $rev_bits(b_0 b*) = $rev_bits(b*) b_0
+def $rev_bits(d_0 d*) = $rev_bits(d*) d_0
 
 ;; no padding
 def $ibits_np(nat) : bit*  hint(show $ibits__np(%))
@@ -20,12 +25,24 @@ def $ibits_np(n) = 1  -- if n = 1
 def $ibits_np(n) = $(n \ 2) ++ $ibits_np($(n / 2))  -- otherwise
 
 
-def $ibits_(N, iN(N)) : bit*                         hint(show $bits_($IN(%),%))
-def $ibits_(N, i) = 0^(N - |b*|) ++ b*
-                  -- if N =/= 0 /\ b* = $rev_bits($ibits_np(i))
+def $ibits_(N, iN(N)) : bit*                         hint(partial)
+def $ibits_(N, i) = 0^(N - |d*|) d*
+                  -- if N =/= 0 /\ d* = $rev_bits($ibits_np(i))
+
+def $invibits_(N, bit*) : nat                        hint(partial) hint(show $ibits_(%)^(-1)#((%)))
+def $invibits_(0, eps) = 0
+def $invibits_(N, d d'*) = $(2^(N-1) * d + $invibits_($(N-1), d'*))  -- if |d'*| = $(N-1)
+
+def $littleendian(bit*) : byte*
+def $littleendian(eps) = eps
+def $littleendian(d^8 d'*) = $littleendian(d'*) $invibits_(8, d^8)
+
+
+def $ibytes_(N, iN(N)) : byte*
+def $ibytes_(N, i) = $littleendian($ibits_(N, i))
+
 
 def $fbits_(N, fN(N)) : bit*                         hint(show $bits_($FN(%),%))
-def $ibytes_(N, iN(N)) : byte*                       hint(show $bytes_($IN(%),%))
 def $fbytes_(N, fN(N)) : byte*                       hint(show $bytes_($FN(%),%))
 def $nbytes_(numtype, num_(numtype)) : byte*         hint(show $bytes_(%,%))
 def $vbytes_(vectype, vec_(vectype)) : byte*         hint(show $bytes_(%,%))
@@ -64,8 +81,10 @@ def $bool(bool) : nat
 def $bool(false) = 0
 def $bool(true) = 1
 
-def $int(rat) : int
-;;def $int(+-q) = +-n  -- if n <- nat /\ $(q - 1) < n <= q
+
+;; This is the `trunc` function as documented in the spec.
+def $int(rat) : int                 hint(show $trunc(%))
+def $int(q) = $int $(q)             ;;  -- if n <- nat /\ $(q - 1) < n <= q
 
 
 ;; Saturation
@@ -152,27 +171,25 @@ def $isub_(N, i_1, i_2) = $((2^N + i_1 - i_2) \ 2^N)
 
 def $imul_(N, i_1, i_2) = $((i_1 * i_2) \ 2^N)
 
-;;def $idiv_(N, U, i_1, 0)   = eps
-;;def $idiv_(N, U, i_1, i_2) = $($int(i_1 / i_2))
-;;def $idiv_(N, S, i_1, 0)   = eps
-;;def $idiv_(N, S, i_1, i_2) = eps  -- if $($signed_(N, i_1) / $signed_(N, i_2)) = 2^(N-1)
-;;def $idiv_(N, S, i_1, i_2) = $($invsigned_(N, $int($signed_(N, i_1) / $signed_(N, i_2))))
+def $idiv_(N, U, i_1, 0)   = eps
+def $idiv_(N, U, i_1, i_2) = $($int($(i_1 / i_2)))
+def $idiv_(N, S, i_1, 0)   = eps
+def $idiv_(N, S, i_1, i_2) = eps  -- if $($signed_(N, i_1) / $signed_(N, i_2)) = 2^(N-1)
+def $idiv_(N, S, i_1, i_2) = $invsigned_(N, $int($($signed_(N, i_1) / $signed_(N, i_2))))
 
-;;def $irem_(N, U, i_1, 0)   = eps
-;;def $irem_(N, U, i_1, i_2) = $(i_1 - i_2 * $int(i_1 / i_2))
-;;def $irem_(N, S, i_1, 0)   = eps
-;;def $irem_(N, S, i_1, i_2) = $($invsigned_(N, j_1 - j_2 * $int(j_1 / f_2)))
-;;                             -- if j_1 = $signed_(N, i_1) /\ j_2 = $signed_(N, i_2)
+def $irem_(N, U, i_1, 0)   = eps
+def $irem_(N, U, i_1, i_2) = $(i_1 - i_2 * $int($(i_1 / i_2)))
+def $irem_(N, S, i_1, 0)   = eps
+def $irem_(N, S, i_1, i_2) = $invsigned_(N, $(j_1 - j_2 * $int($(j_1 / j_2))))
+                             -- if j_1 = $signed_(N, i_1) /\ j_2 = $signed_(N, i_2)
+                             ;; = $invsigned_(N, $($signed_(N, i_1) - $signed_(N, i_2) * $int($($signed_(N, i_1) / $signed_(N, i_2)))))
 
-;;def $imin_(N, U, i_1, i_2) = i_1  -- if i_1 <= i_2
-;;def $imin_(N, U, i_1, i_2) = i_2  -- otherwise
-;;def $imin_(N, S, i_1, i_2) = i_1  -- if $signed_(N, i_1) <= $signed_(N, i_2)
-;;def $imin_(N, S, i_1, i_2) = i_2  -- otherwise
 
-;;def $imax_(N, U, i_1, i_2) = i_1  -- if i_1 >= i_2
-;;def $imax_(N, U, i_1, i_2) = i_2  -- otherwise
-;;def $imax_(N, S, i_1, i_2) = i_1  -- if $signed_(N, i_1) >= $signed_(N, i_2)
-;;def $imax_(N, S, i_1, i_2) = i_2  -- otherwise
+def $imin_(N, sx, i_1, i_2) = i_1  -- if $ilt_(N, sx, i_1, i_2) = 1
+def $imin_(N, sx, i_1, i_2) = i_2  -- otherwise
+
+def $imax_(N, sx, i_1, i_2) = i_1  -- if $igt_(N, sx, i_1, i_2) = 1
+def $imax_(N, sx, i_1, i_2) = i_2  -- otherwise
 
 def $iadd_sat_(N, U, i_1, i_2) = $sat_u_(N, $(i_1 + i_2))
 def $iadd_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $($signed_(N, i_1) + $signed_(N, i_2))))

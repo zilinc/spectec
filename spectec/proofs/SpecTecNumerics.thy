@@ -11,6 +11,9 @@ primrec bit_to_nat :: "bit \<Rightarrow> nat" where
   "bit_to_nat Bit0 = 0" |
   "bit_to_nat Bit1 = 1"
 
+lemma bit_le_1: "bit_to_nat b \<le> 1"
+  by (cases "b"; simp_all)
+
 definition sum_list :: "nat list \<Rightarrow> nat" where
   "sum_list xs \<equiv> fold (+) xs 0"
 
@@ -23,6 +26,15 @@ inductive ibits :: "nat \<Rightarrow> nat \<Rightarrow> bits \<Rightarrow> bool"
             ; i = sum_list (map2 bitn bs (rev [0 ..< N]))
             \<rbrakk> \<Longrightarrow> ibits N i bs"
 
+lemma ibits_nonempty: "ibits N i bs \<Longrightarrow> bs \<noteq> []"
+  using ibits.simps by fastforce
+
+lemma ibits_length: "ibits N i bs \<Longrightarrow> N = length bs"
+  using ibits.simps by simp
+
+lemma ibits_i: "ibits N i bs \<Longrightarrow> i = sum_list (map2 bitn bs (rev [0 ..< N]))"
+  using ibits.simps by simp
+
 fun nat_to_rev_bits :: "nat \<Rightarrow> bits" where
   "nat_to_rev_bits 0 = [Bit0]" |
   "nat_to_rev_bits (Suc 0) = [Bit1]" |
@@ -31,8 +43,55 @@ fun nat_to_rev_bits :: "nat \<Rightarrow> bits" where
 lemma bits_non_empty: "length (nat_to_rev_bits n) \<ge> 1"
   by (metis One_nat_def Suc_le_eq length_greater_0_conv list.simps(3) nat_to_rev_bits.elims)
 
+lemma bits_nat_inv1: "nat_to_rev_bits (bit_to_nat b) = [b]"
+  apply (cases b)
+   by simp_all
 
-find_theorems name: "nat_to_rev_bits"
+
+lemma bits_nat_inv_h0:
+  "bs \<noteq> [] \<Longrightarrow> length bs = N \<Longrightarrow>
+   bs' = rev (nat_to_rev_bits (sum_list (map2 bitn (Bit0 # bs) (rev [0..<N+1])))) \<Longrightarrow>
+   rev (nat_to_rev_bits (sum_list (map2 bitn bs (rev [0..<N])))) = bs'"
+proof (induct bs arbitrary: N bs')
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a as)
+  then show ?case   sorry
+qed
+
+
+lemma bits_nat_inv_h1:
+  "bs \<noteq> [] \<Longrightarrow> length bs = N \<Longrightarrow>
+   bs' = rev (nat_to_rev_bits (sum_list (map2 bitn (Bit1 # bs) (rev [0..<N+1])))) \<Longrightarrow>
+   Bit1 # bs = bs'"
+  apply (induct bs arbitrary: N bs')
+   apply simp
+  apply simp
+  
+  sorry
+
+
+lemma bits_nat_inv: "bs \<noteq> [] \<Longrightarrow> length bs = N \<Longrightarrow>
+                     bs' = rev (nat_to_rev_bits (sum_list (map2 bitn bs (rev [0..<N])))) \<Longrightarrow>
+                     bs = replicate (N - length bs') Bit0 @ bs'"
+proof (induct bs arbitrary: bs' N rule: List.list_nonempty_induct)
+  case (single b)
+  then show ?case using bits_nat_inv1 sum_list_def by fastforce
+next
+  case (cons b bs)
+  then show ?case
+  proof (cases b)
+    case Bit0
+    then show ?thesis using cons bits_nat_inv_h0 sorry
+  next
+    case Bit1
+    then show ?thesis using cons bits_nat_inv_h1
+      by (metis Suc_eq_plus1 cancel_comm_monoid_add_class.diff_cancel length_Cons replicate_0 self_append_conv2)
+  qed
+qed
+
+
 
 fun ibits_f :: "nat \<Rightarrow> nat \<Rightarrow> bits option" where
   "ibits_f N i = (if i \<ge> 2^N \<or> N = 0 then None
@@ -249,6 +308,79 @@ proof (simp add: sum_list_def Let_def split: if_splits)
   qed
 qed
 
+lemma add_msb: "N > 0 \<Longrightarrow> N = length bs \<Longrightarrow> 
+                sum_list (map2 bitn bs (rev [0..<N])) + 2^N * bit_to_nat b =
+                sum_list (map2 bitn (b#bs) (rev [0..<N+1]))"
+  by (simp add: sum_list_def fold_plus_sum_list_rev)
+
+
+lemma ibits_N_i_rel: "ibits N i bs \<Longrightarrow> N > 0 \<and> 2^N > i"
+proof -
+  presume "ibits N i bs \<Longrightarrow> bs \<noteq> [] \<Longrightarrow> N > 0 \<and> 2^N > i"
+  thus "ibits N i bs \<Longrightarrow> N > 0 \<and> 2^N > i"
+    using ibits_nonempty by blast
+next
+  show "ibits N i bs \<Longrightarrow> bs \<noteq> [] \<Longrightarrow> N > 0 \<and> 2^N > i"
+  proof (rotate_tac 1; induct bs arbitrary: N i rule: List.list_nonempty_induct)
+    case (single b)
+    hence "N = 1" using ibits.simps by fastforce
+    hence "i = bit_to_nat b" using ibits.simps sum_list_def single by simp
+    then show ?case using \<open>N = 1\<close> bit_le_1
+      by (simp add: less_2_cases_iff order_le_less)
+  next
+    case (cons b bs)
+    hence N_gt_1: "N > 1" using ibits_length by fastforce
+    hence bs_length: "N - 1 = length bs" using cons.prems ibits_length by fastforce
+    let ?i' = "sum_list (map2 bitn bs (rev [0..<N-1]))"
+    have "ibits (N-1) ?i' bs" using N_gt_1 bs_length[symmetric] ibits_I by simp
+    hence i'_range: "?i' < 2^(N-1)" using cons.hyps by simp
+    from cons have "i = sum_list (map2 bitn (b#bs) (rev [0..<N]))" using ibits.simps by simp
+    hence i_i': "i = ?i' + 2^(N-1) * bit_to_nat b" using N_gt_1 sum_list_def bs_length add_msb
+      by (simp add: Nat.le_imp_diff_is_add)
+    have "x1 < 2^N" if asm0: "N > 1" and asm1: "x1 = x2 + 2^(N-1) * bit_to_nat b" and asm2: "x2 < 2^(N-1)" for N b x1 x2
+    proof -
+      from bit_le_1 have "2^(N-1) * bit_to_nat b \<le> 2^(N-1)" by simp
+      thus "x1 < 2^N" using asm0 asm1 asm2
+        by (metis add_diff_inverse_nat add_mono_thms_linordered_field(3) mult.commute mult_2_right order_less_imp_not_less plus_1_eq_Suc power_Suc)
+    qed
+    thus ?case using N_gt_1 by (metis i_i' bot_nat_0.extremum_strict i'_range not_gr0)
+  qed
+qed
+
+
+lemma ibits_completeness:
+  fixes N i bs
+  assumes "ibits N i bs"
+  shows "ibits_f N i = Some bs"
+proof (simp only: ibits_f.simps)
+  from assms have N_range: "N > 0 \<and> 2^N > i" using ibits_N_i_rel by simp
+  hence "bs \<noteq> []" using assms ibits_length by blast
+  thus "(if 2 ^ N \<le> i \<or> N = 0 then None else let bs = rev (nat_to_rev_bits i) in Some (replicate (N - length bs) Bit0 @ bs)) = Some bs" using assms
+  proof (induct bs arbitrary: N i rule: List.list_nonempty_induct)
+    case (single b)
+    hence "N > 0 \<and> 2^N > i" using ibits_N_i_rel by simp
+    from single ibits_length have asm_N: "N = 1" by force 
+    with single ibits_i sum_list_def have asm_i: "i = bit_to_nat b" by fastforce
+    then show ?case using bits_nat_inv1 asm_N asm_i
+      using \<open>0 < N \<and> i < 2 ^ N\<close> by fastforce
+  next
+    case (cons b bs)
+    hence N_gt_1: "N > 1" using ibits_length by fastforce
+    hence bs_length: "N - 1 = length bs" using cons.prems ibits_length by fastforce
+    let ?i' = "sum_list (map2 bitn bs (rev [0..<N-1]))"
+    have "ibits (N-1) ?i' bs" using N_gt_1 bs_length[symmetric] ibits_I by simp
+    from cons(3) ibits_N_i_rel have "N > 0 \<and> 2^N > i" by simp
+    hence asm_N: "\<not> (2 ^ (N-1) \<le> ?i' \<or> N-1 = 0)"
+      by (metis \<open>ibits (N - 1) (sum_list (map2 bitn bs (rev [0..<N - 1]))) bs\<close> cons.hyps(2) option.distinct(1))
+    from cons(3) have asm_i: "i = sum_list (map2 bitn (b#bs) (rev [0..<N]))" using ibits_i by simp
+    with cons(2) have "(if 2 ^ (N-1) \<le> ?i' \<or> N-1 = 0 then None else let bs = rev (nat_to_rev_bits ?i') in Some (replicate (N-1 - length bs) Bit0 @ bs)) = Some bs"
+      using \<open>ibits (N - 1) (sum_list (map2 bitn bs (rev [0..<N - 1]))) bs\<close> by blast
+    hence "(let bs = rev (nat_to_rev_bits (sum_list (map2 bitn bs (rev [0..<N - 1])))) in Some (replicate (N - 1 - length bs) Bit0 @ bs)) = Some bs" using asm_N asm_i by simp
+    hence "(let bs = rev (nat_to_rev_bits i) in Some (replicate (N - length bs) Bit0 @ bs)) = Some (b # bs)" using asm_i N_gt_1 bits_nat_inv cons.prems ibits.simps by simp
+    thus ?case using cons(3) ibits_N_i_rel[of N i] by fastforce
+  qed
+    from assms have asm_i: "i = sum_list (map2 bitn bs (rev [0 ..< N]))" using ibits_i by simp
+qed
 
 
 end

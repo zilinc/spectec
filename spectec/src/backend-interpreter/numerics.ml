@@ -127,49 +127,6 @@ let sat : numerics =
       );
   }
 
-let idiv : numerics =
-  {
-    name = "idiv";
-    f =
-      (function
-      | [ NumV _; CaseV ("U", []); NumV (`Nat m); NumV (`Nat n) ] ->
-        if n = Z.zero then
-          noneV
-        else
-          Z.(div m n) |> al_of_z_nat |> someV
-      | [ NumV (`Nat z); CaseV ("S", []); NumV (`Nat m); NumV (`Nat n) ] ->
-        if n = Z.zero then
-          noneV
-        else if m = Z.shift_left Z.one (Z.to_int z - 1) && n = maskN z then
-          noneV
-        else
-          let z = NumV (`Nat z) in
-          let m = signed.f [ z; NumV (`Nat m) ] |> al_to_z_int in
-          let n = signed.f [ z; NumV (`Nat n) ] |> al_to_z_int in
-          inverse_of_signed.f [ z; NumV (`Int Z.(div m n)) ] |> someV
-      | vs -> error_values "idiv" vs
-      );
-  }
-let irem : numerics =
-  {
-    name = "irem";
-    f =
-      (function
-      | [ NumV _; CaseV ("U", []); NumV (`Nat m); NumV (`Nat n) ] ->
-        if n = Z.zero then
-          noneV
-        else
-          Z.(rem m n) |> al_of_z_nat |> someV
-      | [ NumV _ as z; CaseV ("S", []); NumV (`Nat m); NumV (`Nat n) ] ->
-        if n = Z.zero then
-          noneV
-        else
-          let m = signed.f [ z; NumV (`Nat m) ] |> al_to_z_int in
-          let n = signed.f [ z; NumV (`Nat n) ] |> al_to_z_int in
-          inverse_of_signed.f [ z; NumV (`Int Z.(rem m n)) ] |> someV
-      | vs -> error_values "irem" vs
-      );
-  }
 let inot : numerics =
   {
     name = "inot";
@@ -331,32 +288,7 @@ let ipopcnt : numerics =
       | vs -> error_values "ipopcnt" vs
       );
   }
-let ilt : numerics =
-  {
-    name = "ilt";
-    f =
-      (function
-      | [ NumV _; CaseV ("U", []); NumV (`Nat m); NumV (`Nat n) ] -> m < n |> al_of_bool
-      | [ NumV _ as z; CaseV ("S", []); NumV _ as m; NumV _ as n ] ->
-        let m = signed.f [ z; m ] |> al_to_z_int in
-        let n = signed.f [ z; n ] |> al_to_z_int in
-        m < n |> al_of_bool
-      | vs -> error_values "ilt" vs
-      );
-  }
-let igt : numerics =
-  {
-    name = "igt";
-    f =
-      (function
-      | [ NumV _; CaseV ("U", []); NumV (`Nat m); NumV (`Nat n) ] -> m > n |> al_of_bool
-      | [ NumV _ as z; CaseV ("S", []); NumV _ as m; NumV _ as n ] ->
-        let m = signed.f [ z; m ] |> al_to_z_int in
-        let n = signed.f [ z; n ] |> al_to_z_int in
-        m > n |> al_of_bool
-      | vs -> error_values "igt" vs
-      );
-  }
+
 let ibitselect : numerics =
   {
     name = "ibitselect";
@@ -377,26 +309,7 @@ let irelaxed_laneselect : numerics =
       | vs -> error_values "irelaxed_laneselect" vs
       );
   }
-let imin : numerics =
-  {
-    name = "imin";
-    f =
-      (function
-      | [ NumV _ as z; CaseV (_, []) as sx; NumV _ as m; NumV _ as n ] ->
-        (if al_to_nat (ilt.f [ z; sx; m; n ]) = 1 then m else n)
-      | vs -> error_values "imin" vs
-      );
-  }
-let imax : numerics =
-  {
-    name = "imax";
-    f =
-      (function
-      | [ NumV _ as z; CaseV (_, []) as sx; NumV _ as m; NumV _ as n ] ->
-        (if al_to_nat (igt.f [ z; sx; m; n ]) = 1 then m else n)
-      | vs -> error_values "imax" vs
-      );
-  }
+
 let iavgr : numerics =
   {
     name = "iavgr";
@@ -1162,7 +1075,6 @@ let numerics_list : numerics list = [
   r_trunc_s;
   r_swizzle;
   r_laneselect;
-  ibytes;
   inverse_of_ibytes;
   nbytes;
   vbytes;
@@ -1174,11 +1086,8 @@ let numerics_list : numerics list = [
   inverse_of_bytes;
   inverse_of_concat;
   inverse_of_concatn;
-  signed;
   inverse_of_signed;
   sat;
-  idiv;
-  irem;
   inot;
   irev;
   iand;
@@ -1194,8 +1103,6 @@ let numerics_list : numerics list = [
   ipopcnt;
   ibitselect;
   irelaxed_laneselect;
-  imin;
-  imax;
   iavgr;
   iq15mulr_sat;
   irelaxed_q15mulr;

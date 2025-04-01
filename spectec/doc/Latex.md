@@ -63,7 +63,7 @@ SpecTec interprets underscores as subscripting in a few places:
 
 * In a function identifier,
   trailing underscores cause the leading arguments to be set as a subscript,
-  specifcally, as many arguments as trailing underscores
+  specifically, as many arguments as trailing underscores
   (e.g., `$f_(i, x, y)` becomes `f_i(x, y)` in Latex,
   while `$f__(i, j, x)` becomes `f_{i, j}(x)`).
 
@@ -226,6 +226,11 @@ Hints of the form `hint(show <exp>)` are recognised on a number of constructs an
   which will be substituted by the actual argument,
   while, the operator `#` represents textual concatenation;
   see below for details.
+
+* When a function identifier shall be displayed with both a subscript and a superscript,
+  as SpecTec has built-in support for subscripts as described above, the underscore(s) (`_`)
+  for subscripts should come first, followed by the superscript (e.g. `^(-1)` for the inverse
+  function). E.g. `$signed_(%)^(-1)#((%))`.
 
 * For a variant case or a function declaration,
   show hints control how the case is rendered;
