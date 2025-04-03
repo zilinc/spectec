@@ -6,17 +6,29 @@ Numerics
 .. _exec-numerics-sign-interpretation:
 
 
-Binary Representation
-~~~~~~~~~~~~~~~~~~~~~
+Utils
+~~~~~
 
-.. _def-rev_bits:
+.. _def-rev_:
 
-$${definition-prose: rev_bits}
+$${definition-prose: rev_}
 
 \
 
-$${definition: rev_bits}
+$${definition: rev_}
 
+
+.. _def_takeWhile_:
+
+$${definition-prose: takeWhile_}
+
+\
+
+$${definition: takeWhile_}
+
+
+Binary Representation
+~~~~~~~~~~~~~~~~~~~~~
 
 .. _def-ibits_np:
 
@@ -130,3 +142,23 @@ $${definition: imin_}
 
 $${definition: imax_}
 
+
+.. _def-iclz_:
+
+$${definition: eqbitzero}
+
+\
+
+$${definition-prose: iclz_}
+
+\
+
+$${definition: iclz_}
+
+where
+
+$${definition-prose: clzbits}
+
+\
+
+$${definition: clzbits}

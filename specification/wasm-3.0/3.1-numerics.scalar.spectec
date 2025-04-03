@@ -6,28 +6,33 @@
 var j: int  ;; HACK??? for type inference
 
 
-
 ;; Conversions
 
 def $s33_to_u32(s33) : u32  hint(show %)
 
+def $real_to_int(real) : int        hint(show $trunc_real(%))
+
+;; This is the `trunc` function as documented in the spec.
+def $int(rat) : int                 hint(show $trunc(%))
+def $int(q) = $real_to_int($real$(q))
+;; def $int(q) = n                     -- if n <- nat /\ $(q - 1) < n <= q
+
+
 
 ;; Representation
 
-def $rev_bits(bit*) : bit*  hint(show $rev__bits(%))
-def $rev_bits(eps) = eps
-def $rev_bits(d_0 d*) = $rev_bits(d*) d_0
 
 ;; no padding
 def $ibits_np(nat) : bit*  hint(show $ibits__np(%))
 def $ibits_np(n) = 0  -- if n = 0
 def $ibits_np(n) = 1  -- if n = 1
-def $ibits_np(n) = $(n \ 2) ++ $ibits_np($(n / 2))  -- otherwise
+def $ibits_np(n) = 0 $ibits_np($(n / 2))       -- if n =/= 0 /\ $(n \ 2) = 0
+def $ibits_np(n) = 1 $ibits_np($((n-1) / 2))   -- if n =/= 1 /\ $(n \ 2) = 1
 
 
 def $ibits_(N, iN(N)) : bit*                         hint(partial)
 def $ibits_(N, i) = 0^(N - |d*|) d*
-                  -- if N =/= 0 /\ d* = $rev_bits($ibits_np(i))
+                  -- if N =/= 0 /\ d* = $rev_(bit, $ibits_np(i))
 
 def $invibits_(N, bit*) : nat                        hint(partial) hint(show $ibits_(%)^(-1)#((%)))
 def $invibits_(0, eps) = 0
@@ -63,8 +68,9 @@ def $signed_(N, nat) : int
 def $signed_(N, i) = i           -- if $(i < 2^(N-1))
 def $signed_(N, i) = $(i - 2^N)  -- if $(2^(N-1) <= i < 2^N)
 
-def $invsigned_(N, int) : nat    hint(show $signed_(%)^(-1)#((%)))
-def $invsigned_(N, i) = j        -- if $signed_(N, j) = i
+def $invsigned_(N, int) : nat       hint(show $signed_(%)^(-1)#((%)))
+def $invsigned_(N, i) = i           -- if $(0 <= i < 2^(N-1))
+def $invsigned_(N, i) = $(i + 2^N)  -- if $(-2^(N-1) <= i < 0)
 
 def $sx(storagetype) : sx?  hint(show $sx(%))
 def $sx(consttype) = eps
@@ -80,11 +86,6 @@ def $zero(Fnn) = $fzero($size(Fnn))
 def $bool(bool) : nat
 def $bool(false) = 0
 def $bool(true) = 1
-
-
-;; This is the `trunc` function as documented in the spec.
-def $int(rat) : int                 hint(show $trunc(%))
-def $int(q) = $int $(q)             ;;  -- if n <- nat /\ $(q - 1) < n <= q
 
 
 ;; Saturation
@@ -104,7 +105,7 @@ def $sat_s_(N, i) = i               -- otherwise
 
 def $ineg_(N, iN(N)) : iN(N)
 def $iabs_(N, iN(N)) : iN(N)
-def $iclz_(N, iN(N)) : iN(N)
+def $iclz_(N, iN(N)) : iLt(N)
 def $ictz_(N, iN(N)) : iN(N)
 def $ipopcnt_(N, iN(N)) : iN(N)
 def $iextend_(N, M, sx, iN(N)) : iN(N)          hint(show $iextend_((%,%))^(%)#((%)))
@@ -155,7 +156,16 @@ def $ineg_(N, i_1) = $invsigned_(N, $(- $signed_(N, i_1)))
 def $iabs_(N, i_1) = i_1             -- if $signed_(N, i_1) >= 0
 def $iabs_(N, i_1) = $ineg_(N, i_1)  -- otherwise
 
-def $iclz_(N, i_1) = k               -- if $ibits_(N, i_1) = (0)^k 1 d*
+
+def $clzbits(bit*) : nat               hint(partial)
+def $clzbits(0^k) = k                  -- if k > 0
+def $clzbits(0^k 1 d*) = k
+
+def $eqbitzero(bit) : bool             hint(show eq__bit_0(%))
+def $eqbitzero(d) = $(d = 0)
+
+;; def $iclz_(N, i) = $clzbits(d*)        -- if d* = $ibits_(N, i)
+def $iclz_(N, i) = |$takeWhile_(bit, $eqbitzero, d*)|  -- if d* = $ibits_(N, i)
 
 ;;def $ictz_(N, i_1) = k               -- if $ibits_(N, i_1) = d* 1 (0)^k
 
@@ -172,9 +182,9 @@ def $isub_(N, i_1, i_2) = $((2^N + i_1 - i_2) \ 2^N)
 def $imul_(N, i_1, i_2) = $((i_1 * i_2) \ 2^N)
 
 def $idiv_(N, U, i_1, 0)   = eps
-def $idiv_(N, U, i_1, i_2) = $($int($(i_1 / i_2)))
+def $idiv_(N, U, i_1, i_2) = $int($(i_1 / i_2))
 def $idiv_(N, S, i_1, 0)   = eps
-def $idiv_(N, S, i_1, i_2) = eps  -- if $($signed_(N, i_1) / $signed_(N, i_2)) = 2^(N-1)
+def $idiv_(N, S, i_1, i_2) = eps  -- if $signed_(N, i_1) = $($signed_(N, i_2) * 2^(N-1))
 def $idiv_(N, S, i_1, i_2) = $invsigned_(N, $int($($signed_(N, i_1) / $signed_(N, i_2))))
 
 def $irem_(N, U, i_1, 0)   = eps
@@ -182,7 +192,6 @@ def $irem_(N, U, i_1, i_2) = $(i_1 - i_2 * $int($(i_1 / i_2)))
 def $irem_(N, S, i_1, 0)   = eps
 def $irem_(N, S, i_1, i_2) = $invsigned_(N, $(j_1 - j_2 * $int($(j_1 / j_2))))
                              -- if j_1 = $signed_(N, i_1) /\ j_2 = $signed_(N, i_2)
-                             ;; = $invsigned_(N, $($signed_(N, i_1) - $signed_(N, i_2) * $int($($signed_(N, i_1) / $signed_(N, i_2)))))
 
 
 def $imin_(N, sx, i_1, i_2) = i_1  -- if $ilt_(N, sx, i_1, i_2) = 1

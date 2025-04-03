@@ -78,6 +78,18 @@ let r_swizzle = relaxed "R_swizzle" 0
 let r_laneselect = relaxed "R_laneselect" 0
 
 
+let real_to_int : numerics =
+  {
+    name = "real_to_int";
+    f =
+      (function
+      | [ NumV (`Real r) ] ->
+        Z.of_float r |> al_of_z_int
+      | vs -> error_values "real_to_int" vs
+      )
+  }
+
+
 let signed : numerics =
   {
     name = "signed";
@@ -1075,6 +1087,7 @@ let numerics_list : numerics list = [
   r_trunc_s;
   r_swizzle;
   r_laneselect;
+  real_to_int;
   inverse_of_ibytes;
   nbytes;
   vbytes;
@@ -1086,7 +1099,6 @@ let numerics_list : numerics list = [
   inverse_of_bytes;
   inverse_of_concat;
   inverse_of_concatn;
-  inverse_of_signed;
   sat;
   inot;
   irev;

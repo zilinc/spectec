@@ -20,6 +20,18 @@ def $concatn_(syntax X, eps, n) = eps
 def $concatn_(syntax X, (w^n) (w'^n)*, n) = w^n $concatn_(X, (w'^n)*, n)
 
 
+;; List manipulation
+
+def $rev_(syntax X, X*) : X*
+def $rev_(syntax X, eps) = eps
+def $rev_(syntax X, w_0 w*) = $rev_(X, w*) w_0
+
+def $takeWhile_(syntax X, def $p(X) : bool, X*) : X*
+def $takeWhile_(syntax X, $p, eps) = eps
+def $takeWhile_(syntax X, $p, w_0 w*) = w_0 $takeWhile_(X, $p, w*)  -- if $p(w_0)
+def $takeWhile_(syntax X, $p, w_0 w*) = eps                         -- otherwise
+
+
 ;; Set functions
 
 def $disjoint_(syntax X, X*) : bool  hint(show %2 $disjoint) hint(macro none)
