@@ -2,6 +2,10 @@
 ;; Numeric Primitives
 ;;
 
+;; Debugging
+
+def $print(syntax X, X) : X
+
 
 var j: int  ;; HACK??? for type inference
 
@@ -10,11 +14,13 @@ var j: int  ;; HACK??? for type inference
 
 def $s33_to_u32(s33) : u32  hint(show %)
 
-def $real_to_int(real) : int        hint(show $trunc_real(%))
+def $rat_to_int(rat) : int
 
 ;; This is the `trunc` function as documented in the spec.
+;; We define it in terms of a built-in function `rat_to_int`
+;; because we want to avoid using the name `int` in OCaml.
 def $int(rat) : int                 hint(show $trunc(%))
-def $int(q) = $real_to_int($real$(q))
+def $int(q) = $rat_to_int(q)
 ;; def $int(q) = n                     -- if n <- nat /\ $(q - 1) < n <= q
 
 
@@ -314,11 +320,11 @@ def $cunpacknum_(packtype, c) = $extend__($psize(packtype), $size($lunpack(packt
 def $unop_(numtype, unop_(numtype), num_(numtype)) : num_(numtype)*
     hint(show %2#$_(%1,%3))
 def $binop_(numtype, binop_(numtype), num_(numtype), num_(numtype)) : num_(numtype)*
-    hint(show %2#$_(%1,%3, %4))
+    hint(show %2#$_(%1,%3,%4))
 def $testop_(numtype, testop_(numtype), num_(numtype)) : u32
     hint(show %2#$_(%1,%3))
 def $relop_(numtype, relop_(numtype), num_(numtype), num_(numtype)) : u32
-    hint(show %2#$_(%1,%3, %4))
+    hint(show %2#$_(%1,%3,%4))
 def $cvtop__(numtype_1, numtype_2, cvtop__(numtype_1, numtype_2), num_(numtype_1)) : num_(numtype_2)*
     hint(show %3#$__(%1,%2,%4))
 

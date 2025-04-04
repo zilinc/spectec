@@ -78,17 +78,36 @@ let r_swizzle = relaxed "R_swizzle" 0
 let r_laneselect = relaxed "R_laneselect" 0
 
 
-let real_to_int : numerics =
+let rat_to_int : numerics =
   {
-    name = "real_to_int";
+    name = "rat_to_int";
     f =
       (function
-      | [ NumV (`Real r) ] ->
-        Z.of_float r |> al_of_z_int
-      | vs -> error_values "real_to_int" vs
+      | [ NumV (`Rat q) ] ->
+        Q.to_bigint q |> al_of_z_int
+      | vs -> error_values "rat_to_int" vs
       )
   }
 
+
+(* For debugging *)
+let print : numerics =
+  {
+    name = "print";
+    f =
+      (function
+      | [ NumV (`Real r) as num] ->
+        let q = Q.of_float r in
+        let _ = Q.print q in num
+      | [ NumV (`Rat q) as num] ->
+        let _ = Q.print q in num
+      | [ NumV (`Int i) as num] ->
+        let _ = Z.print i in num
+      | [ NumV (`Nat n) as num] ->
+        let _ = Z.print n in num
+      | vs -> error_values "print" vs
+      )
+  }
 
 let signed : numerics =
   {
@@ -1087,7 +1106,7 @@ let numerics_list : numerics list = [
   r_trunc_s;
   r_swizzle;
   r_laneselect;
-  real_to_int;
+  rat_to_int;
   inverse_of_ibytes;
   nbytes;
   vbytes;
@@ -1162,6 +1181,7 @@ let numerics_list : numerics list = [
   inverse_of_lsizenn;
   inverse_of_sizenn;
   inverse_of_ibits;
+  print;  (* for debugging *)
 ]
 
 let rec strip_suffix name =
