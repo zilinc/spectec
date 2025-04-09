@@ -33,6 +33,19 @@ let try_with_error fname at stringifier f step =
   | Failure msg -> error at (prefix ^ msg) (stringifier step)
 
 
+(* Hints *)
+
+let find_hint fname hintid =
+  let open Il.Ast in
+  let open Il2al.Il2al_util in
+  List.find_map (fun hintdef ->
+    match hintdef.it with
+    | DecH (id', hints) when fname = id'.it ->
+      List.find_opt (fun hint -> hint.hintid.it = hintid) hints
+    | _ -> None
+  ) !hintdefs
+
+
 (* Matrix operations *)
 
 let is_matrix matrix =
@@ -257,10 +270,21 @@ and eval_expr env expr =
     let el = remove_typargs al in
     (* TODO: refactor numerics function name *)
     let args = List.map (eval_arg env) el in
-    (match call_func ("inverse_of_"^fname') args with
+    let inv_fname =
+      (match find_hint fname "inverse" with
+      | Some hint ->
+        (match hint.hintexp.it with
+        | CallE (fid, []) -> fid.it
+        | _ -> failwith (sprintf "ill-formed inverse hint for definition `%s`" fname)
+        )
+      | None -> "inverse_of_"^fname'
+      )
+    in
+    (match call_func inv_fname args with
     | Some v -> v
     | _ -> raise (Exception.MissingReturnValue fname)
     )
+
   (* Data Structure *)
   | ListE el -> List.map (eval_expr env) el |> listV_of_list
   | CompE (e1, e2) ->

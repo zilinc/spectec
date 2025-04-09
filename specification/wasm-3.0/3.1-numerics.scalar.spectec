@@ -6,15 +6,22 @@
 
 def $print(syntax X, X) : X
 
+;; Hack
 
-var j: int  ;; HACK??? for type inference
+var j : int
+
+
+;; Binary operators
+
+def $xor(bool, bool) : bool         hint(show %1 $xor %2)
+def $xor(bl_1, bl_2) = $(bl_1 = bl_2)
 
 
 ;; Conversions
 
 def $s33_to_u32(s33) : u32  hint(show %)
 
-def $rat_to_int(rat) : int
+def $rat_to_int(rat) : int          hint(builtin)
 
 ;; This is the `trunc` function as documented in the spec.
 ;; We define it in terms of a built-in function `rat_to_int`
@@ -22,7 +29,6 @@ def $rat_to_int(rat) : int
 def $int(rat) : int                 hint(show $trunc(%))
 def $int(q) = $rat_to_int(q)
 ;; def $int(q) = n                     -- if n <- nat /\ $(q - 1) < n <= q
-
 
 
 ;; Representation
@@ -36,18 +42,18 @@ def $ibits_np(n) = 0 $ibits_np($(n / 2))       -- if n =/= 0 /\ $(n \ 2) = 0
 def $ibits_np(n) = 1 $ibits_np($((n-1) / 2))   -- if n =/= 1 /\ $(n \ 2) = 1
 
 
-def $ibits_(N, iN(N)) : bit*                         hint(partial)
+def $ibits_(N, iN(N)) : bit*                         hint(partial) hint(inverse $invibits_)
 def $ibits_(N, i) = 0^(N - |d*|) d*
                   -- if N =/= 0 /\ d* = $rev_(bit, $ibits_np(i))
 
-def $invibits_(N, bit*) : nat                        hint(partial) hint(show $ibits_(%)^(-1)#((%)))
+def $invibits_(N, bit*) : iN(N)                      hint(partial) hint(show $ibits_(%)^(-1)#((%)))
 def $invibits_(0, eps) = 0
 def $invibits_(N, d d'*) = $(2^(N-1) * d + $invibits_($(N-1), d'*))  -- if |d'*| = $(N-1)
 
 def $littleendian(bit*) : byte*
 def $littleendian(eps) = eps
-def $littleendian(d^8 d'*) = $littleendian(d'*) $invibits_(8, d^8)
-
+def $littleendian(d*) = $littleendian(d*[8:l-8]) $invibits_(8, d*[0:8])
+                      -- if l = |d*|
 
 def $ibytes_(N, iN(N)) : byte*
 def $ibytes_(N, i) = $littleendian($ibits_(N, i))
@@ -70,7 +76,7 @@ def $invfbytes_(N, b*) = p  -- if $fbytes_(N, p) = b*
 
 ;; Signed numbers
 
-def $signed_(N, nat) : int
+def $signed_(N, nat) : int hint(inverse $invsigned_)
 def $signed_(N, i) = i           -- if $(i < 2^(N-1))
 def $signed_(N, i) = $(i - 2^N)  -- if $(2^(N-1) <= i < 2^N)
 
@@ -92,6 +98,26 @@ def $zero(Fnn) = $fzero($size(Fnn))
 def $bool(bool) : nat
 def $bool(false) = 0
 def $bool(true) = 1
+
+def $bit2bool(bit) : bool
+def $bit2bool(0) = false
+def $bit2bool(1) = true
+
+
+
+;; Bit-wise operators
+
+def $bitsand_(N, bit*, bit*) : bit*    hint(show %2 $AND_(%1) %3)
+def $bitsand_(N, d_1*, d_2*) = ($bool($bit2bool(d_1) /\ $bit2bool(d_2)))*
+
+def $bitsor_(N, bit*, bit*) : bit*     hint(show %2 $OR_(%1) %3)
+def $bitsor_(N, d_1*, d_2*) = ($bool($bit2bool(d_1) \/ $bit2bool(d_2)))*
+
+def $bitsxor_(N, bit*, bit*) : bit*    hint(show %2 $XOR_(%1) %3)
+def $bitsxor_(N, d_1*, d_2*) = ($bool($xor($bit2bool(d_1), $bit2bool(d_2))))*
+
+def $bitsnot_(N, bit*) : bit*          hint(show $NOT_(%1) %2)
+def $bitsnot_(N, d*) = ($bool(~ $bit2bool(d)))*
 
 
 ;; Saturation
@@ -167,8 +193,8 @@ def $clzbits(bit*) : nat               hint(partial)
 def $clzbits(0^k) = k                  -- if k > 0
 def $clzbits(0^k 1 d*) = k
 
-def $eqbitzero(bit) : bool             hint(show eq__bit_0(%))
-def $eqbitzero(d) = $(d = 0)
+def $eqbitzero(bit) : bool             hint(show $eq__bit_0(%)) hint(show $eq__bit_0)
+def $eqbitzero(d) = ~ $bit2bool(d)
 
 ;; def $iclz_(N, i) = $clzbits(d*)        -- if d* = $ibits_(N, i)
 def $iclz_(N, i) = |$takeWhile_(bit, $eqbitzero, d*)|  -- if d* = $ibits_(N, i)
@@ -197,7 +223,8 @@ def $irem_(N, U, i_1, 0)   = eps
 def $irem_(N, U, i_1, i_2) = $(i_1 - i_2 * $int($(i_1 / i_2)))
 def $irem_(N, S, i_1, 0)   = eps
 def $irem_(N, S, i_1, i_2) = $invsigned_(N, $(j_1 - j_2 * $int($(j_1 / j_2))))
-                             -- if j_1 = $signed_(N, i_1) /\ j_2 = $signed_(N, i_2)
+                             -- if j_1 = $signed_(N, i_1)
+                             -- if j_2 = $signed_(N, i_2)
 
 
 def $imin_(N, sx, i_1, i_2) = i_1  -- if $ilt_(N, sx, i_1, i_2) = 1
@@ -211,6 +238,23 @@ def $iadd_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $($signed_(N, i_1) + 
 
 def $isub_sat_(N, U, i_1, i_2) = $sat_u_(N, $(i_1 - i_2))
 def $isub_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $($signed_(N, i_1) - $signed_(N, i_2))))
+
+def $inot_(N, i) = $invibits_(N, $bitsnot_(N, $ibits_(N, i)))
+
+def $irev_(N, i) = $invibits_(N, $rev_(bit, $ibits_(N, i)))
+
+def $iand_(N, i_1, i_2) = $invibits_(N, $bitsand_(N, $ibits_(N, i_1), $ibits_(N, i_2)))
+
+def $iandnot_(N, i_1, i_2) = $iand_(N, i_1, $inot_(N, i_2))
+
+def $ior_(N, i_1, i_2) = $invibits_(N, $bitsor_(N, $ibits_(N, i_1), $ibits_(N, i_2)))
+
+def $ixor_(N, i_1, i_2) = $invibits_(N, $bitsxor_(N, $ibits_(N, i_1), $ibits_(N, i_2)))
+
+;; def $ishl_(N, iN(N), u32) : iN(N)
+;; def $ishr_(N, sx, iN(N), u32) : iN(N)    hint(show $ishr_(%)^(%)#((%,%)))
+;; def $irotl_(N, iN(N), iN(N)) : iN(N)
+;; def $irotr_(N, iN(N), iN(N)) : iN(N)
 
 
 def $ieqz_(N, i_1) = $bool(i_1 = 0)

@@ -3,7 +3,7 @@ open Construct
 open Al
 open Ast
 open Al_util
-
+open Xl.Num
 
 (* Errors *)
 
@@ -96,18 +96,12 @@ let print : numerics =
     name = "print";
     f =
       (function
-      | [ NumV (`Real r) as num] ->
-        let q = Q.of_float r in
-        let _ = Q.print q in num
-      | [ NumV (`Rat q) as num] ->
-        let _ = Q.print q in num
-      | [ NumV (`Int i) as num] ->
-        let _ = Z.print i in num
-      | [ NumV (`Nat n) as num] ->
-        let _ = Z.print n in num
+      | [ NumV v as num] ->
+        let _ = print_endline (to_string v) in num
       | vs -> error_values "print" vs
       )
   }
+
 
 let signed : numerics =
   {
@@ -944,20 +938,6 @@ let wrap : numerics =
       );
   }
 
-
-let inverse_of_ibits : numerics =
-  {
-    name = "inverse_of_ibits";
-    f =
-      (function
-      | [ NumV (`Nat n); ListV vs ] as vs' ->
-        if Z.of_int (Array.length !vs) <> n then error_values "inverse_of_ibits" vs';
-        let na = Array.map (function | NumV (`Nat e) when e = Z.zero || e = Z.one -> e | v -> error_typ_value "inverse_of_ibits" "bit" v) !vs in
-        natV (Array.fold_left (fun acc e -> Z.logor e (Z.shift_left acc 1)) Z.zero na)
-      | vs -> error_values "inverse_of_ibits" vs
-      );
-  }
-
 let narrow : numerics =
   {
     name = "narrow";
@@ -1118,7 +1098,6 @@ let numerics_list : numerics list = [
   inverse_of_bytes;
   inverse_of_concat;
   inverse_of_concatn;
-  sat;
   inot;
   irev;
   iand;
@@ -1180,7 +1159,6 @@ let numerics_list : numerics list = [
   inverse_of_lsize;
   inverse_of_lsizenn;
   inverse_of_sizenn;
-  inverse_of_ibits;
   print;  (* for debugging *)
 ]
 

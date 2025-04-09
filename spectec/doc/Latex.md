@@ -301,7 +301,7 @@ Show hints for variant cases or function definition are expressions with two add
 
 * *Literal Latex* `%latex("text")` inserts the text as Latex source code unmodified.
   **Use with care!**
-  This is considered a last resort that shoul dbe avoided if possible,
+  This is considered a last resort that should be avoided if possible,
   since it may not work with future rendering backends.
 
 **Example:**
@@ -386,8 +386,8 @@ The default macro names can be overridden by macro hints.
 * `hint(macro none)` selectively suppresses macro generation for an individual identifier,
   and is likewise recognised for all definitions that bind identifiers.
 
-* `hint(macro "text1" "text2")` is avaliable for type definitions,
-  and choses alternative macro names for both the type identifier (`text1`)
+* `hint(macro "text1" "text2")` is available for type definitions,
+  and chooses alternative macro names for both the type identifier (`text1`)
   and for all atoms in its definition (`text2`).
   The latter typically uses `%` to adapt to each case.
 
@@ -410,7 +410,7 @@ syntax comptype =
 ```
 
 Macro hints also apply to symbolic operator atoms.
-This way, such operators can alo be customised,
+This way, such operators can also be customised,
 for example, to produce cross-references.
 
 **Example:**

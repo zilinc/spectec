@@ -9,13 +9,45 @@ Numerics
 Utils
 ~~~~~
 
+.. _def-xor:
+
+$${definition: xor}
+
+.. _def_bitsand_:
+
+$${definition: bitsand_}
+
+.. _def_bitsor_:
+
+$${definition: bitsor_}
+
+.. _def_bitsxor_:
+
+$${definition: bitsxor_}
+
+.. _def_bitsnot_:
+
+$${definition: bitsnot_}
+
+
+
 .. _def-rev_:
+.. _def_rev'_:
+
 
 $${definition-prose: rev_}
 
 \
 
 $${definition: rev_}
+
+\
+
+$${definition-prose: rev'_}
+
+\
+
+$${definition: rev'_}
 
 
 .. _def_takeWhile_:
@@ -162,3 +194,25 @@ $${definition-prose: clzbits}
 \
 
 $${definition: clzbits}
+
+
+
+.. _def_inot_:
+.. _def_irev_:
+.. _def_iand_:
+.. _def_iandnot_:
+.. _def_ior_:
+.. _def_ixor_:
+
+
+$${definition: inot_}
+
+$${definition: irev_}
+
+$${definition: iand_}
+
+$${definition: iandnot_}
+
+$${definition: ior_}
+
+$${definition: ixor_}
