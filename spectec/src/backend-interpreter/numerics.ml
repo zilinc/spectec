@@ -179,25 +179,6 @@ let ior : numerics =
       | vs -> error_values "ior" vs
       );
   }
-let iclz : numerics =
-  {
-    name = "iclz";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m) ] ->
-        if m = Z.zero then
-          z |> al_of_z_nat
-        else
-          let z = Z.to_int z in
-          let rec loop acc n =
-            if Z.equal (Z.logand n (Z.shift_left Z.one (z - 1))) Z.zero then
-              loop (1 + acc) (Z.shift_left n 1)
-            else
-              acc
-          in al_of_nat (loop 0 m)
-      | vs -> error_values "iclz" vs
-      );
-  }
 let ictz : numerics =
   {
     name = "ictz";
