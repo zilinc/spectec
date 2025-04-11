@@ -161,22 +161,6 @@ let inot : numerics =
       | vs -> error_values "inot" vs
       );
   }
-let irev : numerics =
-  {
-    name = "irev";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m) ] ->
-        let rec loop z m n =
-          if z = Z.zero then
-            n
-          else
-            let n' = Z.(logor (shift_left n 1) (logand m one)) in
-            loop Z.(sub z one) (Z.shift_right m 1) n'
-        in loop z m Z.zero |> al_of_z_nat
-      | vs -> error_values "irev" vs
-      );
-  }
 let iand : numerics =
   {
     name = "iand";
@@ -186,15 +170,6 @@ let iand : numerics =
       | vs -> error_values "iand" vs
       );
   }
-let iandnot : numerics =
-  {
-    name = "iandnot";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m); NumV (`Nat n) ] -> Z.(logand (logand m (lognot n)) (maskN z)) |> al_of_z_nat
-      | vs -> error_values "iandnot" vs
-      );
-  }
 let ior : numerics =
   {
     name = "ior";
@@ -202,62 +177,6 @@ let ior : numerics =
       (function
       | [ NumV (`Nat z); NumV (`Nat m); NumV (`Nat n) ] -> Z.(logand (logor m n) (maskN z)) |> al_of_z_nat
       | vs -> error_values "ior" vs
-      );
-  }
-let ixor : numerics =
-  {
-    name = "ixor";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m); NumV (`Nat n) ] -> Z.(logand (logxor m n) (maskN z)) |> al_of_z_nat
-      | vs -> error_values "ixor" vs
-      );
-  }
-let ishl : numerics =
-  {
-    name = "ishl";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m); NumV (`Nat n) ] -> Z.(logand (shift_left m (Z.to_int (rem n z))) (maskN z)) |> al_of_z_nat
-      | vs -> error_values "ishl" vs
-      );
-  }
-let ishr : numerics =
-  {
-    name = "ishr";
-    f =
-      (function
-      | [ NumV (`Nat z); CaseV ("U", []); NumV (`Nat m); NumV (`Nat n) ] -> Z.(shift_right m (Z.to_int (rem n z))) |> al_of_z_nat
-      | [ NumV (`Nat z); CaseV ("S", []); NumV (`Nat m); NumV (`Nat n) ] ->
-          let n = Z.(to_int (rem n z)) in
-          let s = Z.to_int z in
-          let d = s - n in
-          let msb = Z.shift_right m (s - 1) in
-          let pad = Z.(mul (shift_left one s - shift_left one d) msb) in
-          NumV (`Nat Z.(logor pad (shift_right m n)))
-      | vs -> error_values "ishr" vs
-      );
-  }
-let irotl : numerics =
-  {
-    name = "irotl";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m); NumV (`Nat n) ] ->
-        let n = Z.to_int (Z.rem n z) in
-        (Z.logor (Z.logand (Z.shift_left m n) (maskN z)) (Z.shift_right m ((Z.to_int z - n)))) |> al_of_z_nat
-      | vs -> error_values "irotl" vs
-      );
-  }
-let irotr : numerics =
-  {
-    name = "irotr";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m); NumV (`Nat n) ] ->
-        let n = Z.to_int (Z.rem n z) in
-        (Z.logor (Z.shift_right m n) (Z.logand (Z.shift_left m ((Z.to_int z - n))) (maskN z))) |> al_of_z_nat
-      | vs -> error_values "irotr" vs
       );
   }
 let iclz : numerics =
@@ -1098,17 +1017,6 @@ let numerics_list : numerics list = [
   inverse_of_bytes;
   inverse_of_concat;
   inverse_of_concatn;
-  inot;
-  irev;
-  iand;
-  iandnot;
-  ior;
-  ixor;
-  ishl;
-  ishr;
-  irotl;
-  irotr;
-  iclz;
   ictz;
   ipopcnt;
   ibitselect;

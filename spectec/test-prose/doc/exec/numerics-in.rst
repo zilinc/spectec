@@ -50,6 +50,16 @@ $${definition-prose: rev'_}
 $${definition: rev'_}
 
 
+.. _def_take_:
+.. _def_take'_:
+
+$${definition: take_}
+
+\
+
+$${definition: take'_}
+
+
 .. _def_takeWhile_:
 
 $${definition-prose: takeWhile_}
@@ -57,6 +67,17 @@ $${definition-prose: takeWhile_}
 \
 
 $${definition: takeWhile_}
+
+
+.. _def_drop_:
+.. _def_drop'_:
+
+$${definition: drop_}
+
+\
+
+$${definition: drop'_}
+
 
 
 Binary Representation
@@ -216,3 +237,46 @@ $${definition: iandnot_}
 $${definition: ior_}
 
 $${definition: ixor_}
+
+.. _def_ishl_:
+.. _def_ishr_:
+.. _def_irotl_:
+.. _def_irotr_:
+
+
+$${definition-prose: ishl_}
+
+\
+
+$${definition: ishl_}
+
+\
+
+$${definition-prose: ishr_}
+
+\
+
+$${definition: ishr_}
+
+\
+
+$${definition-prose: irotl_}
+
+\
+
+$${definition: irotl_}
+
+\
+
+$${definition-prose: irotr_}
+
+\
+
+$${definition: irotr_}
+
+
+
+
+
+
+

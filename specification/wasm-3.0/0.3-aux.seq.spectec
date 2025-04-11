@@ -32,10 +32,31 @@ def $rev_(syntax X, w_0 w*) = $rev_(X, w*) w_0
 def $rev'_(syntax X, X*) : X*
 def $rev'_(syntax X, w^N) = (w^N[N-1-i])^(i < N)
 
+def $take_(syntax X, nat, X*) : X*
+def $take_(syntax X, 0, w*) = eps
+def $take_(syntax X, n, eps) = eps
+def $take_(syntax X, n, w w'*) = w $take_(X, $(n-1), w'*)  -- if n > 0
+
+def $take'_(syntax X, nat, X*) : X*
+def $take'_(syntax X, n, w^n') = w^n'  -- if n' < n
+def $take'_(syntax X, n, w^n w'*) = w^n
+
 def $takeWhile_(syntax X, def $p(X) : bool, X*) : X*
 def $takeWhile_(syntax X, $p, eps) = eps
 def $takeWhile_(syntax X, $p, w_0 w*) = w_0 $takeWhile_(X, $p, w*)  -- if $p(w_0)
 def $takeWhile_(syntax X, $p, w_0 w*) = eps                         -- otherwise
+
+
+def $drop_(syntax X, nat, X*) : X*
+def $drop_(syntax X, 0, w*) = w*
+def $drop_(syntax X, n, eps) = eps
+def $drop_(syntax X, n, w w'*) = $drop_(X, $(n-1), w'*)  -- if n > 0
+
+;; Doesn't work with the interpreter backend
+def $drop'_(syntax X, nat, X*) : X*
+def $drop'_(syntax X, n, w^n') = eps    -- if n' < n
+def $drop'_(syntax X, n, w^n w'*) = w'*
+
 
 
 ;; Set functions

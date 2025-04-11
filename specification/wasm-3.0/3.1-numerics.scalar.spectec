@@ -14,7 +14,7 @@ var j : int
 ;; Binary operators
 
 def $xor(bool, bool) : bool         hint(show %1 $xor %2)
-def $xor(bl_1, bl_2) = $(bl_1 = bl_2)
+def $xor(bl_1, bl_2) = $(bl_1 =/= bl_2)
 
 
 ;; Conversions
@@ -251,10 +251,21 @@ def $ior_(N, i_1, i_2) = $invibits_(N, $bitsor_(N, $ibits_(N, i_1), $ibits_(N, i
 
 def $ixor_(N, i_1, i_2) = $invibits_(N, $bitsxor_(N, $ibits_(N, i_1), $ibits_(N, i_2)))
 
-;; def $ishl_(N, iN(N), u32) : iN(N)
-;; def $ishr_(N, sx, iN(N), u32) : iN(N)    hint(show $ishr_(%)^(%)#((%,%)))
-;; def $irotl_(N, iN(N), iN(N)) : iN(N)
-;; def $irotr_(N, iN(N), iN(N)) : iN(N)
+def $ishl_(N, i_1, i_2) = $invibits_(N, d* 0^k)    -- if k = $(i_2 \ N)
+                                                   -- if d* = $drop_(bit, k, $ibits_(N, i_1))
+
+def $ishr_(N, U, i_1, i_2) = $invibits_(N, 0^k d*)    -- if k = $(i_2 \ N)
+                                                      -- if d* = $take_(bit, $(N-k), $ibits_(N, i_1))
+def $ishr_(N, S, i_1, i_2) = $invibits_(N, d_0 d_0^k d_1*)  -- if k = $(i_2 \ N)
+                                                            -- if d_0 d_1* = $take_(bit, $(N-k), $ibits_(N, i_1))
+
+def $irotl_(N, i_1, i_2) = $invibits_(N, d_2* d_1*)  -- if k = $(i_2 \ N)
+                                                     -- if d_1* = $take_(bit, k, $ibits_(N, i_1))
+                                                     -- if d_2* = $drop_(bit, k, $ibits_(N, i_1))
+
+def $irotr_(N, i_1, i_2) = $invibits_(N, d_2* d_1*)  -- if k = $(i_2 \ N)
+                                                     -- if d_1* = $take_(bit, $(N-k), $ibits_(N, i_1))
+                                                     -- if d_2* = $drop_(bit, $(N-k), $ibits_(N, i_1))
 
 
 def $ieqz_(N, i_1) = $bool(i_1 = 0)
