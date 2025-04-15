@@ -179,40 +179,6 @@ let ior : numerics =
       | vs -> error_values "ior" vs
       );
   }
-let ictz : numerics =
-  {
-    name = "ictz";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m) ] ->
-        if m = Z.zero then
-          z |> al_of_z_nat
-        else
-          let rec loop acc n =
-            if Z.(equal (logand n one) zero) then
-              loop (1 + acc) (Z.shift_right n 1)
-            else
-              acc
-          in al_of_nat (loop 0 m)
-      | vs -> error_values "ictz" vs
-      );
-  }
-let ipopcnt : numerics =
-  {
-    name = "ipopcnt";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat m) ] ->
-        let rec loop acc i n =
-          if i = 0 then
-            acc
-          else
-            let acc' = if Z.(equal (logand n one) one) then acc + 1 else acc in
-            loop acc' (i - 1) (Z.shift_right n 1)
-        in al_of_nat (loop 0 (Z.to_int z) m)
-      | vs -> error_values "ipopcnt" vs
-      );
-  }
 
 let ibitselect : numerics =
   {
@@ -235,19 +201,6 @@ let irelaxed_laneselect : numerics =
       );
   }
 
-let iavgr : numerics =
-  {
-    name = "iavgr";
-    f =
-      (function
-      | [ NumV _ ; CaseV ("U", []); NumV (`Nat m); NumV (`Nat n) ] -> Z.((m + n + one) / of_int 2) |> al_of_z_nat
-      | [ NumV _ as z; CaseV ("S", []); NumV (`Nat m); NumV (`Nat n) ] ->
-        let m = signed.f [ z; NumV (`Nat m) ] |> al_to_z_int in
-        let n = signed.f [ z; NumV (`Nat n) ] |> al_to_z_int in
-        Z.((m + n + one) / Z.of_int 2) |> al_of_z_nat
-      | vs -> error_values "iavgr" vs
-      );
-  }
 let iq15mulr_sat : numerics =
   {
     name = "iq15mulr_sat";
@@ -987,7 +940,7 @@ let numerics_list : numerics list = [
   r_swizzle;
   r_laneselect;
   rat_to_int;
-  inverse_of_ibytes;
+  (* inverse_of_ibytes; *)
   nbytes;
   vbytes;
   inverse_of_nbytes;
@@ -998,12 +951,7 @@ let numerics_list : numerics list = [
   inverse_of_bytes;
   inverse_of_concat;
   inverse_of_concatn;
-  ictz;
-  ipopcnt;
-  ibitselect;
   irelaxed_laneselect;
-  iavgr;
-  iq15mulr_sat;
   irelaxed_q15mulr;
   fadd;
   fsub;

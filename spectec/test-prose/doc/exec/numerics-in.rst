@@ -49,6 +49,14 @@ $${definition-prose: rev'_}
 
 $${definition: rev'_}
 
+.. _def_filter_:
+
+$${definition-prose: filter_}
+
+\
+
+$${definition: filter_}
+
 
 .. _def_take_:
 .. _def_take'_:
@@ -196,9 +204,21 @@ $${definition: imin_}
 $${definition: imax_}
 
 
+.. _def_iq15mulr_sat_:
+
+$${definition-prose: iq15mulr_sat_}
+
+\
+
+$${definition: iq15mulr_sat_}
+
 .. _def-iclz_:
+.. _def-ictz_:
 
 $${definition: eqbitzero}
+
+$${definition: eqbitone}
+
 
 \
 
@@ -208,22 +228,33 @@ $${definition-prose: iclz_}
 
 $${definition: iclz_}
 
-where
+\
 
-$${definition-prose: clzbits}
+$${definition-prose: ictz_}
 
 \
 
-$${definition: clzbits}
+$${definition: ictz_}
+
+\
+
+$${definition-prose: ipopcnt_}
+
+\
+
+$${definition: ipopcnt_}
 
 
 
-.. _def_inot_:
-.. _def_irev_:
-.. _def_iand_:
-.. _def_iandnot_:
-.. _def_ior_:
-.. _def_ixor_:
+`inot_`, `irev_`, `iand_`, `iandnot_`, `ior_` and `ixor_`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. _def-inot_:
+.. _def-irev_:
+.. _def-iand_:
+.. _def-iandnot_:
+.. _def-ior_:
+.. _def-ixor_:
 
 
 $${definition: inot_}
@@ -275,8 +306,13 @@ $${definition-prose: irotr_}
 $${definition: irotr_}
 
 
+.. _def-ibitselect_:
 
+$${definition-prose: ibitselect_}
 
+\
+
+$${definition: ibitselect_}
 
 
 

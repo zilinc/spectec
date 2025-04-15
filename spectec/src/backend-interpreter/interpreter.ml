@@ -271,10 +271,14 @@ and eval_expr env expr =
     (* TODO: refactor numerics function name *)
     let args = List.map (eval_arg env) el in
     let inv_fname =
+      (* TODO(zilinc): If function $f has hint(inverse $invf), but $invf is
+         defined in terms of the inversion of $f, then infinite loop! We
+         can implement loop checks.
+      *)
       (match find_hint fname "inverse" with
       | Some hint ->
         (match hint.hintexp.it with
-        | CallE (fid, []) -> fid.it
+        | CallE (fid, []) -> Printf.printf "#### USING INVFUNCTION %s\n" (fid.it); fid.it
         | _ -> failwith (sprintf "ill-formed inverse hint for definition `%s`" fname)
         )
       | None -> "inverse_of_"^fname'

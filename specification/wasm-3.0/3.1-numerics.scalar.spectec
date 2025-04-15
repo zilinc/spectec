@@ -4,11 +4,7 @@
 
 ;; Debugging
 
-def $print(syntax X, X) : X
-
-;; Hack
-
-var j : int
+def $print(syntax X, X) : X         hint(builtin)
 
 
 ;; Binary operators
@@ -35,27 +31,32 @@ def $int(q) = $rat_to_int(q)
 
 
 ;; no padding
-def $ibits_np(nat) : bit*  hint(show $ibits__np(%))
-def $ibits_np(n) = 0  -- if n = 0
-def $ibits_np(n) = 1  -- if n = 1
-def $ibits_np(n) = 0 $ibits_np($(n / 2))       -- if n =/= 0 /\ $(n \ 2) = 0
-def $ibits_np(n) = 1 $ibits_np($((n-1) / 2))   -- if n =/= 1 /\ $(n \ 2) = 1
+def $ibits_np(nat) : bit*                            hint(show $ibits__np(%))
+def $ibits_np(n) = 0                                 -- if n = 0
+def $ibits_np(n) = 1                                 -- if n = 1
+def $ibits_np(n) = 0 $ibits_np($(n / 2))             -- if n =/= 0 /\ $(n \ 2) = 0
+def $ibits_np(n) = 1 $ibits_np($((n-1) / 2))         -- if n =/= 1 /\ $(n \ 2) = 1
 
 
 def $ibits_(N, iN(N)) : bit*                         hint(partial) hint(inverse $invibits_)
 def $ibits_(N, i) = 0^(N - |d*|) d*
-                  -- if N =/= 0 /\ d* = $rev_(bit, $ibits_np(i))
+                  -- if d* = $rev_(bit, $ibits_np(i))
+                  -- if |d*| <= N
 
 def $invibits_(N, bit*) : iN(N)                      hint(partial) hint(show $ibits_(%)^(-1)#((%)))
 def $invibits_(0, eps) = 0
 def $invibits_(N, d d'*) = $(2^(N-1) * d + $invibits_($(N-1), d'*))  -- if |d'*| = $(N-1)
+;; FIXME(zilinc): runtime failure. e.g. i64.wast
+;; def $invibits_(N, d d'^(N-1)) = $(2^(N-1) * d + $invibits_($(N-1), d'^(N-1)))
 
 def $littleendian(bit*) : byte*
 def $littleendian(eps) = eps
 def $littleendian(d*) = $littleendian(d*[8:l-8]) $invibits_(8, d*[0:8])
                       -- if l = |d*|
+;; FIXME(zilinc): if inline |d*|, interpreter backend runs into infinite loop.
 
-def $ibytes_(N, iN(N)) : byte*
+
+def $ibytes_(N, iN(N)) : byte*                       hint(inverse $invibytes_)
 def $ibytes_(N, i) = $littleendian($ibits_(N, i))
 
 
@@ -70,7 +71,15 @@ def $cbytes_(Cnn, lit_(Cnn)) : byte*                 hint(show $bytes_(%,%))
 def $invibytes_(N, byte*) : iN(N) hint(show $bytes_($IN(%))^(-1)#((%)))
 def $invfbytes_(N, byte*) : fN(N) hint(show $bytes_($FN(%))^(-1)#((%)))
 
-def $invibytes_(N, b*) = n  -- if $ibytes_(N, n) = b*
+;; def $invibytes_(N, b*) = n  -- if $ibytes_(N, n) = b*
+def $invibytes_(N, b) = b  -- if N = 8 ;; || N = 32
+def $invibytes_(N, b_0 b*) = $($invibytes_($(N-8), b*) * 2^8 + b_0)
+                           -- if $(N = |b*| * 8 + 8) /\ |b*| > 0 ;; || (N = 32 /\ |b*| <= 1)
+;; NOTE(zilinc): The interpreter implementation has that N = 32 case for packtype, but it's
+;; not in the Wasm spec, or would it make invibytes a real inverse of ibytes.
+
+
+
 def $invfbytes_(N, b*) = p  -- if $fbytes_(N, p) = b*
 
 
@@ -180,28 +189,31 @@ def $ile_(N, sx, iN(N), iN(N)) : u32     hint(show $ile_(%)^(%)#((%,%)))
 def $ige_(N, sx, iN(N), iN(N)) : u32     hint(show $ige_(%)^(%)#((%,%)))
 
 
-;; TODO(3, rossberg): implement numerics internally
+def $ineg_(N, i) = $((2^N - i) \ 2^N)
 
-;;def $ineg_(N, i_1) = $((2^N - i_1) \ 2^N)
-def $ineg_(N, i_1) = $invsigned_(N, $(- $signed_(N, i_1)))
+def $iabs_(N, i) = i                   -- if $signed_(N, i) >= 0
+def $iabs_(N, i) = $ineg_(N, i)        -- otherwise
 
-def $iabs_(N, i_1) = i_1             -- if $signed_(N, i_1) >= 0
-def $iabs_(N, i_1) = $ineg_(N, i_1)  -- otherwise
-
-
-def $clzbits(bit*) : nat               hint(partial)
-def $clzbits(0^k) = k                  -- if k > 0
-def $clzbits(0^k 1 d*) = k
+;; TODO(_, zilinc): animation: The key 'k' is not in the map
+;; def $clzbits(bit*) : nat               hint(partial)
+;; def $clzbits(0^k) = k                  -- if k > 0
+;; def $clzbits(0^k 1 d*) = k
 
 def $eqbitzero(bit) : bool             hint(show $eq__bit_0(%)) hint(show $eq__bit_0)
 def $eqbitzero(d) = ~ $bit2bool(d)
 
+def $eqbitone(bit): bool               hint(show $eq__bit_1(%)) hint(show $eq__bit_1)
+def $eqbitone(d) = $bit2bool(d)
+
+
+;; NOTE(zilinc): due to problems in $clzbits
 ;; def $iclz_(N, i) = $clzbits(d*)        -- if d* = $ibits_(N, i)
-def $iclz_(N, i) = |$takeWhile_(bit, $eqbitzero, d*)|  -- if d* = $ibits_(N, i)
+def $iclz_(N, i) = |$takeWhile_(bit, $eqbitzero, d*)|   -- if d* = $ibits_(N, i)
 
-;;def $ictz_(N, i_1) = k               -- if $ibits_(N, i_1) = d* 1 (0)^k
+def $ictz_(N, i) = |$takeWhile_(bit, $eqbitzero, d'*)|  -- if d*  = $ibits_(N, i)
+                                                        -- if d'* = $rev_(bit, d*)
 
-;;def $ipopcnt_(N, i_1) = k            -- if $ibits_(N, i_1) = (0* 1)^k 0*
+def $ipopcnt_(N, i) = |$filter_(bit, $eqbitone, d*)|    -- if d* = $ibits_(N, i)
 
 def $iextend_(N, M, U, i) = $(i \ 2^M)
 def $iextend_(N, M, S, i) = $invsigned_(N, $signed_(M, $(i \ 2^M)))
@@ -239,6 +251,18 @@ def $iadd_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $($signed_(N, i_1) + 
 def $isub_sat_(N, U, i_1, i_2) = $sat_u_(N, $(i_1 - i_2))
 def $isub_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $($signed_(N, i_1) - $signed_(N, i_2))))
 
+;; FIXME(zilinc): 1. the U version is not defined in the wasm spec;
+;;                2. simd/simd_i16x8_q15mulr_sat_s.wast has failing tests. N too small for the input ints.
+def $iq15mulr_sat_(N, U, i_1, i_2) = $invsigned_(N, $sat_u_(N, $ishr_(N, U, j, 15)))
+                                   -- if j = $(i_1 * i_2 + 2^14)
+def $iq15mulr_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $ishr_(N, S, j, 15)))
+                                   -- if j = $(i_1 * i_2 + 2^14)
+
+
+def $iavgr_(N, U, i_1, i_2) = $int($((i_1 + i_2 + 1) / 2))
+def $iavgr_(N, S, i_1, i_2) = $int($((i_1' + i_2' + 1) / 2))    -- if i_1' = $signed_(N, i_1)
+                                                                -- if i_2' = $signed_(N, i_2)
+
 def $inot_(N, i) = $invibits_(N, $bitsnot_(N, $ibits_(N, i)))
 
 def $irev_(N, i) = $invibits_(N, $rev_(bit, $ibits_(N, i)))
@@ -266,14 +290,16 @@ def $irotl_(N, i_1, i_2) = $invibits_(N, d_2* d_1*)
                          -- if k = $(i_2 \ N)
                          -- if d_1* = $take'_(bit, k, $ibits_(N, i_1))
                          -- if d_2* = $drop'_(bit, k, $ibits_(N, i_1))
+
 def $irotr_(N, i_1, i_2) = $invibits_(N, d_2* d_1*)
                          -- if k = $(i_2 \ N)
                          -- if d_1* = $take'_(bit, $(N-k), $ibits_(N, i_1))
                          -- if d_2* = $drop'_(bit, $(N-k), $ibits_(N, i_1))
 
-;; var k : nat
+;; FIXME(zilinc): type inference failure on k
 ;; def $irotr_(N, i_1, i_2) = $invibits_(N, d_2^k d_1^(N-k))
-;;                          -- if k = $(i_2 \ N)
+;;                          -- var k : nat
+;;                          -- if k = $(i_2 \ N) 
 ;;                          -- if d_1^(N-k) d_2^k = $ibits_(N, i_1)
 
 
@@ -297,6 +323,12 @@ def $ile_(N, S, i_1, i_2) = $bool($signed_(N, i_1) <= $signed_(N, i_2))
 
 def $ige_(N, U, i_1, i_2) = $bool(i_1 >= i_2)
 def $ige_(N, S, i_1, i_2) = $bool($signed_(N, i_1) >= $signed_(N, i_2))
+
+
+def $ibitselect_(N, i_1, i_2, i_3) = $ior_(N, j_1, j_2)
+                                   -- if j_1 = $iand_(N, i_1, i_3)
+                                   -- if j_3 = $inot_(N, i_3)
+                                   -- if j_2 = $iand_(N, i_2, j_3)
 
 
 ;; Floating-point operations
