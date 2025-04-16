@@ -384,6 +384,14 @@ def $reinterpret__(numtype_1, numtype_2, num_(numtype_1)) : num_(numtype_2)
 
 ;; TODO(3, rossberg): implement numerics internally
 
+def $wrap__(M, N, i) = $(i \ 2^N)
+
+def $extend__(M, N, U, i) = i
+def $extend__(M, N, S, i) = $invsigned_(N, $signed_(M, i))
+
+def $narrow__(M, N, U, i) = $sat_u_(N, $signed_(M, i))
+def $narrow__(M, N, S, i) = $invsigned_(N, $sat_s_(N, $signed_(M, i)))
+
 
 ;; Packed numbers
 

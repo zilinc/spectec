@@ -526,19 +526,6 @@ let frelaxed_nmadd : numerics =
       );
   }
 
-let extend : numerics =
-  {
-    name = "extend";
-    f =
-      (function
-      | [ NumV (`Nat z); _; CaseV ("U", []); NumV (`Nat v) ] when z = Z.of_int 128 -> V128.I64x2.of_lanes [ z_to_int64 v; 0L ] |> al_of_vec128 (* HARDCODE *)
-      | [ _; _; CaseV ("U", []); v ] -> v
-      | [ NumV _ as m; NumV _ as n; CaseV ("S", []); NumV _ as i ] ->
-        inverse_of_signed.f [ n; signed.f [ m; i ] ]
-      | vs -> error_values "extend" vs
-      );
-  }
-
 let trunc : numerics =
   {
     name = "trunc";
@@ -781,26 +768,6 @@ let inverse_of_cbytes : numerics =
 let bytes : numerics = { name = "bytes"; f = nbytes.f }
 let inverse_of_bytes : numerics = { name = "inverse_of_bytes"; f = inverse_of_nbytes.f }
 
-let wrap : numerics =
-  {
-    name = "wrap";
-    f =
-      (function
-        | [ NumV _m; NumV (`Nat n); NumV (`Nat i) ] -> natV (Z.logand i (maskN n))
-        | vs -> error_values "wrap" vs
-      );
-  }
-
-let narrow : numerics =
-  {
-    name = "narrow";
-    f =
-      (function
-      | [ NumV _ as m; NumV _ as n; CaseV (_, []) as sx; NumV _ as i ] ->
-        sat.f [ n; sx; signed.f [ m; i ]]
-      | vs -> error_values "narrow" vs);
-  }
-
 let lanes : numerics =
   {
     name = "lanes";
@@ -979,12 +946,9 @@ let numerics_list : numerics list = [
   frelaxed_max;
   frelaxed_madd;
   frelaxed_nmadd;
-  extend;
-  wrap;
   trunc;
   trunc_sat;
   relaxed_trunc;
-  narrow;
   promote;
   demote;
   convert;

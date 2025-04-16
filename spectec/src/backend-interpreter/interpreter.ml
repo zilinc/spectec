@@ -278,7 +278,7 @@ and eval_expr env expr =
       (match find_hint fname "inverse" with
       | Some hint ->
         (match hint.hintexp.it with
-        | CallE (fid, []) -> Printf.printf "#### USING INVFUNCTION %s\n" (fid.it); fid.it
+        | CallE (fid, []) -> fid.it
         | _ -> failwith (sprintf "ill-formed inverse hint for definition `%s`" fname)
         )
       | None -> "inverse_of_"^fname'
