@@ -96,8 +96,8 @@ let print : numerics =
     name = "print";
     f =
       (function
-      | [ NumV v as num] ->
-        let _ = print_endline (to_string v) in num
+      | [ TextV s; NumV v as num] ->
+        let _ = print_endline (s ^ to_string v) in num
       | vs -> error_values "print" vs
       )
   }
