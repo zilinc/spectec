@@ -4,7 +4,7 @@
 
 ;; Debugging
 
-def $print(syntax X, X) : X         hint(builtin)
+def $print(syntax X, text, X) : X         hint(builtin)
 
 
 ;; Binary operators
@@ -164,7 +164,7 @@ def $imin_(N, sx, iN(N), iN(N)) : iN(N)         hint(show $imin_(%)^(%)%((%,%)))
 def $imax_(N, sx, iN(N), iN(N)) : iN(N)         hint(show $imax_(%)^(%)%((%,%)))
 def $iadd_sat_(N, sx, iN(N), iN(N)) : iN(N)     hint(show $iadd__sat_(%)^(%)#((%,%)))
 def $isub_sat_(N, sx, iN(N), iN(N)) : iN(N)     hint(show $isub__sat_(%)^(%)#((%,%)))
-def $iq15mulr_sat_(N, sx, iN(N), iN(N)) : iN(N) hint(show $iq15mulr__sat_(%)^(%)#((%,%)))
+def $iq15mulr_sat_(N, sx, iN(N), iN(N)) : iN(N) hint(partial) hint(show $iq15mulr__sat_(%)^(%)#((%,%)))
 def $irelaxed_q15mulr_(N, sx, iN(N), iN(N)) : iN(N)* hint(show $relaxed__iq15mulr_(%)^(%)#((%,%)))
 def $iavgr_(N, sx, iN(N), iN(N)) : iN(N)        hint(show $iavgr_(%)^(%)#((%,%)))
 
@@ -381,12 +381,13 @@ def $iadd_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $($signed_(N, i_1) + 
 def $isub_sat_(N, U, i_1, i_2) = $sat_u_(N, $(i_1 - i_2))
 def $isub_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $($signed_(N, i_1) - $signed_(N, i_2))))
 
-;; FIXME(zilinc): 1. the U version is not defined in the wasm spec;
-;;                2. simd/simd_i16x8_q15mulr_sat_s.wast has failing tests. N too small for the input ints.
-def $iq15mulr_sat_(N, U, i_1, i_2) = $invsigned_(N, $sat_u_(N, $ishr_(N, U, j, 15)))
-                                   -- if j = $(i_1 * i_2 + 2^14)
-def $iq15mulr_sat_(N, S, i_1, i_2) = $invsigned_(N, $sat_s_(N, $ishr_(N, S, j, 15)))
-                                   -- if j = $(i_1 * i_2 + 2^14)
+;; Q15.1 multiplication: https://en.wikipedia.org/wiki/Q_(number_format)
+def $iq15mulr_sat_(N, S, i_1, i_2) = $invsigned_(N, j_2)
+                                   -- if N = 16
+                                   -- if N' = 32
+                                   -- if j_0 = $($signed_(N, i_1) * $signed_(N, i_2) + 2^14)
+                                   -- if j_1 = $ishr_(N', S, $invsigned_(N', j_0), 15)
+                                   -- if j_2 = $sat_s_(N, $signed_(N', j_1))  ;; $sat_s_ only works on signed int
 
 
 def $iavgr_(N, U, i_1, i_2) = $int($((i_1 + i_2 + 1) / 2))
