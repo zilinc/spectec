@@ -11,13 +11,16 @@ def $opt_(syntax X, w) = w
 
 ;; Concatenation
 
-def $concat_(syntax X, (X*)*) : X*  hint(show (++) %2)
+def $concat_(syntax X, (X*)*) : X*  hint(show (++) %2) hint(inverse $invconcat_)
 def $concat_(syntax X, eps) = eps
 def $concat_(syntax X, (w*) (w'*)*) = w* ++ $concat_(X, (w'*)*)
 
-def $concatn_(syntax X, (X*)*, nat) : X*  hint(show (++) %2)
+def $concatn_(syntax X, (X*)*, nat) : X*  hint(show (++) %2) hint(inverse $invconcatn_)
 def $concatn_(syntax X, eps, n) = eps
 def $concatn_(syntax X, (w^n) (w'^n)*, n) = w^n $concatn_(X, (w'^n)*, n)
+
+def $invconcat_(syntax X, X*) : (X*)*        hint(builtin $inverse_of_concat)
+def $invconcatn_(syntax X, nat, X*) : (X*)*  hint(builtin $inverse_of_concatn)
 
 
 ;; List manipulation
