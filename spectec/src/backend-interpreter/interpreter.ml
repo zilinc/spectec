@@ -285,6 +285,10 @@ and eval_expr env expr =
       (match find_hint fname' "inverse" with
       | Some hint ->
         (match hint.hintexp.it with
+          (* TODO(zilinc): we assume that there is only one way to inverse the function. 
+          We can in fact extend the hint, so that we know which argument is becoming 
+          the output of the inverse function.
+          *)
         | CallE (fid, []) -> fid.it
         | _ -> failwith (sprintf "ill-formed inverse hint for definition `%s`" fname')
         )
@@ -804,10 +808,9 @@ and call_func (name: string) (args: value list) : value option =
               | Some builtin ->
                 (match builtin.it with
                 | SeqE [] -> name                 (* hint(builtin) *)
-                (* TODO(zilinc): we assume that there is only one way to inverse the function. 
-                   We can in fact extend the hint, so that we know which argument is becoming 
-                   the output of the inverse function.
-                *)
+                  (* TODO(zilinc): We can in fact extend the hint to support more
+                     complicated aliasing. e.g. $f(t1, t2) : t3 hint(builtin $g(%2)).
+                  *)
                 | CallE (fname, _) -> fname.it    (* hint(builtin $g) *)
                 | _ -> failwith (sprintf "ill-formed builtin hint for definition `%s`" name))
               | None -> name
