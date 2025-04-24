@@ -33,16 +33,25 @@ def $ibits_np(n) = 0 $ibits_np($(n / 2))             -- if n =/= 0 /\ $(n \ 2) =
 def $ibits_np(n) = 1 $ibits_np($((n-1) / 2))         -- if n =/= 1 /\ $(n \ 2) = 1
 
 
-def $ibits_(N, iN(N)) : bit*                         hint(partial) hint(inverse $invibits_)
-def $ibits_(N, i) = 0^(N - |d*|) d*
-                  -- if d* = $rev_(bit, $ibits_np(i))
-                  -- if |d*| <= N
 
-def $invibits_(N, bit*) : iN(N)                      hint(partial) hint(show $ibits_(%)^(-1)#((%)))
-def $invibits_(0, eps) = 0
-def $invibits_(N, d d'*) = $(2^(N-1) * d + $invibits_($(N-1), d'*))  -- if |d'*| = $(N-1)
-;; FIXME(zilinc): The key 'N' is not in the map. e.g. i64.wast
-;; def $invibits_(N, d d'^(N-1)) = $(2^(N-1) * d + $invibits_($(N-1), d'^(N-1)))
+def $ibits_(N, iN(N)) : bit*                         hint(partial) hint(show $bits_($IN(%),%))  hint(inverse $invibits_)
+def $fbits_(N, fN(N)) : bit*                         hint(builtin) hint(show $bits_($FN(%),%))
+def $ibytes_(N, iN(N)) : byte*                       hint(show $bytes_($IN(%),%))               hint(inverse $invibytes_)
+def $fbytes_(N, fN(N)) : byte*                       hint(builtin) hint(show $bytes_($FN(%),%)) hint(inverse $invfbytes_)
+def $nbytes_(numtype, num_(numtype)) : byte*         hint(builtin) hint(show $bytes_(%,%))      hint(inverse $invnbytes_)
+def $vbytes_(vectype, vec_(vectype)) : byte*         hint(builtin) hint(show $bytes_(%,%))      hint(inverse $invvbytes_)
+def $zbytes_(storagetype, lit_(storagetype)) : byte* hint(builtin) hint(show $bytes_(%,%))      hint(inverse $invzbytes_)
+def $cbytes_(Cnn, lit_(Cnn)) : byte*                 hint(builtin) hint(show $bytes_(%,%))      hint(inverse $invcbytes_)
+
+
+def $invibits_(N, bit*) : iN(N)                         hint(partial) hint(show $ibits_(%)^(-1)#((%)))
+def $invibytes_(N, byte*) : iN(N)                       hint(show $bytes_($IN(%))^(-1)#((%)))
+def $invfbytes_(N, byte*) : fN(N)                       hint(show $bytes_($FN(%))^(-1)#((%))) hint(builtin $inverse_of_fbytes)
+def $invnbytes_(numtype, byte*) : num_(numtype)         hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_nbytes)
+def $invvbytes_(vectype, byte*) : vec_(vectype)         hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_vbytes)
+def $invzbytes_(storagetype, byte*) : lit_(storagetype) hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_zbytes)
+def $invcbytes_(Cnn, byte*) : lit_(Cnn)                 hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_cbytes)
+
 
 ;; def $littleendian(bit*) : byte*
 ;; def $littleendian(eps) = eps
@@ -55,24 +64,16 @@ def $littleendian(eps) = eps
 def $littleendian(d^8 d'*) = $littleendian(d'*) $invibits_(8, d^8)
 
 
-def $ibytes_(N, iN(N)) : byte*                       hint(inverse $invibytes_)
+def $ibits_(N, i) = 0^(N - |d*|) d*
+                  -- if d* = $rev_(bit, $ibits_np(i))
+                  -- if |d*| <= N
+
 def $ibytes_(N, i) = $littleendian($ibits_(N, i))
 
-
-def $fbits_(N, fN(N)) : bit*                         hint(builtin) hint(show $bits_($FN(%),%))
-def $fbytes_(N, fN(N)) : byte*                       hint(builtin) hint(show $bytes_($FN(%),%)) hint(inverse $invfbytes_)
-def $nbytes_(numtype, num_(numtype)) : byte*         hint(builtin) hint(show $bytes_(%,%))      hint(inverse $invnbytes_)
-def $vbytes_(vectype, vec_(vectype)) : byte*         hint(builtin) hint(show $bytes_(%,%))      hint(inverse $invvbytes_)
-def $zbytes_(storagetype, lit_(storagetype)) : byte* hint(builtin) hint(show $bytes_(%,%))      hint(inverse $invzbytes_)
-def $cbytes_(Cnn, lit_(Cnn)) : byte*                 hint(builtin) hint(show $bytes_(%,%))      hint(inverse $invcbytes_)
-
-
-def $invibytes_(N, byte*) : iN(N)                       hint(show $bytes_($IN(%))^(-1)#((%)))
-def $invfbytes_(N, byte*) : fN(N)                       hint(show $bytes_($FN(%))^(-1)#((%))) hint(builtin $inverse_of_fbytes)
-def $invnbytes_(numtype, byte*) : num_(numtype)         hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_nbytes)
-def $invvbytes_(vectype, byte*) : vec_(vectype)         hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_vbytes)
-def $invzbytes_(storagetype, byte*) : lit_(storagetype) hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_zbytes)
-def $invcbytes_(Cnn, byte*) : lit_(Cnn)                 hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_cbytes)
+def $invibits_(0, eps) = 0
+def $invibits_(N, d d'*) = $(2^(N-1) * d + $invibits_($(N-1), d'*))  -- if |d'*| = $(N-1)
+;; FIXME(zilinc): The key 'N' is not in the map. e.g. i64.wast
+;; def $invibits_(N, d d'^(N-1)) = $(2^(N-1) * d + $invibits_($(N-1), d'^(N-1)))
 
 
 def $invibytes_(N, b) = b  -- if N = 8 ;; || N = 32
@@ -83,6 +84,7 @@ def $invibytes_(N, b_0 b*) = $($invibytes_($(N-8), b*) * 2^8 + b_0)
 
 ;; def $invibytes_(N, b*) = n  -- if $ibytes_(N, n) = b*
 ;; def $invfbytes_(N, b*) = p  -- if $fbytes_(N, p) = b*
+
 
 
 ;; Signed numbers
