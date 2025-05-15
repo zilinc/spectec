@@ -59,7 +59,7 @@ def $invcbytes_(Cnn, byte*) : lit_(Cnn)                 hint(show $bytes_(%)^(-1
 ;;                       -- if l = |d*|
 ;; FIXME(zilinc): if inline |d*|, interpreter backend runs into infinite loop.
 
-def $littleendian(bit*) : byte*
+def $littleendian(bit*) : byte*                      hint(partial)
 def $littleendian(eps) = eps
 def $littleendian(d^8 d'*) = $littleendian(d'*) $invibits_(8, d^8)
 
@@ -89,11 +89,11 @@ def $invibytes_(N, b_0 b*) = $($invibytes_($(N-8), b*) * 2^8 + b_0)
 
 ;; Signed numbers
 
-def $signed_(N, nat) : int       hint(inverse $invsigned_)
-def $signed_(N, i) = i           -- if $(i < 2^(N-1))
-def $signed_(N, i) = $(i - 2^N)  -- if $(2^(N-1) <= i < 2^N)
+def $signed_(N, nat) : int          hint(partial) hint(inverse $invsigned_)
+def $signed_(N, i) = i              -- if $(i < 2^(N-1))
+def $signed_(N, i) = $(i - 2^N)     -- if $(2^(N-1) <= i < 2^N)
 
-def $invsigned_(N, int) : nat       hint(show $signed_(%)^(-1)#((%)))
+def $invsigned_(N, int) : nat       hint(partial) hint(show $signed_(%)^(-1)#((%)))
 def $invsigned_(N, i) = i           -- if $(0 <= i < 2^(N-1))
 def $invsigned_(N, i) = $(i + 2^N)  -- if $(-2^(N-1) <= i < 0)
 

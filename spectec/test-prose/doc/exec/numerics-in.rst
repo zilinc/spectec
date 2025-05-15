@@ -23,6 +23,10 @@ $${definition: bitsor_}
 
 .. _def_bitsxor_:
 
+$${definition-prose: bitsxor_}
+
+\
+
 $${definition: bitsxor_}
 
 .. _def_bitsnot_:
@@ -155,17 +159,6 @@ $${definition-prose: invsigned_}
 
 $${definition: invsigned_}
 
-
-Conversion
-~~~~~~~~~~
-
-.. _def-int:
-
-$${definition-prose: int}
-
-\
-
-$${definition: int}
 
 
 Integer Operations
