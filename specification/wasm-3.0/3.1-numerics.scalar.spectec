@@ -18,7 +18,7 @@ def $xor(bl_1, bl_2) = $(bl_1 =/= bl_2)
 def $s33_to_u32(s33) : u32  hint(show %)
 
 ;; This is the `trunc` function as documented in the spec.
-def $int(rat) : int                 hint(builtin $rat_to_int) hint(show $trunc(%))
+def $int(rat) : int                 hint(builtin "rat_to_int") hint(show $trunc(%))
 ;; def $int(q) = n                     -- if n <- nat /\ $(q - 1) < n <= q
 
 
@@ -46,11 +46,11 @@ def $cbytes_(Cnn, lit_(Cnn)) : byte*                 hint(builtin) hint(show $by
 
 def $invibits_(N, bit*) : iN(N)                         hint(partial) hint(show $ibits_(%)^(-1)#((%)))
 def $invibytes_(N, byte*) : iN(N)                       hint(show $bytes_($IN(%))^(-1)#((%)))
-def $invfbytes_(N, byte*) : fN(N)                       hint(show $bytes_($FN(%))^(-1)#((%))) hint(builtin $inverse_of_fbytes)
-def $invnbytes_(numtype, byte*) : num_(numtype)         hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_nbytes)
-def $invvbytes_(vectype, byte*) : vec_(vectype)         hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_vbytes)
-def $invzbytes_(storagetype, byte*) : lit_(storagetype) hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_zbytes)
-def $invcbytes_(Cnn, byte*) : lit_(Cnn)                 hint(show $bytes_(%)^(-1)#((%)))      hint(builtin $inverse_of_cbytes)
+def $invfbytes_(N, byte*) : fN(N)                       hint(show $bytes_($FN(%))^(-1)#((%))) hint(builtin "inverse_of_fbytes")
+def $invnbytes_(numtype, byte*) : num_(numtype)         hint(show $bytes_(%)^(-1)#((%)))      hint(builtin "inverse_of_nbytes")
+def $invvbytes_(vectype, byte*) : vec_(vectype)         hint(show $bytes_(%)^(-1)#((%)))      hint(builtin "inverse_of_vbytes")
+def $invzbytes_(storagetype, byte*) : lit_(storagetype) hint(show $bytes_(%)^(-1)#((%)))      hint(builtin "inverse_of_zbytes")
+def $invcbytes_(Cnn, byte*) : lit_(Cnn)                 hint(show $bytes_(%)^(-1)#((%)))      hint(builtin "inverse_of_cbytes")
 
 
 ;; def $littleendian(bit*) : byte*

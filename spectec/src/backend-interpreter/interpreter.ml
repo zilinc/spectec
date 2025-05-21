@@ -807,11 +807,8 @@ and call_func (name: string) (args: value list) : value option =
   let name' = match opt_builtin with
               | Some builtin ->
                 (match builtin.it with
-                | SeqE [] -> name                 (* hint(builtin) *)
-                  (* TODO(zilinc): We can in fact extend the hint to support more
-                     complicated aliasing. e.g. $f(t1, t2) : t3 hint(builtin $g(%2)).
-                  *)
-                | CallE (fname, _) -> fname.it    (* hint(builtin $g) *)
+                | SeqE [] -> name         (* hint(builtin) *)
+                | TextE fname -> fname    (* hint(builtin "g") *)
                 | _ -> failwith (sprintf "ill-formed builtin hint for definition `%s`" name))
               | None -> name
   in

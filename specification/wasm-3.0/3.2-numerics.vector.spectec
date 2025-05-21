@@ -10,7 +10,7 @@
 def $lanes_(shape, vec_(V128)) : lane_($lanetype(shape))*    hint(inverse $invlanes_) hint(builtin)
 
 def $invlanes_(shape, lane_($lanetype(shape))*) : vec_(V128)
-    hint(show $lanes_(%)^(-1)#((%))) hint(builtin $inverse_of_lanes)
+    hint(show $lanes_(%)^(-1)#((%))) hint(builtin "inverse_of_lanes")
 ;; def $invlanes_(sh, c*) = vc  -- if c* = $lanes_(sh, vc)
 
 def $zeroop(shape_1, shape_2, vcvtop__(shape_1, shape_2)) : zero?
