@@ -1,6 +1,6 @@
 (library
   (name middlend)
-  (libraries util il)
+  (libraries util il backend_ast)
   (modules
     sub
     totalize

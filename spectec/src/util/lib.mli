@@ -15,6 +15,19 @@ sig
   val flatten_opt : 'a option list -> 'a list option
   val fold_lefti : (int -> 'acc -> 'a -> 'acc) -> 'acc -> 'a list -> 'acc
   val group_by : ('a -> 'a -> bool) -> 'a list -> 'a list list
+  (*
+  `combination xss`: Construct all the combinations of picking one element from each
+  element in `xss`.
+  Example:
+    input : [["p11"; "p12"]; ["p21"; "p22"; "p23"]; ["p31"]]
+    output: [["p11"; "p21"; "p31"]; ["p12"; "p21"; "p31"]; ["p11"; "p22"; "p31"];
+             ["p12"; "p22"; "p31"]; ["p11"; "p23"; "p31"]; ["p12"; "p23"; "p31"]]
+  *)
+  val combinations : 'a list list -> 'a list list
+  val find_indices : ('a -> bool) -> 'a list -> int list
+  val fold_left1 : ('a -> 'a -> 'a) -> 'a list -> 'a
+  val assoc_with : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
+  val assoc_with_opt : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
 end
 
 module Char :
@@ -30,4 +43,51 @@ sig
   val implode : char list -> string
   val explode : string -> char list
   val replace : string -> string -> string -> string
+end
+
+module Fun :
+sig
+  val curry : (('a * 'b) -> 'c) -> 'a -> 'b -> 'c
+  val uncurry :  ('a -> 'b -> 'c) -> ('a * 'b) -> 'c
+  val both : ('a -> 'b) -> ('a * 'a) -> ('b * 'b)
+  val (>>>) : ('a -> 'b) -> ('b -> 'c) -> ('a -> 'c)
+end
+
+module Option:
+sig
+  val mplus : 'a option -> 'a option -> 'a option
+  val mconcat : 'a option list -> 'a option
+end
+
+module type Monad =
+sig
+  type 'a m
+  val return : 'a -> 'a m
+  val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
+  val ( let* ) : 'a m -> ('a -> 'b m) -> 'b m
+  val ( >=> ) : ('a -> 'b m) -> ('b -> 'c m) -> 'a -> 'c m
+  val ( >> ) : 'a m -> 'b m -> 'b m
+  val mapM : ('a -> 'b m) -> 'a list -> 'b list m
+  val forM : 'a list -> ('a -> 'b m) -> 'b list m
+  val foldlM : ('b -> 'a -> 'b m) -> 'b -> 'a list -> 'b m
+  val foldlM1 : ('a -> 'a -> 'a m) -> 'a list -> 'a m
+end
+
+module type MonadState =
+sig
+  include Monad
+  type s
+  val get : unit -> s m
+  val put : s -> unit m
+  val update : (s -> s) -> unit m
+  val update_get_old : (s -> s) -> s m
+  val update_get_new : (s -> s) -> s m
+  val state : (s -> ('a * s)) -> 'a m
+  val run_state : 'a m -> s -> ('a * s)
+end
+
+module type MonadTrans = functor (M : Monad) ->
+sig
+  include Monad
+  val lift : 'a M.m -> 'a m
 end

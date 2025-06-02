@@ -44,6 +44,7 @@ type 'a phrase = ('a, unit) note_phrase
 let ($) it at = {it; at; note = ()}
 let ($$) it (at, note) = {it; at; note}
 let (%) at note = (at, note)
+let ($>) it e = {e with it}
 
 let it {it; _} = it
 let at {at; _} = at

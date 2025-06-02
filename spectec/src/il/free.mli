@@ -29,7 +29,16 @@ val free_prod : prod -> sets
 val free_deftyp : deftyp -> sets
 val free_param : param -> sets
 
+val bound_iter : iter -> sets
+
+val free_bind : bind -> sets
+val free_binds : bind list -> sets
+
 val bound_typbind : exp * typ -> sets
 val bound_bind : bind -> sets
+val bound_binds : bind list -> sets
 val bound_param : param -> sets
 val bound_def : def -> sets
+
+val string_of_sets : sets -> string
+val string_of_varset : Set.t -> string

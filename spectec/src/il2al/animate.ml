@@ -5,6 +5,7 @@ This transformation
 by performing dataflow analysis.
 *)
 
+open Def
 open Util
 open Source
 open Il.Ast
@@ -200,7 +201,7 @@ let covers (_, _, coverings) col = List.exists ((=) col) coverings
 let disjoint_row (_, _, coverings1) (_, _, coverings2) = List.for_all (fun c -> List.for_all ((<>) c) coverings1) coverings2
 
 (* Saves best attempt of knuth, to recover from knuth failure.
- * Can be removed when knuth is guaranteeded to be succeed. *)
+ * Can be removed when knuth is guaranteed to be succeed. *)
 let best = ref (0, [])
 
 let rec knuth rows cols selected_rows = match cols with
@@ -281,23 +282,24 @@ let rows_of_eq vars len i l r at =
 let rec rows_of_prem vars len i p =
   match p.it with
   | IfPr e ->
-    (match e.it with
+    let eq_rows = begin
+      match e.it with
       | CmpE (`EqOp, _, l, r) ->
-        [ Condition, p, [i] ]
-        @ rows_of_eq vars len i l r p.at
-        @ rows_of_eq vars len i r l p.at
+        rows_of_eq vars len i l r p.at @
+        rows_of_eq vars len i r l p.at
       | MemE (l, r) ->
-        [ Condition, p, [i] ]
-        @ rows_of_eq vars len i l { r with it = TheE r } p.at
-      | _ -> [ Condition, p, [i] ]
-    )
+        rows_of_eq vars len i l { r with it = TheE r } p.at
+      | _ -> []
+      end
+    in
+    [ Condition, p, [i] ] @ eq_rows
   | LetPr (_, _, targets) ->
     let covering_vars = List.filter_map (index_of len vars) targets in
     [ Assign targets, p, [i] @ covering_vars ]
   | RulePr (_, _, { it = TupE args; _ }) ->
-    (* Assumpton: the only possible assigned-value is the last arg (i.e. ... |- lhs ) *)
+    (* Assumption: the only possible assigned-value is the last arg (i.e. ... |- lhs ) *)
     let _, l = Util.Lib.List.split_last args in
-    let frees = (free_exp_list l) in
+    let frees = free_exp_list l in
     [
       Condition, p, [i];
       Assign frees, p, [i] @ List.filter_map (index_of len vars) (free_exp_list l)
@@ -330,15 +332,15 @@ let animate_prems known_vars prems =
   best := (List.length cols + 1, []);
   let (candidates, k_fail) =
     match knuth rows cols [] with
-    | [] -> [ snd !best ], true
-    | xs -> List.map List.rev xs, false
+    | [] -> [ snd !best ], false
+    | xs -> List.map List.rev xs, true
   in
 
   (* 2. Reorder *)
   let best' = ref (-1, []) in
   match List.find_map (fun cand -> select_pops cand other known_vars best') candidates with
   | None ->
-    if (not k_fail) then
+    if k_fail then
       let unhandled_prems = Lib.List.drop (fst !best') (snd !best') in
       Error.error (over_region (List.map at unhandled_prems)) "prose translation" "There might be a cyclic binding"
     else
@@ -346,34 +348,27 @@ let animate_prems known_vars prems =
   | Some x -> x
 
 (* Animate rule *)
-let animate_rule r = match r.it with
-  | RuleD(id, _ , _, _, _) when id.it = "pure" || id.it = "read" -> r (* TODO: remove this line *)
-  | RuleD(id, binds, mixop, args, prems) -> (
-    match (mixop, args.it) with
-    (* lhs ~> rhs *)
-    | ([ [] ; [{it = SqArrow; _}] ; []] , TupE ([_lhs; _rhs])) ->
-      let new_prems = animate_prems {empty with varid = Set.of_list Encode.input_vars} prems in
-      RuleD(id, binds, mixop, args, new_prems) $ r.at
-    | _ -> r
-  )
+let animate_rule (lhs, rhs, prems) : rule_clause =
+  let prems' = animate_prems {empty with varid = Set.of_list Encode.input_vars} prems in
+  (lhs, rhs, prems')
 
 (* Animate clause *)
-let animate_clause c = match c.it with
-  | DefD (binds, args, e, prems) ->
-    let new_prems = animate_prems (free_list (free_arg false) args) prems in
-    DefD (binds, args, e, new_prems) $ c.at
+let animate_clause c =
+  let DefD (binds, args, e, prems) = c.it in
+  let prems' = animate_prems (free_list (free_arg false) args) prems in
+  DefD (binds, args, e, prems') $ c.at
 
 (* Animate defs *)
-let rec animate_def d = match d.it with
-  | RelD (id, mixop, t, rules) ->
-    let rules' = List.map animate_rule rules in
-    RelD (id, mixop, t, rules') $ d.at
-  | DecD (id, t1, t2, clauses) ->
-    let new_clauses = List.map animate_clause clauses in
-    DecD (id, t1, t2, new_clauses) $ d.at
-  | RecD ds -> RecD (List.map animate_def ds) $ d.at
-  | TypD _ | GramD _ | HintD _ -> d
+let animate_def = function
+| RuleDef rdef ->
+  let (rel_id, rule_name, rules)  = rdef.it in
+  let rules' = List.map animate_rule rules in
+  RuleDef ((rel_id, rule_name, rules') $ rdef.at)
+| HelperDef hdef ->
+  let (id, clauses, partial) = hdef.it in
+  let clauses' = List.map animate_clause clauses in
+  HelperDef ((id, clauses', partial) $ hdef.at)
 
 (* Main entry *)
-let transform (defs : script) =
+let transform (defs: dl_def list) : dl_def list =
   List.map animate_def defs

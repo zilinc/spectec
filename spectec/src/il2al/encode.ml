@@ -11,6 +11,7 @@ ex)
 
 open Util
 open Source
+open Def
 
 open Free
 open Il
@@ -45,9 +46,8 @@ let is_context e =
   is_case e &&
   match case_of_case e with
   | (atom :: _) :: _ ->
-    (match it atom with
-
-  | Atom a -> List.mem a Al.Al_util.context_names
+    (match atom.it with
+    | Atom a -> List.mem a Al.Al_util.context_names
     | _ -> false)
   | _ -> false
 
@@ -156,10 +156,13 @@ let encode_stack stack =
   | _ ->
     encode_inner_stack None stack |> snd
 
-(* Encode lhs *)
+(* Encode lhs
+    The shape of [lhs] must be either `z ; stack` or `stack`.
+ *)
 let encode_lhs lhs =
   match lhs.it with
   | CaseE ([[]; [{it = Semicolon; _}]; []], {it = TupE [z; stack]; _}) ->
+    (* assign the initial state to z *)
     let prem = LetPr (z, mk_varE "state" "stateT", free_ids z) $ z.at in
     prem :: encode_stack stack
   | _ ->
@@ -167,29 +170,21 @@ let encode_lhs lhs =
     encode_stack stack
 
 (* Encode rule *)
-let encode_rule r =
-  match r.it with
-  | RuleD(id, binds, mixop, args, prems) ->
-    match (mixop, args.it) with
-    (* lhs ~> rhs *)
-    | ([ [] ; [{it = SqArrow; _}] ; []] , TupE ([lhs; _rhs])) ->
-      let name = String.split_on_char '-' id.it |> List.hd in
-      if List.mem name ["pure"; "read"; "trap"; "ctxt"] then (* Administrative rules *)
-        r
-      else
-        let new_prems = encode_lhs lhs in
-        RuleD(id, binds, mixop, args, new_prems @ prems) $ r.at
-    | _ -> r
+let encode_rule (lhs, rhs, prems) : rule_clause =
+  (lhs, rhs, encode_lhs lhs @ prems)
 
 (* Encode defs *)
-let rec encode_def d =
-  match d.it with
-  | RelD (id, mixop, t, rules) ->
-    let rules' = List.map encode_rule rules in
-    RelD (id, mixop, t, rules') $ d.at
-  | RecD ds -> RecD (List.map encode_def ds) $ d.at
-  | DecD _ | TypD _ | GramD _ | HintD _ -> d
+let encode_def = function
+| RuleDef rdef ->
+  let (rel_id, rule_name, rules) = rdef.it in
+  let rules' =
+    if List.mem rule_name.it ["pure"; "read"; "trap"; "ctxt"] then (* Administrative rules *)
+      rules
+    else List.map encode_rule rules
+  in
+  RuleDef ((rel_id, rule_name, rules') $ rdef.at)
+| d -> d
 
 (* Main entry *)
-let transform (defs : script) =
+let transform (defs: dl_def list) : dl_def list =
   List.map encode_def defs

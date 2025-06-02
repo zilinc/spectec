@@ -1,12 +1,11 @@
-open Al
-open Ast
-open Free
-open Al_util
+open Al.Ast
+open Al.Al_util
 open Printf
 open Util
 open Source
 open Def
 open Il2al_util
+open Print
 open Xl
 
 module Il =
@@ -15,6 +14,18 @@ struct
   include Ast
   include Print
 end
+
+module Al =
+struct
+  include Al
+  include Ast
+  include Free
+  include Print
+  include Al_util
+  include Walk
+  include Valid
+end
+
 
 (* Errors *)
 
@@ -35,43 +46,25 @@ let is_store: Il.exp -> bool = check_typ_of_exp "store"
 let is_frame: Il.exp -> bool = check_typ_of_exp "frame"
 let is_config: Il.exp -> bool = check_typ_of_exp "config"
 
-let field t = Il.VarE ("_" $ Source.no_region) $$ Source.no_region % t, t
-let typ_store = Il.VarT ("store" $ Source.no_region, []) $ Source.no_region
-let typ_frame = Il.VarT ("frame" $ Source.no_region, []) $ Source.no_region
-let typ_state = Il.VarT ("state" $ Source.no_region, []) $ Source.no_region
-let typ_state_arg = Il.TupT [field typ_store; field typ_frame] $ Source.no_region
-
 let split_config (exp: Il.exp): Il.exp * Il.exp =
   assert(is_config exp);
   match exp.it with
   | Il.CaseE ([[]; [{it = Atom.Semicolon; _}]; []], {it = TupE [ e1; e2 ]; _})
   when is_state e1 -> e1, e2
-  | Il.CaseE ([[]; [{it = Atom.Semicolon; _}]; []], {it = TupE [ e1; e2 ]; _})
-  when is_frame e1 ->
-    let store = Il.StrE [] $$ e1.at % typ_store in
-    let state = Il.CaseE ([[]; [Atom.Semicolon $$ e1.at % Atom.info ""]; []], Il.TupE [ store; e1 ] $$ e1.at % typ_state_arg) $$ e1.at % typ_state in
-    state, e2
-  | Il.CaseE ([[]; [{it = Atom.Semicolon; _}]; []], {it = TupE [ e1; e2 ]; _})
-  when is_store e1 ->
-    let frame = Il.StrE [] $$ e1.at % typ_frame in
-    let state = Il.CaseE ([[]; [Atom.Semicolon $$ e1.at % Atom.info ""]; []], Il.TupE [ e1; frame ] $$ e1.at % typ_state_arg) $$ e1.at % typ_state in
-    state, e2
-  | _ -> error exp.at
-    (sprintf "can not recognize `%s` as a `config` expression" (Il.Print.string_of_exp exp))
+  | _ -> assert(false)
 
 let split_state (exp: Il.exp): Il.exp * Il.exp =
   assert(is_state exp);
   match exp.it with
   | Il.CaseE ([[]; [{it = Atom.Semicolon; _}]; []], {it = TupE [ e1; e2 ]; _})
   when is_store e1 && is_frame e2 -> e1, e2
-  | _ -> error exp.at
-    (sprintf "can not recognize `%s` as a `state` expression" (Il.Print.string_of_exp exp))
+  | _ -> assert(false)
 
 let args_of_call e =
   match e.it with
   | CallE (_, args) -> args
   | _ -> error e.at
-    (sprintf "cannot get arguments of call expression `%s`" (Print.string_of_expr e))
+    (sprintf "cannot get arguments of call expression `%s`" (Al.string_of_expr e))
 
 let expr2arg e = ExpA e $ e.at
 let arg2expr a =
@@ -110,8 +103,8 @@ let args_of_clause clause =
 
 let contains_ids ids expr =
   ids
-  |> IdSet.of_list
-  |> IdSet.disjoint (free_expr expr)
+  |> Al.IdSet.of_list
+  |> Al.IdSet.disjoint (Al.free_expr expr)
   |> not
 
 (* Insert `target` at the innermost if instruction *)
@@ -160,10 +153,10 @@ let rec is_wasm_value e =
       "REF.NULL"
     ] -> true
   | Il.CallE (id, _) when id.it = "const" -> true
-  | _ -> Valid.sub_typ e.note valT
+  | _ -> Al.sub_typ e.note valT
 let is_wasm_instr e =
   (* TODO: use hint? *)
-  Valid.sub_typ e.note instrT || Valid.sub_typ e.note admininstrT
+  Al.sub_typ e.note instrT || Al.sub_typ e.note admininstrT
 
 (** Translation *)
 
@@ -389,38 +382,6 @@ let insert_pop e e_n =
   in
   post_process_of_pop pop
 
-let translate_as_side_effect exp =
-  let at = exp.at in
-  match exp.it with
-  | Il.CallE (f, ae) -> [performI (f.it, translate_args ae) ~at]
-  | Il.UpdE (e1, p, e2) ->
-    let base = translate_exp e1 in
-    let path = translate_path p in
-    let v = translate_exp e2 in
-    let note = exp.note in
-
-    let hs, t = Lib.List.split_last path in
-    let access = { (mk_access hs base) with note } in
-    [ replaceI (access, t, v) ~at ]
-  | Il.ExtE (e1, p, e2) ->
-    let base = translate_exp e1 in
-    let path = translate_path p in
-    let v = translate_exp e2 in
-    let note = exp.note in
-
-    let access = { (mk_access path base) with note } in
-    [ appendI (access, v) ~at ]
-  | _ -> []
-
-let translate_state state =
-  match state.it with
-  | Il.CaseE _ ->
-    let frame, store = split_state state in
-    translate_as_side_effect frame @ translate_as_side_effect store
-  | _ ->
-    translate_as_side_effect state
-
-
 let rec translate_rhs exp =
   let at = exp.at in
   match exp.it with
@@ -430,15 +391,17 @@ let rec translate_rhs exp =
   | _ when is_context exp -> translate_context_rhs exp
   (* Config *)
   | _ when is_config exp ->
-    let state, stack = split_config exp in
-    let is1 = translate_state state in
-    let is2 = translate_rhs stack in
-    (
-      match Lib.List.last_opt is2 with
+    let state, rhs = split_config exp in
+    (match state.it with
+    | Il.CallE (f, ae) ->
+      let perform_instr       = performI (f.it, translate_args ae) ~at:state.at in
+      let push_or_exec_instrs = translate_rhs rhs in
+      (match Lib.List.last_opt push_or_exec_instrs with
       | Some { it = ExecuteI _; _ } ->
-        is1 @ is2
+        [ perform_instr ] @ push_or_exec_instrs
       | _ -> (* HARDCODE: TABLE.GROW *)
-        is2 @ is1
+        push_or_exec_instrs @ [ perform_instr ])
+    | _ -> translate_rhs rhs
     )
   (* Recursive case *)
   | Il.LiftE inner_exp -> translate_rhs inner_exp
@@ -465,9 +428,9 @@ let rec translate_rhs exp =
       | ExecuteI e ->
         let res = walk_expr walker e in
         if res = e then [ instr ] else [ executeSeqI res ]
-      | _ -> Walk.base_walker.walk_instr walker instr
+      | _ -> Al.base_walker.walk_instr walker instr
     in
-    let walker = { Walk.base_walker with walk_instr; walk_expr } in
+    let walker = { Al.base_walker with walk_instr; walk_expr } in
 
     let instrs = translate_rhs inner_exp in
     List.concat_map (walker.walk_instr walker) instrs
@@ -514,7 +477,7 @@ let init_lhs_id () = lhs_id_ref := 0
 let get_lhs_var_expr e =
   let lhs_id = !lhs_id_ref in
   lhs_id_ref := (lhs_id + 1);
-  let exp = Il2al_util.typ_to_var_exp e.note ~suffix:("_" ^ string_of_int lhs_id) in
+  let exp = Il2al_util.typ_to_var_exp e.note ~post_fix:("_" ^ string_of_int lhs_id) in
   { (translate_exp exp) with at = e.at; note = e.note}
 
 
@@ -534,8 +497,8 @@ let extract_non_names =
 
 let contains_diff target_ns e =
   (* e contains free variables, one of which is not contained in target names (target_ns) *)
-  let free_ns = free_expr e in
-  not (IdSet.is_empty free_ns) && IdSet.disjoint free_ns target_ns
+  let free_ns = Al.free_expr e in
+  not (Al.IdSet.is_empty free_ns) && Al.IdSet.disjoint free_ns target_ns
 
 let is_iter e =
   match e.it with
@@ -547,7 +510,7 @@ let handle_partial_bindings lhs rhs ids =
   | CallE (_, _) -> lhs, rhs, []
   | _ ->
     let conds = ref [] in
-    let target_ns = IdSet.of_list ids in
+    let target_ns = Al.IdSet.of_list ids in
     let pre_expr = (fun e ->
       if not (contains_diff target_ns e) then
         e
@@ -569,7 +532,7 @@ let handle_partial_bindings lhs rhs ids =
 let rec translate_bindings ids bindings =
   List.fold_right (fun (l, r) cont ->
     match l with
-    | _ when IdSet.is_empty (free_expr l) ->
+    | _ when Al.IdSet.is_empty (Al.free_expr l) ->
       [ ifI (BinE (`EqOp, r, l) $$ no_region % boolT, [], []) ]
     | _ -> insert_instrs cont (handle_special_lhs l r ids)
   ) bindings []
@@ -645,7 +608,7 @@ and call_lhs_to_inverse_call_rhs lhs rhs free_ids =
   (* No argument is free *)
 
   else
-    Print.string_of_expr lhs
+    Al.string_of_expr lhs
     |> sprintf "lhs expression %s doesn't contain free variable"
     |> error lhs.at
 
@@ -654,7 +617,7 @@ and handle_call_lhs lhs rhs free_ids =
 
   (* Helper function *)
 
-  let matches typ1 typ2 = Valid.sub_typ typ1 typ2 || Valid.sub_typ typ2 typ1 in
+  let matches typ1 typ2 = Al.sub_typ typ1 typ2 || Al.sub_typ typ2 typ1 in
 
   (* LHS type and RHS type are the same: normal inverse function *)
 
@@ -685,7 +648,7 @@ and handle_call_lhs lhs rhs free_ids =
       | VarE x -> x
       | IterE (e', (iter, _)) ->
         let x = name_of_var_expr e' in
-        x ^ Print.string_of_iter iter
+        x ^ Al.string_of_iter iter
       | _ -> assert false
     in
     let to_iter_expr e =
@@ -724,7 +687,7 @@ and handle_iter_lhs lhs rhs free_ids =
 
   (* Helper functions *)
 
-  let walk_expr (_walker: Walk.walker) (expr: expr): expr =
+  let walk_expr (_walker: Al.walker) (expr: expr): expr =
     if contains_ids iter_ids expr then
       let iter', typ =
         match iter with
@@ -757,7 +720,7 @@ and handle_iter_lhs lhs rhs free_ids =
 
   (* Iter injection *)
 
-  let walker = { Walk.base_walker with walk_expr } in
+  let walker = { Al.base_walker with walk_expr } in
   List.concat_map (walker.walk_instr walker) instrs
 
 and handle_special_lhs lhs rhs free_ids =
@@ -936,7 +899,7 @@ let rec translate_iterpr pr (iter, xes) =
 
   let inject_iter expr iter xes =
     let ty = handle_iter_ty expr.note in
-    let xes' = List.filter (fun (x, _) -> IdSet.mem x.it (free_expr expr)) xes in
+    let xes' = List.filter (fun (x, _) -> Al.IdSet.mem x.it (Al.free_expr expr)) xes in
     if xes' = [] then expr
     else iterE (expr, (iter, translate_xes xes')) ~at:expr.at ~note:ty
   in
@@ -1016,7 +979,7 @@ let translate_helper helper =
     let expr1 = Transpile.remove_sub expr in
     Al.Walk.base_walker.walk_expr walker expr1
   in
-  let walker = { Walk.base_walker with
+  let walker = { Al.base_walker with
     walk_expr = walk_expr;
   }
   in
@@ -1055,7 +1018,7 @@ let to_frame_instr r =
 
 
 let extract_winstr r at =
-  let _id, _l, _r, prems = r in
+  let _l, _, prems = r in
   match List.find_opt is_winstr_prem prems with
   | Some p -> lhs_of_prem p (* TODO: Collect helper functions into one place *)
   | None -> error at "Failed to extract the target wasm instruction"
@@ -1067,7 +1030,7 @@ let exit_context context_opt instrs =
 
 (* `reduction` -> `instr list` *)
 let translate_reduction ?(context_opt=None) reduction =
-  let _, _, rhs, prems = reduction in
+  let _, rhs, prems = reduction in
 
   (* Translate rhs *)
   translate_rhs rhs
@@ -1220,7 +1183,7 @@ and translate_rgroup (rule: rule_def) =
     let expr1 = Transpile.remove_sub expr in
     Al.Walk.base_walker.walk_expr walker expr1
   in
-  let walker = { Walk.base_walker with
+  let walker = { Al.base_walker with
     walk_expr = walk_expr;
   }
   in
@@ -1237,11 +1200,21 @@ and translate_rgroup (rule: rule_def) =
 
   RuleA (name, anchor, al_params', body) $ rule.at
 
+
+let translate_def = function
+| RuleDef rdef -> translate_rgroup rdef
+| HelperDef hdef -> translate_helper hdef
+
+
 (* Entry *)
+let translate_dl il print_dl =
+  let dl = Preprocess.animation il in
+  if print_dl then
+    print_endline (List.map string_of_dl_def dl |> String.concat "\n")
+
 let translate il interp =
   Transpile.for_interp := interp;
-  let rules, helpers = Preprocess.preprocess il in
-  let al =
-    List.map translate_rgroup rules @ List.map translate_helper helpers
-  in
+  let dl = Preprocess.preprocess il in
+  let al = List.map translate_def dl in
   Postprocess.postprocess al
+
