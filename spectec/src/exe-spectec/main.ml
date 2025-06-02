@@ -13,6 +13,7 @@ type target =
  | Prose of bool
  | Splice of Backend_splice.Config.t
  | Interpreter of string list
+ | RunThrough
 
 type pass =
   | Sub
@@ -53,6 +54,7 @@ let print_el = ref false
 let print_elab_il = ref false
 let print_final_il = ref false
 let print_all_il = ref false
+let print_dl = ref false
 let print_al = ref false
 let print_al_o = ref ""
 let print_no_pos = ref false
@@ -129,6 +131,7 @@ let argspec = Arg.align (
     " Warn about unused or multiply used prose splices";
 
   "--check", Arg.Unit (fun () -> target := Check), " Check only (default)";
+  "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
   "--ast", Arg.Unit (fun () -> target := Ast), " Generate AST";
   "--latex", Arg.Unit (fun () -> target := Latex), " Generate Latex";
   "--splice-latex", Arg.Unit (fun () -> target := Splice Backend_splice.Config.latex),
@@ -150,6 +153,7 @@ let argspec = Arg.align (
   "--print-il", Arg.Set print_elab_il, " Print IL (after elaboration)";
   "--print-final-il", Arg.Set print_final_il, " Print final IL";
   "--print-all-il", Arg.Set print_all_il, " Print IL after each step";
+  "--print-dl", Arg.Set print_dl, " Print dl";
   "--print-al", Arg.Set print_al, " Print al";
   "--print-al-o", Arg.Set_string print_al_o, " Print al with given name";
   "--print-no-pos", Arg.Set print_no_pos, " Suppress position info in output";
@@ -208,6 +212,9 @@ let () =
 
     if !print_final_il && not !print_all_il then print_il il;
 
+    let _dl = Il2al.Translate.translate_dl il !print_dl in
+    let _ = exit 0 in
+
     let al =
       if not !print_al && !print_al_o = "" && (!target = Check || !target = Ast || !target = Latex) then []
       else (
@@ -241,7 +248,7 @@ let () =
     *)
 
     (match !target with
-    | Check -> ()
+    | Check | RunThrough -> ()
 
     | Ast ->
       log "AST Generation...";

@@ -71,6 +71,32 @@ struct
     in
     aux [] xs
 
+  let rec combinations xss =
+    let (let*) ma f = List.concat_map f ma in
+    let return x = [x] in
+    match xss with
+    | [] -> return []
+    | xs :: xss' ->
+        let* x = xs in
+        let* rest = combinations xss' in
+        return (x :: rest)
+
+  let find_indices p xs : int list =
+    let indices = ref [] in
+    List.iteri (fun i x -> if p x then indices := i :: !indices else ()) xs;
+    List.rev !indices
+
+  let fold_left1 f = function
+    | []    -> assert false
+    | x::xs -> List.fold_left f x xs
+
+  let rec assoc_with f y = function
+    | []    -> raise Not_found
+    | (k,v)::xs -> if f k y then v else assoc_with f y xs
+
+  let assoc_with_opt f y xs = match assoc_with f y xs with
+    | exception Not_found -> None
+    | v -> Some v
 end
 
 module Char =
@@ -97,4 +123,54 @@ struct
 
   let replace pattern replacement s =
     Str.global_replace (Str.regexp_string pattern) replacement s
+end
+
+module Fun =
+struct
+  let curry f a b = f (a, b)
+  let uncurry f (a, b) = f a b
+  let both f (a1, a2) = (f a1, f a2)
+  let (>>>) f g = fun x -> x |> f |> g
+end
+
+module Option =
+struct
+  let mplus oa ob = match oa, ob with
+  | Some a, _      -> Some a
+  | None  , None   -> None
+  | None  , Some b -> Some b
+  let mconcat oxs = List.fold_left mplus None oxs
+end
+
+module type Monad =
+sig
+  type 'a m
+  val return : 'a -> 'a m
+  val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
+  val ( let* ) : 'a m -> ('a -> 'b m) -> 'b m
+  val ( >=> ) : ('a -> 'b m) -> ('b -> 'c m) -> 'a -> 'c m
+  val ( >> ) : 'a m -> 'b m -> 'b m
+  val mapM : ('a -> 'b m) -> 'a list -> 'b list m
+  val forM : 'a list -> ('a -> 'b m) -> 'b list m
+  val foldlM : ('b -> 'a -> 'b m) -> 'b -> 'a list -> 'b m
+  val foldlM1 : ('a -> 'a -> 'a m) -> 'a list -> 'a m
+end
+
+module type MonadState =
+sig
+  include Monad
+  type s
+  val get : unit -> s m
+  val put : s -> unit m
+  val update : (s -> s) -> unit m
+  val update_get_old : (s -> s) -> s m
+  val update_get_new : (s -> s) -> s m
+  val state : (s -> ('a * s)) -> 'a m
+  val run_state : 'a m -> s -> ('a * s)
+end
+
+module type MonadTrans = functor (M : Monad) ->
+sig
+  include Monad
+  val lift : 'a M.m -> 'a m
 end

@@ -500,12 +500,6 @@ let unify_helper_def env hd =
   match hd.it with
   | (id, clauses, partial) -> (id, unify_defs env clauses, partial) $ hd.at
 
-let extract_helpers partial_funcs def =
-  match def.it with
-  | DecD (id, _, _, clauses) when List.length clauses > 0 ->
-    let partial = if List.mem id partial_funcs then Partial else Total in
-    Some ((id, clauses, partial) $ def.at)
-  | _ -> None
 
 let remove_last_phrase r =
   let (id, lhs, rhs, prems) = r in
@@ -552,26 +546,6 @@ let unify (il: script) : rule_def list * helper_def list =
     |> List.map rename_rule_def
   in
 
-  let partial_funcs =
-    let get_partial_func def =
-      let is_partial_hint hint = hint.hintid.it = "partial" in
-      match def.it with
-      | HintD { it = DecH (id, hints); _ } when List.exists is_partial_hint hints ->
-        Some (id)
-      | _ -> None
-    in
-    List.filter_map get_partial_func il
-  in
-  let helper_defs =
-    il
-    |> List.filter_map (extract_helpers partial_funcs)
-    |> List.map (
-      fun hd ->
-        let frees = (Free.free_helper_def hd).varid in
-        let env = init_env frees in
-        (env, unify_helper_def env hd)
-    )
-    |> List.map rename_helper_def
-  in
 
-  rule_defs, helper_defs
+let unify do_rules do_helpers (defs: dl_def list) : dl_def list =
+  List.map (unify_def do_rules do_helpers) defs

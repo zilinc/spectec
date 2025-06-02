@@ -271,3 +271,17 @@ let rec bound_def d =
   | GramD (id, _, _, _) -> bound_gramid id
   | RecD ds -> free_list bound_def ds
   | HintD _ -> empty
+
+
+(* Pretty-printing *)
+let string_of_varset s = String.concat ", " (Set.elements s)
+
+let string_of_sets {typid; relid; varid; defid; gramid} =
+  "{" ^
+  "\n  typid: "  ^ string_of_varset typid ^
+  "\n  relid: "  ^ string_of_varset relid ^
+  "\n  varid: "  ^ string_of_varset varid ^
+  "\n  defid: "  ^ string_of_varset defid ^
+  "\n  gramid: " ^ string_of_varset gramid ^
+  "\n}"
+

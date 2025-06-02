@@ -6,3 +6,5 @@
   )
   (files TEST.md)
 )
+
+(env (dev (flags :standard -w -33)))

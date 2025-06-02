@@ -19,7 +19,17 @@ let string_of_rule_def rd =
 let string_of_helper_def hd =
   let id, hcs, partial = hd.it in
   id.it ^
-  (concat "" (List.map (Il.Print.string_of_clause id) hcs)) ^ "\n" ^
+  (concat "\n" (List.map (Il.Print.string_of_clause id) hcs)) ^ "\n" ^
   (match partial with
   | Partial -> "partial"
   | Total -> "total")
+
+let string_of_func_def fd =
+  let id, fcs = fd.it in
+  id.it ^
+  (concat "\n" (List.map (Il.Print.string_of_clause id) fcs))
+
+let string_of_dl_def = function
+| RuleDef   rdef -> string_of_rule_def   rdef
+| HelperDef hdef -> string_of_helper_def hdef
+| FuncDef   fdef -> string_of_func_def   fdef

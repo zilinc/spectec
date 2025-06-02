@@ -17,21 +17,22 @@ let rec transform_rulepr_prem prem =
     IfPr (CallE (id, args @ [ExpA rhs $ rhs.at]) $$ at % note) $ prem.at
   | _ -> prem
 
-let transform_rulepr_rule (rule: rule) : rule =
-  let RuleD (id, binds, mixop, exp, prems) = rule.it in
-  RuleD (id, binds, mixop, exp, List.map transform_rulepr_prem prems) $ rule.at
+let transform_rulepr_rule (rule: rule_clause) : rule_clause =
+  let (lhs, rhs, prems) = rule in
+  (lhs, rhs, List.map transform_rulepr_prem prems)
 
 let transform_rulepr_clause (clause: clause) : clause =
   let DefD (binds, args, exp, prems) = clause.it in
   DefD (binds, args, exp, List.map transform_rulepr_prem prems) $ clause.at
 
-let transform_rulepr_def (def: def) : def =
-  match def.it with
-  | RelD (id, mixop, t, rules) ->
-    RelD (id, mixop, t, List.map transform_rulepr_rule rules) $ def.at
-  | DecD (id, ps, t, clauses) ->
-    DecD (id, ps, t, List.map transform_rulepr_clause clauses) $ def.at
-  | _ -> def
+let transform_rulepr_def (def: dl_def) : dl_def =
+  match def with
+  | RuleDef rdef ->
+    let (rel_id, rule_name, rules) = rdef.it in
+    RuleDef ((rel_id, rule_name, List.map transform_rulepr_rule rules) $ rdef.at)
+  | HelperDef hdef ->
+    let (id, clauses, partial) = hdef.it in
+    HelperDef ((id, List.map transform_rulepr_clause clauses, partial) $ hdef.at)
 
 let transform_rulepr = List.map transform_rulepr_def
 
@@ -51,45 +52,32 @@ let rec remove_or_prem prem =
   | _ -> [ prem ]
 
 let remove_or_rule rule =
-  match rule.it with
-  | RuleD (id, binds, mixop, args, prems) ->
-    let premss = List.map remove_or_prem prems in
-    let premss' = List.fold_right (fun ps pss ->
-      (* Duplice pss *)
-      List.concat_map (fun cur ->
-        List.map (fun p -> p :: cur) ps
-      ) pss
-    ) premss [[]] in
+  let (lhs, rhs, prems) = rule in
+  let premss = List.map remove_or_prem prems in
+  let premss' = Util.Lib.List.combinations premss in
 
-    if List.length premss' = 1 then [ rule ] else
+  if List.length premss' = 1 then [ rule ] else
 
-    List.mapi (fun i prems' ->
-      let id' = id.it ^ "-" ^ string_of_int i $ id.at in
-      RuleD (id', binds, mixop, args, prems') $ rule.at
-    ) premss'
+  List.map (fun prems' -> (lhs, rhs, prems')) premss'
 
 let remove_or_clause clause =
   match clause.it with
   | DefD (binds, args, exp, prems) ->
     let premss = List.map remove_or_prem prems in
-    let premss' = List.fold_right (fun ps pss ->
-      (* Duplice pss *)
-      List.concat_map (fun cur ->
-        List.map (fun p -> p :: cur) ps
-      ) pss
-    ) premss [[]] in
+    let premss' = Util.Lib.List.combinations premss in
 
     if List.length premss' = 1 then [ clause ] else
 
     List.map (fun prems' -> DefD (binds, args, exp, prems') $ clause.at) premss'
 
 let remove_or def =
-  match def.it with
-  | RelD (id, mixop, typ, rules) ->
-    RelD (id, mixop, typ, List.concat_map remove_or_rule rules) $ def.at
-  | DecD (id, params, typ, clauses) ->
-    DecD (id, params, typ, List.concat_map remove_or_clause clauses) $ def.at
-  | _ -> def
+  match def with
+  | RuleDef rdef ->
+    let (rel_id, rule_name, rules) = rdef.it in
+    RuleDef ((rel_id, rule_name, List.concat_map remove_or_rule rules) $ rdef.at)
+  | HelperDef hdef ->
+    let (id, clauses, partial) = hdef.it in
+    HelperDef ((id, List.concat_map remove_or_clause clauses, partial) $ hdef.at)
 
 (* HARDCODE: Remove a reduction rule for the block context, specifically, for THROW_REF *)
 let is_block_context_exp e =
@@ -110,14 +98,15 @@ let is_block_context_prem prem =
   match prem.it with
   | IfPr e -> is_block_context_exp e
   | _ -> false
-let is_block_context_rule rule =
-  match rule.it with
-  | RuleD (_, _, _, _, [prem]) -> is_block_context_prem prem
+let is_block_context_rule (_, _, prems) =
+  match prems with
+  | [prem] -> is_block_context_prem prem
   | _ -> false
 let remove_block_context def =
-  match def.it with
-  | RelD (id, mixop, typ, rules) ->
-    RelD (id, mixop, typ, Util.Lib.List.filter_not is_block_context_rule rules) $ def.at
+  match def with
+  | RuleDef rdef ->
+    let (rel_id, rule_name, rules) = rdef.it in
+    RuleDef ((rel_id, rule_name, Util.Lib.List.filter_not is_block_context_rule rules) $ rdef.at)
   | _ -> def
 
 
@@ -164,63 +153,91 @@ let rec preprocess_prem prem =
     preprocess_prem (IfPr e1 $ prem.at) @ preprocess_prem (IfPr e2 $ prem.at)
   | _ -> [ prem ]
 
-let preprocess_rule (rule: rule) : rule =
-  let RuleD (id, binds, mixop, exp, prems) = rule.it in
-  RuleD (id, binds, mixop, exp, List.concat_map preprocess_prem prems) $ rule.at
+let preprocess_rule (rule: rule_clause) : rule_clause =
+  let (lhs, rhs, prems) = rule in
+  (lhs, rhs, List.concat_map preprocess_prem prems)
 
 let preprocess_clause (clause: clause) : clause =
   let DefD (binds, args, exp, prems) = clause.it in
   DefD (binds, args, exp, List.concat_map preprocess_prem prems) $ clause.at
 
-let preprocess_def (def: def) : def =
+let preprocess_def (def: dl_def) : dl_def =
   let def' =
     def
     |> remove_or
     |> remove_block_context
   in
 
-  match def'.it with
+  match def' with
+  | RuleDef rdef ->
+    let (rel_id, rule_name, rules) = rdef.it in
+    RuleDef ((rel_id, rule_name, List.map preprocess_rule rules) $ rdef.at)
+  | HelperDef hdef ->
+    let (id, clauses, partial) = hdef.it in
+    HelperDef ((id, List.map preprocess_clause clauses, partial) $ hdef.at)
+
+let init_il_env def =
+  match def.it with
   | TypD (id, ps, insts) ->
-    Al.Valid.il_env := Env.bind_typ !Al.Valid.il_env id (ps, insts); def'
+    Al.Valid.il_env := Env.bind_typ !Al.Valid.il_env id (ps, insts)
   | RelD (id, mixop, t, rules) ->
-    Al.Valid.il_env := Env.bind_rel !Al.Valid.il_env id (mixop, t, rules);
-    RelD (id, mixop, t, List.map preprocess_rule rules) $ def.at
+    Al.Valid.il_env := Env.bind_rel !Al.Valid.il_env id (mixop, t, rules)
   | DecD (id, ps, t, clauses) ->
-    Al.Valid.il_env := Env.bind_def !Al.Valid.il_env id (ps, t, clauses);
-    DecD (id, ps, t, List.map preprocess_clause clauses) $ def.at
+    Al.Valid.il_env := Env.bind_def !Al.Valid.il_env id (ps, t, clauses)
   | GramD (id, ps, t, prods) ->
-    Al.Valid.il_env := Env.bind_gram !Al.Valid.il_env id (ps, t, prods); def'
+    Al.Valid.il_env := Env.bind_gram !Al.Valid.il_env id (ps, t, prods)
   | RecD _ -> assert (false);
-  | HintD hintdef -> hintdefs := hintdef :: !hintdefs; def'
+  | HintD hintdef -> hintdefs := hintdef :: !hintdefs
+
 
 let flatten_rec def =
   match def.it with
   | RecD defs -> defs
   | _ -> [ def ]
 
+let is_al_target def =
+  match def.it with
+  | DecD (id, _, _, _) when id.it = "utf8" -> None
+  | RelD (id, mixop, t, rules) when List.mem id.it [ "Step"; "Step_read"; "Step_pure" ] ->
+    (* HARDCODE: Exclude administrative rules *)
+    let filter_rule rule =
+      ["pure"; "read"; "trap"; "ctxt"]
+      |> List.mem (name_of_rule rule)
+      |> not
+    in
+    Some (RelD (id, mixop, t, List.filter filter_rule rules) $ def.at)
+  | RelD (id, _, _, _) when List.mem id.it [ "Eval_expr" ] ->
+    Some def
+  | RelD _ -> None
+  | _ -> Some def
 
-let preprocess (il: script) : rule_def list * helper_def list =
-
-  let is_al_target def =
-    match def.it with
-    | DecD (id, _, _, _) when id.it = "utf8" -> None
-    | RelD (id, mixop, t, rules) when List.mem id.it [ "Step"; "Step_read"; "Step_pure" ] ->
-      (* HARDCODE: Exclude administrative rules *)
-      let filter_rule rule =
-        ["pure"; "read"; "trap"; "ctxt"]
-        |> List.mem (name_of_rule rule)
-        |> not
-      in
-      Some (RelD (id, mixop, t, List.filter filter_rule rules) $ def.at)
-    | RelD _ -> None
-    | _ -> Some def
-  in
-
+let pp_to_dl (il: script) : dl_def list =
   il
   |> List.concat_map flatten_rec
   |> List.filter_map is_al_target
-  |> List.map preprocess_def
+  |> (fun defs -> let _ = List.map init_il_env defs in defs)
+  |> Il2dl.il2dl
+
+let pp_anim_helpers (dl: dl_def list) : dl_def list =
+  dl |> Animate.transform
+
+let preprocess (il: script) : dl_def list =
+  il
+  |> pp_to_dl
+  |> fun dl -> (dl, il)
+  (* Each pass is DL -> DL *)
+
+  (* Experiments(zilinc) *)
+  |> Animate_new.animate
+  (* |> Encode.transform *)
+  (* |> Animate.transform *)
+  (* |> pp_anim_helpers *)
+
+  (* The original pipeline
+  |> List.map preprocess_def  (* hacks for throw_ref rule *)
   |> Encode.transform
   |> Animate.transform
-  |> transform_rulepr
-  |> Unify.unify
+  |> transform_rulepr  (* typing premises in rules -> typing functions *)
+  |> Unify.unify true true
+  *)
+
