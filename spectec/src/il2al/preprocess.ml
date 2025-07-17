@@ -222,16 +222,29 @@ let pp_anim_helpers (dl: dl_def list) : dl_def list =
   dl |> Animate.transform
 
 let preprocess (il: script) : dl_def list =
-  il
+  (* Experiments(kash) *)
+  let dl = il 
+    |> pp_to_dl
+    |> fun dl -> (dl, il)
+    (* Experiments(zilinc) *)
+    |> Animate_new.animate
+  in 
+  Il_validator_new.validate dl; 
+  dl 
+
+  (*Zilin's code:*)
+  (*il 
   |> pp_to_dl
   |> fun dl -> (dl, il)
   (* Each pass is DL -> DL *)
 
   (* Experiments(zilinc) *)
-  |> Animate_new.animate
+  |> Animate_new.animate *)
   (* |> Encode.transform *)
   (* |> Animate.transform *)
-  (* |> pp_anim_helpers *)
+  (* |> pp_anim_helpers *) 
+
+  
 
   (* The original pipeline
   |> List.map preprocess_def  (* hacks for throw_ref rule *)
