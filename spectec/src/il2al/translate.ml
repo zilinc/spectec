@@ -1,11 +1,12 @@
-open Al.Ast
-open Al.Al_util
+open Al
+open Ast
+open Free
+open Al_util
 open Printf
 open Util
 open Source
 open Def
 open Il2al_util
-open Print
 open Xl
 
 module Il =
@@ -14,18 +15,6 @@ struct
   include Ast
   include Print
 end
-
-module Al =
-struct
-  include Al
-  include Ast
-  include Free
-  include Print
-  include Al_util
-  include Walk
-  include Valid
-end
-
 
 (* Errors *)
 
@@ -64,7 +53,7 @@ let args_of_call e =
   match e.it with
   | CallE (_, args) -> args
   | _ -> error e.at
-    (sprintf "cannot get arguments of call expression `%s`" (Al.string_of_expr e))
+    (sprintf "cannot get arguments of call expression `%s`" (Print.string_of_expr e))
 
 let expr2arg e = ExpA e $ e.at
 let arg2expr a =
@@ -103,8 +92,8 @@ let args_of_clause clause =
 
 let contains_ids ids expr =
   ids
-  |> Al.IdSet.of_list
-  |> Al.IdSet.disjoint (Al.free_expr expr)
+  |> IdSet.of_list
+  |> IdSet.disjoint (free_expr expr)
   |> not
 
 (* Insert `target` at the innermost if instruction *)
@@ -153,10 +142,10 @@ let rec is_wasm_value e =
       "REF.NULL"
     ] -> true
   | Il.CallE (id, _) when id.it = "const" -> true
-  | _ -> Al.sub_typ e.note valT
+  | _ -> Valid.sub_typ e.note valT
 let is_wasm_instr e =
   (* TODO: use hint? *)
-  Al.sub_typ e.note instrT || Al.sub_typ e.note admininstrT
+  Valid.sub_typ e.note instrT || Valid.sub_typ e.note admininstrT
 
 (** Translation *)
 
@@ -428,9 +417,9 @@ let rec translate_rhs exp =
       | ExecuteI e ->
         let res = walk_expr walker e in
         if res = e then [ instr ] else [ executeSeqI res ]
-      | _ -> Al.base_walker.walk_instr walker instr
+      | _ -> Walk.base_walker.walk_instr walker instr
     in
-    let walker = { Al.base_walker with walk_instr; walk_expr } in
+    let walker = { Walk.base_walker with walk_instr; walk_expr } in
 
     let instrs = translate_rhs inner_exp in
     List.concat_map (walker.walk_instr walker) instrs
@@ -497,8 +486,8 @@ let extract_non_names =
 
 let contains_diff target_ns e =
   (* e contains free variables, one of which is not contained in target names (target_ns) *)
-  let free_ns = Al.free_expr e in
-  not (Al.IdSet.is_empty free_ns) && Al.IdSet.disjoint free_ns target_ns
+  let free_ns = free_expr e in
+  not (IdSet.is_empty free_ns) && IdSet.disjoint free_ns target_ns
 
 let is_iter e =
   match e.it with
@@ -510,7 +499,7 @@ let handle_partial_bindings lhs rhs ids =
   | CallE (_, _) -> lhs, rhs, []
   | _ ->
     let conds = ref [] in
-    let target_ns = Al.IdSet.of_list ids in
+    let target_ns = IdSet.of_list ids in
     let pre_expr = (fun e ->
       if not (contains_diff target_ns e) then
         e
@@ -532,7 +521,7 @@ let handle_partial_bindings lhs rhs ids =
 let rec translate_bindings ids bindings =
   List.fold_right (fun (l, r) cont ->
     match l with
-    | _ when Al.IdSet.is_empty (Al.free_expr l) ->
+    | _ when IdSet.is_empty (free_expr l) ->
       [ ifI (BinE (`EqOp, r, l) $$ no_region % boolT, [], []) ]
     | _ -> insert_instrs cont (handle_special_lhs l r ids)
   ) bindings []
@@ -608,7 +597,7 @@ and call_lhs_to_inverse_call_rhs lhs rhs free_ids =
   (* No argument is free *)
 
   else
-    Al.string_of_expr lhs
+    Print.string_of_expr lhs
     |> sprintf "lhs expression %s doesn't contain free variable"
     |> error lhs.at
 
@@ -617,7 +606,7 @@ and handle_call_lhs lhs rhs free_ids =
 
   (* Helper function *)
 
-  let matches typ1 typ2 = Al.sub_typ typ1 typ2 || Al.sub_typ typ2 typ1 in
+  let matches typ1 typ2 = Valid.sub_typ typ1 typ2 || Valid.sub_typ typ2 typ1 in
 
   (* LHS type and RHS type are the same: normal inverse function *)
 
@@ -648,7 +637,7 @@ and handle_call_lhs lhs rhs free_ids =
       | VarE x -> x
       | IterE (e', (iter, _)) ->
         let x = name_of_var_expr e' in
-        x ^ Al.string_of_iter iter
+        x ^ Print.string_of_iter iter
       | _ -> assert false
     in
     let to_iter_expr e =
@@ -687,7 +676,7 @@ and handle_iter_lhs lhs rhs free_ids =
 
   (* Helper functions *)
 
-  let walk_expr (_walker: Al.walker) (expr: expr): expr =
+  let walk_expr (_walker: Walk.walker) (expr: expr): expr =
     if contains_ids iter_ids expr then
       let iter', typ =
         match iter with
@@ -720,7 +709,7 @@ and handle_iter_lhs lhs rhs free_ids =
 
   (* Iter injection *)
 
-  let walker = { Al.base_walker with walk_expr } in
+  let walker = { Walk.base_walker with walk_expr } in
   List.concat_map (walker.walk_instr walker) instrs
 
 and handle_special_lhs lhs rhs free_ids =
@@ -899,7 +888,7 @@ let rec translate_iterpr pr (iter, xes) =
 
   let inject_iter expr iter xes =
     let ty = handle_iter_ty expr.note in
-    let xes' = List.filter (fun (x, _) -> Al.IdSet.mem x.it (Al.free_expr expr)) xes in
+    let xes' = List.filter (fun (x, _) -> IdSet.mem x.it (free_expr expr)) xes in
     if xes' = [] then expr
     else iterE (expr, (iter, translate_xes xes')) ~at:expr.at ~note:ty
   in
@@ -979,7 +968,7 @@ let translate_helper helper =
     let expr1 = Transpile.remove_sub expr in
     Al.Walk.base_walker.walk_expr walker expr1
   in
-  let walker = { Al.base_walker with
+  let walker = { Walk.base_walker with
     walk_expr = walk_expr;
   }
   in
@@ -1183,7 +1172,7 @@ and translate_rgroup (rule: rule_def) =
     let expr1 = Transpile.remove_sub expr in
     Al.Walk.base_walker.walk_expr walker expr1
   in
-  let walker = { Al.base_walker with
+  let walker = { Walk.base_walker with
     walk_expr = walk_expr;
   }
   in
@@ -1201,20 +1190,11 @@ and translate_rgroup (rule: rule_def) =
   RuleA (name, anchor, al_params', body) $ rule.at
 
 
-let translate_def = function
-| RuleDef rdef -> translate_rgroup rdef
-| HelperDef hdef -> translate_helper hdef
-
-
 (* Entry *)
-let translate_dl il print_dl =
-  let dl = Preprocess.animation il in
-  if print_dl then
-    print_endline (List.map string_of_dl_def dl |> String.concat "\n")
-
 let translate il interp =
   Transpile.for_interp := interp;
-  let dl = Preprocess.preprocess il in
-  let al = List.map translate_def dl in
+  let rules, helpers = Preprocess.preprocess il in
+  let al =
+    List.map translate_rgroup rules @ List.map translate_helper helpers
+  in
   Postprocess.postprocess al
-

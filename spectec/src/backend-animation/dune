@@ -1,0 +1,12 @@
+(library
+  (name backend_animation)
+  (libraries util frontend il al backend_ast il2al str)
+  (modules
+    main
+    animate
+    il2dl
+    valid
+  )
+)
+
+(env (dev (flags :standard -w -8-26-27-32-33-34)))

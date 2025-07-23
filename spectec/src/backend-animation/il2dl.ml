@@ -1,6 +1,6 @@
 open Il.Ast
-open Def
-open Il2al_util
+open Il2al.Def
+open Il2al.Il2al_util
 open Util.Source
 
 
