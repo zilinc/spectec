@@ -1,4 +1,5 @@
 open Il.Ast
+open Il2al
 open Util.Source
 
 exception InvalidDL of string

@@ -1,6 +1,6 @@
 (library
   (name il2al)
-  (libraries util frontend il al backend_ast str)
+  (libraries util il al str)
   (modules
     animate
     unify
@@ -13,12 +13,7 @@
     il_walk
     encode
     def
-    il2dl
     il2al_util
     print
-    animate_new
-    il_validator_new
   )
 )
-
-(env (dev (flags :standard -w -8-26-27-32-33-34)))
