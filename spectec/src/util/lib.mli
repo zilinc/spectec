@@ -56,7 +56,12 @@ end
 module Option:
 sig
   val mplus : 'a option -> 'a option -> 'a option
+  (* Note that `mconcat` has different semantics to `flatten_opt`: The former biases
+     towards `Some`, whereas the latter biases towards `None`. `cat_opts_opt` is yet
+     different: it collects all the `Some`s.
+  *)
   val mconcat : 'a option list -> 'a option
+  val cat_opts_opt : 'a option list -> 'a list option
 end
 
 module type Monad =
