@@ -70,7 +70,7 @@ module State (S : S) : Lib.MonadState with type s = S.t = struct
   let state f = State f
   let run_state (State m) s = m s
   let get () = state (fun s -> (s, s))
-  let put s = state (fun _ -> ((), s)) 
+  let put s = state (fun _ -> ((), s))
   let return a = state (fun s -> (a, s))
   let ( >>= ) ma f = state (fun s -> let (a, s') = run_state ma s in
                                      run_state (f a) s')
@@ -660,7 +660,7 @@ and animate_exp_eq at lhs rhs : prem list E.m =
       (* It is possible that both e1.0 and e1 have the same type. *)
       info "proj" at ("Num type: " ^ string_of_typ t');
       animate_exp_eq at e1 (TupE [rhs] $$ rhs.at % e1.note)
-    | _ -> E.throw (string_of_error at 
+    | _ -> E.throw (string_of_error at
                      ("Can't invert ProjE.0: " ^ string_of_exp e1 ^ " of type " ^ string_of_typ t'))
     end
   (* Unary constructors. Invert. *)
@@ -1037,7 +1037,7 @@ let animate_rule_red at binds lhs rhs prems : clause' =
   DefD (binds, [ExpA lhs $ lhs.at], rhs, prems')
 
 let animate_rule at (r : rule_clause) : clause =
-  let (lhs, rhs, prems) = r in
+  let (_, lhs, rhs, prems) = r in
   let clause' = animate_rule_red at [] lhs rhs prems in  (* TODO *)
   clause' $ at
 

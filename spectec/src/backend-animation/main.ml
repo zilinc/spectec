@@ -27,7 +27,7 @@ let is_anim_target def =
 
 (* Entry *)
 let animate il print_dl =
-  let dl = il 
+  let dl = il
            |> List.concat_map flatten_rec
            |> List.filter_map is_anim_target
            |> Il2dl.il2dl

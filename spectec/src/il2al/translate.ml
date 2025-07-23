@@ -35,19 +35,37 @@ let is_store: Il.exp -> bool = check_typ_of_exp "store"
 let is_frame: Il.exp -> bool = check_typ_of_exp "frame"
 let is_config: Il.exp -> bool = check_typ_of_exp "config"
 
+let field t = Il.VarE ("_" $ Source.no_region) $$ Source.no_region % t, t
+let typ_store = Il.VarT ("store" $ Source.no_region, []) $ Source.no_region
+let typ_frame = Il.VarT ("frame" $ Source.no_region, []) $ Source.no_region
+let typ_state = Il.VarT ("state" $ Source.no_region, []) $ Source.no_region
+let typ_state_arg = Il.TupT [field typ_store; field typ_frame] $ Source.no_region
+
 let split_config (exp: Il.exp): Il.exp * Il.exp =
   assert(is_config exp);
   match exp.it with
   | Il.CaseE ([[]; [{it = Atom.Semicolon; _}]; []], {it = TupE [ e1; e2 ]; _})
   when is_state e1 -> e1, e2
-  | _ -> assert(false)
+  | Il.CaseE ([[]; [{it = Atom.Semicolon; _}]; []], {it = TupE [ e1; e2 ]; _})
+  when is_frame e1 ->
+    let store = Il.StrE [] $$ e1.at % typ_store in
+    let state = Il.CaseE ([[]; [Atom.Semicolon $$ e1.at % Atom.info ""]; []], Il.TupE [ store; e1 ] $$ e1.at % typ_state_arg) $$ e1.at % typ_state in
+    state, e2
+  | Il.CaseE ([[]; [{it = Atom.Semicolon; _}]; []], {it = TupE [ e1; e2 ]; _})
+  when is_store e1 ->
+    let frame = Il.StrE [] $$ e1.at % typ_frame in
+    let state = Il.CaseE ([[]; [Atom.Semicolon $$ e1.at % Atom.info ""]; []], Il.TupE [ e1; frame ] $$ e1.at % typ_state_arg) $$ e1.at % typ_state in
+    state, e2
+  | _ -> error exp.at
+    (sprintf "can not recognize `%s` as a `config` expression" (Il.Print.string_of_exp exp))
 
 let split_state (exp: Il.exp): Il.exp * Il.exp =
   assert(is_state exp);
   match exp.it with
   | Il.CaseE ([[]; [{it = Atom.Semicolon; _}]; []], {it = TupE [ e1; e2 ]; _})
   when is_store e1 && is_frame e2 -> e1, e2
-  | _ -> assert(false)
+  | _ -> error exp.at
+    (sprintf "can not recognize `%s` as a `state` expression" (Il.Print.string_of_exp exp))
 
 let args_of_call e =
   match e.it with
@@ -371,6 +389,38 @@ let insert_pop e e_n =
   in
   post_process_of_pop pop
 
+let translate_as_side_effect exp =
+  let at = exp.at in
+  match exp.it with
+  | Il.CallE (f, ae) -> [performI (f.it, translate_args ae) ~at]
+  | Il.UpdE (e1, p, e2) ->
+    let base = translate_exp e1 in
+    let path = translate_path p in
+    let v = translate_exp e2 in
+    let note = exp.note in
+
+    let hs, t = Lib.List.split_last path in
+    let access = { (mk_access hs base) with note } in
+    [ replaceI (access, t, v) ~at ]
+  | Il.ExtE (e1, p, e2) ->
+    let base = translate_exp e1 in
+    let path = translate_path p in
+    let v = translate_exp e2 in
+    let note = exp.note in
+
+    let access = { (mk_access path base) with note } in
+    [ appendI (access, v) ~at ]
+  | _ -> []
+
+let translate_state state =
+  match state.it with
+  | Il.CaseE _ ->
+    let frame, store = split_state state in
+    translate_as_side_effect frame @ translate_as_side_effect store
+  | _ ->
+    translate_as_side_effect state
+
+
 let rec translate_rhs exp =
   let at = exp.at in
   match exp.it with
@@ -380,17 +430,15 @@ let rec translate_rhs exp =
   | _ when is_context exp -> translate_context_rhs exp
   (* Config *)
   | _ when is_config exp ->
-    let state, rhs = split_config exp in
-    (match state.it with
-    | Il.CallE (f, ae) ->
-      let perform_instr       = performI (f.it, translate_args ae) ~at:state.at in
-      let push_or_exec_instrs = translate_rhs rhs in
-      (match Lib.List.last_opt push_or_exec_instrs with
+    let state, stack = split_config exp in
+    let is1 = translate_state state in
+    let is2 = translate_rhs stack in
+    (
+      match Lib.List.last_opt is2 with
       | Some { it = ExecuteI _; _ } ->
-        [ perform_instr ] @ push_or_exec_instrs
+        is1 @ is2
       | _ -> (* HARDCODE: TABLE.GROW *)
-        push_or_exec_instrs @ [ perform_instr ])
-    | _ -> translate_rhs rhs
+        is2 @ is1
     )
   (* Recursive case *)
   | Il.LiftE inner_exp -> translate_rhs inner_exp
@@ -466,7 +514,7 @@ let init_lhs_id () = lhs_id_ref := 0
 let get_lhs_var_expr e =
   let lhs_id = !lhs_id_ref in
   lhs_id_ref := (lhs_id + 1);
-  let exp = Il2al_util.typ_to_var_exp e.note ~post_fix:("_" ^ string_of_int lhs_id) in
+  let exp = Il2al_util.typ_to_var_exp e.note ~suffix:("_" ^ string_of_int lhs_id) in
   { (translate_exp exp) with at = e.at; note = e.note}
 
 
@@ -1007,7 +1055,7 @@ let to_frame_instr r =
 
 
 let extract_winstr r at =
-  let _l, _, prems = r in
+  let _id, _l, _r, prems = r in
   match List.find_opt is_winstr_prem prems with
   | Some p -> lhs_of_prem p (* TODO: Collect helper functions into one place *)
   | None -> error at "Failed to extract the target wasm instruction"
@@ -1019,7 +1067,7 @@ let exit_context context_opt instrs =
 
 (* `reduction` -> `instr list` *)
 let translate_reduction ?(context_opt=None) reduction =
-  let _, rhs, prems = reduction in
+  let _, _, rhs, prems = reduction in
 
   (* Translate rhs *)
   translate_rhs rhs
@@ -1188,7 +1236,6 @@ and translate_rgroup (rule: rule_def) =
   in
 
   RuleA (name, anchor, al_params', body) $ rule.at
-
 
 (* Entry *)
 let translate il interp =

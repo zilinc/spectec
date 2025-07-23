@@ -22,9 +22,9 @@ let rule_to_tup rel_id rule =
   let RuleD (id, _, _, exp, prems) = rule.it in
   match exp.it with
   | TupE [ lhs; rhs ] when List.mem rel_id.it [ "Step"; "Step_read"; "Step_pure" ]
-  -> (lhs, rhs, prems)
+  -> (id, lhs, rhs, prems)
   | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr"
-  -> ({exp with it = TupE [z1; lhs]}, {exp with it = TupE [z2; rhs]}, prems)
+  -> (id, {exp with it = TupE [z1; lhs]}, {exp with it = TupE [z2; rhs]}, prems)
   | _ -> error exp.at ("form of reduction rule: [" ^ rel_id.it ^ "]" ^ Il.Print.string_of_exp exp)
 
 
