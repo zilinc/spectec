@@ -140,6 +140,14 @@ struct
   | None  , None   -> None
   | None  , Some b -> Some b
   let mconcat oxs = List.fold_left mplus None oxs
+  let cat_opts_opt oxs =
+    let f acc ox = match acc, ox with
+    | None, None -> None
+    | None, Some x -> Some [x]
+    | Some ys, None -> Some ys
+    | Some ys, Some x -> Some (x::ys)
+    in
+    List.fold_left f None oxs
 end
 
 module type Monad =
