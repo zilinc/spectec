@@ -140,6 +140,7 @@ and exp e =
   | IterE (e1, it) -> exp e1; iterexp it
   | CvtE (e1, nt1, nt2) -> exp e1; numtyp nt1; numtyp nt2
   | SubE (e1, t1, t2) -> exp e1; typ t1; typ t2
+  | SupE (e1, t1, t2) -> exp e1; typ t1; typ t2
 
 and expfield (at, e) = atom at; exp e
 
@@ -177,7 +178,7 @@ and prem pr =
   | RulePr (x, op, e) -> relid x; mixop op; exp e
   | IfPr e -> exp e
   | ElsePr -> ()
-  | IterPr (pr1, it) -> prem pr1; iterexp it
+  | IterPr (pr1, it) -> list prem pr1; iterexp it
   | LetPr (e1, e2, _) -> exp e1; exp e2
 
 and prems prs = list prem prs

@@ -78,7 +78,8 @@ let rec rewrite_iterexp' iterexp pr =
     let new_ids = List.map (rewrite_id iterexp) ids in
     LetPr (new_ e1, new_ e2, new_ids)
   | ElsePr -> ElsePr
-  | IterPr (pr, (iter, xes)) -> IterPr (rewrite_iterexp iterexp pr, (iter, xes |> List.map (fun (x, e) -> (x, new_ e))))
+  | IterPr (prs, (iter, xes)) -> IterPr (List.map (rewrite_iterexp iterexp) prs,
+                                         (iter, xes |> List.map (fun (x, e) -> (x, new_ e))))
 and rewrite_iterexp iterexp pr = Source.map (rewrite_iterexp' iterexp) pr
 
 (* Recover iterexp of IterPr *)
@@ -108,7 +109,8 @@ let rec recover_iterexp' iterexp pr =
     let new_ids = List.map (recover_id iterexp) ids in
     LetPr (new_ e1, new_ e2, new_ids)
   | ElsePr -> ElsePr
-  | IterPr (pr, (iter, xes)) -> IterPr (recover_iterexp iterexp pr, (iter, xes |> List.map (fun (x, e) -> (x, new_ e))))
+  | IterPr (prs, (iter, xes)) -> IterPr (List.map (recover_iterexp iterexp) prs,
+                                         (iter, xes |> List.map (fun (x, e) -> (x, new_ e))))
 and recover_iterexp iterexp pr = Source.map (recover_iterexp' iterexp) pr
 
 (* is this assign premise a if-let? *)
@@ -300,10 +302,11 @@ let rec rows_of_prem vars len i p =
       Condition, p, [i];
       Assign frees, p, [i] @ List.filter_map (index_of len vars) (free_exp_list l)
     ]
-  | IterPr (p', iterexp) ->
+  | IterPr ([p'], iterexp) ->
     let p_r = rewrite_iterexp iterexp p' in
-    let to_iter (tag, p, coverings) = tag, IterPr (recover_iterexp iterexp p, iterexp) $ p.at, coverings in
+    let to_iter (tag, p, coverings) = tag, IterPr ([recover_iterexp iterexp p], iterexp) $ p.at, coverings in
     List.map to_iter (rows_of_prem vars len i p_r)
+  | IterPr (_, _) -> assert false
   | _ -> [ Condition, p, [i] ]
 
 let build_matrix prems known_vars =

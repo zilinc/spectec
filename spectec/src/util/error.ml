@@ -17,3 +17,5 @@ let error at category msg =
 
 let print_error at msg = prerr_endline (string_of_error at msg)
 let print_warn at msg = prerr_endline (string_of_error at ("warning: " ^ msg))
+
+let todo msg = print_endline (msg ^ ": not yet implemented.") |> Obj.magic

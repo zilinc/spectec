@@ -317,6 +317,7 @@ and infer_exp (env : Env.t) e : typ =
   | CaseE _ -> e.note (* error e.at "cannot infer type of case constructor" *)
   | CvtE (_, _, t2) -> NumT t2 $ e.at
   | SubE (_, _, t2) -> t2
+  | SupE (_, _, t2) -> t2
 
 
 and valid_exp ?(side = `Rhs) env e t =
@@ -467,6 +468,12 @@ try
     valid_exp ~side env e1 t1;
     equiv_typ env t2 t e.at;
     sub_typ env t1 t2 e.at
+  | SupE (e1, t1, t2) ->
+    valid_typ env t1;
+    valid_typ env t2;
+    valid_exp ~side env e1 t1;
+    equiv_typ env t2 t e.at;
+    sub_typ env t2 t1 e.at
 with exn ->
   let bt = Printexc.get_raw_backtrace () in
   Printf.eprintf "[valid_exp] %s\n%!" (Debug.il_exp e);
@@ -599,9 +606,9 @@ and valid_prem env prem =
         " do not occur in left-hand side expression")
   | ElsePr ->
     ()
-  | IterPr (prem', iterexp) ->
+  | IterPr (prems, iterexp) ->
     let _iter, env' = valid_iterexp env iterexp prem.at in
-    valid_prem env' prem'
+    List.iter (valid_prem env') prems
 
 
 (* Definitions *)

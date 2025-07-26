@@ -61,6 +61,7 @@ sig
      different: it collects all the `Some`s.
   *)
   val mconcat : 'a option list -> 'a option
+  val mconcat_map : ('a -> 'b option) -> 'a list -> 'b option
   val cat_opts_opt : 'a option list -> 'a list option
 end
 

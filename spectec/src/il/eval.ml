@@ -399,6 +399,41 @@ and reduce_exp env e : exp =
       {e1' with note = e.note}
     | _ -> SubE (e1', t1', t2') $> e
     )
+  (* TODO(zilinc): check SupE. *)
+  | SupE (e1, t1, t2) when equiv_typ env t1 t2 ->
+    reduce_exp env e1
+  | SupE (e1, t1, t2) ->
+    let e1' = reduce_exp env e1 in
+    let t1' = reduce_typ env t1 in
+    let t2' = reduce_typ env t2 in
+    (match e1'.it with
+    | SupE (e11', t11', _t12') ->
+      reduce_exp env (SupE (e11', t11', t2') $> e)
+    | TupE es' ->
+      (match t1.it, t2.it with
+      | TupT ets1, TupT ets2 ->
+        (match
+          List.fold_left2 (fun opt eI ((e1I, t1I), (e2I, t2I)) ->
+            let* (s1, s2, res') = opt in
+            let t1I' = Subst.subst_typ s1 t1I in
+            let t2I' = Subst.subst_typ s2 t2I in
+            let e1I' = reduce_exp env (Subst.subst_exp s1 e1I) in
+            let e2I' = reduce_exp env (Subst.subst_exp s2 e2I) in
+            let* s1' = try match_exp env s1 eI e1I' with Irred -> None in
+            let* s2' = try match_exp env s2 eI e2I' with Irred -> None in
+            let eI' = reduce_exp env (SupE (eI, t1I', t2I') $$ eI.at % t2I') in
+            Some (s1', s2', eI'::res')
+          ) (Some (Subst.empty, Subst.empty, [])) es' (List.combine ets1 ets2)
+        with
+        | Some (_, _, res') -> TupE (List.rev res') $> e
+        | None -> SupE (e1', t1', t2') $> e
+        )
+      | _ -> SupE (e1', t1', t2') $> e
+      )
+    | _ when is_head_normal_exp e1' ->
+      {e1' with note = e.note}
+    | _ -> SupE (e1', t1', t2') $> e
+    )
 
 and reduce_iter env = function
   | ListN (e, ido) -> ListN (reduce_exp env e, ido)

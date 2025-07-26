@@ -169,6 +169,7 @@ and subst_exp s e =
     CaseE (op, subst_exp s e1)
   | CvtE (e1, nt1, nt2) -> CvtE (subst_exp s e1, nt1, nt2)
   | SubE (e1, t1, t2) -> SubE (subst_exp s e1, subst_typ s t1, subst_typ s t2)
+  | SupE (e1, t1, t2) -> SupE (subst_exp s e1, subst_typ s t1, subst_typ s t2)
   ) $$ e.at % subst_typ s e.note
 
 and subst_expfield s (atom, e) = (atom, subst_exp s e)
@@ -213,9 +214,9 @@ and subst_prem s prem =
   | RulePr (id, op, e) -> RulePr (id, op, subst_exp s e)
   | IfPr e -> IfPr (subst_exp s e)
   | ElsePr -> ElsePr
-  | IterPr (prem1, iterexp) ->
+  | IterPr (prems, iterexp) ->
     let it', s' = subst_iterexp s iterexp in
-    IterPr (subst_prem s' prem1, it')
+    IterPr (subst_list subst_prem s' prems, it')
   | LetPr (e1, e2, ids) -> LetPr (subst_exp s e1, subst_exp s e2, ids)
   ) $ prem.at
 

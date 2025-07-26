@@ -167,6 +167,7 @@ and t_exp' env = function
   | CaseE (mixop, e) -> CaseE (mixop, t_exp env e)
   | CvtE (exp, t1, t2) -> CvtE (t_exp env exp, t1, t2)
   | SubE (e, t1, t2) -> SubE (e, t1, t2)
+  | SupE (e, t1, t2) -> SupE (e, t1, t2)
 
 and t_iter env = function
   | ListN (e, id_opt) -> ListN (t_exp env e, id_opt)
@@ -227,7 +228,7 @@ and t_prem' env = function
   | IfPr e -> IfPr (t_exp env e)
   | LetPr (e1, e2, ids) -> LetPr (t_exp env e1, t_exp env e2, ids)
   | ElsePr -> ElsePr
-  | IterPr (prem, iterexp) -> IterPr (t_prem env prem, t_iterexp env iterexp)
+  | IterPr (prems, iterexp) -> IterPr (List.map (t_prem env) prems, t_iterexp env iterexp)
 
 and t_prem env x = { x with it = t_prem' env x.it }
 

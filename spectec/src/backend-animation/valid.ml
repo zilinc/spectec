@@ -2,6 +2,7 @@ open Il.Ast
 open Il.Free
 open Il2al
 open Util
+open Error
 open Source
 
 exception InvalidDL of string
@@ -77,7 +78,7 @@ let rec validate_prem (known : Set.t) (prem : prem) : Set.t =
         raise (InvalidDL ("Let binding output " ^ v ^ " not added to known" ^ Il.Print.string_of_prem prem)))
       new_known;
     Set.union known lhs_fvs
-  | IterPr (p, (iter, pairs)) ->
+  | IterPr ([p], (iter, pairs)) ->
     (* Validate all RHS expressions in the binding pairs *)
     List.iter (fun (_, e) ->
       let fvs = free_vars_exp e in
@@ -111,6 +112,7 @@ let rec validate_prem (known : Set.t) (prem : prem) : Set.t =
      | _ -> ());
     (* Validate body premise *)
     validate_prem known' p
+  | IterPr (_, _) -> todo "Backend_animation.Valid.validate_prem"
   | ElsePr -> known
 
 (* Validate a single rule clause *)
