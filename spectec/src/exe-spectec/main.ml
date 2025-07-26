@@ -212,7 +212,8 @@ let () =
 
     if !print_final_il && not !print_all_il then print_il il;
 
-    if !print_dl then Backend_animation.Main.animate il !print_dl;
+    log "Translating to DL and animate...";
+    let _dl = Backend_animation.Main.animate il !print_dl in
 
     let al =
       if not !print_al && !print_al_o = "" && (!target = Check || !target = Ast || !target = Latex) then []

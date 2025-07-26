@@ -38,3 +38,5 @@ let animate il print_dl =
   | Some errs -> Printf.eprintf "Animation validation:\n%s" (String.concat "\n" errs)
   | None -> if print_dl then
               print_endline (List.map string_of_dl_def dl |> String.concat "\n")
+            else
+              print_endline ("Animation validation passed.")
