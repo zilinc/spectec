@@ -536,14 +536,24 @@ and animate_exp_eq at lhs rhs : prem list E.m =
        (this premise will be handled by the `animate_prem (IterPr {})` case.)
     *)
     begin match iter with
-    (* Base case for iterators *)
     | ListN(len, Some i) ->
-      let t = reduce_typ !env lhs'.note in
-      let rhs' = IdxE (rhs, VarE i $$ i.at % (mk_natT i.at)) $$ rhs.at % lhs'.note in
-      let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
-      bracket (add_knowns (Set.singleton i.it))
-              (remove_knowns (Set.singleton i.it))
-              (animate_prem (IterPr (prem_body, iterexp) $ at))
+      let fv_len = (free_exp false len).varid in
+      let unknowns_len = Set.diff fv_len knowns in
+      if Set.is_empty unknowns_len then
+        (* Base case for iterators *)
+        let t = reduce_typ !env lhs'.note in
+        let rhs' = IdxE (rhs, VarE i $$ i.at % (mk_natT i.at)) $$ rhs.at % lhs'.note in
+        let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
+        bracket (add_knowns (Set.singleton i.it))
+                (remove_knowns (Set.singleton i.it))
+                (animate_prem (IterPr (prem_body, iterexp) $ at))
+      else
+        (* Inductive case where [len] is unknown. *)
+        let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in 
+        let* prem_len = animate_exp_eq len.at len len_rhs in
+        (* By now [len] should be known. *)
+        let* prems' = animate_exp_eq at lhs rhs in
+        E.return (prem_len @ prems')
     (* Inductive cases *)
     | ListN(len, None) ->
       let i = fresh_id at in
@@ -553,7 +563,6 @@ and animate_exp_eq at lhs rhs : prem list E.m =
       let len_v = fresh_id len_rhs.at in
       let len = VarE len_v $$ len_rhs.at % len_rhs.note in
       let* prems_len_v = animate_exp_eq len.at len len_rhs in
-      let i = fresh_id at in
       let oprem_len = match iter with
       | List  -> None
       | Opt   -> Some (IfPr (CmpE (`LeOp, `NatT, len, mk_natE len.at 1) $$ len.at % (BoolT $ len.at)) $ at)
@@ -564,6 +573,7 @@ and animate_exp_eq at lhs rhs : prem list E.m =
       | None -> E.return []
       | Some prem_len -> animate_prem prem_len
       in
+      let i = fresh_id at in
       let* prems' = animate_exp_eq at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs in
       E.return (prems_len_v @ prems_len @ prems')
     end
@@ -812,9 +822,8 @@ and animate_prem : prem -> prem list E.m = fun prem ->
          -- let `v*` = rhs^(i<N) {`v*`}
        Base case 3: (-- let v = rhs {v})^(i<N) {} where N is known
          It means that all v's must have the same value.
-       Inductive case: (-- let v = rhs {v})^(i<N) where N is unknown
-         animate (-- if N = |rhs|)
-         animate (-- let v = rhs {v})^(i<N)
+       Base case: (-- let v = rhs {v})^(i<N) where N is unknown
+         Maybe can't animate in general.
        Inductive cases: (-- let v = rhs {v})^iter
          Reduce to base cases:
            For List:
@@ -873,20 +882,19 @@ and animate_prem : prem -> prem list E.m = fun prem ->
           (* Base case 3 *)
           throw_log (string_of_error prem.at "IterPr Base case 3: not yet implemented: " ^ string_of_prem prem')
       else
-        (* Inductive case where the iterator N is unknown *)
-        let* prems_len = animate_exp_eq len.at len (LenE rhs $$ rhs.at % mk_natT rhs.at) in
-        let* prems' = animate_prem prem in
-        E.return (prems_len @ prems')
+        (* The iterator N is unknown *)
+        E.throw (string_of_error prem.at ("IterPr has unknown iterator " ^ string_of_iter iter ^ "\n" ^
+                                          "  ▹ unknowns: " ^ string_of_varset knowns))
     (* Inductive cases, where the body is -- let v = rhs but the iterator is not ^(i<N). *)
     | LetPr (_, _, binders), ListN(len, None) ->
-      let i = fresh_id no_region in
+      let i = fresh_id len.at in
       animate_prem (IterPr (prem', (ListN(len, Some i), xes)) $ prem.at)
     | LetPr (_, rhs, binders), _ ->
       let len_rhs = LenE rhs $$ rhs.at % mk_natT rhs.at in
       let len_v = fresh_id len_rhs.at in
       let len = VarE len_v $$ len_rhs.at % len_rhs.note in
       let* prems_len_v = animate_exp_eq len.at len len_rhs in
-      let i = fresh_id no_region in
+      let i = fresh_id len.at in
       let oprem_len = match iter with
       | List  -> None
       | Opt   -> Some (IfPr (CmpE (`LeOp, `NatT, len, mk_natE len.at 1) $$ len.at % (BoolT $ len.at)) $ prem.at)
