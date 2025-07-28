@@ -588,12 +588,11 @@ and animate_exp_eq at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return prems'
   | SubE (exp, t1, t2) ->
-    let v = fresh_id exp.at in
-    let v_exp = VarE v $$ v.at % t1 in
-    let prem' = LetPr (SubE (v_exp, t1, t2) $$ exp.at % t2, rhs, [v.it]) $ at in
-    let* () = update (add_knowns (Set.singleton v.it)) in
-    let* prems' = animate_exp_eq at exp v_exp in
-    E.return (prem' :: prems')
+    let rhs' = SupE (rhs, t2, t1) $$ rhs.at % t1 in
+    animate_exp_eq at exp rhs'
+  | SupE (exp, t1, t2) ->
+    let rhs' = SubE (rhs, t2, t1) $$ rhs.at % t1 in
+    animate_exp_eq at exp rhs'
   | OptE None -> assert false  (* Because lhs must contain unknowns *)
   | OptE (Some exp) ->
     let rhs' = TheE rhs $$ rhs.at % (as_iter_typ Opt !env rhs.note) in
@@ -865,17 +864,8 @@ and animate_prem : prem -> prem list E.m = fun prem ->
              Thus [xes'] should contain the exact entries for [rhs].
           *)
           let xes' = Lib.List.filter_not (fun (x, e) -> Il.Eq.eq_id v_id x) xes in
-          (* [lhs'] is not necessarily a `VarE _`, therefore we recursively call the aniamtion function. *)
-          let lhs' = match lhs.it with
-          | VarE _ -> v_star
-          | SubE ({ it = VarE _; _ }, t1, t2) ->
-            let t1' = IterT (t1, iter) $ t1.at in
-            let t2' = IterT (t2, iter) $ t2.at in
-            SubE (v_star, t1', t2') $$ lhs.at % t2'
-          | _ -> assert false
-          in
           let rhs' = IterE (rhs, (iter, xes')) $$ rhs.at % (IterT (rhs.note, iter) $ rhs.at) in
-          animate_exp_eq prem.at lhs' rhs'
+          animate_exp_eq prem.at v_star rhs'
         | None ->
           (* Base case 3 *)
           throw_log (string_of_error prem.at "IterPr Base case 3: not yet implemented: " ^ string_of_prem prem')
