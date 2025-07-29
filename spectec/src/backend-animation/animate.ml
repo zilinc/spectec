@@ -43,11 +43,15 @@ let info v at msg = if List.mem v !verbose then
 
 let fresh_oracle = ref 0
 
-let fresh_id at : id =
+let fresh_id (oname: string option) at : id =
   let i = !fresh_oracle in
   fresh_oracle := !fresh_oracle + 1;
-  let name = fun n -> ("__v" ^ string_of_int n) in
-  name i $ at
+  let name n onm = "__v" ^ string_of_int n ^
+                   match onm with
+                   | None -> ""
+                   | Some nm -> "_" ^ nm 
+  in
+  name i oname $ at
 
 
 (* Environment *)
@@ -554,11 +558,11 @@ and animate_exp_eq at lhs rhs : prem list E.m =
         E.return (prem_len @ prems')
     (* Inductive cases *)
     | ListN(len, None) ->
-      let i = fresh_id at in
+      let i = fresh_id (Some "i") at in
       animate_exp_eq at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs
     | Opt | List | List1 ->
       let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
-      let len_v = fresh_id len_rhs.at in
+      let len_v = fresh_id (Some "len") len_rhs.at in
       let len = VarE len_v $$ len_rhs.at % len_rhs.note in
       let* prems_len_v = animate_exp_eq len.at len len_rhs in
       let oprem_len = match iter with
@@ -571,7 +575,7 @@ and animate_exp_eq at lhs rhs : prem list E.m =
       | None -> E.return []
       | Some prem_len -> animate_prem prem_len
       in
-      let i = fresh_id at in
+      let i = fresh_id (Some "i") at in
       let* prems' = animate_exp_eq at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs in
       E.return (prems_len_v @ prems_len @ prems')
     end
@@ -621,7 +625,7 @@ and animate_exp_eq at lhs rhs : prem list E.m =
   | CaseE (mixop, lhs') ->
     animate_exp_eq at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
   | TupE es ->
-    let v = fresh_id at in
+    let v = fresh_id None at in
     (* Bind to a new variable, so that [rhs] doesn't need to be re-evaluated
        again and again in the following projections.
     *)
@@ -875,14 +879,14 @@ and animate_prem : prem -> prem list E.m = fun prem ->
                                           "  ▹ unknowns: " ^ string_of_varset knowns))
     (* Inductive cases, where the body is -- let v = rhs but the iterator is not ^(i<N). *)
     | LetPr (_, _, binders), ListN(len, None) ->
-      let i = fresh_id len.at in
+      let i = fresh_id (Some "i") len.at in
       animate_prem (IterPr ([prem'], (ListN(len, Some i), xes)) $ prem.at)
     | LetPr (_, rhs, binders), _ ->
       let len_rhs = LenE rhs $$ rhs.at % mk_natT rhs.at in
-      let len_v = fresh_id len_rhs.at in
+      let len_v = fresh_id (Some "len") len_rhs.at in
       let len = VarE len_v $$ len_rhs.at % len_rhs.note in
       let* prems_len_v = animate_exp_eq len.at len len_rhs in
-      let i = fresh_id len.at in
+      let i = fresh_id (Some "i") len.at in
       let oprem_len = match iter with
       | List  -> None
       | Opt   -> Some (IfPr (CmpE (`LeOp, `NatT, len, mk_natE len.at 1) $$ len.at % (BoolT $ len.at)) $ prem.at)
