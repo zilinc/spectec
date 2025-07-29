@@ -40,13 +40,12 @@ let warn msg = print_endline ("warning: " ^ msg)
 (* Try to find a hint `hintid` on a spectec function definition `fname`. *)
 let find_hint fname hintid =
   let open Il.Ast in
-  let open Il2al.Il2al_util in
   List.find_map (fun hintdef ->
     match hintdef.it with
     | DecH (id', hints) when fname = id'.it ->
       List.find_opt (fun hint -> hint.hintid.it = hintid) hints
     | _ -> None
-  ) !hintdefs
+  ) !Al.Valid.il_env.hints
 
 
 (* Matrix operations *)
