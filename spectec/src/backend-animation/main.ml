@@ -30,6 +30,7 @@ let animate il print_dl =
   let dl = il
            |> List.concat_map flatten_rec
            |> List.filter_map is_anim_target
+           |> List.map Il2al.Preprocess.remove_or
            |> Il2dl.il2dl
            |> fun dl -> (dl, il)
            |> Animate.animate
