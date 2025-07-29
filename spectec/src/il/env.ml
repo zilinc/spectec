@@ -26,6 +26,7 @@ type t =
     defs : def_def Map.t;
     rels : rel_def Map.t;
     grams : gram_def Map.t;
+    hints : hintdef list;
   }
 
 
@@ -37,6 +38,7 @@ let empty =
     defs = Map.empty;
     rels = Map.empty;
     grams = Map.empty;
+    hints = [];
   }
 
 let mem map id = Map.mem id.it map
@@ -93,6 +95,9 @@ let rebind_def env id rhs = {env with defs = rebind "definition" env.defs id rhs
 let rebind_rel env id rhs = {env with rels = rebind "relation" env.rels id rhs}
 let rebind_gram env id rhs = {env with grams = rebind "grammar" env.grams id rhs}
 
+let add_hint env hintdef = {env with hints = hintdef :: env.hints}
+
+
 
 (* Extraction *)
 
@@ -103,7 +108,7 @@ let rec env_of_def env d =
   | RelD (id, mixop, t, rules) -> bind_rel env id (mixop, t, rules)
   | GramD (id, ps, t, prods) -> bind_gram env id (ps, t, prods)
   | RecD ds -> List.fold_left env_of_def env ds
-  | HintD _ -> env
+  | HintD h -> add_hint env h
 
 let env_of_script ds =
   List.fold_left env_of_def empty ds

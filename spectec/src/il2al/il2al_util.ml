@@ -18,9 +18,6 @@ let (>>) f g = g << f
 let (<<@) = compose_list
 let (>>@) f g = g <<@ f
 
-(* TODO: combine this with Env *)
-let hintdefs : hintdef list ref = ref []
-
 let name_of_rule rule =
   match rule.it with
   | RuleD (id, _, _, _, _) ->
@@ -142,7 +139,7 @@ let rec typ_to_var_name ty =
   match ty.it with
   (* TODO: guess this for "var" in el? *)
   | Il.Ast.VarT (id, args) ->
-    (match find_hint id !hintdefs with
+    (match find_hint id !Al.Valid.il_env.hints with
     | None -> id.it
     | Some hint -> let _, t = subst_hint hint.hintexp args in t
     )
