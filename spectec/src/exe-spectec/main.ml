@@ -12,6 +12,7 @@ type target =
  | Latex
  | Prose of bool
  | Splice of Backend_splice.Config.t
+ | Animate
  | Interpreter of string list
  | RunThrough
 
@@ -170,6 +171,7 @@ let argspec = Arg.align (
   "--prose-rst", Arg.Unit (fun () -> target := Prose false), " Generate prose";
   "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args),
     " Generate interpreter";
+  "--animate", Arg.Unit (fun () -> target := Animate), " Animate";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),
@@ -218,7 +220,7 @@ let () =
     Il.Valid.valid il;
 
     (match !target with
-    | Prose _ | Splice _ | Interpreter _ ->
+    | Prose _ | Splice _ | Interpreter _ | Animate ->
       enable_pass Sideconditions;
     | _ when !print_al || !print_al_o <> "" ->
       enable_pass Sideconditions;
@@ -245,11 +247,14 @@ let () =
 
     if !print_final_il && not !print_all_il then print_il il;
 
-    log "Translating to DL and animate...";
-    let _dl = Backend_animation.Main.animate il !print_dl in
+    if !target = Animate then (
+      log "Translating to DL and animate...";
+      Backend_animation.Main.animate il !print_dl
+    );
 
     let al =
-      if not !print_al && !print_al_o = "" && (!target = Check || !target = Ast || !target = Latex) then []
+      if not !print_al && !print_al_o = "" &&
+         (!target = Check || !target = Ast || !target = Latex || !target = Animate) then []
       else (
         log "Translating to AL...";
         let interp = match !target with
@@ -359,6 +364,9 @@ let () =
       Backend_interpreter.Ds.init al;
       log "Interpreting...";
       Backend_interpreter.Runner.run args
+
+    | Animate ->
+      log "Animation backend not yet implemented..."
     );
     log "Complete."
   with
