@@ -95,9 +95,17 @@ let rebind_def env id rhs = {env with defs = rebind "definition" env.defs id rhs
 let rebind_rel env id rhs = {env with rels = rebind "relation" env.rels id rhs}
 let rebind_gram env id rhs = {env with grams = rebind "grammar" env.grams id rhs}
 
+(* Hints *)
 let add_hint env hintdef = {env with hints = hintdef :: env.hints}
 
-
+(* Try to find a hint `hintid` on a spectec function definition `fname`. *)
+let find_func_hint env fname hintid =
+  List.find_map (fun hintdef ->
+    match hintdef.it with
+    | DecH (id', hints) when fname = id'.it ->
+      List.find_opt (fun hint -> hint.hintid.it = hintid) hints
+    | _ -> None
+  ) env.hints
 
 (* Extraction *)
 
