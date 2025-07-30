@@ -35,19 +35,6 @@ let try_with_error fname at stringifier f step =
 let warn msg = print_endline ("warning: " ^ msg)
 
 
-(* Hints *)
-
-(* Try to find a hint `hintid` on a spectec function definition `fname`. *)
-let find_hint fname hintid =
-  let open Il.Ast in
-  List.find_map (fun hintdef ->
-    match hintdef.it with
-    | DecH (id', hints) when fname = id'.it ->
-      List.find_opt (fun hint -> hint.hintid.it = hintid) hints
-    | _ -> None
-  ) !Al.Valid.il_env.hints
-
-
 (* Matrix operations *)
 
 let is_matrix matrix =
@@ -275,7 +262,7 @@ and eval_expr env expr =
     let inv_fname =
       (* If function $f has hint(inverse $invf), but $invf is defined in terms
        * of the inversion of $f, then infinite loop! Implement loop checks? *)
-      match find_hint fname' "inverse" with
+      match Il.Env.find_func_hint !Al.Valid.il_env fname' "inverse" with
       | None ->
         fail_expr expr (sprintf "no inverse hint is given for definition `%s`" fname')
       | Some hint ->
@@ -781,7 +768,7 @@ and create_context (name: string) (args: value list) : AlContext.mode =
 
 and call_func (name: string) (args: value list) : value option =
    let builtin_name, is_builtin =
-     match find_hint name "builtin" with
+     match Il.Env.find_func_hint !Al.Valid.il_env name "builtin" with
      | None -> name, false
      | Some hint ->
        match hint.hintexp.it with

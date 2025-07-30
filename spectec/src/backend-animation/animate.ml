@@ -500,28 +500,38 @@ and animate_exp_eq at lhs rhs : prem list E.m =
     let varid = fun s -> s.varid in
     let fv_args = List.map (free_arg false) args |> List.map varid in
     let unknowns = List.map (fun fv_arg -> Set.diff fv_arg knowns) fv_args in
-    let (in_args, ou_args) =
-      List.fold_left2 (fun (ins, ous) a u ->
-                        if Set.is_empty u then (ins@[a], ous) else (ins, ous@[a]))
-                      ([], []) args unknowns
-    in
-    (* TODO(zilinc): use inverse hint *)
-    let inv_fid = {fid with it = "inverse_of_" ^ fid.it} in
+    let oinv_fid = Il.Env.find_func_hint !env fid.it "inverse" in
+    let* inv_fid = match oinv_fid with
+    | None -> E.throw (string_of_error at ("No inverse function declared for `" ^ fid.it ^ "`, so can't invert it."))
+    | Some hint -> begin match hint.hintexp.it with
+      | CallE (fid, []) -> E.return fid
+      | _ -> E.throw (string_of_error at ("Ill-formed inverse hint for function `" ^ fid.it ^ "`, so can't invert it."))
+      end in
     let _ = info "inv_func" at ("Function " ^ fid.it ^ " is being inverted") in
-    let (lhs', fncall) = match ou_args with
-      | [] -> assert false
-      | [{it = ExpA ou_arg; _}] ->
-        let fncall = CallE (inv_fid, in_args @ [ExpA rhs $ rhs.at]) $$ at % ou_arg.note in
-        (ou_arg, fncall)
+    (* Only the last argument is invertible. *)
+    let args_hd, arg_lt = Lib.List.split_last args in
+    let o_unknown_arg = List.find_opt (fun arg ->
+      let fv_arg = (free_arg false arg).varid in
+      Set.is_empty (Set.diff fv_arg knowns) |> not
+    ) args_hd in
+    begin match o_unknown_arg with
+    | None ->
+      (* It is implied that the last argument contains unknowns, because [lhs] contains unknowns. *)
+      let args' = args_hd @ [ExpA rhs $ rhs.at] in
+      begin match arg_lt.it with
+      | ExpA lhs' ->
+        let fncall = CallE (inv_fid, args') $$ at % lhs'.note in
+        animate_exp_eq at lhs' fncall
       | _ ->
-      (* When more than 1 output; make them a tuple. *)
-        let es = List.map (fun {it = ExpA e; _} -> e) ou_args in
-        let tau = TupT (List.map (fun e -> (e, e.note)) es) $ at in
-        let tup = TupE es $$ at % tau in
-        let fncall = CallE (inv_fid, in_args @ [ExpA rhs $ rhs.at]) $$ at % tau in
-        (tup, fncall)
-    in
-    animate_exp_eq at lhs' fncall
+        E.throw (string_of_error at ("The last argument of function `" ^ fid.it ^ "` is not invertible:\n" ^
+                                     "  ▹ Argument: " ^ string_of_arg arg_lt))
+      end
+    | Some unknown_arg ->
+      let unknowns_arg = Set.diff ((free_arg false unknown_arg).varid) knowns in
+      E.throw (string_of_error at ("We can only invert the last argument of function `" ^ fid.it ^ "`,\n" ^
+                                   "but the following argument contains unknowns: " ^ string_of_arg unknown_arg ^ "\n" ^
+                                   "  ▹ Unknowns: " ^ string_of_varset unknowns_arg))
+    end
   | IterE (lhs', ((iter, xes) as iterexp)) ->
     (* To animate -- if lhs^iter = rhs:
        ~~>
