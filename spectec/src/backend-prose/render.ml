@@ -660,7 +660,7 @@ and render_expr' env expr =
     (* HARDCODE: rendering of concat_ *)
     let args = List.map (render_arg env) al in
     (match args with
-    | [_; expr] | [_; expr; _] ->
+    | [_; expr] | [_; _; expr] ->
       "the :ref:`concatenation <notation-concat>` of " ^ expr
     | _ -> error expr.at "Invalid arity for function " ^ id;
     )
