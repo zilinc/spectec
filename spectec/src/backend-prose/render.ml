@@ -638,7 +638,7 @@ and render_expr' env expr =
     (* HARDCODE: rendering of concat_ *)
     let args = List.map (render_arg env) al in
     (match args with
-    | [_; expr] | [_; expr; _] ->
+    | [_; expr] | [_; _; expr] ->
       "the :ref:`concatenation <notation-concat>` of " ^ expr
     | _ -> error expr.at "Invalid arity for function " ^ id;
     )
@@ -1316,7 +1316,7 @@ let rec render_instr env algoname index depth instr =
       | Al.Ast.InvCallE ("concatn_", nl, al) ->
         let elhs, erhs = al_invcalle_to_al_bine e1 "concatn_" nl al in
         (match elhs.it with
-        | CallE (_, [_; { it = Al.Ast.ExpA e'; _}; n]) ->
+        | CallE (_, [_; n; { it = Al.Ast.ExpA e'; _}]) ->
           (match e'.it with
           | Al.Ast.IterE (e'', _) ->
             "", sprintf "the result for which each %s has length %s, and %s is %s"

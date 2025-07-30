@@ -15,9 +15,15 @@ def $concat_(syntax X, (X*)*) : X*  hint(show (++) %2) hint(inverse $inv_concat_
 def $concat_(syntax X, eps) = eps
 def $concat_(syntax X, (w*) (w'*)*) = w* ++ $concat_(X, (w'*)*)
 
-def $concatn_(syntax X, (X*)*, nat) : X*  hint(show (++) %2) hint(inverse $inv_concatn_)
-def $concatn_(syntax X, eps, n) = eps
-def $concatn_(syntax X, (w^n) (w'^n)*, n) = w^n $concatn_(X, (w'^n)*, n)
+;; def $concatn_(syntax X, (X*)*, nat) : X*  hint(show (++) %2) hint(inverse $inv_concatn_)
+;; def $concatn_(syntax X, eps, n) = eps
+;; def $concatn_(syntax X, (w^n) (w'^n)*, n) = w^n $concatn_(X, (w'^n)*, n)
+
+def $concatn_(syntax X, nat, (X*)*) : X*  hint(show (++) %3) hint(inverse $inv_concatn_)
+def $concatn_(syntax X, n, eps) = eps
+def $concatn_(syntax X, n, (w^n) (w'^n)*) = w^n $concatn_(X, n, (w'^n)*)
+
+
 
 def $inv_concat_(syntax X, X*) : (X*)*
 def $inv_concat_ hint(builtin)
