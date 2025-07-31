@@ -1033,9 +1033,22 @@ let animate_rules at rs = List.map (animate_rule at) rs
 
 let animate_clause (c: clause) : func_clause =
   let DefD (binds, args, exp, prems) = c.it in
-  let ins = (free_list (free_arg false) args).varid in
+  let n_args = List.length args in
   let ous = (free_exp false exp).varid in
-  let prems' = animate_prems c.at ins ous prems |> lift_otherwise_prem in
+  let blob = List.mapi (fun i arg -> match arg.it with
+    | ExpA exp ->
+      let v = fresh_id (Some ("a" ^ string_of_int i)) arg.at in
+      let lhs = VarE v $$ v.at % exp.note in
+      let p = IfPr (CmpE (`EqOp, `BoolT, lhs, exp) $$ exp.at % (BoolT $ exp.at)) $ arg.at in
+      (ExpA lhs $ lhs.at, Some p, Some v)
+    | _ -> (arg, None, None)
+  ) args
+  in
+  let (args, o_prem_args, ovs) = Lib.List.unzip3 blob in
+  let prems_args = List.filter_map Fun.id o_prem_args in
+  let vs = List.filter_map Fun.id ovs in
+  let ins = (free_list free_varid vs).varid in
+  let prems' = animate_prems c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
   (DefD (binds, args, exp, prems')) $ c.at
 
 let animate_clauses cs = List.map animate_clause cs
