@@ -719,8 +719,7 @@ and animate_exp_eq at lhs rhs : prem list E.m =
       *)
     | _ -> assert false
     end
-  | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs ^ "\n" ^
-                                      string_of_state s))
+  | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs))
 
 (** ASSUMES: [e] contains unknown vars, whereas [es] is fully known.
     ENSURES: When it returns Error, it means that the original premise should be
