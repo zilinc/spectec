@@ -1063,19 +1063,21 @@ let lift_otherwise_prem prems =
   ow_pr @ rest
 
 let animate_rule_red at binds lhs rhs prems : clause' =
-  let lhs_vars = (free_exp false lhs).varid in
+  let v = fresh_id (Some "lhs") lhs.at in
+  let ve = VarE v $$ v.at % lhs.note in
+  let prem_arg = IfPr (CmpE (`EqOp, `BoolT, lhs, ve) $$ lhs.at % (BoolT $ lhs.at)) $ lhs.at in
   let rhs_vars = (free_exp false rhs).varid in
   let rule_binders = (bound_binds binds).varid in
   let prems_vars = List.map (fun prem -> (free_prem false prem).varid) prems in
   (* Input and output variables in the conclusion *)
-  let in_vars = lhs_vars in
-  let out_vars = Set.diff rhs_vars lhs_vars in
-  let prems' = animate_prems at in_vars out_vars prems in
-  DefD (binds, [ExpA lhs $ lhs.at], rhs, prems')
+  let in_vars = (free_varid v).varid in
+  let out_vars = rhs_vars in
+  let prems' = animate_prems at in_vars out_vars (prem_arg::prems) in
+  DefD (binds, [ExpA ve $ ve.at], rhs, prems')
 
 let animate_rule at (r : rule_clause) : clause =
   let (_, lhs, rhs, prems) = r in
-  let clause' = animate_rule_red at [] lhs rhs prems in  (* TODO *)
+  let clause' = animate_rule_red at [] lhs rhs prems in  (* TODO(zilinc): binds *)
   clause' $ at
 
 let animate_rules at rs = List.map (animate_rule at) rs
