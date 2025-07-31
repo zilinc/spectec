@@ -10,7 +10,7 @@ open Il2al.Def
 open Il2al.Free
 open Backend_ast
 
-
+module StringMap = Map.Make(String)
 
 (* Errors *)
 
@@ -350,6 +350,35 @@ let string_of_state (s: AnimState.t) =
   "inverse : " ^ string_of_bool s.inverse
 
 let throw_log e = let () = info "log" no_region e in E.throw e
+
+(* A whitelist of rules/defs that cannot be easily animated.
+   The map is "reason" ↦ [("rel_id", "rule_name")]
+*)
+let cannot_animate : (string * string) list StringMap.t =
+  StringMap.of_list
+    [ ("rule_lhs",
+      [
+        ("Step_pure", "br-label-zero");
+        ("Step_pure", "br-label-succ");
+        ("Step_pure", "br-handler");
+
+        ("Step_read", "return_call_ref-label");
+        ("Step_read", "return_call_ref-handler");
+        ("Step_read", "return_call_ref-frame-null");
+        ("Step_read", "return_call_ref-frame-addr");
+
+        ("Step_pure", "return-frame");
+        ("Step_pure", "return-label");
+        ("Step_pure", "return-handler");
+
+        ("Step_read", "throw_ref-instrs");
+      ])
+    ]
+
+let is_unanimatable reason rule_name rel_id : bool =
+  match StringMap.find_opt reason cannot_animate with
+  | None -> false
+  | Some ls -> List.exists (fun l -> l = (rel_id, rule_name)) ls
 
 
 (* Mode analysis *)
@@ -1062,25 +1091,40 @@ let lift_otherwise_prem prems =
   let (ow_pr, rest) = List.partition is_otherwise prems in
   ow_pr @ rest
 
+(* The variant that doesn't try to animate the [lhs] of the rule, as we know that
+   it's very difficult.
+*)
+let animate_rule_red_no_arg at binds lhs rhs prems : clause' =
+  let lhs_vars = (free_exp false lhs).varid in
+  let rhs_vars = (free_exp false rhs).varid in
+  (* Input and output variables in the conclusion *)
+  let in_vars  = lhs_vars in
+  let out_vars = rhs_vars in
+  let prems' = animate_prems at in_vars out_vars prems in
+  DefD (binds, [ExpA lhs $ lhs.at], rhs, prems')
+
 let animate_rule_red at binds lhs rhs prems : clause' =
   let v = fresh_id (Some "lhs") lhs.at in
   let ve = VarE v $$ v.at % lhs.note in
   let prem_arg = IfPr (CmpE (`EqOp, `BoolT, lhs, ve) $$ lhs.at % (BoolT $ lhs.at)) $ lhs.at in
   let rhs_vars = (free_exp false rhs).varid in
-  let rule_binders = (bound_binds binds).varid in
-  let prems_vars = List.map (fun prem -> (free_prem false prem).varid) prems in
   (* Input and output variables in the conclusion *)
   let in_vars = (free_varid v).varid in
   let out_vars = rhs_vars in
   let prems' = animate_prems at in_vars out_vars (prem_arg::prems) in
   DefD (binds, [ExpA ve $ ve.at], rhs, prems')
 
-let animate_rule at (r : rule_clause) : clause =
-  let (_, lhs, rhs, prems) = r in
-  let clause' = animate_rule_red at [] lhs rhs prems in  (* TODO(zilinc): binds *)
+let animate_rule rel_id at (r : rule_clause) : clause =
+  let (rule_id, lhs, rhs, prems) = r in
+  let clause' =
+    if is_unanimatable "rule_lhs" rule_id.it rel_id then
+      animate_rule_red_no_arg at [] lhs rhs prems  (* TODO(zilinc): binds *)
+    else
+      animate_rule_red at [] lhs rhs prems  (* TODO(zilinc): binds *)
+  in
   clause' $ at
 
-let animate_rules at rs = List.map (animate_rule at) rs
+let animate_rules rel_id at rs = List.map (animate_rule rel_id at) rs
 
 let animate_clause (c: clause) : func_clause =
   let DefD (binds, args, exp, prems) = c.it in
@@ -1104,9 +1148,9 @@ let animate_clause (c: clause) : func_clause =
 
 let animate_clauses cs = List.map animate_clause cs
 
-
-let animate_rule_def' at (rule_name, rel_id, rules) = (rel_id, animate_rules at rules)
-let animate_rule_def (rdef: rule_def) : func_def = animate_rule_def' rdef.at rdef.it $ rdef.at
+let animate_rule_def (rdef: rule_def) : func_def =
+  let (_, rel_id, rules) = rdef.it in
+  (rel_id, animate_rules rel_id.it rdef.at rules) $ rdef.at
 
 let animate_helper_def' (id, clauses, partial) = (id, animate_clauses clauses)
 let animate_helper_def (hdef: helper_def) : func_def = animate_helper_def' hdef.it $ hdef.at
