@@ -214,7 +214,7 @@ let () =
 
     if !print_final_il && not !print_all_il then print_il il;
 
-    if !target = Animate then (
+    if !target = Animate || !print_dl then (
       log "Translating to DL and animate...";
       Backend_animation.Main.animate il !print_dl
     );
