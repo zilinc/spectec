@@ -97,6 +97,27 @@ struct
   let assoc_with_opt f y xs = match assoc_with f y xs with
     | exception Not_found -> None
     | v -> Some v
+
+  let rec unzip = function
+    | [] -> ([], [])
+    | (x, y)::xys -> let (xs, ys) = unzip xys in (x::xs, y::ys)
+
+  let rec unzip3 = function
+    | [] -> ([], [], [])
+    | (x, y, z)::xyzs -> let (xs, ys, zs) = unzip3 xyzs in (x::xs, y::ys, z::zs)
+
+  let[@tail_mod_cons] rec mapi2' i f l1 l2 =
+    match (l1, l2) with
+    | ([], []) -> []
+    | ([a1], [b1]) ->
+        let r1 = f i a1 b1 in
+        [r1]
+    | (a1::a2::l1, b1::b2::l2) ->
+        let r1 = f i a1 b1 in
+        let r2 = f (i+1) a2 b2 in
+        r1::r2::mapi2' (i+2) f l1 l2
+    | (_, _) -> invalid_arg "Lib.List.mapi2"
+  let mapi2 f l1 l2 = mapi2' 0 f l1 l2
 end
 
 module Char =

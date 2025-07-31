@@ -28,6 +28,9 @@ sig
   val fold_left1 : ('a -> 'a -> 'a) -> 'a list -> 'a
   val assoc_with : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
   val assoc_with_opt : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
+  val unzip : ('a * 'b) list -> 'a list * 'b list
+  val unzip3 : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
+  val mapi2 : (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 end
 
 module Char :
