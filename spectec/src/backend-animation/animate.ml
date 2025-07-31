@@ -654,8 +654,7 @@ and animate_exp_eq at lhs rhs : prem list E.m =
     let* s' = get () in
     let s_new = { (init ()) with prems; knowns = get_knowns s' } in
     let* (prems', s_new') = run_inner s_new (animate_prems' at) in
-    let knowns' = get_knowns s_new' in
-    let* () = put ({ s' with knowns = knowns' }) in
+    let* () = update (put_knowns (get_knowns s_new')) in
     E.return (prems_v @ prems')
   | CvtE (lhs', t1, t2) ->
     (* FIXME(zilinc): Conversion is not checked. *)
@@ -719,6 +718,28 @@ and animate_exp_eq at lhs rhs : prem list E.m =
       *)
     | _ -> assert false
     end
+  (* More complicated patterns that are partially invertible. *)
+  (* [e1; e2; ...; en] ++ exp2 *)
+  | CatE ({ it = ListE exps; _ } as exp1, exp2) ->
+    let len1 = List.length exps in
+    let len = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+    let prems1 = List.mapi (fun i exp ->
+      let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
+      let rhs' = IdxE (rhs, idx) $$ exp.at % exp.note in
+      IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
+    ) exps in
+    let start2 = NumE (`Nat (Z.of_int len1)) $$ no_region % (mk_natT no_region) in
+    let len2 = BinE (`SubOp, `NatT, len, start2) $$ exp2.at % (mk_natT exp2.at) in
+    let rhs2' = SliceE (rhs, start2, len2) $$ rhs.at % rhs.note in
+    let prem2 = IfPr (CmpE (`EqOp, `BoolT, exp2, rhs2') $$ exp2.at % (BoolT $ exp2.at)) $ at in
+    (* Start an inner loop, in case of any dependencies between the list elements.
+       E.g. -- if [v, v] v'* = rhs
+       The first [v] is a binding, and the second becomes a check.
+    *)
+    let s_new = { (init ()) with prems = prems1 @ [prem2]; knowns = get_knowns s } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return prems'
   | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs))
 
 (** ASSUMES: [e] contains unknown vars, whereas [es] is fully known.
@@ -822,43 +843,45 @@ and animate_prem : prem -> prem list E.m = fun prem ->
   | ElsePr ->
     E.return [ prem ]
   | IterPr ([prem'], ((iter, xes) as iterexp)) ->
-    (* The animation algorithm for IterPr goes as follows:
-       Base case 1: (-- if exp)^iter where exp and iter are fully known.
-         -- (if exp)^iter
-         How do we generate Ocaml code from it?
-         ▹ Need to look at the iterexp binding list to find the iterated expressions.
-           TODO(zilinc): Does it have all the information to generate a parallel map_n function?
-       Base case 2: (-- let v = rhs {v})^(i<N) {v <- v*} where N is known
-         -- let `v*` = rhs^(i<N) {`v*`}
-       Base case 3: (-- let v = rhs {v})^(i<N) {} where N is known
-         It means that all v's must have the same value.
-       Base case: (-- let v = rhs {v})^(i<N) where N is unknown
-         Maybe can't animate in general.
-       Inductive cases: (-- let v = rhs {v})^iter
-         Reduce to base cases:
-           For List:
-           -- where N = |rhs| {N}
-           -- animate (-- let v = rhs)^(i<N)
-           For List1:
-           additionally check -- if N >= 1
-           For Opt:  (TODO(zilinc): does it need a special case to handle?)
-           additionally check -- if N <= 1
-       Inductive cases: (-- if exp)^iter. E.g.:
-         animate (-- prem^(i<N){x <- X, y <- Y, i <- I})
-         ~~>
-         (animate prem)^(i<N){x <- X, y <- Y, i <- I}
-         ~~>
-         (prems')^(i<N){x <- X, y <- Y, i <- I}
-         ~~>
-         for prem' ∈ prems': (prem')^(i<N){???}
-         ~~>  ;; pattern match on prem'
-           prems' should be a series of
-           -- let v = e {v} or -- if e (check)
-           We then wrap each output with _^(i<N) { ... }. The iter-binding list
-           should be { v <- v* }, plus those for the inputs.
-           We can approximate it as all the free variables.
+    (* TODO(zilinc): fix the documentation.
+      -- XXX | The animation algorithm for IterPr goes as follows:
+      -- XXX | Base case 1: (-- if exp)^iter where exp and iter are fully known.
+      -- XXX |   -- (if exp)^iter
+      -- XXX |   How do we generate Ocaml code from it?
+      -- XXX |   ▹ Need to look at the iterexp binding list to find the iterated expressions.
+      -- XXX |     TODO(zilinc): Does it have all the information to generate a parallel map_n function?
+      -- XXX | Base case 2: (-- let v = rhs {v})^(i<N) {v <- v*} where N is known
+      -- XXX |   -- let `v*` = rhs^(i<N) {`v*`}
+      -- XXX | Base case 3: (-- let v = rhs {v})^(i<N) {} where N is known
+      -- XXX |   It means that all v's must have the same value.
+      -- XXX | Base case: (-- let v = rhs {v})^(i<N) where N is unknown
+      -- XXX |   Maybe can't animate in general.
+      -- XXX | Inductive cases: (-- let v = rhs {v})^iter
+      -- XXX |   Reduce to base cases:
+      -- XXX |     For List:
+      -- XXX |     -- where N = |rhs| {N}
+      -- XXX |     -- animate (-- let v = rhs)^(i<N)
+      -- XXX |     For List1:
+      -- XXX |     additionally check -- if N >= 1
+      -- XXX |     For Opt:  (TODO(zilinc): does it need a special case to handle?)
+      -- XXX |     additionally check -- if N <= 1
+      -- XXX | Inductive cases: (-- if exp)^iter. E.g.:
+      -- XXX |   animate (-- prem^(i<N){x <- X, y <- Y, i <- I})
+      -- XXX |   ~~>
+      -- XXX |   (animate prem)^(i<N){x <- X, y <- Y, i <- I}
+      -- XXX |   ~~>
+      -- XXX |   (prems')^(i<N){x <- X, y <- Y, i <- I}
+      -- XXX |   ~~>
+      -- XXX |   for prem' ∈ prems': (prem')^(i<N){???}
+      -- XXX |   ~~>  ;; pattern match on prem'
+      -- XXX |     prems' should be a series of
+      -- XXX |     -- let v = e {v} or -- if e (check)
+      -- XXX |     We then wrap each output with _^(i<N) { ... }. The iter-binding list
+      -- XXX |     should be { v <- v* }, plus those for the inputs.
+      -- XXX |     We can approximate it as all the free variables.
     *)
     begin match prem'.it, iter with
+    (*
     | IfPr exp, _ when Set.is_empty (Set.diff fv_prem knowns) ->
       (* Base case 1 *)
       E.return [ prem ]
@@ -908,6 +931,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
       in
       let* prems' = animate_prem (IterPr ([prem'], (ListN(len, Some i), xes)) $ prem.at) in
       E.return (prems_len_v @ prems_len @ prems')
+    *)
     (* Inductive case: arbitrary prem, arbitrary iter *)
     | _ ->
       (* Propagating knowns into the iteration. *)
@@ -924,14 +948,16 @@ and animate_prem : prem -> prem list E.m = fun prem ->
       let* (prems_body', s_body') = run_inner s_body (animate_prems' prem'.at) in
       (* Propagate knowns to the outside of the iterator. *)
       let knowns' = get_knowns s_body' in
-      let knowns_outer = List.filter_map (fun (x, e) ->
-        if Set.mem x.it knowns' then
+      let knowns_outer = List.map (fun x ->
+        match List.find_opt (fun (y, e) -> y.it = x) xes with
+        (* If x <- e exists, then x propagates to e. *)
+        | Some (y, e) ->
           let fv_e = (free_exp false e).varid in
           let unknowns_e = Set.diff fv_e knowns' in
-          Some (Set.elements unknowns_e)
-        else
-          None
-      ) xes |> List.concat |> Set.of_list in
+          Set.elements unknowns_e
+        (* If there's no x <- e, then propagate x out. *)
+        | None -> [x]
+      ) (Set.elements knowns') |> List.concat |> Set.of_list in
       let* () = update (add_knowns knowns_outer) in
       E.return [IterPr (prems_body', iterexp) $ prem.at]
     end
@@ -1004,6 +1030,8 @@ and animate_prems at ins ous prems : prem list =
      | (Ok ps  , s) ->
        if Set.subset ous s.knowns then ps
        else error at ("Premises failed to compute all required output variables:\n" ^
+                      "  ▹ result: " ^ (String.concat "\n      " (List.map string_of_prem ps)) ^ "\n" ^
+                      "  ▹ ins: " ^ string_of_varset ins ^ "\n" ^
                       "  ▹ knowns: " ^ string_of_varset s.knowns ^ "\n" ^
                       "  ▹ outs: " ^ string_of_varset ous)
 
@@ -1033,22 +1061,22 @@ let animate_rules at rs = List.map (animate_rule at) rs
 let animate_clause (c: clause) : func_clause =
   let DefD (binds, args, exp, prems) = c.it in
   let n_args = List.length args in
-  let ous = (free_exp false exp).varid in
   let blob = List.mapi (fun i arg -> match arg.it with
-    | ExpA exp ->
+    | ExpA exp' ->
       let v = fresh_id (Some ("a" ^ string_of_int i)) arg.at in
-      let lhs = VarE v $$ v.at % exp.note in
-      let p = IfPr (CmpE (`EqOp, `BoolT, lhs, exp) $$ exp.at % (BoolT $ exp.at)) $ arg.at in
-      (ExpA lhs $ lhs.at, Some p, Some v)
+      let exp_v = VarE v $$ v.at % exp'.note in
+      let p = IfPr (CmpE (`EqOp, `BoolT, exp', exp_v) $$ exp'.at % (BoolT $ exp'.at)) $ arg.at in
+      (ExpA exp_v $ v.at, Some p, Some v)
     | _ -> (arg, None, None)
   ) args
   in
-  let (args, o_prem_args, ovs) = Lib.List.unzip3 blob in
+  let (args', o_prem_args, ovs) = Lib.List.unzip3 blob in
   let prems_args = List.filter_map Fun.id o_prem_args in
   let vs = List.filter_map Fun.id ovs in
   let ins = (free_list free_varid vs).varid in
+  let ous = (free_exp false exp).varid in
   let prems' = animate_prems c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
-  (DefD (binds, args, exp, prems')) $ c.at
+  (DefD (binds, args', exp, prems')) $ c.at
 
 let animate_clauses cs = List.map animate_clause cs
 
