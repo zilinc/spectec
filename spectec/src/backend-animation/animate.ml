@@ -854,7 +854,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
       -- XXX |   -- let `v*` = rhs^(i<N) {`v*`}
       -- XXX | Base case 3: (-- let v = rhs {v})^(i<N) {} where N is known
       -- XXX |   It means that all v's must have the same value.
-      -- XXX | Base case: (-- let v = rhs {v})^(i<N) where N is unknown
+      -- XXX | Base case 4: (-- let v = rhs {v})^(i<N) where N is unknown
       -- XXX |   Maybe can't animate in general.
       -- XXX | Inductive cases: (-- let v = rhs {v})^iter
       -- XXX |   Reduce to base cases:
@@ -906,7 +906,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
           (* Base case 3 *)
           throw_log (string_of_error prem.at "IterPr Base case 3: not yet implemented: " ^ string_of_prem prem')
       else
-        (* The iterator N is unknown *)
+        (* Base case 4: The iterator N is unknown *)
         E.throw (string_of_error prem.at ("IterPr has unknown iterator " ^ string_of_iter iter ^ "\n" ^
                                           "  ▹ unknowns: " ^ string_of_varset knowns))
     (* Inductive cases, where the body is -- let v = rhs but the iterator is not ^(i<N). *)
