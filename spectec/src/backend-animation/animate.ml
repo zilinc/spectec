@@ -720,15 +720,14 @@ and animate_exp_eq at lhs rhs : prem list E.m =
     end
   (* More complicated patterns that are partially invertible. *)
   (* [e1; e2; ...; en] ++ exp2 *)
-  | CatE ({ it = ListE exps; _ } as exp1, exp2) ->
-    let len1 = List.length exps in
+  | CatE (({ it = ListE exps; _ } as exp1), exp2) ->
     let len = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
     let prems1 = List.mapi (fun i exp ->
       let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
       let rhs' = IdxE (rhs, idx) $$ exp.at % exp.note in
       IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
     ) exps in
-    let start2 = NumE (`Nat (Z.of_int len1)) $$ no_region % (mk_natT no_region) in
+    let start2 = NumE (`Nat (Z.of_int (List.length exps))) $$ exp1.at % (mk_natT exp1.at) in
     let len2 = BinE (`SubOp, `NatT, len, start2) $$ exp2.at % (mk_natT exp2.at) in
     let rhs2' = SliceE (rhs, start2, len2) $$ rhs.at % rhs.note in
     let prem2 = IfPr (CmpE (`EqOp, `BoolT, exp2, rhs2') $$ exp2.at % (BoolT $ exp2.at)) $ at in
@@ -737,6 +736,29 @@ and animate_exp_eq at lhs rhs : prem list E.m =
        The first [v] is a binding, and the second becomes a check.
     *)
     let s_new = { (init ()) with prems = prems1 @ [prem2]; knowns = get_knowns s } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return prems'
+  (* exp1 ++ [e1; e2; ...; en] *)
+  | CatE (exp1, ({ it = ListE exps; _ } as exp2)) ->
+    let len2 = NumE (`Nat (Z.of_int (List.length exps))) $$ exp2.at % (mk_natT exp2.at) in
+    let len = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+    let prems2 = List.mapi (fun i exp ->
+      let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
+      (* idx' = len - (len2 - idx) *)
+      let idx' = BinE (`SubOp, `NatT, len, BinE (`SubOp, `NatT, len2, idx)
+                                           $$ len2.at % (mk_natT len2.at))
+                 $$ idx.at % (mk_natT idx.at) in
+      let rhs' = IdxE (rhs, idx') $$ exp.at % exp.note in
+      IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
+    ) exps in
+    let start1 = NumE (`Nat (Z.of_int 0)) $$ no_region % (mk_natT no_region) in
+    let len1 = BinE (`SubOp, `NatT, len, len2) $$ exp1.at % (mk_natT exp1.at) in
+    let rhs1' = SliceE (rhs, start1, len1) $$ rhs.at % rhs.note in
+    let prem1 = IfPr (CmpE (`EqOp, `BoolT, exp1, rhs1') $$ exp1.at % (BoolT $ exp1.at)) $ at in
+    (* Start an inner loop, in case of any dependencies between the list elements.
+    *)
+    let s_new = { (init ()) with prems = prems2 @ [prem1]; knowns = get_knowns s } in
     let* (prems', s_new') = run_inner s_new (animate_prems' at) in
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return prems'
@@ -974,23 +996,23 @@ and animate_prems' at : prem list E.m =
   | ([], []) -> E.return []
   (* finished one iteration *)
   | ([], ps') -> begin match (has_progress s, can_invert s) with
-                 (* already allowing making inverses but still doesn't make progress *)
-                 | false, true ->
-                   let err = get_failure s in
-                   E.throw (string_of_error at
-                              ("Can't animate the remaining premises:\n" ^
-                               String.concat "\n" (List.map string_of_prem ps') ^ "\n" ^
-                               "This is caused by: \n" ^
-                               err))
-                 (* failed to make progress, but we can try allowing inverses *)
-                 | false, false ->
-                   let* () = update (allow_inverse >>> clr_progress >>> mv_to_prems) in
-                   animate_prems' at
-                 (* has made some progress, enter next iteration *)
-                 | true, _ ->
-                   let* () = update (clr_progress >>> mv_to_prems) in
-                   animate_prems' at
-                 end
+    (* already allowing making inverses but still doesn't make progress *)
+    | false, true ->
+      let err = get_failure s in
+      E.throw (string_of_error at
+                 ("Can't animate the remaining premises:\n" ^
+                  String.concat "\n" (List.map string_of_prem ps') ^ "\n" ^
+                  "This is caused by: \n" ^
+                  err))
+    (* failed to make progress, but we can try allowing inverses *)
+    | false, false ->
+      let* () = update (allow_inverse >>> clr_progress >>> mv_to_prems) in
+      animate_prems' at
+    (* has made some progress, enter next iteration *)
+    | true, _ ->
+      let* () = update (clr_progress >>> mv_to_prems) in
+      animate_prems' at
+    end
   (* continue with the current iteration *)
   | _ -> let ( let* ) = S.( >>= ) in
          E.exceptT (
