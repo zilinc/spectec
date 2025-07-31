@@ -94,16 +94,16 @@ rule Step_pure/label-vals:
 ;; Branch instructions
 
 ;; TODO(4, rossberg): may want a label context instead of bubbling up
-rule Step_pure/br-label-zero:
-  (LABEL_ n `{instr'*} val'* val^n (BR l) instr*)  ~>  val^n instr'*
-  -- if l = 0
+;; rule Step_pure/br-label-zero:
+;;   (LABEL_ n `{instr'*} val'* val^n (BR l) instr*)  ~>  val^n instr'*
+;;   -- if l = 0
 
-rule Step_pure/br-label-succ:
-  (LABEL_ n `{instr'*} val* (BR l) instr*)  ~>  val* (BR $(l - 1))
-  -- if l > 0
+;; rule Step_pure/br-label-succ:
+;;   (LABEL_ n `{instr'*} val* (BR l) instr*)  ~>  val* (BR $(l - 1))
+;;   -- if l > 0
 
-rule Step_pure/br-handler:
-  (HANDLER_ n `{catch*} val* (BR l) instr*)  ~>  val* (BR l)
+;; rule Step_pure/br-handler:
+;;   (HANDLER_ n `{catch*} val* (BR l) instr*)  ~>  val* (BR l)
 
 
 rule Step_pure/br_if-true:
@@ -187,19 +187,19 @@ rule Step_read/return_call:
   -- if $moduleinst(z).FUNCS[x] = a
 
 
-rule Step_read/return_call_ref-label:
-  z; (LABEL_ k `{instr'*} val* (RETURN_CALL_REF yy) instr*)  ~>  val* (RETURN_CALL_REF yy)
-
-rule Step_read/return_call_ref-handler:
-  z; (HANDLER_ k `{catch*} val* (RETURN_CALL_REF yy) instr*)  ~>  val* (RETURN_CALL_REF yy)
-
-rule Step_read/return_call_ref-frame-null:
-  z; (FRAME_ k `{f} val* (REF.NULL ht) (RETURN_CALL_REF yy) instr*)  ~>  TRAP
-
-rule Step_read/return_call_ref-frame-addr:
-  z; (FRAME_ k `{f} val'* val^n (REF.FUNC_ADDR a) (RETURN_CALL_REF yy) instr*)  ~>  val^n (REF.FUNC_ADDR a) (CALL_REF yy)
-  ----
-  -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
+;; rule Step_read/return_call_ref-label:
+;;   z; (LABEL_ k `{instr'*} val* (RETURN_CALL_REF yy) instr*)  ~>  val* (RETURN_CALL_REF yy)
+;; 
+;; rule Step_read/return_call_ref-handler:
+;;   z; (HANDLER_ k `{catch*} val* (RETURN_CALL_REF yy) instr*)  ~>  val* (RETURN_CALL_REF yy)
+;; 
+;; rule Step_read/return_call_ref-frame-null:
+;;   z; (FRAME_ k `{f} val* (REF.NULL ht) (RETURN_CALL_REF yy) instr*)  ~>  TRAP
+;; 
+;; rule Step_read/return_call_ref-frame-addr:
+;;   z; (FRAME_ k `{f} val'* val^n (REF.FUNC_ADDR a) (RETURN_CALL_REF yy) instr*)  ~>  val^n (REF.FUNC_ADDR a) (CALL_REF yy)
+;;   ----
+;;   -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
 
 
 rule Step_pure/call_indirect:
@@ -212,14 +212,14 @@ rule Step_pure/return_call_indirect:
 rule Step_pure/frame-vals:
   (FRAME_ n `{f} val^n)  ~>  val^n
 
-rule Step_pure/return-frame:
-  (FRAME_ n `{f} val'* val^n RETURN instr*)  ~>  val^n
+;; rule Step_pure/return-frame:
+;;   (FRAME_ n `{f} val'* val^n RETURN instr*)  ~>  val^n
 
-rule Step_pure/return-label:
-  (LABEL_ n `{instr'*} val* RETURN instr*)  ~>  val* RETURN
-
-rule Step_pure/return-handler:
-  (HANDLER_ n `{catch*} val* RETURN instr*)  ~>  val* RETURN
+;; rule Step_pure/return-label:
+;;   (LABEL_ n `{instr'*} val* RETURN instr*)  ~>  val* RETURN
+;; 
+;; rule Step_pure/return-handler:
+;;   (HANDLER_ n `{catch*} val* RETURN instr*)  ~>  val* RETURN
 
 
 ;; Exceptions
