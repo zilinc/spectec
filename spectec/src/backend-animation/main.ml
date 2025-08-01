@@ -83,15 +83,9 @@ let animate il print_dl =
            |> fun dl -> (dl, il)
            |> Animate.animate
   in
-  if print_dl then
-    print_endline (List.map string_of_dl_def dl |> String.concat "\n")
-  else
-    print_endline ("Animation done.")
-  (*
   match Valid.validate dl with
   | Some errs -> Printf.eprintf "Animation validation:\n%s" (String.concat "\n" errs)
   | None -> if print_dl then
               print_endline (List.map string_of_dl_def dl |> String.concat "\n")
             else
               print_endline ("Animation validation passed.")
-  *)
