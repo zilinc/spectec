@@ -997,20 +997,44 @@ and animate_prem : prem -> prem list E.m = fun prem ->
       ) (xes @ iNs) |> Set.of_list in
       let s_body = { (init ()) with prems = [prem']; knowns = (Set.union knowns knowns_inner) } in
       let* (prems_body', s_body') = run_inner s_body (animate_prems' prem'.at) in
-      (* Propagate knowns to the outside of the iterator. *)
+      (* Propagate knowns to the outside of the iterator. We need to traverse [knowns']
+         instead of [xes], because there may be variables that need to flow
+         out but do not ∈ xes.
+      *)
       let knowns' = get_knowns s_body' in
-      let knowns_outer = List.map (fun x ->
+      let blob = List.map (fun x ->
         match List.find_opt (fun (y, e) -> y.it = x) xes with
         (* If x <- e exists, then x propagates to e. *)
         | Some (y, e) ->
           let fv_e = (free_exp false e).varid in
           let unknowns_e = Set.diff fv_e knowns' in
-          Set.elements unknowns_e
+          if Set.is_empty unknowns_e then
+            (* [e] already known; nothing to flow out. *)
+            ([], [])
+          else
+            begin match e.it with
+            | VarE ve -> ([ve.it], [])
+            | _ ->
+              (* If [e] is not a single variable and it's out-flowing in {x <- e},
+                 then we create a fresh [v], such that {x <- v}, and -- if v = e
+                 after we finish the interation.
+              *)
+              let y' = Frontend.Dim.annot_varid y [iter] in
+              let v = fresh_id (Some y'.it) e.at in
+              let ve = VarE v $$ e.at % e.note in
+              let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, ve) $$ e.at % (BoolT $ e.at)) $ e.at in
+              ([y'.it], [prem_e])
+            end
         (* If there's no x <- e, then propagate x out. *)
-        | None -> [x]
-      ) (Set.elements knowns') |> List.concat |> Set.of_list in
-      let* () = update (add_knowns knowns_outer) in
-      E.return [IterPr (prems_body', iterexp) $ prem.at]
+        | None -> ([x], [])
+      ) (Set.elements knowns') in
+      let knowns_outer, e_prems = Lib.List.unzip blob |> Lib.Fun.(<***>) List.concat List.concat in
+      let* () = update (add_knowns (Set.of_list knowns_outer)) in
+      let* s_outer = get () in
+      let s_end = { (init ()) with prems = e_prems; knowns = get_knowns s_outer} in
+      let* (e_prems', s_end') = run_inner s_end (animate_prems' prem.at) in
+      let* () = update (put_knowns (get_knowns s_end')) in
+      E.return ((IterPr (prems_body', iterexp) $ prem.at) :: e_prems')
     end
   | IterPr (prems, iterexp) -> todo "animate_prem"
 
