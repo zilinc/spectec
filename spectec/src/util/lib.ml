@@ -152,6 +152,7 @@ struct
   let uncurry f (a, b) = f a b
   let both f (a1, a2) = (f a1, f a2)
   let (>>>) f g = fun x -> x |> f |> g
+  let (<***>) f g (a, b) = (f a, g b)
 end
 
 module Option =

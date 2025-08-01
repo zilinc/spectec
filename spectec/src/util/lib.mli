@@ -54,6 +54,7 @@ sig
   val uncurry :  ('a -> 'b -> 'c) -> ('a * 'b) -> 'c
   val both : ('a -> 'b) -> ('a * 'a) -> ('b * 'b)
   val (>>>) : ('a -> 'b) -> ('b -> 'c) -> ('a -> 'c)
+  val (<***>) : ('a -> 'b) -> ('c -> 'd) -> 'a * 'c -> 'b * 'd
 end
 
 module Option:
