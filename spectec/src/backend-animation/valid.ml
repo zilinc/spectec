@@ -1,5 +1,6 @@
 open Il.Ast
 open Il.Free
+open Il.Print
 open Il2al
 open Util
 open Error
@@ -7,19 +8,25 @@ open Source
 
 exception InvalidDL of string
 
-
 (* Helper: collect free variables from expressions and args *)
-let rec free_vars_exp (e : exp) : Set.t =
+let rec free_vars_path (p : path) : Set.t =
+  match p.it with
+  | RootP -> Set.empty
+  | IdxP (p1, e) -> Set.union (free_vars_path p1) (free_vars_exp e)
+  | SliceP (p1, e1, e2) -> Set.union (Set.union (free_vars_path p1) (free_vars_exp e1)) (free_vars_exp e2)
+  | DotP (p1, _) -> free_vars_path p1
+and free_vars_exp (e : exp) : Set.t =
   match e.it with
   | VarE id -> Set.singleton id.it
   | BoolE _ | NumE _ | TextE _ |  OptE None -> Set.empty
   | UnE (_, _, e1) | TheE e1 | OptE (Some e1) | LiftE e1 | LenE e1 
   | ProjE (e1, _) | DotE (e1, _) | CaseE (_, e1) | UncaseE (e1, _) 
-  | CvtE (e1, _, _) | SubE (e1, _, _) -> free_vars_exp e1
+  | CvtE (e1, _, _) | SubE (e1, _, _) | SupE (e1, _, _) -> free_vars_exp e1
   | BinE (_, _, e1, e2) | CmpE (_, _, e1, e2)
-  | CatE (e1, e2) | CompE (e1, e2) | MemE (e1, e2)
-  | UpdE (e1, _, e2) | ExtE (e1, _, e2) | IdxE (e1, e2) -> 
+  | CatE (e1, e2) | CompE (e1, e2) | MemE (e1, e2) | IdxE (e1, e2) -> 
     Set.union (free_vars_exp e1) (free_vars_exp e2)
+  | UpdE (e1, p, e2) | ExtE (e1, p, e2) ->
+    Set.union (free_vars_exp e1) (Set.union (free_vars_path p) (free_vars_exp e2))
   | TupE es | ListE es ->
     List.fold_left (fun acc e -> Set.union acc (free_vars_exp e)) Set.empty es
   | CallE (_, args) -> free_vars_args args
@@ -29,7 +36,7 @@ let rec free_vars_exp (e : exp) : Set.t =
       | ListN (_, Some id) -> Set.singleton id.it
       | _ -> Set.empty
     in
-    let bindings = List.map snd xes |> List.map free_vars_exp |> List.fold_left Set.union Set.empty in
+    let bindings = List.filter_map (fun (x, e) -> if (Set.mem x.it bound_idx) then None else Some e) xes |> List.map free_vars_exp |> List.fold_left Set.union Set.empty in
     let body_fvs = free_vars_exp e1 in
     let itervar = match iter with
       | ListN (e2, _) -> free_vars_exp e2
@@ -45,14 +52,14 @@ let rec free_vars_exp (e : exp) : Set.t =
 and free_vars_args (args : arg list) : Set.t =
   List.fold_left (fun acc a -> match a.it with
     | ExpA e -> Set.union acc (free_vars_exp e)
-    | _ -> acc (* TODO *)
+    | _ -> acc 
   ) Set.empty args
 
 (* Validate a single premise *)
 let rec validate_prem (known : Set.t) (prem : prem) : Set.t =
   match prem.it with
-  (* idk about RulePr *)
-  | IfPr e | RulePr (_, _, e) ->
+  | RulePr (_, _, e) -> raise (InvalidDL "RulePr found: shouldn't happen.")
+  | IfPr e -> 
     let fvs = free_vars_exp e in
     let unknowns = Set.diff fvs known in
     if not (Set.is_empty unknowns) then
@@ -60,45 +67,50 @@ let rec validate_prem (known : Set.t) (prem : prem) : Set.t =
                         "  ▹ unknowns: " ^ string_of_varset unknowns));
     known
   | LetPr (lhs, rhs, vars) ->
+    if not (List.length vars = 1) then
+      raise (InvalidDL ("Let binding must have exactly one variable at premise:\n" ^ Il.Print.string_of_prem prem));
+    let var = List.hd vars in
     let rhs_fvs = free_vars_exp rhs in
     let unknowns = Set.diff rhs_fvs known in
     if not (Set.is_empty unknowns) then
       raise (InvalidDL ("Let binding RHS uses unknown variables at premise:\n" ^ Il.Print.string_of_prem prem ^ "\n" ^
                         "  ▹ unknowns: " ^ string_of_varset unknowns));
-    let lhs_fvs = free_vars_exp lhs in
-    List.iter (fun v ->
-      if not (Set.mem v lhs_fvs) then
-        raise (InvalidDL (("Let binding output " ^ v ^ " not in LHS at premise:\n" ^ Il.Print.string_of_prem prem)));
-      if (Set.mem v known) then
-        raise (InvalidDL ("Let binding output " ^ v ^ " already known at premise:\n" ^ Il.Print.string_of_prem prem));
-    ) vars;
-    let new_known = Set.diff lhs_fvs known in
-    Set.iter (fun v ->
-      if not (List.mem v vars) then
-        raise (InvalidDL ("Let binding output " ^ v ^ " not added to known" ^ Il.Print.string_of_prem prem)))
-      new_known;
-    Set.union known lhs_fvs
-  | IterPr ([p], (iter, pairs)) ->
-    (* Validate all RHS expressions in the binding pairs *)
-    List.iter (fun (_, e) ->
-      let fvs = free_vars_exp e in
-      if not (Set.subset fvs known) then
-        raise (InvalidDL (
-          "Iteration binding uses unknown variables: " ^
-          string_of_varset (Set.diff fvs known) ^
-          "\nIn: " ^ Il.Print.string_of_prem prem
-        ))
-    ) pairs;
-    (* Add bound variables and index variable to known set *)
-    let bound_ids =
-      List.map fst pairs |> List.map (fun id -> id.it) |> Set.of_list
-    in
-    let bound_idx =
-      match iter with
-      | ListN (_, Some id) -> Set.singleton id.it
-      | _ -> Set.empty
-    in
-    let known' = Set.union known (Set.union bound_ids bound_idx) in
+    (match lhs.it with 
+      | VarE lhs_var -> 
+        if lhs_var.it <> var then 
+          raise (InvalidDL ("Let binding LHS must match output at premise:\n" ^ Il.Print.string_of_prem prem))
+      | _ -> raise (InvalidDL ("Let binding LHS must be a variable at premise:\n" ^ Il.Print.string_of_prem prem)));
+    if (Set.mem var known) then
+      raise (InvalidDL ("Let binding output " ^ var ^ " already known at premise:\n" ^ Il.Print.string_of_prem prem));
+    Set.union (Set.singleton var) known
+  | IterPr (plist, (iter, pairs)) ->
+    (* {t <- t*} is bidirectional so only one side should be known *)
+    let new_knowns = ref known in
+    let knowniters, unknowniters = List.partition (
+      fun (x, e) -> 
+        let fvs = free_vars_exp e in
+        if not (Set.subset fvs known) then
+          (match e.it with
+            | VarE id' -> 
+              if (Set.mem x.it known) then 
+                (new_knowns := Set.add id'.it !new_knowns; true) 
+              else false
+            | _ -> raise (InvalidDL (
+              "Iteration binding uses unknown variables: " ^
+              string_of_varset (Set.diff fvs known) ^
+              "\nIn: " ^ Il.Print.string_of_prem prem
+            )))
+        else 
+          true
+    ) pairs in
+    (* add optional index to knowns since it is bound *)
+    (match iter with
+      | ListN (_, Some id) -> new_knowns := Set.add id.it !new_knowns
+      | _ -> ());
+    (* add the iterators if they are known *)
+    List.iter (fun (id, _) ->
+      new_knowns := Set.add id.it !new_knowns
+    ) knowniters;
     (* Validate iter expression if it’s ListN (exp, _) *)
     (match iter with
      | ListN (e, _) ->
@@ -111,8 +123,21 @@ let rec validate_prem (known : Set.t) (prem : prem) : Set.t =
           ))
      | _ -> ());
     (* Validate body premise *)
-    validate_prem known' p
-  | IterPr (_, _) -> todo "Backend_animation.Valid.validate_prem"
+    new_knowns := (List.fold_left validate_prem !new_knowns plist);
+    let unknowniterids = Set.of_list (List.map (fun (x, _) -> x.it) unknowniters) in
+    if not (Set.subset unknowniterids !new_knowns) then
+      raise (InvalidDL (
+        (Printf.sprintf "Either the IterVars or their binders must be known: %s, \nIn: %s" (string_of_varset (Set.diff unknowniterids !new_knowns)) (Il.Print.string_of_prem prem))
+      ))
+    else 
+      let getrhsiter (_, e) = 
+        match e.it with
+        | VarE id -> id.it
+        | _ -> raise (InvalidDL ("Iteration RHS must be a variable: " ^ Il.Print.string_of_prem prem)) (* todo: this is a redundant check *)
+      in 
+      let learnediters = Set.of_list (List.map getrhsiter unknowniters) in
+      new_knowns := Set.union !new_knowns learnediters;
+    !new_knowns 
   | ElsePr -> known
 
 (* Validate a single rule clause *)
@@ -123,7 +148,7 @@ let validate_clause args e prems : unit =
   in
   let ret_fvs = free_vars_exp e in
   if not (Set.subset ret_fvs known_after_premises) then
-    raise (InvalidDL "Return value uses unknown variables")
+    raise (InvalidDL ("Return value uses unknown variables: \n" ^ string_of_varset (Set.diff ret_fvs known_after_premises)))
 
 (* Validate a full func_def *)
 let validate_func_def (fd : Def.func_def) : string list option =
