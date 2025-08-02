@@ -198,7 +198,7 @@ and string_of_sym g =
 
 (* Premises *)
 
-and string_of_prem prem =
+and string_of_prem' lv prem =
   match prem.it with
   | RulePr (id, mixop, e) ->
     string_of_id id ^ ": " ^ string_of_mixop mixop ^ string_of_exp_args e
@@ -209,12 +209,17 @@ and string_of_prem prem =
     " {" ^ (String.concat ", " (List.map string_of_id ids')) ^ "}"
   | ElsePr -> "otherwise"
   | IterPr ([{it = IterPr _; _} as prem'], iter) ->
-    string_of_prem prem' ^ string_of_iterexp iter
+    string_of_prem' (lv+1) prem' ^ string_of_iterexp iter
   | IterPr ([prem'], iter) ->
-    "(" ^ string_of_prem prem' ^ ")" ^ string_of_iterexp iter
+    "(" ^ string_of_prem' (lv+1) prem' ^ ")" ^ string_of_iterexp iter
   | IterPr (prems', iter) ->
-    "[" ^ String.concat "\n" (List.map string_of_prem prems') ^ "\n" ^
-    "]" ^ string_of_iterexp iter
+    let spaces = String.make (2*(lv+1)) ' ' in
+    let pre = "\n" ^ spaces ^ "-- " in
+    "(" ^
+    concat "" (List.map (prefix pre string_of_prem) prems') ^
+    "\n" ^ spaces ^ ")" ^ string_of_iterexp iter
+
+and string_of_prem prem = string_of_prem' 2 prem
 
 
 (* Definitions *)

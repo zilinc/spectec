@@ -1,17 +1,16 @@
 open Il.Ast
 open Il.Free
 open Il.Print
-open Il2al
+open Def
 open Util
 open Error
 open Source
 
 
-exception InvalidDL of string
-
 let string_of_error at msg = string_of_region at ^ " DL animation validation error:\n" ^ msg
-let error at msg = raise (InvalidDL (string_of_error at msg))
+let error at msg = Error.error at "DL validation" msg
 let error_pr at msg prem = error at (msg ^ "\n" ^ "In premise: " ^ string_of_prem prem)
+
 
 (* Helper: collect free variables from expressions and args *)
 let rec free_vars_path (p : path) : Set.t =
@@ -61,7 +60,7 @@ and free_vars_args (args : arg list) : Set.t =
   ) Set.empty args
 
 (* Validate a single premise *)
-let rec validate_prem (known : Set.t) (prem : prem) : Set.t =
+let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
   match prem.it with
   | RulePr (_, _, e) -> error_pr prem.at "RulePr found: shouldn't happen." prem
   | IfPr e ->
@@ -125,7 +124,7 @@ let rec validate_prem (known : Set.t) (prem : prem) : Set.t =
       | _ -> ()
     );
     (* Validate body premise *)
-    new_knowns := (List.fold_left validate_prem !new_knowns plist);
+    new_knowns := (List.fold_left valid_prem !new_knowns plist);
     let unknowniterids = Set.of_list (List.map (fun (x, _) -> x.it) unknowniters) in
     let unknowns = Set.diff unknowniterids !new_knowns in
     if not (Set.is_empty unknowns) then
@@ -138,33 +137,26 @@ let rec validate_prem (known : Set.t) (prem : prem) : Set.t =
   | ElsePr -> known
 
 (* Validate a single rule clause *)
-let validate_clause at args e prems : unit =
+let valid_clause at args e prems : unit =
   let initial_known = free_vars_args args in
   let known_after_premises =
-    List.fold_left validate_prem initial_known prems
+    List.fold_left valid_prem initial_known prems
   in
   let ret_fvs = free_vars_exp e in
   if not (Set.subset ret_fvs known_after_premises) then
     error at ("Return value uses unknown variables: \n" ^ string_of_varset (Set.diff ret_fvs known_after_premises))
 
 (* Validate a full func_def *)
-let validate_func_def (fd : Def.func_def) : string list option =
-  let (fdid, clauses) = fd.it in
-  List.map (fun clause ->
-    match clause.it with
-      | DefD (_, args, e, prems) ->
-        match
-          validate_clause clause.at args e prems
-        with
-        | exception (InvalidDL msg) -> Some msg
-        | _ -> None
-  ) clauses |> Lib.Option.cat_opts_opt
+let valid_func_def (fd : func_def) : unit =
+  let (fdid, ps, t, clauses, _) = fd.it in
+  List.iter (fun clause ->
+    let DefD (_, args, e, prems) = clause.it in
+    valid_clause clause.at args e prems
+  ) clauses
 
-let validate (dl : Def.dl_def list) : string list option =
-  let open Def in
-  List.map (fun def ->
-    match def with
-      | RuleDef   rd -> Some [string_of_error rd.at "RuleDef found: shouldn't happen."]
-      | HelperDef hd -> Some [string_of_error hd.at "HelperDef found: shouldn't happen."]
-      | FuncDef fd -> validate_func_def fd
-  ) dl |> Lib.Option.cat_opts_opt |> Option.map List.flatten
+let valid_def (def: dl_def) : unit = match def with
+  | RuleDef rd -> error rd.at "RuleDef found: shouldn't happen."
+  | FuncDef fd -> valid_func_def fd
+
+let valid (dl : dl_def list) : unit =
+  List.iter valid_def dl

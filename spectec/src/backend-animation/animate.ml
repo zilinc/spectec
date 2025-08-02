@@ -9,6 +9,8 @@ open Xl.Atom
 open Il2al.Def
 open Il2al.Free
 open Backend_ast
+open Def
+
 
 module StringMap = Map.Make(String)
 
@@ -1156,7 +1158,7 @@ let animate_rule_red at binds lhs rhs prems : clause' =
   DefD (binds, [ExpA ve $ ve.at], rhs, prems')
 
 let animate_rule rel_id at (r : rule_clause) : clause =
-  let (rule_id, lhs, rhs, prems) = r in
+  let (rule_id, lhs, rhs, prems) = r.it in
   let clause' =
     if is_unanimatable "rule_lhs" rule_id.it rel_id then
       animate_rule_red_no_arg at [] lhs rhs prems  (* TODO(zilinc): binds *)
@@ -1190,40 +1192,36 @@ let animate_clause (c: clause) : func_clause =
 let animate_clauses cs = List.map animate_clause cs
 
 let animate_rule_def (rdef: rule_def) : func_def =
-  let (_, rel_id, rules) = rdef.it in
-  (rel_id, animate_rules rel_id.it rdef.at rules) $ rdef.at
+  let (_, rel_id, t1, t2, rules) = rdef.it in
+  let params = [ExpP ("_" $ t1.at, t1) $ t1.at] in
+  (rel_id, params, t2, animate_rules rel_id.it rdef.at rules, None) $ rdef.at
 
-let animate_helper_def' (id, clauses, partial) = (id, animate_clauses clauses)
-let animate_helper_def (hdef: helper_def) : func_def = animate_helper_def' hdef.it $ hdef.at
+let animate_func_def' (id, ps, typ, clauses, opartial) =
+  (id, ps, typ, animate_clauses clauses, opartial)
+let animate_func_def (hdef: func_def) : func_def = animate_func_def' hdef.it $ hdef.at
 
-let animate_def (d: dl_def) = match d with
-| RuleDef   rdef -> FuncDef (animate_rule_def   rdef)
-| HelperDef hdef -> FuncDef (animate_helper_def hdef)
+let animate_def (d: dl_def): dl_def = match d with
+| RuleDef rdef -> FuncDef (animate_rule_def rdef)
+| FuncDef fdef -> FuncDef (animate_func_def fdef)
 
 
 (* Merge all rules that have the same rel_id. *)
 let rec merge_defs (defs: dl_def list) : dl_def list =
-  let is_func = function
-  | FuncDef _ -> true | _ -> false
-  in
-  let (funcs, rest) = List.partition is_func defs in
-
-  let funcs' = match funcs with
+  match defs with
   | [] -> []
   | f :: fs ->
-    let func_id = function | FuncDef {it = (fid, _); _} -> fid | _ -> assert false
-    in
-    let fid0 = func_id f in
+    let FuncDef {it = (fid0, params, typ, _, opartial); _} = f in
+    let func_id (FuncDef {it = (fid, _, _, _, _); _}) = fid in
+    let func_clauses (FuncDef {it = (_, _, _, cls, _); _}) = cls in
     let fs_same, fs_diff =
       List.partition (fun f -> func_id f = fid0) fs in
-    let clauses = f :: fs_same |> List.concat_map (fun (FuncDef fdef) -> snd fdef.it) in
+    let clauses = f :: fs_same |> List.concat_map func_clauses in
     let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
-    let f' = FuncDef ((fid0, clauses) $ at) in
+    let f' = FuncDef ((fid0, params, typ, clauses, opartial) $ at) in
     f' :: merge_defs fs_diff
-  in funcs' @ rest
 
 (* Entry function *)
 let animate (dl, il) =
   env := Il.Env.env_of_script il;
   dl |> List.map animate_def
-     |> merge_defs
+               |> merge_defs
