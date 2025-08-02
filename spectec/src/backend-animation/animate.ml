@@ -986,28 +986,45 @@ and animate_prem : prem -> prem list E.m = fun prem ->
     (* Inductive case: arbitrary prem, arbitrary iter *)
     | _ ->
       (* Propagating knowns into the iteration. *)
-      let iNs = match iter with
-      | ListN(len, Some i) -> [(i, len)]
-      | _ -> []
+      let oindex = match iter with
+      | ListN(len, Some i) ->
+        let fv_len = (free_exp false len).varid in
+        if Set.is_empty (Set.diff fv_len knowns) then
+          Some i
+        else
+          (* It should have been caught by the IL validator. *)
+          assert false
+      | _ -> None
       in
-      let knowns_inner = List.filter_map (fun (x, e) ->
+      (* The new bindings that are introduced by the iteration. *)
+      let knowns_iter = List.filter_map (fun (x, e) ->
         let fv_e = (free_exp false e).varid in
         let unknowns_e = Set.diff fv_e knowns in
         if Set.is_empty unknowns_e then Some x.it else None
-      ) (xes @ iNs) |> Set.of_list in
-      let s_body = { (init ()) with prems = [prem']; knowns = (Set.union knowns knowns_inner) } in
+      ) xes |> Set.of_list in
+      let knowns_inner = Set.union knowns knowns_iter in
+      let knowns_inner_idx = match oindex with
+      | None   -> knowns_inner
+      | Some i -> Set.add i.it knowns_inner in
+      let s_body = { (init ()) with prems = [prem']; knowns = knowns_inner_idx } in
       let* (prems_body', s_body') = run_inner s_body (animate_prems' prem'.at) in
-      (* Propagate knowns to the outside of the iterator. We need to traverse [knowns']
+      (* Propagate knowns to the outside of the iterator. We need to traverse [new_knowns]
          instead of [xes], because there may be variables that need to flow
          out but do not ∈ xes.
       *)
-      let knowns' = get_knowns s_body' in
+      let knowns_inner' = get_knowns s_body' in
+      (* The extra variables that've been worked out inside the interation.
+         CAUTION: If the index [i] exists, then this [i] shouldn't be propagated out.
+         That's why we need to subtract the [knowns_inner_idx] set which includes
+         the index, if there is one.
+      *)
+      let new_knowns = Set.diff knowns_inner' knowns_inner_idx in
       let blob = List.map (fun x ->
         match List.find_opt (fun (y, e) -> y.it = x) xes with
         (* If x <- e exists, then x propagates to e. *)
         | Some (y, e) ->
           let fv_e = (free_exp false e).varid in
-          let unknowns_e = Set.diff fv_e knowns' in
+          let unknowns_e = Set.diff fv_e knowns_inner' in
           if Set.is_empty unknowns_e then
             (* [e] already known; nothing to flow out. *)
             ([], [])
@@ -1027,7 +1044,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
             end
         (* If there's no x <- e, then propagate x out. *)
         | None -> ([x], [])
-      ) (Set.elements knowns') in
+      ) (Set.elements new_knowns) in
       let knowns_outer, e_prems = Lib.List.unzip blob |> Lib.Fun.(<***>) List.concat List.concat in
       let* () = update (add_knowns (Set.of_list knowns_outer)) in
       let* s_outer = get () in
