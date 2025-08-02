@@ -247,11 +247,6 @@ let () =
 
     if !print_final_il && not !print_all_il then print_il il;
 
-    if !target = Animate || !print_dl then (
-      log "Translating to DL and animate...";
-      Backend_animation.Main.animate il !print_dl
-    );
-
     let al =
       if not !print_al && !print_al_o = "" &&
          (!target = Check || !target = Ast || !target = Latex || !target = Animate) then []
@@ -366,8 +361,11 @@ let () =
       Backend_interpreter.Runner.run args
 
     | Animate ->
+      log "Translating to DL and animate...";
+      let _dl = Backend_animation.Main.animate il !print_dl in
       log "Animation backend not yet implemented..."
     );
+
     log "Complete."
   with
   | Util.Error.Error (at, msg) as exn ->

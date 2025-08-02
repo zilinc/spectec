@@ -11,4 +11,4 @@ type func_def = func_def' phrase
 type rule_clause = id * exp * exp * (prem list)
 type rule_def' = string * id * rule_clause list  (* rule_name, rel_id, rules *)
 type rule_def = rule_def' phrase
-type dl_def = RuleDef of rule_def | HelperDef of helper_def | FuncDef of func_def 
+type dl_def = RuleDef of rule_def | HelperDef of helper_def

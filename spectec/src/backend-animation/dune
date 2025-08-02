@@ -4,6 +4,7 @@
   (modules
     main
     animate
+    def
     il2dl
     valid
   )

@@ -1,1 +1,1 @@
-val animate: (Il2al.Def.dl_def list * Il.Ast.script) -> Il2al.Def.dl_def list
+val animate: (Def.dl_def list * Il.Ast.script) -> Def.dl_def list

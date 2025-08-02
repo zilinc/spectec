@@ -1,7 +1,6 @@
 open Il.Ast
-open Il2al.Def
 open Il2al.Il2al_util
-open Il2al.Print
+open Def
 open Util
 open Source
 
@@ -83,9 +82,10 @@ let animate il print_dl =
            |> fun dl -> (dl, il)
            |> Animate.animate
   in
-  match Valid.validate dl with
-  | Some errs -> Printf.eprintf "Animation validation:\n%s" (String.concat "\n" errs)
-  | None -> if print_dl then
-              print_endline (List.map string_of_dl_def dl |> String.concat "\n")
-            else
-              print_endline ("Animation validation passed.")
+  Valid.valid dl;
+  begin if print_dl then
+    print_endline (List.map string_of_dl_def dl |> String.concat "\n")
+  else
+    print_endline ("Animation validation passed.")
+  end;
+  dl
