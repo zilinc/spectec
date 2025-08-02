@@ -135,6 +135,7 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
       error_pr prem.at
         ("Either the IterVars or their binders must be known, but got unknowns: " ^ string_of_varset unknowns) prem
     else
+      (* change this *)
       let learnediters = Set.of_list (List.concat_map (fun (x, e) -> Set.elements (free_vars_exp e)) unknowniters) in
       new_knowns := Set.union !new_knowns learnediters;
     !new_knowns
