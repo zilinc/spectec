@@ -10,6 +10,14 @@ open Def
 let error at msg = Util.Error.error at "IL -> DL" msg
 
 
+(* Type definitions *)
+
+let extract_typedefs (def: def) : type_def list =
+  match def.it with
+  | TypD (id, params, insts) -> [(id, params, insts) $ def.at]
+  | _ -> []
+
+
 (* Relations *)
 
 (* extract reduction rules for wasm instructions *)
@@ -75,6 +83,12 @@ let extract_funcs partial_funcs (def: def): func_def option =
 (* Entry *)
 
 let il2dl (il: script) : dl_def list =
+  let type_defs =
+    il
+    |> List.concat_map extract_typedefs
+    |> List.map (fun tdef -> TypeDef tdef)
+  in
+
   let rule_defs =
     il
     |> List.concat_map extract_rules
@@ -89,4 +103,4 @@ let il2dl (il: script) : dl_def list =
     |> List.map (fun hdef -> FuncDef hdef)
   in
 
-  rule_defs @ func_defs
+  type_defs @ rule_defs @ func_defs

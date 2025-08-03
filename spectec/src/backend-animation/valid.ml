@@ -59,6 +59,10 @@ and free_vars_args (args : arg list) : Set.t =
     | _ -> acc
   ) Set.empty args
 
+
+let valid_type_def td = ()
+
+
 (* Validate a single premise *)
 let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
   match prem.it with
@@ -155,6 +159,7 @@ let valid_func_def (fd : func_def) : unit =
   ) clauses
 
 let valid_def (def: dl_def) : unit = match def with
+  | TypeDef td -> valid_type_def td
   | RuleDef rd -> error rd.at "RuleDef found: shouldn't happen."
   | FuncDef fd -> valid_func_def fd
 

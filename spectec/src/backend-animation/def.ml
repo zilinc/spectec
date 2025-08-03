@@ -29,9 +29,12 @@ let prefix s f x = s ^ f x
 
 
 let string_of_type_def td =
-  let id, _ps, [{it = InstD (bs, as_, dt); _}] = td.it in
+  let id, ps, insts = td.it in
+  let blob = List.map (fun inst -> (id, inst)) insts in
+  "syntax " ^ string_of_id id ^ string_of_params ps ^ " where\n" ^
+  String.concat "\n" (List.map (fun (id, {it = InstD (bs, as_, dt); _}) ->
   "syntax " ^ string_of_id id ^ string_of_binds bs ^ string_of_args as_ ^ " = " ^
-    string_of_deftyp `V dt ^ "\n"
+    string_of_deftyp `V dt) blob) ^ "\n"
 
 
 let string_of_rule_clause rc =

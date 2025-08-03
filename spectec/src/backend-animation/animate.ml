@@ -1201,6 +1201,7 @@ let animate_func_def' (id, ps, typ, clauses, opartial) =
 let animate_func_def (hdef: func_def) : func_def = animate_func_def' hdef.it $ hdef.at
 
 let animate_def (d: dl_def): dl_def = match d with
+| TypeDef tdef -> TypeDef tdef
 | RuleDef rdef -> FuncDef (animate_rule_def rdef)
 | FuncDef fdef -> FuncDef (animate_func_def fdef)
 
@@ -1209,8 +1210,7 @@ let animate_def (d: dl_def): dl_def = match d with
 let rec merge_defs (defs: dl_def list) : dl_def list =
   match defs with
   | [] -> []
-  | f :: fs ->
-    let FuncDef {it = (fid0, params, typ, _, opartial); _} = f in
+  | (FuncDef {it = (fid0, params, typ, _, opartial); _} as f) :: fs ->
     let func_id (FuncDef {it = (fid, _, _, _, _); _}) = fid in
     let func_clauses (FuncDef {it = (_, _, _, cls, _); _}) = cls in
     let fs_same, fs_diff =
@@ -1219,6 +1219,7 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
     let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
     let f' = FuncDef ((fid0, params, typ, clauses, opartial) $ at) in
     f' :: merge_defs fs_diff
+  | f :: fs -> f :: merge_defs fs
 
 (* Entry function *)
 let animate (dl, il) =
