@@ -91,54 +91,47 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
       error_pr prem.at ("LetPr binder `" ^ var ^ "` already known") prem;
     Set.add var known
   | IterPr (plist, (iter, pairs)) ->
-    (* {t <- t*} is bidirectional so only one side should be known *)
-    let new_knowns = ref known in
-    (* [knowniters] can be either in-flow or out-flow.
-       [unknowniters] are those that we know neither side.
-    *)
-    let knowniters, unknowniters = List.partition (
-      fun (x, e) ->
-        let fvs = free_vars_exp e in
-        if not (Set.subset fvs known) then
-          (* Not in-flow. *)
-          if Set.mem x.it known then
-            (* Out-flow. *)
-            (match e.it with
-            | VarE id' ->
-              (new_knowns := Set.add id'.it !new_knowns; true)
-            | _ -> error_pr e.at
-              ("Out-flowing iteration binding {x <- e} ill-formed." ^
-               "e should be VarE but got " ^ string_of_exp e) prem
-            )
-          else  (* No-flow. *)
-            false
-        else
-          (* In-flow. *)
-          (new_knowns := Set.add x.it !new_knowns; true)
-    ) pairs in
-    (* add optional index to knowns since it is bound *)
-    (match iter with
-      | ListN (l, Some id) ->
-        let fv_l = free_vars_exp l in
-        let unknown_l = Set.diff fv_l known in
-        if Set.is_empty unknown_l then
-          new_knowns := Set.add id.it !new_knowns
-        else
-          error_pr l.at ("IterN length `" ^ string_of_exp l ^ "` contains unknowns: " ^ string_of_varset unknown_l) prem
-      | _ -> ()
-    );
+    (* In-flow *)
+    let in_flow_knowns acc (x, e) =
+      match e.it with
+      | VarE id -> if (Set.mem id.it known) then 
+        (if (Set.mem x.it known) then 
+          error_pr e.at ("Iteration binding {x <- e} ill-formed." ^
+            "both x and e cannot be known (" ^ string_of_id x ^ ", " ^ string_of_exp e ^ ")") prem
+        else Set.add x.it acc)
+        else acc 
+      | _ -> error_pr e.at ("Iteration binding {x <- e} ill-formed." ^
+            "e should be VarE but got " ^ string_of_exp e) prem in 
+    let new_knowns = List.fold_left in_flow_knowns known pairs in
+    (* add optional index to knowns and check if length is known *)
+    let bound_idx =
+      (match iter with
+        | ListN (l, idopt) ->
+          let fv_l = free_vars_exp l in
+          let unknown_l = Set.diff fv_l known in
+          if Set.is_empty unknown_l then
+            match idopt with
+            | Some id -> Set.singleton id.it
+            | None -> Set.empty
+          else
+            error_pr l.at ("IterN length `" ^ string_of_exp l ^ "` contains unknowns: " ^ string_of_varset unknown_l) prem
+        | _ -> Set.empty
+      ) in
     (* Validate body premise *)
-    new_knowns := (List.fold_left valid_prem !new_knowns plist);
-    let unknowniterids = Set.of_list (List.map (fun (x, _) -> x.it) unknowniters) in
-    let unknowns = Set.diff unknowniterids !new_knowns in
-    if not (Set.is_empty unknowns) then
-      error_pr prem.at
-        ("Either the IterVars or their binders must be known, but got unknowns: " ^ string_of_varset unknowns) prem
-    else
-      (* change this *)
-      let learnediters = Set.of_list (List.concat_map (fun (x, e) -> Set.elements (free_vars_exp e)) unknowniters) in
-      new_knowns := Set.union !new_knowns learnediters;
-    !new_knowns
+    let new_knowns = (List.fold_left valid_prem (Set.union new_knowns bound_idx) plist) in
+    (* Out-flow *)
+    let out_flow_knowns acc (x, e) =
+      (* we don't need to out-flow `i*` if i is the index *)
+      if (Set.mem x.it bound_idx) then acc else 
+      if (Set.mem x.it acc) then 
+        (* this iterator is now out of scope *)
+        let rmv_iter = Set.diff acc (Set.singleton x.it) in
+        Set.union rmv_iter (free_vars_exp e)
+      else
+        error_pr e.at ("Iteration binding {x <- e} ill-formed." ^
+          "Either x or e must be known: (" ^ string_of_id x ^ ", " ^ string_of_exp e ^ ")") prem
+    in
+    List.fold_left out_flow_knowns new_knowns pairs
   | ElsePr -> known
 
 (* Validate a single rule clause *)
