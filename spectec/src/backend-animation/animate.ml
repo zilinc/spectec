@@ -51,7 +51,7 @@ let fresh_id (oname: string option) at : id =
   let name n onm = "__v" ^ string_of_int n ^
                    match onm with
                    | None -> ""
-                   | Some nm -> "_" ^ nm 
+                   | Some nm -> "_" ^ nm
   in
   name i oname $ at
 
@@ -592,7 +592,7 @@ and animate_exp_eq at lhs rhs : prem list E.m =
                 (animate_prem (IterPr ([prem_body], iterexp) $ at))
       else
         (* Inductive case where [len] is unknown. *)
-        let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in 
+        let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
         let* prem_len = animate_exp_eq len.at len len_rhs in
         (* By now [len] should be known. *)
         let* prems' = animate_exp_eq at lhs rhs in
@@ -1058,7 +1058,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
       let* () = update (put_knowns (get_knowns s_end')) in
       E.return ((IterPr (prems_body', iterexp) $ prem.at) :: e_prems')
     end
-  | IterPr (prems, iterexp) -> todo "animate_prem"
+  | IterPr (prems, iterexp) -> assert false
 
 
 (* The main loop. We handle the ordering of the premises in this function. *)
@@ -1140,16 +1140,17 @@ let lift_otherwise_prem prems =
 (* The variant that doesn't try to animate the [lhs] of the rule, as we know that
    it's very difficult.
 *)
-let animate_rule_red_no_arg at binds lhs rhs prems : clause' =
+let animate_rule_red_no_arg at lhs rhs prems : clause' =
   let lhs_vars = (free_exp false lhs).varid in
   let rhs_vars = (free_exp false rhs).varid in
   (* Input and output variables in the conclusion *)
   let in_vars  = lhs_vars in
   let out_vars = rhs_vars in
   let prems' = animate_prems at in_vars out_vars prems in
+  let binds = [] in  (* TODO(zilinc): binding list *)
   DefD (binds, [ExpA lhs $ lhs.at], rhs, prems')
 
-let animate_rule_red at binds lhs rhs prems : clause' =
+let animate_rule_red at lhs rhs prems : clause' =
   let v = fresh_id (Some "lhs") lhs.at in
   let ve = VarE v $$ v.at % lhs.note in
   let prem_arg = IfPr (CmpE (`EqOp, `BoolT, lhs, ve) $$ lhs.at % (BoolT $ lhs.at)) $ lhs.at in
@@ -1158,39 +1159,41 @@ let animate_rule_red at binds lhs rhs prems : clause' =
   let in_vars = (free_varid v).varid in
   let out_vars = rhs_vars in
   let prems' = animate_prems at in_vars out_vars (prem_arg::prems) in
+  let binds = [] in  (* TODO(zilinc): binding list *)
   DefD (binds, [ExpA ve $ ve.at], rhs, prems')
 
 let animate_rule rel_id at (r : rule_clause) : clause =
   let (rule_id, lhs, rhs, prems) = r.it in
   let clause' =
     if is_unanimatable "rule_lhs" rule_id.it rel_id then
-      animate_rule_red_no_arg at [] lhs rhs prems  (* TODO(zilinc): binds *)
+      animate_rule_red_no_arg at lhs rhs prems
     else
-      animate_rule_red at [] lhs rhs prems  (* TODO(zilinc): binds *)
+      animate_rule_red at lhs rhs prems
   in
   clause' $ at
 
 let animate_rules rel_id at rs = List.map (animate_rule rel_id at) rs
 
 let animate_clause (c: clause) : func_clause =
-  let DefD (binds, args, exp, prems) = c.it in
+  let DefD (_binds, args, exp, prems) = c.it in
   let n_args = List.length args in
   let blob = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
       let v = fresh_id (Some ("a" ^ string_of_int i)) arg.at in
       let exp_v = VarE v $$ v.at % exp'.note in
       let p = IfPr (CmpE (`EqOp, `BoolT, exp', exp_v) $$ exp'.at % (BoolT $ exp'.at)) $ arg.at in
-      (ExpA exp_v $ v.at, Some p, Some v)
-    | _ -> (arg, None, None)
+      let fv_exp' = (free_exp false exp').varid in
+      (ExpA exp_v $ v.at, Some p, Some v, fv_exp')
+    | _ -> (arg, None, None, Set.empty)
   ) args
   in
-  let (args', o_prem_args, ovs) = Lib.List.unzip3 blob in
+  let (args', o_prem_args, ovs, fv_args) = Lib.List.unzip4 blob in
   let prems_args = List.filter_map Fun.id o_prem_args in
   let vs = List.filter_map Fun.id ovs in
   let ins = (free_list free_varid vs).varid in
   let ous = (free_exp false exp).varid in
   let prems' = animate_prems c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
-  (DefD (binds, args', exp, prems')) $ c.at
+  (DefD ([], args', exp, prems')) $ c.at  (* TODO(zilinc): binding list. *)
 
 let animate_clauses cs = List.map animate_clause cs
 

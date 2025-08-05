@@ -79,7 +79,7 @@ let animate il print_dl =
            |> fun dl -> (dl, il)
            |> Animate.animate 
   in
-  Il2dl.list_all_dl_defs dl;
+  (* Il2dl.list_all_dl_defs dl; *)
   Valid.valid dl;
   begin if print_dl then
     print_endline (List.map string_of_dl_def dl |> String.concat "\n")
