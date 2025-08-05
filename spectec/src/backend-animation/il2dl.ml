@@ -5,27 +5,42 @@ open Util.Source
 open Def
 
 
+(* Debug *)
+
+let rec list_all_il_defs' lv (il: script) : unit =
+  let indent n = String.make (2*n) ' ' in
+  List.iter (fun def -> match def.it with
+    | RecD defs -> print_endline "{"; list_all_il_defs' (lv+1) defs; print_endline "}"
+    | TypD (id, _, _)    -> print_endline (indent lv ^ "typ | " ^ string_of_id id)
+    | DecD (id, _, _, _) -> print_endline (indent lv ^ "dec | " ^ string_of_id id)
+    | RelD (id, _, _, _) -> print_endline (indent lv ^ "rel | " ^ string_of_id id)
+    | _ -> ()
+  ) il
+let list_all_il_defs (il: script) : unit = list_all_il_defs' 0 il
+
+let rec list_all_dl_defs' lv dl : unit =
+  let indent n = String.make (2*n) ' ' in
+  List.iter (function
+    | RecDef  defs -> print_endline "{"; list_all_dl_defs' (lv+1) defs; print_endline "}"
+    | TypeDef tdef ->
+      let id, _, _ = tdef.it in
+      print_endline (indent lv ^ "type | " ^ string_of_id id)
+    | FuncDef fdef ->
+      let id, _, _, _, _ = fdef.it in
+      print_endline (indent lv ^ "func | " ^ string_of_id id)
+    | RuleDef rdef ->
+      let _, id, _, _, _ = rdef.it in
+      print_endline (indent lv ^ "rule | " ^ string_of_id id)
+  ) dl
+let list_all_dl_defs (dl: dl_def list) : unit = list_all_dl_defs' 0 dl
+
+
 (* Error *)
 
 let error at msg = Util.Error.error at "IL -> DL" msg
 
 
-(* Type definitions *)
-
-let extract_typedefs (def: def) : type_def list =
-  match def.it with
-  | TypD (id, params, insts) -> [(id, params, insts) $ def.at]
-  | _ -> []
-
-
 (* Relations *)
-
-(* extract reduction rules for wasm instructions *)
-let extract_rules (def: def) =
-  match def.it with
-  | RelD (rel_id, _, typ, rules) -> List.map (fun rule -> (rel_id, typ, rule)) rules
-  | _ -> []
-
 
 let il2dl_rule_clause rel_id rule : rule_clause =
   let RuleD (id, _, _, exp, prems) = rule.it in
@@ -63,7 +78,7 @@ let rec group_rules : (id * typ * rule) list -> rule_def list = function
 
 (* Helper Definitions *)
 
-let get_partial_func def =
+let get_partial_func def : id option =
   let is_partial_hint hint = hint.hintid.it = "partial" in
   match def.it with
   | HintD { it = DecH (id, hints); _ } when List.exists is_partial_hint hints ->
@@ -71,36 +86,23 @@ let get_partial_func def =
   | _ -> None
 
 
-let extract_funcs partial_funcs (def: def): func_def option =
-  match def.it with
-  | DecD (id, params, typ, clauses) when List.length clauses > 0 ->
-    let partial = if List.mem id partial_funcs then Partial else Total in
-    Some ((id, params, typ, clauses, Some partial) $ def.at)
-  | _ -> None
-
-
-
 (* Entry *)
 
-let il2dl (il: script) : dl_def list =
-  let type_defs =
-    il
-    |> List.concat_map extract_typedefs
-    |> List.map (fun tdef -> TypeDef tdef)
-  in
 
-  let rule_defs =
-    il
-    |> List.concat_map extract_rules
-    |> group_rules
-    |> List.map (fun rdef -> RuleDef rdef)
-  in
-
+let rec il2dl (il: script) : dl_def list =
   let partial_funcs = List.filter_map get_partial_func il in
-  let func_defs =
-    il
-    |> List.filter_map (extract_funcs partial_funcs)
-    |> List.map (fun hdef -> FuncDef hdef)
-  in
-
-  type_defs @ rule_defs @ func_defs
+  List.concat_map (fun def ->
+    match def.it with
+    | TypD (id, params, insts) -> [TypeDef ((id, params, insts) $ def.at)]
+    | DecD (id, params, typ, clauses) when List.length clauses > 0 ->
+      let partial = if List.mem id partial_funcs then Partial else Total in
+      [FuncDef ((id, params, typ, clauses, Some partial) $ def.at)]
+    | RelD (rel_id, _, typ, rules) -> 
+      let rules = List.map (fun rule -> (rel_id, typ, rule)) rules in
+      let rule_def = group_rules rules in
+      List.map (fun r -> RuleDef r) rule_def
+    | RecD defs ->
+      let defs' = il2dl defs in
+      if List.is_empty defs' then [] else [RecDef defs']
+    | _ -> []
+  ) il

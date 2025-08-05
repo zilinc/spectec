@@ -4,13 +4,9 @@ open Def
 open Util
 open Source
 
-let flatten_rec def =
-  match def.it with
-  | RecD defs -> defs
-  | _ -> [ def ]
 
 (* FIXME(zilinc): we may want to do differently than the AL route. *)
-let is_anim_target def =
+let rec is_anim_target def =
   match def.it with
   | DecD (id, _, _, _) when id.it = "utf8" -> None
   | RelD (id, mixop, t, rules) when List.mem id.it [ "Step"; "Step_read"; "Step_pure" ] ->
@@ -22,6 +18,7 @@ let is_anim_target def =
     in
     Some (RelD (id, mixop, t, List.filter filter_rule rules) $ def.at)
   | RelD _ -> None
+  | RecD defs -> Some (RecD (List.filter_map is_anim_target defs) $ def.at)
   | _ -> Some def
 
 
@@ -63,25 +60,26 @@ let remove_or_clause clause =
     else
       List.map (fun prems' -> DefD (binds, args, exp, prems') $ clause.at) premss'
 
-let remove_or def =
+let rec remove_or def =
   match def.it with
   | RelD (id, mixop, typ, rules) ->
     RelD (id, mixop, typ, List.concat_map remove_or_rule rules) $ def.at
   | DecD (id, params, typ, clauses) ->
     DecD (id, params, typ, List.concat_map remove_or_clause clauses) $ def.at
+  | RecD defs -> RecD (List.map remove_or defs) $ def.at
   | _ -> def
 
 
 (* Entry *)
 let animate il print_dl =
   let dl = il
-           |> List.concat_map flatten_rec
            |> List.filter_map is_anim_target
            |> List.map remove_or
            |> Il2dl.il2dl
            |> fun dl -> (dl, il)
-           |> Animate.animate
+           |> Animate.animate 
   in
+  Il2dl.list_all_dl_defs dl;
   Valid.valid dl;
   begin if print_dl then
     print_endline (List.map string_of_dl_def dl |> String.concat "\n")
