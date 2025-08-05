@@ -1203,10 +1203,11 @@ let animate_func_def' (id, ps, typ, clauses, opartial) =
   (id, ps, typ, animate_clauses clauses, opartial)
 let animate_func_def (hdef: func_def) : func_def = animate_func_def' hdef.it $ hdef.at
 
-let animate_def (d: dl_def): dl_def = match d with
+let rec animate_def (d: dl_def): dl_def = match d with
 | TypeDef tdef -> TypeDef tdef
 | RuleDef rdef -> FuncDef (animate_rule_def rdef)
 | FuncDef fdef -> FuncDef (animate_func_def fdef)
+| RecDef  defs -> RecDef (List.map animate_def defs)
 
 
 (* Merge all rules that have the same rel_id. *)
@@ -1214,18 +1215,23 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
   match defs with
   | [] -> []
   | (FuncDef {it = (fid0, params, typ, _, opartial); _} as f) :: fs ->
-    let func_id (FuncDef {it = (fid, _, _, _, _); _}) = fid in
+    let func_id = function
+    | FuncDef {it = (fid, _, _, _, _); _} -> Some fid
+    | _ -> None
+    in
     let func_clauses (FuncDef {it = (_, _, _, cls, _); _}) = cls in
     let fs_same, fs_diff =
-      List.partition (fun f -> func_id f = fid0) fs in
+      List.partition (fun f -> func_id f = Some fid0) fs in
     let clauses = f :: fs_same |> List.concat_map func_clauses in
     let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
     let f' = FuncDef ((fid0, params, typ, clauses, opartial) $ at) in
     f' :: merge_defs fs_diff
+  | ((RecDef defs') as f) :: fs ->
+    RecDef (merge_defs defs') :: merge_defs fs
   | f :: fs -> f :: merge_defs fs
 
 (* Entry function *)
 let animate (dl, il) =
   env := Il.Env.env_of_script il;
   dl |> List.map animate_def
-               |> merge_defs
+     |> merge_defs

@@ -1,3 +1,4 @@
+open Il
 open Il.Ast
 open Il.Free
 open Il.Print
@@ -7,10 +8,14 @@ open Error
 open Source
 
 
+(* Error *)
+
 let string_of_error at msg = string_of_region at ^ " DL animation validation error:\n" ^ msg
 let error at msg = Error.error at "DL validation" msg
 let error_pr at msg prem = error at (msg ^ "\n" ^ "In premise: " ^ string_of_prem prem)
 
+
+(* Free variables. FIXME: use Il2al.Free *)
 
 (* Helper: collect free variables from expressions and args *)
 let rec free_vars_path (p : path) : Set.t =
@@ -60,10 +65,8 @@ and free_vars_args (args : arg list) : Set.t =
   ) Set.empty args
 
 
-let valid_type_def td = ()
+(* Validation *)
 
-
-(* Validate a single premise *)
 let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
   match prem.it with
   | RulePr (_, _, e) -> error_pr prem.at "RulePr found: shouldn't happen." prem
@@ -134,28 +137,55 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     List.fold_left out_flow_knowns new_knowns pairs
   | ElsePr -> known
 
-(* Validate a single rule clause *)
-let valid_clause at args e prems : unit =
+let valid_clause clause : unit =
+  Debug.(log_in "animate.valid_clause" line);
+  let DefD (bs, args, e, prems) = clause.it in
   let initial_known = free_vars_args args in
   let known_after_premises =
     List.fold_left valid_prem initial_known prems
   in
   let ret_fvs = free_vars_exp e in
   if not (Set.subset ret_fvs known_after_premises) then
-    error at ("Return value uses unknown variables: \n" ^ string_of_varset (Set.diff ret_fvs known_after_premises))
+    error clause.at ("Return value uses unknown variables: \n" ^ string_of_varset (Set.diff ret_fvs known_after_premises))
 
-(* Validate a full func_def *)
-let valid_func_def (fd : func_def) : unit =
-  let (fdid, ps, t, clauses, _) = fd.it in
-  List.iter (fun clause ->
-    let DefD (_, args, e, prems) = clause.it in
-    valid_clause clause.at args e prems
-  ) clauses
 
-let valid_def (def: dl_def) : unit = match def with
-  | TypeDef td -> valid_type_def td
-  | RuleDef rd -> error rd.at "RuleDef found: shouldn't happen."
-  | FuncDef fd -> valid_func_def fd
+let infer_def envr (def: dl_def) : unit =
+  todo ""
 
+
+let rec valid_def envr (def: dl_def) : unit =
+  Debug.(log_in "animate.valid_def" line);
+  Debug.(log_in "animate.valid_def" (fun _ -> string_of_dl_def def));
+  match def with
+  | TypeDef td ->
+    let id, ps, insts = td.it in
+    let envr' = Valid.local_env envr in
+    List.iter (Valid.valid_param envr') ps;
+    List.iter (Valid.valid_inst envr ps) insts;
+    envr := Env.bind_typ !envr id (ps, insts)
+  | RuleDef rd ->
+    error rd.at "RuleDef found: shouldn't happen."
+  | FuncDef fd ->
+    let (id, ps, t, clauses, _) = fd.it in
+    let envr' = Valid.local_env envr in
+    List.iter (Valid.valid_param envr') ps;
+    Valid.valid_typ !envr' t;
+    List.iter (Valid.valid_clause envr ps t) clauses;  (* IL validation *)
+    envr := Env.bind_def !envr id (ps, t, clauses);
+    List.iter valid_clause clauses  (* For animation *)
+  | RecDef ds ->
+    List.iter (infer_def envr) ds;
+    List.iter (valid_def envr) ds;
+    List.iter (fun d ->
+      match List.hd ds, d with
+      | TypeDef _, TypeDef _
+      | FuncDef _, FuncDef _
+      | _, _ ->
+        error (dl_loc def) ("Invalid recursion between definitions of different sort.")
+    ) ds
+
+
+(* Entry *)
 let valid (dl : dl_def list) : unit =
-  List.iter valid_def dl
+  let envr = ref Env.empty in
+  List.iter (valid_def envr) dl

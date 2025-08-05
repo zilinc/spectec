@@ -23,6 +23,16 @@ type dl_def =
   | TypeDef of type_def
   | RuleDef of rule_def  (* only input to animation *)
   | FuncDef of func_def
+  | RecDef  of dl_def list  (* recursive definitions *)
+
+let rec dl_loc def : region = match def with
+  | TypeDef tdef -> tdef.at
+  | RuleDef rdef -> rdef.at
+  | FuncDef fdef -> fdef.at
+  | RecDef  defs -> begin match defs with
+    | [] -> no_region
+    | _  -> over_region (List.map dl_loc defs)
+    end
 
 let concat = String.concat
 let prefix s f x = s ^ f x
@@ -61,7 +71,8 @@ let string_of_func_def fd =
   (concat "\n" (List.map (Il.Print.string_of_clause id) fcs)) ^ "\n"
 
 
-let string_of_dl_def = function
+let rec string_of_dl_def = function
 | TypeDef tdef -> string_of_type_def tdef
 | RuleDef rdef -> string_of_rule_def rdef
 | FuncDef fdef -> string_of_func_def fdef
+| RecDef dl_defs -> "mutual\n" ^ String.concat "\n" (List.map string_of_dl_def dl_defs) ^ "end_mutual\n"
