@@ -106,6 +106,10 @@ struct
     | [] -> ([], [], [])
     | (x, y, z)::xyzs -> let (xs, ys, zs) = unzip3 xyzs in (x::xs, y::ys, z::zs)
 
+  let rec unzip4 = function
+    | [] -> ([], [], [], [])
+    | (x, y, z, w)::xyzws -> let (xs, ys, zs, ws) = unzip4 xyzws in (x::xs, y::ys, z::zs, w::ws)
+
   let[@tail_mod_cons] rec mapi2' i f l1 l2 =
     match (l1, l2) with
     | ([], []) -> []

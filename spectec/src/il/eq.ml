@@ -157,3 +157,21 @@ and eq_arg a1 a2 =
   | DefA id1, DefA id2 -> eq_id id1 id2
   | GramA g1, GramA g2 -> eq_sym g1 g2
   | _, _ -> false
+
+and eq_param p1 p2 =
+  match p1.it, p2.it with
+  | ExpP (id1, t1), ExpP (id2, t2)
+  | GramP (id1, t1), GramP (id2, t2)
+  -> eq_id id1 id2 && eq_typ t1 t2
+  | TypP id1, TypP id2 -> eq_id id1 id2
+  | DefP (id1, ps1, t1), DefP (id2, ps2, t2) -> eq_id id1 id2 && eq_list eq_param ps1 ps2 && eq_typ t1 t2
+  | _, _ -> false
+
+and eq_bind b1 b2 =
+  match b1.it, b2.it with
+  | ExpB (id1, t1), ExpB (id2, t2) -> eq_id id1 id2 && eq_typ t1 t2
+  | TypB id1, TypB id2 -> eq_id id1 id2
+  | DefB (id1, ps1, t1), DefB (id2, ps2, t2)
+  | GramB (id1, ps1, t1), GramB (id2, ps2, t2)
+  -> eq_id id1 id2 && eq_list eq_param ps1 ps2 && eq_typ t1 t2
+  | _, _ -> false

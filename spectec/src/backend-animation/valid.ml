@@ -97,14 +97,14 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     (* In-flow *)
     let in_flow_knowns acc (x, e) =
       match e.it with
-      | VarE id -> if (Set.mem id.it known) then 
-        (if (Set.mem x.it known) then 
+      | VarE id -> if (Set.mem id.it known) then
+        (if (Set.mem x.it known) then
           error_pr e.at ("Iteration binding {x <- e} ill-formed." ^
             "both x and e cannot be known (" ^ string_of_id x ^ ", " ^ string_of_exp e ^ ")") prem
         else Set.add x.it acc)
-        else acc 
+        else acc
       | _ -> error_pr e.at ("Iteration binding {x <- e} ill-formed." ^
-            "e should be VarE but got " ^ string_of_exp e) prem in 
+            "e should be VarE but got " ^ string_of_exp e) prem in
     let new_knowns = List.fold_left in_flow_knowns known pairs in
     (* add optional index to knowns and check if length is known *)
     let bound_idx =
@@ -125,8 +125,8 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     (* Out-flow *)
     let out_flow_knowns acc (x, e) =
       (* we don't need to out-flow `i*` if i is the index *)
-      if (Set.mem x.it bound_idx) then acc else 
-      if (Set.mem x.it acc) then 
+      if (Set.mem x.it bound_idx) then acc else
+      if (Set.mem x.it acc) then
         (* this iterator is now out of scope *)
         let rmv_iter = Set.diff acc (Set.singleton x.it) in
         Set.union rmv_iter (free_vars_exp e)
@@ -149,8 +149,19 @@ let valid_clause clause : unit =
     error clause.at ("Return value uses unknown variables: \n" ^ string_of_varset (Set.diff ret_fvs known_after_premises))
 
 
-let infer_def envr (def: dl_def) : unit =
-  todo ""
+let rec infer_def envr (def: dl_def) : unit =
+  match def with
+  | TypeDef { it = (id, ps, _insts); _ } ->
+    let envr' = Valid.local_env envr in
+    List.iter (Valid.valid_param envr') ps;
+    envr := Env.bind_typ !envr id (ps, [])
+  | RuleDef rdef -> error rdef.at "RuleDef found: shouldn't happen."
+  | FuncDef { it = (id, ps, t, clauses, _); _ } ->
+    let envr' = Valid.local_env envr in
+    List.iter (Valid.valid_param envr') ps;
+    Valid.valid_typ !envr' t;
+    envr := Env.bind_def !envr id (ps, t, clauses)
+  | RecDef defs -> List.iter (infer_def envr) defs
 
 
 let rec valid_def envr (def: dl_def) : unit =
