@@ -1015,7 +1015,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
          out but do not ∈ xes.
       *)
       let knowns_inner' = get_knowns s_body' in
-      (* The extra variables that've been worked out inside the interation.
+      (* The extra variables that've been newly worked out inside the interation.
          CAUTION: If the index [i] exists, then this [i] shouldn't be propagated out.
          That's why we need to subtract the [knowns_inner_idx] set which includes
          the index, if there is one.
@@ -1044,7 +1044,10 @@ and animate_prem : prem -> prem list E.m = fun prem ->
               let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, ve) $$ e.at % (BoolT $ e.at)) $ e.at in
               ([y'.it], [prem_e])
             end
-        (* If there's no x <- e, then propagate x out. *)
+        (* If there's no x <- e, then propagate x out. But I don't think this will ever
+           happen, as in this case, the [x] can't be a newly-learned variable, but must
+           have been known before we entered the iteration body.
+        *)
         | None -> ([x], [])
       ) (Set.elements new_knowns) in
       let knowns_outer, e_prems = Lib.List.unzip blob |> Lib.Fun.(<***>) List.concat List.concat in
