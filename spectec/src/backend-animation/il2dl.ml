@@ -43,12 +43,12 @@ let error at msg = Util.Error.error at "IL -> DL" msg
 (* Relations *)
 
 let il2dl_rule_clause rel_id rule : rule_clause =
-  let RuleD (id, _, _, exp, prems) = rule.it in
+  let RuleD (id, binds, _, exp, prems) = rule.it in
   match exp.it with
   | TupE [ lhs; rhs ] when List.mem rel_id.it [ "Step"; "Step_read"; "Step_pure" ]
-  -> (id, lhs, rhs, prems) $ rule.at
+  -> (id, binds, lhs, rhs, prems) $ rule.at
   | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr"
-  -> (id, {exp with it = TupE [z1; lhs]}, {exp with it = TupE [z2; rhs]}, prems) $ rule.at
+  -> (id, binds, {exp with it = TupE [z1; lhs]}, {exp with it = TupE [z2; rhs]}, prems) $ rule.at
   | _ -> error exp.at ("Wrong exp form of reduction rule: [" ^ rel_id.it ^ "]" ^ Il.Print.string_of_exp exp)
 
 let il2dl_rule_def rule_name rel_id typ rules at : rule_def =

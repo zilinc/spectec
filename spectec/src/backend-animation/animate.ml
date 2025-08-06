@@ -2,6 +2,7 @@ open Util
 open Error
 open Lib.Fun
 open Source
+open Il.Env
 open Il.Ast
 open Il.Eval
 open Il.Print
@@ -11,8 +12,6 @@ open Il2al.Free
 open Backend_ast
 open Def
 
-
-module StringMap = Map.Make(String)
 
 (* Errors *)
 
@@ -26,6 +25,7 @@ let verbose : string list ref =
         (* *"iterp"    ; *)
         (* "pattern"   ; *)
         (* "log"       ; *)
+        "op"
       ]
 
 let error at msg = Error.error at "IL animation" msg
@@ -45,7 +45,7 @@ let info v at msg = if List.mem v !verbose then
 
 let fresh_oracle = ref 0
 
-let fresh_id (oname: string option) at : id =
+let fresh_id (oname: string option) at t envr : id =
   let i = !fresh_oracle in
   fresh_oracle := !fresh_oracle + 1;
   let name n onm = "__v" ^ string_of_int n ^
@@ -53,7 +53,9 @@ let fresh_id (oname: string option) at : id =
                    | None -> ""
                    | Some nm -> "_" ^ nm
   in
-  name i oname $ at
+  let id = name i oname $ at in
+  envr := Il.Env.bind_var !envr id t;
+  id
 
 
 (* Animation monad *)
@@ -239,6 +241,18 @@ let mk_natT at = NumT `NatT $ at
 
 let mk_natE at (n: int) = NumE (`Nat (Z.of_int n)) $$ at % (mk_natT at)
 
+(* ASSUMES: [e] has numtype [t1]. *)
+let cvt e t1 t2 at = if t1 = t2 then e else CvtE (e, t1, t2) $$ at % (NumT t2 $ at)
+
+(* When e1 and e2 are both `NatT, we want to construct e1 - e2, with both of them
+   converted to `IntT, and then convert the result back to `NatT.
+*)
+let cvt_sub at e1 e2 =
+  let e1' = cvt e1 `NatT `IntT e1.at in
+  let e2' = cvt e2 `NatT `IntT e2.at in
+  let e = BinE (`SubOp, `IntT, e1', e2') $$ at % (NumT `IntT $ at) in
+  cvt e `IntT `NatT at
+
 
 let is_unary_tupT : typ -> bool = fun t ->
   match t.it with
@@ -260,63 +274,13 @@ let as_iter_typ iter env t : typ =
   | IterT (t1, iter') when Il.Eq.eq_iter iter iter' -> t1
   | _ -> error t.at ("Input type is not an iterated " ^ string_of_iter iter ^ " type: " ^ string_of_typ t)
 
-let rec vartyp_arg v arg : typ option =
-  match arg.it with
-  | ExpA exp -> vartyp_exp v exp
-  | TypA _ | DefA _ | GramA _ -> None
 
-and vartyp_exp v exp : typ option =
-  match exp.it with
-  | VarE id when id.it = v
-  -> Some exp.note
-  | VarE _ | BoolE _ | NumE _ | TextE _
-  -> None
-  | UnE (_, _, exp)
-  | ProjE (exp, _)
-  | CaseE (_, exp)
-  | UncaseE (exp, _)
-  | TheE exp
-  | DotE (exp, _)
-  | LiftE exp
-  | LenE exp
-  -> vartyp_exp v exp
-  | BinE (_, _, exp1, exp2)
-  | CmpE (_, _, exp1, exp2)
-  | CompE (exp1, exp2)
-  | MemE (exp1, exp2)
-  | UpdE (exp1, _, exp2)
-  | CatE (exp1, exp2)
-  | ExtE (exp1, _, exp2)
-  | IdxE (exp1, exp2)
-  -> Lib.Option.mplus (vartyp_exp v exp1) (vartyp_exp v exp2)
-  | TupE exps | ListE exps
-  -> Lib.Option.mconcat_map (vartyp_exp v) exps
-  | OptE oexp -> Option.map (vartyp_exp v) oexp |> Option.join
-  | StrE expfields
-  -> let exps = List.map snd expfields in
-     Lib.Option.mconcat_map (vartyp_exp v) exps
-  | SliceE (exp1, exp2, exp3)
-  -> Lib.Option.mconcat_map (vartyp_exp v) [exp1; exp2; exp3]
-  | CallE (_, args)
-  -> Lib.Option.mconcat_map (vartyp_arg v) args
-  | IterE (exp, (iter, xes))
-  -> let len = match iter with
-     | List | Opt | List1 -> []
-     | ListN(n, _) -> [n]
-     in
-     let exps = List.map snd xes in
-     Lib.Option.mconcat_map (vartyp_exp v) (exp :: len @ exps)
-  | CvtE (exp, _, _)
-  | SubE (exp, _, _)
-  -> vartyp_exp v exp
-
-let rec vartyp_prem (v: text) prem : typ option =
-  match prem.it with
-  | RulePr (_, _, exp) -> vartyp_exp v exp
-  | IfPr exp -> vartyp_exp v exp
-  | LetPr (lhs, rhs, _) -> Lib.Option.mplus (vartyp_exp v lhs) (vartyp_exp v rhs)
-  | ElsePr -> None
-  | IterPr (prems, iterexp) -> Lib.Option.mconcat_map (vartyp_prem v) prems
+(* TODO(zilinc): I don't think it handles dependent types correctly. The binds
+   should be telescopic.
+*)
+let binds_of_env env : bind list =
+  let varbinds = Map.to_list env.vars in
+  List.map (fun (v, t) -> ExpB (v $ no_region, t) $ no_region) varbinds
 
 
 let get () = S.get () |> E.lift
@@ -351,8 +315,8 @@ let throw_log e = let () = info "log" no_region e in E.throw e
 (* A whitelist of rules/defs that cannot be easily animated.
    The map is "reason" ↦ [("rel_id", "rule_name")]
 *)
-let cannot_animate : (string * string) list StringMap.t =
-  StringMap.of_list
+let cannot_animate : (string * string) list Map.t =
+  Map.of_list
     [ ("rule_lhs",
       [
         ("Step_pure", "br-label-zero");
@@ -373,7 +337,7 @@ let cannot_animate : (string * string) list StringMap.t =
     ]
 
 let is_unanimatable reason rule_name rel_id : bool =
-  match StringMap.find_opt reason cannot_animate with
+  match Map.find_opt reason cannot_animate with
   | None -> false
   | Some ls -> List.exists (fun l -> l = (rel_id, rule_name)) ls
 
@@ -395,9 +359,10 @@ If this is not possible, it means that it doesn't not have a consistent mode ass
 (**
   [e1] and [e2] are the two operands of the LHS binary expression.
   [op] mayn't be an associative operator.
+  [t] is the type of the input operator [op].
   Returns the inverted lhs and rhs.
  *)
-let invert_bin_exp at op e1 e2 t rhs : (exp * exp) E.m =
+let invert_bin_exp at op e1 e2 (t: numtyp) rhs : (exp * exp) E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in
   let* s = get () in
@@ -406,28 +371,31 @@ let invert_bin_exp at op e1 e2 t rhs : (exp * exp) E.m =
   let fv_e2 = (free_exp false e2).varid in
   let unknowns_e1 = Set.diff fv_e1 knowns in
   let unknowns_e2 = Set.diff fv_e2 knowns in
+  let* op', t' = match op with
+  | `AddOp -> if Xl.Num.sub `IntT t then
+                E.return (`SubOp, t)
+              else
+                E.return (`SubOp, `IntT)
+  | `SubOp -> E.return (`AddOp, t)
+  | `MulOp -> if Xl.Num.sub `NatT t then
+                E.return (`DivOp, t)
+              else
+                E.return (`DivOp, `NatT)
+  | `DivOp -> E.return (`MulOp, t)
+  | `ModOp | `PowOp ->
+    E.throw (string_of_error at ("Binary operator " ^ string_of_binop (op :> binop) ^ " is not invertible."))
+  in
   let* lhs', rhs' = match Set.is_empty unknowns_e1, Set.is_empty unknowns_e2 with
   | true , true  -> assert false
-  | true , false -> E.return (e2, e1)
-  | false, true  -> E.return (e1, e2)
+  | true , false -> E.return (cvt e2 t t' e2.at, cvt e1 t t' e1.at)
+  | false, true  -> E.return (cvt e1 t t' e1.at, cvt e2 t t' e1.at)
   | false, false -> E.throw (string_of_error at
                                ("Can't animate binary expression where both operands contain unknowns:\n" ^
-                                "  ▹ op = " ^ string_of_binop op ^ "\n" ^
+                                "  ▹ op = " ^ string_of_binop (op :> binop) ^ "\n" ^
                                 "  ▹ e1 = " ^ string_of_exp e1 ^ " (unknowns: " ^ string_of_varset unknowns_e1 ^ ")\n" ^
                                 "  ▹ e2 = " ^ string_of_exp e2 ^ " (unknowns: " ^ string_of_varset unknowns_e2 ^ ")"))
   in
-  let* op' = match op with
-  | `AddOp -> E.return `SubOp
-  | `SubOp -> E.return `AddOp
-  | `MulOp -> E.return `DivOp
-  | `DivOp -> E.return `MulOp
-  | `ModOp | `PowOp ->
-    E.throw (string_of_error at ("Binary operator " ^ string_of_binop op ^ " is not invertible."))
-  | `AndOp | `OrOp | `ImplOp | `EquivOp ->
-    (* We can do some, if we really need to. *)
-    E.throw (string_of_error at ("Binary Boolean operator " ^ string_of_binop op ^ " is not invertible in general."))
-  in
-  let rhs'' = BinE (op', t, rhs, rhs') $$ rhs.at % lhs'.note in
+  let rhs'' = BinE (op', (t' :> optyp), cvt rhs t t' rhs.at, rhs') $$ rhs.at % lhs'.note in
   E.return (lhs', rhs'')
 
 
@@ -582,9 +550,10 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
         let t = reduce_typ !envr lhs'.note in
         let rhs' = IdxE (rhs, VarE i $$ i.at % (mk_natT i.at)) $$ rhs.at % lhs'.note in
         let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
+        let lenvr = ref !envr in
         bracket (add_knowns (Set.singleton i.it))
                 (remove_knowns (Set.singleton i.it))
-                (animate_prem envr (IterPr ([prem_body], iterexp) $ at))
+                (animate_prem lenvr (IterPr ([prem_body], iterexp) $ at))
       else
         (* Inductive case where [len] is unknown. *)
         let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
@@ -594,11 +563,12 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
         E.return (prem_len @ prems')
     (* Inductive cases *)
     | ListN(len, None) ->
-      let i = fresh_id (Some "i") at in
-      animate_exp_eq envr at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs
+      let lenvr = ref !envr in
+      let i = fresh_id (Some "i") at (mk_natT at) lenvr in
+      animate_exp_eq lenvr at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs
     | Opt | List | List1 ->
       let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
-      let len_v = fresh_id (Some "len") len_rhs.at in
+      let len_v = fresh_id (Some "len") len_rhs.at (mk_natT len_rhs.at) envr in
       let len = VarE len_v $$ len_rhs.at % len_rhs.note in
       let* prems_len_v = animate_exp_eq envr len.at len len_rhs in
       let oprem_len = match iter with
@@ -611,8 +581,9 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
       | None -> E.return []
       | Some prem_len -> animate_prem envr prem_len
       in
-      let i = fresh_id (Some "i") at in
-      let* prems' = animate_exp_eq envr at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs in
+      let lenvr = ref !envr in
+      let i = fresh_id (Some "i") at (mk_natT at) lenvr in
+      let* prems' = animate_exp_eq lenvr at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs in
       E.return (prems_len_v @ prems_len @ prems')
     end
   (* AST nodes that can be inverted. *)
@@ -642,7 +613,8 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   | ListE exps ->
     let len = List.length exps in
     let prems = List.mapi (fun i exp ->
-          IfPr (CmpE (`EqOp, `BoolT, exp, ProjE (rhs, i) $$ rhs.at % exp.note)
+          let ie = mk_natE exp.at i in
+          IfPr (CmpE (`EqOp, `BoolT, exp, IdxE (rhs, ie) $$ rhs.at % exp.note)
                   $$ exp.at
                   %  (BoolT $ exp.at)
                ) $ exp.at
@@ -661,7 +633,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   | CaseE (mixop, lhs') ->
     animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
   | TupE es ->
-    let v = fresh_id None at in
+    let v = fresh_id None at rhs.note envr in
     (* Bind to a new variable, so that [rhs] doesn't need to be re-evaluated
        again and again in the following projections.
     *)
@@ -688,9 +660,11 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   (* Some operators, together with certain combinations of a known operand plus
      the known RHS, can be inverted.
   *)
-  | BinE (op, t, e1, e2) ->
+  | BinE ((#Xl.Num.binop as op), (#Xl.Num.typ as t), e1, e2) ->
     let* lhs', rhs' = invert_bin_exp at op e1 e2 t rhs in
     animate_exp_eq envr at lhs' rhs'
+  | BinE ((#Xl.Bool.binop as op), (#Xl.Bool.typ as t), e1, e2) ->
+    E.throw (string_of_error at ("Boolean binary operators not animated."))
   (* All unary ops can be inverted. *)
   | UnE (op, t, exp) ->
     animate_exp_eq envr at exp (UnE (op, t, rhs) $$ rhs.at % exp.note)
@@ -754,7 +728,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
       IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
     ) exps in
     let start2 = NumE (`Nat (Z.of_int (List.length exps))) $$ exp1.at % (mk_natT exp1.at) in
-    let len2 = BinE (`SubOp, `NatT, len, start2) $$ exp2.at % (mk_natT exp2.at) in
+    let len2 = cvt_sub exp2.at len start2 in
     let rhs2' = SliceE (rhs, start2, len2) $$ rhs.at % rhs.note in
     let prem2 = IfPr (CmpE (`EqOp, `BoolT, exp2, rhs2') $$ exp2.at % (BoolT $ exp2.at)) $ at in
     (* Start an inner loop, in case of any dependencies between the list elements.
@@ -772,14 +746,12 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let prems2 = List.mapi (fun i exp ->
       let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
       (* idx' = len - (len2 - idx) *)
-      let idx' = BinE (`SubOp, `NatT, len, BinE (`SubOp, `NatT, len2, idx)
-                                           $$ len2.at % (mk_natT len2.at))
-                 $$ idx.at % (mk_natT idx.at) in
+      let idx' = cvt_sub len2.at len (cvt_sub len2.at len2 idx) in
       let rhs' = IdxE (rhs, idx') $$ exp.at % exp.note in
       IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
     ) exps in
     let start1 = NumE (`Nat (Z.of_int 0)) $$ no_region % (mk_natT no_region) in
-    let len1 = BinE (`SubOp, `NatT, len, len2) $$ exp1.at % (mk_natT exp1.at) in
+    let len1 = cvt_sub exp1.at len len2 in
     let rhs1' = SliceE (rhs, start1, len1) $$ rhs.at % rhs.note in
     let prem1 = IfPr (CmpE (`EqOp, `BoolT, exp1, rhs1') $$ exp1.at % (BoolT $ exp1.at)) $ at in
     (* Start an inner loop, in case of any dependencies between the list elements.
@@ -994,6 +966,7 @@ and animate_prem envr prem : prem list E.m =
       | _ -> None
       in
       (* The new bindings that are introduced by the iteration. *)
+      let lenvr = ref !envr in
       let knowns_iter = List.filter_map (fun (x, e) ->
         let fv_e = (free_exp false e).varid in
         let unknowns_e = Set.diff fv_e knowns in
@@ -1004,7 +977,7 @@ and animate_prem envr prem : prem list E.m =
       | None   -> knowns_inner
       | Some i -> Set.add i.it knowns_inner in
       let s_body = { (init ()) with prems = [prem']; knowns = knowns_inner_idx } in
-      let* (prems_body', s_body') = run_inner s_body (animate_prems' envr prem'.at) in
+      let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem'.at) in
       (* Propagate knowns to the outside of the iterator. We need to traverse [new_knowns]
          instead of [xes], because there may be variables that need to flow
          out but do not ∈ xes.
@@ -1034,7 +1007,7 @@ and animate_prem envr prem : prem list E.m =
                  after we finish the interation.
               *)
               let y' = Frontend.Dim.annot_varid y [iter] in
-              let v = fresh_id (Some y'.it) e.at in
+              let v = fresh_id (Some y'.it) e.at e.note envr in
               let ve = VarE v $$ e.at % e.note in
               let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, ve) $$ e.at % (BoolT $ e.at)) $ e.at in
               ([y'.it], [prem_e])
@@ -1135,46 +1108,51 @@ let lift_otherwise_prem prems =
 (* The variant that doesn't try to animate the [lhs] of the rule, as we know that
    it's very difficult.
 *)
-let animate_rule_red_no_arg envr at lhs rhs prems : clause' =
+let animate_rule_red_no_arg envr rule : clause' =
+  let lenvr = ref !envr in
+  let (_, binds, lhs, rhs, prems) = rule.it in
   let lhs_vars = (free_exp false lhs).varid in
   let rhs_vars = (free_exp false rhs).varid in
   (* Input and output variables in the conclusion *)
   let in_vars  = lhs_vars in
   let out_vars = rhs_vars in
-  let prems' = animate_prems envr at in_vars out_vars prems in
+  let prems' = animate_prems lenvr rule.at in_vars out_vars prems in
   let binds = [] in  (* TODO(zilinc): binding list *)
   DefD (binds, [ExpA lhs $ lhs.at], rhs, prems')
 
-let animate_rule_red envr at lhs rhs prems : clause' =
-  let v = fresh_id (Some "lhs") lhs.at in
+let animate_rule_red envr rule : clause' =
+  let lenvr = ref !envr in
+  let (_, binds, lhs, rhs, prems) = rule.it in
+  let v = fresh_id (Some "lhs") lhs.at lhs.note lenvr in
   let ve = VarE v $$ v.at % lhs.note in
   let prem_arg = IfPr (CmpE (`EqOp, `BoolT, lhs, ve) $$ lhs.at % (BoolT $ lhs.at)) $ lhs.at in
   let rhs_vars = (free_exp false rhs).varid in
   (* Input and output variables in the conclusion *)
   let in_vars = (free_varid v).varid in
   let out_vars = rhs_vars in
-  let prems' = animate_prems envr at in_vars out_vars (prem_arg::prems) in
-  let binds = [] in  (* TODO(zilinc): binding list *)
-  DefD (binds, [ExpA ve $ ve.at], rhs, prems')
+  let prems' = animate_prems lenvr rule.at in_vars out_vars (prem_arg::prems) in
+  let binds' = binds_of_env !lenvr in  (* TODO(zilinc): binding list *)
+  DefD (binds @ binds', [ExpA ve $ ve.at], rhs, prems')
 
-let animate_rule envr rel_id at (r : rule_clause) : clause =
-  let (rule_id, lhs, rhs, prems) = r.it in
+let animate_rule envr at rel_id (r : rule_clause) : clause =
+  let (rule_id, _, _, _, _) = r.it in
   let clause' =
     if is_unanimatable "rule_lhs" rule_id.it rel_id then
-      animate_rule_red_no_arg envr at lhs rhs prems
+      animate_rule_red_no_arg envr r
     else
-      animate_rule_red envr at lhs rhs prems
+      animate_rule_red envr r
   in
   clause' $ at
 
-let animate_rules envr rel_id at rs = List.map (animate_rule envr rel_id at) rs
+let animate_rules envr at rel_id rs = List.map (animate_rule envr at rel_id) rs
 
 let animate_clause envr (c: clause) : func_clause =
-  let DefD (_binds, args, exp, prems) = c.it in
+  let lenvr = ref !envr in
+  let DefD (binds, args, exp, prems) = c.it in
   let n_args = List.length args in
   let blob = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
-      let v = fresh_id (Some ("a" ^ string_of_int i)) arg.at in
+      let v = fresh_id (Some ("a" ^ string_of_int i)) arg.at exp'.note lenvr in
       let exp_v = VarE v $$ v.at % exp'.note in
       let p = IfPr (CmpE (`EqOp, `BoolT, exp', exp_v) $$ exp'.at % (BoolT $ exp'.at)) $ arg.at in
       let fv_exp' = (free_exp false exp').varid in
@@ -1187,15 +1165,16 @@ let animate_clause envr (c: clause) : func_clause =
   let vs = List.filter_map Fun.id ovs in
   let ins = (free_list free_varid vs).varid in
   let ous = (free_exp false exp).varid in
-  let prems' = animate_prems envr c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
-  (DefD ([], args', exp, prems')) $ c.at  (* TODO(zilinc): binding list. *)
+  let prems' = animate_prems lenvr c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
+  let binds' = binds_of_env !lenvr in
+  (DefD (binds @ binds', args', exp, prems')) $ c.at  (* TODO(zilinc): binding list. *)
 
 let animate_clauses envr cs = List.map (animate_clause envr) cs
 
 let animate_rule_def envr (rdef: rule_def) : func_def =
   let (_, rel_id, t1, t2, rules) = rdef.it in
   let params = [ExpP ("_" $ t1.at, t1) $ t1.at] in
-  (rel_id, params, t2, animate_rules envr rel_id.it rdef.at rules, None) $ rdef.at
+  (rel_id, params, t2, animate_rules envr rdef.at rel_id.it rules, None) $ rdef.at
 
 let animate_func_def' envr (id, ps, typ, clauses, opartial) =
   (id, ps, typ, animate_clauses envr clauses, opartial)
@@ -1230,6 +1209,9 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
 
 (* Entry function *)
 let animate (dl, il) =
-  let envr = ref Il.Env.empty in
-  dl |> List.map (animate_def envr)
-     |> merge_defs
+  let envr = ref (Il.Env.env_of_script il) in
+  let dl' = dl |> List.map (animate_def envr)
+               |> merge_defs
+  in
+  (* Il2dl.list_all_dl_defs dl'; *)
+  dl'

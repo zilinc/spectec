@@ -108,7 +108,7 @@ let infer_unop at op ot =
   | #Bool.unop, #Bool.typ -> BoolT, BoolT
   | #Num.unop as op, (#Num.typ as nt) ->
     if not (Num.typ_unop op nt nt) then
-      error at ("illegal type " ^ string_of_numtyp nt ^ " for unary operator");
+      error at ("illegal type " ^ string_of_numtyp nt ^ " for unary operator " ^ string_of_unop op);
     NumT nt, NumT nt
   | _, _ ->
     error at ("malformed unary operator annotation")
@@ -123,7 +123,7 @@ let infer_binop at op ot =
       | `PowOp -> nt, (if nt = `NatT then `NatT else `IntT), nt
     in
     if not (Num.typ_binop op nt1 nt2 nt3) then
-      error at ("illegal type " ^ string_of_numtyp nt ^ " for unary operator");
+      error at ("illegal type " ^ string_of_numtyp nt ^ " for binary operator " ^ string_of_binop op);
     NumT nt1, NumT nt2, NumT nt3
   | _, _ ->
     error at ("malformed binary operator annotation")

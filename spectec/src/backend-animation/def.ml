@@ -9,7 +9,7 @@ type type_def = type_def' phrase
    The former is the part of the [rule_id] before the
    first "-".
 *)
-type rule_clause' = id * exp * exp * (prem list)  (* rule_id *)
+type rule_clause' = id * bind list * exp * exp * (prem list)  (* rule_id *)
 type rule_clause = rule_clause' phrase
 type rule_def' = string * id * typ * typ * rule_clause list  (* rule_name, rel_id *)
 type rule_def = rule_def' phrase
@@ -48,11 +48,12 @@ let string_of_type_def td =
 
 
 let string_of_rule_clause rc =
-  let id, e1, e2, prems = rc.it in
-  Printf.sprintf "%s: %s ~> %s%s"
-    (Il.Print.string_of_id  id)
-    (Il.Print.string_of_exp e1)
-    (Il.Print.string_of_exp e2)
+  let id, bs, e1, e2, prems = rc.it in
+  Printf.sprintf "%s%s: %s ~> %s%s"
+    (Il.Print.string_of_id    id)
+    (Il.Print.string_of_binds bs)
+    (Il.Print.string_of_exp   e1)
+    (Il.Print.string_of_exp   e2)
     (concat "" (List.map (prefix "\n    -- " Il.Print.string_of_prem) prems))
 
 let string_of_rule_def rd =
@@ -75,4 +76,4 @@ let rec string_of_dl_def = function
 | TypeDef tdef -> string_of_type_def tdef
 | RuleDef rdef -> string_of_rule_def rdef
 | FuncDef fdef -> string_of_func_def fdef
-| RecDef dl_defs -> "mutual\n" ^ String.concat "\n" (List.map string_of_dl_def dl_defs) ^ "end_mutual\n"
+| RecDef dl_defs -> "recursive\n" ^ String.concat "\n" (List.map string_of_dl_def dl_defs) ^ "end\n"
