@@ -190,9 +190,8 @@ let rec valid_def envr (def: dl_def) : unit =
     List.iter (fun d ->
       match List.hd ds, d with
       | TypeDef _, TypeDef _
-      | FuncDef _, FuncDef _
-      | _, _ ->
-        error (dl_loc def) ("Invalid recursion between definitions of different sort.")
+      | FuncDef _, FuncDef _ -> ()
+      | _, _ -> error (dl_loc def) ("Invalid recursion between definitions of different sort.")
     ) ds
 
 
