@@ -125,7 +125,6 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     (* Out-flow *)
     let out_flow_knowns acc (x, e) =
       (* we don't need to out-flow `i*` if i is the index *)
-      if (Set.mem x.it bound_idx) then acc else
       if (Set.mem x.it acc) then
         (* this iterator is now out of scope *)
         let rmv_iter = Set.diff acc (Set.singleton x.it) in

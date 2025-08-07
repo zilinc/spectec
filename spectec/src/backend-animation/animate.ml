@@ -983,7 +983,6 @@ and animate_prem envr prem : prem list E.m =
       let s_body = { (init ()) with prems = [prem']; knowns = knowns_inner_idx } in
       let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem'.at) in
       let new_binds = Il.Env.diff !lenvr.vars !envr.vars in
-      print_endline ("$$$$$" ^ String.concat ", " (Map.to_list new_binds |> List.map fst));
       (* NOTE the side effect of updating [envr]. *)
       let xes' = List.concat_map (fun (x, t) ->
         let x_star = Frontend.Dim.annot_varid (x $ no_region) [iter] in
@@ -1002,7 +1001,7 @@ and animate_prem envr prem : prem list E.m =
          That's why we need to subtract the [knowns_inner_idx] set which includes
          the index, if there is one.
       *)
-      let new_knowns = Set.diff knowns_inner' knowns_inner_idx in
+      let new_knowns = Set.diff knowns_inner' knowns_inner in
       let blob = List.map (fun x ->
         match List.find_opt (fun (y, e) -> y.it = x) xes with
         (* If x <- e exists, then x propagates to e. *)
