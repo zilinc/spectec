@@ -94,7 +94,7 @@ let rec il2dl (il: script) : dl_def list =
   List.concat_map (fun def ->
     match def.it with
     | TypD (id, params, insts) -> [TypeDef ((id, params, insts) $ def.at)]
-    | DecD (id, params, typ, clauses) when List.length clauses > 0 ->
+    | DecD (id, params, typ, clauses) ->
       let partial = if List.mem id partial_funcs then Partial else Total in
       [FuncDef ((id, params, typ, clauses, Some partial) $ def.at)]
     | RelD (rel_id, _, typ, rules) -> 

@@ -8,7 +8,7 @@ open Source
 (* FIXME(zilinc): we may want to do differently than the AL route. *)
 let rec is_anim_target def =
   match def.it with
-  | DecD (id, _, _, _) when id.it = "utf8" -> None
+  | DecD (id, ps, t, _) when id.it = "utf8" -> Some (DecD (id, ps, t, []) $ def.at)
   | RelD (id, mixop, t, rules) when List.mem id.it [ "Step"; "Step_read"; "Step_pure" ] ->
     (* HARDCODE: Exclude administrative rules *)
     let filter_rule rule =
