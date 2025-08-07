@@ -617,9 +617,12 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     animate_exp_eq envr at exp rhs'
   | OptE None -> assert false  (* Because lhs must contain unknowns *)
   | OptE (Some exp) ->
-    (* TODO(zilinc): refutable pattern *)
-    let rhs' = TheE rhs $$ rhs.at % (as_iter_typ Opt !envr rhs.note) in
-    animate_exp_eq envr at exp rhs'
+    let v = fresh_id None exp.at in
+    envr := bind_var !envr v exp.note;
+    let ve = VarE v $$ v.at % exp.note in
+    let prem_opt = LetPr (OptE (Some ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
+    let* prems' = animate_exp_eq envr at exp ve in
+    E.return (prem_opt :: prems')
   | ListE [] ->
     assert false  (* Because lhs must contain unknowns. *)
   | ListE exps ->
@@ -654,7 +657,14 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     begin match as_variant_typ !envr rhs.note with
     | [(mixop', (_, t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
       animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
-    | _ -> E.throw (string_of_error at "Can't invert non-unary variant: " ^ string_of_exp lhs)
+    | [] -> assert false
+    | tcases ->
+      let v = fresh_id None lhs'.at in
+      envr := bind_var !envr v lhs'.note;
+      let ve = VarE v $$ v.at % lhs'.note in
+      let prem_case = LetPr (CaseE (mixop, ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
+      let* prems' = animate_exp_eq envr at lhs' ve in
+      E.return (prem_case :: prems')
     end
   | TupE es ->
     let v = fresh_id None at in
@@ -747,7 +757,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   | CatE (({ it = ListE exps; _ } as exp1), exp2) ->
     let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
     let len_lhs1 = mk_natE lhs.at (List.length exps) in
-    let prem_len = IfPr (CmpE (`GeOp, `BoolT, len_lhs1, len_rhs) $$ len_rhs.at % (BoolT $ len_rhs.at)) $ len_rhs.at in
+    let prem_len = IfPr (CmpE (`GeOp, `NatT, len_lhs1, len_rhs) $$ len_rhs.at % (BoolT $ len_rhs.at)) $ len_rhs.at in
     let prems1 = List.mapi (fun i exp ->
       let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
       let rhs' = IdxE (rhs, idx) $$ exp.at % exp.note in
@@ -769,7 +779,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   | CatE (exp1, ({ it = ListE exps; _ } as exp2)) ->
     let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
     let len_lhs2 = mk_natE lhs.at (List.length exps) in
-    let prem_len = IfPr (CmpE (`GeOp, `BoolT, len_lhs2, len_rhs) $$ len_rhs.at % (BoolT $ len_rhs.at)) $ len_rhs.at in
+    let prem_len = IfPr (CmpE (`GeOp, `NatT, len_lhs2, len_rhs) $$ len_rhs.at % (BoolT $ len_rhs.at)) $ len_rhs.at in
     let prems2 = List.mapi (fun i exp ->
       let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
       (* idx' = len - (len2 - idx) *)
@@ -1064,8 +1074,8 @@ let animate_rule_red_no_arg envr rule : clause' =
   let in_vars  = lhs_vars in
   let out_vars = rhs_vars in
   let prems' = animate_prems lenvr rule.at in_vars out_vars prems in
-  let binds = [] in  (* TODO(zilinc): binding list *)
-  DefD (binds, [ExpA lhs $ lhs.at], rhs, prems')
+  let binds' = binds_of_env !lenvr in
+  DefD (binds @ binds', [ExpA lhs $ lhs.at], rhs, prems')
 
 let animate_rule_red envr rule : clause' =
   let lenvr = ref !envr in
@@ -1079,7 +1089,7 @@ let animate_rule_red envr rule : clause' =
   let in_vars = (free_varid v).varid in
   let out_vars = rhs_vars in
   let prems' = animate_prems lenvr rule.at in_vars out_vars (prem_arg::prems) in
-  let binds' = binds_of_env !lenvr in  (* TODO(zilinc): binding list *)
+  let binds' = binds_of_env !lenvr in
   DefD (binds @ binds', [ExpA ve $ ve.at], rhs, prems')
 
 let animate_rule envr at rel_id (r : rule_clause) : clause =
@@ -1116,7 +1126,7 @@ let animate_clause envr (c: clause) : func_clause =
   let ous = (free_exp false exp).varid in
   let prems' = animate_prems lenvr c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
   let binds' = binds_of_env !lenvr in
-  (DefD (binds @ binds', args', exp, prems')) $ c.at  (* TODO(zilinc): binding list. *)
+  (DefD (binds @ binds', args', exp, prems')) $ c.at
 
 let animate_clauses envr cs = List.map (animate_clause envr) cs
 
