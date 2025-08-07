@@ -43,6 +43,8 @@ let empty =
 
 let mem map id = Map.mem id.it map
 
+let diff m1 m2 = Map.fold (fun k _v acc -> Map.remove k acc) m2 m1
+
 let find_opt map id =
   Map.find_opt id.it map
 

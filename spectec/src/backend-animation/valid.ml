@@ -131,7 +131,7 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
         let rmv_iter = Set.diff acc (Set.singleton x.it) in
         Set.union rmv_iter (free_vars_exp e)
       else
-        error_pr e.at ("Iteration binding {x <- e} ill-formed." ^
+        error_pr e.at ("Iteration binding {x <- e} ill-formed. " ^
           "Either x or e must be known: (" ^ string_of_id x ^ ", " ^ string_of_exp e ^ ")") prem
     in
     List.fold_left out_flow_knowns new_knowns pairs

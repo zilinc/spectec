@@ -80,10 +80,7 @@ let animate il print_dl =
            |> Animate.animate 
   in
   (* Il2dl.list_all_dl_defs dl; *)
+  if print_dl then
+    print_endline (List.map string_of_dl_def dl |> String.concat "\n");
   Valid.valid dl;
-  begin if print_dl then
-    print_endline (List.map string_of_dl_def dl |> String.concat "\n")
-  else
-    print_endline ("Animation validation passed.")
-  end;
   dl

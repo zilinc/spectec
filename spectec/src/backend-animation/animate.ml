@@ -45,7 +45,7 @@ let info v at msg = if List.mem v !verbose then
 
 let fresh_oracle = ref 0
 
-let fresh_id (oname: string option) at t envr : id =
+let fresh_id (oname: string option) at : id =
   let i = !fresh_oracle in
   fresh_oracle := !fresh_oracle + 1;
   let name n onm = "__v" ^ string_of_int n ^
@@ -53,9 +53,7 @@ let fresh_id (oname: string option) at t envr : id =
                    | None -> ""
                    | Some nm -> "_" ^ nm
   in
-  let id = name i oname $ at in
-  envr := Il.Env.bind_var !envr id t;
-  id
+  name i oname $ at
 
 
 (* Animation monad *)
@@ -494,7 +492,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let varid = fun s -> s.varid in
     let fv_args = List.map (free_arg false) args |> List.map varid in
     let unknowns = List.map (fun fv_arg -> Set.diff fv_arg knowns) fv_args in
-    let oinv_fid = Il.Env.find_func_hint !envr fid.it "inverse" in
+    let oinv_fid = find_func_hint !envr fid.it "inverse" in
     let* inv_fid = match oinv_fid with
     | None -> E.throw (string_of_error at ("No inverse function declared for `" ^ fid.it ^ "`, so can't invert it."))
     | Some hint -> begin match hint.hintexp.it with
@@ -550,10 +548,9 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
         let t = reduce_typ !envr lhs'.note in
         let rhs' = IdxE (rhs, VarE i $$ i.at % (mk_natT i.at)) $$ rhs.at % lhs'.note in
         let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
-        let lenvr = ref !envr in
         bracket (add_knowns (Set.singleton i.it))
                 (remove_knowns (Set.singleton i.it))
-                (animate_prem lenvr (IterPr ([prem_body], iterexp) $ at))
+                (animate_prem envr (IterPr ([prem_body], iterexp) $ at))
       else
         (* Inductive case where [len] is unknown. *)
         let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
@@ -563,12 +560,18 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
         E.return (prem_len @ prems')
     (* Inductive cases *)
     | ListN(len, None) ->
-      let lenvr = ref !envr in
-      let i = fresh_id (Some "i") at (mk_natT at) lenvr in
-      animate_exp_eq lenvr at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs
+      let i = fresh_id (Some "i") at in
+      let i_star = Frontend.Dim.annot_varid i [iter] in
+      let t_star = IterT (mk_natT i_star.at, List) $ i_star.at in
+      let i_star_e = VarE i_star $$ i_star.at % t_star in
+      envr := bind_var !envr i_star t_star;
+      let xes' = (i, i_star_e) :: xes in
+      animate_exp_eq envr at (IterE (lhs', (ListN(len, Some i), xes')) $> lhs) rhs
     | Opt | List | List1 ->
+      let iter' = match iter with Opt -> Opt | _ -> List in
       let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
-      let len_v = fresh_id (Some "len") len_rhs.at (mk_natT len_rhs.at) envr in
+      let len_v = fresh_id (Some "len") len_rhs.at in
+      envr := bind_var !envr len_v (mk_natT len_rhs.at);
       let len = VarE len_v $$ len_rhs.at % len_rhs.note in
       let* prems_len_v = animate_exp_eq envr len.at len len_rhs in
       let oprem_len = match iter with
@@ -581,9 +584,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
       | None -> E.return []
       | Some prem_len -> animate_prem envr prem_len
       in
-      let lenvr = ref !envr in
-      let i = fresh_id (Some "i") at (mk_natT at) lenvr in
-      let* prems' = animate_exp_eq lenvr at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs in
+      let* prems' = animate_exp_eq envr at (IterE (lhs', (ListN(len, None), xes)) $> lhs) rhs in
       E.return (prems_len_v @ prems_len @ prems')
     end
   (* AST nodes that can be inverted. *)
@@ -633,7 +634,8 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   | CaseE (mixop, lhs') ->
     animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
   | TupE es ->
-    let v = fresh_id None at rhs.note envr in
+    let v = fresh_id None at in
+    envr := bind_var !envr v rhs.note;
     (* Bind to a new variable, so that [rhs] doesn't need to be re-evaluated
        again and again in the following projections.
     *)
@@ -954,9 +956,12 @@ and animate_prem envr prem : prem list E.m =
     *)
     (* Inductive case: arbitrary prem, arbitrary iter *)
     | _ ->
+      let iter' = match iter with Opt -> Opt | _ -> List in
+      let lenvr = ref !envr in
       (* Propagating knowns into the iteration. *)
       let oindex = match iter with
       | ListN(len, Some i) ->
+        lenvr := bind_var !lenvr i (mk_natT len.at);
         let fv_len = (free_exp false len).varid in
         if Set.is_empty (Set.diff fv_len knowns) then
           Some i
@@ -966,7 +971,6 @@ and animate_prem envr prem : prem list E.m =
       | _ -> None
       in
       (* The new bindings that are introduced by the iteration. *)
-      let lenvr = ref !envr in
       let knowns_iter = List.filter_map (fun (x, e) ->
         let fv_e = (free_exp false e).varid in
         let unknowns_e = Set.diff fv_e knowns in
@@ -978,6 +982,16 @@ and animate_prem envr prem : prem list E.m =
       | Some i -> Set.add i.it knowns_inner in
       let s_body = { (init ()) with prems = [prem']; knowns = knowns_inner_idx } in
       let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem'.at) in
+      let new_binds = Il.Env.diff !lenvr.vars !envr.vars in
+      print_endline ("$$$$$" ^ String.concat ", " (Map.to_list new_binds |> List.map fst));
+      (* NOTE the side effect of updating [envr]. *)
+      let xes' = List.concat_map (fun (x, t) ->
+        let x_star = Frontend.Dim.annot_varid (x $ no_region) [iter] in
+        let t_star = IterT (t, iter') $ x_star.at in
+        envr := bind_var !envr x_star t_star;
+        if List.exists (fun (x', _) -> x'.it = x) xes then [] else
+          [(x $ x_star.at, VarE x_star $$ x_star.at % t_star)]
+      ) (Map.to_list new_binds) in
       (* Propagate knowns to the outside of the iterator. We need to traverse [new_knowns]
          instead of [xes], because there may be variables that need to flow
          out but do not ∈ xes.
@@ -1007,7 +1021,8 @@ and animate_prem envr prem : prem list E.m =
                  after we finish the interation.
               *)
               let y' = Frontend.Dim.annot_varid y [iter] in
-              let v = fresh_id (Some y'.it) e.at e.note envr in
+              let v = fresh_id (Some y'.it) e.at in
+              envr := bind_var !envr y' e.note;
               let ve = VarE v $$ e.at % e.note in
               let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, ve) $$ e.at % (BoolT $ e.at)) $ e.at in
               ([y'.it], [prem_e])
@@ -1024,7 +1039,7 @@ and animate_prem envr prem : prem list E.m =
       let s_end = { (init ()) with prems = e_prems; knowns = get_knowns s_outer} in
       let* (e_prems', s_end') = run_inner s_end (animate_prems' envr prem.at) in
       let* () = update (put_knowns (get_knowns s_end')) in
-      E.return ((IterPr (prems_body', iterexp) $ prem.at) :: e_prems')
+      E.return ((IterPr (prems_body', (iter, xes @ xes')) $ prem.at) :: e_prems')
     end
   | IterPr (prems, iterexp) -> assert false
 
@@ -1123,7 +1138,8 @@ let animate_rule_red_no_arg envr rule : clause' =
 let animate_rule_red envr rule : clause' =
   let lenvr = ref !envr in
   let (_, binds, lhs, rhs, prems) = rule.it in
-  let v = fresh_id (Some "lhs") lhs.at lhs.note lenvr in
+  let v = fresh_id (Some "lhs") lhs.at in
+  lenvr := bind_var !lenvr v lhs.note;
   let ve = VarE v $$ v.at % lhs.note in
   let prem_arg = IfPr (CmpE (`EqOp, `BoolT, lhs, ve) $$ lhs.at % (BoolT $ lhs.at)) $ lhs.at in
   let rhs_vars = (free_exp false rhs).varid in
@@ -1152,7 +1168,8 @@ let animate_clause envr (c: clause) : func_clause =
   let n_args = List.length args in
   let blob = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
-      let v = fresh_id (Some ("a" ^ string_of_int i)) arg.at exp'.note lenvr in
+      let v = fresh_id (Some ("a" ^ string_of_int i)) exp'.at in
+      lenvr := bind_var !lenvr v exp'.note;
       let exp_v = VarE v $$ v.at % exp'.note in
       let p = IfPr (CmpE (`EqOp, `BoolT, exp', exp_v) $$ exp'.at % (BoolT $ exp'.at)) $ arg.at in
       let fv_exp' = (free_exp false exp').varid in
