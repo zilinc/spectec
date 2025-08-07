@@ -616,10 +616,17 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   | ListE [] ->
     assert false  (* Because lhs must contain unknowns. *)
   | ListE exps ->
-    let len = List.length exps in
+    let v = fresh_id None rhs.at in
+    envr := bind_var !envr v rhs.note;
+    let ve = VarE v $$ v.at % rhs.note in
+    let* prems_rhs = animate_exp_eq envr rhs.at ve rhs in
+    (* We need a length check to serve as the irrefutable list pattern. *)
+    let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+    let len_lhs = mk_natE lhs.at (List.length exps) in
+    let prem_len = IfPr (CmpE (`EqOp, `BoolT, len_lhs, len_rhs) $$ at % (BoolT $ at)) $ at in
     let prems = List.mapi (fun i exp ->
           let ie = mk_natE exp.at i in
-          IfPr (CmpE (`EqOp, `BoolT, exp, IdxE (rhs, ie) $$ rhs.at % exp.note)
+          IfPr (CmpE (`EqOp, `BoolT, exp, IdxE (ve, ie) $$ ve.at % exp.note)
                   $$ exp.at
                   %  (BoolT $ exp.at)
                ) $ exp.at
@@ -630,11 +637,12 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
          -- if x = rhs.1
        If we can't animate `x + 1` (hypothetically, if it was something difficult),
        we can still solve it by first computing `x`.
-     *)
-    let s_new = { (init ()) with prems; knowns = get_knowns s } in
+    *)
+    let* s' = get () in
+    let s_new = { (init ()) with prems; knowns = get_knowns s' } in
     let* prems', s_new' = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
-    E.return prems'
+    E.return (prems_rhs @ [prem_len] @ prems')
   | CaseE (mixop, lhs') ->
     begin match as_variant_typ !envr rhs.note with
     | [(mixop', (_, t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
