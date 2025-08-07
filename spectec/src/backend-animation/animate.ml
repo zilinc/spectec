@@ -480,7 +480,13 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     E.throw (string_of_error at ("LHS of rule " ^ id.it ^ " has unknowns: " ^
                                  string_of_varset unknowns_fncall))
 
-(** ASSUMES: [lhs] contains unknown vars, whereas [rhs] is fully known. *)
+(** ASSUMES: [lhs] contains unknown vars, whereas [rhs] is fully known.
+    Essentially, the LHS is pattern to match against, and RHS is the scrutinee.
+    When the LHS is an irrefutable pattern, we can invert it. When LHS
+    is refutable, we have to animate it to something that we can pattern match on,
+    or rewrite it as an if check. For example: match ls with [x, y] -> ... and
+    this can be rewritten as a length check.
+*)
 and animate_exp_eq envr at lhs rhs : prem list E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in
@@ -611,6 +617,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     animate_exp_eq envr at exp rhs'
   | OptE None -> assert false  (* Because lhs must contain unknowns *)
   | OptE (Some exp) ->
+    (* TODO(zilinc): refutable pattern *)
     let rhs' = TheE rhs $$ rhs.at % (as_iter_typ Opt !envr rhs.note) in
     animate_exp_eq envr at exp rhs'
   | ListE [] ->
@@ -738,14 +745,16 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   (* More complicated patterns that are partially invertible. *)
   (* [e1; e2; ...; en] ++ exp2 *)
   | CatE (({ it = ListE exps; _ } as exp1), exp2) ->
-    let len = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+    let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+    let len_lhs1 = mk_natE lhs.at (List.length exps) in
+    let prem_len = IfPr (CmpE (`GeOp, `BoolT, len_lhs1, len_rhs) $$ len_rhs.at % (BoolT $ len_rhs.at)) $ len_rhs.at in
     let prems1 = List.mapi (fun i exp ->
       let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
       let rhs' = IdxE (rhs, idx) $$ exp.at % exp.note in
       IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
     ) exps in
     let start2 = NumE (`Nat (Z.of_int (List.length exps))) $$ exp1.at % (mk_natT exp1.at) in
-    let len2 = cvt_sub exp2.at len start2 in
+    let len2 = cvt_sub exp2.at len_rhs start2 in
     let rhs2' = SliceE (rhs, start2, len2) $$ rhs.at % rhs.note in
     let prem2 = IfPr (CmpE (`EqOp, `BoolT, exp2, rhs2') $$ exp2.at % (BoolT $ exp2.at)) $ at in
     (* Start an inner loop, in case of any dependencies between the list elements.
@@ -755,20 +764,21 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let s_new = { (init ()) with prems = prems1 @ [prem2]; knowns = get_knowns s } in
     let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
-    E.return prems'
+    E.return (prem_len :: prems')
   (* exp1 ++ [e1; e2; ...; en] *)
   | CatE (exp1, ({ it = ListE exps; _ } as exp2)) ->
-    let len2 = NumE (`Nat (Z.of_int (List.length exps))) $$ exp2.at % (mk_natT exp2.at) in
-    let len = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+    let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+    let len_lhs2 = mk_natE lhs.at (List.length exps) in
+    let prem_len = IfPr (CmpE (`GeOp, `BoolT, len_lhs2, len_rhs) $$ len_rhs.at % (BoolT $ len_rhs.at)) $ len_rhs.at in
     let prems2 = List.mapi (fun i exp ->
       let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
       (* idx' = len - (len2 - idx) *)
-      let idx' = cvt_sub len2.at len (cvt_sub len2.at len2 idx) in
+      let idx' = cvt_sub len_lhs2.at len_rhs (cvt_sub len_lhs2.at len_lhs2 idx) in
       let rhs' = IdxE (rhs, idx') $$ exp.at % exp.note in
       IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
     ) exps in
     let start1 = NumE (`Nat (Z.of_int 0)) $$ no_region % (mk_natT no_region) in
-    let len1 = cvt_sub exp1.at len len2 in
+    let len1 = cvt_sub exp1.at len_rhs len_lhs2 in
     let rhs1' = SliceE (rhs, start1, len1) $$ rhs.at % rhs.note in
     let prem1 = IfPr (CmpE (`EqOp, `BoolT, exp1, rhs1') $$ exp1.at % (BoolT $ exp1.at)) $ at in
     (* Start an inner loop, in case of any dependencies between the list elements.
@@ -776,7 +786,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let s_new = { (init ()) with prems = prems2 @ [prem1]; knowns = get_knowns s } in
     let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
-    E.return prems'
+    E.return (prem_len :: prems')
   | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs))
 
 (** ASSUMES: [e] contains unknown vars, whereas [es] is fully known.
