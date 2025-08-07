@@ -85,10 +85,12 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     if not (Set.is_empty unknowns) then
       error_pr rhs.at ("LetPr RHS uses unknown variables: " ^ string_of_varset unknowns) prem;
     (match lhs.it with
-      | VarE lhs_var ->
-        if lhs_var.it <> var then
-          error_pr lhs.at ("LetPr LHS variable `" ^ lhs_var.it ^ "` doesn't match binder `" ^ var ^ "`.") prem
-      | _ -> error_pr lhs.at ("Let binding LHS must be a variable, but got " ^ string_of_exp lhs) prem
+      | VarE lhs_var
+      | CaseE (_, { it = VarE lhs_var; _ })
+      | OptE (Some { it = VarE lhs_var; _})
+      -> if lhs_var.it <> var then
+           error_pr lhs.at ("LetPr LHS variable `" ^ lhs_var.it ^ "` doesn't match binder `" ^ var ^ "`.") prem
+      | _ -> error_pr lhs.at ("Ill-formed LetPr's LHS: " ^ string_of_exp lhs) prem
     );
     if Set.mem var known then
       error_pr prem.at ("LetPr binder `" ^ var ^ "` already known") prem;
