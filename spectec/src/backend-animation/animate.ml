@@ -272,6 +272,10 @@ let as_iter_typ iter env t : typ =
   | IterT (t1, iter') when Il.Eq.eq_iter iter iter' -> t1
   | _ -> error t.at ("Input type is not an iterated " ^ string_of_iter iter ^ " type: " ^ string_of_typ t)
 
+let as_variant_typ env t : typcase list =
+  match (reduce_typdef env t).it with
+  | VariantT tcs -> tcs
+  | _ -> error t.at ("Input type is not a variant type: " ^ string_of_typ t)
 
 (* TODO(zilinc): I don't think it handles dependent types correctly. The binds
    should be telescopic.
@@ -632,7 +636,11 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return prems'
   | CaseE (mixop, lhs') ->
-    animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
+    begin match as_variant_typ !envr rhs.note with
+    | [(mixop', (_, t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
+      animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
+    | _ -> E.throw (string_of_error at "Can't invert non-unary variant: " ^ string_of_exp lhs)
+    end
   | TupE es ->
     let v = fresh_id None at in
     envr := bind_var !envr v rhs.note;
@@ -688,11 +696,10 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   (* Unary constructors. Invert. *)
   | UncaseE (e1, mixop) ->
     (* Technically, need to check for the refinement when wrapping with a CaseE. *)
-    let t' = reduce_typdef !envr e1.note in
-    begin match t'.it with
+    begin match as_variant_typ !envr e1.note with
     (* Unary variant type, we can invert the UncaseE. *)
-    | VariantT [_] ->
-        animate_exp_eq envr at e1 (CaseE (mixop, rhs) $$ rhs.at % e1.note)
+    | [(mixop', (_, _t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
+      animate_exp_eq envr at e1 (CaseE (mixop, rhs) $$ rhs.at % e1.note)
       (*
       (* FIXME(zilinc): The side-condition from the type definition.
          For now, we don't check it. But the check can be added in a separate
@@ -865,181 +872,89 @@ and animate_prem envr prem : prem list E.m =
   | ElsePr ->
     E.return [ prem ]
   | IterPr ([prem'], ((iter, xes) as iterexp)) ->
-    (* TODO(zilinc): fix the documentation.
-      -- XXX | The animation algorithm for IterPr goes as follows:
-      -- XXX | Base case 1: (-- if exp)^iter where exp and iter are fully known.
-      -- XXX |   -- (if exp)^iter
-      -- XXX |   How do we generate Ocaml code from it?
-      -- XXX |   ▹ Need to look at the iterexp binding list to find the iterated expressions.
-      -- XXX |     TODO(zilinc): Does it have all the information to generate a parallel map_n function?
-      -- XXX | Base case 2: (-- let v = rhs {v})^(i<N) {v <- v*} where N is known
-      -- XXX |   -- let `v*` = rhs^(i<N) {`v*`}
-      -- XXX | Base case 3: (-- let v = rhs {v})^(i<N) {} where N is known
-      -- XXX |   It means that all v's must have the same value.
-      -- XXX | Base case 4: (-- let v = rhs {v})^(i<N) where N is unknown
-      -- XXX |   Maybe can't animate in general.
-      -- XXX | Inductive cases: (-- let v = rhs {v})^iter
-      -- XXX |   Reduce to base cases:
-      -- XXX |     For List:
-      -- XXX |     -- where N = |rhs| {N}
-      -- XXX |     -- animate (-- let v = rhs)^(i<N)
-      -- XXX |     For List1:
-      -- XXX |     additionally check -- if N >= 1
-      -- XXX |     For Opt:  (TODO(zilinc): does it need a special case to handle?)
-      -- XXX |     additionally check -- if N <= 1
-      -- XXX | Inductive cases: (-- if exp)^iter. E.g.:
-      -- XXX |   animate (-- prem^(i<N){x <- X, y <- Y, i <- I})
-      -- XXX |   ~~>
-      -- XXX |   (animate prem)^(i<N){x <- X, y <- Y, i <- I}
-      -- XXX |   ~~>
-      -- XXX |   (prems')^(i<N){x <- X, y <- Y, i <- I}
-      -- XXX |   ~~>
-      -- XXX |   for prem' ∈ prems': (prem')^(i<N){???}
-      -- XXX |   ~~>  ;; pattern match on prem'
-      -- XXX |     prems' should be a series of
-      -- XXX |     -- let v = e {v} or -- if e (check)
-      -- XXX |     We then wrap each output with _^(i<N) { ... }. The iter-binding list
-      -- XXX |     should be { v <- v* }, plus those for the inputs.
-      -- XXX |     We can approximate it as all the free variables.
-    *)
-    begin match prem'.it, iter with
-    (*
-    | IfPr exp, _ when Set.is_empty (Set.diff fv_prem knowns) ->
-      (* Base case 1 *)
-      E.return [ prem ]
-    | LetPr (lhs, rhs, binders), ListN (len, Some i) ->
-      (* Because LetPr is animated, there should be only one free variable. *)
-      let [v] = (free_exp false lhs).varid |> Set.elements in
+    let iter' = match iter with Opt -> Opt | _ -> List in
+    let lenvr = ref !envr in
+    (* Propagating knowns into the iteration. *)
+    let oindex = match iter with
+    | ListN(len, Some i) ->
+      lenvr := bind_var !lenvr i (mk_natT len.at);
       let fv_len = (free_exp false len).varid in
-      let unknowns_len = Set.diff fv_len knowns in
-      if Set.is_empty unknowns_len then
-        match List.find_opt (fun (x, e) -> v = x.it) xes with
-        | Some (v_id, v_star) ->
-          (* Base case 2 *)
-          let VarE v_star_id = v_star.it in
-          (* Since [v] is unknown, whereas [rhs] is fully known, [v] cannot appear
-             in [rhs]. We remove it from the binding list, which is for [rhs].
-             Thus [xes'] should contain the exact entries for [rhs].
-          *)
-          let xes' = Lib.List.filter_not (fun (x, e) -> Il.Eq.eq_id v_id x) xes in
-          let rhs' = IterE (rhs, (iter, xes')) $$ rhs.at % (IterT (rhs.note, iter) $ rhs.at) in
-          animate_exp_eq prem.at v_star rhs'
-        | None ->
-          (* Base case 3 *)
-          throw_log (string_of_error prem.at "IterPr Base case 3: not yet implemented: " ^ string_of_prem prem')
+      if Set.is_empty (Set.diff fv_len knowns) then
+        Some i
       else
-        (* Base case 4: The iterator N is unknown *)
-        E.throw (string_of_error prem.at ("IterPr has unknown iterator " ^ string_of_iter iter ^ "\n" ^
-                                          "  ▹ unknowns: " ^ string_of_varset knowns))
-    (* Inductive cases, where the body is -- let v = rhs but the iterator is not ^(i<N). *)
-    | LetPr (_, _, binders), ListN(len, None) ->
-      let i = fresh_id (Some "i") len.at in
-      animate_prem (IterPr ([prem'], (ListN(len, Some i), xes)) $ prem.at)
-    | LetPr (_, rhs, binders), _ ->
-      let len_rhs = LenE rhs $$ rhs.at % mk_natT rhs.at in
-      let len_v = fresh_id (Some "len") len_rhs.at in
-      let len = VarE len_v $$ len_rhs.at % len_rhs.note in
-      let* prems_len_v = animate_exp_eq len.at len len_rhs in
-      let i = fresh_id (Some "i") len.at in
-      let oprem_len = match iter with
-      | List  -> None
-      | Opt   -> Some (IfPr (CmpE (`LeOp, `NatT, len, mk_natE len.at 1) $$ len.at % (BoolT $ len.at)) $ prem.at)
-      | List1 -> Some (IfPr (CmpE (`GeOp, `NatT, len, mk_natE len.at 1) $$ len.at % (BoolT $ len.at)) $ prem.at)
-      | _ -> assert false
-      in
-      let* prems_len = match oprem_len with
-      | None -> E.return []
-      | Some prem_len -> animate_prem prem_len
-      in
-      let* prems' = animate_prem (IterPr ([prem'], (ListN(len, Some i), xes)) $ prem.at) in
-      E.return (prems_len_v @ prems_len @ prems')
+        (* It should have been caught by the IL validator. *)
+        assert false
+    | _ -> None
+    in
+    (* The new bindings that are introduced by the iteration. *)
+    let knowns_iter = List.filter_map (fun (x, e) ->
+      let fv_e = (free_exp false e).varid in
+      let unknowns_e = Set.diff fv_e knowns in
+      if Set.is_empty unknowns_e then Some x.it else None
+    ) xes |> Set.of_list in
+    let knowns_inner = Set.union knowns knowns_iter in
+    let knowns_inner_idx = match oindex with
+    | None   -> knowns_inner
+    | Some i -> Set.add i.it knowns_inner in
+    let s_body = { (init ()) with prems = [prem']; knowns = knowns_inner_idx } in
+    let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem'.at) in
+    let new_binds = Il.Env.diff !lenvr.vars !envr.vars in
+    (* NOTE the side effect of updating [envr]. *)
+    let xes' = List.concat_map (fun (x, t) ->
+      let x_star = Frontend.Dim.annot_varid (x $ no_region) [iter] in
+      let t_star = IterT (t, iter') $ x_star.at in
+      envr := bind_var !envr x_star t_star;
+      if List.exists (fun (x', _) -> x'.it = x) xes then [] else
+        [(x $ x_star.at, VarE x_star $$ x_star.at % t_star)]
+    ) (Map.to_list new_binds) in
+    (* Propagate knowns to the outside of the iterator. We need to traverse [new_knowns]
+       instead of [xes], because there may be variables that need to flow
+       out but do not ∈ xes.
     *)
-    (* Inductive case: arbitrary prem, arbitrary iter *)
-    | _ ->
-      let iter' = match iter with Opt -> Opt | _ -> List in
-      let lenvr = ref !envr in
-      (* Propagating knowns into the iteration. *)
-      let oindex = match iter with
-      | ListN(len, Some i) ->
-        lenvr := bind_var !lenvr i (mk_natT len.at);
-        let fv_len = (free_exp false len).varid in
-        if Set.is_empty (Set.diff fv_len knowns) then
-          Some i
-        else
-          (* It should have been caught by the IL validator. *)
-          assert false
-      | _ -> None
-      in
-      (* The new bindings that are introduced by the iteration. *)
-      let knowns_iter = List.filter_map (fun (x, e) ->
+    let knowns_inner' = get_knowns s_body' in
+    (* The extra variables that've been newly worked out inside the interation.
+       CAUTION: If the index [i] exists, then this [i] shouldn't be propagated out.
+       That's why we need to subtract the [knowns_inner_idx] set which includes
+       the index, if there is one.
+    *)
+    let new_knowns = Set.diff knowns_inner' knowns_inner in
+    let blob = List.map (fun x ->
+      match List.find_opt (fun (y, e) -> y.it = x) xes with
+      (* If x <- e exists, then x propagates to e. *)
+      | Some (y, e) ->
         let fv_e = (free_exp false e).varid in
-        let unknowns_e = Set.diff fv_e knowns in
-        if Set.is_empty unknowns_e then Some x.it else None
-      ) xes |> Set.of_list in
-      let knowns_inner = Set.union knowns knowns_iter in
-      let knowns_inner_idx = match oindex with
-      | None   -> knowns_inner
-      | Some i -> Set.add i.it knowns_inner in
-      let s_body = { (init ()) with prems = [prem']; knowns = knowns_inner_idx } in
-      let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem'.at) in
-      let new_binds = Il.Env.diff !lenvr.vars !envr.vars in
-      (* NOTE the side effect of updating [envr]. *)
-      let xes' = List.concat_map (fun (x, t) ->
-        let x_star = Frontend.Dim.annot_varid (x $ no_region) [iter] in
-        let t_star = IterT (t, iter') $ x_star.at in
-        envr := bind_var !envr x_star t_star;
-        if List.exists (fun (x', _) -> x'.it = x) xes then [] else
-          [(x $ x_star.at, VarE x_star $$ x_star.at % t_star)]
-      ) (Map.to_list new_binds) in
-      (* Propagate knowns to the outside of the iterator. We need to traverse [new_knowns]
-         instead of [xes], because there may be variables that need to flow
-         out but do not ∈ xes.
+        let unknowns_e = Set.diff fv_e knowns_inner' in
+        if Set.is_empty unknowns_e then
+          (* [e] already known; nothing to flow out. *)
+          ([], [])
+        else
+          begin match e.it with
+          | VarE ve -> ([ve.it], [])
+          | _ ->
+            (* If [e] is not a single variable and it's out-flowing in {x <- e},
+               then we create a fresh [v], such that {x <- v}, and -- if v = e
+               after we finish the interation.
+            *)
+            let y' = Frontend.Dim.annot_varid y [iter] in
+            let v = fresh_id (Some y'.it) e.at in
+            envr := bind_var !envr y' e.note;
+            let ve = VarE v $$ e.at % e.note in
+            let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, ve) $$ e.at % (BoolT $ e.at)) $ e.at in
+            ([y'.it], [prem_e])
+          end
+      (* If there's no x <- e, then propagate x out. But I don't think this will ever
+         happen, as in this case, the [x] can't be a newly-learned variable, but must
+         have been known before we entered the iteration body.
       *)
-      let knowns_inner' = get_knowns s_body' in
-      (* The extra variables that've been newly worked out inside the interation.
-         CAUTION: If the index [i] exists, then this [i] shouldn't be propagated out.
-         That's why we need to subtract the [knowns_inner_idx] set which includes
-         the index, if there is one.
-      *)
-      let new_knowns = Set.diff knowns_inner' knowns_inner in
-      let blob = List.map (fun x ->
-        match List.find_opt (fun (y, e) -> y.it = x) xes with
-        (* If x <- e exists, then x propagates to e. *)
-        | Some (y, e) ->
-          let fv_e = (free_exp false e).varid in
-          let unknowns_e = Set.diff fv_e knowns_inner' in
-          if Set.is_empty unknowns_e then
-            (* [e] already known; nothing to flow out. *)
-            ([], [])
-          else
-            begin match e.it with
-            | VarE ve -> ([ve.it], [])
-            | _ ->
-              (* If [e] is not a single variable and it's out-flowing in {x <- e},
-                 then we create a fresh [v], such that {x <- v}, and -- if v = e
-                 after we finish the interation.
-              *)
-              let y' = Frontend.Dim.annot_varid y [iter] in
-              let v = fresh_id (Some y'.it) e.at in
-              envr := bind_var !envr y' e.note;
-              let ve = VarE v $$ e.at % e.note in
-              let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, ve) $$ e.at % (BoolT $ e.at)) $ e.at in
-              ([y'.it], [prem_e])
-            end
-        (* If there's no x <- e, then propagate x out. But I don't think this will ever
-           happen, as in this case, the [x] can't be a newly-learned variable, but must
-           have been known before we entered the iteration body.
-        *)
-        | None -> ([x], [])
-      ) (Set.elements new_knowns) in
-      let knowns_outer, e_prems = Lib.List.unzip blob |> Lib.Fun.(<***>) List.concat List.concat in
-      let* () = update (add_knowns (Set.of_list knowns_outer)) in
-      let* s_outer = get () in
-      let s_end = { (init ()) with prems = e_prems; knowns = get_knowns s_outer} in
-      let* (e_prems', s_end') = run_inner s_end (animate_prems' envr prem.at) in
-      let* () = update (put_knowns (get_knowns s_end')) in
-      E.return ((IterPr (prems_body', (iter, xes @ xes')) $ prem.at) :: e_prems')
-    end
+      | None -> ([x], [])
+    ) (Set.elements new_knowns) in
+    let knowns_outer, e_prems = Lib.List.unzip blob |> Lib.Fun.(<***>) List.concat List.concat in
+    let* () = update (add_knowns (Set.of_list knowns_outer)) in
+    let* s_outer = get () in
+    let s_end = { (init ()) with prems = e_prems; knowns = get_knowns s_outer} in
+    let* (e_prems', s_end') = run_inner s_end (animate_prems' envr prem.at) in
+    let* () = update (put_knowns (get_knowns s_end')) in
+    E.return ((IterPr (prems_body', (iter, xes @ xes')) $ prem.at) :: e_prems')
   | IterPr (prems, iterexp) -> assert false
 
 
