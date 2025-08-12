@@ -285,6 +285,29 @@ let binds_of_env env : bind list =
   List.map (fun (v, t) -> ExpB (v $ no_region, t) $ no_region) varbinds
 
 
+let new_bind_exp' envr oname exp =
+  let v = fresh_id oname exp.at in
+  envr := bind_var !envr v exp.note;
+  let ve = VarE v $$ v.at % exp.note in
+  let prem_eq = IfPr (CmpE (`EqOp, `BoolT, exp, ve) $$ exp.at % (BoolT $ exp.at)) $ exp.at in
+  (envr, v, ve, prem_eq)
+let new_bind_exp envr oname exp : Il.Env.t ref * id * exp * prem =
+  match exp.it with
+  | SubE (exp', t1, t2) ->
+    let (envr', v, ve, prem_eq) = new_bind_exp' envr oname exp' in
+    let ve' = SubE (ve, t1, t2) $> exp in
+    (envr', v, ve', prem_eq)
+  | SupE (exp', t1, t2) ->
+    let (envr', v, ve, prem_eq) = new_bind_exp' envr oname exp' in
+    let ve' = SupE (ve, t1, t2) $> exp in
+    (envr', v, ve', prem_eq)
+  | CvtE (exp', t1, t2) ->
+    let (envr', v, ve, prem_eq) = new_bind_exp' envr oname exp' in
+    let ve' = CvtE (ve, t1, t2) $> exp in
+    (envr', v, ve', prem_eq)
+  | _ -> new_bind_exp' envr oname exp
+
+
 let get () = S.get () |> E.lift
 let put s  = S.put s  |> E.lift
 let update f = S.update f |> E.lift
@@ -617,11 +640,9 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     animate_exp_eq envr at exp rhs'
   | OptE None -> assert false  (* Because lhs must contain unknowns *)
   | OptE (Some exp) ->
-    let v = fresh_id None exp.at in
-    envr := bind_var !envr v exp.note;
-    let ve = VarE v $$ v.at % exp.note in
+    let (envr', v, ve, prem_v) = new_bind_exp envr None exp in
     let prem_opt = LetPr (OptE (Some ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
-    let* prems' = animate_exp_eq envr at exp ve in
+    let* prems' = animate_prem envr' prem_v in
     E.return (prem_opt :: prems')
   | ListE [] ->
     assert false  (* Because lhs must contain unknowns. *)
@@ -659,11 +680,9 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
       animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
     | [] -> assert false
     | tcases ->
-      let v = fresh_id None lhs'.at in
-      envr := bind_var !envr v lhs'.note;
-      let ve = VarE v $$ v.at % lhs'.note in
+      let (envr', v, ve, prem_v) = new_bind_exp envr None lhs' in
       let prem_case = LetPr (CaseE (mixop, ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
-      let* prems' = animate_exp_eq envr at lhs' ve in
+      let* prems' = animate_prem envr' prem_v in
       E.return (prem_case :: prems')
     end
   | TupE es ->
@@ -1110,12 +1129,9 @@ let animate_clause envr (c: clause) : func_clause =
   let n_args = List.length args in
   let blob = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
-      let v = fresh_id (Some ("a" ^ string_of_int i)) exp'.at in
-      lenvr := bind_var !lenvr v exp'.note;
-      let exp_v = VarE v $$ v.at % exp'.note in
-      let p = IfPr (CmpE (`EqOp, `BoolT, exp', exp_v) $$ exp'.at % (BoolT $ exp'.at)) $ arg.at in
+      let (lenvr', v, ve, prem_v) = new_bind_exp lenvr (Some ("a" ^ string_of_int i)) exp' in
       let fv_exp' = (free_exp false exp').varid in
-      (ExpA exp_v $ v.at, Some p, Some v, fv_exp')
+      (ExpA ve $ v.at, Some prem_v, Some v, fv_exp')
     | _ -> (arg, None, None, Set.empty)
   ) args
   in
