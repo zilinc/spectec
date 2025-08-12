@@ -131,7 +131,7 @@ and is_head_normal_exp e =
   match e.it with
   | BoolE _ | NumE _ | TextE _
   | OptE _ | ListE _ | TupE _ | CaseE _ | StrE _ -> true
-  | SubE (e, _, _) -> is_head_normal_exp e
+  | SubE (e, _, _) | SupE (e, _, _) -> is_head_normal_exp e
   | _ -> false
 
 and is_normal_exp e =
@@ -139,7 +139,7 @@ and is_normal_exp e =
   | BoolE _ | NumE _ | TextE _ -> true
   | ListE es | TupE es -> List.for_all is_normal_exp es
   | OptE None -> true
-  | OptE (Some e) | CaseE (_, e) | SubE (e, _, _) -> is_normal_exp e
+  | OptE (Some e) | CaseE (_, e) | SubE (e, _, _) | SupE (e, _, _) -> is_normal_exp e
   | StrE efs -> List.for_all (fun (_, e) -> is_normal_exp e) efs
   | _ -> false
 
@@ -764,6 +764,9 @@ and match_exp' env s e1 e2 : subst option =
       then match_exp' env s {e1 with note = t21} e21
       else None
     else raise Irred
+  (* TODO(zilinc): add cases for SupE. *)
+  | SupE (e11, t11, t12), SupE (e21, t21, t22)
+  -> match_exp' env s (SubE (e11, t12, t11) $$ e1.at % t11) (SubE (e21, t22, t21) $$ e2.at % t21)
   | _, _ when is_head_normal_exp e1 -> None
   | _, _ ->
     raise Irred
