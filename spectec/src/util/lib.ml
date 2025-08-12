@@ -98,9 +98,7 @@ struct
     | exception Not_found -> None
     | v -> Some v
 
-  let rec unzip = function
-    | [] -> ([], [])
-    | (x, y)::xys -> let (xs, ys) = unzip xys in (x::xs, y::ys)
+  let unzip = List.split
 
   let rec unzip3 = function
     | [] -> ([], [], [])

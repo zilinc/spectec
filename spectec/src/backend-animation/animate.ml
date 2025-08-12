@@ -277,7 +277,7 @@ let as_variant_typ env t : typcase list =
   | VariantT tcs -> tcs
   | _ -> error t.at ("Input type is not a variant type: " ^ string_of_typ t)
 
-(* TODO(zilinc): I don't think it handles dependent types correctly. The binds
+(* FIXME(zilinc): I don't think it handles dependent types correctly. The binds
    should be telescopic.
 *)
 let binds_of_env env : bind list =
@@ -690,7 +690,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return (prems_v @ prems')
   | CvtE (lhs', t1, t2) ->
-    (* FIXME(zilinc): Conversion is not checked. *)
+    (* TODO(zilinc): Conversion is not checked. *)
     animate_exp_eq envr at lhs' (CvtE (rhs, t2, t1) $$ rhs.at % lhs'.note)
   (* Some operators, together with certain combinations of a known operand plus
      the known RHS, can be inverted.
@@ -726,7 +726,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     | [(mixop', (_, _t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
       animate_exp_eq envr at e1 (CaseE (mixop, rhs) $$ rhs.at % e1.note)
       (*
-      (* FIXME(zilinc): The side-condition from the type definition.
+      (* TODO(zilinc): The side-condition from the type definition.
          For now, we don't check it. But the check can be added in a separate
          phase that follows animation.
        *)

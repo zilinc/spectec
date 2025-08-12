@@ -15,7 +15,8 @@ sig
   val flatten_opt : 'a option list -> 'a list option
   val fold_lefti : (int -> 'acc -> 'a -> 'acc) -> 'acc -> 'a list -> 'acc
   val group_by : ('a -> 'a -> bool) -> 'a list -> 'a list list
-  (*
+
+  (**
   `combination xss`: Construct all the combinations of picking one element from each
   element in `xss`.
   Example:
@@ -28,6 +29,8 @@ sig
   val fold_left1 : ('a -> 'a -> 'a) -> 'a list -> 'a
   val assoc_with : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
   val assoc_with_opt : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
+
+  (** Same as [List.split]. *)
   val unzip : ('a * 'b) list -> 'a list * 'b list
   val unzip3 : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
   val unzip4 : ('a * 'b * 'c * 'd) list -> 'a list * 'b list * 'c list * 'd list
