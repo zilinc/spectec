@@ -1,6 +1,6 @@
 (library
   (name backend_animation)
-  (libraries util frontend il al backend_ast il2al str)
+  (libraries util frontend il al backend_ast il2al str tsort)
   (modules
     main
     animate

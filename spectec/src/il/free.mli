@@ -15,6 +15,9 @@ val free_opt : ('a -> sets) -> 'a option -> sets
 val free_list : ('a -> sets) -> 'a list -> sets
 
 val free_varid : id -> sets
+val free_typid : id -> sets
+val free_defid : id -> sets
+val free_gramid : id -> sets
 
 val free_iter : iter -> sets
 val free_typ : typ -> sets
@@ -30,6 +33,7 @@ val free_deftyp : deftyp -> sets
 val free_param : param -> sets
 
 val bound_iter : iter -> sets
+val bound_typ : typ -> sets
 
 val free_bind : bind -> sets
 val free_binds : bind list -> sets

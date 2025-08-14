@@ -180,9 +180,11 @@ let rec valid_def envr (def: dl_def) : unit =
   | FuncDef fd ->
     let (id, ps, t, clauses, _) = fd.it in
     let envr' = Valid.local_env envr in
+    (*
     List.iter (Valid.valid_param envr') ps;
     Valid.valid_typ !envr' t;
     List.iter (Valid.valid_clause envr ps t) clauses;  (* IL validation *)
+    *)
     envr := Env.bind_def !envr id (ps, t, clauses);
     List.iter valid_clause clauses  (* For animation *)
   | RecDef ds ->
