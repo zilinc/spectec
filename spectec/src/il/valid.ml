@@ -263,7 +263,7 @@ and infer_exp (env : Env.t) e : typ =
   | UpdE (e1, _, _)
   | ExtE (e1, _, _)
   | CompE (e1, _) -> infer_exp env e1
-  | StrE _ -> error e.at "cannot infer type of record"
+  | StrE _ -> error e.at ("cannot infer type of record: " ^ string_of_exp e)
   | DotE (e1, atom) ->
     let tfs = as_struct_typ "expression" env Infer (infer_exp env e1) e1.at in
     let _binds, t, _prems = find_field tfs atom e1.at in
@@ -594,7 +594,7 @@ and valid_prem env prem =
   | IfPr e ->
     valid_exp env e (BoolT $ e.at)
   | LetPr (e1, e2, ids) ->
-    let t = infer_exp env e2 in
+    let t = try infer_exp env e2 with _ -> infer_exp env e1 in
     valid_exp ~side:`Lhs env e1 t;
     valid_exp env e2 t;
     let target_ids = Free.{empty with varid = Set.of_list ids} in
