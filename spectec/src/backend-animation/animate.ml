@@ -337,24 +337,26 @@ let new_bind_exp' envr oname exp ot =
   let ve = VarE v $$ v.at % t in
   let prem_eq = IfPr (CmpE (`EqOp, `BoolT, exp, ve) $$ exp.at % (BoolT $ exp.at)) $ exp.at in
   (envr, v, ve, prem_eq)
-let new_bind_exp envr oname exp ot : Il.Env.t ref * id * exp * prem =
+let rec new_bind_exp envr oname exp ot : (Il.Env.t ref * id * exp * prem, id) result =
+  let ( let* ) = Result.bind in
   match exp.it with
+  | VarE v -> Error v
   | SubE (exp', t1, t2) ->
     assert (Option.is_none ot);
-    let (envr, v, ve, prem_eq) = new_bind_exp' envr oname exp' None in
+    let* (envr, v, ve, prem_eq) = new_bind_exp envr oname exp' None in
     let ve' = SubE (ve, t1, t2) $> exp in
-    (envr, v, ve', prem_eq)
+    Ok (envr, v, ve', prem_eq)
   | SupE (exp', t1, t2) ->
     assert (Option.is_none ot);
-    let (envr, v, ve, prem_eq) = new_bind_exp' envr oname exp' None in
+    let* (envr, v, ve, prem_eq) = new_bind_exp envr oname exp' None in
     let ve' = SupE (ve, t1, t2) $> exp in
-    (envr, v, ve', prem_eq)
+    Ok (envr, v, ve', prem_eq)
   | CvtE (exp', t1, t2) ->
     assert (Option.is_none ot);
-    let (envr, v, ve, prem_eq) = new_bind_exp' envr oname exp' None in
+    let* (envr, v, ve, prem_eq) = new_bind_exp envr oname exp' None in
     let ve' = CvtE (ve, t1, t2) $> exp in
-    (envr, v, ve', prem_eq)
-  | _ -> new_bind_exp' envr oname exp ot
+    Ok (envr, v, ve', prem_eq)
+  | _ -> Ok (new_bind_exp' envr oname exp ot)
 
 
 let get () = S.get () |> E.lift
@@ -691,18 +693,25 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     animate_exp_eq envr at exp rhs'
   | OptE None -> assert false  (* Because lhs must contain unknowns *)
   | OptE (Some exp) ->
-    let (envr, v, ve, prem_v) = new_bind_exp envr None exp None in
-    let prem_opt = LetPr (OptE (Some ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
-    let* () = update (add_knowns (Set.singleton v.it)) in
-    let* prems' = animate_prem envr prem_v in
-    E.return (prem_opt :: prems')
+    begin match new_bind_exp envr None exp None with
+    | Ok (envr, v, ve, prem_v) ->
+      let prem_opt = LetPr (OptE (Some ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
+      let* () = update (add_knowns (Set.singleton v.it)) in
+      let* prems' = animate_prem envr prem_v in
+      E.return (prem_opt :: prems')
+    | Error v ->
+      let* () = update (add_knowns (Set.singleton v.it)) in
+      E.return [LetPr (lhs, rhs, [v.it]) $ at]
+    end
   | ListE [] ->
     assert false  (* Because lhs must contain unknowns. *)
   | ListE exps ->
-    let v = fresh_id None rhs.at in
-    envr := bind_var !envr v rhs.note;
-    let ve = VarE v $$ v.at % rhs.note in
-    let* prems_rhs = animate_exp_eq envr rhs.at ve rhs in
+    let* (envr, ve, prems_rhs) = begin match new_bind_exp envr None rhs None with
+    | Ok (envr, v, ve, prem_v) ->
+      let* prems_v' = animate_prem envr prem_v in
+      E.return (envr, ve, prems_v')
+    | Error v -> E.return (envr, rhs, [])
+    end in
     (* We need a length check to serve as the irrefutable list pattern. *)
     let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
     let len_lhs = mk_natE lhs.at (List.length exps) in
@@ -751,22 +760,30 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
       | _ ->
         (* Use tcases to work out the type of ve, because it retains the dependent tuple type. *)
         let (_, (bs, t', _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
-        let (envr, v, ve, prem_v) = new_bind_exp envr None lhs' (Some t') in
-        let envr = env_of_binds bs envr in
-        let prem_case = LetPr (CaseE (mixop, ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
-        let* () = update (add_knowns (Set.singleton v.it)) in
-        let* prems' = animate_prem envr prem_v in
-        E.return (prem_case :: prems')
+        begin match new_bind_exp envr None lhs' (Some t') with
+        | Ok (envr, v, ve, prem_v) ->
+          let envr = env_of_binds bs envr in
+          let prem_case = LetPr (CaseE (mixop, ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
+          let* () = update (add_knowns (Set.singleton v.it)) in
+          let* prems' = animate_prem envr prem_v in
+          E.return (prem_case :: prems')
+        | Error v ->
+          let* () = update (add_knowns (Set.singleton v.it)) in
+          E.return [LetPr (lhs, rhs, [v.it]) $ at]
+        end
       end
     end
   | TupE es ->
-    let v = fresh_id None at in
-    envr := bind_var !envr v rhs.note;
     (* Bind to a new variable, so that [rhs] doesn't need to be re-evaluated
        again and again in the following projections.
     *)
-    let ve = VarE v $$ v.at % rhs.note in
-    let* prems_v = animate_exp_eq envr at ve rhs in
+    let* (envr, ve, prems_rhs) = begin match new_bind_exp envr None rhs None with
+    | Ok (envr, v, ve, prem_v) ->
+      let* prems_v = animate_exp_eq envr at ve rhs in
+      E.return (envr, ve, prems_v)
+    | Error v ->
+      E.return (envr, rhs, [])
+    end in
     let prems = Fun.flip List.mapi es (fun i e ->
       let bool_t = BoolT $ e.at in
       let proj_rhs = ProjE (ve, i) $$ ve.at % e.note in
@@ -781,7 +798,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let s_new = { (init ()) with prems; knowns = get_knowns s' } in
     let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
-    E.return (prems_v @ prems')
+    E.return (prems_rhs @ prems')
   | CvtE (lhs', t1, t2) ->
     (* TODO(zilinc): Conversion is not checked. *)
     animate_exp_eq envr at lhs' (CvtE (rhs, t2, t1) $$ rhs.at % lhs'.note)
@@ -1174,15 +1191,15 @@ let animate_rule_red_no_arg envr rule : clause' =
 let animate_rule_red envr rule : clause' =
   let lenvr = ref !envr in
   let (id, binds, lhs, rhs, prems) = rule.it in
-  let v = fresh_id (Some "lhs") lhs.at in
-  lenvr := bind_var !lenvr v lhs.note;
-  let ve = VarE v $$ v.at % lhs.note in
-  let prem_arg = IfPr (CmpE (`EqOp, `BoolT, lhs, ve) $$ lhs.at % (BoolT $ lhs.at)) $ lhs.at in
+  let (lenvr, v, ve, prems_lhs) = begin match new_bind_exp lenvr (Some "lhs") lhs None with
+  | Ok (lenvr, v, ve, prem_v) -> (lenvr, v, ve, [prem_v])
+  | Error v -> (lenvr, v, lhs, [])
+  end in
   let rhs_vars = (free_exp false rhs).varid in
   (* Input and output variables in the conclusion *)
   let in_vars = (free_varid v).varid in
   let out_vars = rhs_vars in
-  let prems' = animate_prems lenvr rule.at in_vars out_vars (prem_arg::prems) in
+  let prems' = animate_prems lenvr rule.at in_vars out_vars (prems_lhs @ prems) in
   let binds' = binds_of_env !lenvr in
   let binds'' = sort_binds id (binds @ binds') in
   DefD (binds'', [ExpA ve $ ve.at], rhs, prems')
@@ -1215,9 +1232,12 @@ let animate_clause id envr (c: clause) : func_clause =
   let n_args = List.length args in
   let blob = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
-      let (_lenvr, v, ve, prem_v) = new_bind_exp lenvr (Some ("a" ^ string_of_int i)) exp' None in
-      let fv_exp' = (free_exp false exp').varid in
-      (ExpA ve $ v.at, Some prem_v, Some v, fv_exp')
+      begin match new_bind_exp lenvr (Some ("a" ^ string_of_int i)) exp' None with
+      | Ok (_lenvr, v, ve, prem_v) ->
+        let fv_exp' = (free_exp false exp').varid in
+        (ExpA ve $ v.at, Some prem_v, Some v, fv_exp')
+      | Error v -> (arg, None, Some v, Set.empty)
+      end
     | _ -> (arg, None, None, Set.empty)
   ) args
   in
@@ -1231,7 +1251,7 @@ let animate_clause id envr (c: clause) : func_clause =
   let binds'' = sort_binds id (binds @ binds') in
   (DefD (binds'', args', exp, prems')) $ c.at
 
-let animate_clauses id envr cs = List.map (animate_clause_no_arg id envr) cs
+let animate_clauses id envr cs = List.map (animate_clause id envr) cs
 
 let animate_rule_def envr (rdef: rule_def) : func_def =
   let (_, rel_id, t1, t2, rules) = rdef.it in
