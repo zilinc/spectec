@@ -66,6 +66,9 @@ let print_al_o = ref ""
 let print_no_pos = ref false
 let new_interpreter_args = ref None
 
+let generate_ocaml = ref None
+
+(* Utility functions *)
 
 module PS = Set.Make(struct type t = pass let compare = compare; end)
 let selected_passes = ref (PS.empty)
@@ -191,6 +194,8 @@ let argspec = Arg.align (
   "--print-al", Arg.Set print_al, " Print al";
   "--print-al-o", Arg.Set_string print_al_o, " Print al with given name";
   "--print-no-pos", Arg.Set print_no_pos, " Suppress position info in output";
+  "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
+    " Generate OCaml code for DL types and functions";
 ] @ List.map pass_argspec all_passes @ [
   "--all-passes", Arg.Unit (fun () -> List.iter enable_pass all_passes)," Run all passes";
 
