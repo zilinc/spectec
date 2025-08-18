@@ -69,6 +69,18 @@ let rec remove_or def =
   | RecD defs -> RecD (List.map remove_or defs) $ def.at
   | _ -> def
 
+let generate_ocaml dl ocamlfile = 
+  let ocaml_filename = Option.value ~default:"dl_codegen-0" ocamlfile in
+  let basepath = "./src/backend-animation/dl-interpreter/" in
+  let write_file filename content =
+    let oc = open_out filename in
+    output_string oc content;
+    close_out oc
+  in
+  let main, types, typeconv = Interpreter_new.generate_ocaml dl in
+  write_file (basepath ^ ocaml_filename ^ ".ml") main;
+  write_file (basepath ^ ocaml_filename ^ "_types.ml") types;
+  write_file (basepath ^ ocaml_filename ^ "_typeconv.ml") typeconv
 
 (* Entry *)
 let run il print_dl =

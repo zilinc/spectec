@@ -12,6 +12,8 @@
     interpreter
     script
     valid
+    interpreter_new
+    util_new
   )
 )
 
