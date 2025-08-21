@@ -1,11 +1,13 @@
 (library
   (name backend_animation)
-  (libraries util frontend il al backend_ast il2al str tsort)
+  (libraries util frontend il al backend_ast il2al str tsort reference_interpreter backend_interpreter)
   (modules
-    main
+    main_animate
+    main_interpret
     animate
     def
     il2dl
+    interpreter
     valid
   )
 )

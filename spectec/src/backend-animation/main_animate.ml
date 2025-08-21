@@ -71,16 +71,16 @@ let rec remove_or def =
 
 
 (* Entry *)
-let animate il print_dl =
-  let dl = il
-           |> List.filter_map is_anim_target
-           |> List.map remove_or
-           |> Il2dl.il2dl
-           |> fun dl -> (dl, il)
-           |> Animate.animate 
+let run il print_dl =
+  let (env, dl) = il
+                  |> List.filter_map is_anim_target
+                  |> List.map remove_or
+                  |> Il2dl.il2dl
+                  |> fun dl -> (dl, il)
+                  |> Animate.animate
   in
   (* Il2dl.list_all_dl_defs dl; *)
   if print_dl then
     print_endline (List.map string_of_dl_def dl |> String.concat "\n");
   Valid.valid dl;
-  dl
+  (env, dl)
