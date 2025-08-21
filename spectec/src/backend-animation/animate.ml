@@ -25,7 +25,6 @@ let verbose : string list ref =
         (* *"iterp"    ; *)
         (* "pattern"   ; *)
         (* "log"       ; *)
-        "op"
       ]
 
 let error at msg = Error.error at "IL animation" msg
@@ -1296,4 +1295,4 @@ let animate (dl, il) =
                |> merge_defs
   in
   (* Il2dl.list_all_dl_defs dl'; *)
-  dl'
+  (!envr, dl')

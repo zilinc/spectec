@@ -25,6 +25,23 @@ type dl_def =
   | FuncDef of func_def
   | RecDef  of dl_def list  (* recursive definitions *)
 
+
+let rec find_dl_type_def name dl : type_def option =
+  List.find_map (function
+    | TypeDef def -> let (id, _, _) = def.it in
+                     if id.it = name then Some def else None
+    | RecDef dl'  -> find_dl_type_def name dl'
+    | _           -> None
+  ) dl
+
+let rec find_dl_func_def name dl : func_def option =
+  List.find_map (function
+    | FuncDef def -> let (id, _, _, _, _) = def.it in
+                     if id.it = name then Some def else None
+    | RecDef dl'  -> find_dl_func_def name dl'
+    | _           -> None
+  ) dl
+
 let rec dl_loc def : region = match def with
   | TypeDef tdef -> tdef.at
   | RuleDef rdef -> rdef.at
