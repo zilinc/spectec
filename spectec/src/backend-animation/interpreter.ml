@@ -46,25 +46,73 @@ let fail_assign at lhs rhs msg =
             "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
             "  ▹ value: " ^ Al.Print.string_of_value rhs)
 
-let infer_val val_ : typ = todo "infer_val: don't implement."
+let rec infer_val' val_ : typ' = match val_ with
+  | A.NumV num-> begin match num with
+    | `Nat _  -> `NatT
+    | `Int _  -> `IntT
+    | `Rat _  -> `RatT
+    | `Real _ -> `RealT
+    end
+    |> (fun t -> NumT t)
+  | A.BoolV b   -> BoolT
+  | A.TextV s   -> TextT
+  | A.ListV arr when Array.length !arr > 0 -> IterT (infer_val (Array.get !arr 0), List)
+  | A.ListV arr -> todo "ListV empty: can't infer"
+  | A.StrV str  -> todo ""
+  | A.CaseV (mop, vs) -> todo ""
+  | A.OptV None -> todo "OptV: can't infer"
+  | A.OptV (Some v) -> IterT (infer_val v, Opt)
+  | A.TupV vs -> TupT (List.map (fun v ->
+                         let t = infer_val v in
+                         (VarE ("_" $ no_region) $$ no_region % t, infer_val v))
+                      vs)
+  | A.FnameV id -> todo ""
+and infer_val val_ : typ = infer_val' val_ $ no_region
 
-let exp_to_val exp : A.value =
-  todo "exp_to_val: don't implement?"
 
-let val_to_exp' val_ : exp' = match val_ with
+let text_to_mixop s : mixop = todo "text_to_mixop"
+
+let rec val_to_exp' val_ : exp' = match val_ with
   | A.NumV num  -> NumE num
   | A.BoolV b   -> BoolE b
   | A.TextV s   -> TextE s
   | A.ListV arr -> todo ""
-  | A.StrV str  -> todo ""
-  | A.CaseV (mop, vs) -> todo ""
-  | A.OptV None -> todo ""
-  | A.OptV (Some v) -> todo ""
-  | A.TupV vs -> todo ""
+  | A.StrV str  -> StrE (List.map record_to_expfield str)
+  | A.CaseV (mop, vs) -> CaseE (text_to_mixop mop, todo "val_to_exp': CaseV")
+  | A.OptV ov   -> OptE (Option.map val_to_exp ov)
+  | A.TupV vs   -> TupE (List.map val_to_exp vs)
   | A.FnameV id -> todo ""
-let val_to_exp val_ : exp =
+and val_to_exp val_ : exp =
   let t = infer_val val_ in
   val_to_exp' val_ $$ no_region % t
+
+and record_to_expfield (id, val_ref) : expfield =
+  todo "record_to_expfield"
+
+let rec exp_to_val exp : A.value =
+  match exp.it with
+  | BoolE b  -> A.BoolV b
+  | NumE num -> A.NumV num
+  | TextE s  -> A.TextV s
+  | TupE  es -> A.TupV  (List.map exp_to_val es)
+  | ListE es -> A.ListV (List.map exp_to_val es |> Array.of_list |> ref)
+  | OptE oe  -> A.OptV (Option.map exp_to_val oe)
+  | CaseE (mixop, e) -> A.CaseV (string_of_mixop mixop, tup_to_val e)
+  | SubE (e, _, _) | SupE (e, _, _) -> exp_to_val e
+  | StrE fs -> A.StrV (List.map expfield_to_record fs)
+  | _ -> error exp.at ("Expression is not in normal form: " ^ string_of_exp exp)
+
+and expfield_to_record (atom, exp) : A.id * A.value ref =
+  let id = string_of_atom atom in
+  let val_  = exp_to_val exp in
+  (id, ref val_)
+
+and tup_to_val exp : A.value list =
+  match exp.it with
+  | TupE es -> List.map exp_to_val es
+  | _       -> [exp_to_val exp]
+
+
 
 let vctx_to_subst ctx : Il.Subst.subst =
   VCtx.fold (fun var value subst ->
@@ -138,7 +186,7 @@ let eval_exp ctx exp : A.value =
 let eval_prem ctx prem : vcontext option =
   match prem.it with
   | LetPr (lhs, rhs, _vs) ->
-    let rhs' = eval_exp ctx rhs |> exp_to_val in
+    let rhs' = eval_exp ctx rhs in
     Some (assign ctx lhs rhs')
   | IfPr e ->
     let b = eval_exp ctx e in
