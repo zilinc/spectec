@@ -12,7 +12,7 @@ type target =
  | Latex
  | Prose of bool
  | Splice of Backend_splice.Config.t
- | Animate of string list
+ | Animate
  | Interpreter of string list
  | RunThrough
 
@@ -64,6 +64,8 @@ let print_dl = ref false
 let print_al = ref false
 let print_al_o = ref ""
 let print_no_pos = ref false
+let new_interpreter_args = ref None
+
 
 module PS = Set.Make(struct type t = pass let compare = compare; end)
 let selected_passes = ref (PS.empty)
@@ -170,9 +172,9 @@ let argspec = Arg.align (
     " Splice Sphinx";
   "--prose", Arg.Unit (fun () -> target := Prose true), " Generate prose";
   "--prose-rst", Arg.Unit (fun () -> target := Prose false), " Generate prose";
-  "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args),
-    " Generate interpreter";
-  "--animate", Arg.Rest_all (fun args -> target := Animate args), " Animate";
+  "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args), " Generate interpreter";
+  "--animate", Arg.Unit (fun () -> target := Animate), " Animate";
+  "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), "New meta-interpreter";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),
@@ -221,7 +223,7 @@ let () =
     Il.Valid.valid il;
 
     (match !target with
-    | Prose _ | Splice _ | Interpreter _ | Animate _ ->
+    | Prose _ | Splice _ | Interpreter _ | Animate ->
       enable_pass Sideconditions;
     | _ when !print_al || !print_al_o <> "" ->
       enable_pass Sideconditions;
@@ -248,14 +250,9 @@ let () =
 
     if !print_final_il && not !print_all_il then print_il il;
 
-    let is_animate = match !target with
-    | Animate _ -> true
-    | _ -> false
-    in
-
     let al =
       if not !print_al && !print_al_o = "" &&
-         (!target = Check || !target = Ast || !target = Latex || is_animate) then []
+         (!target = Check || !target = Ast || !target = Latex || !target = Animate) then []
       else (
         log "Translating to AL...";
         let interp = match !target with
@@ -366,11 +363,15 @@ let () =
       log "Interpreting...";
       Backend_interpreter.Runner.run args
 
-    | Animate args ->
+    | Animate ->
       log "Translating to DL and animate...";
       let (env, dl) = Backend_animation.Main_animate.run il !print_dl in
-      log "Interpreting...";
-      Backend_animation.Main_interpret.run env dl args
+      (match !new_interpreter_args with
+      | Some args ->
+        log "Interpreting...";
+        Backend_animation.Main_interpret.run env dl args
+      | None -> ()
+      )
     );
 
     log "Complete."
