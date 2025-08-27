@@ -11,6 +11,7 @@ open Il2al.Def
 open Il2al.Free
 open Backend_ast
 open Def
+open Il_util
 
 
 (* Errors *)
@@ -229,59 +230,6 @@ module S = AnimateS
 
 (* Helpers *)
 
-let is_varE : exp -> bool = fun e ->
-  match e.it with
-  | VarE _ -> true
-  | _      -> false
-
-let mk_natT at = NumT `NatT $ at
-
-let mk_natE at (n: int) = NumE (`Nat (Z.of_int n)) $$ at % (mk_natT at)
-
-(* ASSUMES: [e] has numtype [t1]. *)
-let cvt e t1 t2 at = if t1 = t2 then e else CvtE (e, t1, t2) $$ at % (NumT t2 $ at)
-
-(* When e1 and e2 are both `NatT, we want to construct e1 - e2, with both of them
-   converted to `IntT, and then convert the result back to `NatT.
-*)
-let cvt_sub at e1 e2 =
-  let e1' = cvt e1 `NatT `IntT e1.at in
-  let e2' = cvt e2 `NatT `IntT e2.at in
-  let e = BinE (`SubOp, `IntT, e1', e2') $$ at % (NumT `IntT $ at) in
-  cvt e `IntT `NatT at
-
-
-let is_unary_tupT : typ -> bool = fun t ->
-  match t.it with
-  | TupT [_] -> true
-  | _        -> false
-
-let is_unary_variantT : deftyp -> bool = fun deft ->
-  match deft.it with
-  | VariantT [_] -> true
-  | _            -> false
-
-let iter_elt_typ env t : typ =
-  match (reduce_typ env t).it with
-  | IterT (t', (List | List1 | ListN _)) -> t'
-  | _ -> error t.at ("Input type is not an iterated type: " ^ string_of_typ t)
-
-let as_iter_typ iter env t : typ =
-  match (reduce_typ env t).it with
-  | IterT (t1, iter') when Il.Eq.eq_iter iter iter' -> t1
-  | _ -> error t.at ("Input type is not an iterated " ^ string_of_iter iter ^ " type: " ^ string_of_typ t)
-
-let as_variant_typ env t : typcase list =
-  match (reduce_typdef env t).it with
-  | VariantT tcs -> tcs
-  | _ -> error t.at ("Input type is not a variant type: " ^ string_of_typ t)
-
-let as_tup_typ env t : (exp * typ) list =
-  match (reduce_typ env t).it with
-  | TupT ets -> ets
-  | _ -> error t.at ("Input type is not a tuple type: " ^ string_of_typ t)
-
-
 
 (* FIXME(zilinc): I don't think it handles dependent types correctly. The binds
    should be telescopic.
@@ -462,15 +410,15 @@ let invert_bin_exp at op e1 e2 (t: numtyp) rhs : (exp * exp) E.m =
   in
   let* lhs', rhs' = match Set.is_empty unknowns_e1, Set.is_empty unknowns_e2 with
   | true , true  -> assert false
-  | true , false -> E.return (cvt e2 t t' e2.at, cvt e1 t t' e1.at)
-  | false, true  -> E.return (cvt e1 t t' e1.at, cvt e2 t t' e1.at)
+  | true , false -> E.return (mk_cvt ~at:e2.at e2 t t', mk_cvt ~at:e1.at e1 t t')
+  | false, true  -> E.return (mk_cvt ~at:e1.at e1 t t', mk_cvt ~at:e2.at e2 t t')
   | false, false -> E.throw (string_of_error at
                                ("Can't animate binary expression where both operands contain unknowns:\n" ^
                                 "  ▹ op = " ^ string_of_binop (op :> binop) ^ "\n" ^
                                 "  ▹ e1 = " ^ string_of_exp e1 ^ " (unknowns: " ^ string_of_varset unknowns_e1 ^ ")\n" ^
                                 "  ▹ e2 = " ^ string_of_exp e2 ^ " (unknowns: " ^ string_of_varset unknowns_e2 ^ ")"))
   in
-  let rhs'' = BinE (op', (t' :> optyp), cvt rhs t t' rhs.at, rhs') $$ rhs.at % lhs'.note in
+  let rhs'' = BinE (op', (t' :> optyp), mk_cvt ~at:rhs.at rhs t t', rhs') $$ rhs.at % lhs'.note in
   E.return (lhs', rhs'')
 
 
@@ -629,14 +577,14 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
       if Set.is_empty unknowns_len then
         (* Base case for iterators *)
         let t = reduce_typ !envr lhs'.note in
-        let rhs' = IdxE (rhs, VarE i $$ i.at % (mk_natT i.at)) $$ rhs.at % lhs'.note in
+        let rhs' = IdxE (rhs, VarE i $$ i.at % (natT ~at:i.at ())) $$ rhs.at % lhs'.note in
         let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
         bracket (add_knowns (Set.singleton i.it))
                 (remove_knowns (Set.singleton i.it))
                 (animate_prem envr (IterPr ([prem_body], iterexp) $ at))
       else
         (* Inductive case where [len] is unknown. *)
-        let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+        let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
         let* prem_len = animate_exp_eq envr len.at len len_rhs in
         (* By now [len] should be known. *)
         let* prems' = animate_exp_eq envr at lhs rhs in
@@ -649,20 +597,20 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     | ListN(len, None) ->
       let i = fresh_id (Some "i") at in
       let i_star = Frontend.Dim.annot_varid i [iter] in
-      let t_star = IterT (mk_natT i_star.at, List) $ i_star.at in
+      let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
       let i_star_e = VarE i_star $$ i_star.at % t_star in
       envr := bind_var !envr i_star t_star;
       let xes' = (i, i_star_e) :: xes in
       animate_exp_eq envr at (IterE (lhs', (ListN(len, Some i), xes')) $> lhs) rhs
     | List | List1 ->
-      let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
+      let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
       let len_v = fresh_id (Some "len") len_rhs.at in
-      envr := bind_var !envr len_v (mk_natT len_rhs.at);
+      envr := bind_var !envr len_v (natT ~at:len_rhs.at ());
       let len = VarE len_v $$ len_rhs.at % len_rhs.note in
       let* prems_len_v = animate_exp_eq envr len.at len len_rhs in
       let oprem_len = match iter with
       | List  -> None
-      | List1 -> Some (IfPr (CmpE (`GeOp, `NatT, len, mk_natE len.at 1) $$ len.at % (BoolT $ len.at)) $ at)
+      | List1 -> Some (IfPr (CmpE (`GeOp, `NatT, len, mk_nat ~at:len.at 1) $$ len.at % (BoolT $ len.at)) $ at)
       | _     -> assert false
       in
       let* prems_len = match oprem_len with
@@ -712,11 +660,11 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     | Error v -> E.return (envr, rhs, [])
     end in
     (* We need a length check to serve as the irrefutable list pattern. *)
-    let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
-    let len_lhs = mk_natE lhs.at (List.length exps) in
+    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
+    let len_lhs = mk_nat ~at:lhs.at (List.length exps) in
     let prem_len = IfPr (CmpE (`EqOp, `BoolT, len_lhs, len_rhs) $$ at % (BoolT $ at)) $ at in
     let prems = List.mapi (fun i exp ->
-          let ie = mk_natE exp.at i in
+          let ie = mk_nat ~at:exp.at i in
           IfPr (CmpE (`EqOp, `BoolT, exp, IdxE (ve, ie) $$ ve.at % exp.note)
                   $$ exp.at
                   %  (BoolT $ exp.at)
@@ -864,16 +812,16 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   (* More complicated patterns that are partially invertible. *)
   (* [e1; e2; ...; en] ++ exp2 *)
   | CatE (({ it = ListE exps; _ } as exp1), exp2) ->
-    let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
-    let len_lhs1 = mk_natE lhs.at (List.length exps) in
+    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
+    let len_lhs1 = mk_nat ~at:lhs.at (List.length exps) in
     let prem_len = IfPr (CmpE (`GeOp, `NatT, len_lhs1, len_rhs) $$ len_rhs.at % (BoolT $ len_rhs.at)) $ len_rhs.at in
     let prems1 = List.mapi (fun i exp ->
-      let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
+      let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (natT ~at:exp.at ()) in
       let rhs' = IdxE (rhs, idx) $$ exp.at % exp.note in
       IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
     ) exps in
-    let start2 = NumE (`Nat (Z.of_int (List.length exps))) $$ exp1.at % (mk_natT exp1.at) in
-    let len2 = cvt_sub exp2.at len_rhs start2 in
+    let start2 = NumE (`Nat (Z.of_int (List.length exps))) $$ exp1.at % (natT ~at:exp1.at ()) in
+    let len2 = mk_cvt_sub ~at:exp2.at len_rhs start2 in
     let rhs2' = SliceE (rhs, start2, len2) $$ rhs.at % rhs.note in
     let prem2 = IfPr (CmpE (`EqOp, `BoolT, exp2, rhs2') $$ exp2.at % (BoolT $ exp2.at)) $ at in
     (* Start an inner loop, in case of any dependencies between the list elements.
@@ -886,18 +834,18 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     E.return (prem_len :: prems')
   (* exp1 ++ [e1; e2; ...; en] *)
   | CatE (exp1, ({ it = ListE exps; _ } as exp2)) ->
-    let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in
-    let len_lhs2 = mk_natE lhs.at (List.length exps) in
+    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
+    let len_lhs2 = mk_nat ~at:lhs.at (List.length exps) in
     let prem_len = IfPr (CmpE (`GeOp, `NatT, len_lhs2, len_rhs) $$ len_rhs.at % (BoolT $ len_rhs.at)) $ len_rhs.at in
     let prems2 = List.mapi (fun i exp ->
-      let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (mk_natT exp.at) in
+      let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (natT ~at:exp.at ()) in
       (* idx' = len - (len2 - idx) *)
-      let idx' = cvt_sub len_lhs2.at len_rhs (cvt_sub len_lhs2.at len_lhs2 idx) in
+      let idx' = mk_cvt_sub ~at:len_lhs2.at len_rhs (mk_cvt_sub ~at:len_lhs2.at len_lhs2 idx) in
       let rhs' = IdxE (rhs, idx') $$ exp.at % exp.note in
       IfPr (CmpE (`EqOp, `BoolT, exp, rhs') $$ exp.at % (BoolT $ exp.at)) $ at
     ) exps in
-    let start1 = NumE (`Nat (Z.of_int 0)) $$ no_region % (mk_natT no_region) in
-    let len1 = cvt_sub exp1.at len_rhs len_lhs2 in
+    let start1 = mk_nat 0 in
+    let len1 = mk_cvt_sub ~at:exp1.at len_rhs len_lhs2 in
     let rhs1' = SliceE (rhs, start1, len1) $$ rhs.at % rhs.note in
     let prem1 = IfPr (CmpE (`EqOp, `BoolT, exp1, rhs1') $$ exp1.at % (BoolT $ exp1.at)) $ at in
     (* Start an inner loop, in case of any dependencies between the list elements.
@@ -918,7 +866,7 @@ and animate_exp_mem at e es : prem list E.m =
   match e.it with
   (* Base case: choose the first alternative. *)
   | VarE v ->
-    let zero = NumE (`Nat Z.zero) $$ e.at % (mk_natT e.at) in
+    let zero = NumE (`Nat Z.zero) $$ e.at % (natT ~at:e.at ()) in
     let es_0 = IdxE (es, zero) $$ es.at % e.note in
     let fv_e = (free_exp false e).varid in
     let* () = update (add_knowns (Set.singleton v.it)) in
@@ -1014,7 +962,7 @@ and animate_prem envr prem : prem list E.m =
     (* Propagating knowns into the iteration. *)
     let oindex = match iter with
     | ListN(len, Some i) ->
-      lenvr := bind_var !lenvr i (mk_natT len.at);
+      lenvr := bind_var !lenvr i (natT ~at:len.at ());
       let fv_len = (free_exp false len).varid in
       if Set.is_empty (Set.diff fv_len knowns) then
         Some i

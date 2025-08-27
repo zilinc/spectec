@@ -8,7 +8,9 @@
     construct
     def
     il2dl
+    il_util
     interpreter
+    script
     valid
   )
 )

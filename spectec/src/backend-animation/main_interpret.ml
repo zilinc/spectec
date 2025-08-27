@@ -1,13 +1,18 @@
 open Def
-open Reference_interpreter
 open Script
-open Source
+open Il_util
 open Al.Al_util
+open Il.Ast
 open Util
+open Error
 open Backend_interpreter.Construct
-open Backend_interpreter.Ds
 module I = Backend_interpreter
+module R = Reference_interpreter
+open R.Script
+open R.Source
+(* open R.Ast *)
 module A = Al.Ast
+module C = Construct
 
 
 (* Errors *)
@@ -20,6 +25,10 @@ let _error_interpret at msg = Error.error at "interpreter" msg
 let logging = ref false
 
 let log fmt = Printf.(if !logging then fprintf stderr fmt else ifprintf stderr fmt)
+
+
+(*
+
 
 (* Result *)
 
@@ -73,31 +82,31 @@ let print_runner_result name result =
     Printf.printf "- %d/%d (%.2f%%)\n\n" num_success total percentage;
   log "%s took %f ms.\n" name (execution_time *. 1000.)
 
-let get_export name modulename =
-  modulename
+let get_export name moduleinst_name =
+  moduleinst_name
   |> Register.find
-  |> strv_access "EXPORTS"
-  |> listv_find
-    (fun export -> al_to_string (strv_access "NAME" export) = name)
+  |> find_str_field "EXPORTS"
+  |> find_list_elem
+    (fun export -> text_to_string (find_str_field "NAME" export) = name)
 
 let get_externaddr import =
-  let Ast.Import (module_name, item_name, _) = import.it in
+  let R.Ast.Import (module_name, item_name, _) = import.it in
   module_name
   |> Utf8.encode
   |> get_export (Utf8.encode item_name)
-  |> strv_access "ADDR"
+  |> find_str_field "ADDR"
 
 let textual_to_module textual =
   match (snd textual).it with
-  | Script.Textual (m, _) -> m
+  | R.Script.Textual (m, _) -> m
   | _ -> assert false
 
-let get_export_addr name modulename =
+let get_export_addr name moduleinst_name =
   let vl =
-    modulename
+    moduleinst_name
     |> get_export name
-    |> strv_access "ADDR"
-    |> args_of_casev
+    |> find_str_field "ADDR"
+    |> args_of_case
   in
   try List.hd vl with Failure _ ->
     failwith ("Function export doesn't contain function address")
@@ -106,11 +115,12 @@ let get_export_addr name modulename =
 
 (** Main functions **)
 
-let invoke module_name funcname args =
-  log "[Invoking %s %s...]\n" funcname (Value.string_of_values args);
+let invoke moduleinst_name funcname args =
+  log "[Invoking %s %s...]\n" funcname (R.Value.string_of_values args);
 
-  let funcaddr = get_export_addr funcname module_name in
-  Interpreter.invoke [funcaddr; al_of_list al_of_value args]
+  let store = I.Ds.Store.get () in
+  let funcaddr = get_export_addr funcname moduleinst_name in
+  Interpreter.invoke [store; funcaddr; C.il_of_list C.il_of_value args]
 
 (* TODO(zilinc):
    1. get_export_add: change the return type to A.value
@@ -124,7 +134,7 @@ let get_global_value module_name globalname =
   let index = get_export_addr globalname module_name in
   index
   |> al_to_nat
-  |> listv_nth (Store.access "GLOBALS")
+  |> listv_nth (I.Ds.Store.access "GLOBALS")
   |> strv_access "VALUE"
   |> Array.make 1
   |> listV
@@ -133,11 +143,11 @@ let get_global_value module_name globalname =
 let instantiate module_ =
   log "[Instantiating module...]\n";
 
-  match al_of_module module_, List.map get_externaddr module_.it.imports with
+  match C.il_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
-  | al_module, externaddrs ->
+  | il_module, externaddrs ->
     let store = I.Ds.Store.get () in
-    Interpreter.instantiate [ store; al_module; listV_of_list externaddrs ]
+    Interpreter.instantiate [ store; il_module; listV_of_list externaddrs ]
 
 
 (** Wast runner **)
@@ -145,8 +155,8 @@ let instantiate module_ =
 let module_of_def def =
   match def.it with
   | Textual (m, _) -> m
-  | Encoded (name, bs) -> Decode.decode name bs.it
-  | Quoted (_, s) -> Parse.Module.parse_string s.it |> textual_to_module
+  | Encoded (name, bs) -> R.Decode.decode name bs.it
+  | Quoted (_, s) -> R.Parse.Module.parse_string s.it |> textual_to_module
 
 let run_action action =
   match action.it with
@@ -156,6 +166,7 @@ let run_action action =
     get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname)
 
 let test_assertion assertion =
+  let open R in
   match assertion.it with
   | AssertReturn (action, expected) ->
     let result = run_action action |> al_to_list al_to_value in
@@ -198,6 +209,7 @@ let test_assertion assertion =
   | _ -> pass
 
 let run_command' command =
+  let open R in
   match command.it with
   | Module (var_opt, def) ->
     def
@@ -248,9 +260,9 @@ let run_command command =
 let run_wast name script =
   (* Intialize spectest *)
   log ("[run_wast...]\n");
-  let spectest = I.Host.spectest () in
+  let spectest = il_of_spectest () in
   log "[built `spectest`.]\n";
-  Register.add "spectest" spectest;
+  Register.add "spectest" spectest;  (* spectest is a `moduleinst`. *)
   log ("[registered `spectec`.]\n");
 
   let result =
@@ -266,7 +278,7 @@ let run_wast name script =
 let run_wasm' args module_ =
   (* Intialize spectest *)
   log ("[run_wasm'...]\n");
-  let spectest = I.Host.spectest () in
+  let spectest = il_of_spectest () in
   log "[built `spectest`.]\n";
   Register.add "spectest" spectest;
   log ("[registered `spectec`.]\n");
@@ -280,13 +292,16 @@ let run_wasm' args module_ =
   (* TODO: Only Int32 arguments/results are acceptable *)
   match args with
   | funcname :: args' ->
-    let make_value s = Value.Num (I32 (Int32.of_string s)) in
+    let make_value s = R.Value.Num (I32 (Int32.of_string s)) in
 
     (* Invoke *)
     invoke (Register.get_module_name None) funcname (List.map make_value args')
-    (* Print invocation result *)
+    (* Print invocation result. We don't really have to convert it to reference
+       interpreter's value type though.
+    *)
+    |> Interpreter.exp_to_val
     |> al_to_list al_to_value
-    |> Value.string_of_values
+    |> R.Value.string_of_values
     |> print_endline;
     success
   | [] -> success
@@ -331,7 +346,7 @@ let rec run_file path args =
     | ".wast" ->
       let (m1, n1), time1 =
         path
-        |> parse_file path Parse.Script.parse_file
+        |> parse_file path R.Parse.Script.parse_file
         |> run_wast path
       in
       let (m2, n2), time2 =
@@ -343,15 +358,15 @@ let rec run_file path args =
       (m1 + m2, n1 + n2), time1 +. time2
     | ".wat" ->
       path
-      |> parse_file path Parse.Module.parse_file
+      |> parse_file path R.Parse.Module.parse_file
       |> textual_to_module
       |> run_wat args
     | ".wasm" ->
       In_channel.with_open_bin path In_channel.input_all
-      |> parse_file path (Decode.decode path)
+      |> parse_file path (R.Decode.decode path)
       |> run_wasm args
     | _ -> pass, 0.0
-  with Decode.Code _ | Parse.Syntax _ -> pass, 0.0
+  with R.Decode.Code _ | R.Parse.Syntax _ -> pass, 0.0
 
 and run_dir path =
   path
@@ -380,3 +395,8 @@ let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
     )
   | path :: _ -> failwith ("file " ^ path ^ " does not exist")
   | [] -> failwith "no file to run"
+
+
+*)
+
+let run env dl args = todo ""
