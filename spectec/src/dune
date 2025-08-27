@@ -16,3 +16,5 @@
     (re_export il2al)
   )
 )
+
+(env (dev (flags (:standard -warn-error -A))))

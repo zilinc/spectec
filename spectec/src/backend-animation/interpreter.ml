@@ -1,3 +1,5 @@
+open Il_util
+open Construct
 open Def
 open Util
 open Error
@@ -5,7 +7,6 @@ open Il.Ast
 open Il.Print
 open Source
 open Printf
-open Al.Al_util
 module A = Al.Ast
 module I = Backend_interpreter
 
@@ -31,7 +32,7 @@ let info v at msg = if List.mem v !verbose || v = "" then
 (* Environments *)
 
 module VCtx = Map.Make(String)
-type vcontext = A.value VCtx.t
+type vcontext = exp VCtx.t
 
 let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
@@ -44,8 +45,9 @@ exception PatternMatchFailure
 let fail_assign at lhs rhs msg =
   error at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
             "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
-            "  ▹ value: " ^ Al.Print.string_of_value rhs)
+            "  ▹ value: " ^ string_of_exp rhs)
 
+(*
 let rec infer_val' val_ : typ' = match val_ with
   | A.NumV num-> begin match num with
     | `Nat _  -> `NatT
@@ -88,6 +90,8 @@ and val_to_exp val_ : exp =
 
 and record_to_expfield (id, val_ref) : expfield =
   todo "record_to_expfield"
+*)
+
 
 let rec exp_to_val exp : A.value =
   match exp.it with
@@ -112,28 +116,30 @@ and tup_to_val exp : A.value list =
   | TupE es -> List.map exp_to_val es
   | _       -> [exp_to_val exp]
 
-
+let unwrap_listE e : exp list =
+  match e.it with
+  | ListE es -> es
+  | _ -> error no_region "unwrap_listE: not a list value"
 
 let vctx_to_subst ctx : Il.Subst.subst =
   VCtx.fold (fun var value subst ->
-    let exp = val_to_exp value in
-    Il.Subst.add_varid subst (var $ no_region) exp
+    Il.Subst.add_varid subst (var $ no_region) value
   ) ctx Il.Subst.empty
 
-let rec assign ctx (lhs: exp) (rhs: A.value) : vcontext =
-  match lhs.it, rhs with
+let rec assign ctx (lhs: exp) (rhs: exp) : vcontext =
+  match lhs.it, rhs.it with
   | VarE name, _ -> VCtx.add name.it rhs ctx
-  | IterE ({ it = VarE x1; _ }, ((List|List1), [(x2, lhs')])), ListV _ when x1 = x2 ->
+  | IterE ({ it = VarE x1; _ }, ((List|List1), [(x2, lhs')])), ListE _ when x1 = x2 ->
     assign ctx lhs' rhs
   | IterE (e, (iter, xes)), _ ->
-    let vs = unwrap_seqv_to_list rhs in
+    let vs = unwrap_listE rhs in
     let ctxs = List.map (assign VCtx.empty e) vs in
 
     (* Assign length variable *)
     let ctx' =
       match iter with
       | ListN (expr, None) ->
-        let length = natV_of_int (List.length vs) in
+        let length = il_of_nat (List.length vs) in
         assign ctx expr length
       | ListN _ ->
         fail_assign lhs.at lhs rhs ("invalid assignment: iter with index cannot be an assignment target")
@@ -143,12 +149,12 @@ let rec assign ctx (lhs: exp) (rhs: A.value) : vcontext =
     List.fold_left (fun ctx (x, e) ->
       let vs = List.map (VCtx.find x.it) ctxs in
       let v = match iter with
-      | Opt -> optV (List.nth_opt vs 0)
-      | _   -> listV_of_list vs
+      | Opt -> optE e.note (List.nth_opt vs 0)
+      | _   -> listE e.note vs
       in
       assign ctx e v
     ) ctx' xes
-  | TupE lhs_s, TupV rhs_s
+  | TupE lhs_s, TupE rhs_s
     when List.length lhs_s = List.length rhs_s ->
     List.fold_left2 assign ctx lhs_s rhs_s
   (*
@@ -156,32 +162,28 @@ let rec assign ctx (lhs: exp) (rhs: A.value) : vcontext =
     when List.length lhs_s = Array.length !rhs_s ->
     List.fold_left2 assign ctx lhs_s (Array.to_list !rhs_s)
   *)
-  | CaseE (op, lhs_s), CaseV (rhs_tag, rhs_s) ->
-    begin match lhs_s.it with
-    | TupE lhs_s' when List.length lhs_s' = List.length rhs_s ->
-      (match get_atom op with
-      | Some lhs_tag when (Al.Print.string_of_atom lhs_tag) = rhs_tag ->
-        List.fold_left2 assign ctx lhs_s' rhs_s
-      | None when "" = rhs_tag ->
-        List.fold_left2 assign ctx lhs_s' rhs_s
-      | _ -> fail_assign lhs.at lhs rhs "constructor doesn't match"
-      )
+  | CaseE (lhs_tag, lhs_s), CaseE (rhs_tag, rhs_s) ->
+    begin match lhs_s.it, rhs_s.it with
+    | TupE lhs_s', TupE rhs_s' ->
+      if Il.Eq.eq_mixop lhs_tag rhs_tag && List.length lhs_s' = List.length rhs_s' then
+        List.fold_left2 assign ctx lhs_s' rhs_s'
+      else
+        fail_assign lhs.at lhs rhs "tag or payload doesn't match"
     | _ -> fail_assign lhs.at lhs rhs "not a TupE inside a CaseE"
     end
-  | OptE (Some lhs'), OptV (Some rhs') -> assign ctx lhs' rhs'
-  | CvtE (e1, nt, _), NumV n ->
+  | OptE (Some lhs'), OptE (Some rhs') -> assign ctx lhs' rhs'
+  | CvtE (e1, nt, _), NumE n ->
     (match Xl.Num.cvt nt n with
-    | Some n' -> assign ctx e1 (NumV n')
-    | None -> fail_assign lhs.at lhs rhs ("inverse conversion not defined for " ^ Al.Print.string_of_value (NumV n))
+    | Some n' -> assign ctx e1 (mk_expr rhs.at (NumT nt $ rhs.at) (NumE n'))
+    | None -> fail_assign lhs.at lhs rhs ("inverse conversion not defined for " ^ string_of_exp rhs)
     )
   | _, _ -> fail_assign lhs.at lhs rhs "invalid pattern"
 
 
-let eval_exp ctx exp : A.value =
+let eval_exp ctx exp : exp =
   let subst = vctx_to_subst ctx in
   let exp' = Il.Subst.subst_exp subst exp in
-  let exp'' = Il.Eval.reduce_exp !il_env exp' in
-  exp_to_val exp''
+  Il.Eval.reduce_exp !il_env exp'
 
 let eval_prem ctx prem : vcontext option =
   match prem.it with
@@ -190,7 +192,7 @@ let eval_prem ctx prem : vcontext option =
     Some (assign ctx lhs rhs')
   | IfPr e ->
     let b = eval_exp ctx e in
-    if b = BoolV true then Some ctx else None
+    if b.it = BoolE true then Some ctx else None
   | IterPr (prems, iter) -> todo "eval_prem: IterPr"
   | _ -> assert false
 
@@ -202,7 +204,7 @@ let rec eval_prems ctx prems : vcontext option =
     let* ctx = eval_prems ctx prems in
     Some ctx
 
-let match_arg at (parg: arg) (arg: A.value) : vcontext option =
+let match_arg at (parg: arg) (arg: exp) : vcontext option =
   match parg.it with
   | TypA typ  -> todo "match_arg TypA"
   | ExpA exp  -> (try Some (assign VCtx.empty exp arg) with PatternMatchFailure -> None)
@@ -218,7 +220,7 @@ let rec match_args at pargs args : vcontext option =
     let* vctx' = match_args at pargs' args' in
     Some (VCtx.union (fun k _ _ -> error at ("Duplicate variable `" ^ k ^ "`")) vctx vctx')
 
-let rec match_clause at (fname: string) (clauses: clause list) (args: A.value list) : A.value =
+let rec match_clause at (fname: string) (clauses: clause list) (args: exp list) : exp =
   info "interpreter" at ("match_clause: `" ^ fname ^ "`.");
   match clauses with
   | [] -> error at ("No function clause matches the input arguments in function " ^ fname)
@@ -234,12 +236,12 @@ let rec match_clause at (fname: string) (clauses: clause list) (args: A.value li
     | None -> match_clause at fname cls args
 
 
-let eval_func name func_def args : A.value =
+let eval_func name func_def args : exp =
   let (_, params, typ, fcs, _) = func_def.it in
   match_clause no_region name fcs args
 
 
-let call_func name args : A.value option =
+let call_func name args : exp option =
   let builtin_name, is_builtin =
     match Il.Env.find_func_hint !il_env name "builtin" with
     | None -> name, false
@@ -257,7 +259,8 @@ let call_func name args : A.value option =
   | None when I.Numerics.mem builtin_name -> (
     if not is_builtin then
       warn no_region (sprintf "Numeric function `%s` is not defined in source, consider adding a hint(builtin)." name);
-    Some (I.Numerics.call_numerics builtin_name args)
+    (* Some (I.Numerics.call_numerics builtin_name args) *)
+    error no_region "call_func: Can't call built-in functions for now; not yet implemented."
   )
   (* Relation *)
   | None when I.Relation.mem name -> (
@@ -279,13 +282,13 @@ let call_func name args : A.value option =
 
 (* Wasm interpreter entry *)
 
-let instantiate (args: A.value list) : A.value =
+let instantiate (args: exp list) : exp =
   (* WasmContext.init_context (); *)
   match call_func "instantiate" args with
   | Some module_inst -> module_inst
   | None -> failwith "Instantiation doesn't return module instance"
 
-let invoke (args: A.value list) : A.value =
+let invoke (args: exp list) : exp =
   (* WasmContext.init_context (); *)
   match call_func "invoke" args with
   | Some v -> v
