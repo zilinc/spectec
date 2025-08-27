@@ -983,63 +983,79 @@ and animate_prem envr prem : prem list E.m =
     | Some i -> Set.add i.it knowns_inner in
     let s_body = { (init ()) with prems = [prem']; knowns = knowns_inner_idx } in
     let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem'.at) in
-    let new_binds = Il.Env.diff !lenvr.vars !envr.vars in
-    (* NOTE the side effect of updating [envr]. *)
-    let xes' = [] in (* List.concat_map (fun (x, t) ->
-      let x_star = Frontend.Dim.annot_varid (x $ no_region) [iter] in
-      let t_star = IterT (t, iter') $ x_star.at in
-      envr := bind_var !envr x_star t_star;
-      if List.exists (fun (x', _) -> x'.it = x) xes then [] else
+    let new_knowns = Set.diff (get_knowns s_body') (get_knowns s_body) in
+    (* Add the static variables that need to flow out but are not in the binding list.
+       Intermediate variables are excluded.
+       NOTE the side effect of updating [envr].
+    *)
+    let xes' = List.concat_map (fun x ->
+      if String.starts_with ~prefix:"__v" x || List.exists (fun (x', _) -> x'.it = x) xes
+      then []
+      else
+        (* Not in the binding list and not intermediate variables *)
+        let x_star = Frontend.Dim.annot_varid (x $ no_region) [iter] in
+        let t = Il.Env.find_var !lenvr (x $ no_region) in
+        let t_star = IterT (t, iter') $ x_star.at in
+        envr := bind_var !envr x_star t_star;
         [(x $ x_star.at, VarE x_star $$ x_star.at % t_star)]
-    ) (Map.to_list new_binds) in  *)
-    (* Propagate knowns to the outside of the iterator. We need to traverse [new_knowns]
-       instead of [xes], because there may be variables that need to flow
-       out but do not ∈ xes.
+    ) (Il.Env.Set.to_list new_knowns) in
+    (* Propagate knowns to the outside of the iterator. We traverse [xes] and [xes'],
+       because they together include all the variables that need to flow out.
+       But the entries in [xes] and in [xes'] generate different premises.
     *)
-    let knowns_inner' = get_knowns s_body' in
-    (* The extra variables that've been newly worked out inside the interation.
-       CAUTION: If the index [i] exists, then this [i] shouldn't be propagated out.
-       That's why we need to subtract the [knowns_inner_idx] set which includes
-       the index, if there is one.
-    *)
-    let new_knowns = Set.diff knowns_inner' knowns_inner in
-    let blob = List.map (fun x ->
-      match List.find_opt (fun (y, e) -> y.it = x) xes with
-      (* If x <- e exists, then x propagates to e. *)
-      | Some (y, e) ->
-        let fv_e = (free_exp false e).varid in
-        let unknowns_e = Set.diff fv_e knowns_inner' in
-        if Set.is_empty unknowns_e then
-          (* [e] already known; nothing to flow out. *)
-          ([], [])
-        else
-          begin match e.it with
-          | VarE ve -> ([ve.it], [])
-          | _ ->
-            (* If [e] is not a single variable and it's out-flowing in {x <- e},
-               then we create a fresh [v], such that {x <- v}, and -- if v = e
-               after we finish the interation.
-            *)
-            let y' = Frontend.Dim.annot_varid y [iter] in
-            let v = fresh_id (Some y'.it) e.at in
-            envr := bind_var !envr y' e.note;
-            let ve = VarE v $$ e.at % e.note in
-            let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, ve) $$ e.at % (BoolT $ e.at)) $ e.at in
-            ([y'.it], [prem_e])
-          end
-      (* If there's no x <- e, then propagate x out. But I don't think this will ever
-         happen, as in this case, the [x] can't be a newly-learned variable, but must
-         have been known before we entered the iteration body.
+    let blob1 = List.map (fun (x, e) ->
+      begin match e.it with
+      | VarE v -> ([v.it], [])
+      | _ ->
+        (* If [e] is not a single variable and it's out-flowing in {x <- e},
+           then we create a fresh [v], such that {x <- v}, and -- if v = e
+           after we finish the interation.
+        *)
+        let x' = Frontend.Dim.annot_varid x [iter] in
+        let x_star = fresh_id (Some x'.it) e.at in
+        envr := bind_var !envr x_star e.note;
+        let x_star_e = VarE x_star $$ e.at % e.note in
+        let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, x_star_e) $$ e.at % (BoolT $ e.at)) $ e.at in
+        ([x_star.it], [prem_e])
+      end
+    ) xes
+    in
+    let blob2 = List.map (fun (x, e) ->
+      (* If there's no x <- e, then propagate x out. This can happen if there's a
+         -- where x = ... inside the iterator. That `x` needs to be transfered to the
+         outer scope. But we also need to avoid doing so for any intermediate variables
+         that are genuinely only visible inside.
+         If we have ( let a = rhs )^iter { ... } and a is not in the binding list,
+         then we generate the following DL:
+           ( -- where __v = ...
+             -- where a   = ...
+           )^iter { ... , a <- a* }
+           -- if |a*| > 0
+           -- where a = a*[0]
+           (-- if a = a*[i])^(i < |a*|)
       *)
-      | None -> ([x], [])
-    ) (Set.elements new_knowns) in
-    let knowns_outer, e_prems = Lib.List.unzip blob |> Lib.Fun.(<***>) List.concat List.concat in
-    let* () = update (add_knowns (Set.of_list knowns_outer)) in
+      let VarE x_star = e.it in
+      let len = LenE e $$ e.at % (natT ~at:e.at ()) in
+      let prem_len = IfPr (CmpE (`GeOp, `NatT, len, mk_nat 0) $$ len.at % (BoolT $ len.at)) $ len.at in
+      let t = find_var !lenvr x in
+      let x0 = IdxE (e, mk_nat 0) $$ e.at % t in
+      let prem_x0 = LetPr (VarE x $$ x.at % t, x0, [x.it]) $ e.at in
+      let i = fresh_id (Some "i") len.at in
+      let iter = ListN (len, Some i) in
+      let e_i = IdxE (e, VarE i $$ i.at % (natT ~at:i.at ())) $$ e.at % x0.note in
+      let prem_eq = IfPr (CmpE (`EqOp, `NatT, x0, e_i) $$ x0.at % (BoolT $ x0.at)) $ x0.at in
+      let prem_eq_iter = IterPr ([prem_eq], (iter, [])) $ x0.at in
+      ([x.it; x_star.it], [prem_len; prem_x0; prem_eq_iter])
+    ) xes'
+    in
+    let knowns_outer1, e_prems1 = Lib.List.unzip blob1 |> Lib.Fun.(<***>) List.concat List.concat in
+    let knowns_outer2, e_prems2 = Lib.List.unzip blob2 |> Lib.Fun.(<***>) List.concat List.concat in
+    let* () = update (add_knowns (Set.of_list (knowns_outer1 @ knowns_outer2))) in
     let* s_outer = get () in
-    let s_end = { (init ()) with prems = e_prems; knowns = get_knowns s_outer} in
-    let* (e_prems', s_end') = run_inner s_end (animate_prems' envr prem.at) in
+    let s_end = { (init ()) with prems = e_prems1; knowns = get_knowns s_outer} in
+    let* (e_prems1', s_end') = run_inner s_end (animate_prems' envr prem.at) in
     let* () = update (put_knowns (get_knowns s_end')) in
-    E.return ((IterPr (prems_body', (iter, xes @ xes')) $ prem.at) :: e_prems')
+    E.return ((IterPr (prems_body', (iter, xes @ xes')) $ prem.at) :: e_prems1' @ e_prems2)
   | IterPr (prems, iterexp) -> assert false
 
 
@@ -1109,7 +1125,7 @@ and animate_prems envr at ins ous prems : prem list =
      | (Ok ps  , s) ->
        if Set.subset ous s.knowns then ps
        else error at ("Premises failed to compute all required output variables:\n" ^
-                      "  ▹ result: " ^ (String.concat "\n      " (List.map string_of_prem ps)) ^ "\n" ^
+                      "  ▹ result:\n      " ^ (String.concat "\n      " (List.map string_of_prem ps)) ^ "\n" ^
                       "  ▹ ins: " ^ string_of_varset ins ^ "\n" ^
                       "  ▹ knowns: " ^ string_of_varset s.knowns ^ "\n" ^
                       "  ▹ outs: " ^ string_of_varset ous)
@@ -1176,6 +1192,7 @@ let animate_clause_no_arg id envr (c: clause) : func_clause =
 let animate_clause id envr (c: clause) : func_clause =
   let lenvr = ref !envr in
   let DefD (binds, args, exp, prems) = c.it in
+  let lenvr = env_of_binds binds lenvr in
   let n_args = List.length args in
   let blob = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
@@ -1195,7 +1212,7 @@ let animate_clause id envr (c: clause) : func_clause =
   let ous = (free_exp false exp).varid in
   let prems' = animate_prems lenvr c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
   let binds' = binds_of_env !lenvr in
-  let binds'' = sort_binds id (binds @ binds') in
+  let binds'' = sort_binds id binds' in
   (DefD (binds'', args', exp, prems')) $ c.at
 
 let animate_clauses id envr cs = List.map (animate_clause id envr) cs
