@@ -985,13 +985,13 @@ and animate_prem envr prem : prem list E.m =
     let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem'.at) in
     let new_binds = Il.Env.diff !lenvr.vars !envr.vars in
     (* NOTE the side effect of updating [envr]. *)
-    let xes' = List.concat_map (fun (x, t) ->
+    let xes' = [] in (* List.concat_map (fun (x, t) ->
       let x_star = Frontend.Dim.annot_varid (x $ no_region) [iter] in
       let t_star = IterT (t, iter') $ x_star.at in
       envr := bind_var !envr x_star t_star;
       if List.exists (fun (x', _) -> x'.it = x) xes then [] else
         [(x $ x_star.at, VarE x_star $$ x_star.at % t_star)]
-    ) (Map.to_list new_binds) in
+    ) (Map.to_list new_binds) in  *)
     (* Propagate knowns to the outside of the iterator. We need to traverse [new_knowns]
        instead of [xes], because there may be variables that need to flow
        out but do not ∈ xes.
