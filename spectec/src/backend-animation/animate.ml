@@ -1025,10 +1025,10 @@ and animate_prem envr prem : prem list E.m =
          -- where x = ... inside the iterator. That `x` needs to be transfered to the
          outer scope. But we also need to avoid doing so for any intermediate variables
          that are genuinely only visible inside.
-         If we have ( let a = rhs )^iter { ... } and a is not in the binding list,
+         If we have ( -- where a = rhs )^iter { ... } and a is not in the binding list,
          then we generate the following DL:
            ( -- where __v = ...
-             -- where a   = ...
+             -- where a = ...
            )^iter { ... , a <- a* }
            -- if |a*| > 0
            -- where a = a*[0]
