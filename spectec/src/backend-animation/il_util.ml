@@ -55,12 +55,12 @@ and optE ?(at = no) t oe : exp = mk_expr at t (OptE oe)
 and optE' ?(at = no) oe : exp = match oe with
   | None   -> error at "optE: can't infer type when None"
   | Some e -> let t = iterT (e.note) in optE t oe
+and strE ?(at = no) ~note r = StrE r |> mk_expr at note
 (*
 and unE ?(at = no) ~note (unop, t, e) = UnE (unop, t, e) |> mk_expr at note
 and binE ?(at = no) ~note (binop, t, e1, e2) = BinE (binop, t, e1, e2) |> mk_expr at note
 and updE ?(at = no) ~note (e1, pl, e2) = UpdE (e1, pl, e2) |> mk_expr at note
 and extE ?(at = no) ~note (e1, pl, e2, dir) = ExtE (e1, pl, e2, dir) |> mk_expr at note
-and strE ?(at = no) ~note r = StrE r |> mk_expr at note
 and compE ?(at = no) ~note (e1, e2) = CompE (e1, e2) |> mk_expr at note
 and liftE ?(at = no) ~note e = LiftE e |> mk_expr at note
 and catE ?(at = no) ~note (e1, e2) = CatE (e1, e2) |> mk_expr at note
@@ -111,7 +111,7 @@ and mk_cvt_sub ?(at = no) e1 e2 =
   mk_cvt e `IntT `NatT
 
 and mk_atom ?(at = no) ~info (atom: string) arity =
-  [[Xl.Atom.Atom atom $$ at % info] :: List.init arity (Fun.const [])]
+  [Xl.Atom.Atom atom $$ at % info] :: List.init arity (Fun.const [])
 
 and mk_mixop ?(at = no) ~info (mixop: string list list) =
   List.map (fun as_ -> List.map (fun a -> Xl.Atom.Atom a $$ at % info) as_) mixop
@@ -129,6 +129,13 @@ and mk_tup ?(at = no) es =
   let ts = List.map (fun e -> e.note) es in
   let t = t_tup ts in
   tupE ~note:t es
+
+and mk_str ?(at = no) tname fes =
+  let mk_field (fname, e) = let info = Xl.Atom.{def = tname; case = ""} in
+                            (Xl.Atom.Atom fname $$ at % info, e)
+  in
+  strE ~note:(varT tname) (List.map mk_field fes)
+
 
 and mk_none ?(at = no) t = optE t None
 and mk_some ?(at = no) t e = optE t (Some e)

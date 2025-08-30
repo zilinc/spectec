@@ -283,13 +283,11 @@ let call_func name args : exp option =
 (* Wasm interpreter entry *)
 
 let instantiate (args: exp list) : exp =
-  (* WasmContext.init_context (); *)
   match call_func "instantiate" args with
   | Some module_inst -> module_inst
   | None -> failwith "Instantiation doesn't return module instance"
 
 let invoke (args: exp list) : exp =
-  (* WasmContext.init_context (); *)
   match call_func "invoke" args with
   | Some v -> v
   | None -> failwith "Invocation doesn't return any values"
