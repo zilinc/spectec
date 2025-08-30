@@ -1,7 +1,6 @@
 open Def
 open Script
 open Il_util
-open Al.Al_util
 open Il.Ast
 open Util
 open Error
@@ -26,8 +25,6 @@ let logging = ref false
 
 let log fmt = Printf.(if !logging then fprintf stderr fmt else ifprintf stderr fmt)
 
-
-(*
 
 
 (* Result *)
@@ -111,23 +108,7 @@ let get_export_addr name moduleinst_name =
   try List.hd vl with Failure _ ->
     failwith ("Function export doesn't contain function address")
 
-
-
-(** Main functions **)
-
-let invoke moduleinst_name funcname args =
-  log "[Invoking %s %s...]\n" funcname (R.Value.string_of_values args);
-
-  let store = I.Ds.Store.get () in
-  let funcaddr = get_export_addr funcname moduleinst_name in
-  Interpreter.invoke [store; funcaddr; C.il_of_list C.il_of_value args]
-
-(* TODO(zilinc):
-   1. get_export_add: change the return type to A.value
-   2. al_of_value --> il_of_value
- *)
-
-
+(*
 let get_global_value module_name globalname =
   log "[Getting %s...]\n" globalname;
 
@@ -138,7 +119,9 @@ let get_global_value module_name globalname =
   |> strv_access "VALUE"
   |> Array.make 1
   |> listV
+*)
 
+(** Main functions **)
 
 let instantiate module_ =
   log "[Instantiating module...]\n";
@@ -146,8 +129,17 @@ let instantiate module_ =
   match C.il_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | il_module, externaddrs ->
-    let store = I.Ds.Store.get () in
-    Interpreter.instantiate [ store; il_module; listV_of_list externaddrs ]
+    let store = Store.get_store () in
+    Interpreter.instantiate [ store; il_module; listE (t_star "externaddr") externaddrs ]
+
+
+let invoke moduleinst_name funcname args =
+  log "[Invoking %s %s...]\n" funcname (R.Value.string_of_values args);
+
+  let store = Store.get_store () in
+  let funcaddr = get_export_addr funcname moduleinst_name in
+  Interpreter.invoke [store; funcaddr; il_of_list (t_star "val") C.il_of_value args]
+
 
 
 (** Wast runner **)
@@ -158,6 +150,7 @@ let module_of_def def =
   | Encoded (name, bs) -> R.Decode.decode name bs.it
   | Quoted (_, s) -> R.Parse.Module.parse_string s.it |> textual_to_module
 
+(*
 let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
@@ -207,8 +200,10 @@ let test_assertion assertion =
     )
   (* ignore other kinds of assertions *)
   | _ -> pass
+*)
 
-let run_command' command =
+let run_command' command = todo "run_command'"
+(*
   let open R in
   match command.it with
   | Module (var_opt, def) ->
@@ -229,6 +224,7 @@ let run_command' command =
     ignore (run_action a); success
   | Assertion a -> test_assertion a
   | Meta _ -> pass
+*)
 
 let run_command command =
   let start_time = Sys.time () in
@@ -381,7 +377,6 @@ and run_dir path =
 let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
   Interpreter.dl     := dl;
   Interpreter.il_env := env;
-  I.Ds.Store.init();
   match args with
   | path :: args' when Sys.file_exists path ->
     (* Run file *)
@@ -395,8 +390,3 @@ let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
     )
   | path :: _ -> failwith ("file " ^ path ^ " does not exist")
   | [] -> failwith "no file to run"
-
-
-*)
-
-let run env dl args = todo ""
