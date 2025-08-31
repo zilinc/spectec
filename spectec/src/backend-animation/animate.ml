@@ -26,6 +26,7 @@ let verbose : string list ref =
         (* *"iterp"    ; *)
         (* "pattern"   ; *)
         (* "log"       ; *)
+        (* "case"      ; *)
       ]
 
 let error at msg = Error.error at "IL animation" msg
@@ -236,7 +237,15 @@ module S = AnimateS
 *)
 let binds_of_env env : bind list =
   let varbinds = Map.to_list env.vars in
-  List.map (fun (v, t) -> ExpB (v $ no_region, t) $ no_region) varbinds
+  let typbinds = Map.to_list env.typs in
+  let defbinds = Map.to_list env.defs in
+  let grambinds = Map.to_list env.grams in
+  List.map (fun (v, t)   -> ExpB (v $ no_region, t) $ no_region) varbinds
+  @ List.map (fun (v, _)   -> TypB (v $ no_region) $ no_region) typbinds
+  @ List.map (fun (v, def) -> (let (ps, t, _) = def in
+                               DefB (v $ no_region, ps, t) $ no_region)) defbinds
+  @ List.map (fun (v, def) -> (let (ps, t, _) = def in
+                               GramB (v $ no_region, ps, t) $ no_region)) grambinds
 
 let env_of_binds binds envr : Il.Env.t ref =
   List.iter (fun b -> match b.it with
@@ -683,6 +692,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return (prems_rhs @ [prem_len] @ prems')
   | CaseE (mixop, lhs') ->
+    info "case" at ("The payload of constructor " ^ string_of_mixop mixop ^ " is " ^ string_of_exp lhs');
     begin match as_variant_typ !envr rhs.note with
     | [] -> assert false
     | [(mixop', (_, t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
@@ -707,6 +717,8 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
       | _ ->
         (* Use tcases to work out the type of ve, because it retains the dependent tuple type. *)
         let (_, (bs, t', _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
+        info "case" no_region ("lhs'.note = " ^ string_of_typ lhs'.note);
+        info "case" no_region ("t' from rhs = " ^ string_of_typ t');
         begin match new_bind_exp envr None lhs' (Some t') with
         | Ok (envr, v, ve, prem_v) ->
           let envr = env_of_binds bs envr in
@@ -734,6 +746,8 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     let prems = Fun.flip List.mapi es (fun i e ->
       let bool_t = BoolT $ e.at in
       let proj_rhs = ProjE (ve, i) $$ ve.at % e.note in
+      info "case" ve.at ("Proj " ^ string_of_exp proj_rhs ^ "'s type is " ^ string_of_typ e.note);
+      info "case" ve.at ("RHS " ^ string_of_exp rhs ^ "'s type is " ^ string_of_typ rhs.note);
       IfPr (CmpE (`EqOp, `BoolT, e, proj_rhs) $$ e.at % bool_t) $ at)
     in
     (* We start an inner loop to animate the components of TupE. This is needed
@@ -1141,19 +1155,21 @@ let lift_otherwise_prem prems =
 let animate_rule_red_no_arg envr rule : clause' =
   let lenvr = ref !envr in
   let (id, binds, lhs, rhs, prems) = rule.it in
+  let lenvr = env_of_binds binds lenvr in
   let lhs_vars = (free_exp false lhs).varid in
   let rhs_vars = (free_exp false rhs).varid in
   (* Input and output variables in the conclusion *)
   let in_vars  = lhs_vars in
   let out_vars = rhs_vars in
   let prems' = animate_prems lenvr rule.at in_vars out_vars prems in
-  let binds' = binds_of_env !lenvr in
-  let binds'' = sort_binds id (binds @ binds') in
+  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
+  let binds'' = sort_binds id binds' in
   DefD (binds'', [ExpA lhs $ lhs.at], rhs, prems')
 
 let animate_rule_red envr rule : clause' =
   let lenvr = ref !envr in
   let (id, binds, lhs, rhs, prems) = rule.it in
+  let lenvr = env_of_binds binds lenvr in
   let (lenvr, v, ve, prems_lhs) = begin match new_bind_exp lenvr (Some "lhs") lhs None with
   | Ok (lenvr, v, ve, prem_v) -> (lenvr, v, ve, [prem_v])
   | Error v -> (lenvr, v, lhs, [])
@@ -1163,8 +1179,8 @@ let animate_rule_red envr rule : clause' =
   let in_vars = (free_varid v).varid in
   let out_vars = rhs_vars in
   let prems' = animate_prems lenvr rule.at in_vars out_vars (prems_lhs @ prems) in
-  let binds' = binds_of_env !lenvr in
-  let binds'' = sort_binds id (binds @ binds') in
+  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
+  let binds'' = sort_binds id binds' in
   DefD (binds'', [ExpA ve $ ve.at], rhs, prems')
 
 let animate_rule envr at rel_id (r : rule_clause) : clause =
@@ -1182,11 +1198,12 @@ let animate_rules envr at rel_id rs = List.map (animate_rule envr at rel_id) rs
 let animate_clause_no_arg id envr (c: clause) : func_clause =
   let lenvr = ref !envr in
   let DefD (binds, args, exp, prems) = c.it in
+  let lenvr = env_of_binds binds lenvr in
   let ins = (free_list (free_arg false) args).varid in
   let ous = (free_exp false exp).varid in
   let prems' = animate_prems lenvr c.at ins ous prems |> lift_otherwise_prem in
-  let binds' = binds_of_env !lenvr in
-  let binds'' = sort_binds id (binds @ binds') in
+  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
+  let binds'' = sort_binds id binds' in
   (DefD (binds'', args, exp, prems')) $ c.at
 
 let animate_clause id envr (c: clause) : func_clause =
@@ -1211,7 +1228,7 @@ let animate_clause id envr (c: clause) : func_clause =
   let ins = (free_list free_varid vs).varid in
   let ous = (free_exp false exp).varid in
   let prems' = animate_prems lenvr c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
-  let binds' = binds_of_env !lenvr in
+  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
   let binds'' = sort_binds id binds' in
   (DefD (binds'', args', exp, prems')) $ c.at
 
