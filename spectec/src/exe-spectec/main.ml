@@ -338,6 +338,8 @@ let () =
     | Animate ->
       log "Translating to DL and animate...";
       let (env, dl) = Backend_animation.Main_animate.run il !print_dl in
+      log "DL Validating...";
+      Backend_animation.Valid.valid dl;
       (match !new_interpreter_args with
       | Some args ->
         log "Interpreting...";

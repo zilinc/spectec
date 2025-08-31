@@ -45,6 +45,17 @@ let mem map id = Map.mem id.it map
 
 let diff m1 m2 = Map.fold (fun k _v acc -> Map.remove k acc) m2 m1
 
+let env_diff env1 env2 = 
+  { vars = diff env1.vars env2.vars;
+    typs = diff env1.typs env2.typs;
+    defs = diff env1.defs env2.defs;
+    rels = diff env1.rels env2.rels;
+    grams = diff env1.grams env2.grams;
+    hints = List.filter (fun h -> List.mem h env2.hints |> not) env1.hints;
+  }
+
+
+
 let find_opt map id =
   Map.find_opt id.it map
 
