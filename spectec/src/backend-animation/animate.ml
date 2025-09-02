@@ -298,23 +298,18 @@ let rec new_bind_exp envr oname exp ot : (Il.Env.t ref * id * exp * prem, id) re
   let ( let* ) = Result.bind in
   match exp.it with
   | VarE v -> Error v
-  (*
   | SubE (exp', t1, t2) ->
-    assert (Option.is_none ot);
     let* (envr, v, ve, prem_eq) = new_bind_exp envr oname exp' None in
     let ve' = SubE (ve, t1, t2) $> exp in
     Ok (envr, v, ve', prem_eq)
   | SupE (exp', t1, t2) ->
-    assert (Option.is_none ot);
     let* (envr, v, ve, prem_eq) = new_bind_exp envr oname exp' None in
     let ve' = SupE (ve, t1, t2) $> exp in
     Ok (envr, v, ve', prem_eq)
   | CvtE (exp', t1, t2) ->
-    assert (Option.is_none ot);
     let* (envr, v, ve, prem_eq) = new_bind_exp envr oname exp' None in
     let ve' = CvtE (ve, t1, t2) $> exp in
     Ok (envr, v, ve', prem_eq)
-  *)
   | _ -> Ok (new_bind_exp' envr oname exp ot)
 
 
@@ -718,6 +713,9 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
         let ets = as_tup_typ !envr t' in
         let (envr, vs, ves, prem_vs) = List.fold_left (fun acc (e, (_, t)) ->
           let (envr, vs, ves, prem_vs) = acc in
+          (* NOTE: If we use `t` to type the new variable below, then it's possible that some of them
+             do not reduce, and will cause later pattern matching on the types to fail.
+          *)
           begin match new_bind_exp envr None e None with
           | Ok (envr, v, ve, prem_v) ->
             (envr, vs@[v.it], ves@[ve], prem_vs@[prem_v])
