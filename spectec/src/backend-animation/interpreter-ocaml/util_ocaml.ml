@@ -1,10 +1,10 @@
 open Xl
-open Il.Ast 
+open Il.Ast
 
 let uncaseE (e : exp) op =
   match e.it with
-  | CaseE (o, e) when (Mixop.eq o op) -> 
-    (match e.it with 
+  | CaseE (o, e) when (Mixop.eq o op) ->
+    (match e.it with
     | TupE tupe -> ListE tupe (* convert tuple to list in case we need to index *)
     | e' -> e')
   | _ -> failwith "uncase: expected UncaseE"
@@ -16,19 +16,19 @@ let projE lst n =
     | None -> failwith "list too short")
   | _ -> failwith "projE: expected ListE"
 let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
-  let lowercase name = 
-      if recordfield then String.lowercase_ascii name 
+  let lowercase name =
+      if recordfield then String.lowercase_ascii name
       else name
   in
-  match mixop with 
-  | [{it = Atom.Atom a; _}]::tail when List.for_all ((=) []) tail -> (*"Atom " ^*) lowercase a 
-  | mixop -> 
+  match mixop with
+  | [{it = Atom.Atom a; _}]::tail when List.for_all ((=) []) tail -> (*"Atom " ^*) lowercase a
+  | mixop ->
     let s =
       String.concat "_pct_" (List.map (
         fun atoms -> String.concat "" (List.map (fun x -> x |> Atom.to_string |> lowercase) atoms)) mixop
       )
     in
-    (*"Atom " ^*) s 
+    (*"Atom " ^*) s
 
 let slice (lst : 'a list) (start : int) (end_ : int) : 'a list option =
   if start < 0 || end_ < start then None else
@@ -58,8 +58,8 @@ let rec lookup (x : id) (pairs : (id * 'b) list) : 'b option =
       if k.it = x.it then Some v else lookup x rest
 
 (* this is a bad way of doing it but works for now *)
-module TypeMap = Map.Make(String) 
-module TypeSet = Set.Make(String) 
+module TypeMap = Map.Make(String)
+module TypeSet = Set.Make(String)
 
 (* A state+writer monad *)
 module TypeM = struct
@@ -69,11 +69,11 @@ module TypeM = struct
     mutable typeconvfuncs : TypeSet.t; (* keeps track of type-conversion functions *)
   }
 
-  type 'a t = types -> 'a * types * string  
+  type 'a t = types -> 'a * types * string
 
   let return x : 'a t = fun st -> (x, st, "")
 
-  let append_sep a b sep = 
+  let append_sep a b sep =
     if a = "" then b else if b = "" then a else a ^ sep ^ b
   let append a b = append_sep a b "\n"
 
@@ -115,8 +115,8 @@ module TypeM = struct
         let* y = f i x in
         let* ys = aux (i + 1) xs in
         return (y :: ys)
-    in 
-    aux 0 xs 
+    in
+    aux 0 xs
 
   let concat_mapMi sep f xs =
     let* parts = mapMi f xs in

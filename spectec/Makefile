@@ -27,18 +27,12 @@ build_ocamlprog: exe
 
 .PHONY: build_interpreter
 
-build_interpreter: create_dl_interpreter exe
+build_interpreter: exe
 	./spectec ../specification/wasm-3.0/* --animate --print-dl > dl.log
 	@echo "#### spectec finished, generating code in dl-interpreter"
 	dune build src/backend-animation/dl-interpreter
 	@echo "#### dl-interpreter code compiled successfully"
 
-# Interpreter Generation
-
-.PHONY: create_dl_interpreter
-
-create_dl_interpreter:
-	mkdir -p src/backend-animation/dl-interpreter
 
 # Executable
 
@@ -52,7 +46,7 @@ CLONERM = dune-project jslib
 
 .PHONY: exe
 
-exe: create_dl_interpreter $(CLONEDIR)
+exe: $(CLONEDIR)
 	rm -f ./$(NAME)
 	dune build $(SRCDIR)/$(EXE)
 	ln -f $(OUTDIR)/$(EXE) ./$(NAME)
