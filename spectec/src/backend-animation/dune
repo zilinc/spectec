@@ -1,3 +1,5 @@
+(include_subdirs unqualified)
+
 (library
   (name backend_animation)
   (libraries util frontend il al backend_ast il2al str tsort reference_interpreter backend_interpreter)
@@ -12,8 +14,10 @@
     interpreter
     script
     valid
-    interpreter_new
-    util_new
+    ; interpreter-ocaml
+    main_interpreter_ocaml
+    interpreter_ocaml
+    util_ocaml
   )
 )
 
