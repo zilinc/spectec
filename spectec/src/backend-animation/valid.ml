@@ -27,24 +27,32 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
       error_pr prem.at ("IfPr uses unknown variables: " ^ string_of_varset unknowns) prem;
     known
   | LetPr (lhs, rhs, vars) ->
-    if not (List.length vars = 1) then
-      error_pr prem.at ("LetPr can only bind one variable, but got " ^ string_of_varset (Set.of_list vars)) prem;
-    let var = List.hd vars in
+    let vars_set = Set.of_list vars in
     let rhs_fvs = free_vars_exp rhs in
     let unknowns = Set.diff rhs_fvs known in
     if not (Set.is_empty unknowns) then
       error_pr rhs.at ("LetPr RHS uses unknown variables: " ^ string_of_varset unknowns) prem;
     (match lhs.it with
       | VarE lhs_var
-      | CaseE (_, { it = VarE lhs_var; _ })
       | OptE (Some { it = VarE lhs_var; _})
-      -> if lhs_var.it <> var then
+      -> if not (List.length vars = 1) then
+           error_pr prem.at ("The only binding is " ^ lhs_var.it ^ " but expected " ^ string_of_varset vars_set) prem;
+         let var = List.hd vars in
+         if lhs_var.it <> var then
            error_pr lhs.at ("LetPr LHS variable `" ^ lhs_var.it ^ "` doesn't match binder `" ^ var ^ "`.") prem
+      | CaseE (_, { it = TupE es; _ }) ->
+        let lhs_vars = List.map (fun e -> match e.it with
+        | VarE lhs_var -> lhs_var.it
+        | _ -> error_pr e.at ("Constructor payload must be a tuple of variables, but got " ^ string_of_exp lhs) prem
+        ) es in
+        if Set.equal (Set.of_list lhs_vars) vars_set |> not then
+          error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " doesn't match binding list " ^ string_of_varset vars_set) prem
       | _ -> error_pr lhs.at ("Ill-formed LetPr's LHS: " ^ string_of_exp lhs) prem
     );
-    if Set.mem var known then
-      error_pr prem.at ("LetPr binder `" ^ var ^ "` already known") prem;
-    Set.add var known
+    if Set.subset vars_set known then
+      error_pr prem.at ("Some LetPr binders " ^ string_of_varset vars_set ^ " already known.\n" ^
+                        "  ▹ Knowns: " ^ string_of_varset known) prem;
+    Set.union vars_set known
   | IterPr (plist, (iter, pairs)) ->
     (* In-flow *)
     let in_flow_knowns acc (x, e) =

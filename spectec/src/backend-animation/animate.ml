@@ -27,6 +27,7 @@ let verbose : string list ref =
         (* "pattern"   ; *)
         (* "log"       ; *)
         (* "case"      ; *)
+        (* "knowns"    ; *)
       ]
 
 let error at msg = Error.error at "IL animation" msg
@@ -297,6 +298,7 @@ let rec new_bind_exp envr oname exp ot : (Il.Env.t ref * id * exp * prem, id) re
   let ( let* ) = Result.bind in
   match exp.it with
   | VarE v -> Error v
+  (*
   | SubE (exp', t1, t2) ->
     assert (Option.is_none ot);
     let* (envr, v, ve, prem_eq) = new_bind_exp envr oname exp' None in
@@ -312,6 +314,7 @@ let rec new_bind_exp envr oname exp ot : (Il.Env.t ref * id * exp * prem, id) re
     let* (envr, v, ve, prem_eq) = new_bind_exp envr oname exp' None in
     let ve' = CvtE (ve, t1, t2) $> exp in
     Ok (envr, v, ve', prem_eq)
+  *)
   | _ -> Ok (new_bind_exp' envr oname exp ot)
 
 
@@ -330,10 +333,20 @@ let bracket (f_begin: AnimState.t -> AnimState.t)
             (f_end  : AnimState.t -> AnimState.t)
             (ma : 'a E.m) : 'a E.m =
   let ( let* ) = E.( >>= ) in
+  let* s = get () in
   let* () = update f_begin in
-  let* a = ma in
-  let* () = update f_end in
-  E.return a
+  let* s' = get () in
+  E.exceptT (
+    let ( let* ) = S.( >>= ) in
+    let* r = E.run_exceptT ma in
+    match r with
+    | Ok a ->
+      let* () = S.update f_end in
+      S.return (Ok a)
+    | Error e ->
+      let* () = S.put s in
+      S.return (Result.Error e)
+  )
 
 let string_of_state (s: AnimState.t) =
   "prems   : length: " ^ string_of_int (List.length s.prems) ^ "\n" ^
@@ -693,28 +706,33 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     E.return (prems_rhs @ [prem_len] @ prems')
   | CaseE (mixop, lhs') ->
     info "case" at ("The payload of constructor " ^ string_of_mixop mixop ^ " is " ^ string_of_exp lhs');
+    info "case" at ("The RHS: (" ^ string_of_exp rhs ^ ") type is " ^ string_of_typ rhs.note);
     begin match as_variant_typ !envr rhs.note with
     | [] -> assert false
     | [(mixop', (_, t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
       animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
     | tcases ->
       begin match lhs'.it with
-      (*
       | TupE es ->
-        let (_, (bs, t', _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
+        let (_, (_bs, t', _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
         let ets = as_tup_typ !envr t' in
-        let* (envr, vs, ves, prem_vs) = E.foldlM (fun acc (e, (_, t)) ->
+        let (envr, vs, ves, prem_vs) = List.fold_left (fun acc (e, (_, t)) ->
           let (envr, vs, ves, prem_vs) = acc in
-          let (envr, v, ve, prem_v) = new_bind_exp envr None e (Some t) in
-          let* () = update (add_knowns (Set.singleton v.it)) in
-          E.return (envr, vs@[v.it], ves@[ve], prem_vs@[prem_v])
+          begin match new_bind_exp envr None e None with
+          | Ok (envr, v, ve, prem_v) ->
+            (envr, vs@[v.it], ves@[ve], prem_vs@[prem_v])
+          | Error v ->
+            (envr, vs@[v.it], ves@[e], prem_vs)
+          end
         ) (envr, [], [], []) (List.combine es ets) in
-        let prem_case = LetPr (CaseE (mixop, TupE ves $$ lhs'.at % lhs'.note) $$ lhs.at % rhs.note, rhs, vs) $ at in
-        let envr = env_of_binds bs envr in
+        let prem_case = LetPr (CaseE (mixop, TupE ves $$ lhs.at % lhs.note) $$ lhs.at % rhs.note, rhs, vs) $ at in
+        info "case" at ("CaseE-TupE prem_vs: " ^ String.concat "\n" (List.map string_of_prem prem_vs));
+        let* () = update (add_knowns (Set.of_list vs)) in
         let* prems' = E.mapM (animate_prem envr) prem_vs in
         E.return (prem_case :: List.concat prems')
-      *)
       | _ ->
+        assert false
+        (*
         (* Use tcases to work out the type of ve, because it retains the dependent tuple type. *)
         let (_, (bs, t', _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
         info "case" no_region ("lhs'.note = " ^ string_of_typ lhs'.note);
@@ -730,6 +748,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
           let* () = update (add_knowns (Set.singleton v.it)) in
           E.return [LetPr (lhs, rhs, [v.it]) $ at]
         end
+        *)
       end
     end
   | TupE es ->
@@ -1109,8 +1128,8 @@ and animate_prems' envr at : prem list E.m =
            let* r = animate_prem envr prem |> E.run_exceptT in
            match r with
            | Error e ->
-             (* Recover from failure. *)
-             let* () = S.update (push_prems' prem >>> set_failure e) in
+             (* Recover from failure. NOTE: Need to also restore old known set. *)
+             let* () = S.update (push_prems' prem >>> set_failure e >>> put_knowns (get_knowns s')) in
              animate_prems' envr at |> E.run_exceptT
            | Ok prems -> E.run_exceptT (
                let ( let* ) = E.( >>= ) in
