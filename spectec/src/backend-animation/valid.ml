@@ -41,11 +41,8 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
          if lhs_var.it <> var then
            error_pr lhs.at ("LetPr LHS variable `" ^ lhs_var.it ^ "` doesn't match binder `" ^ var ^ "`.") prem
       | CaseE (_, { it = TupE es; _ }) ->
-        let lhs_vars = List.map (fun e -> match e.it with
-        | VarE lhs_var -> lhs_var.it
-        | _ -> error_pr e.at ("Constructor payload must be a tuple of variables, but got " ^ string_of_exp lhs) prem
-        ) es in
-        if Set.equal (Set.of_list lhs_vars) vars_set |> not then
+        let lhs_vars = List.fold_left Set.union Set.empty (List.map free_vars_exp es) in
+        if Set.equal lhs_vars vars_set |> not then
           error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " doesn't match binding list " ^ string_of_varset vars_set) prem
       | _ -> error_pr lhs.at ("Ill-formed LetPr's LHS: " ^ string_of_exp lhs) prem
     );
@@ -135,11 +132,13 @@ let rec valid_def envr (def: dl_def) : unit =
   | FuncDef fd ->
     let (id, ps, t, clauses, _) = fd.it in
     let envr' = Valid.local_env envr in
+    (* *)
     (*
     List.iter (Valid.valid_param envr') ps;
     Valid.valid_typ !envr' t;
     List.iter (Valid.valid_clause envr ps t) clauses;  (* IL validation *)
     *)
+    (* *)
     envr := Env.bind_def !envr id (ps, t, clauses);
     List.iter valid_clause clauses  (* For animation *)
   | RecDef ds ->
