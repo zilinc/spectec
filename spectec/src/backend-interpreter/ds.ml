@@ -45,7 +45,16 @@ let lookup_algo name =
 
 (* Store *)
 
-module Store = struct
+module type Store = sig
+  type t
+  val init : unit -> unit
+  val get : unit -> t
+  val access : string -> t
+end
+
+module Store : Store with type t = value = struct
+  type t = value
+
   let store = ref Record.empty
 
   let init () =
@@ -130,8 +139,13 @@ end
 
 (* Register *)
 
-module Register = struct
-  let _register : value Map.t ref = ref Map.empty
+module type ValueType = sig
+  type t
+end
+
+module Register (T : ValueType) = struct
+  type t = T.t
+  let _register : t Map.t ref = ref Map.empty
   let _latest = ""
 
   let add name moduleinst = _register := Map.add name moduleinst !_register

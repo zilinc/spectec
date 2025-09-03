@@ -98,7 +98,7 @@ let textual_to_module textual =
   | R.Script.Textual (m, _) -> m
   | _ -> assert false
 
-let get_export_addr name moduleinst_name =
+let get_export_addr name moduleinst_name : exp =
   let vl =
     moduleinst_name
     |> get_export name
@@ -108,35 +108,32 @@ let get_export_addr name moduleinst_name =
   try List.hd vl with Failure _ ->
     failwith ("Function export doesn't contain function address")
 
-(*
-let get_global_value module_name globalname =
+let get_global_value module_name globalname : exp (* val *) =
   log "[Getting %s...]\n" globalname;
 
   let index = get_export_addr globalname module_name in
   index
-  |> al_to_nat
-  |> listv_nth (I.Ds.Store.access "GLOBALS")
-  |> strv_access "VALUE"
-  |> Array.make 1
-  |> listV
-*)
+  |> il_to_nat
+  |> nth_of_list (Store.access "GLOBALS")
+  |> find_str_field "VALUE"
+
 
 (** Main functions **)
 
-let instantiate module_ =
+let instantiate module_ : exp =
   log "[Instantiating module...]\n";
 
   match C.il_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | il_module, externaddrs ->
-    let store = Store.get_store () in
+    let store = Store.get () in
     Interpreter.instantiate [ store; il_module; listE (t_star "externaddr") externaddrs ]
 
 
-let invoke moduleinst_name funcname args =
+let invoke moduleinst_name funcname args : exp =
   log "[Invoking %s %s...]\n" funcname (R.Value.string_of_values args);
 
-  let store = Store.get_store () in
+  let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
   Interpreter.invoke [store; funcaddr; il_of_list (t_star "val") C.il_of_value args]
 
@@ -150,7 +147,6 @@ let module_of_def def =
   | Encoded (name, bs) -> R.Decode.decode name bs.it
   | Quoted (_, s) -> R.Parse.Module.parse_string s.it |> textual_to_module
 
-(*
 let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
@@ -162,12 +158,12 @@ let test_assertion assertion =
   let open R in
   match assertion.it with
   | AssertReturn (action, expected) ->
-    let result = run_action action |> al_to_list al_to_value in
+    let result = run_action action |> Interpreter.exp_to_val |> al_to_list al_to_value in
     Run.assert_results no_region result expected;
     success
   | AssertTrap (action, re) -> (
     try
-      let result = run_action action in
+      let result = run_action action |> Interpreter.exp_to_val in
       Run.assert_message assertion.at "runtime" (Al.Print.string_of_value result) re;
       fail
     with I.Exception.Trap -> success
@@ -200,10 +196,8 @@ let test_assertion assertion =
     )
   (* ignore other kinds of assertions *)
   | _ -> pass
-*)
 
-let run_command' command = todo "run_command'"
-(*
+let run_command' command =
   let open R in
   match command.it with
   | Module (var_opt, def) ->
@@ -224,7 +218,6 @@ let run_command' command = todo "run_command'"
     ignore (run_action a); success
   | Assertion a -> test_assertion a
   | Meta _ -> pass
-*)
 
 let run_command command =
   let start_time = Sys.time () in
