@@ -86,6 +86,8 @@ let print_runner_result name result =
     Printf.printf "- %d/%d (%.2f%%)\n\n" num_success total percentage;
   log "%s took %f ms.\n" name (execution_time *. 1000.)
 
+module Register = Register(struct type t = Al.Ast.value end)
+
 let get_export name modulename =
   modulename
   |> Register.find

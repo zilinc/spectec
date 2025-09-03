@@ -15,16 +15,16 @@ let no = no_region
 
 (* Construct type *)
 
-let rec varT ?(at = no) name : typ = VarT (name $ at, []) $ at
+let natT ?(at = no) () = NumT `NatT $ at
+let iterT ?(at = no) t : typ = IterT (t, List) $ at
+let optT  ?(at = no) t : typ = IterT (t, Opt) $ at
 
-and natT ?(at = no) () = NumT `NatT $ at
-and iterT ?(at = no) t : typ = IterT (t, List) $ at
-and optT  ?(at = no) t : typ = IterT (t, Opt) $ at
-
-and t_star ?(at = no) name : typ = iterT (varT name)
-and t_list ?(at = no) name : typ = VarT ("list" $ at, [TypA (varT name) $ at]) $ at
-and t_opt  ?(at = no) name : typ = optT  (varT name)
-and t_tup  ?(at = no) ts : typ = TupT (List.map (fun t -> (varE ~note:t ("_" $ at), t)) ts) $ at
+let t_var ?(at = no) name : typ = VarT (name $ at, []) $ at
+let t_app ?(at = no) name ts : typ = VarT (name $ at, ts) $ at
+let t_star ?(at = no) name : typ = iterT (t_var name)
+let t_list ?(at = no) name : typ = VarT ("list" $ at, [TypA (t_var name) $ at]) $ at
+let t_opt  ?(at = no) name : typ = optT  (t_var name)
+let rec t_tup  ?(at = no) ts : typ = TupT (List.map (fun t -> (varE ~note:t "_", t)) ts) $ at
 
 
 (* Construct argument *)
@@ -38,7 +38,7 @@ and defA ?(at = no) id = DefA id $ at
 
 and mk_expr at note it = it $$ at % note
 
-and varE ?(at = no) ~note id = VarE id |> mk_expr at note
+and varE ?(at = no) ~note v = VarE (v $ at) |> mk_expr at note
 and boolE ?(at = no) b = BoolE b |> mk_expr at (BoolT $ at)
 and numE ?(at = no) ~note i = NumE i |> mk_expr at note
 and natE ?(at = no) i = NumE (`Nat i) |> mk_expr at (natT ())
@@ -56,6 +56,7 @@ and optE' ?(at = no) oe : exp = match oe with
   | None   -> error at "optE: can't infer type when None"
   | Some e -> let t = iterT (e.note) in optE t oe
 and strE ?(at = no) ~note r = StrE r |> mk_expr at note
+and subE ?(at = no) id t1 t2 = SubE (id, t1, t2) |> mk_expr at t2
 (*
 and unE ?(at = no) ~note (unop, t, e) = UnE (unop, t, e) |> mk_expr at note
 and binE ?(at = no) ~note (binop, t, e1, e2) = BinE (binop, t, e1, e2) |> mk_expr at note
@@ -82,7 +83,6 @@ and matchE ?(at = no) ~note (e1, e2) = MatchE (e1, e2) |> mk_expr at note
 and hasTypeE ?(at = no) ~note (e, ty) = HasTypeE (e, ty) |> mk_expr at note
 and topValueE ?(at = no) ~note e_opt = TopValueE e_opt |> mk_expr at note
 and topValuesE ?(at = no) ~note e = TopValuesE e |> mk_expr at note
-and subE ?(at = no) ~note (id, ty) = SubE (id, ty) |> mk_expr at note
 and yetE ?(at = no) ~note s = YetE s |> mk_expr at note
 
 
@@ -99,46 +99,53 @@ and mk_nat ?(at = no) n : exp = natE (Z.of_int n)
 and mk_int ?(at = no) n : exp = intE (Z.of_int n)
 
 (* ASSUMES: [e] has numtype [t1]. *)
-and mk_cvt ?(at = no) e t1 t2 = if t1 = t2 then e else CvtE (e, t1, t2) $$ at % (NumT t2 $ at)
+and mk_cvt ?(at = no) e t1 t2 : exp = if t1 = t2 then e else CvtE (e, t1, t2) $$ at % (NumT t2 $ at)
 
 (* When e1 and e2 are both `NatT, we want to construct e1 - e2, with both of them
    converted to `IntT, and then convert the result back to `NatT.
 *)
-and mk_cvt_sub ?(at = no) e1 e2 =
+and mk_cvt_sub ?(at = no) e1 e2 : exp =
   let e1' = mk_cvt ~at:e1.at e1 `NatT `IntT in
   let e2' = mk_cvt ~at:e2.at e2 `NatT `IntT in
   let e = BinE (`SubOp, `IntT, e1', e2') $$ at % (NumT `IntT $ at) in
   mk_cvt e `IntT `NatT
 
-and mk_atom ?(at = no) ~info (atom: string) arity =
+and mk_atom ?(at = no) ~info (atom: string) arity: mixop =
   [Xl.Atom.Atom atom $$ at % info] :: List.init arity (Fun.const [])
 
-and mk_mixop ?(at = no) ~info (mixop: string list list) =
+and mk_mixop ?(at = no) ~info (mixop: string list list): mixop =
   List.map (fun as_ -> List.map (fun a -> Xl.Atom.Atom a $$ at % info) as_) mixop
 
-and mk_case ?(at = no) tname mixop es =
-  let t = varT tname in
-  let info = Xl.Atom.{def = tname; case = ""} in
+and mk_case' ?(at = no) tname mixop es : exp =
+  let t = t_var tname in
+  mk_case t mixop es
+
+and mk_case ?(at = no) t mixop es : exp =
+  let info = Xl.Atom.{def = ""; case = ""} in
   let mixop' = mk_mixop ~info:info mixop in
   let e = mk_tup es in
   caseE ~note:t (mixop', e)
 
-and mk_nullary ?(at = no) tname con = mk_case tname [[String.uppercase_ascii con]] []
+and mk_nullary' ?(at = no) tname con : exp =
+  mk_case' tname [[String.uppercase_ascii con]] []
 
-and mk_tup ?(at = no) es =
+and mk_nullary ?(at = no) t con : exp =
+  mk_case t [[String.uppercase_ascii con]] []
+
+and mk_tup ?(at = no) es : exp =
   let ts = List.map (fun e -> e.note) es in
   let t = t_tup ts in
   tupE ~note:t es
 
-and mk_str ?(at = no) tname fes =
+and mk_str ?(at = no) tname fes : exp =
   let mk_field (fname, e) = let info = Xl.Atom.{def = tname; case = ""} in
                             (Xl.Atom.Atom fname $$ at % info, e)
   in
-  strE ~note:(varT tname) (List.map mk_field fes)
+  strE ~note:(t_var tname) (List.map mk_field fes)
 
 
-and mk_none ?(at = no) t = optE t None
-and mk_some ?(at = no) t e = optE t (Some e)
+and mk_none ?(at = no) t : exp = optE t None
+and mk_some ?(at = no) t e : exp = optE t (Some e)
 
 
 
@@ -170,6 +177,12 @@ let is_unary_variantT : deftyp -> bool = fun deft ->
 
 (* Destruct *)
 
+
+let il_to_nat e : Xl.Num.nat =
+  match e.it with
+  | NumE (`Nat n) -> n
+  | _ -> error e.at ("Il expression not a nat: " ^ string_of_exp e)
+
 let iter_elt_typ env t : typ =
   match (reduce_typ env t).it with
   | IterT (t', (List | List1 | ListN _)) -> t'
@@ -198,6 +211,11 @@ let find_str_field atom str : exp =
 let find_list_elem p lst : exp =
   match lst.it with
   | ListE es -> List.find (fun e -> p e) es
+  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
+
+let nth_of_list lst (idx: Z.t) : exp =
+  match lst.it with
+  | ListE es -> List.nth es (Z.to_int idx)
   | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
 
 let args_of_case case : exp list =

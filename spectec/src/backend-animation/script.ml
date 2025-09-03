@@ -1,64 +1,42 @@
-(* The .wast stuff *)
-
 open Il.Ast
 open Util.Error
 open Util.Source
 open Il_util
+module Ds = Backend_interpreter.Ds
 
-(* Register *)
+(* Register, Modules *)
 
-module Map = Map.Make (String)
+module Register = Ds.Register(struct type t = exp end)
+module Modules  = Ds.Modules
 
-module Register = struct
-  let _register : Il.Ast.exp Map.t ref = ref Map.empty
-  let _latest = ""
+(* Record *)
 
-  let add name moduleinst = _register := Map.add name moduleinst !_register
+module Record   = Util.Record
 
-  let add_with_var var moduleinst =
-    let open Reference_interpreter.Source in
-    add _latest moduleinst;
-    match var with
-    | Some name -> add name.it moduleinst
-    | _ -> ()
-
-  exception ModuleNotFound of string
-
-  let find name =
-    match Map.find_opt name !_register with
-    | Some x -> x
-    | None -> raise (ModuleNotFound name)
-
-  let get_module_name var =
-    let open Reference_interpreter.Source in
-    match var with
-    | Some name -> name.it
-    | None -> _latest
-end
 
 (* Store *)
 
-module Store = struct
-  let _init_store : exp =
-    mk_str "store" [ ("TAGS"   , listE (t_star "taginst"    ) [])
-                   ; ("GLOBALS", listE (t_star "globalinst" ) [])
-                   ; ("MEMS"   , listE (t_star "meminst"    ) [])
-                   ; ("TABLES" , listE (t_star "tableinst"  ) [])
-                   ; ("FUNCS"  , listE (t_star "funcinst"   ) [])
-                   ; ("DATAS"  , listE (t_star "datainst"   ) [])
-                   ; ("ELEMS"  , listE (t_star "eleminst"   ) [])
-                   ; ("STRUCTS", listE (t_star "structinst" ) [])
-                   ; ("ARRAYS" , listE (t_star "arrayinst"  ) [])
-                   ; ("EXNS"   , listE (t_star "exninst"    ) [])
-                   ]
+module Store : Backend_interpreter.Ds.Store with type t = exp = struct
+  type t = exp
 
-  let _store : exp ref = ref _init_store
+  let store = ref Record.empty
 
-  let get_store () : exp = !_store
-  let set_store s : unit = _store := s
+  let init () =
+    store := Record.empty
+      |> Record.add "TAGS"    (listE (t_star "taginst"    ) [])
+      |> Record.add "GLOBALS" (listE (t_star "globalinst" ) [])
+      |> Record.add "MEMS"    (listE (t_star "meminst"    ) [])
+      |> Record.add "TABLES"  (listE (t_star "tableinst"  ) [])
+      |> Record.add "FUNCS"   (listE (t_star "funcinst"   ) [])
+      |> Record.add "DATAS"   (listE (t_star "datainst"   ) [])
+      |> Record.add "ELEMS"   (listE (t_star "eleminst"   ) [])
+      |> Record.add "STRUCTS" (listE (t_star "structinst" ) [])
+      |> Record.add "ARRAYS"  (listE (t_star "arrayinst"  ) [])
+      |> Record.add "EXNS"    (listE (t_star "exninst"    ) [])
 
+  let get () = mk_str "store" (List.map (fun (f, er) -> (f, !er)) !store)
 
-
+  let access field = Record.find field !store
 end
 
 

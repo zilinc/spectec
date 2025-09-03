@@ -10,11 +10,19 @@ type env = value Env.t
 val lookup_env : string -> env -> value
 val lookup_env_opt : string -> env -> value option
 
-module Store : sig
-  val init : unit -> unit
-  val get : unit -> value
-  val access : string -> value
+module type ValueType = sig
+  type t
 end
+
+
+module type Store = sig
+  type t
+  val init : unit -> unit
+  val get : unit -> t
+  val access : string -> t
+end
+
+module Store : Store with type t = value
 
 module Info : sig
   type info = { algo_name: string; instr: instr; mutable covered: bool }
@@ -24,11 +32,11 @@ module Info : sig
   val find : int -> info
 end
 
-module Register : sig
-  val add : string -> value -> unit
-  val add_with_var : Reference_interpreter.Script.var option -> value -> unit
+module Register (T : ValueType) : sig
+  val add : string -> T.t -> unit
+  val add_with_var : Reference_interpreter.Script.var option -> T.t -> unit
   exception ModuleNotFound of string
-  val find : string -> value
+  val find : string -> T.t
   val get_module_name : Reference_interpreter.Script.var option -> string
 end
 
