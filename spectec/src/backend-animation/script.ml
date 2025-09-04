@@ -3,6 +3,7 @@ open Util.Error
 open Util.Source
 open Il_util
 module Ds = Backend_interpreter.Ds
+module RI = Reference_interpreter
 
 (* Register, Modules *)
 
@@ -16,7 +17,7 @@ module Record   = Util.Record
 
 (* Store *)
 
-module Store : Backend_interpreter.Ds.Store with type t = exp = struct
+module Store = struct
   type t = exp
 
   let store = ref Record.empty
@@ -37,142 +38,167 @@ module Store : Backend_interpreter.Ds.Store with type t = exp = struct
   let get () = mk_str "store" (List.map (fun (f, er) -> (f, !er)) !store)
 
   let access field = Record.find field !store
+  let update field f = let v = access field in
+                       store := Record.add field (f v) !store
 end
 
 
 (* Host *)
 
 let il_of_spectest () : exp =
-  todo "il_to_spectest"
-(*
-  (* TODO : Change this into host function instance, instead of current normal function instance *)
-  let create_funcinst (name, type_tags) =
-    let winstr_tag = String.uppercase_ascii name in
-    let code = nullary winstr_tag in
-    let ptype = Array.map nullary type_tags in
-    let arrow = CaseV ("->", [ listV ptype; listV [||] ]) in
-    let ftype = CaseV ("FUNC", [ listV ptype; listV [||] ]) in
-    let dtype =
-      CaseV ("_DEF", [
-        CaseV ("REC", [
-          [| CaseV ("SUB", [some "FINAL"; listV [||]; ftype]) |] |> listV
-        ]); natV Z.zero
-      ]) in
-    let tidx = CaseV ("", [ natV Z.zero ]) in
-    name, StrV [
-      "TYPE", ref (if !Construct.version <= 2 then arrow else dtype);
-      "MODULE", ref (StrV Record.empty); (* dummy module *)
-      "CODE", ref (CaseV ("FUNC", [ tidx; listV [||]; listV [| code |] ]))
+
+  (* Helper functions *)
+  let i32_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I32"; Construct.il_of_nat32   i ] in
+  let i64_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I64"; Construct.il_of_nat64   i ] in
+  let f32_to_const f = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "F32"; Construct.il_of_float32 f ] in
+  let f64_to_const f = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "F64"; Construct.il_of_float64 f ] in
+
+
+  (* TODO: Change this into host function instance, instead of current normal function instance.
+     TODO(zilinc): what does it mean?
+  *)
+  let create_funcinst name ptypes =
+    let code = mk_nullary' "instr" (String.uppercase_ascii name) in  (* instr *)
+    let param_types = List.map (mk_nullary' "numtype") ptypes  (* list(valtype) *) in
+    let comptype = mk_case' "comptype" [["FUNC"];["->"];[]] [
+      listE (t_var "resulttype") param_types;
+      listE (t_var "resulttype") []
+    ] in
+    let subtype = mk_case' "subtype" [["SUB"];[];[];[]] [
+      optE (t_var "fin") (Some (mk_nullary' "" "FINAL"));
+      listE (t_star "typeuse") [];
+      comptype
+    ] in
+    let rectype = mk_case' "rectype" [["REC"];[]] [
+      listE (t_app "list" [typA (t_var "subtype")]) [subtype]
+    ] in
+    let deftype = mk_case' "deftype" [["_DEF"];[];[]] [
+      rectype; mk_nat 0
+    ] in
+    let func = mk_case' "func" [["FUNC"];[];[];[]] [
+
+    ] in
+    let funccode = mk_case' "funccode" [["FUNC"];[];[];[]] [
+      mk_nat 0;
+      listE (t_star "local") [];
+      listE (t_var "expr") [code]
+    ] in
+    name, mk_str "funcinst" [
+      "TYPE"  , deftype;
+      "MODULE", (mk_str "moduleinst" []); (* dummy module *)
+      "CODE"  , funccode
     ] in
 
-  let create_globalinst t v = StrV [
-    "TYPE", t |> ref;
-    "VALUE", v |> ref
-  ] in
+  let create_globalinst t v =
+    let valtype = mk_nullary' "valtype" t in
+    let globaltype = mk_case' "globaltype" [[];[]] [ 
+      mk_none (t_var "mut");
+      valtype
+    ] in
+    mk_str "globalinst" [ ("TYPE", globaltype); ("VALUE" , v ) ]
+  in
 
-  let create_tableinst t elems = StrV [
-    "TYPE", t |> ref;
-    "REFS", elems |> ref
-  ] in
+  let create_tableinst t =
+    let addrtype = mk_nullary' "addrtype" t in
+    let limits   = mk_case' "limits" [["["];[".."];["]"]] [
+      mk_nat 10; mk_nat 20
+    ] in
+    let reftype  = mk_case' "reftype" [["REF"];[];[]] [
+      mk_some (t_var "nul") (mk_nullary' "" "NULL");
+      mk_nullary' "heaptype" "FUNC"
+    ] in
+    let tabletype = mk_case' "tabletype" [[];[];[];[]] [
+      addrtype; limits; reftype
+    ] in
+    let func = mk_nullary' "heaptype" "FUNC" in
+    let nulls = listE (t_star "ref") (List.init 10 (Fun.const (mk_case' "ref" [["REF.NULL"];[]] [func]))) in
+    mk_str "tableinst" [ ("TYPE", tabletype); ("REFS", nulls) ]
+  in
 
-  let create_meminst t bytes_ = StrV [
-    "TYPE", t |> ref;
-    "BYTES", bytes_ |> ref
-  ] in
+  let create_meminst t =
+    let addrtype = mk_nullary' "addrtype" t in
+    let limits   = mk_case' "limits" [["["];[".."];["]"]] [
+      mk_nat 1; mk_nat 2
+    ] in
+    let memtype = mk_case' "memtype" [[];[];["PAGE"]] [
+      addrtype; limits
+    ] in
+    let zeros = listE (t_star "byte") (List.init 0x10000 (Fun.const (mk_nat 0))) in
+    mk_str "meminst" [ ("TYPE", memtype); ("BYTES", zeros) ] in
 
   (* Builtin functions *)
-  let funcs = List.rev [
-    ("print", [||]) |> create_funcinst;
-    ("print_i32", [| "I32" |]) |> create_funcinst;
-    ("print_i64", [| "I64" |]) |> create_funcinst;
-    ("print_f32", [| "F32" |]) |> create_funcinst;
-    ("print_f64", [| "F64" |]) |> create_funcinst;
-    ("print_i32_f32", [| "I32"; "F32" |]) |> create_funcinst;
-    ("print_f64_f64", [| "F64"; "F64" |]) |> create_funcinst
+  let funcs = [
+    create_funcinst "print"         [            ];
+    create_funcinst "print_i32"     ["I32"       ];
+    create_funcinst "print_i64"     ["I64"       ];
+    create_funcinst "print_f32"     ["F32"       ];
+    create_funcinst "print_f64"     ["F64"       ];
+    create_funcinst "print_i32_f32" ["I32"; "F32"];
+    create_funcinst "print_f64_f64" ["F64"; "F64"];
   ] in
+
   (* Builtin globals *)
-  let globals = List.rev [
-    "global_i32", 666   |> I32.of_int_u |> i32_to_const |> create_globalinst (TupV [none "MUT"; nullary "I32"]);
-    "global_i64", 666   |> I64.of_int_u |> i64_to_const |> create_globalinst (TupV [none "MUT"; nullary "I64"]);
-    "global_f32", 666.6 |> F32.of_float |> f32_to_const |> create_globalinst (TupV [none "MUT"; nullary "F32"]);
-    "global_f64", 666.6 |> F64.of_float |> f64_to_const |> create_globalinst (TupV [none "MUT"; nullary "F64"]);
+  let globals = [
+    "global_i32", 666   |> RI.I32.of_int_u |> i32_to_const |> create_globalinst "I32";
+    "global_i64", 666   |> RI.I64.of_int_u |> i64_to_const |> create_globalinst "I64";
+    "global_f32", 666.6 |> RI.F32.of_float |> f32_to_const |> create_globalinst "F32";
+    "global_f64", 666.6 |> RI.F64.of_float |> f64_to_const |> create_globalinst "F64";
   ] in
+
   (* Builtin tables *)
-  let nulls = CaseV ("REF.NULL", [ nullary "FUNC" ]) |> Array.make 10 in
-  let funcref =
-    if !Construct.version <= 2 then
-      nullary "FUNCREF"
-    else
-      CaseV ("REF", [some "NULL"; nullary "FUNC"])
-  in
-  let mk_ttype nt =
-    let args = [ CaseV ("[", [ natV (Z.of_int 10); natV (Z.of_int 20) ]); funcref ] in
-    if !Construct.version <= 2 then
-      TupV args
-    else
-      TupV (CaseV (nt, []) :: args)
-  in
   let tables = [
-    "table",
-    listV nulls |> create_tableinst (mk_ttype "I32");
-    "table64",
-    listV nulls |> create_tableinst (mk_ttype "I64");
+    "table"  , create_tableinst "I32";
+    "table64", create_tableinst "I64";
   ] in
+
   (* Builtin memories *)
-  let zeros = natV Z.zero |> Array.make 0x10000 in
-  let mk_mtype nt =
-    let arg = CaseV ("[", [ natV Z.one; natV (Z.of_int 2) ]) in
-    if !Construct.version <= 2 then
-      CaseV ("PAGE", [ arg ])
-    else
-      CaseV ("PAGE", [ CaseV (nt, []); arg ])
-  in
   let memories = [
-    "memory",
-    listV zeros |> create_meminst (mk_mtype "I32");
-    "memory64",
-    listV zeros |> create_meminst (mk_mtype "I64");
+    "memory"  , create_meminst "I32";
+    "memory64", create_meminst "I64";
   ] in
+
   let tags = [] in
 
-  let append kind (name, inst) extern =
+  let append kind (name, inst) exinsts =
 
     let kinds = kind ^ "S" in
 
-    (* Generate ExternFunc *)
+    (* Generate exportinst *)
 
     let addr =
-      match Store.access kinds with
-      | ListV a -> Array.length !a |> Z.of_int
+      match (Store.access kinds).it with
+      | ListE a -> List.length a
       | _ -> assert false
     in
-    let new_extern =
-      StrV [ "NAME", ref (TextV name); "ADDR", ref (CaseV (kind, [ natV addr ])) ]
+    let new_inst =
+      mk_str "exportinst" [ ("NAME", textE name); ("ADDR", mk_case' "externaddr" [[kind];[]] [ mk_nat addr ]) ]
     in
 
     (* Update Store *)
 
-    (match Store.access kinds with
-    | ListV a -> a := Array.append !a [|inst|]
-    | _ -> assert false);
+    Store.update kinds (fun e -> match e.it with
+    | ListE es -> ListE (es @ [inst]) $> e
+    | _ -> assert false
+    );
 
-    new_extern :: extern in
+    new_inst :: exinsts in
 
   (* extern -> new_extern *)
-  let func_extern = List.fold_right (append "FUNC") funcs in
-  let global_extern = List.fold_right (append "GLOBAL") globals in
-  let table_extern = List.fold_right (append "TABLE") tables in
-  let memory_extern = List.fold_right (append "MEM") memories in
-  let tag_extern = List.fold_right (append "TAG") tags in
+  let append_func_extern   = List.fold_right (append "FUNC"  ) funcs    in
+  let append_global_extern = List.fold_right (append "GLOBAL") globals  in
+  let append_table_extern  = List.fold_right (append "TABLE" ) tables   in
+  let append_memory_extern = List.fold_right (append "MEM"   ) memories in
+  let append_tag_extern    = List.fold_right (append "TAG"   ) tags     in
 
-  let extern =
+  let exportinsts =
     []
-    |> func_extern
-    |> global_extern
-    |> table_extern
-    |> memory_extern
-    |> tag_extern
-    |> Array.of_list in
+    |> append_func_extern
+    |> append_global_extern
+    |> append_table_extern
+    |> append_memory_extern
+    |> append_tag_extern
+    |> listE (t_star "exportinst")
+  in
 
   let moduleinst = mk_str "moduleinst"
                           [ ("TYPES"  , listE (t_star "deftype") [])
@@ -183,11 +209,13 @@ let il_of_spectest () : exp =
                           ; ("FUNCS"  , listE (t_star "funcaddr") [])
                           ; ("ELEMS"  , listE (t_star "elemaddr") [])
                           ; ("DATAS"  , listE (t_star "dataaddr") [])
-                          ; ("EXPORTS", extern)
+                          ; ("EXPORTS", exportinsts)
                           ]
   in
-  moduleinst, store
-*)
+  moduleinst
+
+
+(* Host instructions *)
 
 let is_host = function
   | "PRINT" | "PRINT_I32" | "PRINT_I64" | "PRINT_F32" | "PRINT_F64" | "PRINT_I32_F32" | "PRINT_F64_F64" -> true

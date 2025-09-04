@@ -870,7 +870,6 @@ let rec il_of_instr (instr: RI.Ast.instr) =
   | ExternConvert Externalize  -> mk_instr0 "EXTERN.CONVERT_ANY"
   | _ -> mk_instr0 "TODO: Unconstructed Wasm instruction (il_of_instr)"
 
-
 let il_of_const (const: RI.Ast.const) = il_of_list (t_star "instr") il_of_instr const.it
 
 
