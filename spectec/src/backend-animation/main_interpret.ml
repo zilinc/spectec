@@ -247,6 +247,7 @@ let run_command command =
   result, Sys.time () -. start_time
 
 let run_wast name script =
+  Store.init ();
   (* Intialize spectest *)
   log ("[run_wast...]\n");
   let spectest = il_of_spectest () in
@@ -265,6 +266,7 @@ let run_wast name script =
 (** Wasm runner **)
 
 let run_wasm' args module_ =
+  Store.init ();
   (* Intialize spectest *)
   log ("[run_wasm'...]\n");
   let spectest = il_of_spectest () in
