@@ -607,7 +607,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
         let* prems' = animate_exp_eq envr at lhs rhs in
         E.return (prem_len @ prems')
     | Opt ->
-      let rhs' = TheE rhs $$ rhs.at % (as_iter_typ Opt !envr rhs.note) in
+      let rhs' = TheE rhs $$ rhs.at % (as_iter_typ' Opt !envr rhs.note) in
       let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
       animate_prem envr (IterPr ([prem_body], iterexp) $ at)
     (* Inductive cases *)

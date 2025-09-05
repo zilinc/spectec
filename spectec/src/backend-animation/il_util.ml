@@ -8,6 +8,82 @@ open Source
 let error at msg = Error.error at "Il_util" msg
 
 
+(* Predicate *)
+
+let is_varE : exp -> bool = fun e ->
+  match e.it with
+  | VarE _ -> true
+  | _      -> false
+
+let is_unary_tupT : typ -> bool = fun t ->
+  match t.it with
+  | TupT [_] -> true
+  | _        -> false
+
+let is_unary_variantT : deftyp -> bool = fun deft ->
+  match deft.it with
+  | VariantT [_] -> true
+  | _            -> false
+
+
+(* Destruct *)
+
+
+let il_to_nat e : Xl.Num.nat =
+  match e.it with
+  | NumE (`Nat n) -> n
+  | _ -> error e.at ("Il expression not a nat: " ^ string_of_exp e)
+
+let as_iter_typ env t : typ =
+  match (reduce_typ env t).it with
+  | IterT (t', (List | List1 | ListN _)) -> t'
+  | _ -> error t.at ("Input type is not an iterated type: " ^ string_of_typ t)
+
+let as_iter_typ' iter env t : typ =
+  match (reduce_typ env t).it with
+  | IterT (t1, iter') when Il.Eq.eq_iter iter iter' -> t1
+  | _ -> error t.at ("Input type is not an iterated " ^ string_of_iter iter ^ " type: " ^ string_of_typ t)
+
+let as_variant_typ env t : typcase list =
+  match (reduce_typdef env t).it with
+  | VariantT tcs -> tcs
+  | _ -> error t.at ("Input type is not a variant type: " ^ string_of_typ t)
+
+let as_tup_typ env t : (exp * typ) list =
+  match (reduce_typ env t).it with
+  | TupT ets -> ets
+  | _ -> error t.at ("Input type is not a tuple type: " ^ string_of_typ t)
+
+let find_str_field atom str : exp =
+  match str.it with
+  | StrE fes -> List.find (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes |> snd
+  | _ -> error str.at ("Input expression is not a struct: " ^ string_of_exp str)
+
+let find_list_elem p lst : exp =
+  match lst.it with
+  | ListE es -> List.find (fun e -> p e) es
+  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
+
+let nth_of_list lst (idx: Z.t) : exp =
+  match lst.it with
+  | ListE es -> List.nth es (Z.to_int idx)
+  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
+
+let args_of_case case : exp list =
+  match case.it with
+  | CaseE (_, tup) ->
+    (match tup.it with
+    | TupE es -> es
+    | _ -> [tup]
+    )
+  | _ -> error case.at ("Input expression is not a case: " ^ string_of_exp case)
+
+let text_to_string txt : string =
+  match txt.it with
+  | TextE str -> str
+  | _ -> error txt.at ("Input expression is not a text: " ^ string_of_exp txt)
+
+
 (* Construct *)
 
 let no = no_region
@@ -155,78 +231,3 @@ let il_of_seq t f s = List.of_seq s |> il_of_list f t
 let il_of_opt t f opt = Option.map f opt |> optE t
 let il_of_tup t fel = List.map (fun (f, e) -> f e) fel |> tupE ~note:t
 
-
-(* Predicate *)
-
-let is_varE : exp -> bool = fun e ->
-  match e.it with
-  | VarE _ -> true
-  | _      -> false
-
-let is_unary_tupT : typ -> bool = fun t ->
-  match t.it with
-  | TupT [_] -> true
-  | _        -> false
-
-let is_unary_variantT : deftyp -> bool = fun deft ->
-  match deft.it with
-  | VariantT [_] -> true
-  | _            -> false
-
-
-(* Destruct *)
-
-
-let il_to_nat e : Xl.Num.nat =
-  match e.it with
-  | NumE (`Nat n) -> n
-  | _ -> error e.at ("Il expression not a nat: " ^ string_of_exp e)
-
-let iter_elt_typ env t : typ =
-  match (reduce_typ env t).it with
-  | IterT (t', (List | List1 | ListN _)) -> t'
-  | _ -> error t.at ("Input type is not an iterated type: " ^ string_of_typ t)
-
-let as_iter_typ iter env t : typ =
-  match (reduce_typ env t).it with
-  | IterT (t1, iter') when Il.Eq.eq_iter iter iter' -> t1
-  | _ -> error t.at ("Input type is not an iterated " ^ string_of_iter iter ^ " type: " ^ string_of_typ t)
-
-let as_variant_typ env t : typcase list =
-  match (reduce_typdef env t).it with
-  | VariantT tcs -> tcs
-  | _ -> error t.at ("Input type is not a variant type: " ^ string_of_typ t)
-
-let as_tup_typ env t : (exp * typ) list =
-  match (reduce_typ env t).it with
-  | TupT ets -> ets
-  | _ -> error t.at ("Input type is not a tuple type: " ^ string_of_typ t)
-
-let find_str_field atom str : exp =
-  match str.it with
-  | StrE fes -> List.find (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes |> snd
-  | _ -> error str.at ("Input expression is not a struct: " ^ string_of_exp str)
-
-let find_list_elem p lst : exp =
-  match lst.it with
-  | ListE es -> List.find (fun e -> p e) es
-  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
-
-let nth_of_list lst (idx: Z.t) : exp =
-  match lst.it with
-  | ListE es -> List.nth es (Z.to_int idx)
-  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
-
-let args_of_case case : exp list =
-  match case.it with
-  | CaseE (_, tup) ->
-    (match tup.it with
-    | TupE es -> es
-    | _ -> [tup]
-    )
-  | _ -> error case.at ("Input expression is not a case: " ^ string_of_exp case)
-
-let text_to_string txt : string =
-  match txt.it with
-  | TextE str -> str
-  | _ -> error txt.at ("Input expression is not a text: " ^ string_of_exp txt)

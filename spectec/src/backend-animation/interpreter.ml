@@ -7,6 +7,7 @@ open Il.Ast
 open Il.Print
 open Source
 open Printf
+open Il2al.Free
 module A = Al.Ast
 module I = Backend_interpreter
 
@@ -14,7 +15,7 @@ module I = Backend_interpreter
 (* Errors *)
 
 let verbose : string list ref =
-  ref ["interpreter"]
+  ref ["match"; "eval"; "assign"]
 
 let error at msg = Error.error at "(Meta)Interpreter" msg
 let error_np msg = error no_region msg
@@ -29,23 +30,55 @@ let info v at msg = if List.mem v !verbose || v = "" then
                       ()
 
 
+(* Helper *)
+
+let (--) start end_ : int list = List.init (end_ - start) (fun i -> start + i)
+
+module OptMonad = struct
+  type 'a m = 'a option
+  let return a = Some a
+  let fail     = None
+  let ( >>= ) = Option.bind
+  let ( let* ) = ( >>= )
+  let ( >=> ) f g = fun x -> (f x >>= fun y -> g y)
+  let ( >> ) ma f = ma >>= fun _ -> f
+  let mapM f = Fun.flip (List.fold_right (fun a m -> let* x = f a in
+                                                     let* xs = m in
+                                                     return (x::xs)))
+                        (return [])
+  let forM xs f = mapM f xs
+  let rec foldlM f b = function
+    | []    -> return b
+    | x::xs -> f b x >>= fun x' -> foldlM f x' xs
+  let foldlM1 f = function
+    | [] -> raise (Invalid_argument "empty list is invalid")
+    | x::xs -> foldlM f x xs
+end
+
+open OptMonad
+
 (* Environments *)
 
-module VCtx = Map.Make(String)
-type vcontext = exp VCtx.t
+module VContext = struct
+  module M = Map.Make(String)
+  include M
+  type t = exp M.t
+
+  let dom ctx : Set.t = ctx |> M.bindings |> List.map fst |> Set.of_list
+end
+
 
 let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
 
 
-let ( let* ) = Option.bind
-
 exception PatternMatchFailure
 
 let fail_assign at lhs rhs msg =
-  error at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
-            "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
-            "  ▹ value: " ^ string_of_exp rhs)
+  info "match" at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
+                   "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
+                   "  ▹ value: " ^ string_of_exp rhs);
+  raise PatternMatchFailure
 
 (*
 let rec infer_val' val_ : typ' = match val_ with
@@ -122,18 +155,20 @@ let unwrap_listE e : exp list =
   | _ -> error no_region "unwrap_listE: not a list value"
 
 let vctx_to_subst ctx : Il.Subst.subst =
-  VCtx.fold (fun var value subst ->
+  VContext.fold (fun var value subst ->
     Il.Subst.add_varid subst (var $ no_region) value
   ) ctx Il.Subst.empty
 
-let rec assign ctx (lhs: exp) (rhs: exp) : vcontext =
+let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t =
   match lhs.it, rhs.it with
-  | VarE name, _ -> VCtx.add name.it rhs ctx
+  | VarE name, _ ->
+    info "assign" lhs.at ("Add " ^ name.it ^ " to value context.");
+    VContext.add name.it rhs ctx
   | IterE ({ it = VarE x1; _ }, ((List|List1), [(x2, lhs')])), ListE _ when x1 = x2 ->
     assign ctx lhs' rhs
   | IterE (e, (iter, xes)), _ ->
     let vs = unwrap_listE rhs in
-    let ctxs = List.map (assign VCtx.empty e) vs in
+    let ctxs = List.map (assign VContext.empty e) vs in
 
     (* Assign length variable *)
     let ctx' =
@@ -147,7 +182,7 @@ let rec assign ctx (lhs: exp) (rhs: exp) : vcontext =
     in
 
     List.fold_left (fun ctx (x, e) ->
-      let vs = List.map (VCtx.find x.it) ctxs in
+      let vs = List.map (VContext.find x.it) ctxs in
       let v = match iter with
       | Opt -> optE e.note (List.nth_opt vs 0)
       | _   -> listE e.note vs
@@ -185,47 +220,114 @@ let eval_exp ctx exp : exp =
   let exp' = Il.Subst.subst_exp subst exp in
   Il.Eval.reduce_exp !il_env exp'
 
-let eval_prem ctx prem : vcontext option =
+let rec eval_prem ctx prem : VContext.t OptMonad.m =
+  info "match" prem.at ("Match premise " ^ string_of_prem prem);
   match prem.it with
   | LetPr (lhs, rhs, _vs) ->
     let rhs' = eval_exp ctx rhs in
-    Some (assign ctx lhs rhs')
+    return (assign ctx lhs rhs')
   | IfPr e ->
     let b = eval_exp ctx e in
-    if b.it = BoolE true then Some ctx else None
-  | IterPr (prems, iter) -> todo "eval_prem: IterPr"
+    if b.it = BoolE true then return ctx
+    else
+      (info "match" prem.at ("If premise failed."); fail)
+  | IterPr (prems, (iter, xes)) ->
+    (* Work out which variables are inflow and which are outflow. *)
+    let in_binds, out_binds = List.fold_right (fun (x, e) (ins, ous) ->
+      let fv_e = (free_exp false e).varid in
+      if Set.subset fv_e (VContext.dom ctx) then
+        (x, e)::ins, ous
+      else
+        ins, (x, e)::ous
+    ) xes ([], []) in
+    begin match iter with
+    | ListN (n, Some i) ->
+      let* n' = begin match (eval_exp ctx n).it with
+      | NumE (`Nat n') -> return (Z.to_int n')
+      | n' -> (info "eval" n.at ("Expression " ^ string_of_exp n ^ " ~> " ^
+                                 string_of_exp (n' $> n) ^ " is not a nat.");
+               fail)
+      end in
+      let il_env0 = !il_env in
+      (* Extend il_env with "local" variables in the iteration *)
+      List.iter (fun (x, e) ->
+        match e.it with
+        | VarE x_star ->
+          let t_star = Il.Env.find_var !il_env x_star in
+          let t = Il_util.as_iter_typ !il_env t_star in
+          il_env := Il.Env.(bind_var !il_env x t);
+        | _ -> assert false
+      ) (in_binds @ out_binds);
+      (* Run the loop *)
+      let* ctx' = foldlM (fun ctx idx ->
+        let lctxr = ref ctx in
+        lctxr := VContext.add i.it (mk_nat idx) !lctxr;
+        (* In-flow *)
+        List.iter (fun (x, e) ->
+          let t = Il.Env.find_var !il_env x in
+          let e' = eval_exp ctx (IdxE (e, mk_nat idx) $$ e.at % t) in
+          lctxr := VContext.add x.it e' !lctxr
+        ) in_binds;
+        let* lctx = eval_prems !lctxr prems in
+        lctxr := lctx;
+        (* Out-flow *)
+        List.iter (fun (x, e) ->
+          match e.it with
+          | VarE x_star ->
+            let vx = VContext.find x.it !lctxr in
+            let opt_vx_star = VContext.find_opt x_star.it !lctxr in
+            begin match opt_vx_star with
+            | None -> lctxr := VContext.add x_star.it (ListE [vx] $$ no_region % e.note) !lctxr
+            | Some vx_star -> begin match vx_star.it with
+              | ListE es -> let vx_star' = ListE (es @ [vx]) $> vx_star in
+                            lctxr := VContext.add x_star.it vx_star' !lctxr
+              | _ -> assert false
+              end
+            end
+          | _ -> assert false
+        ) out_binds;
+        return !lctxr
+      ) ctx (0 -- n') in
+      il_env := il_env0;  (* Resume old environment *)
+      return ctx'
+    | ListN (n, None) -> todo "eval_prem: IterPr ListN(_, None)"
+    | List | List1 -> todo "eval_prem: IterPr List|List1"
+    | Opt -> todo "eval_prem: IterPr Opt"
+    end
   | _ -> assert false
 
-let rec eval_prems ctx prems : vcontext option =
+and eval_prems ctx prems : VContext.t OptMonad.m =
   match prems with
-  | [] -> Some ctx
+  | [] -> return ctx
   | prem :: prems ->
     let* ctx = eval_prem ctx prem in
     let* ctx = eval_prems ctx prems in
-    Some ctx
+    return ctx
 
-let match_arg at (parg: arg) (arg: exp) : vcontext option =
+let match_arg at (parg: arg) (arg: exp) : VContext.t option =
   match parg.it with
   | TypA typ  -> todo "match_arg TypA"
-  | ExpA exp  -> (try Some (assign VCtx.empty exp arg) with PatternMatchFailure -> None)
+  | ExpA exp  -> (try Some (assign VContext.empty exp arg) with PatternMatchFailure -> None)
   | DefA id   -> todo "match_arg DefA"
   | GramA sym -> todo "match_arg GramA"
 
 
-let rec match_args at pargs args : vcontext option =
+let rec match_args at pargs args : VContext.t option =
   match pargs, args with
-  | [], [] -> Some VCtx.empty
+  | [], [] -> return VContext.empty
   | parg::pargs', arg::args' ->
     let* vctx = match_arg at parg arg in
     let* vctx' = match_args at pargs' args' in
-    Some (VCtx.union (fun k _ _ -> error at ("Duplicate variable `" ^ k ^ "`")) vctx vctx')
+    return (VContext.union (fun k _ _ -> error at ("Duplicate variable `" ^ k ^ "`")) vctx vctx')
 
 let rec match_clause at (fname: string) (clauses: clause list) (args: exp list) : exp =
-  info "interpreter" at ("match_clause: `" ^ fname ^ "`.");
+  info "match" at ("Match_clause: `" ^ fname ^ "`");
   match clauses with
-  | [] -> error at ("No function clause matches the input arguments in function " ^ fname)
+  | [] -> error at ("No function clause matches the input arguments in function `" ^ fname ^ "`")
   | cl :: cls ->
-    let DefD (_, pargs, exp, prems) = cl.it in
+    let DefD (binds, pargs, exp, prems) = cl.it in
+    let env_binds = Animate.env_of_binds binds il_env in
+    il_env := Il.Env.env_merge !il_env !env_binds;
     assert (List.length pargs = List.length args);
     match match_args cl.at pargs args with
     | Some vctx ->
