@@ -478,15 +478,12 @@ let invert_bin_exp at op e1 e2 (t: numtyp) rhs : (exp * exp) E.m =
     Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:447.6-447.12)
     Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:499.6-499.12)
 *)
-(* We don't allow inverting rules, so the LHS (i.e. all args expect the last one)
-   of a rule must be known.
-*)
 let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in
   let* s = get () in
   let knowns = get_knowns s in
-  let (rhs, fncall) = match id.it, exp.it with
+  let (res, fncall) = match id.it, exp.it with
   | _, TupE [lhs; rhs] when List.mem id.it ["Step"; "Step_read"; "Step_pure"] ->
     let fncall = CallE (id, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
     (rhs, fncall)
@@ -494,10 +491,14 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     let fid = "expanddt" $ id.at in
     let fncall = CallE (fid, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
     (rhs, fncall)
-  | "Eval_expr", TupE [lhs; rhs] ->
-    let fncall = CallE (id, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
-    (rhs, fncall)
-  (* Other rules, mostly from validation *)
+  | "Eval_expr", TupE [z; lhs; z'; rhs] ->
+    let fncall = CallE (id, [ExpA z $ z.at; ExpA lhs $ lhs.at]) $$ at % rhs.note in
+    let res = TupE [z'; rhs] $$ z'.at % (t_tup [z'.note; rhs.note]) in
+    (res, fncall)
+  (* Other rules, mostly from validation.
+     We don't allow inverting rules, so the LHS (i.e. all args expect the last one)
+     of a rule must be known.
+  *)
   | _, TupE es when List.length es >= 2 ->
     let lhss, rhs = Lib.List.split_last es in
     let expA (e: exp) = ExpA e $ e.at in
@@ -505,15 +506,15 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     (rhs, fncall)
   | _ -> error at ("Unknown rule form: " ^ id.it ^ "(" ^ string_of_region id.at ^")")
   in
-  (* Let RHS = $call(LHS) *)
-  let unknowns_rhs    = Set.diff (free_exp false rhs   ).varid knowns in
+  (* Let res = $call(args) *)
+  let unknowns_res    = Set.diff (free_exp false res   ).varid knowns in
   let unknowns_fncall = Set.diff (free_exp false fncall).varid knowns in
-  if not (Set.is_empty unknowns_rhs) && Set.is_empty unknowns_fncall then
+  if not (Set.is_empty unknowns_res) && Set.is_empty unknowns_fncall then
     (* When satisfying the precondition of `animate_exp_eq`. *)
-    animate_exp_eq envr at rhs fncall
-  else if Set.is_empty unknowns_rhs && Set.is_empty unknowns_fncall then
+    animate_exp_eq envr at res fncall
+  else if Set.is_empty unknowns_res && Set.is_empty unknowns_fncall then
     (* The rule is fully known, then check. *)
-    animate_if_prem envr at (CmpE (`EqOp, `BoolT, rhs, fncall) $$ at % (BoolT $ at))
+    animate_if_prem envr at (CmpE (`EqOp, `BoolT, res, fncall) $$ at % (BoolT $ at))
   else
     E.throw (string_of_error at ("LHS of rule " ^ id.it ^ " has unknowns: " ^
                                  string_of_varset unknowns_fncall))
@@ -705,7 +706,13 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     begin match as_variant_typ !envr rhs.note with
     | [] -> assert false
     | [(mixop', (_, t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
-      animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
+      begin match new_bind_exp envr None rhs None with
+      | Error _ -> animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
+      | Ok (envr, v, ve, prem_v) ->
+        let* prems_v' = animate_prem envr prem_v in
+        let* prems' = animate_exp_eq envr at lhs' (UncaseE (ve, mixop) $$ ve.at % lhs'.note) in
+        E.return (prems_v' @ prems')
+      end
     | tcases ->
       begin match lhs'.it with
       | TupE es ->
@@ -755,8 +762,8 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     *)
     let* (envr, ve, prems_rhs) = begin match new_bind_exp envr None rhs None with
     | Ok (envr, v, ve, prem_v) ->
-      let* prems_v = animate_exp_eq envr at ve rhs in
-      E.return (envr, ve, prems_v)
+      let* prems_v'  = animate_prem envr prem_v in
+      E.return (envr, ve, prems_v')
     | Error v ->
       E.return (envr, rhs, [])
     end in
