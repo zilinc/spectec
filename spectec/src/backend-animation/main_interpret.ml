@@ -127,7 +127,7 @@ let instantiate module_ : exp =
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | il_module, externaddrs ->
     let store = Store.get () in
-    Interpreter.instantiate [ store; il_module; listE (t_star "externaddr") externaddrs ]
+    Interpreter.instantiate [ expA store ; expA il_module; listE (t_star "externaddr") externaddrs |> expA ]
 
 
 let invoke moduleinst_name funcname args : exp =
@@ -135,7 +135,7 @@ let invoke moduleinst_name funcname args : exp =
 
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
-  Interpreter.invoke [store; funcaddr; il_of_list (t_star "val") C.il_of_value args]
+  Interpreter.invoke [ expA store; expA funcaddr; il_of_list (t_star "val") C.il_of_value args |> expA ]
 
 
 

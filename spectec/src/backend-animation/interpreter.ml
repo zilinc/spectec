@@ -215,13 +215,21 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t =
   | _, _ -> fail_assign lhs.at lhs rhs "invalid pattern"
 
 
-let eval_exp ctx exp : exp =
+let rec eval_exp ctx exp : exp =
   let subst = vctx_to_subst ctx in
+  info "eval" exp.at ("Subst expression: " ^ string_of_exp exp);
   let exp' = Il.Subst.subst_exp subst exp in
-  Il.Eval.reduce_exp !il_env exp'
+  info "eval" exp.at ("Substitution done; got " ^ string_of_exp exp');
+  match exp'.it with
+  (* NOTE: We assume function calls are at the root of the AST. *)
+  | CallE (fid, args) ->
+    info "eval" exp.at ("Call function: `" ^ fid.it ^ "`");
+    let args' = List.map (Il.Eval.reduce_arg !il_env) args in
+    call_func fid.it args'
+  | _ -> info "eval" exp.at ("Not a CallE"); Il.Eval.reduce_exp !il_env exp'
 
-let rec eval_prem ctx prem : VContext.t OptMonad.m =
-  info "match" prem.at ("Match premise " ^ string_of_prem prem);
+and eval_prem ctx prem : VContext.t OptMonad.m =
+  info "match" prem.at ("Match premise: " ^ string_of_prem prem);
   match prem.it with
   | LetPr (lhs, rhs, _vs) ->
     let rhs' = eval_exp ctx rhs in
@@ -304,15 +312,16 @@ and eval_prems ctx prems : VContext.t OptMonad.m =
     let* ctx = eval_prems ctx prems in
     return ctx
 
-let match_arg at (parg: arg) (arg: exp) : VContext.t option =
-  match parg.it with
-  | TypA typ  -> todo "match_arg TypA"
-  | ExpA exp  -> (try Some (assign VContext.empty exp arg) with PatternMatchFailure -> None)
-  | DefA id   -> todo "match_arg DefA"
-  | GramA sym -> todo "match_arg GramA"
+and match_arg at (pat: arg) (arg: arg) : VContext.t option =
+  match pat.it, arg.it with
+  | TypA ptyp , TypA _    -> todo "match_arg TypA"
+  | ExpA pexp , ExpA aexp -> (try Some (assign VContext.empty pexp aexp) with PatternMatchFailure -> None)
+  | DefA pid  , DefA _    -> todo "match_arg DefA"
+  | GramA psym, GramA _   -> todo "match_arg GramA"
+  | _ -> (info "match" at ("Wrong argument sort: " ^ string_of_arg arg ^ " doesn't match pattern " ^ string_of_arg pat); None)
 
 
-let rec match_args at pargs args : VContext.t option =
+and match_args at pargs args : VContext.t option =
   match pargs, args with
   | [], [] -> return VContext.empty
   | parg::pargs', arg::args' ->
@@ -320,7 +329,7 @@ let rec match_args at pargs args : VContext.t option =
     let* vctx' = match_args at pargs' args' in
     return (VContext.union (fun k _ _ -> error at ("Duplicate variable `" ^ k ^ "`")) vctx vctx')
 
-let rec match_clause at (fname: string) (clauses: clause list) (args: exp list) : exp =
+and match_clause at (fname: string) (clauses: clause list) (args: arg list) : exp =
   info "match" at ("Match_clause: `" ^ fname ^ "`");
   match clauses with
   | [] -> error at ("No function clause matches the input arguments in function `" ^ fname ^ "`")
@@ -338,12 +347,12 @@ let rec match_clause at (fname: string) (clauses: clause list) (args: exp list) 
     | None -> match_clause at fname cls args
 
 
-let eval_func name func_def args : exp =
+and eval_func name func_def args : exp =
   let (_, params, typ, fcs, _) = func_def.it in
   match_clause no_region name fcs args
 
 
-let call_func name args : exp option =
+and call_func name args : exp =
   let builtin_name, is_builtin =
     match Il.Env.find_func_hint !il_env name "builtin" with
     | None -> name, false
@@ -355,8 +364,7 @@ let call_func name args : exp option =
   in
   (* Function *)
   match Def.find_dl_func_def name !dl with
-  | Some fdef when not is_builtin ->
-    Some (eval_func name fdef args)
+  | Some fdef when not is_builtin -> eval_func name fdef args
   (* Numerics *)
   | None when I.Numerics.mem builtin_name -> (
     if not is_builtin then
@@ -365,33 +373,13 @@ let call_func name args : exp option =
     error no_region "call_func: Can't call built-in functions for now; not yet implemented."
   )
   (* Relation *)
-  | None when I.Relation.mem name -> (
-    raise (I.Exception.UnknownFunc (sprintf "Relation %s doesn't have an animated function" name))
-    (*
-    match Il.Env.find_opt_rel !il_env (name $ no_region) with
-    | Some rdef ->
-      [create_context name args]
-      |> run
-      |> AlContext.get_return_value
-    else
-      Some (Relation.call_func name args)
-    *)
-  )
-  | None ->
-    raise (I.Exception.UnknownFunc ("There is no function named: " ^ name))
+  | None when Relation.mem name -> Relation.call_func name args
+  | None -> raise (I.Exception.UnknownFunc ("There is no function named: " ^ name))
 
 
 
 (* Wasm interpreter entry *)
 
-let instantiate (args: exp list) : exp =
-  match call_func "instantiate" args with
-  | Some module_inst -> module_inst
-  | None -> failwith "Instantiation doesn't return module instance"
+let instantiate (args: arg list) : exp = call_func "instantiate" args
 
-let invoke (args: exp list) : exp =
-  match call_func "invoke" args with
-  | Some v -> v
-  | None -> failwith "Invocation doesn't return any values"
-
-
+let invoke (args: arg list) : exp = call_func "invoke" args
