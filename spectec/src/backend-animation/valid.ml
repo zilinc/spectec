@@ -35,19 +35,29 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     (match lhs.it with
       | VarE lhs_var
       | OptE (Some { it = VarE lhs_var; _})
-      -> if not (List.length vars = 1) then
-           error_pr prem.at ("The only binding is " ^ lhs_var.it ^ " but expected " ^ string_of_varset vars_set) prem;
+      -> if List.length vars <> 1 then
+           error_pr prem.at ("Only one binder is allowed on this -- where premise but got " ^ string_of_varset vars_set) prem;
          let var = List.hd vars in
          if lhs_var.it <> var then
-           error_pr lhs.at ("LetPr LHS variable `" ^ lhs_var.it ^ "` doesn't match binder `" ^ var ^ "`.") prem
+           error_pr lhs.at ("Variable `" ^ lhs_var.it ^ "` on the LHS of this -- where premise doesn't match binder `" ^ var ^ "`.") prem
+      | IterE ({ it = VarE lhs_var; _ }, (Opt, xes))
+      -> if List.length vars <> 1 then
+           error_pr prem.at ("Only one binder is allowed on this -- where premise but got " ^ string_of_varset vars_set) prem;
+         let var = List.hd vars in
+         let var_question = match xes with
+         | [(x, { it = VarE v_question; _ })] when Il.Eq.eq_id x lhs_var -> v_question
+         | _ -> error_pr lhs.at ("Iterator binding list of " ^ string_of_exp lhs ^ " is invalid.") prem
+         in
+         if var_question.it <> var then
+           error_pr lhs.at ("Variable `" ^ var_question.it ^ "` on the LHS of this -- where premise doesn't match binder `" ^ var ^ "`.") prem
       | CaseE (_, { it = TupE es; _ }) ->
         let lhs_vars = List.fold_left Set.union Set.empty (List.map free_vars_exp es) in
         if Set.equal lhs_vars vars_set |> not then
           error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " doesn't match binding list " ^ string_of_varset vars_set) prem
-      | _ -> error_pr lhs.at ("Ill-formed LetPr's LHS: " ^ string_of_exp lhs) prem
+      | _ -> error_pr lhs.at ("Ill-formed LHS of -- where premise: " ^ string_of_exp lhs) prem
     );
     if Set.subset vars_set known then
-      error_pr prem.at ("Some LetPr binders " ^ string_of_varset vars_set ^ " already known.\n" ^
+      error_pr prem.at ("Some -- where premise binders " ^ string_of_varset vars_set ^ " already known.\n" ^
                         "  ▹ Knowns: " ^ string_of_varset known) prem;
     Set.union vars_set known
   | IterPr (plist, (iter, pairs)) ->

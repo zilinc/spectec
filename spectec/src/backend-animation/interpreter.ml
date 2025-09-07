@@ -217,16 +217,13 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t =
 
 let rec eval_exp ctx exp : exp =
   let subst = vctx_to_subst ctx in
-  info "eval" exp.at ("Subst expression: " ^ string_of_exp exp);
   let exp' = Il.Subst.subst_exp subst exp in
-  info "eval" exp.at ("Substitution done; got " ^ string_of_exp exp');
   match exp'.it with
   (* NOTE: We assume function calls are at the root of the AST. *)
   | CallE (fid, args) ->
-    info "eval" exp.at ("Call function: `" ^ fid.it ^ "`");
     let args' = List.map (Il.Eval.reduce_arg !il_env) args in
     call_func fid.it args'
-  | _ -> info "eval" exp.at ("Not a CallE"); Il.Eval.reduce_exp !il_env exp'
+  | _ -> Il.Eval.reduce_exp !il_env exp'
 
 and eval_prem ctx prem : VContext.t OptMonad.m =
   info "match" prem.at ("Match premise: " ^ string_of_prem prem);
