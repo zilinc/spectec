@@ -1,9 +1,29 @@
 open Il.Ast
-open Util.Error
-open Util.Source
+open Il.Print
+open Util
+open Error
+open Source
 open Il_util
 module Ds = Backend_interpreter.Ds
 module RI = Reference_interpreter
+
+(* TODO(zilinc): Properly convert Il expression to RI type and run the checker,
+   and get back the result expression.
+*)
+let dummy : exp = varE ~note:(t_var "dummyT") "dummyE"
+
+(* Errors *)
+
+let verbose : string list ref =
+  ref []
+
+let error at msg = Error.error at "Animate/Relation" msg
+let error_np msg = error no_region msg
+
+let info v at msg = if List.mem v !verbose || v = "" then
+                      print_endline (string_of_region at ^ " Animate/Relation info[" ^ v ^ "]:\n" ^ msg)
+                    else
+                      ()
 
 
 (* $Ref_ok : store -> ref -> reftype *)
@@ -56,10 +76,12 @@ let ref_ok s ref : exp = todo "ref_ok"
 *)
 
 (* $Module_ok : module -> moduletype *)
-let module_ok module_ : exp = todo "module_ok"
+let module_ok (module_: arg) : exp =
+  match module_.it with
+  | ExpA module_' -> dummy
+  | _ -> error module_.at ("Wrong argument sort to function $Module_ok. Got: " ^ string_of_arg module_)
 (*
-  if !Construct.version <> 3 then failwith "This hardcoded function ($Module_ok) should be only called with test version 3.0";
-  match v with
+  match module_ with
   | [ m ] ->
     (try
       let module_ = Construct.al_to_module m in
@@ -74,7 +96,11 @@ let module_ok module_ : exp = todo "module_ok"
 *)
 
 (* $Externaddr_ok : store -> externaddr -> externtype *)
-let externaddr_ok s eaddr = todo "externaddr_ok"
+let externaddr_ok s eaddr =
+  match s.it, eaddr.it with
+  | ExpA s', ExpA eaddr' -> dummy
+  | _ , ExpA _ -> error s.at     ("1st argument to function $Externaddr_ok has wrong sort. Got: " ^ string_of_arg s    )
+  | ExpA _ , _ -> error eaddr.at ("2nd argument to function $Externaddr_ok has wrong sort. Got: " ^ string_of_arg eaddr)
 (* match eaddr with
   | [ CaseV (name, [ NumV (`Nat z) ]); t ] ->
     (try
@@ -126,7 +152,7 @@ let eval_expr st exp : exp = todo "eval_expr"
 let mem name =
   List.mem name ["Ref_ok"; "Module_ok"; "Externaddr_ok"; "Val_ok"; "Eval_expr"]
 
-let call_func name args : exp =
+let call_func name (args: arg list) : exp =
   let nargs = List.length args in
   match name with
   | "Ref_ok"        when nargs = 2 -> ref_ok        (List.nth args 0) (List.nth args 1)

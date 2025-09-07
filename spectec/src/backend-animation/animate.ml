@@ -589,6 +589,32 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
        (this premise will be handled by the `animate_prem (IterPr {})` case.)
     *)
     begin match iter with
+    (* Special case *)
+    | Opt ->
+      begin match new_bind_exp envr None lhs' None with
+      | Error v ->
+        (* Find the out-flowing `v?`. *)
+        let v_question = List.find_map (fun (x, e) ->
+          if Il.Eq.eq_id v x then
+            match e.it with
+            | VarE v_question -> Some v_question
+            | _ -> None
+          else None
+        ) xes |> Option.get in
+        let* () = update (add_knowns (Set.singleton v_question.it)) in
+        let prem' = LetPr (IterE (VarE v $> lhs', iterexp) $> lhs', rhs, [v_question.it]) $ at in
+        E.return [prem']
+      | Ok (envr, v, ve, prem_v) ->
+        let v' = Frontend.Dim.annot_varid v [iter] in
+        let v_question = fresh_id (Some v'.it) ve.at in
+        let ve_question = VarE v_question $$ ve.at % rhs.note in
+        envr := bind_var !envr v_question rhs.note;
+        let prem_opt = LetPr (IterE (ve, (iter, [(v, ve_question)])) $$ lhs.at % lhs'.note, rhs, [v_question.it]) $ at in
+        let* () = update (add_knowns (Set.singleton v.it)) in
+        let* prems_iter' = animate_prem envr (IterPr ([prem_v], (iter, (v, ve_question)::xes)) $ at) in
+        E.return (prem_opt :: prems_iter')
+      end
+    (* Base case *)
     | ListN(len, Some i) ->
       let fv_len = (free_exp false len).varid in
       let unknowns_len = Set.diff fv_len knowns in
@@ -607,10 +633,6 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
         (* By now [len] should be known. *)
         let* prems' = animate_exp_eq envr at lhs rhs in
         E.return (prem_len @ prems')
-    | Opt ->
-      let rhs' = TheE rhs $$ rhs.at % (as_iter_typ' Opt !envr rhs.note) in
-      let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
-      animate_prem envr (IterPr ([prem_body], iterexp) $ at)
     (* Inductive cases *)
     | ListN(len, None) ->
       let i = fresh_id (Some "i") at in
