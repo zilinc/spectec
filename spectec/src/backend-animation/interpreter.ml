@@ -15,7 +15,7 @@ module I = Backend_interpreter
 (* Errors *)
 
 let verbose : string list ref =
-  ref ["match"; "eval"; "assign"]
+  ref ["match"; "eval"; "assign";  "iter"]
 
 let error at msg = Error.error at "(Meta)Interpreter" msg
 let error_np msg = error no_region msg
@@ -149,32 +149,30 @@ and tup_to_val exp : A.value list =
   | TupE es -> List.map exp_to_val es
   | _       -> [exp_to_val exp]
 
-let unwrap_listE e : exp list =
-  match e.it with
-  | ListE es -> es
-  | _ -> error no_region "unwrap_listE: not a list value"
-
 let vctx_to_subst ctx : Il.Subst.subst =
   VContext.fold (fun var value subst ->
     Il.Subst.add_varid subst (var $ no_region) value
   ) ctx Il.Subst.empty
 
 let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t =
+  info "assign" lhs.at ("Assign " ^ string_of_exp lhs ^ " to " ^ string_of_exp rhs);
   match lhs.it, rhs.it with
   | VarE name, _ ->
-    info "assign" lhs.at ("Add " ^ name.it ^ " to value context.");
     VContext.add name.it rhs ctx
-  | IterE ({ it = VarE x1; _ }, ((List|List1), [(x2, lhs')])), ListE _ when x1 = x2 ->
+  | IterE ({ it = VarE x1; _ }, ((List|List1), [(x2, lhs')])), ListE _ when Il.Eq.eq_id x1 x2 ->
     assign ctx lhs' rhs
-  | IterE (e, (iter, xes)), _ ->
-    let vs = unwrap_listE rhs in
-    let ctxs = List.map (assign VContext.empty e) vs in
+  | IterE ({ it = VarE x1; _ }, (Opt, [x2, lhs'])), _ when Il.Eq.eq_id x1 x2 ->
+    assign ctx lhs' rhs
+  | IterE (e, (Opt, xes)), _ ->
+    assert false  (* Animation shouldn't output this. *)
+  | IterE (e, ((ListN _|List|List1) as iter, xes)), ListE es ->
+    let ctxs = List.map (assign VContext.empty e) es in
 
     (* Assign length variable *)
     let ctx' =
       match iter with
       | ListN (expr, None) ->
-        let length = il_of_nat (List.length vs) in
+        let length = il_of_nat (List.length es) in
         assign ctx expr length
       | ListN _ ->
         fail_assign lhs.at lhs rhs ("invalid assignment: iter with index cannot be an assignment target")
@@ -192,11 +190,6 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t =
   | TupE lhs_s, TupE rhs_s
     when List.length lhs_s = List.length rhs_s ->
     List.fold_left2 assign ctx lhs_s rhs_s
-  (*
-  | ListE lhs_s, ListV rhs_s
-    when List.length lhs_s = Array.length !rhs_s ->
-    List.fold_left2 assign ctx lhs_s (Array.to_list !rhs_s)
-  *)
   | CaseE (lhs_tag, lhs_s), CaseE (rhs_tag, rhs_s) ->
     begin match lhs_s.it, rhs_s.it with
     | TupE lhs_s', TupE rhs_s' ->
@@ -253,6 +246,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
                                  string_of_exp (n' $> n) ^ " is not a nat.");
                fail)
       end in
+      info "iter" n.at ("Iter length n' = " ^ string_of_int n');
       let il_env0 = !il_env in
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
@@ -263,8 +257,19 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           il_env := Il.Env.(bind_var !il_env x t);
         | _ -> assert false
       ) (in_binds @ out_binds);
+      info "iter" prem.at ("in-binds are: " ^ string_of_iterexp (iter, in_binds) ^ "\n" ^
+                            "out-binds are: " ^ string_of_iterexp (iter, out_binds));
+      (* Initialise the out-vars, so that even when n' = 0 they are still assigned to `eps`. *)
+      let ctx' = List.fold_left (fun ctx (x, e) ->
+        match e.it with
+        | VarE x_star ->
+          let vx_star = ListE [] $$ no_region % e.note in
+          info "iter" prem.at ("Initialise " ^ x_star.it ^ " to " ^ string_of_exp vx_star);
+          VContext.add x_star.it vx_star ctx
+        | _ -> assert false
+      ) ctx out_binds in
       (* Run the loop *)
-      let* ctx' = foldlM (fun ctx idx ->
+      let* ctx'' = foldlM (fun ctx idx ->
         let lctxr = ref ctx in
         lctxr := VContext.add i.it (mk_nat idx) !lctxr;
         (* In-flow *)
@@ -282,19 +287,21 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
             let vx = VContext.find x.it !lctxr in
             let opt_vx_star = VContext.find_opt x_star.it !lctxr in
             begin match opt_vx_star with
-            | None -> lctxr := VContext.add x_star.it (ListE [vx] $$ no_region % e.note) !lctxr
-            | Some vx_star -> begin match vx_star.it with
+            | Some vx_star ->
+              begin match vx_star.it with
               | ListE es -> let vx_star' = ListE (es @ [vx]) $> vx_star in
+                            info "iter" prem.at ("Outflow: " ^ x_star.it ^ " := " ^ string_of_exp vx_star');
                             lctxr := VContext.add x_star.it vx_star' !lctxr
               | _ -> assert false
               end
+            | _ -> assert false
             end
           | _ -> assert false
         ) out_binds;
         return !lctxr
-      ) ctx (0 -- n') in
+      ) ctx' (0 -- n') in
       il_env := il_env0;  (* Resume old environment *)
-      return ctx'
+      return ctx''
     | ListN (n, None) -> todo "eval_prem: IterPr ListN(_, None)"
     | List | List1 -> todo "eval_prem: IterPr List|List1"
     | Opt -> todo "eval_prem: IterPr Opt"
