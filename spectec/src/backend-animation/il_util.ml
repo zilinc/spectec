@@ -39,6 +39,11 @@ let as_iter_typ env t : typ =
   | IterT (t', (List | List1 | ListN _)) -> t'
   | _ -> error t.at ("Input type is not an iterated type: " ^ string_of_typ t)
 
+let as_opt_typ env t : typ =
+  match (reduce_typ env t).it with
+  | IterT (t', Opt) -> t'
+  | _ -> error t.at ("Input type is not an option type: " ^ string_of_typ t)
+
 let as_iter_typ' iter env t : typ =
   match (reduce_typ env t).it with
   | IterT (t1, iter') when Il.Eq.eq_iter iter iter' -> t1

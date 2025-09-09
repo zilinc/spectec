@@ -304,7 +304,68 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       return ctx''
     | ListN (n, None) -> todo "eval_prem: IterPr ListN(_, None)"
     | List | List1 -> todo "eval_prem: IterPr List|List1"
-    | Opt -> todo "eval_prem: IterPr Opt"
+    | Opt ->
+      let il_env0 = !il_env in
+      (* Extend il_env with "local" variables in the iteration *)
+      List.iter (fun (x, e) ->
+        match e.it with
+        | VarE x_question ->
+          let t_question = Il.Env.find_var !il_env x_question in
+          let t = Il_util.as_opt_typ !il_env t_question in
+          il_env := Il.Env.(bind_var !il_env x t);
+        | _ -> assert false
+      ) (in_binds @ out_binds);
+      info "iter" prem.at ("in-binds are: " ^ string_of_iterexp (iter, in_binds) ^ "\n" ^
+                            "out-binds are: " ^ string_of_iterexp (iter, out_binds));
+      (* Need to figure out whether it runs or not. *)
+      let in_vals = List.map (fun (x, e) -> (x, eval_exp ctx e)) in_binds in
+      assert (List.length in_vals > 0);
+      let run_opt = match (List.hd in_vals |> snd).it with
+      | OptE None     -> false
+      | OptE (Some _) -> true
+      in
+      (* Check that all inputs agree. *)
+      List.iter (fun (_, opt_val) ->
+        match opt_val.it, run_opt with
+        | OptE None, false -> ()
+        | OptE (Some _), true -> ()
+        | _ -> assert false
+      ) in_vals;
+      let* ctx' = begin if not run_opt then
+      (* When the optional is None, all outflow variables should be None. *)
+        List.fold_left (fun ctx (x, e) ->
+          match e.it with
+          | VarE x_question -> VContext.add x_question.it (mk_none e.note) ctx
+          | _ -> assert false
+        ) ctx out_binds |> return
+      else
+      (* When the optional is Some *)
+        let lctxr = ref ctx in
+        (* In-flow *)
+        List.iter (fun (x, opt_val) ->
+          let t = Il.Env.find_var !il_env x in
+          let OptE (Some val_) = opt_val.it in
+          lctxr := VContext.add x.it val_ !lctxr
+        ) in_vals;
+        let* lctx = eval_prems !lctxr prems in
+        lctxr := lctx;
+        (* Out-flow *)
+        List.iter (fun (x, e) ->
+          match e.it with
+          | VarE x_question ->
+            let vx = VContext.find x.it !lctxr in
+            let opt_vx_question = VContext.find_opt x_question.it !lctxr in
+            begin match opt_vx_question with
+            | Some vx_question -> assert false
+            | None -> let some_vx = mk_some e.note vx in
+                      lctxr := VContext.add x_question.it some_vx !lctxr
+            end
+          | _ -> assert false
+        ) out_binds;
+        return !lctxr
+      end in
+      il_env := il_env0;  (* Resume old environment *)
+      return ctx'
     end
   | _ -> assert false
 
