@@ -13,26 +13,16 @@ default: exe
 all: exe latex test
 ci: all
 
-# Build some OCaml functions from spec  
+# Build interpreter and example ocaml programs 
 
 .PHONY: build_ocamlprog
 
 build_ocamlprog: exe
+	mkdir src/backend-animation/interpreter-ocaml/build
 	./spectec ../specification/wasm-3.0/* --animate --generate-ocaml "dl_codegen" --print-dl > dl.log
-	@echo "#### spectec finished, generating code in dl-interpreter"
-	dune build src/backend-animation/dl-interpreter
+	@echo "#### spectec finished, compiling generated code"
+	dune build src/backend-animation/interpreter-ocaml/build
 	@echo "#### dl-interpreter code compiled successfully"
-
-# Build Interpreter
-
-.PHONY: build_interpreter
-
-build_interpreter: exe
-	./spectec ../specification/wasm-3.0/* --animate --print-dl > dl.log
-	@echo "#### spectec finished, generating code in dl-interpreter"
-	dune build src/backend-animation/dl-interpreter
-	@echo "#### dl-interpreter code compiled successfully"
-
 
 # Executable
 
@@ -47,6 +37,7 @@ CLONERM = dune-project jslib
 .PHONY: exe
 
 exe: $(CLONEDIR)
+	rm -rf src/backend-animation/interpreter-ocaml/build
 	rm -f ./$(NAME)
 	dune build $(SRCDIR)/$(EXE)
 	ln -f $(OUTDIR)/$(EXE) ./$(NAME)

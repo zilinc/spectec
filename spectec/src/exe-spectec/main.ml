@@ -340,6 +340,12 @@ let () =
       let (env, dl) = Backend_animation.Main_animate.run il !print_dl in
       log "DL Validating...";
       Backend_animation.Valid.valid dl;
+      (match !generate_ocaml with
+      | Some ocamlfile -> 
+          log "Generating OCaml..."; 
+          Backend_animation.Main_interpreter_ocaml.generate_ocaml dl (Some ocamlfile)
+      | None -> ()
+      );
       (match !new_interpreter_args with
       | Some args ->
         log "Interpreting...";

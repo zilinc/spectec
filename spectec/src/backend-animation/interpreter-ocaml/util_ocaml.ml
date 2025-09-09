@@ -1,6 +1,7 @@
 open Xl
 open Il.Ast
 
+(* this is wrong, need a case statement for every possible type *)
 let uncaseE (e : exp) op =
   match e.it with
   | CaseE (o, e) when (Mixop.eq o op) ->
@@ -9,12 +10,14 @@ let uncaseE (e : exp) op =
     | e' -> e')
   | _ -> failwith "uncase: expected UncaseE"
 
+(* maybe we don't need to throw error and just return None *)
 let projE lst n =
   match lst with
   | ListE es -> (match List.nth_opt es n with
     | Some v -> v
     | None -> failwith "list too short")
   | _ -> failwith "projE: expected ListE"
+
 let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
   let lowercase name =
       if recordfield then String.lowercase_ascii name
@@ -57,19 +60,45 @@ let rec lookup (x : id) (pairs : (id * 'b) list) : 'b option =
   | (k,v) :: rest ->
       if k.it = x.it then Some v else lookup x rest
 
-(* this is a bad way of doing it but works for now *)
-module TypeMap = Map.Make(String)
-module TypeSet = Set.Make(String)
+let unzip1 lst = lst 
+let unzip2 (lst : ('a * 'b) list) : ('a list * 'b list) =
+  let rec aux acc1 acc2 = function
+    | [] -> (List.rev acc1, List.rev acc2)
+    | (x, y) :: rest -> aux (x :: acc1) (y :: acc2) rest
+  in
+  aux [] [] lst
+let unzip3 (lst : ('a * 'b * 'c) list) : ('a list * 'b list * 'c list) =
+  let rec aux acc1 acc2 acc3 = function
+    | [] -> (List.rev acc1, List.rev acc2, List.rev acc3)
+    | (x, y, z) :: rest -> aux (x :: acc1) (y :: acc2) (z :: acc3) rest
+  in
+  aux [] [] [] lst
 
-(* A state+writer monad *)
+let map1 = List.map
+let rec map2 (f : 'a -> 'b -> 'c) (lst : ('a * 'b) list) : ('c list) =
+  match lst with 
+  | [] -> []
+  | (x, y) :: rest -> (f x y) :: (map2 f rest)
+let rec map3 (f : 'a -> 'b -> 'c -> 'd) (lst : ('a * 'b * 'c) list) : ('d list) =
+  match lst with
+  | [] -> []
+  | (x, y, z) :: rest -> (f x y z) :: (map3 f rest)
+
+module TypeMap = Map.Make(String) 
+module Set = Set.Make(String) 
+
+(* A State+Writer monad: 
+   The State keeps track of type definitions and known 
+   variables, the Writer accumulates type-casting functions *)
 module TypeM = struct
 
-  type types = {
+  type state = {
     mutable typemap : Def.dl_def TypeMap.t; (* maps types to their definitions*)
-    mutable typeconvfuncs : TypeSet.t; (* keeps track of type-conversion functions *)
+    mutable typeconvfuncs : Set.t; (* keeps track of type-conversion functions *)
+    mutable knowns : Set.t; (* need this to determine inflow/outflow *)
   }
 
-  type 'a t = types -> 'a * types * string
+  type 'a t = state -> 'a * state * string  
 
   let return x : 'a t = fun st -> (x, st, "")
 
@@ -89,9 +118,34 @@ module TypeM = struct
   let tell_if_nonempty (w : string) : unit t =
     if w = "" then return () else tell w
 
-  let get : types t = fun st -> (st, st, "")
-  let put (st' : types) : unit t = fun _ -> ((), st', "")
+  let get : state t = fun st -> (st, st, "")
+  let put (st' : state) : unit t = fun _ -> ((), st', "")
   let modify f : unit t = fun st -> ((), f st, "")
+  let get_knowns : Set.t t = fun st -> st.knowns, st, ""
+
+  let set_knowns (xs : Set.t) : unit t =
+    modify (fun st -> { st with knowns = xs })
+
+  let add_known (x : string) : unit t =
+    modify (fun st -> { st with knowns = Set.add x st.knowns })
+
+  let add_knowns (xs : string list) : unit t =
+    modify (fun st ->
+      let k = List.fold_left (fun acc s -> Set.add s acc) st.knowns xs in
+      { st with knowns = k })
+
+  let is_known (x: string) : bool t =
+    fun st -> (Set.mem x st.knowns, st, "")
+
+  (* maybe dont need this? *)
+  let are_knowns (xs: Set.t) : bool t =
+    fun st -> (Set.subset xs st.knowns, st, "")
+
+  let is_defined (x : string) : bool t =
+    fun st -> (Set.mem x st.typeconvfuncs, st, "")
+
+  let add_func (x : string) : unit t =
+    modify (fun st -> { st with typeconvfuncs = Set.add x st.typeconvfuncs })
 
   let concat_nonempty sep xs =
   xs |> List.filter (fun s -> s <> "") |> String.concat sep
@@ -132,8 +186,13 @@ module TypeM = struct
       let (a, st1, w1) = m2 st0 in
       (("", a), st1, w1)
 
-  (* runners *)
-  let run m st0  = m st0               (* -> (a, st1, log) *)
-  let eval m st0 = let (a, _, w) = m st0 in (a, w)  (* -> (result_string, accumulated_string) *)
+  (*let run m st0  = m st0*)              
+  let eval m = 
+    let st0 = { typemap = TypeMap.empty; 
+    typeconvfuncs = Set.empty;
+    knowns = Set.empty
+    } in 
+    let (a, _, w) = m st0 in (a, w) 
+
 end
 
