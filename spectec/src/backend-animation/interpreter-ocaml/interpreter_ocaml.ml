@@ -4,12 +4,10 @@ open Util.Source
 open Xl
 open Def
 
-(* maybe there is a better way to do this *)
+(* there is definitely a better way to do this *)
 open Util_ocaml.TypeMap
-open Util_ocaml.TypeSet
 
 module TypeM   = Util_ocaml.TypeM
-module TypeSet = Util_ocaml.TypeSet
 module TypeMap = Util_ocaml.TypeMap
 open TypeM
 
@@ -34,6 +32,7 @@ let uppcase_first s =
 (* OCaml convention:
    typenames are lowercased
    constructors have their first letter uppercased
+   constructors cannot begin with non-letter chars
    type arguments are prefixed with a quote (') *)
 let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) id =
   let lowercased =
@@ -125,8 +124,9 @@ let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
       let lhs  = sanitize_name id1.it
       and rhs  = sanitize_name id2.it in
       let funcname = Printf.sprintf "%s_of_%s" rhs lhs in
-      if TypeSet.mem funcname st.typeconvfuncs then return () else begin
-      let* () = put { st with typeconvfuncs = TypeSet.add funcname st.typeconvfuncs } in
+      let* is_defined = is_defined funcname in
+      if is_defined then return () else begin
+      let* () = add_func funcname in
       let td1  = typedef_of_dl_def (TypeMap.find_opt lhs st.typemap)
       and td2  = typedef_of_dl_def (TypeMap.find_opt rhs st.typemap) in
       match td1, td2 with
@@ -139,13 +139,14 @@ let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
   | _ -> tell "TODO: type conversion not implemented yet\n"
 
 
-let generate_numtype_conv (types : types) (t1 : numtyp) (t2 : numtyp) : string =
+let generate_numtype_conv (t1 : numtyp) (t2 : numtyp) : string t =
   let funcname = ocaml_of_numtyp t1 ^ "_of_" ^ ocaml_of_numtyp t2 in
-  if (TypeSet.mem funcname types.typeconvfuncs) then "" else begin
+  let* is_defined = is_defined funcname in
+  if is_defined then return "" else begin
   let funcdef = "let " ^ funcname ^ " (arg : " ^ ocaml_of_numtyp t2 ^ ") : " ^ ocaml_of_numtyp t1 ^ " =\n" in
   let funcbody = "Num.cvt " ^ ocaml_of_numtyp t1 ^  " arg\n" in
-  types.typeconvfuncs <- TypeSet.add funcname types.typeconvfuncs;
-  funcdef ^ funcbody
+  let* () = add_func funcname in
+  return (funcdef ^ funcbody)
   end
 
 (* this may be repeated but just grouping all terminals from the IL AST into one type for now - this should probably just refer to the generated ocaml types oops *)
@@ -182,17 +183,21 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
   | CallE (id, args) ->
     let fname = sanitize_name id.it in
     let* args' = ocaml_of_args ~typearg args in
-    return (fname ^ " " ^ args')
+    return (fname ^ " (" ^ args' ^ ")")
   | CaseE (mixop, e1) ->
-    let label = Util_ocaml.mixop_to_atom_str mixop in
+    let label = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop) in
     let* e1str = ocaml_of_exp e1 in
-    return (append_sep label e1str "")
+    return (append_sep label e1str " ")
   | BinE (op, _, e1, e2) ->
     let* e1str = ocaml_of_exp e1 in
     let* e2str = ocaml_of_exp e2 in
-    return ("(" ^ e1str ^ " " ^ string_of_binop op ^ " " ^ e2str ^ ")")
+    return ("(" ^ e1str ^ " " ^ ocaml_of_binop op ^ " " ^ e2str ^ ")")
+  | UnE (op, _, e1) ->
+    let* e1str = ocaml_of_exp e1 in
+    return (ocaml_of_unop op ^ "(" ^ e1str ^ ")")
   | UncaseE (e, mixop) -> let* expstr = ocaml_of_exp e in
-    return ("uncase (" ^ expstr ^ ") (" ^ Util_ocaml.mixop_to_atom_str mixop ^ ")")
+    let mixopstr = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop) in 
+    return ("uncase (" ^ expstr ^ ") (" ^ mixopstr ^ ")")
   | ProjE (e, n) -> let* expstr = ocaml_of_exp e in
     return ("proj (" ^ expstr ^ ") " ^ string_of_int n)
   | CmpE (op, _, e1, e2) ->
@@ -206,8 +211,8 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
     | [(id, e)] ->
       let* body_str = ocaml_of_exp e1 in
       let* list_name = ocaml_of_exp e in
-      return (Printf.sprintf "List.map (fun %s -> %s) %s" id.it body_str list_name)
-    | _ -> return "(* TODO: IterE with multiple bindings *)"
+      return (Printf.sprintf "(List.map (fun %s -> %s) %s)" (sanitize_name id.it) body_str list_name)
+    | _ -> return "(* TODO: IterE with multiple bindings *)" 
     end
   | SupE (e1, typ1, typ2) | SubE (e1, typ1, typ2) ->
     let* () = generate_type_conv typ1 typ2 in
@@ -233,8 +238,22 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
     let* start_str = ocaml_of_exp start in
     let* end_str = ocaml_of_exp end_ in
     return ("(slice " ^ e1str ^ " " ^ start_str ^ " " ^ end_str ^ ")")
+  | CatE (e1, e2) ->
+    let* e1str = ocaml_of_exp e1 in
+    let* e2str = ocaml_of_exp e2 in
+    return ("(" ^ e1str ^ " @ " ^ e2str ^ ")")
+  | MemE (e1, e2) -> (* todo this can also be a choice operator (?) *)
+    let* e1str = ocaml_of_exp e1 in
+    let* e2str = ocaml_of_exp e2 in
+    return ("List.mem " ^ e1str ^ " " ^ e2str)
+  | StrE strlist -> 
+    let* recordstr = concat_mapM ";\n  " ocaml_of_expfield strlist in
+    return ("{\n  " ^ recordstr ^ "  }") 
   | _ -> return "TODO: other expression types not supported yet"
 
+and ocaml_of_expfield (a, e) : string t = 
+  let* estr = ocaml_of_exp e in 
+  return (Util_ocaml.mixop_to_atom_str ~recordfield:true [[a]] ^ " = " ^ estr)
 
 and ocaml_of_iter iter : string t =
   match iter with
@@ -284,7 +303,24 @@ and ocaml_of_args ?(typearg=true) = function
   | [] -> return ""
   | as_ -> concat_mapM " " (ocaml_of_arg ~typearg) as_
 
-let ocaml_of_iterprem (iterlist : (id * exp) list) (len : exp) (id_opt : id option) (prem : prem' phrase) : string t =
+and ocaml_of_bool_binop = function
+  | `AndOp -> "&&"
+  | `OrOp -> "||"
+  | `ImplOp -> "TODO: ImplOp"
+  | `EquivOp -> "TODO: EquivOp"
+
+and ocaml_of_binop = function
+  | #Bool.binop as op -> ocaml_of_bool_binop op
+  | #Num.binop as op -> Num.string_of_binop op
+
+and ocaml_of_bool_unop = function
+  | `NotOp -> "not"
+
+and ocaml_of_unop = function
+  | #Bool.unop as op -> ocaml_of_bool_unop op
+  | #Num.unop as op -> Num.string_of_unop op
+
+(*let ocaml_of_iterprem (iterlist : (id * exp) list) (len : exp) (id_opt : id option) (prem : prem' phrase) : string t =
   match prem.it with
   | LetPr (lhs, rhs, _) ->
     (* Out-flow: if we have n <- n* and let n = ...,
@@ -309,15 +345,112 @@ let ocaml_of_iterprem (iterlist : (id * exp) list) (len : exp) (id_opt : id opti
   | IfPr _ -> return "(* TODO: IfPr in iter *)"
   | RulePr _ -> return "(* TODO: RulePr in iter *)"
   | ElsePr -> return ""
-  | IterPr _ -> return "(* TODO: nested iter *)"
+  | IterPr _ -> return "(* TODO: nested iter *)"*)
 
-let ocaml_of_prems (prems : prem' phrase list) : string t =
+let rec get_bound_vars (prems : prem' phrase list) : string list = 
+  List.fold_left (fun acc p ->
+    match p.it with
+    | LetPr (lhs, _, vars) ->
+      (match lhs.it with
+      | VarE id -> id.it :: acc
+      | _ -> acc) (* LHS must be a variable *)
+    | IterPr (prems, (iter, iterlist)) -> 
+      (* The outflows of a nested premise are also "known" *)
+      let from_prems = get_bound_vars prems in
+      (* In length iterators i <- i*, the length 'i*' also outflows *)
+      let len_iter = begin 
+      match iter with
+        | ListN (_, id_opt) -> (match id_opt with
+          | Some id -> [id.it]
+          | None -> [])
+        | _ -> []
+      end in
+      let outflows : (id * exp) list =
+        List.filter (fun (x, _) -> List.mem x.it (from_prems @ len_iter)) iterlist in
+      let outflow_vars = List.map (
+        fun (_, e) -> match e.it with
+        | VarE id -> id.it
+        | _ -> raise (CodegenError "Outflow iterator is not a variable")
+      ) outflows in
+      (outflow_vars @ acc) 
+    | _ -> acc
+  ) [] prems
+
+let get_idx_list (iterlist : (id * exp) list) id_opt =
+  let idx_str = match id_opt with
+    | Some id -> id.it
+    | None -> "(* TODO: no iterator variable *)"
+  in
+  let idx_list = List.filter (fun (id, _) -> id.it = idx_str) iterlist in
+  match idx_list with 
+  | [] -> return ""
+  | [(_, e)] -> ocaml_of_exp e
+  | _ -> raise (CodegenError ("Improper use of index variable " ^ idx_str ^  " in iterator list: Shouldn't happen."))
+
+let gen_case_arm i e : string t = 
+  match e.it with 
+  | VarE _ -> return (Printf.sprintf "Some freshvar_%d" i)
+  | SubE (e1, t1, t2) | SupE (e1, t1, t2) -> 
+      let* t1str = ocaml_of_typ t1 in
+      let* t2str = ocaml_of_typ t2 in
+      let* () = generate_type_conv t1 t2 in
+      return (Printf.sprintf "(%s_of_%s freshvar_%d)" t1str t2str i)
+  | _ -> return "(* TODO: LetPr LHS = CaseE(mixop, e) where e is not some combination of tuples, variables, subtypes or supertypes  *)"
+let gen_case_arms e : string t = 
+  match e.it with 
+  | TupE es -> concat_mapMi ", " gen_case_arm es 
+  | _ -> gen_case_arm 0 e 
+
+let rec ocaml_of_prems (prems : prem list) : string t =
   concat_mapM "\n"
   (function p -> match p.it with
-    | LetPr (lhs, rhs, _) ->
+    | LetPr (lhs, rhs, vars) ->
         let* lhs_str = ocaml_of_exp lhs in
         let* rhs_str = ocaml_of_exp rhs in
-        return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
+        begin 
+        match lhs.it with
+          | VarE id -> begin 
+            let* () = add_known id.it in 
+            return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
+          end
+          | CaseE (mixop, e) -> begin
+            let let_lhs = match vars with
+              | []   -> raise (CodegenError "LetPr with no bound vars: shouldn't happen")
+              | [v]  -> v
+              | vs   -> String.concat ", " vs
+            in
+            let newvararity = List.length vars in 
+            let newvars, failcase = match newvararity with
+              | 0 -> raise (CodegenError "LetPr with no bound vars: shouldn't happen")
+              | 1 -> "freshvar_0", "None"
+              | n -> "(" ^ (String.concat ", " (List.init n (fun i -> Printf.sprintf "freshvar_%d" i))) ^ ")", (String.concat ", " (List.init n (fun _ -> "None")))
+            in 
+            let mixopstr = (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop)) in
+            let indent = "    " in 
+            let* retvalues = gen_case_arms e in
+            return (Printf.sprintf "  let* %s = match %s with\n%s| %s %s -> %s\n%s| _ -> %s\n  in" let_lhs rhs_str indent mixopstr newvars retvalues indent failcase)
+            end
+          | _ -> return "(* TODO: LetPr where LHS is not a variable or CaseE *)"
+        end 
+            (*match e.it with
+              | VarE id | TupE [{it = VarE id; _}] -> 
+                let* () = add_known id.it in
+                let varname = sanitize_name ~typename:false id.it in
+                return (Printf.sprintf "  let* %s = match %s with\n%s| %s v1 -> Some v1\n%s| _ -> None\n  in" varname rhs_str indent mixopstr indent)
+              | SubE ({it = VarE id; _}, t1, t2)
+              | SupE ({it = VarE id; _}, t1, t2)
+              | TupE [{it = SubE ({it = VarE id; _}, t1, t2); _}]
+              | TupE [{it = SupE ({it = VarE id; _}, t1, t2); _}] -> 
+                let* () = add_known id.it in
+                let varname = sanitize_name ~typename:false id.it in
+                let* t1str = ocaml_of_typ t1 in
+                let* t2str = ocaml_of_typ t2 in
+                let* () = generate_type_conv t1 t2 in
+                return (Printf.sprintf "  let* %s = match %s with\n%s| %s v -> Some (%s_of_%s v)\n%s| _ -> None\n  in" varname rhs_str indent mixopstr t1str t2str indent)
+              | _ -> return ("LetPr LHS: CaseE with non-variable, got " ^ (Il.Print.string_of_exp e))
+          end
+          | _ -> return "not implemented" (*raise (CodegenError (Printf.sprintf "LetPr LHS is not a variable: should not happen. got %s" lhs_str))*)
+        end *)
     | IfPr cond ->
         let* cond_str = ocaml_of_exp cond in
         return (Printf.sprintf "  if not (%s) then None else" cond_str)
@@ -327,7 +460,46 @@ let ocaml_of_prems (prems : prem' phrase list) : string t =
       | Opt -> return "(* TODO: IterPr Opt *)"
       | List -> return "(* TODO: IterPr List *)"
       | List1 -> return "(* TODO: IterPr List1 *)"
-      | ListN (e, id_opt) -> concat_mapM "\n" (ocaml_of_iterprem iterlist e id_opt) prems
+      | ListN (e, id_opt) -> 
+        (* if x* is known then x <- x* is an inflow.
+         Otherwise, it is an outflow. *)
+        (* maybe there is a better way to do this *)
+        let* prev_knowns = get_knowns in 
+        let inflows, outflows = 
+          List.partition (fun (id', e) -> 
+            match id_opt with 
+            | Some id -> (Il.Free.Set.subset prev_knowns (Valid.free_vars_exp e)) || (id.it = id'.it)
+            | None -> (Il.Free.Set.subset prev_knowns (Valid.free_vars_exp e)) 
+        ) iterlist
+        in 
+        (* this will add new things to knowns, but their scope is limited *)
+        let* prem_strs = ocaml_of_prems prems in
+        let* list_len = ocaml_of_exp e in
+        let* idx_list = get_idx_list iterlist id_opt in
+        let def_idx_list = Printf.sprintf "  let %s = List.init %s (fun i -> i) in\n" idx_list list_len in
+        let inflow_vars = String.concat " " (List.map (fun (id, _) -> (sanitize_name id.it)) inflows) in
+        let* inflow_lists = concat_mapM " " ocaml_of_exp (List.map snd inflows) in
+        let outflow_vars = String.concat ", " (List.map (fun (id, _) -> (sanitize_name id.it)) outflows) in
+        let* outflow_lists = concat_mapM ", " ocaml_of_exp (List.map snd outflows) in
+        (* reset knowns: whatever was added by the inner premises can now be removed *)
+        let* () = set_knowns prev_knowns in
+        (* now add whatever outflows *)
+        (* maybe theres a cleaner way to write this *)
+        let* outflow_listvars = mapM ocaml_of_exp (List.map snd outflows) in
+        let* () = add_knowns outflow_listvars in
+        return (def_idx_list ^ Printf.sprintf "  let %s = unzip%d (map%d (fun %s -> %s %s) %s) in" outflow_lists (List.length outflows) (List.length inflows) inflow_vars prem_strs outflow_vars inflow_lists)
+
+        (*let* out_flows_strs = concat_mapM ", " (fun (_, e) -> 
+        let* e = ocaml_of_exp e in return ("(" ^ e ^ ")")) out_flows in*) 
+
+
+      (*let* prem_strs = ocaml_of_prems prems in
+      let bound_iters = get_bound_vars prems in
+      (* if we have "let n = ..." in our premises,
+         then n <- n* is an outflow. Otherwise, it is an inflow. *)
+      let outflows, inflows =
+        List.partition (fun (x, _) -> List.mem x.it bound_iters) iterlist in*)
+          
   ) prems
 
 (* todo: the bracketing is possibly wrong *)
@@ -339,7 +511,9 @@ let ocaml_of_typ_args t =
 
 (* Each clause is it's own function *)
 let ocaml_of_func_def (fdef : func_def) : string list t =
-  let id, _, _, clauses, _ = fdef.it in
+  let id, params, _, clauses, _ = fdef.it in
+  if (List.length clauses) = 0 then return [] else begin
+  let argslist = String.concat " " (List.init (List.length params) (fun i -> Printf.sprintf "a%d" i)) in
   let name = sanitize_name id.it in
   let* clause_funcs =
   mapMi (fun i clause ->
@@ -348,18 +522,19 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       let* prems_block = ocaml_of_prems prems in
       let* bodycode = ocaml_of_exp body in
       (* maybe if the function is parametric over a type we may need to generate a type def for it *)
-      let* argname = ocaml_of_args ~typearg:false params in
-      return (Printf.sprintf "clause_%s_%d %s =\n%s\n  Some (%s)\n" name i argname prems_block bodycode)
+      let* argnames = ocaml_of_args ~typearg:false params in
+      return (Printf.sprintf "clause_%s_%d %s =\n%s\n  Some (%s)\n" name i argnames prems_block bodycode)
   ) clauses
   in
   let clause_names =
-  String.concat "\n  <|> " (List.mapi (fun i _ -> Printf.sprintf "clause_%s_%d" name i) clauses)
+  String.concat "\n  <|> " (List.mapi (fun i _ -> Printf.sprintf "clause_%s_%d %s" name i argslist) clauses)
   in
-  let main_func = (Printf.sprintf "%s arg =\n  %s |> Option.value
-  ~default:(failwith \"No matching clause\")\n" name clause_names) in
+  let main_func = (Printf.sprintf "%s %s =\n  %s |> Option.value 
+  ~default:(failwith \"No matching clause\")\n" name argslist clause_names) in
   return (clause_funcs @ [main_func])
+  end
 
-(* ignoring the refinement type annotations for now - animation deals with this? *)
+(* ignoring the dependent type annotations for now *)
 let ocaml_of_typcase (op, (_, t, _), _hints) =
   let* args_str = ocaml_of_typ_args t in
   if args_str = "" then
@@ -400,12 +575,17 @@ let ocaml_of_typedef (typedef : type_def) : string t =
 let ocaml_of_dl_def (def : dl_def) : (string * string) t =
   match def with
   | RuleDef _  -> raise (CodegenError "RuleDef: should not happen")
-  | TypeDef typedef -> let* typestr = ocaml_of_typedef typedef in
-    return ("", "type " ^ typestr)
-  | FuncDef fdef ->
-    let* funcslist = ocaml_of_func_def fdef in
-    let funcstr = "let " ^ (String.concat "\nlet " funcslist) in
-    return (funcstr, "")
+  | TypeDef typedef -> let* typestr = ocaml_of_typedef typedef in 
+    (* because we don't support multiple instances yet *)
+    if String.length typestr >= 2 && String.sub typestr 0 2 = "(*" then
+      return ("", typestr)
+    else
+      return ("", "type " ^ typestr)
+  | FuncDef fdef -> 
+    let* funcslist = ocaml_of_func_def fdef in 
+    if funcslist = [] then return ("", "") else
+    (let funcstr = "let " ^ (String.concat "\nlet " funcslist) in
+    return (funcstr, ""))
   | RecDef dl_defs ->
     match dl_defs with
     | [] -> return ("", "")
@@ -414,14 +594,18 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
         | _ -> raise (CodegenError "RecDef not consistent: should not happen")
       ) dl_defs in
       let* func_blocks = mapM ocaml_of_func_def fdefs in
-      let func_strs = List.concat func_blocks in
+      let func_strs = List.concat func_blocks in  
+      if func_strs = [] then return ("", "") else
       return ("let rec " ^ String.concat "\nand " func_strs, "")
     | (TypeDef _)::_ -> let typedefs = List.map (fun def -> match def with
         | TypeDef typedef -> typedef
         | _ -> raise (CodegenError "RecDef not consistent: should not happen")
       ) dl_defs in
       let* typestrs = concat_mapM "\nand " ocaml_of_typedef typedefs in
-      return ("", "type " ^ typestrs)
+      if String.length typestrs >= 2 && String.sub typestrs 0 2 = "(*" then
+        return ("", typestrs)
+      else
+        return ("", "type " ^ typestrs)
     | (RuleDef _)::_ -> raise (CodegenError "RecDef: RuleDef should not happen")
 
 let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
@@ -431,34 +615,15 @@ let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
   let type_str = concat_nonempty "\n" type_defs in
   return (func_str, type_str)
 
-(* Generate a dune file for the dl_interpreter library *)
-
-let generate_dune_file () =
-  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_typeconv"] in
-  let libraries = ["backend_animation"; "xl"] in
-  (* Dune file content *)
-  let dune_content = Printf.sprintf
-    "(library\n  (name dl_interpreter)\n  (modules %s)\n  (libraries %s))"
-    (String.concat " " modules) (String.concat " " libraries)
-  in
-  let dune_file_path = "src/backend-animation/dl-interpreter/dune" in
-  let oc = open_out dune_file_path in
-  output_string oc dune_content;
-  close_out oc
-
 let generate_ocaml (dl_defs : dl_def list) : string * string * string =
-  generate_dune_file ();
   let main =
     "open Xl.Atom\n" ^
     "open Util_ocaml\n\n" ^
     "let (<|>) = Util_ocaml.Lib.Option.mplus\n" ^
     "let (let*) = Option.bind\n\n"
   in
-  let init_state = { typemap = Util_ocaml.TypeMap.empty;
-    typeconvfuncs = Util_ocaml.TypeSet.empty
-  } in
-  let (funcdefs, typedefs), _, typeconvfuncs =
-    run (ocaml_of_dl_defs dl_defs) init_state in
+  let (funcdefs, typedefs), typeconvfuncs = 
+    eval (ocaml_of_dl_defs dl_defs) in
   (main ^ funcdefs), typedefs, typeconvfuncs
 
 
