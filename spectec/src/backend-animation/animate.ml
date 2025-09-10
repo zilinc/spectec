@@ -28,6 +28,8 @@ let verbose : string list ref =
         (* "log"       ; *)
         (* "case"      ; *)
         (* "knowns"    ; *)
+        (* "binds"     ; *)
+        (* "##binds"   ; *)
       ]
 
 let error at msg = Error.error at "IL animation" msg
@@ -1016,8 +1018,36 @@ and animate_prem envr prem : prem list E.m =
     error prem.at ("Can't animate LetPr: " ^ string_of_prem prem)
   | ElsePr ->
     E.return [ prem ]
-  | IterPr ([prem'], ((iter, xes) as iterexp)) ->
-    let iter' = match iter with Opt -> Opt | _ -> List in
+  | IterPr (prems, ((List|List1) as iter, xes)) ->
+    (* Reduce them to ListN(_, None). *)
+    let list_e = List.find_map (fun (x, e) ->
+      let fv_e = (free_exp false e).varid in
+      if Set.subset fv_e knowns then Some e else None
+    ) xes |> Option.get in
+    let len_v = fresh_id (Some "len") list_e.at in
+    envr := bind_var !envr len_v (natT ());
+    let len_e = VarE len_v $$ len_v.at % (natT ()) in
+    let prem_len = LetPr (len_e, LenE list_e $> len_e, [len_v.it]) $ prem.at in
+    let* () = update (add_knowns (Set.singleton len_v.it)) in
+    let prem_list1 = match iter with 
+    | List  -> []
+    | List1 -> [IfPr (CmpE(`GeOp, `NatT, len_e, mk_nat 1) $$ len_e.at % (BoolT $ len_e.at)) $ prem.at]
+    | _ -> assert false
+    in
+    let prem' = IterPr (prems, (ListN(len_e, None), xes)) $ prem.at in
+    let* prems' = animate_prem envr prem' in
+    E.return (prem_len :: prem_list1 @ prems')
+  | IterPr (prems, (ListN(len, None) as iter, xes)) ->
+    (* Reduce them to ListN(_, Some _). *)
+    let i = fresh_id (Some "i") len.at in
+    let i_star = Frontend.Dim.annot_varid i [iter] in
+    let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
+    let i_star_e = VarE i_star $$ i_star.at % t_star in
+    envr := bind_var !envr i_star t_star;
+    let xes' = (i, i_star_e) :: xes in
+    let prem' = IterPr (prems, (ListN(len, Some i), xes')) $ prem.at in
+    animate_prem envr prem'
+  | IterPr ([prem'], (((Opt|ListN(_, Some _)) as iter, xes) as iterexp)) ->
     let lenvr = ref !envr in
     (* Propagating knowns into the iteration. *)
     let oindex = match iter with
@@ -1048,17 +1078,36 @@ and animate_prem envr prem : prem list E.m =
        Intermediate variables are excluded.
        NOTE the side effect of updating [envr].
     *)
+    info "binds" no_region ("Process inner premises: " ^ String.concat "\n" (List.map string_of_prem prems_body'));
+    info "binds" no_region ("Inner bindings: " ^ (!lenvr.vars |> Il.Env.Map.to_list |> List.map fst |> String.concat ","));
+    info "binds" no_region ("New bindings: " ^ ((Il.Env.env_diff !lenvr !envr).vars |> Il.Env.Map.to_list |> List.map fst |> String.concat ","));
     let xes' = List.concat_map (fun x ->
       if String.starts_with ~prefix:"__v" x || List.exists (fun (x', _) -> x'.it = x) xes
-      then []
+      then
+        (info "binds" prem.at ("Variable `" ^ x ^ "` is intermediate or is in binding list"); [])
       else
         (* Not in the binding list and not intermediate variables *)
         let x_star = Frontend.Dim.annot_varid (x $ no_region) [iter] in
-        let t = Il.Env.find_var !lenvr (x $ no_region) in
+        let t = find_var !lenvr (x $ no_region) in
+        let iter' = match iter with Opt -> Opt | _ -> List in
         let t_star = IterT (t, iter') $ x_star.at in
         envr := bind_var !envr x_star t_star;
+        info "binds" prem.at ("Add " ^ x_star.it ^ " to type binding");
         [(x $ x_star.at, VarE x_star $$ x_star.at % t_star)]
-    ) (Il.Env.Set.to_list new_knowns) in
+    ) (Set.to_list new_knowns) in
+    (* Propagate the new binders (type-binding) from the inner premises to the outside. *)
+    List.iter (fun (v, t) ->
+      if List.exists (fun (x', _) -> x'.it = v) xes then
+        info "##binds" prem.at ("## Variable " ^ v ^ " in binding list")
+      else
+        (* For those who don't bind to a higher dim variable, add them to the
+           top-level type binds. A variable is either bound at the top level,
+           or via the iterator binding list [xes].
+        *)
+        let t = find_var !lenvr (v $ no_region) in
+        info "##binds" prem.at ("## Add " ^ v ^ " to type binding");
+        envr := bind_var !envr  (v $ no_region) t
+    ) ((Il.Env.env_diff !lenvr !envr).vars |> Il.Env.Map.to_list);
     (* Propagate knowns to the outside of the iterator. We traverse [xes] and [xes'],
        because they together include all the variables that need to flow out.
        But the entries in [xes] and in [xes'] generate different premises.
@@ -1099,12 +1148,14 @@ and animate_prem envr prem : prem list E.m =
       let prem_len = IfPr (CmpE (`GeOp, `NatT, len, mk_nat 0) $$ len.at % (BoolT $ len.at)) $ len.at in
       let t = find_var !lenvr x in
       let x0 = IdxE (e, mk_nat 0) $$ e.at % t in
-      let prem_x0 = LetPr (VarE x $$ x.at % t, x0, [x.it]) $ e.at in
+      let xe = VarE x $$ x.at % t in
+      envr := bind_var !envr x t;
+      let prem_x0 = LetPr (xe, x0, [x.it]) $ e.at in
       let i = fresh_id (Some "i") len.at in
       let iter = ListN (len, Some i) in
       let e_i = IdxE (e, VarE i $$ i.at % (natT ~at:i.at ())) $$ e.at % x0.note in
-      let prem_eq = IfPr (CmpE (`EqOp, `NatT, x0, e_i) $$ x0.at % (BoolT $ x0.at)) $ x0.at in
-      let prem_eq_iter = IterPr ([prem_eq], (iter, [])) $ x0.at in
+      let prem_eq = IfPr (CmpE (`EqOp, `NatT, xe, e_i) $$ xe.at % (BoolT $ xe.at)) $ xe.at in
+      let prem_eq_iter = IterPr ([prem_eq], (iter, [])) $ xe.at in
       ([x.it; x_star.it], [prem_len; prem_x0; prem_eq_iter])
     ) xes'
     in
