@@ -45,6 +45,8 @@ let mem map id = Map.mem id.it map
 
 (* Right-biased merge. *)
 let merge m1 m2 = Map.union (fun _k _v1 v2 -> Some v2) m1 m2
+
+(* m1 - m2 *)
 let diff m1 m2 = Map.fold (fun k _v acc -> Map.remove k acc) m2 m1
 
 let env_diff env1 env2 =

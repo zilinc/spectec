@@ -302,8 +302,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       ) ctx' (0 -- n') in
       il_env := il_env0;  (* Resume old environment *)
       return ctx''
-    | ListN (n, None) -> todo "eval_prem: IterPr ListN(_, None)"
-    | List | List1 -> todo "eval_prem: IterPr List|List1"
+    | ListN (_, None) | List | List1 -> assert false  (* Should have been compiled away by animation. *)
     | Opt ->
       let il_env0 = !il_env in
       (* Extend il_env with "local" variables in the iteration *)
