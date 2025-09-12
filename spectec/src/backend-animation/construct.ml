@@ -63,6 +63,10 @@ let il_of_float64 f64 = RI.F64.to_bits f64 |> Z.of_int64_unsigned |> il_of_float
 let il_of_vec128 vec = BI.Construct.vec128_to_z vec |> il_of_z_nat
 let il_of_memidx idx = il_of_idx idx
 
+
+(* syntax list(syntax X) = X*  -- if ... *)
+let il_of_list' t ls = mk_case' "list" [[];[]] [ listE t ls ]
+
 (*
 let al_of_bool b = Stdlib.Bool.to_int b |> al_of_nat
 *)
@@ -95,7 +99,7 @@ and il_of_storagetype = function
 and il_of_fieldtype = function
   | RT.FieldT (mut, st) -> mk_case' "fieldtype" [[];[];[]] [ il_of_mut mut; il_of_storagetype st ]
 
-and il_of_resulttype rt = il_of_list (t_star "valtype") il_of_valtype rt
+and il_of_resulttype rt = il_of_list' (t_star "valtype") (List.map il_of_valtype rt)
 
 and il_of_comptype = function
   | RT.StructT ftl      -> mk_case' "comptype" [["STRUCT"];[]]      [ il_of_list (t_list "fieldtype") il_of_fieldtype ftl ]
@@ -107,7 +111,7 @@ and il_of_subtype = function
     mk_case' "subtype" [["SUB"];[];[];[]] [ il_of_final fin; il_of_list (t_star "typeuse") il_of_typeuse tul; il_of_comptype st ]
 
 and il_of_rectype = function
-  | RT.RecT stl -> mk_case' "rectype" [["REC"];[]] [ il_of_list (t_list "subtype") il_of_subtype stl ]
+  | RT.RecT stl -> mk_case' "rectype" [["REC"];[]] [ il_of_list' (t_list "subtype") (List.map il_of_subtype stl) ]
 
 and il_of_deftype = function
   | RT.DefT (rt, i) -> mk_case' "deftype" [["_DEF"];[];[]] [il_of_rectype rt; il_of_nat32 i]
