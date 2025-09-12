@@ -200,11 +200,72 @@ and mk_cvt_sub ?(at = no) e1 e2 : exp =
   let e = BinE (`SubOp, `IntT, e1', e2') $$ at % (NumT `IntT $ at) in
   mk_cvt e `IntT `NatT
 
-and mk_atom ?(at = no) ~info (atom: string) arity: mixop =
-  [Xl.Atom.Atom atom $$ at % info] :: List.init arity (Fun.const [])
+and mk_atom ?(at = no) ~info (atom: string) : Xl.Atom.atom =
+  Xl.Atom.(match atom with
+  | "->" -> Arrow
+  | _    -> Atom atom
+  ) $$ at % info
+  (*
+  | Infinity                     (* infinity *)
+  | Bot                          (* `_|_` *)
+  | Top                          (* `^|^` *)
+  | Dot                          (* `.` *)
+  | Dot2                         (* `..` *)
+  | Dot3                         (* `...` *)
+  | Semicolon                    (* `;` *)
+  | Backslash                    (* `\` *)
+  | Mem                          (* `<-` *)
+  | Arrow                        (* `->` *)
+  | Arrow2                       (* ``=>` *)
+  | ArrowSub                     (* `->_` *)
+  | Arrow2Sub                    (* ``=>_` *)
+  | Colon                        (* `:` *)
+  | ColonSub                     (* `:_` *)
+  | Sub                          (* `<:` *)
+  | Sup                          (* `:>` *)
+  | Assign                       (* `:=` *)
+  | Equal                        (* ``=` *)
+  | EqualSub                     (* ``=_` *)
+  | NotEqual                     (* ``=/=` *)
+  | Less                         (* ``<` *)
+  | Greater                      (* ``>` *)
+  | LessEqual                    (* ``<=` *)
+  | GreaterEqual                 (* ``>=` *)
+  | Equiv                        (* `==` *)
+  | EquivSub                     (* `==_` *)
+  | Approx                       (* `~~` *)
+  | ApproxSub                    (* `~~_` *)
+  | SqArrow                      (* `~>` *)
+  | SqArrowSub                   (* `~>_` *)
+  | SqArrowStar                  (* `~>*` *)
+  | SqArrowStarSub               (* `~>*_` *)
+  | Prec                         (* `<<` *)
+  | Succ                         (* `>>` *)
+  | Turnstile                    (* `|-` *)
+  | TurnstileSub                 (* `|-_` *)
+  | Tilesturn                    (* `-|` *)
+  | TilesturnSub                 (* `-|_` *)
+  | Quest                        (* ``?` *)
+  | Plus                         (* ``+` *)
+  | Star                         (* ``*` *)
+  | Comma                        (* ``,` *)
+  | Cat                          (* ``++` *)
+  | Bar                          (* ``|` *)
+  | BigAnd                       (* `(/\)` *)
+  | BigOr                        (* `(\/)` *)
+  | BigAdd                       (* `(+)` *)
+  | BigMul                       (* `( * )` *)
+  | BigCat                       (* `(++)` *)
+  | LParen | RParen              (* ``(` `)` *)
+  | LBrack | RBrack              (* ``[` `]` *)
+  | LBrace | RBrace              (* ``{` `}` *)
+  *)
 
-and mk_mixop ?(at = no) ~info (mixop: string list list): mixop =
-  List.map (fun as_ -> List.map (fun a -> Xl.Atom.Atom a $$ at % info) as_) mixop
+and mk_mixop' ?(at = no) ~info (atom: string) arity : mixop =
+  [mk_atom ~info atom] :: List.init arity (Fun.const [])
+
+and mk_mixop ?(at = no) ~info (mixop: string list list) : mixop =
+  List.map (fun as_ -> List.map (fun a -> mk_atom ~info a) as_) mixop
 
 and mk_case' ?(at = no) tname mixop es : exp =
   let t = t_var tname in

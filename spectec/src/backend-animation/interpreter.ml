@@ -15,7 +15,7 @@ module I = Backend_interpreter
 (* Errors *)
 
 let verbose : string list ref =
-  ref ["log"; "match"; "eval"; "assign"; "iter"]
+  ref ["log"; "eval"; "assign"; "iter"]
 
 let error at msg = Error.error at "(Meta)Interpreter" msg
 let error_np msg = error no_region msg
@@ -105,13 +105,11 @@ let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
 
 
-exception PatternMatchFailure
-
 let fail_assign at lhs rhs msg =
-  info "match" at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
+  info "assign" at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
                    "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
                    "  ▹ value: " ^ string_of_exp rhs);
-  raise PatternMatchFailure
+  fail
 
 (*
 let rec infer_val' val_ : typ' = match val_ with
@@ -197,11 +195,10 @@ let vctx_to_subst ctx : Il.Subst.subst =
     Il.Subst.add_varid subst (var $ no_region) value
   ) ctx Il.Subst.empty
 
-let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t =
+let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
   info "assign" lhs.at ("Assign " ^ string_of_exp lhs ^ " to " ^ string_of_exp rhs);
   match lhs.it, rhs.it with
-  | VarE name, _ ->
-    VContext.add name.it rhs ctx
+  | VarE name, _ -> VContext.add name.it rhs ctx |> return
   | IterE ({ it = VarE x1; _ }, ((List|List1), [(x2, lhs')])), ListE _ when Il.Eq.eq_id x1 x2 ->
     assign ctx lhs' rhs
   | IterE ({ it = VarE x1; _ }, (Opt, [x2, lhs'])), _ when Il.Eq.eq_id x1 x2 ->
@@ -209,18 +206,18 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t =
   | IterE (e, (Opt, xes)), _ ->
     assert false  (* Animation shouldn't output this. *)
   | IterE (e, ((ListN _|List|List1) as iter, xes)), ListE es ->
-    let ctxs = List.map (assign VContext.empty e) es in
+    let* ctxs = mapM (assign VContext.empty e) es in
     (* Assign length variable *)
-    let ctx' =
+    let* ctx' =
       match iter with
       | ListN (expr, None) ->
         let length = il_of_nat (List.length es) in
         assign ctx expr length
       | ListN _ ->
         fail_assign lhs.at lhs rhs ("invalid assignment: iter with index cannot be an assignment target")
-      | _ -> ctx
+      | _ -> return ctx
     in
-    List.fold_left (fun ctx (x, e) ->
+    foldlM (fun ctx (x, e) ->
       let vs = List.map (VContext.find x.it) ctxs in
       let v = match iter with
       | Opt -> optE e.note (List.nth_opt vs 0)
@@ -228,16 +225,15 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t =
       in
       assign ctx e v
     ) ctx' xes
-  | TupE lhs_s, TupE rhs_s
-    when List.length lhs_s = List.length rhs_s ->
-    List.fold_left2 assign ctx lhs_s rhs_s
+  | TupE lhs_s, TupE rhs_s when List.length lhs_s = List.length rhs_s ->
+    foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s rhs_s)
   | CaseE (lhs_tag, lhs_s), CaseE (rhs_tag, rhs_s) ->
     begin match lhs_s.it, rhs_s.it with
     | TupE lhs_s', TupE rhs_s' ->
       if Il.Eq.eq_mixop lhs_tag rhs_tag && List.length lhs_s' = List.length rhs_s' then
-        List.fold_left2 assign ctx lhs_s' rhs_s'
+        foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s' rhs_s')
       else
-        fail_assign lhs.at lhs rhs "tag or payload doesn't match"
+        fail_assign lhs.at lhs rhs ("tag or payload doesn't match")
     | _ -> fail_assign lhs.at lhs rhs "not a TupE inside a CaseE"
     end
   | OptE (Some lhs'), OptE (Some rhs') -> assign ctx lhs' rhs'
@@ -421,7 +417,7 @@ let rec eval_exp ctx exp : exp OptMonad.m =
     let* e1' = eval_exp ctx e1 in
     (match e1'.it with
     | CaseE (mixop', e11') when Il.Eq.eq_mixop mixop mixop' -> return e11'
-    | _ -> fail_log_exp "Constructor payload extraction expression" exp None
+    | _ -> fail_log_exp "Constructor unwrapping expression" exp None
     )
   | OptE eo -> let* eo' = Option.map (eval_exp ctx) eo in OptE eo' $> exp |> return
   | TheE e1 ->
@@ -518,8 +514,14 @@ and eval_iter ctx = function
 
 and eval_iterexp ctx (iter, xes) : iterexp OptMonad.m =
   let* iter' = eval_iter ctx iter in
-  let* xes' = mapM (fun (id, e) -> let* e' = eval_exp ctx e in return (id, e')) xes in
-  return (iter', xes')
+  let excl_ids = match iter with
+  | ListN(_, Some i) -> [i.it]
+  | _ -> []
+  in
+  (* Remove the outflowing binding. *)
+  let xes' = List.filter (fun (x, e) -> List.mem x.it excl_ids |> not) xes in
+  let* xes'' = mapM (fun (id, e) -> let* e' = eval_exp ctx e in return (id, e')) xes' in
+  return (iter', xes'')
 
 and eval_expfield ctx (atom, e) : expfield OptMonad.m =
   let* e' = eval_exp ctx e in return (atom, e')
@@ -583,7 +585,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
   match prem.it with
   | LetPr (lhs, rhs, _vs) ->
     let* rhs' = eval_exp ctx rhs in
-    return (assign ctx lhs rhs')
+    assign ctx lhs rhs'
   | IfPr e ->
     let* b = eval_exp ctx e in
     if b.it = BoolE true then return ctx
@@ -741,7 +743,7 @@ and eval_prems ctx prems : VContext.t OptMonad.m =
 and match_arg at (pat: arg) (arg: arg) : VContext.t option =
   match pat.it, arg.it with
   | TypA ptyp , TypA _    -> todo "match_arg TypA"
-  | ExpA pexp , ExpA aexp -> (try Some (assign VContext.empty pexp aexp) with PatternMatchFailure -> fail)
+  | ExpA pexp , ExpA aexp -> assign VContext.empty pexp aexp
   | DefA pid  , DefA _    -> todo "match_arg DefA"
   | GramA psym, GramA _   -> todo "match_arg GramA"
   | _ -> fail_log at ("Wrong argument sort: " ^ string_of_arg arg ^ " doesn't match pattern " ^ string_of_arg pat)
