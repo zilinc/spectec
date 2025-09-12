@@ -730,6 +730,11 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
     begin match as_variant_typ !envr rhs.note with
     | [] -> assert false
     | [(mixop', (_, t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
+      animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
+      (*
+      (* NOTE: Rebind the RHS to a fresh variable. This is only needed to lift
+         the function call nodes to the top of the AST.
+      *)
       begin match new_bind_exp envr None rhs None with
       | Error _ -> animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
       | Ok (envr, v, ve, prem_v) ->
@@ -737,6 +742,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
         let* prems' = animate_exp_eq envr at lhs' (UncaseE (ve, mixop) $$ ve.at % lhs'.note) in
         E.return (prems_v' @ prems')
       end
+      *)
     | tcases ->
       begin match lhs'.it with
       | TupE es ->

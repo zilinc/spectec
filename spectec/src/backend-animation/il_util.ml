@@ -88,6 +88,15 @@ let text_to_string txt : string =
   | TextE str -> str
   | _ -> error txt.at ("Input expression is not a text: " ^ string_of_exp txt)
 
+let of_bool_exp = function
+  | BoolE b -> Some b
+  | _ -> None
+
+let of_num_exp = function
+  | NumE n -> Some n
+  | _ -> None
+
+
 
 (* Construct *)
 
@@ -227,6 +236,9 @@ and mk_str ?(at = no) tname fes : exp =
 
 and mk_none ?(at = no) t : exp = optE t None
 and mk_some ?(at = no) t e : exp = optE t (Some e)
+
+let to_bool_exp b = BoolE b
+let to_num_exp n = NumE n
 
 
 (* Construct data structure *)
