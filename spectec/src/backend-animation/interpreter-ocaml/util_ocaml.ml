@@ -60,6 +60,11 @@ let rec lookup (x : id) (pairs : (id * 'b) list) : 'b option =
   | (k,v) :: rest ->
       if k.it = x.it then Some v else lookup x rest
 
+let rec update_at i v = function
+  | _ :: xs when i = 0 -> v :: xs
+  | x :: xs            -> x :: update_at (i - 1) v xs
+  | [] -> failwith "update_at: index out of bounds" (* todo this is also a codegen error *)
+
 let unzip1 lst = lst 
 let unzip2 (lst : ('a * 'b) list) : ('a list * 'b list) =
   let rec aux acc1 acc2 = function
