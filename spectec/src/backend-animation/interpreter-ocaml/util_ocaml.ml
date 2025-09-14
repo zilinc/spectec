@@ -18,11 +18,59 @@ let projE lst n =
     | None -> failwith "list too short")
   | _ -> failwith "projE: expected ListE"
 
-let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
-  let lowercase name =
-      if recordfield then String.lowercase_ascii name
-      else name
+let is_letter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+let is_capital c = 'A' <= c && c <= 'Z'
+
+let uppcase_first s =
+  match s with
+  | "" -> ""
+  | _  ->
+      let first = s.[0] in
+      if is_letter first then
+        let len = String.length s in
+        let first = Char.uppercase_ascii first in
+        String.init len (fun i -> if i = 0 then first else s.[i])
+      else
+        "C" ^ s
+
+(* OCaml convention:
+   typenames and record fields are lowercased
+   constructors have their first letter uppercased
+   constructors cannot begin with non-letter chars
+   type arguments are prefixed with a quote (') *)
+let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfield = false) id =
+  let lowercased =
+    if typename || recordfield then
+      (if (id = String.lowercase_ascii id) then id
+      (* add a prefix, otherwise variables like N and n will point to the same thing after sanitization *)
+      else ("uc_" ^ String.lowercase_ascii id))
+    else id
   in
+  let raw =
+    if typecons then uppcase_first lowercased
+    else lowercased
+  in
+  let raw = if typearg then "'" ^ raw else raw in
+  let replacements = [
+    '*', "_star";
+    '?', "_opt";
+    '%', "Pct";
+    '.', "_dot_";
+    '[', "_lbrack";
+    ']', "_rbrack";
+    '-', "_dash";
+    '>', "_right";
+    ';', "_semi"
+  ] in
+  let replaced = List.fold_left (fun acc (ch, repl) ->
+    String.concat repl (String.split_on_char ch acc)
+  ) raw replacements in
+  match replaced with
+  | "match" | "type" | "let" | "val" | "list" | "in" | "module" -> replaced ^ "_"
+  | _ -> replaced
+
+let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
+  let lowercase name = sanitize_name ~typename:false ~recordfield name in
   match mixop with
   | [{it = Atom.Atom a; _}]::tail when List.for_all ((=) []) tail -> (*"Atom " ^*) lowercase a
   | mixop ->
@@ -64,6 +112,19 @@ let rec update_at i v = function
   | _ :: xs when i = 0 -> v :: xs
   | x :: xs            -> x :: update_at (i - 1) v xs
   | [] -> failwith "update_at: index out of bounds" (* todo this is also a codegen error *)
+
+let update_slice l i j l' =
+  let len = List.length l in
+  if i < 0 || j < 0 || i >= len || j >= len || i > j || List.length l' <> j - i + 1 then
+    failwith "update_slice: invalid indices";
+  let prefix = List.take i l in
+  let suffix = List.drop (j+1) l in
+  prefix @ l' @ suffix
+
+let slice l i j =
+  if i < 0 || j < 0 || i > j || j >= List.length l then
+    failwith "slice: bad indices";
+  List.take (j - i + 1) (List.drop i l)
 
 let unzip1 lst = lst 
 let unzip2 (lst : ('a * 'b) list) : ('a list * 'b list) =
