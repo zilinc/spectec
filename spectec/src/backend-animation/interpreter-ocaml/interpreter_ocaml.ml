@@ -3,9 +3,7 @@ open Il.Print
 open Util.Source
 open Xl
 open Def
-
-(* there is definitely a better way to do this *)
-open Util_ocaml.TypeMap
+open Util_ocaml
 
 module TypeM   = Util_ocaml.TypeM
 module TypeMap = Util_ocaml.TypeMap
@@ -14,55 +12,20 @@ open TypeM
 (* TODO: change this to use Error module *)
 exception CodegenError of string
 
-let is_letter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
-let is_capital c = 'A' <= c && c <= 'Z'
 
-let uppcase_first s =
-  match s with
-  | "" -> ""
-  | _  ->
-      let first = s.[0] in
-      if is_letter first then
-        let len = String.length s in
-        let first = Char.uppercase_ascii first in
-        String.init len (fun i -> if i = 0 then first else s.[i])
-      else
-        "C" ^ s
+(* messy as of now *)
+type step_path =
+  | RootSP
+  | IdxSP of exp
+  | SliceSP of exp * exp
+  | DotSP of atom
 
-(* OCaml convention:
-   typenames are lowercased
-   constructors have their first letter uppercased
-   constructors cannot begin with non-letter chars
-   type arguments are prefixed with a quote (') *)
-let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) id =
-  let lowercased =
-    if typename then
-      (if (id = String.lowercase_ascii id) then id
-      (* add a prefix, otherwise variables like N and n will point to the same thing after sanitization *)
-      else ("uc_" ^ String.lowercase_ascii id))
-    else id
-  in
-  let raw =
-    if typecons then uppcase_first lowercased
-    else lowercased
-  in
-  let raw = if typearg then "'" ^ raw else raw in
-  let replacements = [
-    '*', "_star";
-    '?', "_opt";
-    '%', "Pct";
-    '.', "_dot_";
-    '[', "_lbrack";
-    ']', "_rbrack";
-    '-', "_dash";
-    '>', "_right"
-  ] in
-  let replaced = List.fold_left (fun acc (ch, repl) ->
-    String.concat repl (String.split_on_char ch acc)
-  ) raw replacements in
-  match replaced with
-  | "match" | "type" | "let" | "val" | "list" | "in" | "module" -> replaced ^ "_"
-  | _ -> replaced
+let rec flatten_path (p : path) (acc : step_path list) : step_path list =
+  match p.it with
+  | RootP -> acc 
+  | IdxP (p, e) -> flatten_path p (IdxSP e :: acc)
+  | SliceP (p1, e1, e2) -> flatten_path p1 (SliceSP (e1, e2) :: acc)
+  | DotP (p, atom) -> flatten_path p (DotSP atom :: acc)
 
 (* not sure if this is even necessary *)
 let rec check_eq_typs t1 t2 =
@@ -183,7 +146,7 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
   | CallE (id, args) ->
     let fname = sanitize_name id.it in
     let* args' = ocaml_of_args ~typearg args in
-    return (fname ^ " (" ^ args' ^ ")")
+    return (fname ^ " " ^ args')
   | CaseE (mixop, e1) ->
     let label = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop) in
     let* e1str = ocaml_of_exp e1 in
@@ -199,19 +162,32 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
     let mixopstr = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop) in 
     return ("uncase (" ^ expstr ^ ") (" ^ mixopstr ^ ")")
   | ProjE (e, n) -> let* expstr = ocaml_of_exp e in
-    return ("proj (" ^ expstr ^ ") " ^ string_of_int n)
+    return ("(proj (" ^ expstr ^ ") " ^ string_of_int n ^ ")")
   | CmpE (op, _, e1, e2) ->
     let* e1str = ocaml_of_exp e1 in
     let* e2str = ocaml_of_exp e2 in
     return ("(" ^ e1str ^ " " ^ ocaml_of_cmpop op ^ " " ^ e2str ^ ")")
   | IterE (e1, (iter, bindings)) ->
-    (* TODO: assuming that we always INFLOW, change later *)
+    (* TODO: assuming that we always INFLOW, change later
+    also needs to be more general *)
     begin
     match bindings with
     | [(id, e)] ->
       let* body_str = ocaml_of_exp e1 in
       let* list_name = ocaml_of_exp e in
       return (Printf.sprintf "(List.map (fun %s -> %s) %s)" (sanitize_name id.it) body_str list_name)
+    | [] -> 
+      let* body_str = ocaml_of_exp e1 in
+      begin match iter with 
+      | ListN (e, optid) ->
+        let* lenstr = ocaml_of_exp e in
+        let idstr = match optid with
+          | Some id -> sanitize_name id.it
+          | None -> "_"
+        in
+        return ("List.init (" ^ lenstr ^ ") (fun " ^ idstr ^ " -> " ^ body_str ^ ")")
+      | _ -> return "(* TODO: IterE with no bindings and non-length iterator *)"
+      end 
     | _ -> return "(* TODO: IterE with multiple bindings *)" 
     end
   | SupE (e1, typ1, typ2) | SubE (e1, typ1, typ2) ->
@@ -255,8 +231,28 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
     return (e1str ^ "." ^ mixopstr)
   | UpdE (e1, p, e2) -> 
     let* e1str = ocaml_of_exp e1 in
-    let* e2str = ocaml_of_exp e2 in
-    begin
+    let flat_path = flatten_path p [] in 
+    let rec build_update steppaths path_acc : string t =
+    begin match steppaths with
+    | [] -> ocaml_of_exp e2 
+    | DotSP atom :: rest ->
+      let mixopstr = Util_ocaml.mixop_to_atom_str ~recordfield:true [[atom]] in
+      let* inner_update = build_update rest (path_acc ^ "." ^ mixopstr) in 
+      return ("{ " ^ path_acc ^ " with " ^ mixopstr ^ " = " ^ inner_update ^ " }")
+    | IdxSP idexp :: rest -> 
+      let* idxtsr = ocaml_of_exp idexp in 
+      let* inner_update = build_update rest ("(List.nth " ^ idxtsr ^ " " ^ path_acc ^ ")") in
+      return ("(update_at " ^ idxtsr ^ " " ^ inner_update ^ " " ^ path_acc ^ ")")
+    | SliceSP (i, j) :: rest -> 
+      let* startstr = ocaml_of_exp i in 
+      let* endstr = ocaml_of_exp j in 
+      let* inner_update = build_update rest ("(slice " ^ path_acc ^ startstr ^ " " ^ endstr ^ ")") in
+      return ("(update_slice " ^ path_acc ^ " " ^ startstr ^ " " ^ endstr ^ " " ^ inner_update ^ ")")
+    end in 
+    build_update flat_path e1str
+
+
+    (*begin
     match p.it with
     | RootP -> return "TODO: root path"
     | IdxP ({it = RootP; note; _}, e) -> 
@@ -272,7 +268,7 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
       let* e_str = ocaml_of_exp e in
       return ("{ " ^ e1str ^ " with " ^ mixopstr ^ " = (update_at " ^ e_str ^ " " ^ e2str ^ " " ^ e1str ^ "." ^ mixopstr ^ ") }")
     | _ -> return ("TODO: UpdE with non-root nested path")
-    end
+    end*)
   | _ -> return "TODO: other expressions not supported yet"
 
 and ocaml_of_expfield (a, e) : string t = 
