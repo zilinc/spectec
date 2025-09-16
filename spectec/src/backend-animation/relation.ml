@@ -27,7 +27,7 @@ let info v at msg = if List.mem v !verbose || v = "" then
 
 
 (* $Ref_ok : store -> ref -> reftype *)
-let ref_ok s ref : exp = todo "ref_ok"
+let ref_ok s ref : exp = todo "$Ref_ok"
 (*
   (* TODO: some / none *)
   let null = some "NULL" in
@@ -121,7 +121,7 @@ let externaddr_ok s eaddr =
 *)
 
 (* $Val_ok : store -> val -> valtype *)
-let val_ok s val_ = todo "val_ok"
+let val_ok s val_ = todo "$Val_ok"
 (*
 function
   | [ v; t ] ->
@@ -147,7 +147,7 @@ let expand = function
 *)
 
 (* $Eval_expr : state -> expr -> (state * exp) *)
-let eval_expr st exp : exp = todo "eval_expr"
+let eval_expr st exp : exp = todo "$Eval_expr"
 
 let mem name =
   List.mem name ["Ref_ok"; "Module_ok"; "Externaddr_ok"; "Val_ok"; "Eval_expr"]
