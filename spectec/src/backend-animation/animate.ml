@@ -573,22 +573,15 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     or rewrite it as an if check. For example: match ls with [x, y] -> ... and
     this can be rewritten as a length check.
 *)
-(*
 and animate_exp_eq envr at lhs rhs : prem list E.m =
   let ( let* ) = E.( >>= ) in
   info "anf" at ("lhs = " ^ string_of_exp lhs ^ "; rhs = " ^ string_of_exp rhs);
-  let* (envr', v, rhs', prems_v) = match new_bind_exp envr None rhs None with
-  | Error v -> E.return (envr, v, rhs, [])
-  | Ok (envr', v, ve, _) ->
-    let prem_v = LetPr (ve, rhs, [v.it]) $ rhs.at in
-    let* () = update (AnimState.add_knowns (Set.singleton v.it)) in
-    E.return (envr', v, ve, [prem_v])
-  in
+  let (envr', v, rhs', oprems_v) = new_bind_exp envr None rhs None `Rhs in
+  let* () = update (AnimState.add_knowns (Set.singleton v.it)) in
   let* prems = animate_exp_eq' envr' at lhs rhs' in
-  E.return (prems_v @ prems)
-*)
+  E.return (Option.to_list oprems_v @ prems)
 
-and animate_exp_eq envr at lhs rhs : prem list E.m =
+and animate_exp_eq' envr at lhs rhs : prem list E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in
   let* s = get () in

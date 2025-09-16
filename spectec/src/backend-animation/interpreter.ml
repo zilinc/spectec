@@ -19,7 +19,7 @@ let verbose : string list ref =
       (* "eval"; *)          (* Evaluation of expressions. *)
       (* "assign"; *)        (* Matching, but for terms only. *)
       (* "match"; *)         (* Matching of other types. *)
-      "match_info";
+      (* *"match_info"; *)
       (* "iter"; *)          (* Low-level debugging. *)
       ]
 
@@ -658,6 +658,7 @@ and eval_arg ctx a : arg =
 and eval_prem ctx prem : VContext.t OptMonad.m =
   (* info "match_info" prem.at ("Match premise: " ^ string_of_prem prem); *)
   match prem.it with
+  | ElsePr -> return ctx
   | LetPr (lhs, rhs, _vs) -> assign ctx lhs rhs
   | IfPr e ->
     let b = eval_exp ctx e in
