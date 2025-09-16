@@ -1,16 +1,7 @@
 open Xl
 open Il.Ast
 
-(* this is wrong, need a case statement for every possible type *)
-let uncaseE (e : exp) op =
-  match e.it with
-  | CaseE (o, e) when (Mixop.eq o op) ->
-    (match e.it with
-    | TupE tupe -> ListE tupe (* convert tuple to list in case we need to index *)
-    | e' -> e')
-  | _ -> failwith "uncase: expected UncaseE"
-
-(* maybe we don't need to throw error and just return None *)
+(* FIXME: we project on ocaml lists/tuples not DL lists *)
 let projE lst n =
   match lst with
   | ListE es -> (match List.nth_opt es n with
@@ -56,8 +47,12 @@ let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfi
     '?', "_opt";
     '%', "Pct";
     '.', "_dot_";
-    '[', "_lbrack";
-    ']', "_rbrack";
+    '[', "_lbracksq";
+    ']', "_rbracksq";
+    '{', "_lbrackcu";
+    '}', "_rbrackcu";
+    '(', "_lbrackro";
+    ')', "_rbrackro";
     '-', "_dash";
     '>', "_right";
     ';', "_semi"
@@ -154,12 +149,12 @@ module TypeMap = Map.Make(String)
 module Set = Set.Make(String) 
 
 (* A State+Writer monad: 
-   The State keeps track of type definitions and known 
+   The State keeps track of type definitions, known and bound
    variables, the Writer accumulates type-casting functions *)
 module TypeM = struct
 
   type state = {
-    mutable typemap : Def.dl_def TypeMap.t; (* maps types to their definitions*)
+    mutable typemap : Def.dl_def TypeMap.t; (* maps types to their definitions *)
     mutable typeconvfuncs : Set.t; (* keeps track of type-conversion functions *)
     mutable knowns : Set.t; (* need this to determine inflow/outflow *)
   }
@@ -188,6 +183,7 @@ module TypeM = struct
   let put (st' : state) : unit t = fun _ -> ((), st', "")
   let modify f : unit t = fun st -> ((), f st, "")
   let get_knowns : Set.t t = fun st -> st.knowns, st, ""
+  let get_typedef (typename : string) : Def.dl_def option t = fun st -> ((TypeMap.find_opt typename st.typemap), st, "")
 
   let set_knowns (xs : Set.t) : unit t =
     modify (fun st -> { st with knowns = xs })
@@ -241,18 +237,10 @@ module TypeM = struct
   let concat_mapMi sep f xs =
     let* parts = mapMi f xs in
     return (concat_nonempty sep parts)
-
-  let lift_pair1 (m1 : string t) : (string * string) t =
-    fun st0 ->
-      let (a, st1, w1) = m1 st0 in
-      ((a, ""), st1, w1)
-
-  let lift_pair2 (m2 : string t) : (string * string) t =
-    fun st0 ->
-      let (a, st1, w1) = m2 st0 in
-      (("", a), st1, w1)
-
-  (*let run m st0  = m st0*)              
+  let catchM (thunk: unit -> 'a t) (handler : exn -> 'a t) : 'a t = fun st -> 
+    try (thunk ()) st with
+    | e -> handler e st
+            
   let eval m = 
     let st0 = { typemap = TypeMap.empty; 
     typeconvfuncs = Set.empty;
