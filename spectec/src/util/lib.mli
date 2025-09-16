@@ -50,6 +50,7 @@ sig
   val implode : char list -> string
   val explode : string -> char list
   val replace : string -> string -> string -> string
+  val shorten : ?cap:int -> string -> string
 end
 
 module Fun :
@@ -71,17 +72,24 @@ sig
   val mconcat : 'a option list -> 'a option
   val mconcat_map : ('a -> 'b option) -> 'a list -> 'b option
   val cat_opts_opt : 'a option list -> 'a list option
+  val opt_list : 'a list option -> 'a list
 end
 
 module type Monad =
 sig
   type 'a m
   val return : 'a -> 'a m
+  val fail : unit -> 'a m
   val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
   val ( let* ) : 'a m -> ('a -> 'b m) -> 'b m
   val ( >=> ) : ('a -> 'b m) -> ('b -> 'c m) -> 'a -> 'c m
   val ( >> ) : 'a m -> 'b m -> 'b m
+  val ( <$> ) : ('a -> 'b) -> 'a m -> 'b m
+  val ( <&> ) : 'a m -> ('a -> 'b) -> 'b m
   val mapM : ('a -> 'b m) -> 'a list -> 'b list m
+  val iterM : ('a -> 'b m) -> 'a list -> unit m
+  val mapiM : (int -> 'a -> 'b m) -> 'a list -> 'b list m
+  val opt_mapM : ('a -> 'b m) -> 'a option -> 'b option m
   val forM : 'a list -> ('a -> 'b m) -> 'b list m
   val foldlM : ('b -> 'a -> 'b m) -> 'b -> 'a list -> 'b m
   val foldlM1 : ('a -> 'a -> 'a m) -> 'a list -> 'a m

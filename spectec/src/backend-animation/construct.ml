@@ -53,14 +53,16 @@ let il_of_nat16 i16 = Z.of_int (RI.I16.to_int_u i16) |> il_of_z_nat
 let il_of_nat32 i32 = Z.of_int32_unsigned i32 |> il_of_z_nat
 let il_of_nat64 i64 = Z.of_int64_unsigned i64 |> il_of_z_nat
 
-let il_of_idx (idx: RI.Ast.idx) = il_of_nat32 idx.it
-
 let il_of_name name = textE (Utf8.encode name)
 let il_of_byte byte = Char.code byte |> il_of_nat
 let il_of_bytes bytes = String.to_seq bytes |> il_of_seq il_of_byte (t_star "byte")
 let il_of_float32 f32 = RI.F32.to_bits f32 |> Z.of_int32_unsigned |> il_of_floatN BI.Construct.layout32
 let il_of_float64 f64 = RI.F64.to_bits f64 |> Z.of_int64_unsigned |> il_of_floatN BI.Construct.layout64
 let il_of_vec128 vec = BI.Construct.vec128_to_z vec |> il_of_z_nat
+
+
+let il_of_uN _sz (n: RI.Ast.idx) = mk_case' "uN" [[];[]] [il_of_nat32 n.it]
+let il_of_idx (idx: RI.Ast.idx) = il_of_uN 32 idx
 let il_of_memidx idx = il_of_idx idx
 
 
