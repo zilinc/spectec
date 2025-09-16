@@ -2,7 +2,7 @@ let basepath = "./src/backend-animation/interpreter-ocaml/build/"
 
 (* Generate a dune file for the dl_interpreter library *)
 let generate_dune_file () =
-  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_typeconv"] in
+  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"] in
   let libraries = ["backend_animation"; "xl"] in
   (* Dune file content *)
   let dune_content = Printf.sprintf
@@ -28,4 +28,4 @@ let generate_ocaml dl ocamlfile =
   let main, types, typeconv = Interpreter_ocaml.generate_ocaml dl in
   write_file (basepath ^ ocaml_filename ^ ".ml") main;
   write_file (basepath ^ ocaml_filename ^ "_types.ml") types;
-  write_file (basepath ^ ocaml_filename ^ "_typeconv.ml") typeconv
+  write_file (basepath ^ ocaml_filename ^ "_util.ml") typeconv

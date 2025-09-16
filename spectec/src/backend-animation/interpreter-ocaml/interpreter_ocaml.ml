@@ -11,7 +11,7 @@ open TypeM
 
 (* TODO: change this to use Error module *)
 exception CodegenError of string
-
+exception CannotAnimate of string
 
 (* messy as of now *)
 type step_path =
@@ -132,8 +132,12 @@ let ocaml_of_cmpop op =
   | "=/=" -> "<>"
   | s -> s
 
-let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
-  match e.it with
+let rec ocaml_of_exp ?(typearg=false) ?(is_arg=false) (e : exp) : string t =
+  (* function or type arguments must be variables *)
+  if is_arg then begin match e.it with 
+  | VarE id -> return (sanitize_name ~typearg id.it)
+  | _ -> raise (CannotAnimate "non-variable arguments")
+  end else match e.it with
   | NumE n -> return (Num.to_string n)
   | TextE s -> return (Printf.sprintf "%S" s)
   | BoolE b -> return (string_of_bool b)
@@ -250,26 +254,51 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
       return ("(update_slice " ^ path_acc ^ " " ^ startstr ^ " " ^ endstr ^ " " ^ inner_update ^ ")")
     end in 
     build_update flat_path e1str
-
-
-    (*begin
-    match p.it with
-    | RootP -> return "TODO: root path"
-    | IdxP ({it = RootP; note; _}, e) -> 
-      let* e_str = ocaml_of_exp e in
-      return ("(update_at " ^ e_str ^ " " ^ e2str ^ " " ^ e1str ^ ")")
-    | SliceP (p1, e1, e2) -> return "TODO: SLICE PATH"
-    | DotP ({it = RootP; _}, atom) ->
+  | ExtE (e1, p, e2) -> 
+    let* e1str = ocaml_of_exp e1 in
+    let flat_path = flatten_path p [] in 
+    let rec build_update steppaths path_acc : string t =
+    begin match steppaths with
+    | [] -> 
+      let* e2str = ocaml_of_exp e2 in
+      return (path_acc ^ e2str)
+    | DotSP atom :: rest ->
       let mixopstr = Util_ocaml.mixop_to_atom_str ~recordfield:true [[atom]] in
-      return ("{ " ^ e1str ^ " with " ^ mixopstr ^ " = " ^ e2str ^ " }")
-    (* we want to handle this more generally *)
-    | IdxP ({it = DotP ({it = RootP; _}, atom); _}, e) -> 
-      let mixopstr = Util_ocaml.mixop_to_atom_str ~recordfield:true [[atom]] in
-      let* e_str = ocaml_of_exp e in
-      return ("{ " ^ e1str ^ " with " ^ mixopstr ^ " = (update_at " ^ e_str ^ " " ^ e2str ^ " " ^ e1str ^ "." ^ mixopstr ^ ") }")
-    | _ -> return ("TODO: UpdE with non-root nested path")
-    end*)
+      let* inner_update = build_update rest (path_acc ^ "." ^ mixopstr) in 
+      return ("{ " ^ path_acc ^ " with " ^ mixopstr ^ " = " ^ inner_update ^ " }")
+    | IdxSP idexp :: rest -> 
+      let* idxtsr = ocaml_of_exp idexp in 
+      let* inner_update = build_update rest ("(List.nth " ^ idxtsr ^ " " ^ path_acc ^ ")") in
+      return ("(update_at " ^ idxtsr ^ " " ^ inner_update ^ " " ^ path_acc ^ ")")
+    | SliceSP (i, j) :: rest -> 
+      let* startstr = ocaml_of_exp i in 
+      let* endstr = ocaml_of_exp j in 
+      let* inner_update = build_update rest ("(slice " ^ path_acc ^ startstr ^ " " ^ endstr ^ ")") in
+      return ("(update_slice " ^ path_acc ^ " " ^ startstr ^ " " ^ endstr ^ " " ^ inner_update ^ ")")
+    end in 
+    build_update flat_path e1str
   | _ -> return "TODO: other expressions not supported yet"
+
+(* an "uncase exp typcons" function will strip the typecons from the exp (a variant type) *)
+and generate_uncase tcs typename : unit t =
+  let funcstart = "let uncase_" ^ typename ^ " arg1 arg2 =\n  match arg1, arg2 with\n" in
+  let rec gen_match_arms acc tcs = 
+    match tcs with 
+    | [] -> acc 
+    | (op, (_, typargs, _), _) :: rest -> 
+      let opstr = sanitize_name ~typecons:true (Util_ocaml.mixop_to_atom_str op) in
+      let numargs = begin match typargs.it with 
+      | VarT _ | NumT _ | IterT _  | BoolT  | TextT -> 1
+      | TupT typarglist -> List.length typarglist
+      end in 
+      let arglist = List.init numargs (fun i -> "fv_" ^ string_of_int (i)) |> (String.concat ", ") in
+      let matcharm = "  | " ^ opstr ^ " (" ^ arglist ^ "), \"" ^ opstr ^ "\" -> Some (" ^ arglist ^ ")\n" in
+      gen_match_arms (acc ^ matcharm) rest
+  in 
+  let matcharms = gen_match_arms "" tcs in 
+  if matcharms = "" then return () else
+  let nonearm = "  | _ -> None" in 
+  tell (funcstart ^ matcharms ^ nonearm)
 
 and ocaml_of_expfield (a, e) : string t = 
   let* estr = ocaml_of_exp e in 
@@ -311,17 +340,17 @@ and ocaml_of_typbind (e, t) =
     let* tstr = ocaml_of_typ t in
     return (estr ^ " : " ^ tstr)*)
   | _ -> ocaml_of_typ t
-and ocaml_of_arg ?(typearg=true) a =
+and ocaml_of_arg ?(typearg=true) ?(is_arg=false) a =
   match a.it with
-  | ExpA e -> ocaml_of_exp ~typearg e (* ignore this for now *)
+  | ExpA e -> ocaml_of_exp ~typearg ~is_arg e
   | TypA t -> let* typstr = ocaml_of_typ t in
     if typearg then return ("'" ^ typstr) else return ""
   | DefA id -> return (sanitize_name ~typearg:false id.it)
   | GramA g -> return ("TODO: grammar in arg not supported")
 
-and ocaml_of_args ?(typearg=true) = function
+and ocaml_of_args ?(typearg=true) ?(is_arg=false) = function
   | [] -> return ""
-  | as_ -> concat_mapM " " (ocaml_of_arg ~typearg) as_
+  | as_ -> concat_mapM " " (ocaml_of_arg ~typearg ~is_arg) as_
 
 and ocaml_of_bool_binop = function
   | `AndOp -> "&&"
@@ -513,9 +542,15 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     | DefD (_, params, body, prems) ->
       let* prems_block = ocaml_of_prems prems in
       let* bodycode = ocaml_of_exp body in
-      (* maybe if the function is parametric over a type we may need to generate a type def for it *)
-      let* argnames = ocaml_of_args ~typearg:false params in
-      return (Printf.sprintf "clause_%s_%d %s =\n%s\n  Some (%s)\n" name i argnames prems_block bodycode)
+      catchM
+      (fun () -> 
+        let* argnames = ocaml_of_args ~typearg:false ~is_arg:true params in
+        return (Printf.sprintf "clause_%s_%d %s =\n%s\n  Some (%s)\n" name i argnames prems_block bodycode))
+      (function 
+      | CannotAnimate _ ->
+        let argnames  = String.concat " " (List.init (List.length params) (fun i -> Printf.sprintf "unanimated%d" i)) in
+        return (Printf.sprintf "clause_%s_%d %s = None\n" name i argnames)
+      | e -> raise e)
   ) clauses
   in
   let clause_names =
@@ -538,13 +573,13 @@ let ocaml_of_typfield (atom, (_bs, t, _prems), _hints) =
   let* typ_str = ocaml_of_typ t in
   return (Util_ocaml.mixop_to_atom_str ~recordfield:true [[atom]] ^ ": " ^ typ_str)
 
-let ocaml_of_deftyp dt =
+let ocaml_of_deftyp dt name =
   match dt.it with
   | AliasT t -> ocaml_of_typ t
   | StructT tfs ->
     let* tfs_str = concat_mapM ";\n " ocaml_of_typfield tfs in
     return ("{\n  " ^ tfs_str ^ "\n}")
-  | VariantT tcs ->
+  | VariantT tcs -> let* () = generate_uncase tcs name in 
     let* tcs_str = concat_mapM "\n  | " ocaml_of_typcase tcs in
     return ("\n  | " ^ tcs_str)
 
@@ -559,7 +594,7 @@ let ocaml_of_typedef (typedef : type_def) : string t =
       let* () = put {st with typemap = TypeMap.add (sanitize_name id.it) (TypeDef typedef) st.typemap} in
       let* args_str = ocaml_of_args ~typearg:true as_ in
       let space = if args_str = "" then "" else " " in
-      let* dt_str = ocaml_of_deftyp dt in
+      let* dt_str = ocaml_of_deftyp dt (sanitize_name id.it) in
       return (args_str ^ space ^ (sanitize_name id.it) ^ " = " ^ dt_str ^ "\n")
     | _ -> return ("(* TODO: MULTIPLE INSTANCE TYPE: \n type " ^ (sanitize_name id.it) ^ " = " ^ string_of_params ps ^ " " ^
     String.concat "\n" (List.map (string_of_inst id) insts) ^ "*)\n")
