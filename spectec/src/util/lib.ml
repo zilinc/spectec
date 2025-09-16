@@ -146,6 +146,10 @@ struct
 
   let replace pattern replacement s =
     Str.global_replace (Str.regexp_string pattern) replacement s
+
+  let shorten ?(cap=200) s =
+    let l = String.length s in
+    if l > cap then String.sub s 0 (cap/2) ^ "..." ^ String.sub s (l-1-cap/2) (cap/2) else s
 end
 
 module Fun =
@@ -173,17 +177,26 @@ struct
     | Some ys, Some x -> Some (x::ys)
     in
     List.fold_left f None oxs
+  let opt_list = function
+    | None -> []
+    | Some ls -> ls
 end
 
 module type Monad =
 sig
   type 'a m
   val return : 'a -> 'a m
+  val fail : unit -> 'a m
   val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
   val ( let* ) : 'a m -> ('a -> 'b m) -> 'b m
   val ( >=> ) : ('a -> 'b m) -> ('b -> 'c m) -> 'a -> 'c m
   val ( >> ) : 'a m -> 'b m -> 'b m
+  val ( <$> ) : ('a -> 'b) -> 'a m -> 'b m
+  val ( <&> ) : 'a m -> ('a -> 'b) -> 'b m
   val mapM : ('a -> 'b m) -> 'a list -> 'b list m
+  val iterM : ('a -> 'b m) -> 'a list -> unit m
+  val mapiM : (int -> 'a -> 'b m) -> 'a list -> 'b list m
+  val opt_mapM : ('a -> 'b m) -> 'a option -> 'b option m
   val forM : 'a list -> ('a -> 'b m) -> 'b list m
   val foldlM : ('b -> 'a -> 'b m) -> 'b -> 'a list -> 'b m
   val foldlM1 : ('a -> 'a -> 'a m) -> 'a list -> 'a m

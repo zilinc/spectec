@@ -131,7 +131,7 @@ let instantiate module_ : exp =
 
 
 let invoke moduleinst_name funcname args : exp =
-  log "[Invoking %s %s...]\n" funcname (R.Value.string_of_values args);
+  log "[Invoking %s %s...]\n" funcname (R.Value.string_of_values args |> Lib.String.shorten);
 
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
@@ -164,7 +164,7 @@ let test_assertion assertion =
   | AssertTrap (action, re) -> (
     try
       let result = run_action action |> Interpreter.exp_to_val in
-      Run.assert_message assertion.at "runtime" (Al.Print.string_of_value result) re;
+      Run.assert_message assertion.at "runtime" (Al.Print.string_of_value result |> Util.Lib.String.shorten) re;
       fail
     with I.Exception.Trap -> success
   )
@@ -222,7 +222,7 @@ let run_command' command =
 let run_command command =
   let start_time = Sys.time () in
   let result =
-    let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) msg in
+    let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) (Lib.String.shorten msg) in
     try
       run_command' command
     with
@@ -293,6 +293,7 @@ let run_wasm' args module_ =
     |> Interpreter.exp_to_val
     |> al_to_list al_to_value
     |> R.Value.string_of_values
+    |> Lib.String.shorten
     |> print_endline;
     success
   | [] -> success
