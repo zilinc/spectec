@@ -1,2 +1,7 @@
 spectec
 _specification
+.DS_Store
+dl.log
+il.log
+interpret.log
+interpreter.log
