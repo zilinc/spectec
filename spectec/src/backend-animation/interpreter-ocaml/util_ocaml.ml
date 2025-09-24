@@ -121,6 +121,11 @@ let slice l i j =
     failwith "slice: bad indices";
   List.take (j - i + 1) (List.drop i l)
 
+let lift e = 
+  match e with 
+  | Some v -> [v]
+  | None -> []
+
 let unzip1 lst = lst 
 let unzip2 (lst : ('a * 'b) list) : ('a list * 'b list) =
   let rec aux acc1 acc2 = function
@@ -157,6 +162,8 @@ module TypeM = struct
     mutable typemap : Def.dl_def TypeMap.t; (* maps types to their definitions *)
     mutable typeconvfuncs : Set.t; (* keeps track of type-conversion functions *)
     mutable knowns : Set.t; (* need this to determine inflow/outflow *)
+    mutable typecasts : string; (* type-casted arguments in the DL to be moved to the function body *)
+    mutable freshvaridx : int
   }
 
   type 'a t = state -> 'a * state * string  
@@ -185,6 +192,20 @@ module TypeM = struct
   let get_knowns : Set.t t = fun st -> st.knowns, st, ""
   let get_typedef (typename : string) : Def.dl_def option t = fun st -> ((TypeMap.find_opt typename st.typemap), st, "")
 
+  let get_freshvar () : string t = fun st ->
+      let var = Printf.sprintf "v%d" st.freshvaridx in
+      st.freshvaridx <- st.freshvaridx + 1;
+      (var, st, "")
+
+  let get_typecasts () : string t =
+    fun st -> (st.typecasts, st, "")
+
+  let set_typecasts (xs : string) : unit t =
+    modify (fun st -> { st with typecasts = xs })
+
+  let add_typecast (x : string) : unit t =
+    modify (fun st -> { st with typecasts = append_sep st.typecasts x "\n" })
+
   let set_knowns (xs : Set.t) : unit t =
     modify (fun st -> { st with knowns = xs })
 
@@ -199,10 +220,8 @@ module TypeM = struct
   let is_known (x: string) : bool t =
     fun st -> (Set.mem x st.knowns, st, "")
 
-  (* maybe dont need this? *)
-  let are_knowns (xs: Set.t) : bool t =
-    fun st -> (Set.subset xs st.knowns, st, "")
-
+  let are_knowns (xs: Set.t) : bool t = fun st -> 
+    (Set.subset xs st.knowns, st, "")
   let is_defined (x : string) : bool t =
     fun st -> (Set.mem x st.typeconvfuncs, st, "")
 
@@ -234,17 +253,32 @@ module TypeM = struct
     in
     aux 0 xs
 
+  let rec allM (f : 'a -> 'b t) (xs : 'a list) : bool t =
+    match xs with 
+    | [] -> return true 
+    | x::rest -> 
+      let* b = f x in 
+      if b then allM f rest else return false 
+
   let concat_mapMi sep f xs =
     let* parts = mapMi f xs in
     return (concat_nonempty sep parts)
   let catchM (thunk: unit -> 'a t) (handler : exn -> 'a t) : 'a t = fun st -> 
     try (thunk ()) st with
     | e -> handler e st
-            
+
+  let rec foldM f acc = function
+  | [] -> return acc
+  | x :: xs ->
+      let* acc' = f acc x in
+      foldM f acc' xs
+
   let eval m = 
     let st0 = { typemap = TypeMap.empty; 
     typeconvfuncs = Set.empty;
-    knowns = Set.empty
+    knowns = Set.empty;
+    typecasts = "";
+    freshvaridx = 0
     } in 
     let (a, _, w) = m st0 in (a, w) 
 
