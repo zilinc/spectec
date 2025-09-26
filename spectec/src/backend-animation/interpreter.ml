@@ -16,12 +16,19 @@ module I = Backend_interpreter
 
 let verbose : string list ref =
   ref [
+         "log";
+         "table";
+      (* "assertion"; *)
       (* "eval"; *)          (* Evaluation of expressions. *)
-      (* "assign"; *)        (* Matching, but for terms only. *)
-      (* "match"; *)         (* Matching of other types. *)
-      (* *"match_info"; *)
+      (* "assign"; *)         (* Matching, but for terms only. *)
+      (* "match";  *)        (* Matching of other types. *)
+      (* "match_info"; *)
+      (* "steps"; *)
       (* "iter"; *)          (* Low-level debugging. *)
       ]
+
+
+exception FunctionNoMatch of region * string
 
 let error at msg = Error.error at "(Meta)Interpreter" msg
 let error_np msg = error no_region msg
@@ -34,6 +41,8 @@ let info v at msg = if List.mem v !verbose || v = "" then
                       print_endline (string_of_region at ^ " (Meta)Interpreter info[" ^ v ^ "]:\n" ^ msg)
                     else
                       ()
+
+let assert_msg cond msg = if not cond then info "assertion" no msg; assert cond
 
 
 (* Helper *)
@@ -93,6 +102,7 @@ let error_eval etyp exp onotes =
   | None     -> ""
   | Some msg -> "\n  ▹ " ^ msg
   in
+  info "log" exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes);
   error exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes)
 
 let fail_assign at lhs rhs msg =
@@ -115,9 +125,42 @@ end
 
 let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
+let step_table = ref [
+  [["LABEL_"];["{"];["}"];[]], 0;
+  [["FRAME_"];["{"];["}"];[]], 0;
+
+]
+let step_pure_table = ref [
+  [["UNREACHABLE"]], 0;
+  [["NOP"]], 0;
+  [["DROP"]], 0;
+  [["SELECT"];[]], 3;
+  [["IF"];[];["ELSE"]], 1;
+  [["LABEL_"];["{"];["}"];[]], 0;  (* also in step *)
+  [["HANDLER_"];["{"];["}"];[]], 0;
+  [["BR_IF"];[]], 1;
+  [["BR_TABLE"];[];[]], 1;
+  [["BR_ON_NULL"];[]], 1;
+  [["BR_ON_NON_NULL"];[]], 1;
 
 
+]
+let step_read_table = ref [
+  (* [["BLOCK"];[];[]], m; *)
+  (* [["LOOP"];[];[]], m; *)
+  [["BR_ON_CAST"];[];[];[]], 1;
+  [["BR_ON_CAST_FAIL"];[];[];[]], 1;
+  [["CALL"];[]], 0;
+  [["CALL_REF"];[]], 1;
+  (* [["CALL_REF"];[]], 1 + n; *)
 
+]
+
+
+(* TODO(zilinc): Properly convert Il expression to RI type and run the checker,
+   and get back the result expression.
+*)
+let dummy : exp = varE ~note:(t_var "dummyT") "dummyE"
 
 (*
 let rec infer_val' val_ : typ' = match val_ with
@@ -175,33 +218,13 @@ let as_list_exp e =
   | ListE es -> es
   | _ -> failwith "as_list_exp"
 
-let rec exp_to_val exp : A.value =
-  match exp.it with
-  | BoolE b  -> A.BoolV b
-  | NumE num -> A.NumV num
-  | TextE s  -> A.TextV s
-  | TupE  es -> A.TupV  (List.map exp_to_val es)
-  | ListE es -> A.ListV (List.map exp_to_val es |> Array.of_list |> ref)
-  | OptE oe  -> A.OptV (Option.map exp_to_val oe)
-  | CaseE (mixop, e) -> A.CaseV (string_of_mixop mixop, tup_to_val e)
-  | SubE (e, _, _) | SupE (e, _, _) -> exp_to_val e
-  | StrE fs -> A.StrV (List.map expfield_to_record fs)
-  | _ -> error exp.at ("Expression is not in normal form: " ^ string_of_exp exp)
-
-and expfield_to_record (atom, exp) : A.id * A.value ref =
-  let id = string_of_atom atom in
-  let val_  = exp_to_val exp in
-  (id, ref val_)
-
-and tup_to_val exp : A.value list =
-  match exp.it with
-  | TupE es -> List.map exp_to_val es
-  | _       -> [exp_to_val exp]
 
 let vctx_to_subst ctx : Il.Subst.subst =
   VContext.Map.fold (fun var value subst ->
     Il.Subst.add_varid subst (var $ no_region) value
   ) ctx Il.Subst.empty
+
+
 
 (** [lhs] is the pattern, and [rhs] is the expression. *)
 let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
@@ -337,8 +360,19 @@ and eval_exp ctx exp : exp =
     let e1' = eval_exp ctx e1 in
     let e2' = eval_exp ctx e2 in
     (match e1'.it, e2'.it with
-    | ListE es, NumE (`Nat i) when i < Z.of_int (List.length es) -> List.nth es (Z.to_int i)
-    | _ -> error_eval "Indexing expression" exp None
+    | ListE es, NumE (`Nat i) ->
+      if i < Z.of_int (List.length es) then
+        List.nth es (Z.to_int i)
+      else
+        error_eval "Indexing expression" exp
+          (Some ("Index out-of-range:\n" ^
+                 "seq   = " ^ string_of_exp e1' ^ "\n" ^
+                 "|seq| = " ^ string_of_int (List.length es) ^ "\n" ^
+                 "idx   = " ^ string_of_int (Z.to_int i)
+                )
+          )
+    | _ -> error_eval "Indexing expression" exp
+             (Some ("seq = " ^ string_of_exp e1' ^ "; idx = " ^ string_of_exp e2'))
     )
   | SliceE (e1, e2, e3) ->
     let e1' = eval_exp ctx e1 in
@@ -849,7 +883,12 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
     let old_env = !il_env in
     (* Add bindings to [il_env]. *)
     let _ = Animate.env_of_binds binds il_env in
-    assert (List.length pargs = List.length args);
+    assert_msg (List.length pargs = List.length args)
+      (sprintf "Function `%s`%s (%d) but got arguments %s (%d)" fname
+        (string_of_args pargs |> Lib.String.shorten)
+        (List.length pargs)
+        (string_of_args args  |> Lib.String.shorten)
+        (List.length args));
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
@@ -865,9 +904,11 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
     return val_
 
 
-and eval_func name func_def args : exp OptMonad.m =
+and eval_func name func_def args : exp =
   let (_, params, typ, fcs, _) = func_def.it in
-  match_clause no_region name 1 fcs args
+  match match_clause no_region name 1 fcs args |> run_opt with
+  | Some v -> v
+  | None   -> raise (FunctionNoMatch (func_def.at, "Can't evaluate function call " ^ name ^ string_of_args args ^ "."))
 
 
 and call_func name args : exp =
@@ -882,11 +923,7 @@ and call_func name args : exp =
   in
   (* Function *)
   match Def.find_dl_func_def name !dl with
-  | Some fdef when not is_builtin ->
-    (match eval_func name fdef args |> run_opt with
-    | Some val_ -> val_
-    | None -> error fdef.at ("Function call failed: " ^ name ^ string_of_args args)
-    )
+  | Some fdef when not is_builtin -> eval_func name fdef args
   (* Numerics *)
   | None when I.Numerics.mem builtin_name -> (
     if not is_builtin then
@@ -895,8 +932,298 @@ and call_func name args : exp =
     error no "call_func: Can't call built-in functions for now; not yet implemented."
   )
   (* Relation *)
-  | None when Relation.mem name -> Relation.call_func name args
+  | None when relation_mem name -> call_rule name args
   | None -> error no (sprintf "There is no function named `%s`." name)
+
+
+(* Hard-coded relations *)
+
+and call_rule name (args: arg list) : exp =
+  let nargs = List.length args in
+  match name with
+  | "Ref_ok"        when nargs = 2 -> ref_ok        (List.nth args 0) (List.nth args 1)
+  | "Module_ok"     when nargs = 1 -> module_ok     (List.nth args 0)
+  | "Externaddr_ok" when nargs = 2 -> externaddr_ok (List.nth args 0) (List.nth args 1)
+  | "Val_ok"        when nargs = 2 -> val_ok        (List.nth args 0) (List.nth args 1)
+  | "Steps"         when nargs = 1 -> steps         (List.nth args 0)
+  | _ -> assert false
+
+
+(* $Ref_ok : store -> ref -> reftype *)
+and ref_ok s ref : exp = todo "$Ref_ok"
+(*
+  (* TODO: some / none *)
+  let null = some "NULL" in
+  let nonull = none "NULL" in
+  let none = nullary "NONE" in
+  let nofunc = nullary "NOFUNC" in
+  let noexn = nullary "NOEXN" in
+  let noextern = nullary "NOEXTERN" in
+
+  let match_heaptype v1 v2 =
+    let ht1 = Construct.al_to_heaptype v1 in
+    let ht2 = Construct.al_to_heaptype v2 in
+    Match.match_reftype [] (Types.Null, ht1) (Types.Null, ht2)
+  in
+
+  match ref with
+  (* null *)
+  | [CaseV ("REF.NULL", [ ht ]) as v] ->
+    if match_heaptype none ht then
+      CaseV ("REF", [ null; none])
+    else if match_heaptype nofunc ht then
+      CaseV ("REF", [ null; nofunc])
+    else if match_heaptype noexn ht then
+      CaseV ("REF", [ null; noexn])
+    else if match_heaptype noextern ht then
+      CaseV ("REF", [ null; noextern])
+    else
+      Numerics.error_typ_value "$Reftype" "null reference" v
+  (* i31 *)
+  | [CaseV ("REF.I31_NUM", [ _ ])] -> CaseV ("REF", [ nonull; nullary "I31"])
+  (* host *)
+  | [CaseV ("REF.HOST_ADDR", [ _ ])] -> CaseV ("REF", [ nonull; nullary "ANY"])
+  (* exception *)
+  | [CaseV ("REF.EXN_ADDR", [ _ ])] -> CaseV ("REF", [ nonull; nullary "EXN"])
+  (* array/func/struct addr *)
+  | [CaseV (name, [ NumV (`Nat i) ])]
+  when String.starts_with ~prefix:"REF." name && String.ends_with ~suffix:"_ADDR" name ->
+    let field_name = String.sub name 4 (String.length name - 9) in
+    let object_ = listv_nth (Ds.Store.access (field_name ^ "S")) (Z.to_int i) in
+    let dt = strv_access "TYPE" object_ in
+    CaseV ("REF", [ nonull; dt])
+  (* extern *)
+  (* TODO: check null *)
+  | [CaseV ("REF.EXTERN", [ _ ])] -> CaseV ("REF", [ nonull; nullary "EXTERN"])
+  | vs -> Numerics.error_values "$Reftype" vs
+*)
+
+(* $Module_ok : module -> moduletype *)
+and module_ok (module_: arg) : exp =
+  match module_.it with
+  | ExpA module_' -> dummy
+  | _ -> error module_.at ("Wrong argument sort to function $Module_ok. Got: " ^ string_of_arg module_)
+(*
+  match module_ with
+  | [ m ] ->
+    (try
+      let module_ = Construct.al_to_module m in
+      let ModuleT (its, ets) = Reference_interpreter.Valid.check_module module_ in
+      let importtypes = List.map (fun (Types.ImportT (_, _, xt)) -> Construct.al_of_externtype xt) its in
+      let exporttypes = List.map (fun (Types.ExportT (_, xt)) -> Construct.al_of_externtype xt) ets in
+      CaseV ("->", [ listV_of_list importtypes; listV_of_list exporttypes ])
+    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
+    )
+
+  | vs -> Numerics.error_values "$Module_ok" vs
+*)
+
+(* $Externaddr_ok : store -> externaddr -> externtype *)
+and externaddr_ok s eaddr =
+  match s.it, eaddr.it with
+  | ExpA s', ExpA eaddr' -> dummy
+  | _ , ExpA _ -> error s.at     ("1st argument to function $Externaddr_ok has wrong sort. Got: " ^ string_of_arg s    )
+  | ExpA _ , _ -> error eaddr.at ("2nd argument to function $Externaddr_ok has wrong sort. Got: " ^ string_of_arg eaddr)
+(* match eaddr with
+  | [ CaseV (name, [ NumV (`Nat z) ]); t ] ->
+    (try
+      let addr = Z.to_int z in
+      let externaddr_type =
+        name^"S"
+        |> Store.access
+        |> unwrap_listv_to_array
+        |> fun arr -> Array.get arr addr
+        |> strv_access "TYPE"
+        |> fun type_ -> CaseV (name, [type_])
+        |> Construct.al_to_externtype
+      in
+      let externtype = Construct.al_to_externtype t in
+      boolV (Match.match_externtype [] externaddr_type externtype)
+    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ())))
+  | vs -> Numerics.error_values "$Externaddr_ok" vs
+*)
+
+(* $Val_ok : store -> val -> valtype *)
+and val_ok s val_ = todo "$Val_ok"
+(*
+function
+  | [ v; t ] ->
+    let value = Construct.al_to_value v in
+    let valtype = Construct.al_to_valtype t in
+    (try
+      boolV (Match.match_valtype [] (Value.type_of_value value) valtype)
+    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ())))
+  | vs -> Numerics.error_values "$Val_ok" vs
+*)
+
+(*
+(* Rule `Expand` has been compiled to `$expanddt` in animation.ml *)
+let expand = function
+  | [ v ] ->
+    (try
+      v
+      |> Construct.al_to_deftype
+      |> Types.expand_deftype
+      |> Construct.al_of_comptype
+    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ())))
+  | vs -> Numerics.error_values "$Expand" vs
+*)
+
+
+(*
+
+(* They don't work. *)
+
+(* Build a table of opcodes and arities for each of the Step function. *)
+and mk_step_tables (rels: Il.Env.rel_def Il.Env.Map.t) =
+  let step_rdef      = Il.Env.Map.find "Step"      rels in
+  let step_pure_rdef = Il.Env.Map.find "Step_pure" rels in
+  let step_read_rdef = Il.Env.Map.find "Step_read" rels in
+  let (_, _, step_rules) = step_rdef in
+  let (_, _, step_pure_rules) = step_pure_rdef in
+  let (_, _, step_read_rules) = step_read_rdef in
+
+  let filter_rule rule =
+    ["pure"; "read"; "trap"; "ctxt"]
+    |> List.mem (Il2al.Il2al_util.name_of_rule rule)
+    |> not
+  in
+
+  (* ASSUMES all clauses of an inductive rule for one instruction agree on the number
+     of operands it takes.
+  *)
+
+  let step_pure_table = List.map (fun c ->
+    let RuleD (_, _, _, exp, _) = c.it in
+  let step_table = List.map (fun r ->
+    let RuleD (_, _, _, exp, _) = r.it in
+    let TupE [lhs; rhs] = exp.it in
+    let CaseE (_, tup) = lhs.it in  (* %;% *)
+    let TupE [_; instrs] = tup.it in
+    info "table" instrs.at ("rule = " ^ string_of_rule r);
+    let instrs' = elts_of_list instrs in
+    let opcode = Lib.List.last instrs' in
+    let arity = List.length instrs' - 1 in
+    let CaseE (op, _) = opcode.it in
+    (op, arity)
+  ) (List.filter filter_rule step_rules) in
+
+  let step_pure_table = List.map (fun c ->
+    let RuleD (_, _, _, exp, _) = c.it in
+    let TupE [lhs; rhs] = exp.it in
+    let instrs' = elts_of_list lhs in
+    let opcode = Lib.List.last instrs' in
+    let arity = List.length instrs' - 1 in
+    let CaseE (op, _) = opcode.it in
+    (op, arity)
+  ) step_pure_rules in
+
+  let step_read_table = List.map (fun c ->
+    let RuleD (_, _, _, exp, _) = c.it in
+    let TupE [lhs; rhs] = exp.it in
+    let CaseE (_, tup) = lhs.it in  (* %;% *)
+    let TupE [_; instrs] = tup.it in
+    let instrs' = elts_of_list instrs in
+    let opcode = Lib.List.last instrs' in
+    let arity = List.length instrs' - 1 in
+    let CaseE (op, _) = opcode.it in
+    (op, arity)
+  ) step_read_rules in
+
+  step_table, step_pure_table, step_read_table
+*)
+
+(* $Steps : config -> config *)
+and steps arg : exp =
+  let instr_ops = as_variant_typ !il_env (t_var "instr") |> List.map (fun (mixop, _, _) -> mixop) in
+  let val_ops   = as_variant_typ !il_env (t_var "val")   |> List.map (fun (mixop, _, _) -> mixop) in
+  let in_val_ops iop = List.exists (fun vop -> Il.Eq.eq_mixop vop iop) val_ops in
+  let redex_ops = List.filter (fun iop -> in_val_ops iop |> not) instr_ops in
+  let rec find_redex' (pre : exp list) (instrs : exp list) : exp list * exp list * exp list =
+    match instrs with
+    | [] -> pre, [], []
+    | i::is -> (match i.it with
+      | CaseE (mixop, _) ->
+        if List.mem mixop redex_ops then
+        (
+          info "steps" i.at ("Redex is: " ^ string_of_exp i);
+          pre, [i], is
+        )
+        else
+          find_redex' (pre@[i]) is
+      | _ -> assert false
+      )
+  in
+  let find_redex instrs = find_redex' [] instrs in
+
+  let ExpA conf = arg.it in
+  let CaseE (mixop, tup) = conf.it in
+  let TupE [z; instrs] = tup.it in
+  info "steps" conf.at ("Input instr* is: " ^ Il.Print.string_of_exp instrs);
+  let ops = elts_of_list instrs in
+  let ops_l, ops_m, ops_r = find_redex ops in
+  if List.is_empty ops_m then
+    (info "steps" conf.at ("ops_m = eps"); conf)
+  else
+    let _ = () in
+    info "steps" conf.at ("|ops|  : " ^ string_of_int (List.length ops) ^ "\n" ^
+                          "|ops_l|: " ^ string_of_int (List.length ops_l) ^ "\n" ^
+                          "ops_m  : " ^ String.concat ", " (List.map string_of_exp ops_m) ^ "\n" ^
+                          "|ops_r|: " ^ string_of_int (List.length ops_r));
+
+    let find_in_table table = List.find_map (fun (con, arity) ->
+      let [{ it = CaseE(op', _); _ }] = ops_m in
+      let op = mk_mixop ~info:(Xl.Atom.info "") con in
+      if Il.Eq.eq_mixop op op' then Some (op, arity) else None
+    ) table in
+
+    let mk_step_args ops_l ops_m arity =
+      let ops_l', ops_args = Lib.List.split (List.length ops_l - arity) ops_l in
+      let instrs_m = ListE (ops_args @ ops_m) $> instrs in
+      let tup_step  = TupE [z; instrs_m] $> tup in
+      let conf_step = CaseE (mixop, tup_step) $> conf in
+      let conf_arg = ExpA conf_step $ conf_step.at in
+      let instrs_arg = ExpA instrs_m $ instrs_m.at in
+      (conf_arg, instrs_arg, ops_l')
+    in
+
+    let mk_next_conf ops_l' instrs_m' ops_r =
+      let ops_m'  = elts_of_list instrs_m' in
+      let instrs' = ListE (ops_l' @ ops_m' @ ops_r) $> instrs in
+      let tup'    = TupE [z; instrs'] $> tup in
+      let conf'   = CaseE (mixop, tup') $> conf in
+      ExpA conf' $ conf'.at
+    in
+
+    begin match find_in_table !step_pure_table with
+    | Some (_, arity) ->
+      let _, instrs_arg, ops_l' = mk_step_args ops_l ops_m arity in
+      let instrs_m' = call_func "Step_pure" [instrs_arg] in
+      let conf_arg' = mk_next_conf ops_l' instrs_m' ops_r in
+      steps conf_arg'
+    | None ->
+      begin match find_in_table !step_read_table with
+      | Some (_, arity) ->
+        let conf_arg, _, ops_l' = mk_step_args ops_l ops_m arity in
+        let instrs_m' = call_func "Step_read" [conf_arg] in
+        let conf_arg' = mk_next_conf ops_l' instrs_m' ops_r in
+        steps conf_arg'
+      | None ->
+        begin match find_in_table !step_table with
+        | Some (_, arity) ->
+          let conf_arg, _, ops_l' = mk_step_args ops_l ops_m arity in
+          let conf_step' = call_func "Step" [conf_arg] in
+          let CaseE (mixop', tup_step') = conf_step'.it in
+          let TupE [z'; instrs_m'] = tup_step'.it in
+          let conf_arg' = mk_next_conf ops_l' instrs_m' ops_r in
+          steps conf_arg'
+        | None -> conf  (* Steps/refl *)
+        end
+      end
+    end
+
+and relation_mem name =
+  List.mem name ["Ref_ok"; "Module_ok"; "Externaddr_ok"; "Val_ok"; "Steps"]
 
 
 

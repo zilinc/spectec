@@ -66,13 +66,18 @@ let find_str_field atom str : exp =
 
 let find_list_elem p lst : exp =
   match lst.it with
-  | ListE es -> List.find (fun e -> p e) es
-  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
+  | ListE es -> List.find p es
+  | _ -> error lst.at ("find_list_elem: Input expression is not a list: " ^ string_of_exp lst)
 
 let nth_of_list lst (idx: Z.t) : exp =
   match lst.it with
   | ListE es -> List.nth es (Z.to_int idx)
-  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
+  | _ -> error lst.at ("nth_of_list: Input expression is not a list: " ^ string_of_exp lst)
+
+let elts_of_list lst : exp list =
+  match lst.it with
+  | ListE es -> es
+  | _ -> error lst.at ("elts_of_list: Input expression is not a list: " ^ string_of_exp lst)
 
 let args_of_case case : exp list =
   match case.it with
@@ -82,6 +87,16 @@ let args_of_case case : exp list =
     | _ -> [tup]
     )
   | _ -> error case.at ("Input expression is not a case: " ^ string_of_exp case)
+
+let unwrap_case case : exp =
+  match case.it with
+  | CaseE ([[];[]], { it = TupE [e]; _ }) -> e
+  | _ -> error case.at ("Input expression is not a singleton variant: " ^ string_of_exp case)
+
+let unwrap_num num : num =
+  match num.it with
+  | NumE num' -> num'
+  | _ -> error num.at ("Input expression is not a number: " ^ string_of_exp num)
 
 let text_to_string txt : string =
   match txt.it with
@@ -202,64 +217,64 @@ and mk_cvt_sub ?(at = no) e1 e2 : exp =
 
 and mk_atom ?(at = no) ~info (atom: string) : Xl.Atom.atom =
   Xl.Atom.(match atom with
-  | "->" -> Arrow
-  | _    -> Atom atom
+    | "infinity" -> Infinity
+    | "_|_"      -> Bot
+    | "^|^"      -> Top
+    | "."        -> Dot
+    | ".."       -> Dot2
+    | "..."      -> Dot3
+    | ";"        -> Semicolon
+    | "\\"       -> Backslash
+    | "<-"       -> Mem
+    | "->"       -> Arrow
+    | "=>"       -> Arrow2
+    | "->_"      -> ArrowSub
+    | "=>_"      -> Arrow2Sub
+    | ":"        -> Colon
+    | ":_"       -> ColonSub
+    | "<:"       -> Sub
+    | ":>"       -> Sup
+    | ":="       -> Assign
+    | "="        -> Equal
+    | "=_"       -> EqualSub
+    | "=/="      -> NotEqual
+    | "<"        -> Less
+    | ">"        -> Greater
+    | "<="       -> LessEqual
+    | ">="       -> GreaterEqual
+    | "=="       -> Equiv
+    | "==_"      -> EquivSub
+    | "~~"       -> Approx
+    | "~~_"      -> ApproxSub
+    | "~>"       -> SqArrow
+    | "~>_"      -> SqArrowSub
+    | "~>*"      -> SqArrowStar
+    | "~>*_"     -> SqArrowStarSub
+    | "<<"       -> Prec
+    | ">>"       -> Succ
+    | "|-"       -> Turnstile
+    | "|-_"      -> TurnstileSub
+    | "-|"       -> Tilesturn
+    | "-|_"      -> TilesturnSub
+    | "?"        -> Quest
+    | "+"        -> Plus
+    | "*"        -> Star
+    | ","        -> Comma
+    | "++"       -> Cat
+    | "|"        -> Bar
+    | "(/\\)"    -> BigAnd
+    | "(\\/)"    -> BigOr
+    | "(+)"      -> BigAdd
+    | "(*)"      -> BigMul
+    | "(++)"     -> BigCat
+    | "("        -> LParen
+    | "["        -> LBrack
+    | "{"        -> LBrace
+    | ")"        -> RParen
+    | "]"        -> RBrack
+    | "}"        -> RBrace
+    | _          -> Atom atom
   ) $$ at % info
-  (*
-  | Infinity                     (* infinity *)
-  | Bot                          (* `_|_` *)
-  | Top                          (* `^|^` *)
-  | Dot                          (* `.` *)
-  | Dot2                         (* `..` *)
-  | Dot3                         (* `...` *)
-  | Semicolon                    (* `;` *)
-  | Backslash                    (* `\` *)
-  | Mem                          (* `<-` *)
-  | Arrow                        (* `->` *)
-  | Arrow2                       (* ``=>` *)
-  | ArrowSub                     (* `->_` *)
-  | Arrow2Sub                    (* ``=>_` *)
-  | Colon                        (* `:` *)
-  | ColonSub                     (* `:_` *)
-  | Sub                          (* `<:` *)
-  | Sup                          (* `:>` *)
-  | Assign                       (* `:=` *)
-  | Equal                        (* ``=` *)
-  | EqualSub                     (* ``=_` *)
-  | NotEqual                     (* ``=/=` *)
-  | Less                         (* ``<` *)
-  | Greater                      (* ``>` *)
-  | LessEqual                    (* ``<=` *)
-  | GreaterEqual                 (* ``>=` *)
-  | Equiv                        (* `==` *)
-  | EquivSub                     (* `==_` *)
-  | Approx                       (* `~~` *)
-  | ApproxSub                    (* `~~_` *)
-  | SqArrow                      (* `~>` *)
-  | SqArrowSub                   (* `~>_` *)
-  | SqArrowStar                  (* `~>*` *)
-  | SqArrowStarSub               (* `~>*_` *)
-  | Prec                         (* `<<` *)
-  | Succ                         (* `>>` *)
-  | Turnstile                    (* `|-` *)
-  | TurnstileSub                 (* `|-_` *)
-  | Tilesturn                    (* `-|` *)
-  | TilesturnSub                 (* `-|_` *)
-  | Quest                        (* ``?` *)
-  | Plus                         (* ``+` *)
-  | Star                         (* ``*` *)
-  | Comma                        (* ``,` *)
-  | Cat                          (* ``++` *)
-  | Bar                          (* ``|` *)
-  | BigAnd                       (* `(/\)` *)
-  | BigOr                        (* `(\/)` *)
-  | BigAdd                       (* `(+)` *)
-  | BigMul                       (* `( * )` *)
-  | BigCat                       (* `(++)` *)
-  | LParen | RParen              (* ``(` `)` *)
-  | LBrack | RBrack              (* ``[` `]` *)
-  | LBrace | RBrace              (* ``{` `}` *)
-  *)
 
 and mk_mixop' ?(at = no) ~info (atom: string) arity : mixop =
   [mk_atom ~info atom] :: List.init arity (Fun.const [])
@@ -309,3 +324,8 @@ let il_of_seq t f s = List.of_seq s |> il_of_list f t
 let il_of_opt t f opt = Option.map f opt |> optE t
 let il_of_tup t fel = List.map (fun (f, e) -> f e) fel |> tupE ~note:t
 
+
+
+(* Helper functions *)
+
+let eq_mixop (cons: string list list) mixop = Il.Eq.eq_mixop (mk_mixop ~info:(Xl.Atom.info "") cons) mixop
