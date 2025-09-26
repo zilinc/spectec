@@ -539,8 +539,9 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     let fncall = CallE (fid, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
     (rhs, fncall)
   | "Eval_expr", TupE [z; lhs; z'; rhs] ->
-    let fncall = CallE (id, [ExpA z $ z.at; ExpA lhs $ lhs.at]) $$ at % rhs.note in
-    let res = TupE [z'; rhs] $$ z'.at % (t_tup [z'.note; rhs.note]) in
+    let arg = mk_case' ~at:at "config" [[];[";"];[]] [z;lhs] in
+    let res = mk_case' ~at:at "config" [[];[";"];[]] [z';rhs] in
+    let fncall = CallE (id, [expA arg]) $$ at % res.note in
     (res, fncall)
   (* Other rules, mostly from validation.
      We don't allow inverting rules, so the LHS (i.e. all args expect the last one)
@@ -769,6 +770,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     E.return ([prem_len] @ prems')
   | CaseE (mixop, lhs') ->
     info "case" at ("The payload of constructor " ^ string_of_mixop mixop ^ " is " ^ string_of_exp lhs');
+    info "case" at ("The LHS: (" ^ string_of_exp lhs ^ ") type is " ^ string_of_typ lhs.note);
     info "case" at ("The RHS: (" ^ string_of_exp rhs ^ ") type is " ^ string_of_typ rhs.note);
     begin match as_variant_typ !envr rhs.note with
     | [] -> assert false

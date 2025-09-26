@@ -4,6 +4,7 @@ module List :
 sig
   val take : int -> 'a list -> 'a list (* raises Failure *)
   val drop : int -> 'a list -> 'a list (* raises Failure *)
+  val take_from_back : int -> 'a list -> 'a list (* raises Failure *)
   val split : int -> 'a list -> 'a list * 'a list (* raises Failure *)
   val split_hd : 'a list -> 'a * 'a list (* raises Failure *)
   val split_last_opt : 'a list -> ('a list * 'a) option

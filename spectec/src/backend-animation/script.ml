@@ -34,12 +34,81 @@ module Store = struct
       |> Record.add "STRUCTS" (listE (t_star "structinst" ) [])
       |> Record.add "ARRAYS"  (listE (t_star "arrayinst"  ) [])
       |> Record.add "EXNS"    (listE (t_star "exninst"    ) [])
+    ;
+    Ds.Store.init ()
+
 
   let get () = mk_str "store" (List.map (fun (f, er) -> (f, !er)) !store)
 
   let access field = Record.find field !store
   let update field f = let v = access field in
                        store := Record.add field (f v) !store
+
+  let put s =
+    let tags    = find_str_field "TAGS"    s in
+    let globals = find_str_field "GLOBALS" s in
+    let mems    = find_str_field "MEMS"    s in
+    let tables  = find_str_field "TABLES"  s in
+    let funcs   = find_str_field "FUNCS"   s in
+    let datas   = find_str_field "DATAS"   s in
+    let elems   = find_str_field "ELEMS"   s in
+    let structs = find_str_field "STRUCTS" s in
+    let arrays  = find_str_field "ARRAYS"  s in
+    let exns    = find_str_field "EXNS"    s in
+    update "TAGS"    (Fun.const tags   );
+    update "GLOBALS" (Fun.const globals);
+    update "MEMS"    (Fun.const mems   );
+    update "TABLES"  (Fun.const tables );
+    update "FUNCS"   (Fun.const funcs  );
+    update "DATAS"   (Fun.const datas  );
+    update "ELEMS"   (Fun.const elems  );
+    update "STRUCTS" (Fun.const structs);
+    update "ARRAYS"  (Fun.const arrays );
+    update "EXNS"    (Fun.const exns   );
+
+    (* Update Ds.Store as well, because AL -> Value relies on it. Yikes! *)
+    let als_tags    = Il_util.elts_of_list tags    |> List.map Construct.exp_to_val in
+    let als_globals = Il_util.elts_of_list globals |> List.map Construct.exp_to_val in
+    let als_mems    = Il_util.elts_of_list mems    |> List.map Construct.exp_to_val in
+    let als_tables  = Il_util.elts_of_list tables  |> List.map Construct.exp_to_val in
+    let als_funcs   = Il_util.elts_of_list funcs   |> List.map Construct.exp_to_val in
+    let als_datas   = Il_util.elts_of_list datas   |> List.map Construct.exp_to_val in
+    let als_elems   = Il_util.elts_of_list elems   |> List.map Construct.exp_to_val in
+    let als_structs = Il_util.elts_of_list structs |> List.map Construct.exp_to_val in
+    let als_arrays  = Il_util.elts_of_list arrays  |> List.map Construct.exp_to_val in
+    let als_exns    = Il_util.elts_of_list exns    |> List.map Construct.exp_to_val in
+
+    (match Ds.Store.access "TAGS" with
+    | ListV a -> a := Array.of_list als_tags
+    | _ -> assert false);
+    (match Ds.Store.access "GLOBALS" with
+    | ListV a -> a := Array.of_list als_globals
+    | _ -> assert false);
+    (match Ds.Store.access "MEMS" with
+    | ListV a -> a := Array.of_list als_mems
+    | _ -> assert false);
+    (match Ds.Store.access "TABLES" with
+    | ListV a -> a := Array.of_list als_tables
+    | _ -> assert false);
+    (match Ds.Store.access "FUNCS" with
+    | ListV a -> a := Array.of_list als_funcs
+    | _ -> assert false);
+    (match Ds.Store.access "DATAS" with
+    | ListV a -> a := Array.of_list als_datas
+    | _ -> assert false);
+    (match Ds.Store.access "ELEMS" with
+    | ListV a -> a := Array.of_list als_elems
+    | _ -> assert false);
+    (match Ds.Store.access "STRUCTS" with
+    | ListV a -> a := Array.of_list als_structs
+    | _ -> assert false);
+    (match Ds.Store.access "ARRAYS" with
+    | ListV a -> a := Array.of_list als_arrays
+    | _ -> assert false);
+    (match Ds.Store.access "EXNS" with
+    | ListV a -> a := Array.of_list als_exns
+    | _ -> assert false);
+
 end
 
 
@@ -48,8 +117,8 @@ end
 let il_of_spectest () : exp =
 
   (* Helper functions *)
-  let i32_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I32"; Construct.il_of_nat32   i ] in
-  let i64_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I64"; Construct.il_of_nat64   i ] in
+  let i32_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I32"; Construct.il_of_uN_32   i ] in
+  let i64_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I64"; Construct.il_of_uN_64   i ] in
   let f32_to_const f = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "F32"; Construct.il_of_float32 f ] in
   let f64_to_const f = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "F64"; Construct.il_of_float64 f ] in
 
@@ -130,11 +199,12 @@ let il_of_spectest () : exp =
   let funcs = [
     create_funcinst "print"         [            ];
     create_funcinst "print_i32"     ["I32"       ];
+    (*
     create_funcinst "print_i64"     ["I64"       ];
     create_funcinst "print_f32"     ["F32"       ];
     create_funcinst "print_f64"     ["F64"       ];
     create_funcinst "print_i32_f32" ["I32"; "F32"];
-    create_funcinst "print_f64_f64" ["F64"; "F64"];
+    create_funcinst "print_f64_f64" ["F64"; "F64"]; *)
   ] in
 
   (* Builtin globals *)
