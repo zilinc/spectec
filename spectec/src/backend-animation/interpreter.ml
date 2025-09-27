@@ -1178,18 +1178,17 @@ and steps arg : exp =
     ) table in
 
     let mk_step_args ops_l ops_m arity =
-      let ops_l', ops_args = Lib.List.split (List.length ops_l - arity) ops_l in
-      let instrs_m = ListE (ops_args @ ops_m) $> instrs in
+      let instrs_m = ListE (ops_l @ ops_m) $> instrs in
       let tup_step  = TupE [z; instrs_m] $> tup in
       let conf_step = CaseE (mixop, tup_step) $> conf in
       let conf_arg = ExpA conf_step $ conf_step.at in
       let instrs_arg = ExpA instrs_m $ instrs_m.at in
-      (conf_arg, instrs_arg, ops_l')
+      (conf_arg, instrs_arg)
     in
 
-    let mk_next_conf ops_l' instrs_m' ops_r =
+    let mk_next_conf instrs_m' ops_r =
       let ops_m'  = elts_of_list instrs_m' in
-      let instrs' = ListE (ops_l' @ ops_m' @ ops_r) $> instrs in
+      let instrs' = ListE (ops_m' @ ops_r) $> instrs in
       let tup'    = TupE [z; instrs'] $> tup in
       let conf'   = CaseE (mixop, tup') $> conf in
       ExpA conf' $ conf'.at
@@ -1197,25 +1196,25 @@ and steps arg : exp =
 
     begin match find_in_table !step_pure_table with
     | Some (_, arity) ->
-      let _, instrs_arg, ops_l' = mk_step_args ops_l ops_m arity in
+      let _, instrs_arg = mk_step_args ops_l ops_m arity in
       let instrs_m' = call_func "Step_pure" [instrs_arg] in
-      let conf_arg' = mk_next_conf ops_l' instrs_m' ops_r in
+      let conf_arg' = mk_next_conf instrs_m' ops_r in
       steps conf_arg'
     | None ->
       begin match find_in_table !step_read_table with
       | Some (_, arity) ->
-        let conf_arg, _, ops_l' = mk_step_args ops_l ops_m arity in
+        let conf_arg, _ = mk_step_args ops_l ops_m arity in
         let instrs_m' = call_func "Step_read" [conf_arg] in
-        let conf_arg' = mk_next_conf ops_l' instrs_m' ops_r in
+        let conf_arg' = mk_next_conf instrs_m' ops_r in
         steps conf_arg'
       | None ->
         begin match find_in_table !step_table with
         | Some (_, arity) ->
-          let conf_arg, _, ops_l' = mk_step_args ops_l ops_m arity in
+          let conf_arg, _ = mk_step_args ops_l ops_m arity in
           let conf_step' = call_func "Step" [conf_arg] in
           let CaseE (mixop', tup_step') = conf_step'.it in
           let TupE [z'; instrs_m'] = tup_step'.it in
-          let conf_arg' = mk_next_conf ops_l' instrs_m' ops_r in
+          let conf_arg' = mk_next_conf instrs_m' ops_r in
           steps conf_arg'
         | None -> conf  (* Steps/refl *)
         end

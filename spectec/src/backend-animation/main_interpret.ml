@@ -1,5 +1,6 @@
 open Def
 open Script
+open State
 open Il_util
 open Il.Ast
 open Util
@@ -303,8 +304,7 @@ let run_wasm' args module_ =
     (* Print invocation result. We don't really have to convert it to reference
        interpreter's value type though.
     *)
-    |> Construct.exp_to_val
-    |> al_to_list al_to_value
+    |> Construct.il_to_list Construct.il_to_value
     |> R.Value.string_of_values
     |> Lib.String.shorten
     |> print_endline;

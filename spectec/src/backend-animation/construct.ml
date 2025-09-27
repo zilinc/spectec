@@ -11,7 +11,7 @@ open Xl.Atom
 
 
 let error at msg = Util.Error.error at "ani.../int.../construct" msg
-
+let error_value name exp = error exp.at ("Invalid " ^ name ^ ": " ^ string_of_exp exp)
 
 (* Constant *)
 
@@ -981,59 +981,28 @@ let il_of_module (module_: RI.Ast.module_) =
 
 
 
-
-
-module A = Al.Ast
-
-
-let rec exp_to_val exp : A.value =
-  match exp.it with
-  | BoolE b  -> A.BoolV b
-  | NumE num -> A.NumV num
-  | TextE s  -> A.TextV s
-  | TupE  es -> A.TupV  (List.map exp_to_val es)
-  | ListE es -> A.ListV (List.map exp_to_val es |> Array.of_list |> ref)
-  | OptE oe  -> A.OptV (Option.map exp_to_val oe)
-  | CaseE (mixop, e) ->
-    (match mixop, e.it with
-    | [[];[]], TupE [e'] -> exp_to_val e'
-    | _ -> A.CaseV (string_of_mixop mixop, tup_to_val e)
-    )
-  | SubE (e, _, _) | SupE (e, _, _) -> exp_to_val e
-  | StrE fs -> A.StrV (List.map expfield_to_record fs)
-  | _ -> error exp.at ("Expression is not in normal form: " ^ string_of_exp exp)
-
-and expfield_to_record (atom, exp) : A.id * A.value ref =
-  let id = string_of_atom atom in
-  let val_  = exp_to_val exp in
-  (id, ref val_)
-
-and tup_to_val exp : A.value list =
-  match exp.it with
-  | TupE es -> List.map exp_to_val es
-  | _       -> [exp_to_val exp]
-
-
-
-
 (* Destruct *)
 
 
-(*
+let match_caseE name exp : string list list * exp list =
+  match exp.it with
+  | CaseE (tag, { it = TupE es; _ }) -> mixop_to_text tag, es
+  | _ -> error_value name exp
+
 
 (* Destruct data structure *)
 
-let al_to_opt (f: value -> 'a) (v: value): 'a option = unwrap_optv v |> Option.map f
-*)
+let il_to_opt (f: exp -> 'a) (e: exp): 'a option = unwrap_opt e |> Option.map f
 
 let il_to_list (f: exp -> 'a) (e: exp): 'a list =
   elts_of_list e |> List.map f
 
 (*
 let al_to_seq f s = al_to_list f s |> List.to_seq
-let al_to_phrase (f: value -> 'a) (v: value): 'a phrase = f v @@ no_region
+*)
+let il_to_phrase (f: exp -> 'a) (v: exp): 'a RI.Source.phrase = RI.Source.(f v @@ no_region)
 
-
+(*
 (* Destruct minor *)
 
 type layout = { width : int; exponent : int; mantissa : int }
@@ -1088,8 +1057,10 @@ let il_to_vec128  exp : RI.V128.t = unwrap_num exp |> il_to_z_nat |> z_to_vec128
 (*
 let il_to_float32 exp : RI.F32.t = al_to_floatN layout32 v |> Z.to_int32_unsigned |> F32.of_bits
 let il_to_float64 exp : RI.F64.t = al_to_floatN layout64 v |> Z.to_int64_unsigned |> F64.of_bits
+*)
 
-let al_to_idx: value -> idx = al_to_phrase al_to_nat32
+let il_to_idx exp : RI.Ast.idx = il_to_phrase il_to_nat32 exp
+(*
 let al_to_byte (v: value): Char.t = al_to_nat v |> Char.chr
 let al_to_bytes (v: value): string = al_to_seq al_to_byte v |> String.of_seq
 let al_to_string = function
@@ -1098,148 +1069,169 @@ let al_to_string = function
 let al_to_name name = name |> al_to_string |> Utf8.decode
 let al_to_bool = unwrap_boolv
 
+*)
 
 (* Destruct type *)
 
-let al_to_null: value -> null = function
-  | OptV None -> NoNull
-  | OptV _ -> Null
-  | v -> error_value "null" v
 
-let al_to_final: value -> final = function
-  | OptV None -> NoFinal
-  | OptV _ -> Final
-  | v -> error_value "final" v
+let il_to_null exp : RI.Types.null =
+  match exp.it with
+  | OptE None -> NoNull
+  | OptE _ -> Null
+  | _ -> error_value "null" exp
 
-let al_to_mut: value -> mut = function
-  | OptV None -> Cons
-  | OptV _ -> Var
-  | v -> error_value "mut" v
+let il_to_final exp : RI.Types.final =
+  match exp.it with
+  | OptE None -> NoFinal
+  | OptE _ -> Final
+  | _ -> error_value "final" exp
 
-let rec al_to_storagetype: value -> storagetype = function
-  | CaseV ("I8", []) -> PackStorageT I8T
-  | CaseV ("I16", []) -> PackStorageT I16T
-  | v -> ValStorageT (al_to_valtype v)
+let il_to_mut exp : RI.Types.mut =
+  match exp.it with
+  | OptE None -> Cons
+  | OptE _ -> Var
+  | _ -> error_value "mut" exp
 
-and al_to_fieldtype: value -> fieldtype = function
-  | CaseV (_, [ mut; st ]) -> FieldT (al_to_mut mut, al_to_storagetype st)
-  | v -> error_value "fieldtype" v
+let rec il_to_storagetype exp : RI.Types.storagetype =
+  match match_caseE "storagetype" exp with
+  | [["I8"]] , [] -> PackStorageT I8T
+  | [["I16"]], [] -> PackStorageT I16T
+  | _ -> ValStorageT (il_to_valtype exp)
 
-and al_to_resulttype: value -> resulttype = function
-  v -> al_to_list al_to_valtype v
+and il_to_fieldtype exp : RI.Types.fieldtype =
+  match match_caseE "fieldtype" exp with
+  | [[];[]], [mut; st] -> FieldT (il_to_mut mut, il_to_storagetype st)
+  | _ -> error_value "fieldtype" exp
 
-and al_to_comptype: value -> comptype = function
-  | CaseV ("STRUCT", [ ftl ]) -> StructT (al_to_list al_to_fieldtype ftl)
-  | CaseV ("ARRAY", [ ft ]) -> ArrayT (al_to_fieldtype ft)
-  | CaseV ("FUNC", [ CaseV ("->", [ rt1; rt2 ]) ]) when !version <= 2 ->
-    FuncT (al_to_resulttype rt1, (al_to_resulttype rt2))
-  | CaseV ("FUNC", [ rt1; rt2 ]) ->
-    FuncT (al_to_resulttype rt1, (al_to_resulttype rt2))
-  | v -> error_value "comptype" v
+and il_to_resulttype exp : RI.Types.resulttype =
+  il_to_list il_to_valtype exp
 
-and al_to_subtype: value -> subtype = function
-  | CaseV ("SUB", [ fin; tul; st ]) ->
-    SubT (al_to_final fin, al_to_list al_to_typeuse tul, al_to_comptype st)
-  | v -> error_value "subtype" v
+and il_to_comptype exp : RI.Types.comptype =
+  match match_caseE "comptype" exp with
+  | [["STRUCT"];[]], [ftl] -> StructT (il_to_list il_to_fieldtype ftl)
+  | [["ARRAY"];[]], [ft] -> ArrayT (il_to_fieldtype ft)
+  | [["FUNC"];["->"];[]], [rt1; rt2] -> FuncT (il_to_resulttype rt1, il_to_resulttype rt2)
+  | _ -> error_value "comptype" exp
 
-and al_to_rectype: value -> rectype = function
-  | CaseV ("REC", [ stl ]) -> RecT (al_to_list al_to_subtype stl)
-  | v -> error_value "rectype" v
+and il_to_subtype exp : RI.Types.subtype =
+  match match_caseE "subtype" exp with
+  | [["SUB"];[];[];[]], [fin; tul; st] ->
+    SubT (il_to_final fin, il_to_list il_to_typeuse tul, il_to_comptype st)
+  | _ -> error_value "subtype" exp
 
-and al_to_deftype: value -> deftype = function
-  | CaseV ("_DEF", [ rt; i32 ]) -> DefT (al_to_rectype rt, al_to_nat32 i32)
-  | v -> error_value "deftype" v
+and il_to_rectype exp : RI.Types.rectype =
+  match match_caseE "rectype" exp with
+  | [["REC"];[]], [stl] -> RecT (il_to_list il_to_subtype stl)
+  | _ -> error_value "rectype" exp
 
-and al_to_typeuse: value -> typeuse = function
-  | v when !version <= 2 -> Idx (al_to_idx v).it
-  | CaseV ("_IDX", [ idx ]) -> Idx (al_to_idx idx).it
-  | CaseV ("REC", [ n ]) -> Rec (al_to_nat32 n)
-  | CaseV ("_DEF", _) as dt -> Def (al_to_deftype dt)
-  | v -> error_value "typeuse" v
+and il_to_deftype exp : RI.Types.deftype =
+  match match_caseE "deftype" exp with
+  | [["_DEF"];[];[]], [rt; i32] -> DefT (il_to_rectype rt, il_to_nat32 i32)
+  | _ -> error_value "deftype" exp
 
+and il_to_typeuse exp : RI.Types.typeuse =
+  match exp.it with
+  | CaseE (tag, { it = TupE es; _ }) ->
+    (match mixop_to_text tag, es with
+    | [["_IDX"];[]]   , [ idx ] -> Idx (il_to_idx idx).it
+    | [["REC"];[]]    , [ n ]   -> Rec (il_to_nat32 n)
+    | [["_DEF"];[];[]], _       -> Def (il_to_deftype exp)
+    )
+  | v -> error exp.at ("Invalid typeuse:"  ^ string_of_exp exp)
+
+(*
 and al_to_idx_of_typeuse: value -> idx = function
   | v when !version <= 2 -> al_to_idx v
   | CaseV ("_IDX", [ idx ]) -> al_to_idx idx
   | v -> error_value "idx_of_typeuse" v
+*)
 
-and al_to_heaptype: value -> heaptype = function
-  | CaseV (tag, []) as v ->
-    (match tag with
-    | "BOT" -> BotHT
-    | "ANY" -> AnyHT
-    | "NONE" -> NoneHT
-    | "EQ" -> EqHT
-    | "I31" -> I31HT
-    | "STRUCT" -> StructHT
-    | "ARRAY" -> ArrayHT
-    | "FUNC" | "FUNCREF" -> FuncHT
-    | "NOFUNC" -> NoFuncHT
-    | "EXN" | "EXNREF" -> ExnHT
-    | "NOEXN" -> NoExnHT
-    | "EXTERN" | "EXTERNREF" -> ExternHT
-    | "NOEXTERN" -> NoExternHT
-    | _ -> error_value "absheaptype" v)
-  | CaseV (("_IDX" | "REC" | "_DEF"), _) as v -> UseHT (al_to_typeuse v)
-  | v -> error_value "heaptype" v
+and il_to_heaptype exp : RI.Types.heaptype =
+  match exp.it with
+  | CaseE (tag, _) ->
+    (match mixop_to_text tag with
+    | [["BOT"]]                      -> BotHT
+    | [["ANY"]]                      -> AnyHT
+    | [["NONE"]]                     -> NoneHT
+    | [["EQ"]]                       -> EqHT
+    | [["I31"]]                      -> I31HT
+    | [["STRUCT"]]                   -> StructHT
+    | [["ARRAY"]]                    -> ArrayHT
+    | [["FUNC"]] | [["FUNCREF"]]     -> FuncHT
+    | [["NOFUNC"]]                   -> NoFuncHT
+    | [["EXN"]] | [["EXNREF"]]       -> ExnHT
+    | [["NOEXN"]]                    -> NoExnHT
+    | [["EXTERN"]] | [["EXTERNREF"]] -> ExternHT
+    | [["NOEXTERN"]]                 -> NoExternHT
+    | ([["_IDX"];[]] | [["REC"];[]] | [["_DEF"];[];[]]) -> UseHT (il_to_typeuse exp)
+    | _ -> error exp.at ("Invalid heaptype: " ^ string_of_exp exp)
+    )
+  | _ -> error exp.at ("Invalid heaptype: " ^ string_of_exp exp)
 
-and al_to_reftype: value -> reftype = function
-  | CaseV ("REF", [ n; ht ]) -> al_to_null n, al_to_heaptype ht
-  | v -> error_value "reftype" v
+and il_to_reftype exp : RI.Types.reftype =
+  match match_caseE "reftype" exp with
+  | [["REF"];[];[]], [n; ht] -> il_to_null n, il_to_heaptype ht
+  | _ -> error_value "reftype" exp
 
-and al_to_addrtype: value -> addrtype = function
-  | CaseV ("I32", []) -> I32AT
-  | CaseV ("I64", []) -> I64AT
-  | v -> error_value "addrtype" v
+and il_to_addrtype exp : RI.Types.addrtype =
+  match match_caseE "addrtype" exp with
+  | [["I32"]], [] -> I32AT
+  | [["I64"]], [] -> I64AT
+  | _ -> error_value "addrtype" exp
 
-and al_to_numtype: value -> numtype = function
-  | CaseV ("I32", []) -> I32T
-  | CaseV ("I64", []) -> I64T
-  | CaseV ("F32", []) -> F32T
-  | CaseV ("F64", []) -> F64T
-  | v -> error_value "numtype" v
+and il_to_numtype exp : RI.Types.numtype =
+  match match_caseE "numtype" exp with
+  | [["I32"]], [] -> I32T
+  | [["I64"]], [] -> I64T
+  | [["F32"]], [] -> F32T
+  | [["F64"]], [] -> F64T
+  | _ -> error_value "numtype" exp
 
-and al_to_packtype: value -> packtype = function
-  | CaseV ("I8", []) -> I8T
-  | CaseV ("I16", []) -> I16T
-  | v -> error_value "packtype" v
+and il_to_packtype exp : RI.Types.packtype =
+  match match_caseE "packtype" exp with
+  | [["I8" ]], [] -> I8T
+  | [["I16"]], [] -> I16T
+  | _ -> error_value "packtype" exp
 
-and al_to_valtype: value -> valtype = function
-  | CaseV ("I32", _) | CaseV ("I64", _)
-  | CaseV ("F32", _) | CaseV ("F64", _) as v -> NumT (al_to_numtype v)
-  | CaseV ("V128", []) -> VecT V128T
-  | CaseV ("REF", _) as v -> RefT (al_to_reftype v)
-  | CaseV ("BOT", []) -> BotT
-  | v -> error_value "valtype" v
+and il_to_valtype exp : RI.Types.valtype =
+  match match_caseE "valtype" exp with
+  | [["I32"]], _ | [["I64"]], _ | [["F32"]], _ | [["F64"]], _ -> NumT (il_to_numtype exp)
+  | [["V128"]], [] -> VecT V128T
+  | [["REF"];[];[]], _ -> RefT (il_to_reftype exp)
+  | [["BOT"]], [] -> BotT
+  | _ -> error_value "valtype" exp
 
-let al_to_blocktype: value -> blocktype = function
-  | CaseV ("_IDX", [ idx ]) -> VarBlockType (al_to_idx idx)
-  | CaseV ("_RESULT", [ vt_opt ]) -> ValBlockType (al_to_opt al_to_valtype vt_opt)
-  | v -> error_value "blocktype" v
+let il_to_blocktype exp : RI.Ast.blocktype =
+  match match_caseE "blocktype" exp with
+  | [["_IDX"];[]], [idx] -> VarBlockType (il_to_idx idx)
+  | [["_RESULT"];[]], [vt_opt] -> ValBlockType (il_to_opt il_to_valtype vt_opt)
+  | _ -> error_value "blocktype" exp
 
-let al_to_limits (default: int64): value -> limits = function
-  | CaseV ("[", [ min; max ]) ->
+let il_to_limits (default: int64) exp : RI.Types.limits =
+  match match_caseE "limits" exp with
+  | [["["];[".."];["]"]], [min; max] ->
     let max' =
-      match al_to_nat64 max with
+      match il_to_nat64 max with
       | i64 when default = i64 -> None
-      | _ -> Some (al_to_nat64 max)
+      | _ -> Some (il_to_nat64 max)
     in
-    { min = al_to_nat64 min; max = max' }
-  | v -> error_value "limits" v
+    { min = il_to_nat64 min; max = max' }
+  | _ -> error_value "limits" exp
 
-
-let al_to_globaltype: value -> globaltype = function
+(*
+let il_to_globaltype: value -> globaltype = function
   | TupV [ mut; vt ] | CaseV (_, [ mut; vt ]) -> GlobalT (al_to_mut mut, al_to_valtype vt)
   | v -> error_value "globaltype" v
 
-let al_to_tabletype: value -> tabletype = function
-  | TupV [ at; limits; rt ] | CaseV (_, [ at; limits; rt ]) -> TableT (al_to_addrtype at, al_to_limits default_table_max limits, al_to_reftype rt)
+let il_to_tabletype: value -> tabletype = function
+  | TupV [ at; limits; rt ] | CaseV (_, [ at; limits; rt ]) -> TableT (al_to_addrtype at, al_to_limits default_table_max limits, il_to_reftype rt)
   | v -> error_value "tabletype" v
 
-let al_to_memorytype: value -> memorytype = function
+let il_to_memorytype: value -> memorytype = function
   | CaseV ("PAGE", [ at; limits ]) -> MemoryT (al_to_addrtype at, al_to_limits default_memory_max limits)
   | v -> error_value "memorytype" v
 
-let al_to_tagtype: value -> tagtype = function
+let il_to_tagtype: value -> tagtype = function
   | tu -> TagT (al_to_typeuse tu)
 
 
@@ -1893,6 +1885,11 @@ let al_to_func': value -> func' = function
   | v -> error_value "func" v
 let al_to_func: value -> func = al_to_phrase al_to_func'
 
+*)
+
+let il_to_func exp : RI.Ast.func = todo "il_to_func"
+(*
+
 let al_to_global': value -> global' = function
   | CaseV ("GLOBAL", [ gt; const ]) ->
     Global (al_to_globaltype gt, al_to_const const)
@@ -1996,30 +1993,30 @@ let al_to_module: value -> module_ = al_to_phrase al_to_module'
 
 (* Destruct value *)
 
+let rec il_to_field exp : RI.Aggr.field =
+  match match_caseE "field" exp with
+  | [["PACK"];[];[]], [pt; c] -> RI.Aggr.PackField (il_to_packtype pt, ref (il_to_nat c |> Z.to_int))
+  | _ -> RI.Aggr.ValField (ref (il_to_value exp))
 
-let rec destruct_value_dummy () = todo "destruct_value_dummy"
+and il_to_array exp : RI.Aggr.array =
+  if has_str_field "TYPE" exp && has_str_field "FIELDS" exp then
+    RI.Aggr.Array (
+      il_to_deftype (find_str_field "TYPE" exp),
+      il_to_list il_to_field (find_str_field "FIELDS" exp)
+    )
+  else
+    error_value "array" exp
+
+and il_to_struct exp : RI.Aggr.struct_ =
+  if has_str_field "TYPE" exp && has_str_field "FIELDS" exp then
+    RI.Aggr.Struct (
+      il_to_deftype (find_str_field "TYPE" exp),
+      il_to_list il_to_field (find_str_field "FIELDS" exp)
+    )
+  else
+    error_value "struct" exp
+
 (*
-
-let rec al_to_field: value -> Aggr.field = function
-  | CaseV ("PACK", [pt; c]) -> Aggr.PackField (al_to_packtype pt, ref (al_to_nat c))
-  | v -> Aggr.ValField (ref (al_to_value v))
-
-and al_to_array: value -> Aggr.array = function
-  | StrV r when Record.mem "TYPE" r && Record.mem "FIELDS" r ->
-    Aggr.Array (
-      al_to_deftype (Record.find "TYPE" r),
-      al_to_list al_to_field (Record.find "FIELDS" r)
-    )
-  | v -> error_value "array" v
-
-and al_to_struct: value -> Aggr.struct_ = function
-  | StrV r when Record.mem "TYPE" r && Record.mem "FIELDS" r ->
-    Aggr.Struct (
-      al_to_deftype (Record.find "TYPE" r),
-      al_to_list al_to_field (Record.find "FIELDS" r)
-    )
-  | v -> error_value "struct" v
-
 and al_to_tag: value -> Tag.t = function
   | StrV r when Record.mem "TYPE" r ->
     Tag.alloc (al_to_tagtype (Record.find "TYPE" r))
@@ -2034,46 +2031,44 @@ and al_to_exn: value -> Exn.exn_ = function
       al_to_list al_to_value (Record.find "FIELDS" r)
     )
   | v -> error_value "exn" v
+*)
 
-and al_to_funcinst: value -> Instance.funcinst = function
-  | StrV r when Record.mem "TYPE" r && Record.mem "MODULE" r && Record.mem "CODE" r ->
-    Func.AstFunc (
-      al_to_deftype (Record.find "TYPE" r),
+and il_to_funcinst exp : RI.Instance.funcinst =
+  if has_str_field "TYPE" exp && has_str_field "MODULE" exp && has_str_field "CODE" exp then
+    RI.Func.AstFunc (
+      il_to_deftype (find_str_field "TYPE" exp),
       Reference_interpreter.Lib.Promise.make (), (* TODO: Fulfill the promise with module instance *)
-      al_to_func (Record.find "CODE" r)
+      il_to_func (find_str_field "CODE" exp)
     )
-  | v -> error_value "funcinst" v
-*)
-and il_to_ref exp : RI.Value.ref_ = todo "il_to_ref"
-(*
-  | CaseV ("REF.NULL", [ ht ]) -> NullRef (al_to_heaptype ht)
-  | CaseV ("REF.I31_NUM", [ i ]) -> I31.I31Ref (al_to_nat i)
-  | CaseV ("REF.STRUCT_ADDR", [ addr ]) ->
-    let struct_insts = Ds.Store.access "STRUCTS" in
-    let struct_ = addr |> al_to_nat |> listv_nth struct_insts |> al_to_struct in
+  else
+    error_value "funcinst" exp
+
+and il_to_ref exp : RI.Value.ref_ =
+  let open RI in
+  let open Value in
+  match match_caseE "ref" exp with
+  | [["REF.NULL"];[]], [ht] -> NullRef (il_to_heaptype ht)
+  | [["REF.I31_NUM"];[]], [i] -> RI.I31.I31Ref (il_to_nat i |> Z.to_int)
+  | [["REF.STRUCT_ADDR"];[]], [addr] ->
+    let struct_insts = State.Store.access "STRUCTS" in
+    let struct_ = addr |> il_to_nat |> nth_of_list struct_insts |> il_to_struct in
     Aggr.StructRef struct_
-  | CaseV ("REF.ARRAY_ADDR", [ addr ]) ->
-    let arr_insts = Ds.Store.access "ARRAYS" in
-    let arr = addr |> al_to_nat |> listv_nth arr_insts |> al_to_array in
+  | [["REF.ARRAY_ADDR"];[]], [addr] ->
+    let arr_insts = State.Store.access "ARRAYS" in
+    let arr = addr |> il_to_nat |> nth_of_list arr_insts |> il_to_array in
     Aggr.ArrayRef arr
-  | CaseV ("REF.FUNC_ADDR", [ addr ]) ->
-    let func_insts = Ds.Store.access "FUNCS" in
-    let func = addr |> al_to_nat |> listv_nth func_insts |> al_to_funcinst in
+  | [["REF.FUNC_ADDR"];[]], [addr] ->
+    let func_insts = State.Store.access "FUNCS" in
+    let func = addr |> il_to_nat |> nth_of_list func_insts |> il_to_funcinst in
     Instance.FuncRef func
-  | CaseV ("REF.HOST_ADDR", [ i32 ]) -> Script.HostRef (al_to_nat32 i32)
-  | CaseV ("REF.EXTERN", [ r ]) -> Extern.ExternRef (al_to_ref r)
-  | v -> error_value "ref" v
-*)
+  | [["REF.HOST_ADDR"];[]], [i32] -> RI.Script.HostRef (il_to_nat32 i32)
+  | [["REF.EXTERN"];[]], [r] -> Extern.ExternRef (il_to_ref r)
+  | _ ->  error_value "ref" exp
 
-
-and il_to_value val_ : RI.Value.value =
-  let CaseE (mixop, tup) = val_.it in
-  match tup.it with
-  | TupE [numtype; num_] when eq_mixop [["CONST" ];[];[]] mixop -> Num (il_to_num numtype num_)
-  | TupE [numtype; num_] when eq_mixop [["VCONST"];[];[]] mixop -> Vec (il_to_vec numtype num_)
-  | _ -> (match (List.hd (List.hd mixop)).it with
-         | Atom con_name when String.starts_with ~prefix:"REF." con_name -> Ref (il_to_ref val_)
-         | _ -> error val_.at ("Invalid val: " ^ string_of_exp val_)
-         )
-  | v -> error val_.at ("Invalid val: " ^ string_of_exp val_)
-
+and il_to_value exp : RI.Value.value =
+  match match_caseE "val" exp with
+  | [["CONST" ];[];[]], [numtype; num_] -> Num (il_to_num numtype num_)
+  | [["VCONST"];[];[]], [numtype; num_] -> Vec (il_to_vec numtype num_)
+  | [[ref_con];[]], _ when String.starts_with ~prefix:"REF." ref_con ->
+    Ref (il_to_ref exp)
+  | _ -> error_value "val" exp

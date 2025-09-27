@@ -428,6 +428,10 @@ let is_unanimatable reason rule_name rel_id : bool =
   | None -> false
   | Some ls -> List.exists (fun l -> l = (rel_id, rule_name)) ls
 
+let is_step_rule rel_id : bool = rel_id = "Step"
+let is_step_pure_rule rel_id : bool = rel_id = "Step_pure"
+let is_step_read_rule rel_id : bool = rel_id = "Step_read"
+
 
 (* Mode analysis *)
 (*
@@ -962,6 +966,25 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return (Option.to_list oprem_v_len_rhs @ prem_len :: prems')
+  (* exp1 ++ exp2'^n where n is known *)
+  | CatE (exp1, ({ it = IterE (exp2', (ListN(len_lhs2, _), xes)); _} as exp2)) ->
+    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
+    let (envr, v_len_rhs, len_rhs', oprem_v_len_rhs) = new_bind_exp envr None len_rhs None `Rhs in
+    let* () = update (add_knowns (Set.singleton v_len_rhs.it)) in
+    let prem_len = IfPr (CmpE (`LeOp, `NatT, len_lhs2, len_rhs') $$ len_rhs'.at % (BoolT $ len_rhs'.at)) $ len_rhs'.at in
+    let start1 = mk_nat 0 in
+    let len_lhs1 = mk_cvt_sub ~at:exp1.at len_rhs' len_lhs2 in
+    let rhs1' = SliceE (rhs, start1, len_lhs1) $> rhs in
+    let rhs2' = SliceE (rhs, len_lhs1, len_lhs2) $> rhs in
+    let prem1 = IfPr (eqE ~at:exp1.at exp1 rhs1') $ at in
+    let prem2 = IfPr (eqE ~at:exp2.at exp2 rhs2') $ at in
+    (* Start an inner loop, in case of any dependencies between the list elements.
+    *)
+    let* s' = get () in
+    let s_new = { (init ()) with prems = [prem1; prem2]; knowns = get_knowns s' } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return (Option.to_list oprem_v_len_rhs @ prem_len :: prems')
   | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs))
 
 (** ASSUMES: [e] contains unknown vars, whereas [es] is fully known.
@@ -1323,11 +1346,101 @@ let animate_rule_red envr rule : clause' =
   let binds'' = sort_binds id binds' in
   DefD (binds'', [ExpA ve $ ve.at], rhs, prems')
 
-let animate_rule envr at rel_id (r : rule_clause) : clause =
+(* Many $Step rules are dependent in their arguments. For example,
+  ```
+  rule Step_read/block:
+    z; val^m ( BLOCK bt instr* )  ~>  ( LABEL_ n `{eps} val^m instr* )
+    -- if $blocktype_(z, bt) = t_1^m -> t_2^n
+  ```
+  `m` is initially unknown, and we need to use the second part of the pattern
+  `( BLOCK bt instr* )` and the premise to compute `m` and then to determine
+  what values this pattern can match. This violates the precondition that all
+  variables in the input (or LHS of a rule) are known.
+  This transformation eliminates this circularity:
+  ```
+  rule Step_read/block:
+    z; val* ( BLOCK bt instr* )  ~>  rest* ( LABEL_ n `{eps} val^m instr* )
+    -- if $blocktype_(z, bt) = t_1^m -> t_2^n
+    -- if val* = rest* val^m
+  ```
+  so that we can match the first part of the argument unconditionally and then
+  compute `m` in the premises.
+ *)
+let transform_step_vals in_stack out_stack prems : bind list * exp * exp * prem list =
+  match in_stack.it with
+  | CatE ({ it = IterE (vals, (ListN(n, _), xes)); _ } as in_vals, in_stack2) ->
+    let iter' = List in
+    let val_ = fresh_id (Some "val") vals.at in
+    let val_e = VarE val_ $$ vals.at % (t_var "val") in
+    let val_e' = SubE (val_e, t_var "val", t_var "instr") $$ vals.at % t_var "instr" in
+    let val_star = Frontend.Dim.annot_varid val_ [iter'] in
+    let val_star_e = IterE (val_e', (iter', [(val_, VarE val_star $$ vals.at % t_star "val")])) $> vals in
+    let rest = fresh_id (Some "rest") vals.at in
+    let rest_e = VarE rest $> val_e in
+    let rest_e' = SubE (rest_e, t_var "val", t_var "instr") $> val_e' in
+    let rest_star = Frontend.Dim.annot_varid rest [iter'] in
+    let rest_star_e = IterE (rest_e', (iter', [(rest, VarE rest_star $$ vals.at % t_star "val")])) $> vals in
+    let in_vals' = val_star_e in
+    let in_stack' = CatE (in_vals', in_stack2) $> in_stack in
+    let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
+    let prems' = (IfPr (eqE ~at:rest_star_e.at in_vals' (CatE (rest_star_e, in_vals) $> in_vals)) $ rest_star_e.at) :: prems in
+    ([ExpB (rest_star, t_star "val") $ rest_star_e.at;
+      ExpB (val_star, t_star "val") $ val_star_e.at],
+     in_stack', out_stack', prems')
+  (* This case is not circular dependent, but we still generalise it so that we can pass in the entire value
+     stack, instead of manually pick a certain number of operands to feed to the instruction.
+  *)
+  | ListE instrs ->
+    let iter' = List in
+    let rest = fresh_id (Some "rest") in_stack.at in
+    let rest_e = VarE rest $$ in_stack.at % (t_var "val") in
+    let rest_e' = SubE (rest_e, t_var "val", t_var "instr") $> in_stack in
+    let rest_star = Frontend.Dim.annot_varid rest [iter'] in
+    let rest_star_e = IterE (rest_e', (iter', [(rest, VarE rest_star $$ in_stack.at % t_star "val")])) $> in_stack in
+    let in_stack' = CatE (rest_star_e, in_stack) $> in_stack in
+    let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
+    ([ExpB (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
+  | _ -> [], in_stack, out_stack, prems
+
+let transform_step_rule envr (r: rule_clause) : clause' =
+  let (rule_id, binds, lhs, rhs, prems) = r.it in
+  let CaseE (in_mixop, in_tup) = lhs.it in
+  let TupE [in_z; in_stack] = in_tup.it in
+  let CaseE (out_mixop, out_tup) = rhs.it in
+  let TupE [out_z; out_stack] = out_tup.it in
+  let binds', in_stack', out_stack', prems' = transform_step_vals in_stack out_stack prems in
+  let in_tup' = TupE [in_z; in_stack'] $> in_tup in
+  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
+  let out_tup' = TupE [out_z; out_stack'] $> out_tup in
+  let rhs' = CaseE (out_mixop, out_tup') $> rhs in
+  animate_rule_red envr ((rule_id, binds @ binds', lhs', rhs', prems') $> r)
+
+let transform_step_pure_rule envr (r: rule_clause) : clause' =
+  let (rule_id, binds, in_stack, out_stack, prems) = r.it in
+  let binds', in_stack', out_stack', prems' = transform_step_vals in_stack out_stack prems in
+  animate_rule_red envr ((rule_id, binds @ binds', in_stack', out_stack', prems') $> r)
+
+let transform_step_read_rule envr (r: rule_clause) : clause' =
+  let (rule_id, binds, lhs, out_stack, prems) = r.it in
+  let CaseE (in_mixop, in_tup) = lhs.it in
+  let TupE [in_z; in_stack] = in_tup.it in
+  let binds', in_stack', out_stack', prems' = transform_step_vals in_stack out_stack prems in
+  let in_tup' = TupE [in_z; in_stack'] $> in_tup in
+  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
+  animate_rule_red envr ((rule_id, binds @ binds', lhs', out_stack', prems') $> r)
+
+
+let animate_rule envr at rel_id (r: rule_clause) : clause =
   let (rule_id, _, _, _, _) = r.it in
   let clause' =
     if is_unanimatable "rule_lhs" rule_id.it rel_id then
       animate_rule_red_no_arg envr r
+    else if is_step_rule rel_id then
+      transform_step_rule envr r
+    else if is_step_pure_rule rel_id then
+      transform_step_pure_rule envr r
+    else if is_step_read_rule rel_id then
+      transform_step_read_rule envr r
     else
       animate_rule_red envr r
   in
