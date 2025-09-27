@@ -59,6 +59,11 @@ let as_tup_typ env t : (exp * typ) list =
   | TupT ets -> ets
   | _ -> error t.at ("Input type is not a tuple type: " ^ string_of_typ t)
 
+let has_str_field atom str : bool =
+  match str.it with
+  | StrE fes -> List.exists (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes
+  | _ -> error str.at ("Input expression is not a struct: " ^ string_of_exp str)
+
 let find_str_field atom str : exp =
   match str.it with
   | StrE fes -> List.find (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes |> snd
@@ -98,6 +103,12 @@ let unwrap_num num : num =
   | NumE num' -> num'
   | _ -> error num.at ("Input expression is not a number: " ^ string_of_exp num)
 
+let unwrap_opt opt : exp option =
+  match opt.it with
+  | OptE e -> e
+  | _ -> error opt.at ("Input expression is not a optional: " ^ string_of_exp opt)
+
+
 let text_to_string txt : string =
   match txt.it with
   | TextE str -> str
@@ -111,6 +122,8 @@ let of_num_exp = function
   | NumE n -> Some n
   | _ -> None
 
+let mixop_to_text mixop : string list list =
+  List.map (fun ops -> List.map Xl.Atom.to_string ops) mixop
 
 
 (* Construct *)
@@ -162,6 +175,9 @@ and optE' ?(at = no) oe : exp = match oe with
   | Some e -> let t = iterT (e.note) in optE t oe
 and strE ?(at = no) ~note r = StrE r |> mk_expr at note
 and subE ?(at = no) id t1 t2 = SubE (id, t1, t2) |> mk_expr at t2
+and eqE ?(at = no) lhs rhs = CmpE (`EqOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
+
+
 (*
 and unE ?(at = no) ~note (unop, t, e) = UnE (unop, t, e) |> mk_expr at note
 and binE ?(at = no) ~note (binop, t, e1, e2) = BinE (binop, t, e1, e2) |> mk_expr at note
