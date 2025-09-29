@@ -28,3 +28,7 @@ val string_of_prod : ?suppress_pos:bool -> prod -> string
 val string_of_inst : ?suppress_pos:bool -> id -> inst -> string
 val string_of_clause : ?suppress_pos:bool -> id -> clause -> string
 val string_of_script : ?suppress_pos:bool -> script -> string
+
+(* Kashish's code *)
+val string_of_typbind : exp * typ -> string
+val string_of_typfield : typfield -> string

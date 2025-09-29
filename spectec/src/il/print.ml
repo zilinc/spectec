@@ -84,14 +84,14 @@ and string_of_typbind (e, t) =
 
 and string_of_deftyp layout dt =
   match dt.it with
-  | AliasT t -> string_of_typ t
-  | StructT tfs when layout = `H ->
+  | AliasT t -> "alias: " ^ string_of_typ t
+  | StructT tfs when layout = `H -> "struct: " ^
     "{" ^ concat ", " (List.map string_of_typfield tfs) ^ "}"
-  | StructT tfs ->
+  | StructT tfs -> "struct V: " ^
     "\n{\n  " ^ concat ",\n  " (List.map string_of_typfield tfs) ^ "\n}"
-  | VariantT tcs when layout = `H ->
+  | VariantT tcs when layout = `H -> 
     "| " ^ concat " | " (List.map string_of_typcase tcs)
-  | VariantT tcs ->
+  | VariantT tcs -> 
     "\n  | " ^ concat "\n  | " (List.map string_of_typcase tcs)
 
 and string_of_typfield (atom, (bs, t, prems), _hints) =
@@ -303,8 +303,8 @@ let string_of_prod ?(suppress_pos = false) prod =
 let rec string_of_def ?(suppress_pos = false) d =
   let pre = "\n" ^ region_comment ~suppress_pos "" d.at in
   match d.it with
-  | TypD (id, _ps, [{it = InstD (bs, as_, dt); _}]) ->
-    pre ^ "syntax " ^ string_of_id id ^ string_of_binds bs ^ string_of_args as_ ^ " = " ^
+  | TypD (id, _ps, [{it = InstD (bs, as_, dt); _}]) -> "Type D" ^ 
+    pre ^ "syntax " ^ string_of_id id ^ string_of_binds bs ^ string_of_args as_ ^ " = " ^ "deftype: " ^ 
       string_of_deftyp `V dt ^ "\n"
   | TypD (id, ps, insts) ->
     pre ^ "syntax " ^ string_of_id id ^ string_of_params ps ^

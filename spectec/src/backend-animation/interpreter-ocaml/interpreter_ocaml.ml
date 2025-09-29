@@ -9,7 +9,13 @@ module TypeM   = Util_ocaml.TypeM
 module TypeMap = Util_ocaml.TypeMap
 open TypeM
 
-(* TODO: change this to use Error module *)
+(* TODOs: 
+change this to use Error module 
+use Animation error when applicable
+check if sanitize_name is used with correct args each time 
+check if add_known and check_known use sanitize_name consistently 
+MAJOR REFACTOR 
+make iterator code general *)
 exception CodegenError of string
 exception CannotAnimate of string
 
@@ -581,43 +587,53 @@ let rec ocaml_of_prems (prems : prem list) : string t =
   concat_mapM "\n"
   (function p -> match p.it with
     | LetPr (lhs, rhs, vars) ->
-        let* () = add_knowns vars in 
+        let* () = add_knowns (List.map sanitize_name vars) in
         let* lhs_str = ocaml_of_exp lhs in
         let* rhs_str = ocaml_of_exp rhs in
         begin 
         match lhs.it with
-          | VarE id ->  
-            return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
-          | CaseE (mixop, e) -> begin
-            let let_lhs = match vars with
-              | []   -> raise (CodegenError "LetPr with no bound vars: shouldn't happen")
-              | [v]  -> v
-              | vs   -> String.concat ", " vs
-            in
-            let newvararity = List.length vars in 
-            let newvars, failcase = match newvararity with
-              | 0 -> raise (CodegenError "LetPr with no bound vars: shouldn't happen")
-              | 1 -> "freshvar_0", "None"
-              | n -> "(" ^ (String.concat ", " (List.init n (fun i -> Printf.sprintf "freshvar_%d" i))) ^ ")", (String.concat ", " (List.init n (fun _ -> "None")))
-            in 
-            let mixopstr = (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop)) in
-            let indent = "    " in 
-            let* retvalues = gen_case_arms e in
-            return (Printf.sprintf "  let* %s = match %s with\n%s| %s %s -> %s\n%s| _ -> %s\n  in" let_lhs rhs_str indent mixopstr newvars retvalues indent failcase)
-            end
-          | OptE (Some {it = VarE id; _}) -> 
-            let lhs_str = sanitize_name id.it in 
-            return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
-          | OptE None -> return "(* TODO: OptE None *)" 
-          | _ -> return "(* TODO: LetPr where LHS is not a variable or CaseE *)"
-        end 
+        (* todo: just match this exactly with the validator *)
+        | VarE id ->  
+          return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
+        | CaseE (mixop, e) -> begin
+          let let_lhs = match vars with
+            | []   -> raise (CodegenError "LetPr with no bound vars: shouldn't happen")
+            | [v]  -> v
+            | vs   -> String.concat ", " vs
+          in
+          let newvararity = List.length vars in 
+          let newvars, failcase = match newvararity with
+            | 0 -> raise (CodegenError "LetPr with no bound vars: shouldn't happen")
+            | 1 -> "freshvar_0", "None"
+            | n -> "(" ^ (String.concat ", " (List.init n (fun i -> Printf.sprintf "freshvar_%d" i))) ^ ")", (String.concat ", " (List.init n (fun _ -> "None")))
+          in 
+          let mixopstr = (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop)) in
+          let indent = "    " in 
+          let* retvalues = gen_case_arms e in
+          return (Printf.sprintf "  let* %s = match %s with\n%s| %s %s -> %s\n%s| _ -> %s\n  in" let_lhs rhs_str indent mixopstr newvars retvalues indent failcase)
+          end
+        | OptE (Some {it = VarE id; _}) -> 
+          let lhs_str = sanitize_name id.it in 
+          return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
+        | IterE ({ it = VarE lhs_var; _ }, (Opt, xes)) -> begin
+          match xes with 
+          | [(varname, listname)] -> 
+            let vardef = Printf.sprintf "  let %s = Option.get %s in\n" (sanitize_name varname.it) rhs_str in
+            let* liststr = ocaml_of_exp listname in 
+            let outflow_def = Printf.sprintf "  let %s = Some %s in" liststr (sanitize_name varname.it) in 
+            return (vardef ^ outflow_def)
+          | _ -> return "(* TODO: LetPr LHS is IterOpt with multiple bindings *)"
+          end
+        | _ -> return "(* LetPr LHS ill-formed: should not happen *)"
+      end 
     | IfPr cond ->
         let* cond_str = ocaml_of_exp cond in
         return (Printf.sprintf "  if not (%s) then None else" cond_str)
     | RulePr _ -> return "(* TODO: RulePr *)"
     | ElsePr -> return ""
-    | IterPr (prems, (iter, iterlist)) -> match iter with
-      (* definitely incomplete and wrong for now !! *)
+    | IterPr (prems, (iter, iterlist)) -> begin 
+      (* GENERALISE *)
+      match iter with
       | Opt -> begin
         match iterlist with 
         | [(id, e)] -> 
@@ -665,19 +681,8 @@ let rec ocaml_of_prems (prems : prem list) : string t =
           (* if there are no outflows, the nested premises must be "ifs" *)
           return (def_idx_list ^ Printf.sprintf "  let* () = map%d (fun %s -> %s Some ()) %s in" (List.length inflows) inflow_vars prem_strs inflow_lists)
         else 
-          return (def_idx_list ^ Printf.sprintf "  let %s = unzip%d (map%d (fun %s -> %s %s) %s) in" outflow_lists (List.length outflows) (List.length inflows) inflow_vars prem_strs outflow_vars inflow_lists)
-
-        (*let* out_flows_strs = concat_mapM ", " (fun (_, e) -> 
-        let* e = ocaml_of_exp e in return ("(" ^ e ^ ")")) out_flows in*) 
-
-
-      (*let* prem_strs = ocaml_of_prems prems in
-      let bound_iters = get_bound_vars prems in
-      (* if we have "let n = ..." in our premises,
-         then n <- n* is an outflow. Otherwise, it is an inflow. *)
-      let outflows, inflows =
-        List.partition (fun (x, _) -> List.mem x.it bound_iters) iterlist in*)
-          
+          return (def_idx_list ^ Printf.sprintf "  let %s = unzip%d (map%d (fun %s -> %s %s) %s) in" outflow_lists (List.length outflows) (List.length inflows) inflow_vars prem_strs outflow_vars inflow_lists) 
+        end     
   ) prems
 
 (* todo: the bracketing is possibly wrong *)
