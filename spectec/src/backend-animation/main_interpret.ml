@@ -3,6 +3,7 @@ open Script
 open State
 open Il_util
 open Il.Ast
+open Il.Print
 open Util
 open Error
 open Backend_interpreter.Construct
@@ -142,12 +143,14 @@ let invoke moduleinst_name funcname args : exp =
     funcname (R.Value.string_of_values args |> Lib.String.shorten) moduleinst_name;
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
+  log "  > Export func addr is: %s\n" (string_of_exp funcaddr);
   let config' = Interpreter.invoke [ expA store; expA funcaddr; il_of_list (t_star "val") C.il_of_value args |> expA ] in
   let CaseE (_, tup1) = config'.it in
   let TupE [state'; instrs'] = tup1.it in
   let CaseE (_, tup2) = state'.it in
   let TupE [store'; _] = tup2.it in
   Store.put store';
+  log "  > Result of invoking %s is %s\n" funcname (string_of_exp instrs');
   instrs'
 
 
