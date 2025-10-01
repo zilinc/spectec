@@ -757,8 +757,8 @@ let il_of_catch (catch: RI.Ast.catch) =
   | CatchAllRef idx       -> mk_catch "CATCH_ALL_REF" 1 [il_of_idx idx]
 
 let rec il_of_instr (instr: RI.Ast.instr) =
-  let mk_instr0 = mk_nullary' "instr'" in
-  let mk_instr c n = mk_case' "instr'" ([c] :: List.init 2 (Fun.const [])) in
+  let mk_instr0 = mk_nullary' "instr" in
+  let mk_instr c n = mk_case' "instr" ([c] :: List.init n (Fun.const [])) in
   match instr.it with
   (* wasm values *)
   | Const num -> il_of_num num.it
@@ -986,11 +986,11 @@ let il_of_module (module_: RI.Ast.module_) =
 (* Destruct *)
 
 
-(* This function also strips any SubE, SupE nodes. *)
+(* This function also strips any SubE nodes. *)
 let rec match_caseE name exp : string list list * exp list =
   match exp.it with
   | CaseE (tag, { it = TupE es; _ }) -> mixop_to_text tag, es
-  | SubE (exp', _, _) | SupE (exp', _, _) -> match_caseE name exp'
+  | SubE (exp', _, _) -> match_caseE name exp'
   | _ -> error_value (name ^ " (match_caseE)") exp
 
 

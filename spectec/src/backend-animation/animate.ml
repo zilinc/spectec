@@ -344,10 +344,6 @@ let rec new_bind_exp envr oname exp ot dir : Il.Env.t ref * id * exp * prem opti
     let (envr, v, ve, oprem_eq) = new_bind_exp envr oname exp' None dir in
     let ve' = SubE (ve, t1, t2) $> exp in
     (envr, v, ve', oprem_eq)
-  | SupE (exp', t1, t2) ->
-    let (envr, v, ve, oprem_eq) = new_bind_exp envr oname exp' None dir in
-    let ve' = SupE (ve, t1, t2) $> exp in
-    (envr, v, ve', oprem_eq)
   | CvtE (exp', t1, t2) ->
     let (envr, v, ve, oprem_eq) = new_bind_exp envr oname exp' None dir in
     let ve' = CvtE (ve, t1, t2) $> exp in
@@ -420,6 +416,10 @@ let cannot_animate : (string * string) list Map.t =
         ("Step_pure", "return-handler");
 
         ("Step_read", "throw_ref-instrs");
+
+        ("Step_pure", "trap-instrs");
+
+        ("Step", "ctxt-instrs");
       ])
     ]
 
@@ -734,11 +734,11 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return prems'
   | SubE (exp, t1, t2) ->
-    let rhs' = SupE (rhs, t2, t1) $$ rhs.at % t1 in
-    animate_exp_eq envr at exp rhs'
-  | SupE (exp, t1, t2) ->
-    let rhs' = SubE (rhs, t2, t1) $$ rhs.at % t1 in
-    animate_exp_eq envr at exp rhs'
+    let (envr, v, ve, oprem_v) = new_bind_exp envr None exp None `Lhs in
+    let prem' = LetPr (SubE (ve, t1, t2) $> lhs, rhs, [v.it]) $ at in
+    let* () = update (add_knowns (Set.singleton v.it)) in
+    let* prems_v' = E.(opt_mapM (animate_prem envr) oprem_v <&> opt_list) in
+    E.return (prem' :: prems_v')
   | OptE None -> assert false  (* Because lhs must contain unknowns *)
   | OptE (Some exp) ->
     let (envr', v, ve, oprem_v) = new_bind_exp envr None exp None `Lhs in

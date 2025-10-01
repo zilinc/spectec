@@ -35,6 +35,7 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     (match lhs.it with
       | VarE lhs_var
       | OptE (Some { it = VarE lhs_var; _})
+      | SubE ({ it = VarE lhs_var; _ }, _, _)
       -> if List.length vars <> 1 then
            error_pr prem.at ("Only one binder is allowed on this -- where premise but got " ^ string_of_varset vars_set) prem;
          let var = List.hd vars in

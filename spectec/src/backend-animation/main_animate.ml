@@ -12,7 +12,7 @@ let rec is_anim_target def =
   | RelD (id, mixop, t, rules) when List.mem id.it [ "Eval_expr"; "Step"; "Step_read"; "Step_pure" ] ->
     (* HARDCODE: Exclude administrative rules *)
     let filter_rule rule =
-      ["pure-"; "read-"; "trap-"; "ctxt-instrs"]
+      [(*"trap-instrs"; "ctxt-instrs"*)]
       |> List.exists (fun n -> String.starts_with ~prefix:n (full_name_of_rule rule))
       |> not
     in

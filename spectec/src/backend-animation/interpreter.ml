@@ -21,7 +21,7 @@ let verbose : string list ref =
       (* "assertion"; *)
       (* "eval"; *)          (* Evaluation of expressions. *)
        "assign";          (* Matching, but for terms only. *)
-       "match";           (* Matching of other types. *)
+       "match";            (* Matching of other types. *)
        "match_info";
        "steps";
       (* "iter"; *)          (* Low-level debugging. *)
@@ -199,8 +199,19 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
     | Some n' -> assign ctx e1 (mk_expr rhs'.at (NumT nt $ rhs'.at) (NumE n'))
     | None -> fail_assign lhs.at lhs rhs' ("inverse conversion not defined for " ^ string_of_exp rhs')
     )
-  | SubE (p, t1, _t2), _ when Il.Eq.eq_typ t1 rhs'.note -> assign ctx p rhs'
   | SubE (p, pt1, pt2), SubE (e, et1, et2) when Il.Eq.eq_typ pt1 et1 && Il.Eq.eq_typ pt2 et2 -> assign ctx p e
+  | SubE (p, t1, t2), _ when Il.Eq.eq_typ t1 rhs'.note -> assign ctx p rhs'
+  | SubE (p, t1, t2), CaseE (mixop, tup) when Il.Eq.eq_typ t2 rhs'.note ->
+    let tcs = as_variant_typ !il_env t1 in
+    info "assign" lhs.at ("tcs = " ^ String.concat ", " (List.map (fun (m, _, _) -> string_of_mixop m) tcs));
+    info "assign" lhs.at ("mixop = " ^ string_of_mixop mixop);
+    (match List.find_map (fun (mixop', _, _) -> if Il.Eq.eq_mixop mixop mixop' then Some mixop' else None) tcs with
+    | Some mixop' ->
+      let rhs'' = CaseE (mixop', tup) $$ rhs'.at % t1 in
+      assign ctx p rhs''
+    | None ->
+      fail_assign lhs.at lhs rhs' ("Variant doesn't have the corresponding subtype " ^ string_of_typ t1)
+    )
   (*
     if sub_typ env e1.note t21 then
       match_exp' env s (reduce_exp env (SubE (e1, e1.note, t21) $> e21)) e21
@@ -226,7 +237,7 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
       else None
     else raise Irred
   *)
-  | _, _ -> fail_assign lhs.at lhs rhs "Invalid pattern-matching"
+  | _, _ -> fail_assign lhs.at lhs rhs' "Invalid pattern-matching"
 
 
 and eval_exp ctx exp : exp =
@@ -506,38 +517,6 @@ and eval_exp ctx exp : exp =
       )
     | _ -> SubE (e1', t1, t2) $> exp
     )
-  (* TODO(zilinc): check SupE. *)
-  | SupE (e1, t1, t2) when Il.Eval.equiv_typ !il_env t1 t2 -> eval_exp ctx e1
-  | SupE (e1, t1, t2) ->
-    let e1' = eval_exp ctx e1 in
-    let t1' = Il.Eval.reduce_typ !il_env t1 in
-    let t2' = Il.Eval.reduce_typ !il_env t2 in
-    (match e1'.it with
-    | SupE (e11', t11', _t12') -> eval_exp ctx (SupE (e11', t11', t2') $> exp)
-    | TupE es' ->
-      (match t1.it, t2.it with
-      | TupT ets1, TupT ets2 ->
-        let ( let* ) = Option.bind in
-        (match
-          List.fold_left2 (fun opt eI ((e1I, t1I), (e2I, t2I)) ->
-            let* (s1, s2, res') = opt in
-            let t1I' = Il.Subst.subst_typ s1 t1I in
-            let t2I' = Il.Subst.subst_typ s2 t2I in
-            let e1I' = eval_exp ctx (Il.Subst.subst_exp s1 e1I) in
-            let e2I' = eval_exp ctx (Il.Subst.subst_exp s2 e2I) in
-            let* s1' = try Il.Eval.match_exp !il_env s1 eI e1I' with Il.Eval.Irred -> None in
-            let* s2' = try Il.Eval.match_exp !il_env s2 eI e2I' with Il.Eval.Irred -> None in
-            let eI' = eval_exp ctx (SupE (eI, t1I', t2I') $$ eI.at % t2I') in
-            Some (s1', s2', eI'::res')
-          ) (Some (Il.Subst.empty, Il.Subst.empty, [])) es' (List.combine ets1 ets2)
-        with
-        | Some (_, _, res') -> TupE (List.rev res') $> exp
-        | None -> error_eval "Tuple supertyping expression" exp None
-        )
-      | _ -> error_eval "Supertyping expression" exp (Some "Invalid type for tuple expression.")
-      )
-    | _ -> SupE (e1', t1, t2) $> exp
-    )
   (* | _ -> todo "eval_exp: unmatched cases" *)
 
 and eval_iter ctx = function
@@ -621,7 +600,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
     let b = eval_exp ctx e in
     if b.it = BoolE true then return ctx
     else
-      fail_info "match" prem.at "If premise failed."
+      fail_info "match" prem.at ("If premise failed: " ^ string_of_exp e)
   | IterPr (prems, (iter, xes)) ->
     (* Work out which variables are inflow and which are outflow. *)
     let in_binds, out_binds = List.fold_right (fun (x, e) (ins, ous) ->
@@ -798,11 +777,11 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
     return ctx''
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
-  info "match_info" at ("Match the " ^ string_of_int nth ^ "-th clause of function `" ^ fname ^ "`\n" ^
-                        if nth = 1 then ("args: " ^ string_of_args args) else "");
   match clauses with
-  | [] -> fail_info "match" at ("No function clause matches the input arguments in function `" ^ fname ^ "`")
+  | [] -> fail_info "match_info" at ("No function clause matches the input arguments in function `" ^ fname ^ "`")
   | cl :: cls ->
+    info "match_info" at ("Match the " ^ string_of_int nth ^ "-th clause of function `" ^ fname ^ "`\n" ^
+                          if nth = 1 then ("args: " ^ Lib.String.shorten (string_of_args args)) else "");
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
     (* Add bindings to [il_env]. *)
@@ -1000,21 +979,18 @@ and steps arg : exp =
   let val_ops   = as_variant_typ !il_env (t_var "val")   |> List.map (fun (mixop, _, _) -> mixop) in
   let in_val_ops iop = List.exists (fun vop -> Il.Eq.eq_mixop vop iop) val_ops in
   let redex_ops = Lib.List.filter_not in_val_ops instr_ops in
-  let rec find_redex' (pre : exp list) (instrs : exp list) : exp list * exp list * exp list =
+  let rec find_redex' (pre: exp list) (instrs: exp list) : exp list * exp list * exp list =
     match instrs with
     | [] -> pre, [], []
-    | i::is -> (match i.it with
-      | CaseE (mixop, _) ->
-        if List.exists (fun redex_op -> Il.Eq.eq_mixop mixop redex_op) redex_ops then
-        (
-          info "steps" i.at ("Redex is: " ^ string_of_exp i);
-          pre, [i], is
-        )
-        else
-          find_redex' (pre@[i]) is
-      | SubE (i', _, _) | SupE (i', _, _) -> info "steps" i'.at ("SubE/SupE"); find_redex' pre (i'::is)
-      | _ -> assert false
+    | i::is ->
+      let mixop, _ = match_caseE "instr" i in
+      if List.mem mixop (List.map mixop_to_text redex_ops) then
+      (
+        info "steps" i.at ("Redex is: " ^ string_of_exp i);
+        pre, [i], is
       )
+      else
+        find_redex' (pre@[i]) is
   in
   let find_redex instrs = find_redex' [] instrs in
 
