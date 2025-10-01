@@ -99,8 +99,6 @@ and eq_exp e1 e2 =
     eq_exp e1 e2 && nt11 = nt21 && nt12 = nt22
   | SubE (e1, t11, t12), SubE (e2, t21, t22) ->
     eq_exp e1 e2 && eq_typ t11 t21 && eq_typ t12 t22
-  | SupE (e1, t11, t12), SupE (e2, t21, t22) ->
-    eq_exp e1 e2 && eq_typ t11 t21 && eq_typ t12 t22
   | _, _ -> e1.it = e2.it
 
 and eq_expfield (atom1, e1) (atom2, e2) =

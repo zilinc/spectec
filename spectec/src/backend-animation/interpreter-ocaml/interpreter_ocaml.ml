@@ -209,12 +209,6 @@ let rec ocaml_of_exp ?(typearg=false) (e : exp)  : string t =
       return (Printf.sprintf "List.map (fun %s -> %s) %s" id.it body_str list_name)
     | _ -> return "(* TODO: IterE with multiple bindings *)"
     end
-  | SupE (e1, typ1, typ2) | SubE (e1, typ1, typ2) ->
-    let* () = generate_type_conv typ1 typ2 in
-    let* e1str = ocaml_of_exp e1 in
-    let* typ1str = ocaml_of_typ typ1 in
-    let* typ2str = ocaml_of_typ typ2 in
-    return (typ1str ^ "_of_" ^ typ2str ^ " (" ^ e1str ^ ")")
   | CvtE (e1, typ1, typ2) ->
     let* e1str = ocaml_of_exp e1 in
     return (ocaml_of_numtyp typ1 ^ "_of_" ^ ocaml_of_numtyp typ2 ^ " (" ^ e1str ^ ")")
