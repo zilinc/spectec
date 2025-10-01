@@ -17,13 +17,13 @@ module I = Backend_interpreter
 let verbose : string list ref =
   ref [
          "log";
-         "table";
+      (* "table"; *)
       (* "assertion"; *)
       (* "eval"; *)          (* Evaluation of expressions. *)
-      (* "assign"; *)         (* Matching, but for terms only. *)
-      (* "match";  *)        (* Matching of other types. *)
-      (* "match_info"; *)
-      (* "steps"; *)
+       "assign";          (* Matching, but for terms only. *)
+       "match";           (* Matching of other types. *)
+       "match_info";
+       "steps";
       (* "iter"; *)          (* Low-level debugging. *)
       ]
 
@@ -125,87 +125,10 @@ end
 
 let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
-let step_table = ref [
-  [["LABEL_"];["{"];["}"];[]], 0;
-  [["FRAME_"];["{"];["}"];[]], 0;
-
-]
-let step_pure_table = ref [
-  [["UNREACHABLE"]], 0;
-  [["NOP"]], 0;
-  [["DROP"]], 0;
-  [["SELECT"];[]], 3;
-  [["IF"];[];["ELSE"]], 1;
-  [["LABEL_"];["{"];["}"];[]], 0;  (* also in step *)
-  [["HANDLER_"];["{"];["}"];[]], 0;
-  [["BR_IF"];[]], 1;
-  [["BR_TABLE"];[];[]], 1;
-  [["BR_ON_NULL"];[]], 1;
-  [["BR_ON_NON_NULL"];[]], 1;
 
 
-]
-let step_read_table = ref [
-  (* [["BLOCK"];[];[]], m; *)
-  (* [["LOOP"];[];[]], m; *)
-  [["BR_ON_CAST"];[];[];[]], 1;
-  [["BR_ON_CAST_FAIL"];[];[];[]], 1;
-  [["CALL"];[]], 0;
-  [["CALL_REF"];[]], 1;
-  (* [["CALL_REF"];[]], 1 + n; *)
-
-]
-
-
-(* TODO(zilinc): Properly convert Il expression to RI type and run the checker,
-   and get back the result expression.
-*)
+(* FIXME(zilinc): Implement the _ok rules properly. *)
 let dummy : exp = varE ~note:(t_var "dummyT") "dummyE"
-
-(*
-let rec infer_val' val_ : typ' = match val_ with
-  | A.NumV num-> begin match num with
-    | `Nat _  -> `NatT
-    | `Int _  -> `IntT
-    | `Rat _  -> `RatT
-    | `Real _ -> `RealT
-    end
-    |> (fun t -> NumT t)
-  | A.BoolV b   -> BoolT
-  | A.TextV s   -> TextT
-  | A.ListV arr when Array.length !arr > 0 -> IterT (infer_val (Array.get !arr 0), List)
-  | A.ListV arr -> todo "ListV empty: can't infer"
-  | A.StrV str  -> todo ""
-  | A.CaseV (mop, vs) -> todo ""
-  | A.OptV None -> todo "OptV: can't infer"
-  | A.OptV (Some v) -> IterT (infer_val v, Opt)
-  | A.TupV vs -> TupT (List.map (fun v ->
-                         let t = infer_val v in
-                         (VarE ("_" $ no_region) $$ no_region % t, infer_val v))
-                      vs)
-  | A.FnameV id -> todo ""
-and infer_val val_ : typ = infer_val' val_ $ no_region
-
-
-let text_to_mixop s : mixop = todo "text_to_mixop"
-
-let rec val_to_exp' val_ : exp' = match val_ with
-  | A.NumV num  -> NumE num
-  | A.BoolV b   -> BoolE b
-  | A.TextV s   -> TextE s
-  | A.ListV arr -> todo ""
-  | A.StrV str  -> StrE (List.map record_to_expfield str)
-  | A.CaseV (mop, vs) -> CaseE (text_to_mixop mop, todo "val_to_exp': CaseV")
-  | A.OptV ov   -> OptE (Option.map val_to_exp ov)
-  | A.TupV vs   -> TupE (List.map val_to_exp vs)
-  | A.FnameV id -> todo ""
-and val_to_exp val_ : exp =
-  let t = infer_val val_ in
-  val_to_exp' val_ $$ no_region % t
-
-and record_to_expfield (id, val_ref) : expfield =
-  todo "record_to_expfield"
-*)
 
 
 let as_opt_exp e =
@@ -875,7 +798,8 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
     return ctx''
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
-  info "match_info" at ("Match the " ^ string_of_int nth ^ "-th clause of function `" ^ fname ^ "`");
+  info "match_info" at ("Match the " ^ string_of_int nth ^ "-th clause of function `" ^ fname ^ "`\n" ^
+                        if nth = 1 then ("args: " ^ string_of_args args) else "");
   match clauses with
   | [] -> fail_info "match" at ("No function clause matches the input arguments in function `" ^ fname ^ "`")
   | cl :: cls ->
@@ -1070,87 +994,25 @@ let expand = function
 *)
 
 
-(*
-
-(* They don't work. *)
-
-(* Build a table of opcodes and arities for each of the Step function. *)
-and mk_step_tables (rels: Il.Env.rel_def Il.Env.Map.t) =
-  let step_rdef      = Il.Env.Map.find "Step"      rels in
-  let step_pure_rdef = Il.Env.Map.find "Step_pure" rels in
-  let step_read_rdef = Il.Env.Map.find "Step_read" rels in
-  let (_, _, step_rules) = step_rdef in
-  let (_, _, step_pure_rules) = step_pure_rdef in
-  let (_, _, step_read_rules) = step_read_rdef in
-
-  let filter_rule rule =
-    ["pure"; "read"; "trap"; "ctxt"]
-    |> List.mem (Il2al.Il2al_util.name_of_rule rule)
-    |> not
-  in
-
-  (* ASSUMES all clauses of an inductive rule for one instruction agree on the number
-     of operands it takes.
-  *)
-
-  let step_pure_table = List.map (fun c ->
-    let RuleD (_, _, _, exp, _) = c.it in
-  let step_table = List.map (fun r ->
-    let RuleD (_, _, _, exp, _) = r.it in
-    let TupE [lhs; rhs] = exp.it in
-    let CaseE (_, tup) = lhs.it in  (* %;% *)
-    let TupE [_; instrs] = tup.it in
-    info "table" instrs.at ("rule = " ^ string_of_rule r);
-    let instrs' = elts_of_list instrs in
-    let opcode = Lib.List.last instrs' in
-    let arity = List.length instrs' - 1 in
-    let CaseE (op, _) = opcode.it in
-    (op, arity)
-  ) (List.filter filter_rule step_rules) in
-
-  let step_pure_table = List.map (fun c ->
-    let RuleD (_, _, _, exp, _) = c.it in
-    let TupE [lhs; rhs] = exp.it in
-    let instrs' = elts_of_list lhs in
-    let opcode = Lib.List.last instrs' in
-    let arity = List.length instrs' - 1 in
-    let CaseE (op, _) = opcode.it in
-    (op, arity)
-  ) step_pure_rules in
-
-  let step_read_table = List.map (fun c ->
-    let RuleD (_, _, _, exp, _) = c.it in
-    let TupE [lhs; rhs] = exp.it in
-    let CaseE (_, tup) = lhs.it in  (* %;% *)
-    let TupE [_; instrs] = tup.it in
-    let instrs' = elts_of_list instrs in
-    let opcode = Lib.List.last instrs' in
-    let arity = List.length instrs' - 1 in
-    let CaseE (op, _) = opcode.it in
-    (op, arity)
-  ) step_read_rules in
-
-  step_table, step_pure_table, step_read_table
-*)
-
 (* $Steps : config -> config *)
 and steps arg : exp =
   let instr_ops = as_variant_typ !il_env (t_var "instr") |> List.map (fun (mixop, _, _) -> mixop) in
   let val_ops   = as_variant_typ !il_env (t_var "val")   |> List.map (fun (mixop, _, _) -> mixop) in
   let in_val_ops iop = List.exists (fun vop -> Il.Eq.eq_mixop vop iop) val_ops in
-  let redex_ops = List.filter (fun iop -> in_val_ops iop |> not) instr_ops in
+  let redex_ops = Lib.List.filter_not in_val_ops instr_ops in
   let rec find_redex' (pre : exp list) (instrs : exp list) : exp list * exp list * exp list =
     match instrs with
     | [] -> pre, [], []
     | i::is -> (match i.it with
       | CaseE (mixop, _) ->
-        if List.mem mixop redex_ops then
+        if List.exists (fun redex_op -> Il.Eq.eq_mixop mixop redex_op) redex_ops then
         (
           info "steps" i.at ("Redex is: " ^ string_of_exp i);
           pre, [i], is
         )
         else
           find_redex' (pre@[i]) is
+      | SubE (i', _, _) | SupE (i', _, _) -> info "steps" i'.at ("SubE/SupE"); find_redex' pre (i'::is)
       | _ -> assert false
       )
   in
@@ -1171,55 +1033,44 @@ and steps arg : exp =
                           "ops_m  : " ^ String.concat ", " (List.map string_of_exp ops_m) ^ "\n" ^
                           "|ops_r|: " ^ string_of_int (List.length ops_r));
 
-    let find_in_table table = List.find_map (fun (con, arity) ->
-      let [{ it = CaseE(op', _); _ }] = ops_m in
-      let op = mk_mixop ~info:(Xl.Atom.info "") con in
-      if Il.Eq.eq_mixop op op' then Some (op, arity) else None
-    ) table in
-
-    let mk_step_args ops_l ops_m arity =
-      let instrs_m = ListE (ops_l @ ops_m) $> instrs in
-      let tup_step  = TupE [z; instrs_m] $> tup in
+    let mk_step_args ops_l ops_m =
+      let stack = ListE (ops_l @ ops_m) $> instrs in
+      let tup_step  = TupE [z; stack] $> tup in
       let conf_step = CaseE (mixop, tup_step) $> conf in
       let conf_arg = ExpA conf_step $ conf_step.at in
-      let instrs_arg = ExpA instrs_m $ instrs_m.at in
+      let instrs_arg = ExpA stack $ stack.at in
       (conf_arg, instrs_arg)
     in
 
-    let mk_next_conf instrs_m' ops_r =
-      let ops_m'  = elts_of_list instrs_m' in
-      let instrs' = ListE (ops_m' @ ops_r) $> instrs in
+    let mk_next_conf stack' ops_r =
+      let ops_lm'  = elts_of_list stack' in
+      let instrs' = ListE (ops_lm' @ ops_r) $> instrs in
       let tup'    = TupE [z; instrs'] $> tup in
       let conf'   = CaseE (mixop, tup') $> conf in
       ExpA conf' $ conf'.at
     in
 
-    begin match find_in_table !step_pure_table with
-    | Some (_, arity) ->
-      let _, instrs_arg = mk_step_args ops_l ops_m arity in
-      let instrs_m' = call_func "Step_pure" [instrs_arg] in
-      let conf_arg' = mk_next_conf instrs_m' ops_r in
+    let conf_arg, instrs_arg = mk_step_args ops_l ops_m in
+    try
+      let instrs_lm' = call_func "Step_pure" [instrs_arg] in
+      let conf_arg' = mk_next_conf instrs_lm' ops_r in
       steps conf_arg'
-    | None ->
-      begin match find_in_table !step_read_table with
-      | Some (_, arity) ->
-        let conf_arg, _ = mk_step_args ops_l ops_m arity in
-        let instrs_m' = call_func "Step_read" [conf_arg] in
-        let conf_arg' = mk_next_conf instrs_m' ops_r in
+    with
+    | FunctionNoMatch _ ->
+      try
+        let instrs_lm' = call_func "Step_read" [conf_arg] in
+        let conf_arg' = mk_next_conf instrs_lm' ops_r in
         steps conf_arg'
-      | None ->
-        begin match find_in_table !step_table with
-        | Some (_, arity) ->
-          let conf_arg, _ = mk_step_args ops_l ops_m arity in
+      with
+      | FunctionNoMatch _ ->
+        try
           let conf_step' = call_func "Step" [conf_arg] in
           let CaseE (mixop', tup_step') = conf_step'.it in
-          let TupE [z'; instrs_m'] = tup_step'.it in
-          let conf_arg' = mk_next_conf instrs_m' ops_r in
+          let TupE [z'; instrs_lm'] = tup_step'.it in
+          let conf_arg' = mk_next_conf instrs_lm' ops_r in
           steps conf_arg'
-        | None -> conf  (* Steps/refl *)
-        end
-      end
-    end
+        with
+        | FunctionNoMatch _ -> conf  (* Steps/refl *)
 
 and relation_mem name =
   List.mem name ["Ref_ok"; "Module_ok"; "Externaddr_ok"; "Val_ok"; "Steps"]
@@ -1230,4 +1081,4 @@ and relation_mem name =
 
 let instantiate (args: arg list) : exp = call_func "instantiate" args
 
-let invoke (args: arg list) : exp = call_func "invoke" args
+let invoke (args: arg list) : exp = call_func "invoke" args |> expA |> steps

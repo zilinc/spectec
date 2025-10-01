@@ -986,11 +986,11 @@ let il_of_module (module_: RI.Ast.module_) =
 (* Destruct *)
 
 
-(* This function also strips any SubE nodes. *)
+(* This function also strips any SubE, SupE nodes. *)
 let rec match_caseE name exp : string list list * exp list =
   match exp.it with
   | CaseE (tag, { it = TupE es; _ }) -> mixop_to_text tag, es
-  | SubE (exp', _, _) -> match_caseE name exp'
+  | SubE (exp', _, _) | SupE (exp', _, _) -> match_caseE name exp'
   | _ -> error_value (name ^ " (match_caseE)") exp
 
 
