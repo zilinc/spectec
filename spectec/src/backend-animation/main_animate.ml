@@ -5,18 +5,11 @@ open Util
 open Source
 
 
-(* FIXME(zilinc): we may want to do differently than the AL route. *)
 let rec is_anim_target def =
   match def.it with
   | DecD (id, ps, t, _) when id.it = "utf8" -> Some (DecD (id, ps, t, []) $ def.at)
   | RelD (id, mixop, t, rules) when List.mem id.it [ "Eval_expr"; "Step"; "Step_read"; "Step_pure" ] ->
-    (* HARDCODE: Exclude administrative rules *)
-    let filter_rule rule =
-      [(*"trap-instrs"; "ctxt-instrs"*)]
-      |> List.exists (fun n -> String.starts_with ~prefix:n (full_name_of_rule rule))
-      |> not
-    in
-    Some (RelD (id, mixop, t, List.filter filter_rule rules) $ def.at)
+    Some (RelD (id, mixop, t, rules) $ def.at)
   | RelD _ -> None
   | RecD defs -> Some (RecD (List.filter_map is_anim_target defs) $ def.at)
   | _ -> Some def

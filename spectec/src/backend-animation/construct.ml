@@ -1780,8 +1780,8 @@ let il_to_num exp : RI.Value.num =
   match match_caseE "numtype" numtype with
   | [["I32"]], [] -> I32 (il_to_nat32   (unwrap_case num_))
   | [["I64"]], [] -> I64 (il_to_nat64   (unwrap_case num_))
-  | [["F32"]], [] -> F32 (il_to_float32 (unwrap_case num_))
-  | [["F64"]], [] -> F64 (il_to_float64 (unwrap_case num_))
+  | [["F32"]], [] -> F32 (il_to_float32 num_)
+  | [["F64"]], [] -> F64 (il_to_float64 num_)
   | v -> error_value "numtype" numtype
 
 let il_to_vec exp : RI.Value.vec =
