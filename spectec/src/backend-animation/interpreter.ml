@@ -10,6 +10,7 @@ open Printf
 open Il2al.Free
 module A = Al.Ast
 module I = Backend_interpreter
+module RI = Reference_interpreter
 
 
 (* Errors *)
@@ -240,9 +241,12 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
   | _, _ -> fail_assign lhs.at lhs rhs' "Invalid pattern-matching"
 
 
+and is_value : exp -> bool = Il.Eval.is_normal_exp
+
 and eval_exp ctx exp : exp OptMonad.m =
   let open Xl in
   match exp.it with
+  | _ when is_value exp -> return exp
   | VarE v -> (match VContext.Map.find_opt v.it ctx.varid with
               | Some v' -> return v'
               | None -> error exp.at (sprintf "Variable `%s` is not in the value context.\n  ▹ vctx: %s" v.it
@@ -826,18 +830,21 @@ and call_func name args : exp OptMonad.m =
       | TextE fname -> (fname, true)  (* hint(builtin "g") *)
       | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
   in
-  (* Function *)
   match Def.find_dl_func_def name !dl with
+  (* Regular function definition. *)
   | Some fdef when not is_builtin -> eval_func name fdef args
   (* Numerics *)
-  | None when I.Numerics.mem builtin_name -> (
-    if not is_builtin then
-      warn no (sprintf "Numeric function `%s` is not defined in source, consider adding a hint(builtin)." name);
-    (* Some (I.Numerics.call_numerics builtin_name args) *)
-    error no "call_func: Can't call built-in functions for now; not yet implemented."
-  )
+  | Some { it = (_, _, _, [], _); _ } when is_builtin ->
+    (* TODO(zilinc): This is actually wrong. We need to do it all in IL. *)
+    if I.Numerics.mem builtin_name then
+      Numerics.call_numerics builtin_name args |> return
+    else
+      error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
+  | _ when is_builtin ->
+    error no (sprintf "Numeric function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
   (* Relation *)
-  | None when relation_mem name -> call_rule name args |> return
+  (* There may be function definitions in DL, but we ignore them and use the hardcoded rules. *)
+  | _ when relation_mem name -> call_rule name args |> return
   | None -> error no (sprintf "There is no function named `%s`." name)
 
 
@@ -848,10 +855,10 @@ and call_rule name (args: arg list) : exp =
   match name with
   | "Ref_ok"        when nargs = 2 -> ref_ok        (List.nth args 0) (List.nth args 1)
   | "Module_ok"     when nargs = 1 -> module_ok     (List.nth args 0)
-  | "Externaddr_ok" when nargs = 2 -> externaddr_ok (List.nth args 0) (List.nth args 1)
-  | "Val_ok"        when nargs = 2 -> val_ok        (List.nth args 0) (List.nth args 1)
+  | "Externaddr_ok" when nargs = 3 -> externaddr_ok (List.nth args 0) (List.nth args 1) (List.nth args 2)
+  | "Val_ok"        when nargs = 3 -> val_ok        (List.nth args 0) (List.nth args 1) (List.nth args 2)
   | "Steps"         when nargs = 1 -> steps         (List.nth args 0)
-  | _ -> assert false
+  | _ -> error no ("Rule `" ^ name ^ "` has the wrong number (" ^ string_of_int nargs ^ ") of arguments.")
 
 
 (* $Ref_ok : store -> ref -> reftype *)
@@ -906,29 +913,20 @@ and ref_ok s ref : exp = todo "$Ref_ok"
 (* $Module_ok : module -> moduletype *)
 and module_ok (module_: arg) : exp =
   match module_.it with
-  | ExpA module_' -> dummy
+  | ExpA m ->
+    let module_' = il_to_module m in
+    let ModuleT (its, ets) = RI.Valid.check_module module_' in
+    let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> il_of_externtype xt) its in
+    let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> il_of_externtype xt) ets in
+    mk_case' "moduletype" [[];["->"];[]] [ listE (t_star "externtype") importtypes; listE (t_star "externtype") exporttypes ]
   | _ -> error module_.at ("Wrong argument sort to function $Module_ok. Got: " ^ string_of_arg module_)
-(*
-  match module_ with
-  | [ m ] ->
-    (try
-      let module_ = Construct.al_to_module m in
-      let ModuleT (its, ets) = Reference_interpreter.Valid.check_module module_ in
-      let importtypes = List.map (fun (Types.ImportT (_, _, xt)) -> Construct.al_of_externtype xt) its in
-      let exporttypes = List.map (fun (Types.ExportT (_, xt)) -> Construct.al_of_externtype xt) ets in
-      CaseV ("->", [ listV_of_list importtypes; listV_of_list exporttypes ])
-    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
-    )
 
-  | vs -> Numerics.error_values "$Module_ok" vs
-*)
 
-(* $Externaddr_ok : store -> externaddr -> externtype *)
-and externaddr_ok s eaddr =
-  match s.it, eaddr.it with
-  | ExpA s', ExpA eaddr' -> dummy
-  | _ , ExpA _ -> error s.at     ("1st argument to function $Externaddr_ok has wrong sort. Got: " ^ string_of_arg s    )
-  | ExpA _ , _ -> error eaddr.at ("2nd argument to function $Externaddr_ok has wrong sort. Got: " ^ string_of_arg eaddr)
+(* $Externaddr_ok : store -> externaddr -> externtype -> bool *)
+and externaddr_ok s eaddr etype =
+  match s.it, eaddr.it, etype.it with
+  | ExpA s', ExpA eaddr', ExpA etype' -> boolE true  (* TODO(zilinc) *)
+  | _ -> error eaddr.at ("Non-expression argument to function $Externaddr_ok.")
 (* match eaddr with
   | [ CaseV (name, [ NumV (`Nat z) ]); t ] ->
     (try
@@ -948,8 +946,8 @@ and externaddr_ok s eaddr =
   | vs -> Numerics.error_values "$Externaddr_ok" vs
 *)
 
-(* $Val_ok : store -> val -> valtype *)
-and val_ok s val_ = todo "$Val_ok"
+(* $Val_ok : store -> val -> valtype -> bool *)
+and val_ok s val_ valtype = boolE true  (* TODO(zilinc) *)
 (*
 function
   | [ v; t ] ->
@@ -1029,26 +1027,21 @@ and steps arg : exp =
     in
 
     let conf_arg, instrs_arg = mk_step_args ops_l ops_m in
-    (match call_func "Step_pure" [instrs_arg] |> run_opt with
-    | Some instrs_lm' ->
+    (match call_func "Step" [conf_arg] |> run_opt with
+    | Some conf_step' ->
+      let CaseE (mixop', tup_step') = conf_step'.it in
+      let TupE [z'; instrs_lm'] = tup_step'.it in
       let conf_arg' = mk_next_conf instrs_lm' ops_r in
       steps conf_arg'
-    | None ->
-      (match call_func "Step_read" [conf_arg] |> run_opt with
-      | Some instrs_lm' ->
-        let conf_arg' = mk_next_conf instrs_lm' ops_r in
-        steps conf_arg'
-      | None ->
-        (match call_func "Step" [conf_arg] |> run_opt with
-        | Some conf_step' ->
-          let CaseE (mixop', tup_step') = conf_step'.it in
-          let TupE [z'; instrs_lm'] = tup_step'.it in
-          let conf_arg' = mk_next_conf instrs_lm' ops_r in
-          steps conf_arg'
-        | None -> conf  (* Steps/refl *)
-        )
-      )
+    | None -> conf  (* Steps/refl *)
     )
+
+and step conf : exp = todo "step"
+
+and step_pure instrs : exp = todo "step_pure"
+
+and step_read conf : exp = todo "step_read"
+
 
 and relation_mem name =
   List.mem name ["Ref_ok"; "Module_ok"; "Externaddr_ok"; "Val_ok"; "Steps"]

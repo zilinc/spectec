@@ -400,24 +400,20 @@ let throw_log e = let () = info "log" no_region e in E.throw e
 *)
 let cannot_animate : (string * string) list Map.t =
   Map.of_list
-    [ ("rule_lhs",
-      [
+    [ ("rule_lhs", [
         ("Step_pure", "br-label-zero");
         ("Step_pure", "br-label-succ");
         ("Step_pure", "br-handler");
+        ("Step_pure", "return-frame");
+        ("Step_pure", "return-label");
+        ("Step_pure", "return-handler");
+        ("Step_pure", "trap-instrs");
 
         ("Step_read", "return_call_ref-label");
         ("Step_read", "return_call_ref-handler");
         ("Step_read", "return_call_ref-frame-null");
         ("Step_read", "return_call_ref-frame-addr");
-
-        ("Step_pure", "return-frame");
-        ("Step_pure", "return-label");
-        ("Step_pure", "return-handler");
-
         ("Step_read", "throw_ref-instrs");
-
-        ("Step_pure", "trap-instrs");
 
         ("Step", "ctxt-instrs");
       ])
@@ -547,8 +543,18 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     let res = mk_case' ~at:at "config" [[];[";"];[]] [z';rhs] in
     let fncall = CallE (id, [expA arg]) $$ at % res.note in
     (res, fncall)
-  (* Other rules, mostly from validation.
-     We don't allow inverting rules, so the LHS (i.e. all args expect the last one)
+  | "Externaddr_ok", TupE [store; externaddr; externtype] ->
+    let fncall = CallE (id, [expA store; expA externaddr; expA externtype]) $$ at % (BoolT $ at) in
+    let res = boolE true in
+    (fncall, res)
+  | "Val_ok", TupE [store; val_; valtype] ->
+    let fncall = CallE (id, [expA store; expA val_; expA valtype]) $$ at % (BoolT $ at) in
+    let res = boolE true in
+    (fncall, res)
+  (* Other rules, mostly from validation:
+     * Ref_ok : (store, ref) -> reftype
+     * Module_ok : module -> moduletype
+     We don't allow inverting rules, so the LHS (i.e. all args except the last one)
      of a rule must be known.
   *)
   | _, TupE es when List.length es >= 2 ->
@@ -967,7 +973,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return (Option.to_list oprem_v_len_rhs @ prem_len :: prems')
   (* exp1 ++ exp2'^n where n is known *)
-  | CatE (exp1, ({ it = IterE (exp2', (ListN(len_lhs2, _), xes)); _} as exp2)) ->
+  | CatE (exp1, ({ it = IterE (exp2', (ListN(len_lhs2, _), xes)); _} as exp2))
+    when Set.subset ((free_exp false len_lhs2).varid) knowns ->
     let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
     let (envr, v_len_rhs, len_rhs', oprem_v_len_rhs) = new_bind_exp envr None len_rhs None `Rhs in
     let* () = update (add_knowns (Set.singleton v_len_rhs.it)) in
@@ -985,6 +992,14 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return (Option.to_list oprem_v_len_rhs @ prem_len :: prems')
+  (* exp1* ++ [X] ++ exp2* *)
+  (*
+  | CatE ({ it = CatE ({ it = IterE (exp1', (List, xes1)); _ },
+                       { it = ListE [{ it = CaseE _; _ }]; _ })
+          ; _ },
+          { it = IterE (exp2', (List, xes2)); _ }) ->
+    todo "maybe better off just handle the rules manually."
+  *)
   | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs))
 
 (** ASSUMES: [e] contains unknown vars, whereas [es] is fully known.
@@ -1361,7 +1376,7 @@ let animate_rule_red envr rule : clause' =
   rule Step_read/block:
     z; val* ( BLOCK bt instr* )  ~>  rest* ( LABEL_ n `{eps} val^m instr* )
     -- if $blocktype_(z, bt) = t_1^m -> t_2^n
-    -- if val* = rest* val^m
+    -- if rest* val^m = val*
   ```
   so that we can match the first part of the argument unconditionally and then
   compute `m` in the premises.
@@ -1387,8 +1402,9 @@ let transform_step_vals in_stack out_stack prems : bind list * exp * exp * prem 
     ([ExpB (rest_star, t_star "val") $ rest_star_e.at;
       ExpB (val_star, t_star "val") $ val_star_e.at],
      in_stack', out_stack', prems')
-  (* This case is not circular dependent, but we still generalise it so that we can pass in the entire value
-     stack, instead of manually pick a certain number of operands to feed to the instruction.
+  (* In this case, the LHS pattern is not circular dependent as the above case, but we still
+     generalise it so that we can pass in the entire value stack, instead of manually pick a
+     certain number of operands to feed to the instruction.
   *)
   | ListE instrs ->
     let iter' = List in

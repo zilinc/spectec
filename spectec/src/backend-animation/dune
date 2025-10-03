@@ -12,6 +12,7 @@
     il2dl
     il_util
     interpreter
+    numerics
     script
     state
     valid
