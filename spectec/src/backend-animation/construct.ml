@@ -40,9 +40,9 @@ let il_of_fmagN layout i : exp =
   if n = Z.zero then
     mk_case t [["SUBNORM"];[]] [il_of_z_nat m]
   else if n <> BI.Construct.mask_exp layout then
-    mk_case t [["NORM"];[]] [il_of_z_nat m; il_of_z_int Z.(shift_right n layout.mantissa - BI.Construct.bias layout)]
+    mk_case t [["NORM"];[];[]] [il_of_z_nat m; il_of_z_int Z.(shift_right n layout.mantissa - BI.Construct.bias layout)]
   else if m = Z.zero then
-    mk_case t [["INF"];[]] []
+    mk_case t [["INF"]] []
   else
     mk_case t [["NAN"];[]] [il_of_z_nat m]
 
@@ -809,7 +809,7 @@ let rec il_of_instr (instr: RI.Ast.instr) =
   | Block (bt, instrs) -> mk_instr "BLOCK" 2 [il_of_blocktype bt; il_of_list (t_star "instr") il_of_instr instrs]
   | Loop  (bt, instrs) -> mk_instr "LOOP"  2 [il_of_blocktype bt; il_of_list (t_star "instr") il_of_instr instrs]
   | If (bt, instrs1, instrs2) ->
-    mk_case (t_var "instr") [["IF"];[];[];["ELSE"];[]] [
+    mk_case (t_var "instr") [["IF"];[];["ELSE"];[]] [
       il_of_blocktype bt;
       il_of_list (t_star "instr") il_of_instr instrs1;
       il_of_list (t_star "instr") il_of_instr instrs2;
@@ -1005,9 +1005,8 @@ let il_to_list' (f: exp -> 'a) exp : 'a list =
   | [[];[]], [l] -> il_to_list f l
   | _ -> error_value "list" exp
 
-(*
-let al_to_seq f s = al_to_list f s |> List.to_seq
-*)
+let il_to_seq f s = il_to_list f s |> List.to_seq
+
 let il_to_phrase (f: exp -> 'a) exp : 'a RI.Source.phrase = RI.Source.(f exp @@ no_region)
 
 
@@ -1065,22 +1064,21 @@ let il_to_vec128  exp : RI.V128.t = unwrap_num exp |> il_to_z_nat |> z_to_vec128
 let il_to_float32 exp : RI.F32.t = il_to_floatN layout32 exp |> Z.to_int32_unsigned |> RI.F32.of_bits
 let il_to_float64 exp : RI.F64.t = il_to_floatN layout64 exp |> Z.to_int64_unsigned |> RI.F64.of_bits
 
-let il_to_uN32 exp : RI.I32.t =
-  match match_caseE "uN32" exp with
-  | [[];[]], [n] -> il_to_nat32 n
-  | _ -> error_value "uN32" exp
+let il_to_uN32 exp : RI.I32.t = il_to_nat32 (unwrap_case exp)
+let il_to_uN64 exp : RI.I64.t = il_to_nat64 (unwrap_case exp)
 
 let il_to_idx exp : RI.Ast.idx = il_to_phrase il_to_uN32 exp
-(*
-let al_to_byte (v: value): Char.t = al_to_nat v |> Char.chr
-let al_to_bytes (v: value): string = al_to_seq al_to_byte v |> String.of_seq
-let al_to_string = function
-  | TextV str -> str
-  | v -> error_value "text" v
-let al_to_name name = name |> al_to_string |> Utf8.decode
-let al_to_bool = unwrap_boolv
+let il_to_byte exp : Char.t = il_to_nat exp |> Z.to_int |> Char.chr
+let il_to_bytes exp : string = il_to_seq il_to_byte exp |> String.of_seq
+let il_to_string exp =
+  match exp.it with
+  | TextE str -> str
+  | _ -> error_value "text" exp
+let il_to_name name = name |> il_to_string |> Utf8.decode
+let il_to_bool exp = match exp.it with
+  | BoolE b -> b
+  | _ -> error_value "bool" exp
 
-*)
 
 (* Destruct type *)
 
@@ -1217,29 +1215,31 @@ let il_to_limits (default: int64) exp : RI.Types.limits =
   match match_caseE "limits" exp with
   | [["["];[".."];["]"]], [min; max] ->
     let max' =
-      match il_to_nat64 max with
+      match il_to_uN64 max with
       | i64 when default = i64 -> None
-      | _ -> Some (il_to_nat64 max)
+      | _ -> Some (il_to_uN64 max)
     in
-    { min = il_to_nat64 min; max = max' }
+    { min = il_to_uN64 min; max = max' }
   | _ -> error_value "limits" exp
 
-(*
-let il_to_globaltype: value -> globaltype = function
-  | TupV [ mut; vt ] | CaseV (_, [ mut; vt ]) -> GlobalT (al_to_mut mut, al_to_valtype vt)
-  | v -> error_value "globaltype" v
+let il_to_globaltype exp : RI.Types.globaltype =
+  match match_caseE "globaltype" exp with
+  | [[];[];[]], [mut; vt] -> GlobalT (il_to_mut mut, il_to_valtype vt)
+  | _ -> error_value "globaltype" exp
 
-let il_to_tabletype: value -> tabletype = function
-  | TupV [ at; limits; rt ] | CaseV (_, [ at; limits; rt ]) -> TableT (al_to_addrtype at, al_to_limits default_table_max limits, il_to_reftype rt)
-  | v -> error_value "tabletype" v
+let il_to_tabletype exp : RI.Types.tabletype =
+  match match_caseE "tabletype" exp with
+  | [[];[];[];[]], [at; limits; rt] ->
+    TableT (il_to_addrtype at, il_to_limits default_table_max limits, il_to_reftype rt)
+  | _ -> error_value "tabletype" exp
 
-let il_to_memorytype: value -> memorytype = function
-  | CaseV ("PAGE", [ at; limits ]) -> MemoryT (al_to_addrtype at, al_to_limits default_memory_max limits)
-  | v -> error_value "memorytype" v
+let il_to_memorytype exp : RI.Types.memorytype =
+  match match_caseE "memorytype" exp with
+  | [[];[];["PAGE"]], [at; limits] -> MemoryT (il_to_addrtype at, il_to_limits default_memory_max limits)
+  | _ -> error_value "memorytype" exp
 
-let il_to_tagtype: value -> tagtype = function
-  | tu -> TagT (al_to_typeuse tu)
-*)
+let il_to_tagtype exp : RI.Types.tagtype = TagT (il_to_typeuse exp)
+
 
 (* Destruct operator *)
 
@@ -1677,7 +1677,7 @@ let il_to_memop (f: exp -> 'p) exps : RI.Ast.idx * (RI.Types.numtype, 'p) RI.Ast
     {
       ty = il_to_numtype nt;
       align  = find_str_field "ALIGN"  str |> il_to_nat |> Z.to_int;
-      offset = find_str_field "OFFSET" str |> il_to_nat64;
+      offset = find_str_field "OFFSET" str |> il_to_uN64;
       pack = f p;
     }
   | _ -> error_values "memop" exps
@@ -1776,13 +1776,16 @@ let il_to_catch' exp : RI.Ast.catch' =
 let il_to_catch exp : RI.Ast.catch = il_to_phrase il_to_catch' exp
 
 let il_to_num exp : RI.Value.num =
-  let _, [numtype; num_] = match_caseE "num" exp in
-  match match_caseE "numtype" numtype with
-  | [["I32"]], [] -> I32 (il_to_nat32   (unwrap_case num_))
-  | [["I64"]], [] -> I64 (il_to_nat64   (unwrap_case num_))
-  | [["F32"]], [] -> F32 (il_to_float32 num_)
-  | [["F64"]], [] -> F64 (il_to_float64 num_)
-  | v -> error_value "numtype" numtype
+  match match_caseE "num" exp with
+  | [["CONST"];[];[]], [numtype; num_] ->
+    (match match_caseE "numtype" numtype with
+    | [["I32"]], [] -> I32 (il_to_uN32    num_)
+    | [["I64"]], [] -> I64 (il_to_uN64    num_)
+    | [["F32"]], [] -> F32 (il_to_float32 num_)
+    | [["F64"]], [] -> F64 (il_to_float64 num_)
+    | v -> error_value "numtype" numtype
+    )
+  | _ -> error_value "num" exp
 
 let il_to_vec exp : RI.Value.vec =
   let _, [vectype; vec_] = match_caseE "vec" exp in
@@ -1893,11 +1896,11 @@ and il_to_instr' exp : RI.Ast.instr' =
   | [["STRUCT.NEW"];[]], [idx] -> StructNew (il_to_idx idx, Explicit)
   | [["STRUCT.NEW_DEFAULT"];[]], [idx] -> StructNew (il_to_idx idx, Implicit)
   | [["STRUCT.GET"];[];[];[]], [sx_opt; idx1; idx2] ->
-    StructGet (il_to_idx idx1, il_to_nat32 idx2, il_to_opt il_to_sx sx_opt)
-  | [["STRUCT.SET"];[];[]], [idx1; idx2] -> StructSet (il_to_idx idx1, il_to_nat32 idx2)
+    StructGet (il_to_idx idx1, il_to_uN32 idx2, il_to_opt il_to_sx sx_opt)
+  | [["STRUCT.SET"];[];[]], [idx1; idx2] -> StructSet (il_to_idx idx1, il_to_uN32 idx2)
   | [["ARRAY.NEW"];[]], [idx] -> ArrayNew (il_to_idx idx, Explicit)
   | [["ARRAY.NEW_DEFAULT"];[]], [idx] -> ArrayNew (il_to_idx idx, Implicit)
-  | [["ARRAY.NEW_FIXED"];[];[]], [idx; i32] -> ArrayNewFixed (il_to_idx idx, il_to_nat32 i32)
+  | [["ARRAY.NEW_FIXED"];[];[]], [idx; i32] -> ArrayNewFixed (il_to_idx idx, il_to_uN32 i32)
   | [["ARRAY.NEW_ELEM"];[];[]], [idx1; idx2] -> ArrayNewElem (il_to_idx idx1, il_to_idx idx2)
   | [["ARRAY.NEW_DATA"];[];[]], [idx1; idx2] -> ArrayNewData (il_to_idx idx1, il_to_idx idx2)
   | [["ARRAY.GET"];[];[]], [sx_opt; idx] -> ArrayGet (il_to_idx idx, il_to_opt il_to_sx sx_opt)
@@ -1911,17 +1914,15 @@ and il_to_instr' exp : RI.Ast.instr' =
   | [["EXTERN.CONVERT_ANY"]], [] -> ExternConvert Externalize
   | _ -> error_value "instruction" exp
 
-
-(*
-let al_to_const: value -> const = al_to_list al_to_instr |> al_to_phrase
+let il_to_const : exp -> RI.Ast.const = il_to_list il_to_instr |> il_to_phrase
 
 
 (* Deconstruct module *)
 
-let al_to_type: value -> type_ = function
-  | CaseV ("TYPE", [ rt ]) -> al_to_phrase al_to_rectype rt
-  | v -> error_value "type" v
-*)
+let il_to_type exp : RI.Ast.type_ =
+  match match_caseE "type" exp with
+  | [["TYPE"];[]], [rt] -> il_to_phrase il_to_rectype rt
+  | _ -> error_value "type" exp
 
 let il_to_local' exp : RI.Ast.local' =
   match match_caseE "local" exp with
@@ -1936,108 +1937,113 @@ let il_to_func' exp : RI.Ast.func' =
   | _ -> error_value "func" exp
 let il_to_func exp : RI.Ast.func = il_to_phrase il_to_func' exp
 
-(*
+let il_to_global' exp : RI.Ast.global' =
+  match match_caseE "global" exp with
+  | [["GLOBAL"];[];[]], [gt; const] ->
+    Global (il_to_globaltype gt, il_to_const const)
+  | _ -> error_value "global" exp
+let il_to_global : exp -> RI.Ast.global = il_to_phrase il_to_global'
 
-let al_to_global': value -> global' = function
-  | CaseV ("GLOBAL", [ gt; const ]) ->
-    Global (al_to_globaltype gt, al_to_const const)
-  | v -> error_value "global" v
-let al_to_global: value -> global = al_to_phrase al_to_global'
+let il_to_table' exp : RI.Ast.table' =
+  match match_caseE "table" exp with
+  | [["TABLE"];[];[]], [tt; const] ->
+    Table (il_to_tabletype tt, il_to_const const)
+  | _ -> error_value "table" exp
+let il_to_table : exp -> RI.Ast.table = il_to_phrase il_to_table'
 
-let al_to_table': value -> table' = function
-  | CaseV ("TABLE", [ tt; const ]) ->
-    Table (al_to_tabletype tt, al_to_const const)
-  | v -> error_value "table" v
-let al_to_table: value -> table = al_to_phrase al_to_table'
+let il_to_memory' exp : RI.Ast.memory' =
+  match match_caseE "memory" exp with
+  | [["MEMORY"];[]], [mt] -> Memory (il_to_memorytype mt)
+  | _ -> error_value "memory" exp
+let il_to_memory : exp -> RI.Ast.memory = il_to_phrase il_to_memory'
 
-let al_to_memory': value -> memory' = function
-  | CaseV ("MEMORY", [ mt ]) -> Memory (al_to_memorytype mt)
-  | v -> error_value "memory" v
-let al_to_memory: value -> memory = al_to_phrase al_to_memory'
+let il_to_tag' exp : RI.Ast.tag' =
+  match match_caseE "tag" exp with
+  | [["TAG"];[]], [tt] -> Tag (il_to_tagtype tt)
+  | _ -> error_value "tag" exp
+let il_to_tag : exp -> RI.Ast.tag = il_to_phrase il_to_tag'
 
-let al_to_tag': value -> tag' = function
-  | CaseV ("TAG", [ tt ]) -> Tag (al_to_tagtype tt)
-  | v -> error_value "tag" v
-let al_to_tag: value -> tag = al_to_phrase al_to_tag'
+let il_to_segmentmode' exp : RI.Ast.segmentmode' =
+  match match_caseE "segmentmode" exp with
+  | [["PASSIVE"]], [] -> Passive
+  | [["ACTIVE"];[];[]], [idx; const] -> Active (il_to_idx idx, il_to_const const)
+  | [["DECLARE"]], [] -> Declarative
+  | _ -> error_value "segmentmode" exp
+let il_to_segmentmode : exp -> RI.Ast.segmentmode = il_to_phrase il_to_segmentmode'
 
-let al_to_segmentmode': value -> segmentmode' = function
-  | CaseV ("PASSIVE", []) -> Passive
-  | CaseV ("ACTIVE", [ idx; const ]) -> Active (al_to_idx idx, al_to_const const)
-  | CaseV ("DECLARE", []) -> Declarative
-  | v -> error_value "segmentmode" v
-let al_to_segmentmode: value -> segmentmode = al_to_phrase al_to_segmentmode'
+let il_to_elem' exp : RI.Ast.elem' =
+  match match_caseE "elem" exp with
+  | [["ELEM"];[];[];[]], [rt; consts; mode] ->
+    Elem (il_to_reftype rt, il_to_list il_to_const consts, il_to_segmentmode mode)
+  | _ -> error_value "elem" exp
+let il_to_elem : exp -> RI.Ast.elem = il_to_phrase il_to_elem'
 
-let al_to_elem': value -> elem' = function
-  | CaseV ("ELEM", [ rt; consts; mode ]) ->
-    Elem (al_to_reftype rt, al_to_list al_to_const consts, al_to_segmentmode mode)
-  | v -> error_value "elem" v
-let al_to_elem: value -> elem = al_to_phrase al_to_elem'
+let il_to_data' exp : RI.Ast.data' =
+  match match_caseE "data" exp with
+  | [["DATA"];[];[]], [bytes; mode] ->
+    Data (il_to_bytes bytes, il_to_segmentmode mode)
+  | _ -> error_value "data" exp
+let il_to_data : exp -> RI.Ast.data = il_to_phrase il_to_data'
 
-let al_to_data': value -> data' = function
-  | CaseV ("DATA", [ bytes; mode ]) ->
-    Data (al_to_bytes bytes, al_to_segmentmode mode)
-  | v -> error_value "data" v
-let al_to_data: value -> data = al_to_phrase al_to_data'
+let il_to_externtype exp : RI.Types.externtype =
+  match match_caseE "externtype" exp with
+  | [["FUNC"]  ;[]], [typeuse]    -> ExternFuncT   (il_to_typeuse    typeuse   )
+  | [["GLOBAL"];[]], [globaltype] -> ExternGlobalT (il_to_globaltype globaltype)
+  | [["TABLE"] ;[]], [tabletype]  -> ExternTableT  (il_to_tabletype  tabletype )
+  | [["MEM"]   ;[]], [memtype]    -> ExternMemoryT (il_to_memorytype memtype   )
+  | [["TAG"]   ;[]], [tagtype]    -> ExternTagT    (il_to_tagtype    tagtype   )
+  | _ -> error_value "externtype" exp
 
-let al_to_externtype = function
-  | CaseV ("FUNC", [typeuse]) -> ExternFuncT (al_to_typeuse typeuse)
-  | CaseV ("GLOBAL", [globaltype]) -> ExternGlobalT (al_to_globaltype globaltype)
-  | CaseV ("TABLE", [tabletype]) -> ExternTableT (al_to_tabletype tabletype)
-  | CaseV ("MEM", [memtype]) -> ExternMemoryT (al_to_memorytype memtype)
-  | CaseV ("TAG", [tagtype]) -> ExternTagT (al_to_tagtype tagtype)
-  | v -> error_value "externtype" v
+let il_to_import' exp : RI.Ast.import' =
+  match match_caseE "import" exp with
+  | [["IMPORT"];[];[];[]], [module_name; item_name; xt] ->
+    RI.Ast.Import (il_to_name module_name, il_to_name item_name, il_to_externtype xt)
+  | _ -> error_value "import" exp
+let il_to_import : exp -> RI.Ast.import = il_to_phrase il_to_import'
 
-let al_to_import = function
-  | CaseV ("IMPORT", [ module_name; item_name; xt ]) ->
-    Import (al_to_name module_name, al_to_name item_name, al_to_externtype xt) @@ no_region
-  | v -> error_value "import" v
+let il_to_externidx' exp : RI.Ast.externidx' =
+  match match_caseE "externidx" exp with
+  | [["FUNC"]  ;[]], [idx] -> FuncX   (il_to_idx idx)
+  | [["TABLE"] ;[]], [idx] -> TableX  (il_to_idx idx)
+  | [["MEM"]   ;[]], [idx] -> MemoryX (il_to_idx idx)
+  | [["GLOBAL"];[]], [idx] -> GlobalX (il_to_idx idx)
+  | [["TAG"]   ;[]], [idx] -> TagX    (il_to_idx idx)
+  | _ -> error_value "externidx" exp
+let il_to_externidx : exp -> RI.Ast.externidx = il_to_phrase il_to_externidx'
 
-let al_to_externidx': value -> externidx' = function
-  | CaseV ("FUNC", [ idx ]) -> FuncX (al_to_idx idx)
-  | CaseV ("TABLE", [ idx ]) -> TableX (al_to_idx idx)
-  | CaseV ("MEM", [ idx ]) -> MemoryX (al_to_idx idx)
-  | CaseV ("GLOBAL", [ idx ]) -> GlobalX (al_to_idx idx)
-  | CaseV ("TAG", [ idx ]) -> TagX (al_to_idx idx)
-  | v -> error_value "externidx" v
-let al_to_externidx: value -> externidx = al_to_phrase al_to_externidx'
+let il_to_start' exp : RI.Ast.start' =
+  match match_caseE "start" exp with
+  | [["START"];[]], [idx] -> Start (il_to_idx idx)
+  | _ -> error_value "start" exp
+let il_to_start : exp -> RI.Ast.start = il_to_phrase il_to_start'
 
-let al_to_start': value -> start' = function
-  | CaseV ("START", [ idx ]) -> Start (al_to_idx idx)
-  | v -> error_value "start" v
-let al_to_start: value -> start = al_to_phrase al_to_start'
+let il_to_export' exp : RI.Ast.export' =
+  match match_caseE "export" exp with
+  | [["EXPORT"];[];[]], [name; xx] -> Export (il_to_name name, il_to_externidx xx)
+  | _ -> error_value "export" exp
+let il_to_export : exp -> RI.Ast.export = il_to_phrase il_to_export'
 
-let al_to_export': value -> export' = function
-  | CaseV ("EXPORT", [ name; xx ]) -> Export (al_to_name name, al_to_externidx xx)
-  | v -> error_value "export" v
-let al_to_export: value -> export = al_to_phrase al_to_export'
-
-let rec al_to_module': value -> module_' = function
-  | CaseV ("MODULE", [
-      types; imports; funcs; globals; tables; memories; elems; datas; start; exports
-    ]) when !version <= 2 ->
-    al_to_module' (CaseV ("MODULE", [
-      types; imports; listV [||]; globals; memories; tables; funcs; datas; elems; start; exports
-    ]))
-  | CaseV ("MODULE", [
+let il_to_module' exp : RI.Ast.module_' =
+  match match_caseE "module" exp with
+  | [["MODULE"];[];[];[];[];[];[];[];[];[];[];[]], [
       types; imports; tags; globals; memories; tables; funcs; datas; elems; start; exports
-    ]) ->
+    ] ->
     {
-      types = al_to_list al_to_type types;
-      imports = al_to_list al_to_import imports;
-      tags = al_to_list al_to_tag tags;
-      globals = al_to_list al_to_global globals;
-      memories = al_to_list al_to_memory memories;
-      tables = al_to_list al_to_table tables;
-      funcs = al_to_list al_to_func funcs;
-      datas = al_to_list al_to_data datas;
-      elems = al_to_list al_to_elem elems;
-      start = al_to_opt al_to_start start;
-      exports = al_to_list al_to_export exports;
+      types    = il_to_list il_to_type   types   ;
+      imports  = il_to_list il_to_import imports ;
+      tags     = il_to_list il_to_tag    tags    ;
+      globals  = il_to_list il_to_global globals ;
+      memories = il_to_list il_to_memory memories;
+      tables   = il_to_list il_to_table  tables  ;
+      funcs    = il_to_list il_to_func   funcs   ;
+      datas    = il_to_list il_to_data   datas   ;
+      elems    = il_to_list il_to_elem   elems   ;
+      start    = il_to_opt  il_to_start  start   ;
+      exports  = il_to_list il_to_export exports ;
     }
-  | v -> error_value "module" v
-let al_to_module: value -> module_ = al_to_phrase al_to_module'
+  | _ -> error_value "module" exp
+let il_to_module : exp -> RI.Ast.module_ = il_to_phrase il_to_module'
 
-*)
 
 (* Destruct value *)
 
