@@ -1446,7 +1446,7 @@ let transform_step_read_rule envr (r: rule_clause) : clause' =
   animate_rule_red envr ((rule_id, binds @ binds', lhs', out_stack', prems') $> r)
 
 
-let animate_rule envr at rel_id (r: rule_clause) : clause =
+let animate_rule envr at rel_id rule_name (r: rule_clause) : clause =
   let (rule_id, _, _, _, _) = r.it in
   let clause' =
     if is_unanimatable "rule_lhs" rule_id.it rel_id then
@@ -1462,7 +1462,7 @@ let animate_rule envr at rel_id (r: rule_clause) : clause =
   in
   clause' $ at
 
-let animate_rules envr at rel_id rs = List.map (animate_rule envr at rel_id) rs
+let animate_rules envr at rel_id rule_name rs = List.map (animate_rule envr at rel_id rule_name) rs
 
 let animate_clause_no_arg id envr (c: clause) : func_clause =
   let lenvr = ref !envr in
@@ -1504,9 +1504,15 @@ let animate_clause id envr (c: clause) : func_clause =
 let animate_clauses id envr cs = List.map (animate_clause id envr) cs
 
 let animate_rule_def envr (rdef: rule_def) : func_def =
-  let (_, rel_id, t1, t2, rules) = rdef.it in
+  let (rule_name, rel_id, t1, t2, rules) = rdef.it in
   let params = [ExpP ("_" $ t1.at, t1) $ t1.at] in
-  (rel_id, params, t2, animate_rules envr rdef.at rel_id.it rules, None) $ rdef.at
+  if List.mem rel_id.it ["Step"; "Step_pure"; "Step_read"] then
+    ((rel_id.it ^ "/" ^ rule_name) $> rel_id, params, t2,
+     animate_rules envr rdef.at rel_id.it rule_name rules, None) $ rdef.at
+  else
+    (rel_id, params, t2,
+     animate_rules envr rdef.at rel_id.it rule_name rules, None) $ rdef.at
+
 
 let animate_func_def' envr (id, ps, typ, clauses, opartial) =
   (id, ps, typ, animate_clauses id envr clauses, opartial)
@@ -1519,22 +1525,60 @@ let rec animate_def envr (d: dl_def): dl_def = match d with
 | RecDef  defs -> RecDef (List.map (animate_def envr) defs)
 
 
-(* Merge all rules that have the same rel_id. *)
+(* Merge all rules that have the same rel_id.
+   We've generated functions for each rule_name like:
+     $Rel_id/rule_name1(params) : t
+     $Rel_id/rule_name2(params) : t
+   We also want to create an umbralla function definition that tries all
+   different rules, like:
+     $Rel_id(params) : t
+     $Rel_id(vs) = $Rel_id/rule_name1(vs)
+     $Rel_id(vs) = $Rel_id/rule_name2(vs)
+   So that we can use the former more efficient version when we want,
+   and leave the rest to the latter more pattern-match heavy one.
+   This requires a special semantics in the interpreter, that
+   even the patterns all overlap, if a clause fails, it still falls
+   through to try later cases. It is a bit tricky to directly translate
+   it into OCaml though.
+*)
 let rec merge_defs (defs: dl_def list) : dl_def list =
   match defs with
   | [] -> []
   | (FuncDef {it = (fid0, params, typ, _, opartial); _} as f) :: fs ->
-    let func_id = function
-    | FuncDef {it = (fid, _, _, _, _); _} -> Some fid
+    let rel_id = function
+    | FuncDef {it = (fid, _, _, _, _); _} -> Some (String.split_on_char '/' fid.it |> List.hd)
     | _ -> None
     in
-    let func_clauses (FuncDef {it = (_, _, _, cls, _); _}) = cls in
+    let rel_id0 = String.split_on_char '/' fid0.it |> List.hd in
     let fs_same, fs_diff =
-      List.partition (fun f -> func_id f = Some fid0) fs in
-    let clauses = f :: fs_same |> List.concat_map func_clauses in
-    let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
-    let f' = FuncDef ((fid0, params, typ, clauses, opartial) $ at) in
-    f' :: merge_defs fs_diff
+      List.partition (fun f -> rel_id f = Some rel_id0) fs in
+    let fs =
+      if List.mem rel_id0 ["Step"; "Step_pure"; "Step_read"] then
+        let mk_clause = function
+        | FuncDef {it = (fid, ps, t, _, _); at; _} ->
+          let args, binds = List.map (fun p -> (match p.it with
+            | ExpP (v, t') ->
+              let v' = if v.it = "_" then fresh_id (Some "a") v.at else v in
+              ExpA (VarE v' $$ v.at % t') $ p.at, ExpB (v', t') $ p.at
+            | TypP s -> TypA (VarT (s, []) $ s.at) $ p.at, TypB s $ p.at
+            | DefP (f, ps', t') -> DefA f $ p.at, DefB (f, ps', t') $ p.at
+            | GramP (v, t') -> todo "merge_def: GramP"
+            )
+          ) ps |> Lib.List.unzip in
+          let e = CallE (fid, args) $$ at % t in
+          DefD (binds, args, e, []) $ at in
+        let clauses = f :: fs_same |> List.map mk_clause in
+        let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
+        let f' = FuncDef ((rel_id0 $> fid0, params, typ, clauses, opartial) $ at) in
+        f :: fs_same @ [f']
+      else
+        let func_clauses (FuncDef {it = (_, _, _, cls, _); _}) = cls in
+        let clauses = f :: fs_same |> List.concat_map func_clauses in
+        let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
+        let f' = FuncDef ((fid0, params, typ, clauses, opartial) $ at) in
+        [f']
+    in
+    fs @ merge_defs fs_diff
   | ((RecDef defs') as f) :: fs ->
     RecDef (merge_defs defs') :: merge_defs fs
   | f :: fs -> f :: merge_defs fs
