@@ -111,7 +111,7 @@ let rec il2dl (il: script) : dl_def list =
     | DecD (id, params, typ, clauses) ->
       let partial = if List.mem id partial_funcs then Partial else Total in
       [FuncDef ((id, params, typ, clauses, Some partial) $ def.at)]
-    | RelD (rel_id, _, typ, rules) -> 
+    | RelD (rel_id, _, typ, rules) ->
       let rules = List.map (fun rule -> (rel_id, typ, rule)) rules in
       let rule_def = group_rules rules in
       List.map (fun r -> RuleDef r) rule_def
