@@ -13,6 +13,42 @@ module Modules  = Ds.Modules
 module Record   = Util.Record
 
 
+(* Context *)
+
+module Context = struct
+  type t = Label   of exp * exp list
+         | Frame   of exp * exp list
+         | Handler of exp * exp list
+
+  let context: t list ref = ref []
+
+  let enter t : unit = context := t :: !context
+  let get () : t =
+    match !context with
+    | [] -> raise (Failure "Context is empty.")
+    | c::_ -> c
+  let leave () : unit =
+    match !context with
+    | [] -> raise (Failure "Context is empty.")
+    | c::cs -> context := cs
+  let get_label () : exp * exp list =
+    let c = get () in
+    match c with
+    | Label (n, instrs) -> n, instrs
+    | _ -> raise (Failure "Not a LABEL_ context.")
+  let get_frame () : exp * exp list =
+    let c = get () in
+    match c with
+    | Frame (n, frame) -> n, frame
+    | _ -> raise (Failure "Not a FRAME_ context.")
+  let get_handler () : exp * exp list =
+    let c = get () in
+    match c with
+    | Handler (n, catches) -> n, catches
+    | _ -> raise (Failure "Not a HANDLER_ context.")
+end
+
+
 (* Store *)
 
 module Store = struct

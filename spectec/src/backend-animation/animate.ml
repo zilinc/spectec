@@ -424,9 +424,9 @@ let is_unanimatable reason rule_name rel_id : bool =
   | None -> false
   | Some ls -> List.exists (fun l -> l = (rel_id, rule_name)) ls
 
-let is_step_rule rel_id : bool = rel_id = "Step"
-let is_step_pure_rule rel_id : bool = rel_id = "Step_pure"
-let is_step_read_rule rel_id : bool = rel_id = "Step_read"
+let is_step_rule rel_id : bool = String.starts_with ~prefix:"Step/" rel_id
+let is_step_pure_rule rel_id : bool = String.starts_with ~prefix:"Step_pure/" rel_id
+let is_step_read_rule rel_id : bool = String.starts_with ~prefix:"Step_read/" rel_id
 
 
 (* Mode analysis *)
@@ -531,7 +531,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   let* s = get () in
   let knowns = get_knowns s in
   let (res, fncall) = match id.it, exp.it with
-  | _, TupE [lhs; rhs] when List.mem id.it ["Step"; "Step_read"; "Step_pure"] ->
+  | _, TupE [lhs; rhs] when List.mem id.it Common.step_relids ->
     let fncall = CallE (id, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
     (rhs, fncall)
   | "Expand", TupE [lhs; rhs] ->
@@ -1361,6 +1361,8 @@ let animate_rule_red envr rule : clause' =
   let binds'' = sort_binds id binds' in
   DefD (binds'', [ExpA ve $ ve.at], rhs, prems')
 
+
+
 (* Many $Step rules are dependent in their arguments. For example,
   ```
   rule Step_read/block:
@@ -1381,7 +1383,7 @@ let animate_rule_red envr rule : clause' =
   so that we can match the first part of the argument unconditionally and then
   compute `m` in the premises.
  *)
-let transform_step_vals in_stack out_stack prems : bind list * exp * exp * prem list =
+let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * prem list =
   match in_stack.it with
   | CatE ({ it = IterE (vals, (ListN(n, _), xes)); _ } as in_vals, in_stack2) ->
     let iter' = List in
@@ -1424,7 +1426,7 @@ let transform_step_rule envr (r: rule_clause) : clause' =
   let TupE [in_z; in_stack] = in_tup.it in
   let CaseE (out_mixop, out_tup) = rhs.it in
   let TupE [out_z; out_stack] = out_tup.it in
-  let binds', in_stack', out_stack', prems' = transform_step_vals in_stack out_stack prems in
+  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
   let out_tup' = TupE [out_z; out_stack'] $> out_tup in
@@ -1433,14 +1435,14 @@ let transform_step_rule envr (r: rule_clause) : clause' =
 
 let transform_step_pure_rule envr (r: rule_clause) : clause' =
   let (rule_id, binds, in_stack, out_stack, prems) = r.it in
-  let binds', in_stack', out_stack', prems' = transform_step_vals in_stack out_stack prems in
+  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   animate_rule_red envr ((rule_id, binds @ binds', in_stack', out_stack', prems') $> r)
 
 let transform_step_read_rule envr (r: rule_clause) : clause' =
   let (rule_id, binds, lhs, out_stack, prems) = r.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
-  let binds', in_stack', out_stack', prems' = transform_step_vals in_stack out_stack prems in
+  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
   animate_rule_red envr ((rule_id, binds @ binds', lhs', out_stack', prems') $> r)
@@ -1506,7 +1508,7 @@ let animate_clauses id envr cs = List.map (animate_clause id envr) cs
 let animate_rule_def envr (rdef: rule_def) : func_def =
   let (rule_name, rel_id, t1, t2, rules) = rdef.it in
   let params = [ExpP ("_" $ t1.at, t1) $ t1.at] in
-  if List.mem rel_id.it ["Step"; "Step_pure"; "Step_read"] then
+  if List.mem rel_id.it Common.step_relids then
     ((rel_id.it ^ "/" ^ rule_name) $> rel_id, params, t2,
      animate_rules envr rdef.at rel_id.it rule_name rules, None) $ rdef.at
   else
@@ -1553,7 +1555,7 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
     let fs_same, fs_diff =
       List.partition (fun f -> rel_id f = Some rel_id0) fs in
     let fs =
-      if List.mem rel_id0 ["Step"; "Step_pure"; "Step_read"] then
+      if List.mem rel_id0 Common.step_relids then
         let mk_clause = function
         | FuncDef {it = (fid, ps, t, _, _); at; _} ->
           let args, binds = List.map (fun p -> (match p.it with

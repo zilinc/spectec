@@ -45,7 +45,7 @@ let error at msg = Util.Error.error at "IL -> DL" msg
 let il2dl_rule_clause rel_id rule : rule_clause =
   let RuleD (id, binds, _, exp, prems) = rule.it in
   match exp.it with
-  | TupE [ lhs; rhs ] when List.mem rel_id.it [ "Step"; "Step_read"; "Step_pure" ]
+  | TupE [ lhs; rhs ] when List.mem rel_id.it Common.step_relids
   -> (id, binds, lhs, rhs, prems) $ rule.at
   | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr"
   -> let at1 = over_region [z1.at; lhs.at] in
@@ -59,7 +59,7 @@ let il2dl_rule_def rule_name rel_id typ rules at : rule_def =
   let rule_clauses = List.map (il2dl_rule_clause rel_id) rules in
   let t1, t2 =
     (match typ.it with
-    | TupT [(_, t1); (_, t2)] when List.mem rel_id.it [ "Step"; "Step_read"; "Step_pure" ] ->
+    | TupT [(_, t1); (_, t2)] when List.mem rel_id.it Common.step_relids ->
       t1, t2
     | TupT [et11; et12; et21; et22] when rel_id.it = "Eval_expr" ->
       let at1 = over_region [(fst et11).at; (snd et12).at] in

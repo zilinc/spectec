@@ -32,6 +32,9 @@ let version = ref 3
 let il_of_z_nat z : exp = natE z
 let il_of_z_int z : exp = intE z
 
+let il_of_uN z : exp = mk_case' "uN" [[];[]] [natE z]
+let il_of_iN z : exp = mk_case' "iN" [[];[]] [natE z]
+
 
 let il_of_fmagN layout i : exp =
   let n = Z.logand i (BI.Construct.mask_exp layout) in
@@ -75,14 +78,6 @@ let il_of_memidx idx = il_of_idx idx
 
 (* syntax list(syntax X) = X*  -- if ... *)
 let il_of_list' t ls = mk_case' "list" [[];[]] [listE t ls]
-
-(*
-let al_of_bool b = Stdlib.Bool.to_int b |> al_of_nat
-*)
-
-
-
-
 
 
 let rec il_of_null = function
@@ -1051,8 +1046,12 @@ let e64 = Z.(shift_left one 64)
 let z_to_vec128 i =
   let hi, lo = Z.div_rem i e64 in
   RI.V128.I64x2.of_lanes [Z.to_int64_unsigned lo; Z.to_int64_unsigned hi]
+
+let il_to_int exp : int =
+  match exp.it with
+  | NumE e -> il_to_z_nat e |> Z.to_int
+  | _ -> error_value "int" exp
 (*
-let al_to_nat (v: value): int = al_to_z_nat v |> Z.to_int
 let al_to_nat8 (v: value): I8.t = al_to_z_nat v |> Z.to_int |> I8.of_int_u
 let al_to_int8 (v: value): I8.t = al_to_z_nat v |> Z.to_int |> I8.of_int_s
 let al_to_int16 (v: value): I16.t = al_to_z_nat v |> Z.to_int |> I16.of_int_s
@@ -1064,10 +1063,10 @@ let il_to_vec128  exp : RI.V128.t = unwrap_num exp |> il_to_z_nat |> z_to_vec128
 let il_to_float32 exp : RI.F32.t = il_to_floatN layout32 exp |> Z.to_int32_unsigned |> RI.F32.of_bits
 let il_to_float64 exp : RI.F64.t = il_to_floatN layout64 exp |> Z.to_int64_unsigned |> RI.F64.of_bits
 
-let il_to_uN32 exp : RI.I32.t = il_to_nat32 (unwrap_case exp)
-let il_to_uN64 exp : RI.I64.t = il_to_nat64 (unwrap_case exp)
+let il_to_uN_32 exp : RI.I32.t = il_to_nat32 (unwrap_case exp)
+let il_to_uN_64 exp : RI.I64.t = il_to_nat64 (unwrap_case exp)
 
-let il_to_idx exp : RI.Ast.idx = il_to_phrase il_to_uN32 exp
+let il_to_idx exp : RI.Ast.idx = il_to_phrase il_to_uN_32 exp
 let il_to_byte exp : Char.t = il_to_nat exp |> Z.to_int |> Char.chr
 let il_to_bytes exp : string = il_to_seq il_to_byte exp |> String.of_seq
 let il_to_string exp =
@@ -1215,11 +1214,11 @@ let il_to_limits (default: int64) exp : RI.Types.limits =
   match match_caseE "limits" exp with
   | [["["];[".."];["]"]], [min; max] ->
     let max' =
-      match il_to_uN64 max with
+      match il_to_uN_64 max with
       | i64 when default = i64 -> None
-      | _ -> Some (il_to_uN64 max)
+      | _ -> Some (il_to_uN_64 max)
     in
-    { min = il_to_uN64 min; max = max' }
+    { min = il_to_uN_64 min; max = max' }
   | _ -> error_value "limits" exp
 
 let il_to_globaltype exp : RI.Types.globaltype =
@@ -1677,7 +1676,7 @@ let il_to_memop (f: exp -> 'p) exps : RI.Ast.idx * (RI.Types.numtype, 'p) RI.Ast
     {
       ty = il_to_numtype nt;
       align  = find_str_field "ALIGN"  str |> il_to_nat |> Z.to_int;
-      offset = find_str_field "OFFSET" str |> il_to_uN64;
+      offset = find_str_field "OFFSET" str |> il_to_uN_64;
       pack = f p;
     }
   | _ -> error_values "memop" exps
@@ -1779,8 +1778,8 @@ let il_to_num exp : RI.Value.num =
   match match_caseE "num" exp with
   | [["CONST"];[];[]], [numtype; num_] ->
     (match match_caseE "numtype" numtype with
-    | [["I32"]], [] -> I32 (il_to_uN32    num_)
-    | [["I64"]], [] -> I64 (il_to_uN64    num_)
+    | [["I32"]], [] -> I32 (il_to_uN_32   num_)
+    | [["I64"]], [] -> I64 (il_to_uN_64   num_)
     | [["F32"]], [] -> F32 (il_to_float32 num_)
     | [["F64"]], [] -> F64 (il_to_float64 num_)
     | v -> error_value "numtype" numtype
@@ -1896,11 +1895,11 @@ and il_to_instr' exp : RI.Ast.instr' =
   | [["STRUCT.NEW"];[]], [idx] -> StructNew (il_to_idx idx, Explicit)
   | [["STRUCT.NEW_DEFAULT"];[]], [idx] -> StructNew (il_to_idx idx, Implicit)
   | [["STRUCT.GET"];[];[];[]], [sx_opt; idx1; idx2] ->
-    StructGet (il_to_idx idx1, il_to_uN32 idx2, il_to_opt il_to_sx sx_opt)
-  | [["STRUCT.SET"];[];[]], [idx1; idx2] -> StructSet (il_to_idx idx1, il_to_uN32 idx2)
+    StructGet (il_to_idx idx1, il_to_uN_32 idx2, il_to_opt il_to_sx sx_opt)
+  | [["STRUCT.SET"];[];[]], [idx1; idx2] -> StructSet (il_to_idx idx1, il_to_uN_32 idx2)
   | [["ARRAY.NEW"];[]], [idx] -> ArrayNew (il_to_idx idx, Explicit)
   | [["ARRAY.NEW_DEFAULT"];[]], [idx] -> ArrayNew (il_to_idx idx, Implicit)
-  | [["ARRAY.NEW_FIXED"];[];[]], [idx; i32] -> ArrayNewFixed (il_to_idx idx, il_to_uN32 i32)
+  | [["ARRAY.NEW_FIXED"];[];[]], [idx; i32] -> ArrayNewFixed (il_to_idx idx, il_to_uN_32 i32)
   | [["ARRAY.NEW_ELEM"];[];[]], [idx1; idx2] -> ArrayNewElem (il_to_idx idx1, il_to_idx idx2)
   | [["ARRAY.NEW_DATA"];[];[]], [idx1; idx2] -> ArrayNewData (il_to_idx idx1, il_to_idx idx2)
   | [["ARRAY.GET"];[];[]], [sx_opt; idx] -> ArrayGet (il_to_idx idx, il_to_opt il_to_sx sx_opt)
