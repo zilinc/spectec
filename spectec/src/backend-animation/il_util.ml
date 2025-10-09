@@ -29,7 +29,7 @@ let is_unary_variantT : deftyp -> bool = fun deft ->
 (* Destruct *)
 
 
-let il_to_nat e : Xl.Num.nat =
+let il_to_nat e : Z.t =
   match e.it with
   | NumE (`Nat n) -> n
   | _ -> error e.at ("Il expression not a nat: " ^ string_of_exp e)
@@ -97,6 +97,11 @@ let unwrap_case case : exp =
   match case.it with
   | CaseE ([[];[]], { it = TupE [e]; _ }) -> e
   | _ -> error case.at ("Input expression is not a singleton variant: " ^ string_of_exp case)
+
+let case_mixop case : mixop =
+  match case.it with
+  | CaseE (mixop, _) -> mixop
+  | _ -> error case.at ("Input expression is not a case: " ^ string_of_exp case)
 
 let unwrap_num num : num =
   match num.it with
@@ -325,12 +330,15 @@ and mk_str ?(at = no) tname fes : exp =
   in
   strE ~note:(t_var tname) (List.map mk_field fes)
 
+and mk_singleton ?(at = no) e : exp = listE' [e]
 
 and mk_none ?(at = no) t : exp = optE t None
 and mk_some ?(at = no) t e : exp = optE t (Some e)
 
 let to_bool_exp b = BoolE b
 let to_num_exp n = NumE n
+
+let int_of_bool b = Stdlib.Bool.to_int b
 
 
 (* Construct data structure *)

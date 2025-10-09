@@ -29,8 +29,6 @@ let verbose : string list ref =
       ]
 
 
-exception FunctionNoMatch of region * string
-
 let error at msg = Error.error at "(Meta)Interpreter" msg
 let error_np msg = error no_region msg
 
@@ -831,6 +829,10 @@ and call_func name args : exp OptMonad.m =
       | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
   in
   match Def.find_dl_func_def name !dl with
+  (* Hardcoded functions *)
+  | _ when name = "Step"      -> step      args
+  | _ when name = "Step_pure" -> step_pure args
+  | _ when name = "Step_read" -> step_read args
   (* Regular function definition. *)
   | Some fdef when not is_builtin -> eval_func name fdef args
   (* Numerics *)
@@ -1003,44 +1005,75 @@ and steps arg : exp =
   if List.is_empty ops_m then
     (info "steps" conf.at ("ops_m = eps"); conf)
   else
-    let _ = () in
-    info "steps" conf.at ("|ops|  : " ^ string_of_int (List.length ops) ^ "\n" ^
-                          "|ops_l|: " ^ string_of_int (List.length ops_l) ^ "\n" ^
-                          "ops_m  : " ^ String.concat ", " (List.map string_of_exp ops_m) ^ "\n" ^
-                          "|ops_r|: " ^ string_of_int (List.length ops_r));
+    let op_m = List.hd ops_m in
+    let opcode = op_m |> case_mixop |> Xl.Mixop.to_string in
+    if List.mem opcode Common.admin_instrs then
+      todo "ctxt"
+    else
+      let step_, rule_name =
+        (match Common.Map.find_opt opcode !Common.step_table with
+        | Some fname -> fname
+        | None -> error op_m.at ("No function clause to step instruction " ^ string_of_exp op_m)
+        )
+      in
+      info "steps" conf.at ("|ops|  : " ^ string_of_int (List.length ops) ^ "\n" ^
+                            "|ops_l|: " ^ string_of_int (List.length ops_l) ^ "\n" ^
+                            "ops_m  : " ^ String.concat ", " (List.map string_of_exp ops_m) ^ "\n" ^
+                            "|ops_r|: " ^ string_of_int (List.length ops_r));
+      let mk_step_args ops_l ops_m =
+        let stack = ListE (ops_l @ ops_m) $> instrs in
+        let tup_step  = TupE [z; stack] $> tup in
+        let conf_step = CaseE (mixop, tup_step) $> conf in
+        let conf_arg = ExpA conf_step $ conf_step.at in
+        let instrs_arg = ExpA stack $ stack.at in
+        (conf_arg, instrs_arg)
+      in
 
-    let mk_step_args ops_l ops_m =
-      let stack = ListE (ops_l @ ops_m) $> instrs in
-      let tup_step  = TupE [z; stack] $> tup in
-      let conf_step = CaseE (mixop, tup_step) $> conf in
-      let conf_arg = ExpA conf_step $ conf_step.at in
-      let instrs_arg = ExpA stack $ stack.at in
-      (conf_arg, instrs_arg)
-    in
+      let mk_next_conf stack' ops_r =
+        let ops_lm'  = elts_of_list stack' in
+        let instrs' = ListE (ops_lm' @ ops_r) $> instrs in
+        let tup'    = TupE [z; instrs'] $> tup in
+        let conf'   = CaseE (mixop, tup') $> conf in
+        ExpA conf' $ conf'.at
+      in
 
-    let mk_next_conf stack' ops_r =
-      let ops_lm'  = elts_of_list stack' in
-      let instrs' = ListE (ops_lm' @ ops_r) $> instrs in
-      let tup'    = TupE [z; instrs'] $> tup in
-      let conf'   = CaseE (mixop, tup') $> conf in
-      ExpA conf' $ conf'.at
-    in
+      let conf_arg, instrs_arg = mk_step_args ops_l ops_m in
+      let fname = step_ ^ "/" ^ rule_name in
+      (match step_ with
+      | "Step_pure" ->
+        (match call_func fname [instrs_arg] |> run_opt with
+        | Some instrs_step' ->
+          let conf_arg' = mk_next_conf instrs_step' ops_r in
+          steps conf_arg'
+        | None -> error instrs_arg.at ("Function " ^ fname ^ " fails to evaluate when applied to " ^ string_of_arg instrs_arg)
+        )
+      | "Step_read" ->
+        (match call_func fname [conf_arg] |> run_opt with
+        | Some instrs_step' ->
+          let conf_arg' = mk_next_conf instrs_step' ops_r in
+          steps conf_arg'
+        | None -> error instrs_arg.at ("Function " ^ fname ^ " fails to evaluate when applied to " ^ string_of_arg conf_arg)
+        )
+      | "Step"      ->
+        (match call_func fname [conf_arg] |> run_opt with
+        | Some conf_step' ->
+          let CaseE (mixop', tup_step') = conf_step'.it in
+          let TupE [z'; instrs_lm'] = tup_step'.it in
+          let conf_arg' = mk_next_conf instrs_lm' ops_r in
+          steps conf_arg'
+        | None -> conf  (* Steps/refl *)
+        )
+      )
 
-    let conf_arg, instrs_arg = mk_step_args ops_l ops_m in
-    (match call_func "Step" [conf_arg] |> run_opt with
-    | Some conf_step' ->
-      let CaseE (mixop', tup_step') = conf_step'.it in
-      let TupE [z'; instrs_lm'] = tup_step'.it in
-      let conf_arg' = mk_next_conf instrs_lm' ops_r in
-      steps conf_arg'
-    | None -> conf  (* Steps/refl *)
-    )
+and step args : exp OptMonad.m = todo ""
+and step_pure args : exp OptMonad.m = todo ""
+and step_read args : exp OptMonad.m = todo ""
 
-and step conf : exp = todo "step"
+and step' conf : exp = todo "step"
 
-and step_pure instrs : exp = todo "step_pure"
+and step_pure' instrs : exp = todo "step_pure"
 
-and step_read conf : exp = todo "step_read"
+and step_read' conf : exp = todo "step_read"
 
 
 and relation_mem name =
