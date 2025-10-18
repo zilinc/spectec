@@ -76,8 +76,8 @@ let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
     in
     (*"Atom " ^*) s
 
-let slice (lst : 'a list) (start : int) (end_ : int) : 'a list option =
-  if start < 0 || end_ < start then None else
+(* let slice (lst : 'a list) (start : int) (len : int) : 'a list option =
+  if start < 0 || len < 0 then None else
   let rec drop n l =
     match n, l with
     | 0, l -> Some l
@@ -95,31 +95,32 @@ let slice (lst : 'a list) (start : int) (end_ : int) : 'a list option =
   in
   match drop start lst with
   | None -> None
-  | Some after_drop -> take (end_ - start) after_drop
+  | Some after_drop -> take len after_drop
 
 let rec lookup (x : id) (pairs : (id * 'b) list) : 'b option =
   match pairs with
   | [] -> None
   | (k,v) :: rest ->
-      if k.it = x.it then Some v else lookup x rest
+      if k.it = x.it then Some v else lookup x rest*)
 
 let rec update_at i v = function
   | _ :: xs when i = 0 -> v :: xs
   | x :: xs            -> x :: update_at (i - 1) v xs
   | [] -> failwith "update_at: index out of bounds" (* todo this is also a codegen error *)
 
-let update_slice l i j l' =
-  let len = List.length l in
-  if i < 0 || j < 0 || i >= len || j >= len || i > j || List.length l' <> j - i + 1 then
+(* todo: does update also take start and len or start and end?*)
+let update_slice l i len l' =
+  let n = List.length l in
+  if i < 0 || len < 0 || i + len > n || List.length l' <> len then
     failwith "update_slice: invalid indices";
   let prefix = List.take i l in
-  let suffix = List.drop (j+1) l in
+  let suffix = List.drop (i + len) l in
   prefix @ l' @ suffix
 
-let slice l i j =
-  if i < 0 || j < 0 || i > j || j >= List.length l then
+let slice l start len =
+  if start < 0 || len < 0 || start + len > List.length l then
     failwith "slice: bad indices";
-  List.take (j - i + 1) (List.drop i l)
+  List.take len (List.drop start l)
 
 let lift e = 
   match e with 
@@ -162,7 +163,7 @@ module TypeM = struct
     mutable typemap : Def.dl_def TypeMap.t; (* maps types to their definitions *)
     mutable typeconvfuncs : Set.t; (* keeps track of type-conversion functions *)
     mutable knowns : Set.t; (* need this to determine inflow/outflow *)
-    mutable typecasts : string; (* type-casted arguments in the DL to be moved to the function body *)
+    mutable typecasts : string; (* type-casted function arguments to be moved to the body *)
     mutable freshvaridx : int
   }
 
@@ -284,3 +285,18 @@ module TypeM = struct
 
 end
 
+(* I DO NOT KNOW IF THIS IS HOW I WANT TO DO THIS*)
+module NumConversions = struct
+  type nat = int 
+  type real = float 
+  type rat = float
+  let int_of_nat (n : nat) : int = n
+  let nat_of_int (i : int) : nat = i
+
+  let rat_of_int (i : int) : rat = float_of_int i
+  let rat_of_nat (n : nat) : rat = float_of_int n
+end
+
+let val_or_fail = function 
+  | Some v -> v
+  | None -> failwith "No matching clause"

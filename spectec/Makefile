@@ -17,12 +17,16 @@ ci: all
 
 .PHONY: build_ocamlprog
 
+# Default spec path (can be overridden on the command line)
+SPEC ?= ../specification/wasm-3.0/*
+
 build_ocamlprog: exe
 	mkdir src/backend-animation/interpreter-ocaml/build
-	./spectec ../specification/wasm-3.0/* --animate --generate-ocaml "dl_codegen" --print-dl > dl.log
+	./spectec $(SPEC) --animate --generate-ocaml "dl_codegen" --print-dl > dl.log
 	@echo "#### spectec finished, compiling generated code"
-	dune build src/backend-animation/interpreter-ocaml/build
-	@echo "#### dl-interpreter code compiled successfully"
+	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+	@echo "#### dl-interpreter code compiled successfully, running tests ... "
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 
 # Executable
 
