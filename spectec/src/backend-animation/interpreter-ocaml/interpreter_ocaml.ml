@@ -18,6 +18,65 @@ MAJOR REFACTOR *)
 exception CodegenError of string
 exception CannotAnimate of string
 
+(* this is a hacky way of getting the type variables in scope in a typedef.
+works for now but we need to change the signatures of ocaml_of_args, ocaml_of_arg and possibly ocaml_of_typ to return a list of type variables that have been brought into scope *)
+let get_typeargs (s : string) : string list =
+  let len = String.length s in
+
+  (* Skip a possibly nested OCaml comment starting at position i = "(*" after i,i+1 *)
+  let rec skip_comment i depth =
+    if i >= len then len
+    else if i + 1 < len && s.[i] = '(' && s.[i+1] = '*' then
+      skip_comment (i + 2) (depth + 1)
+    else if i + 1 < len && s.[i] = '*' && s.[i+1] = ')' then
+      let i' = i + 2 in
+      if depth = 1 then i' else skip_comment i' (depth - 1)
+    else
+      skip_comment (i + 1) depth
+  in
+
+  let is_ident_start = function
+    | 'a'..'z' | 'A'..'Z' | '_' -> true
+    | _ -> false
+  in
+  let is_ident_char = function
+    | 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' | '\'' -> true
+    | _ -> false
+  in
+
+  let rec loop i acc =
+    if i >= len then List.rev acc
+    else if i + 1 < len && s.[i] = '(' && s.[i+1] = '*' then
+      let j = skip_comment (i + 2) 1 in
+      loop j acc
+    else if s.[i] = '\'' then
+      (* Parse an identifier after the leading quote *)
+      let j = i + 1 in
+      if j < len && is_ident_start s.[j] then
+        let k = ref (j + 1) in
+        while !k < len && is_ident_char s.[!k] do
+          incr k
+        done;
+        let name = String.sub s j (!k - j) in
+        loop !k (name :: acc)
+      else
+        loop (i + 1) acc
+    else
+      loop (i + 1) acc
+  in
+  loop 0 []
+
+let get_type e = 
+  match e.note.it with
+  | VarT (id, _) -> id.it
+  | BoolT -> "bool"
+  | NumT num -> begin match num with 
+    | `NatT | `IntT -> "int"
+    | `RatT | `RealT -> "float" end 
+  | TextT -> "string"                    
+  | TupT _ -> "todo"
+  | IterT _ -> "todo"
+
 let rmv_nonexp (p: param) : bool = match p.it with 
   | ExpP _ -> true
   | _ -> false
@@ -156,14 +215,14 @@ let ocaml_of_cmpop op =
   | "=/=" -> "<>"
   | s -> s
 
-let rec ocaml_of_exp ?(typearg=false) ?(func_arg=false) (e : exp) : string t =
+let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : exp) : string t =
   (* for now, we don't support dependent types. *)
   if typearg then begin match e.it with
   | VarE id -> return "(* TODO:typearg *)"
   | _ -> raise (CannotAnimate "non-variable type argument")
   end else 
   (* function arguments must be (subtyped/supertyped) variables *)
-  if func_arg then begin match e.it with 
+  if funcdef then begin match e.it with 
   | VarE id -> let* () = add_known id.it in return (sanitize_name ~typearg id.it)
   | SupE (e1, typ1, typ2) | SubE (e1, typ1, typ2) ->
     (* if an argument is of the form e : t1 <: t2, 
@@ -178,7 +237,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(func_arg=false) (e : exp) : string t =
     let* typ2str = ocaml_of_typ typ2 in
     let* () =  add_typecast ("  let " ^ e1str ^ " = " ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ freshvarname ^ " in") in
     return freshvarname
-  | _ -> raise (CannotAnimate "non-variable arguments")
+  | _ -> return "TODO non-variable arguments"
   end else match e.it with
   | NumE n -> return (Num.to_string n)
   | TextE s -> return (Printf.sprintf "%S" s)
@@ -191,17 +250,30 @@ let rec ocaml_of_exp ?(typearg=false) ?(func_arg=false) (e : exp) : string t =
     return ("(" ^ es_strs ^ ")")
   | CallE (id, args) ->
     let fname = sanitize_name id.it in
-    let* args' = ocaml_of_args ~typearg args in
+    let* args' = ocaml_of_args ~typearg ~funcdef ~funccall:true args in
     let args'' = if args' = "" then "()" else args' in
     return ("(" ^ fname ^ " " ^ args'' ^ ")")
   | CaseE (mixop, e1) ->
     let label = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop) in
     let* e1str = ocaml_of_exp e1 in
     return (append_sep label e1str " ")
-  | BinE (op, _, e1, e2) ->
+  | BinE (op, _, e1, e2) -> 
     let* e1str = ocaml_of_exp e1 in
     let* e2str = ocaml_of_exp e2 in
-    return ("(" ^ e1str ^ " " ^ ocaml_of_binop op ^ " " ^ e2str ^ ")")
+    let e1type = get_type e1 in
+    let e2type = get_type e2 in
+    (* ASSUMING THAT IF E IS NOT A FLOAT IT MUST BE AN INT *)
+    let floatify estr etype float opstr =
+      if (etype = "int") && (float || opstr = "**") then
+        "(float_of_int " ^ estr ^ ")"
+      else estr
+    in 
+    (* if either e1 or e2 is a float, we need to use a floating point operation (+. instead of +, for example) and convert the other exp to a float as well. *)
+    let float = e1type = "float" || e2type = "float" in
+    let binopstr = ocaml_of_binop ~float op in
+    let e1str' = floatify e1str e1type float binopstr in
+    let e2str' = floatify e2str e2type float binopstr in
+    return ("(" ^ e1str' ^ " " ^ binopstr ^ " " ^ e2str' ^ ")")
   | UnE (op, _, e1) ->
     let* e1str = ocaml_of_exp e1 in
     return (ocaml_of_unop op ^ "(" ^ e1str ^ ")")
@@ -366,26 +438,41 @@ let rec ocaml_of_exp ?(typearg=false) ?(func_arg=false) (e : exp) : string t =
     let* e1str = ocaml_of_exp e1 in
     return ("(Option.get " ^ e1str ^ ")")
 
-(* an "uncase exp typcons" function will strip the typecons from the exp (a variant type) *)
+(* an "uncase exp typcons" function will strip the typecons from the exp (a variant type). but each constructor can take a different number / type of arguments, meaning uncase_type will have different return types for each cons. so we have to generate a separate function for each cons. *)
 and generate_uncase tcs typename : unit t =
-  let funcstart = "let uncase_" ^ typename ^ " arg1 arg2 =\n  match arg1, arg2 with\n" in
-  let rec gen_match_arms acc tcs = 
-    match tcs with 
-    | [] -> acc 
-    | (op, (_, typargs, _), _) :: rest -> 
-      let opstr = sanitize_name ~typecons:true (Util_ocaml.mixop_to_atom_str op) in
-      let numargs = begin match typargs.it with 
-      | VarT _ | NumT _ | IterT _  | BoolT  | TextT -> 1
-      | TupT typarglist -> List.length typarglist
-      end in 
-      let arglist = List.init numargs (fun i -> "fv_" ^ string_of_int (i)) |> (String.concat ", ") in
-      let matcharm = "  | " ^ opstr ^ " (" ^ arglist ^ "), \"" ^ opstr ^ "\" -> Some (" ^ arglist ^ ")\n" in
-      gen_match_arms (acc ^ matcharm) rest
-  in 
-  let matcharms = gen_match_arms "" tcs in 
-  if matcharms = "" then return () else
-  let nonearm = "  | _ -> None" in 
-  tell (funcstart ^ matcharms ^ nonearm)
+  let gen_one (op, (_, typargs, _), _) : unit t =
+    let cons =
+      sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str op)
+    in
+    let suffix = String.lowercase_ascii cons in
+    let fname  = sanitize_name ("uncase_" ^ typename ^ "_" ^ suffix) in
+
+    (* Figure out arg pattern + return expression shape for this constructor *)
+    let numargs, pat_args, ret_expr =
+      match typargs.it with
+      | VarT _ | NumT _ | IterT _ | BoolT | TextT ->
+          (1, "fv_0", "fv_0")
+      | TupT es ->
+          let n = List.length es in
+          if n = 0 then (0, "", "")
+          else
+            let vs = List.init n (fun i -> "fv_" ^ string_of_int i) in
+            (n, "(" ^ String.concat ", " vs ^ ")",
+                "Some (" ^ String.concat ", " vs ^ ")")
+    in
+    let body =
+      Printf.sprintf
+        "let %s arg1 arg2 =\n\
+         \  match arg1, arg2 with\n\
+         \  | %s %s, %S -> %s\n\
+         \  | _ -> None\n"
+        fname cons pat_args cons ret_expr
+    in
+    if numargs <> 0 then tell body else return ()
+  in
+  (* Emit one function per constructor *)
+  let* _ = mapM gen_one tcs in
+  return ()
 
 (* Get deftype from an alias *)
 and lookup (typename : string) : deftyp option t =
@@ -479,43 +566,45 @@ and ocaml_of_iter iter : string t =
       return ("ListN (" ^ e_str ^ ", " ^ id_str ^ ")")
 
 (* TODO im not sure if the iterator exp can have type conversions + i completely forgot what this is actually *)
-and ocaml_of_typ ?(typearg=false) (t : typ) : string t =
+and ocaml_of_typ ?(typearg=false) ?(typevars=[]) (t : typ) : string t =
   match t.it with
-  | VarT (id, _) -> 
-    let name = sanitize_name id.it in 
-    if typearg then return ("'" ^ name) else return name
+  | VarT (id, _) -> let name = sanitize_name id.it in
+    if typearg && (List.mem name typevars) then return ("'" ^ name) else return name
   | BoolT -> return "bool"
   | NumT numtype -> return (ocaml_of_numtyp numtype)
   | TextT -> return "string"
   | TupT ets ->
-    concat_mapM " * " (ocaml_of_typbind ~typearg) ets
+    concat_mapM " * " (ocaml_of_typbind ~typearg ~typevars) ets
   | IterT (t1, iter) -> 
-    let* t1str = ocaml_of_typ ~typearg t1 in
+    let* t1str = ocaml_of_typ ~typearg ~typevars t1 in
     let* iterstr = ocaml_of_iter iter in
     return (t1str ^ " " ^ iterstr)
 
 (* TODO this is copied from print.ml I don't understand yet *)
-and ocaml_of_typbind ?(typearg=false) (e, t) =
+and ocaml_of_typbind ?(typearg=false) ?(typevars=[]) (e, t) =
   match e.it with
-  | VarE {it = "_"; _} -> ocaml_of_typ ~typearg t
+  | VarE {it = "_"; _} -> ocaml_of_typ ~typearg ~typevars t
   (*| _ -> let* estr = ocaml_of_exp e in
     let* tstr = ocaml_of_typ t in
     return (estr ^ " : " ^ tstr)*)
-  | _ -> ocaml_of_typ ~typearg t
+  | _ -> ocaml_of_typ ~typearg ~typevars t
 
-(* func_arg refers to whether the argument is part of a function definition or not. when _defining_ a function, an argument can only be variable (or a sub/super typed variable). but when calling functions, it can be any expr
-typearg refers to whether the arg is from a type defintion. right now, we only support arguments that are types themselves (polymorphic types) we dont support an arg like "nat" as these lead to dependent types.
+(* func_arg refers to whether the argument is part of a function definition or not. when _defining_ a function, an argument can only be variable (or a sub/super typed variable). but when calling functions, it can be any expr.
+typearg refers to whether the arg is from a type defintion. right now, we only support arguments that are types themselves (polymorphic types) we dont support an arg like "nat" (dependent types).
 TODO: idk what defA in args does *)
-and ocaml_of_arg ?(typearg=true) ?(func_arg=false) a =
+and ocaml_of_arg ?(typearg=true) ?(funcdef=false) ?(funccall=false) a =
   match a.it with
-  | ExpA e -> ocaml_of_exp ~typearg ~func_arg e
-  | TypA t -> ocaml_of_typ ~typearg t
+  | ExpA e -> ocaml_of_exp ~typearg ~funcdef ~funccall e
+  | TypA t -> if not (funccall || funcdef) then begin
+    let* arg = ocaml_of_typ ~typearg t in
+    if typearg then return ("'" ^ arg) else return arg
+    end else return ""
   | DefA id -> return (sanitize_name ~typearg:false id.it)
   | GramA g -> return ("TODO: grammar in arg not supported")
 
-and ocaml_of_args ?(typearg=true) ?(func_arg=false) = function
+and ocaml_of_args ?(typearg=true) ?(funcdef=false) ?(funccall=false) = function
   | [] -> return ""
-  | as_ -> concat_mapM " " (ocaml_of_arg ~typearg ~func_arg) as_
+  | as_ -> concat_mapM " " (ocaml_of_arg ~typearg ~funcdef ~funccall) as_
 
 and ocaml_of_bool_binop = function
   | `AndOp -> "&&"
@@ -523,17 +612,20 @@ and ocaml_of_bool_binop = function
   | `ImplOp -> "TODO: ImplOp"
   | `EquivOp -> "TODO: EquivOp"
 
-and ocaml_of_num_binop = function
+and ocaml_of_num_binop ?(float=false) op =  
+  let opstr = match op with
   | `AddOp -> "+"
   | `SubOp -> "-"
   | `MulOp -> "*"
   | `DivOp -> "/"
   | `ModOp -> "mod"
   | `PowOp -> "**"
+  in 
+  if float && opstr <> "mod" && opstr <> "**" then (opstr ^ ".") else opstr
 
-and ocaml_of_binop = function
+and ocaml_of_binop ?(float=false) = function
   | #Bool.binop as op -> ocaml_of_bool_binop op
-  | #Num.binop as op -> ocaml_of_num_binop op
+  | #Num.binop as op -> ocaml_of_num_binop ~float op
 
 and ocaml_of_bool_unop = function
   | `NotOp -> "not"
@@ -711,11 +803,11 @@ let rec ocaml_of_prems (prems : prem list) : string t =
   ) prems
 
 (* todo: the bracketing is possibly wrong, copied from print.ml *)
-let ocaml_of_typ_args t =
+let ocaml_of_typ_args ?(typevars=[]) t =
   match t.it with
   | TupT [] -> return ""
-  | TupT _ -> ocaml_of_typ ~typearg:true t
-  | _ -> let* argstr = ocaml_of_typ ~typearg:true t in return ("(" ^ argstr ^ ")")
+  | TupT _ -> ocaml_of_typ ~typearg:true ~typevars t
+  | _ -> let* argstr = ocaml_of_typ ~typearg:true ~typevars t in return ("(" ^ argstr ^ ")")
 
 (* Each clause is it's own function *)
 let ocaml_of_func_def (fdef : func_def) : string list t =
@@ -737,7 +829,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       catchM
       (fun () -> 
         let num_params = List.length params in 
-        let* argnames = if num_params = 0 then return "()" else (ocaml_of_args ~typearg:false ~func_arg:true params) in
+        let* argnames = if num_params = 0 then return "()" else (ocaml_of_args ~typearg:false ~funcdef:true params) in
         let* typecasts = get_typecasts () in
         let* () = set_typecasts "" in
         let bodycode = typecasts ^ prems_block in
@@ -760,8 +852,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
   end
 
 (* ignoring the dependent type annotations for now *)
-let ocaml_of_typcase (op, (_, t, _), _hints) =
-  let* args_str = ocaml_of_typ_args t in
+let ocaml_of_typcase ?(typevars=[]) (op, (_, t, _), _hints) =
+  let* args_str = ocaml_of_typ_args ~typevars t in
   if args_str = "" then
     return (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str op))
   else
@@ -771,15 +863,15 @@ let ocaml_of_typfield (atom, (_bs, t, _prems), _hints) =
   let* typ_str = ocaml_of_typ t in
   return (Util_ocaml.mixop_to_atom_str ~recordfield:true [[atom]] ^ ": " ^ typ_str)
 
-let ocaml_of_deftyp dt name =
+let ocaml_of_deftyp ?(typevars=[]) dt name =
   let* () = generate_compose dt name in
   match dt.it with
-  | AliasT t -> ocaml_of_typ t
+  | AliasT t -> ocaml_of_typ ~typevars t
   | StructT tfs -> 
-    let* tfs_str = concat_mapM ";\n " ocaml_of_typfield tfs in
+    let* tfs_str = concat_mapM ";\n  " ocaml_of_typfield tfs in
     return ("{\n  " ^ tfs_str ^ "\n}")
   | VariantT tcs -> let* () = generate_uncase tcs name in 
-    let* tcs_str = concat_mapM "\n  | " ocaml_of_typcase tcs in
+    let* tcs_str = concat_mapM "\n  | " (ocaml_of_typcase ~typevars) tcs in
     return ("\n  | " ^ tcs_str)
 
 let ocaml_of_typedef (typedef : type_def) : string t =
@@ -792,8 +884,9 @@ let ocaml_of_typedef (typedef : type_def) : string t =
       let* st = get in
       let* () = put {st with typemap = TypeMap.add (sanitize_name id.it) (TypeDef typedef) st.typemap} in
       let* args_str = ocaml_of_args ~typearg:true as_ in
+      let typevars = get_typeargs args_str in
       let space = if args_str = "" then "" else " " in
-      let* dt_str = ocaml_of_deftyp dt (sanitize_name id.it) in
+      let* dt_str = ocaml_of_deftyp ~typevars dt (sanitize_name id.it) in
       return (args_str ^ space ^ (sanitize_name id.it) ^ " = " ^ dt_str ^ "\n")
     | _ -> return ("(* TODO: MULTIPLE INSTANCE TYPE: \n type " ^ (sanitize_name id.it) ^ " = " ^ string_of_params ps ^ " " ^
     String.concat "\n" (List.map (string_of_inst id) insts) ^ "*)\n")
@@ -846,9 +939,9 @@ let generate_ocaml (dl_defs : dl_def list) : string * string * string =
     "open Backend_animation.Util_ocaml\n" ^
     "open Backend_animation.Util_ocaml.NumConversions\n\n" ^
     "let (<|>) = Util.Lib.Option.mplus\n" ^
-    "let (let*) = Option.bind\n\n"
+    "let (let*) = Option.bind\n"
   in
-  let typeimports = "open Xl.Num\n\n" in 
-  let (funcdefs, typedefs), typeconvfuncs = 
+  let typeimports = "type nat = int\n" in
+  let (funcdefs, typedefs), typeconvfuncs =
     eval (ocaml_of_dl_defs dl_defs) in
   (main ^ funcdefs), (typeimports ^ typedefs), typeconvfuncs
