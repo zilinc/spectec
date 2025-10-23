@@ -22,7 +22,7 @@ let generate_dune_file () =
   close_out oc
 
 let generate_runner () =
-  let num_tests = 2 in
+  let num_tests = 3 in
   let calls =
   String.concat "; "
     (List.init num_tests (fun i -> Printf.sprintf "Interpreter_ocaml.Dl_codegen.run_tests%d ()" (i+2)))

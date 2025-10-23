@@ -256,13 +256,15 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
   | CaseE (mixop, e1) ->
     let label = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop) in
     let* e1str = ocaml_of_exp e1 in
-    return (append_sep label e1str " ")
+    if not (e1str = "") then
+      return ("(" ^ label ^ " " ^ e1str ^ ")")
+    else return label 
   | BinE (op, _, e1, e2) -> 
     let* e1str = ocaml_of_exp e1 in
     let* e2str = ocaml_of_exp e2 in
     let e1type = get_type e1 in
     let e2type = get_type e2 in
-    (* ASSUMING THAT IF E IS NOT A FLOAT IT MUST BE AN INT *)
+    (* ASSUMING THAT IF E IS NOT A FLOAT IT MUST BE AN INT: might be wrong *)
     let floatify estr etype float opstr =
       if (etype = "int") && (float || opstr = "**") then
         "(float_of_int " ^ estr ^ ")"
@@ -273,7 +275,10 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let binopstr = ocaml_of_binop ~float op in
     let e1str' = floatify e1str e1type float binopstr in
     let e2str' = floatify e2str e2type float binopstr in
-    return ("(" ^ e1str' ^ " " ^ binopstr ^ " " ^ e2str' ^ ")")
+    (* if both e1 and e2 were ints, but we used the float power operater, we need to convert the result back to a float *)
+    if (e1type = "int") && (e2type = "int") && (binopstr = "**") then
+      return ("(int_of_float (" ^ e1str' ^ " " ^ binopstr ^ " " ^ e2str' ^ "))")
+    else return ("(" ^ e1str' ^ " " ^ binopstr ^ " " ^ e2str' ^ ")")
   | UnE (op, _, e1) ->
     let* e1str = ocaml_of_exp e1 in
     return (ocaml_of_unop op ^ "(" ^ e1str ^ ")")
