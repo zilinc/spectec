@@ -4,10 +4,18 @@ open Util.Source
 open Xl
 open Def
 open Util_ocaml
+open Util.Error 
 
 module TypeM   = Util_ocaml.TypeM
 module TypeMap = Util_ocaml.TypeMap
 open TypeM
+
+let rec get_dl_def_region (dl_def : dl_def) : region =
+  match dl_def with
+  | FuncDef fd -> fd.at
+  | TypeDef td -> td.at
+  | RecDef (rd :: _) -> get_dl_def_region rd
+  | RuleDef rd -> rd.at
 
 (* TODOs: 
 change this to use Error module 
@@ -17,6 +25,9 @@ check if add_known and check_known use sanitize_name consistently
 MAJOR REFACTOR *)
 exception CodegenError of string
 exception CannotAnimate of string
+
+(* This exception is raised when the OCaml generator sees a pattern that it does not expect (for example, if ruled out by validation) / unreachable code *) 
+let error at msg = error at "OCaml CodeGen Error" msg
 
 (* this is a hacky way of getting the type variables in scope in a typedef.
 works for now but we need to change the signatures of ocaml_of_args, ocaml_of_arg and possibly ocaml_of_typ to return a list of type variables that have been brought into scope *)
@@ -85,7 +96,7 @@ let known_exps (es : exp list) : bool t =
   allM (fun e -> begin
     match e.it with
     | VarE id -> is_known (sanitize_name id.it)
-    | _ -> raise (CannotAnimate "non-var in IterE")
+    | _ -> error e.at "Invalid Iterator expression x <- e: e must be a variable."
   end) es
 
 let get_unknown_vars (es : (id * exp) list) : string list t =
@@ -93,7 +104,7 @@ let get_unknown_vars (es : (id * exp) list) : string list t =
     match e.it with
     | VarE id' -> let* known = is_known (sanitize_name id'.it) in 
       if known then return acc else return (id.it :: acc)
-    | _ -> raise (CannotAnimate "non-var e in i <- e of iterator")
+    | _ -> error e.at "Invalid Iterator expression x <- e: e must be a variable."
   ) [] es
 
 (* messy as of now *)
@@ -164,7 +175,6 @@ let typedef_of_dl_def (def : dl_def option) : type_def option =
   | _ -> None
 
 let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
-  let* st = get in
   match t1.it, t2.it with
   | VarT (id1, _), VarT (id2, _) ->
       let lhs  = sanitize_name id1.it
@@ -173,16 +183,17 @@ let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
       let* is_defined = is_defined funcname in
       if is_defined then return () else begin
       let* () = add_func funcname in
-      let td1  = typedef_of_dl_def (TypeMap.find_opt lhs st.typemap)
-      and td2  = typedef_of_dl_def (TypeMap.find_opt rhs st.typemap) in
-      match td1, td2 with
-      | Some _lhs_def, Some _rhs_def ->
+      let* dl_defs = mapM (get_typedef) [lhs; rhs] in
+      let type_defs = List.map typedef_of_dl_def dl_defs in
+      match type_defs with
+      | [Some _lhs_def; Some _rhs_def] ->
           let func = Printf.sprintf "let %s_of_%s (arg : %s) : %s =\n  match arg with\n" rhs lhs lhs rhs in
           let arms = generate_type_arms _lhs_def.it _rhs_def.it in
           tell (func ^ arms)
-      | _ -> raise (CodegenError (Printf.sprintf "error: types %s and %s not defined\n" lhs rhs))
+      | [None; _] -> error t1.at (Printf.sprintf "Type %s: appears in sub/super type but is not defined" lhs)
+      | [_; None] -> error t2.at (Printf.sprintf "Type %s: appears in sub/super type but is not defined" rhs)
       end
-  | _ -> tell "TODO: type conversion not implemented yet\n"
+  | _ -> tell "TODO: type conversion between non-VarTs not implemented yet\n"
 
 
 let generate_numtype_conv (t1 : numtyp) (t2 : numtyp) : string t =
@@ -219,7 +230,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
   (* for now, we don't support dependent types. *)
   if typearg then begin match e.it with
   | VarE id -> return "(* TODO:typearg *)"
-  | _ -> raise (CannotAnimate "non-variable type argument")
+  | _ -> error e.at "Invalid type argument: expected a variable."
   end else 
   (* function arguments must be (subtyped/supertyped) variables *)
   if funcdef then begin match e.it with 
@@ -231,7 +242,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let* () = generate_type_conv typ1 typ2 in
     let* e1str = match e1.it with
     | VarE id -> let* () = add_known id.it in return (sanitize_name ~typearg id.it)
-    | _ -> raise (CannotAnimate "non-variable supertype/subtype argument")
+    | _ -> error e1.at "Invalid supertype/subtype argument: expected a variable."
     in 
     let* typ1str = ocaml_of_typ typ1 in
     let* typ2str = ocaml_of_typ typ2 in
@@ -522,7 +533,7 @@ and typ_is_list (typname : typ) : bool t =
   match tfs with 
   | Some [] -> return true
   | Some _ -> return false
-  | None -> raise (CodegenError "Non-composable type: shouldn't happen.")
+  | None -> error typname.at "Non-composable type: shouldn't happen."
 
 and build_fields (tfs : typfield list) : unit t = 
   (* Verify every field is composable *)
@@ -573,7 +584,7 @@ and ocaml_of_iter iter : string t =
 (* TODO im not sure if the iterator exp can have type conversions + i completely forgot what this is actually *)
 and ocaml_of_typ ?(typearg=false) ?(typevars=[]) (t : typ) : string t =
   match t.it with
-  | VarT (id, _) -> let name = sanitize_name id.it in
+  | VarT (id, _) -> Printf.printf "VarT: %s\n" id.it; let name = sanitize_name id.it in
     if typearg && (List.mem name typevars) then return ("'" ^ name) else return name
   | BoolT -> return "bool"
   | NumT numtype -> return (ocaml_of_numtyp numtype)
@@ -594,9 +605,9 @@ and ocaml_of_typbind ?(typearg=false) ?(typevars=[]) (e, t) =
     return (estr ^ " : " ^ tstr)*)
   | _ -> ocaml_of_typ ~typearg ~typevars t
 
-(* func_arg refers to whether the argument is part of a function definition or not. when _defining_ a function, an argument can only be variable (or a sub/super typed variable). but when calling functions, it can be any expr.
+(* funcdef refers to whether the argument is part of a function definition or not. when _defining_ a function, an argument can only be variable (or a sub/super typed variable). but when calling functions, it can be any expr.
 typearg refers to whether the arg is from a type defintion. right now, we only support arguments that are types themselves (polymorphic types) we dont support an arg like "nat" (dependent types).
-TODO: idk what defA in args does *)
+TODO: idk what a defA / GramA arg is *)
 and ocaml_of_arg ?(typearg=true) ?(funcdef=false) ?(funccall=false) a =
   match a.it with
   | ExpA e -> ocaml_of_exp ~typearg ~funcdef ~funccall e
@@ -639,37 +650,7 @@ and ocaml_of_unop = function
   | #Bool.unop as op -> ocaml_of_bool_unop op
   | #Num.unop as op -> Num.string_of_unop op
 
-(* don't think this is used anymore *)
-let rec get_bound_vars (prems : prem' phrase list) : string list = 
-  List.fold_left (fun acc p ->
-    match p.it with
-    | LetPr (lhs, _, vars) ->
-      (match lhs.it with
-      | VarE id -> id.it :: acc
-      | _ -> acc) (* LHS must be a variable *)
-    | IterPr (prems, (iter, iterlist)) -> 
-      (* The outflows of a nested premise are also "known" *)
-      let from_prems = get_bound_vars prems in
-      (* In length iterators i <- i*, the length 'i*' also outflows *)
-      let len_iter = begin 
-      match iter with
-        | ListN (_, id_opt) -> (match id_opt with
-          | Some id -> [id.it]
-          | None -> [])
-        | _ -> []
-      end in
-      let outflows : (id * exp) list =
-        List.filter (fun (x, _) -> List.mem x.it (from_prems @ len_iter)) iterlist in
-      let outflow_vars = List.map (
-        fun (_, e) -> match e.it with
-        | VarE id -> id.it
-        | _ -> raise (CodegenError "Outflow iterator is not a variable")
-      ) outflows in
-      (outflow_vars @ acc) 
-    | _ -> acc
-  ) [] prems
-
-let get_idx_list (iterlist : (id * exp) list) id_opt =
+let get_idx_list (iterlist : (id * exp) list) id_opt region =
   let idx_str = match id_opt with
     | Some id -> id.it
     | None -> "(* TODO: no iterator variable *)"
@@ -678,7 +659,7 @@ let get_idx_list (iterlist : (id * exp) list) id_opt =
   match idx_list with 
   | [] -> return ""
   | [(_, e)] -> ocaml_of_exp e
-  | _ -> raise (CodegenError ("Improper use of index variable " ^ idx_str ^  " in iterator list: Shouldn't happen."))
+  | _ -> error region ("Index variable " ^ idx_str ^  " can only occur once in binder list")
 
 let gen_case_arm i e : string t = 
   match e.it with 
@@ -688,11 +669,11 @@ let gen_case_arm i e : string t =
       let* t2str = ocaml_of_typ t2 in
       let* () = generate_type_conv t1 t2 in
       return (Printf.sprintf "(%s_of_%s freshvar_%d)" t1str t2str i)
-  | _ -> return "(* TODO: LetPr LHS = CaseE(mixop, e) where e is not some combination of tuples, variables, subtypes or supertypes  *)"
+  | _ -> return "(* TODO: LetPr LHS = CaseE(mixop, TupE es) where some e in es is not a combination of tuples, variables, subtypes or supertypes  *)"
 let gen_case_arms e : string t = 
   match e.it with 
   | TupE es -> concat_mapMi ", " gen_case_arm es 
-  | _ -> gen_case_arm 0 e 
+  | _ -> (*gen_case_arm 0 e*) error e.at "LetPr LHS CaseE(mixop, e) ill-formed: e must be a Tuple"
 
 let rec ocaml_of_prems (prems : prem list) : string t =
   concat_mapM "\n"
@@ -703,18 +684,17 @@ let rec ocaml_of_prems (prems : prem list) : string t =
         let* rhs_str = ocaml_of_exp rhs in
         begin 
         match lhs.it with
-        (* todo: just match this exactly with the validator *)
         | VarE id ->  
           return (Printf.sprintf "  let %s = %s in" lhs_str rhs_str)
         | CaseE (mixop, e) -> begin
           let let_lhs = match vars with
-            | []   -> raise (CodegenError "LetPr with no bound vars: shouldn't happen")
+            | []   -> error p.at "LetPr with no bound vars: shouldn't happen"
             | [v]  -> v
             | vs   -> String.concat ", " vs
           in
           let newvararity = List.length vars in 
           let newvars, failcase = match newvararity with
-            | 0 -> raise (CodegenError "LetPr with no bound vars: shouldn't happen")
+            | 0 -> error p.at "LetPr with no bound vars: shouldn't happen"
             | 1 -> "freshvar_0", "None"
             | n -> "(" ^ (String.concat ", " (List.init n (fun i -> Printf.sprintf "freshvar_%d" i))) ^ ")", (String.concat ", " (List.init n (fun _ -> "None")))
           in 
@@ -737,7 +717,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
             return (vardef ^ outflow_def)
           | _ -> return "(* TODO: LetPr LHS is IterOpt with multiple bindings *)"
           end
-        | _ -> return "(* LetPr LHS ill-formed: should not happen *)"
+        | _ -> error p.at "LetPr ill-formed: LHS must be one of: variable, optional value/iterator, cased expression."
       end 
     | IfPr cond ->
         let* cond_str = ocaml_of_exp cond in
@@ -781,7 +761,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
       | ListN (e, id_opt) -> 
         let inflows, outflows = partition id_opt in 
         let* list_len = ocaml_of_exp e in
-        let* idx_list = get_idx_list iterlist id_opt in
+        let* idx_list = get_idx_list iterlist id_opt p.at in
         let* freshvar = get_freshvar () in
         let idx_listname = if idx_list = "" then (freshvar ^ "_list") else idx_list in
         let def_idx_list = Printf.sprintf "  let %s = List.init %s (fun i -> i) in\n" idx_listname list_len in
@@ -871,7 +851,7 @@ let ocaml_of_typfield (atom, (_bs, t, _prems), _hints) =
 let ocaml_of_deftyp ?(typevars=[]) dt name =
   let* () = generate_compose dt name in
   match dt.it with
-  | AliasT t -> ocaml_of_typ ~typevars t
+  | AliasT t -> Printf.printf "alias type:\n"; ocaml_of_typ ~typevars t
   | StructT tfs -> 
     let* tfs_str = concat_mapM ";\n  " ocaml_of_typfield tfs in
     return ("{\n  " ^ tfs_str ^ "\n}")
@@ -898,7 +878,7 @@ let ocaml_of_typedef (typedef : type_def) : string t =
 
 let ocaml_of_dl_def (def : dl_def) : (string * string) t =
   match def with
-  | RuleDef _  -> raise (CodegenError "RuleDef: should not happen")
+  | RuleDef rd  -> error rd.at "RuleDef found: should not happen"
   | TypeDef typedef -> let* typestr = ocaml_of_typedef typedef in 
     (* because we don't support multiple instances yet *)
     if String.length typestr >= 2 && String.sub typestr 0 2 = "(*" && String.sub typestr 8 7 <> "typearg" then
@@ -915,7 +895,7 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
     | [] -> return ("", "")
     | (FuncDef _)::_ -> let fdefs = List.map (fun def -> match def with
         | FuncDef fdef -> fdef
-        | _ -> raise (CodegenError "RecDef not consistent: should not happen")
+        | _ -> error (get_dl_def_region def) "RecDef not consistent: should not happen"
       ) dl_defs in
       let* func_blocks = mapM ocaml_of_func_def fdefs in
       let func_strs = List.concat func_blocks in  
@@ -923,14 +903,14 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
       return ("let rec " ^ String.concat "\nand " func_strs, "")
     | (TypeDef _)::_ -> let typedefs = List.map (fun def -> match def with
         | TypeDef typedef -> typedef
-        | _ -> raise (CodegenError "RecDef not consistent: should not happen")
+        | _ -> error (get_dl_def_region def) "RecDef not consistent: should not happen"
       ) dl_defs in
       let* typestrs = concat_mapM "\nand " ocaml_of_typedef typedefs in
       if String.length typestrs >= 2 && String.sub typestrs 0 2 = "(*" then
         return ("", typestrs)
       else
         return ("", "type " ^ typestrs)
-    | (RuleDef _)::_ -> raise (CodegenError "RecDef: RuleDef should not happen")
+    | (RuleDef _)::_ -> error (get_dl_def_region def) "Recursive RuleDef: should not happen"
 
 let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
   let* def_strs : (string * string) list = mapM ocaml_of_dl_def defs in
