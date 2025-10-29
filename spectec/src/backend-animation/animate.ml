@@ -1504,7 +1504,21 @@ let animate_clause id envr (c: clause) : func_clause =
   let binds'' = sort_binds id binds' in
   (DefD (binds'', args', exp, prems')) $ c.at
 
-let animate_clauses id envr cs = List.map (animate_clause id envr) cs
+
+(* $step_ctxt: config -> config *)
+let transform_step_ctxt_clause id envr (c: clause) : func_clause =
+  let DefD (binds, [{it = ExpA lhs; _}], rhs, prems) = c.it in
+  let CaseE (out_mixop, out_tup) = rhs.it in
+  let CaseE (in_mixop, in_tup) = lhs.it in
+  let TupE [in_z; in_stack] = in_tup.it in
+  let TupE [out_z; out_stack] = out_tup.it in
+  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  let in_tup' = TupE [in_z; in_stack'] $> in_tup in
+  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
+  let out_tup' = TupE [out_z; out_stack'] $> out_tup in
+  let rhs' = CaseE (out_mixop, out_tup') $> rhs in
+  animate_clause id envr (DefD (binds @ binds', [expA lhs'], rhs', prems) $> c)
+
 
 let animate_rule_def envr (rdef: rule_def) : func_def =
   let (rule_name, rel_id, t1, t2, rules) = rdef.it in
@@ -1518,8 +1532,11 @@ let animate_rule_def envr (rdef: rule_def) : func_def =
 
 
 let animate_func_def' envr (id, ps, typ, clauses, opartial) =
-  (id, ps, typ, animate_clauses id envr clauses, opartial)
+  match id.it with
+  | "step_ctxt" -> (id, ps, typ, List.map (transform_step_ctxt_clause id envr) clauses, opartial)
+  | _           -> (id, ps, typ, List.map (animate_clause             id envr) clauses, opartial)
 let animate_func_def envr (hdef: func_def) : func_def = animate_func_def' envr hdef.it $ hdef.at
+
 
 let rec animate_def envr (d: dl_def): dl_def = match d with
 | TypeDef tdef -> TypeDef tdef
