@@ -395,7 +395,7 @@ let string_of_state (s: AnimState.t) =
 
 let throw_log e = let () = info "log" no_region e in E.throw e
 
-(* A whitelist of rules/defs that cannot be easily animated.
+(* A list of rules/defs that cannot be easily animated.
    The map is "reason" ↦ [("rel_id", "rule_name")]
 *)
 let cannot_animate : (string * string) list Map.t =
@@ -424,9 +424,9 @@ let is_unanimatable reason rule_name rel_id : bool =
   | None -> false
   | Some ls -> List.exists (fun l -> l = (rel_id, rule_name)) ls
 
-let is_step_rule rel_id : bool = String.starts_with ~prefix:"Step/" rel_id
-let is_step_pure_rule rel_id : bool = String.starts_with ~prefix:"Step_pure/" rel_id
-let is_step_read_rule rel_id : bool = String.starts_with ~prefix:"Step_read/" rel_id
+let is_step_rule rel_id : bool = rel_id = "Step"
+let is_step_pure_rule rel_id : bool = rel_id = "Step_pure"
+let is_step_read_rule rel_id : bool = rel_id = "Step_read"
 
 
 (* Mode analysis *)
@@ -1383,6 +1383,7 @@ let animate_rule_red envr rule : clause' =
   so that we can match the first part of the argument unconditionally and then
   compute `m` in the premises.
  *)
+
 let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * prem list =
   match in_stack.it with
   | CatE ({ it = IterE (vals, (ListN(n, _), xes)); _ } as in_vals, in_stack2) ->

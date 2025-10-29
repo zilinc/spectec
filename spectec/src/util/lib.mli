@@ -58,6 +58,8 @@ module Fun :
 sig
   val curry : (('a * 'b) -> 'c) -> 'a -> 'b -> 'c
   val uncurry :  ('a -> 'b -> 'c) -> ('a * 'b) -> 'c
+  val curry3 : (('a * 'b * 'c) -> 'd) -> 'a -> 'b -> 'c -> 'd
+  val uncurry3 :  ('a -> 'b -> 'c -> 'd) -> ('a * 'b * 'c) -> 'd
   val both : ('a -> 'b) -> ('a * 'a) -> ('b * 'b)
   val (>>>) : ('a -> 'b) -> ('b -> 'c) -> ('a -> 'c)
   val (<***>) : ('a -> 'b) -> ('c -> 'd) -> 'a * 'c -> 'b * 'd
@@ -74,6 +76,11 @@ sig
   val mconcat_map : ('a -> 'b option) -> 'a list -> 'b option
   val cat_opts_opt : 'a option list -> 'a list option
   val opt_list : 'a list option -> 'a list
+end
+
+module Time:
+sig
+  val time : string -> ('a -> 'b) -> 'a -> 'b
 end
 
 module type Monad =

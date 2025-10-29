@@ -86,19 +86,18 @@ let il_of_spectest () : exp =
     let memtype = mk_case' "memtype" [[];[];["PAGE"]] [
       addrtype; limits
     ] in
-    let zeros = listE (t_star "byte") (List.init 0x10000 (Fun.const (mk_nat 0))) in
+    let zeros = listE (t_star "byte") (List.init 0x20 (Fun.const (mk_nat 0))) in  (* 0x10000 *)
     mk_str "meminst" [ ("TYPE", memtype); ("BYTES", zeros) ] in
 
   (* Builtin functions *)
   let funcs = [
     create_funcinst "print"         [            ];
     create_funcinst "print_i32"     ["I32"       ];
-    (*
     create_funcinst "print_i64"     ["I64"       ];
     create_funcinst "print_f32"     ["F32"       ];
     create_funcinst "print_f64"     ["F64"       ];
     create_funcinst "print_i32_f32" ["I32"; "F32"];
-    create_funcinst "print_f64_f64" ["F64"; "F64"]; *)
+    create_funcinst "print_f64_f64" ["F64"; "F64"];
   ] in
 
   (* Builtin globals *)

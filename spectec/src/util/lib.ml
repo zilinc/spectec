@@ -160,6 +160,8 @@ module Fun =
 struct
   let curry f a b = f (a, b)
   let uncurry f (a, b) = f a b
+  let curry3 f a b c = f (a, b, c)
+  let uncurry3 f (a, b, c) = f a b c
   let both f (a1, a2) = (f a1, f a2)
   let (>>>) f g = fun x -> x |> f |> g
   let (<***>) f g (a, b) = (f a, g b)
@@ -185,6 +187,17 @@ struct
     | None -> []
     | Some ls -> ls
 end
+
+module Time =
+struct
+  let time msg f a =
+    let start = Sys.time () in
+    let b = f a in
+    let lapsed = Sys.time () -. start in
+    print_endline (msg ^ ": " ^ Printf.sprintf "%.5fs." lapsed);
+    b
+end
+
 
 module type Monad =
 sig

@@ -6,6 +6,8 @@ open Il.Ast
 open Il.Print
 open Util
 open Error
+open Lib.Time
+open Lib.Fun
 open Backend_interpreter.Construct
 module I = Backend_interpreter
 module R = Reference_interpreter
@@ -27,6 +29,7 @@ let logging = ref false
 
 let log fmt = Printf.(if !logging then fprintf stderr fmt else ifprintf stderr fmt)
 
+let print_name n = if n = "" then "[_]" else n
 
 
 (* Result *)
@@ -63,11 +66,6 @@ let sum_results_with_time l =
   let l', times = List.split l in
   sum_results l', sum_float times
 
-let try_run runner target =
-  let start_time = Sys.time () in
-  let result = runner target in
-  result, Sys.time () -. start_time
-
 let print_runner_result name result =
   let (num_success, total), execution_time = result in
   let percentage =
@@ -79,10 +77,9 @@ let print_runner_result name result =
     Printf.printf "Total [%d/%d] (%.2f%%)\n\n" num_success total percentage
   else
     Printf.printf "- %d/%d (%.2f%%)\n\n" num_success total percentage;
-  log "%s took %f ms.\n" name (execution_time *. 1000.)
+  log "%s took %.5f s.\n" name execution_time
 
 let get_export name moduleinst_name =
-  log "[Getting export %s from module instance %s...]\n" name moduleinst_name;
   Register.find moduleinst_name
   |> find_str_field "EXPORTS"
   |> find_list_elem (fun export -> text_to_string (find_str_field "NAME" export) = name)
@@ -100,7 +97,6 @@ let textual_to_module textual =
   | _ -> assert false
 
 let get_export_addr name moduleinst_name : exp =
-  log "[Getting export addr %s from module instance %s...]\n" name moduleinst_name;
   let vl =
     moduleinst_name
     |> get_export name
@@ -111,7 +107,6 @@ let get_export_addr name moduleinst_name : exp =
     failwith ("Function export doesn't contain function address")
 
 let get_global_value module_name globalname : exp (* val *) =
-  log "[Getting global value %s from module %s...]\n" globalname module_name;
   get_export_addr globalname module_name
   |> il_to_nat
   |> nth_of_list (Store.access "GLOBALS")
@@ -120,7 +115,10 @@ let get_global_value module_name globalname : exp (* val *) =
 
 (** Main functions **)
 
-let instantiate module_ : exp =
+let rec instantiate module_ : exp =
+  time "Instantiate" instantiate' module_
+
+and instantiate' module_ : exp =
   log "[Instantiating module...]\n";
 
   match C.il_of_module module_, List.map get_externaddr module_.it.imports with
@@ -138,19 +136,20 @@ let instantiate module_ : exp =
     moduleinst
 
 
-let invoke moduleinst_name funcname args : exp =
+let rec invoke moduleinst_name funcname args =
+  time "Invoke" (uncurry3 invoke') (moduleinst_name, funcname, args)
+
+and invoke' moduleinst_name funcname args : exp =
   log "[Invoking %s %s in module instance %s...]\n"
-    funcname (R.Value.string_of_values args |> Lib.String.shorten) moduleinst_name;
+    funcname (R.Value.string_of_values args |> Lib.String.shorten) (print_name moduleinst_name);
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
-  log "  > Export func addr is: %s\n" (string_of_exp funcaddr);
   let config' = Interpreter.invoke [ expA store; expA funcaddr; il_of_list (t_star "val") C.il_of_value args |> expA ] in
   let CaseE (_, tup1) = config'.it in
   let TupE [state'; instrs'] = tup1.it in
   let CaseE (_, tup2) = state'.it in
   let TupE [store'; _] = tup2.it in
   Store.put store';
-  log "  > Result of invoking %s is %s\n" funcname (string_of_exp instrs');
   instrs'
 
 
@@ -214,7 +213,7 @@ let test_assertion assertion =
 
 let run_command' command =
   let open R in
-  match command.it with
+  let res = match command.it with
   | Module (var_opt, def) ->
     log "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     def
@@ -235,13 +234,17 @@ let run_command' command =
     ignore (run_action a); success
   | Assertion a -> test_assertion a
   | Meta _ -> pass
+  in
+  res
+
+
 
 let run_command command =
   let start_time = Sys.time () in
   let result =
     let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) (Lib.String.shorten msg) in
     try
-      run_command' command
+      time "Running command" run_command' command
     with
     | I.Exception.Error (at, msg, step) ->
       let msg' = msg ^ " (interpreting " ^ step ^ " at " ^ Source.string_of_region at ^ ")" in
@@ -265,12 +268,10 @@ let run_command command =
 
 let run_wast name script =
   Store.init ();
-  (* Intialize spectest *)
   log ("[run_wast...]\n");
+  (* Intialise spectest *)
   let spectest = il_of_spectest () in
-  log "[built `spectest`.]\n";
   Register.add "spectest" spectest;  (* spectest is a `moduleinst`. *)
-  log ("[registered `spectec`.]\n");
 
   let result =
     script
@@ -284,18 +285,15 @@ let run_wast name script =
 
 let run_wasm' args module_ =
   Store.init ();
-  (* Intialize spectest *)
   log ("[run_wasm'...]\n");
+  (* Intialise spectest *)
   let spectest = il_of_spectest () in
-  log "[built `spectest`.]\n";
   Register.add "spectest" spectest;
-  log ("[registered `spectec`.]\n");
 
   (* Instantiate *)
   module_
   |> instantiate
   |> Register.add_with_var None;
-  log ("[instantiated module.]\n");
 
   (* TODO: Only Int32 arguments/results are acceptable *)
   match args with
@@ -332,9 +330,7 @@ let parse_file name parser_ file =
   log "===========================\n\n%s\n\n" name;
 
   try
-    let x = parser_ file in
-    log "[finished parsing.]\n";
-    x
+    parser_ file
   with e ->
     let bt = Printexc.get_raw_backtrace () in
     print_endline ("- Failed to parse " ^ name ^ "\n");

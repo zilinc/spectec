@@ -2120,8 +2120,8 @@ and il_to_ref exp : RI.Value.ref_ =
 
 and il_to_value exp : RI.Value.value =
   match match_caseE "val" exp with
-  | [["CONST" ];[];[]], _ -> Num (il_to_num exp)
-  | [["VCONST"];[];[]], _ -> Vec (il_to_vec exp)
+  | [["CONST" ];[];[]], _ -> RI.Value.Num (il_to_num exp)
+  | [["VCONST"];[];[]], _ -> RI.Value.Vec (il_to_vec exp)
   | [[ref_con];[]], _ when String.starts_with ~prefix:"REF." ref_con ->
-    Ref (il_to_ref exp)
+    RI.Value.Ref (il_to_ref exp)
   | _ -> error_value "val" exp
