@@ -38,7 +38,7 @@ def $use_step_ctxt          hint(builtin)
 def $dispatch_step(instr, config)      : config
 def $dispatch_step_pure(instr, instr*) : instr*
 def $dispatch_step_read(instr, config) : instr*
-def $dispatch_step_ctxt(config)        : config
+def $step_ctxt(config) : config
 
 def $dispatch_step                hint(builtin)
 def $dispatch_step_pure           hint(builtin)
@@ -56,7 +56,7 @@ def $dispatch_reduce(instr_0, config) = config_1
     -- if $dispatch_step(instr_0, config) = config_1
 def $dispatch_reduce(instr_0, config) = config_1
     -- if $use_step_ctxt(instr_0) = true
-    -- if $dispatch_step_ctxt(config) = config_1
+    -- if $step_ctxt(config) = config_1
 def $dispatch_reduce(instr_0, config) = eps
     -- otherwise
 
@@ -65,94 +65,61 @@ def $Step_read_throw_ref_handler(config) : instr*
 def $Step_read_throw_ref_handler           hint(builtin)
 
 
-;; def $dispatch_step_ctxt(LABEL_ n `{instr*} instr'*, config) = config
-;;     -- if $find_first_instr(instr'*) = (val*, eps, eps)
-;; def $dispatch_step_ctxt(LABEL_ n `{instr*} instr'*, config) = config1
-;;     -- if $find_first_instr(instr'*) = (val*, instr0, instr1*)
-;;     -- if $dispatch_reduce(instr0, config) = config1
-;; def $dispatch_step_ctxt(LABEL_ n_ `{instr_*} instr_'*, z; instr''*) = z; (LABEL_ n `{instr*} instr1'*)
-;;     ;; ctxt rule
-;;     -- if $find_first_instr(instr'*) = (val*, instr0, instr1*)
-;;     -- if $reduce(instr0, z; instr'*) = z'; instr1'*
-;; def $dispatch_step_ctxt(LABEL_ n `{instr*} instr'*, config) = config
-;;     -- otherwise
-;; def $dispatch_step_ctxt(FRAME_ n `{f} instr*, config) = config
-;;     -- if $find_first_instr(instr*) = (val*, eps, eps)
-;; def $dispatch_step_ctxt(FRAME_ n `{f} instr*, config) = config1
-;;     -- if $find_first_instr(instr*) = (val*, instr0, instr1*)
-;;     -- if $dispatch_reduce(instr0, config) = config1
-;; def $dispatch_step_ctxt(FRAME_ n `{f'} instr*, s; f; instr'*) = s'; f; (FRAME_ n `{f''} instr1*)
-;;     ;; ctxt rule
-;;     -- if $find_first_instr(instr*) = (val*, instr0, instr1*)
-;;     -- if $dispatch_reduce(instr0, s; f ; instr'*) = eps
-;;     -- if $dispatch_reduce(instr0, s; f'; instr* ) = s'; f''; instr1*
-;; def $dispatch_step_ctxt(FRAME_ n `{f} instr*, config) = config
-;;     -- otherwise
-;; def $dispatch_step_ctxt(HANDLER_ n `{catch*} instr*, config) = config
-;;     -- if $find_first_instr(instr*) = (val*, eps, eps)
-;; def $dispatch_step_ctxt(HANDLER_ n `{catch*} instr*, config) = config
-;;     -- if $find_first_instr(instr*) = (val*, instr0, instr1*)
-;;     -- if $dispatch_reduce(instr0, config) = eps
-;; def $dispatch_step_ctxt(HANDLER_ n `{catch} instr*, config) = config1
-;;     -- if $find_first_instr(instr*) = (val*, instr0, instr1*)
-;;     -- if $dispatch_reduce(instr0, config) = config1
-
-
 ;;;;;;;;;;;;;;;;;;; LABEL_
-def $dispatch_step_ctxt(z; (LABEL_ n `{instr*} val*)) = z; val*
+def $step_ctxt(z; (LABEL_ n `{instr*} val*)) = z; val*
 ;; br
-def $dispatch_step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val^n instr'*
+def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val^n instr'*
     -- if $find_first_instr(instr''*) = (val'* val^n, BR l, instr*)
     -- if l = 0
-def $dispatch_step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* (BR $(l - 1))
+def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* (BR $(l - 1))
     -- if $find_first_instr(instr''*) = (val*, BR l, instr*)
     -- if l > 0
 ;; return_call_ref
-def $dispatch_step_ctxt(z; (LABEL_ k `{instr'*} instr''*)) = z; val* (RETURN_CALL_REF yy)
+def $step_ctxt(z; (LABEL_ k `{instr'*} instr''*)) = z; val* (RETURN_CALL_REF yy)
     -- if $find_first_instr(instr''*) = (val*, RETURN_CALL_REF yy, instr*)
 ;; return
-def $dispatch_step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* RETURN
+def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* RETURN
     -- if $find_first_instr(instr''*) = (val*, RETURN, instr*)
 ;; throw_ref
-def $dispatch_step_ctxt(z; (LABEL_ n `{instr'*} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
+def $step_ctxt(z; (LABEL_ n `{instr'*} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
 ;; trap
-def $dispatch_step_ctxt(z; (LABEL_ n `{instr'*} TRAP)) = z; TRAP
+def $step_ctxt(z; (LABEL_ n `{instr'*} TRAP)) = z; TRAP
 ;; ctxt-label
-def $dispatch_step_ctxt(z; (LABEL_ n `{instr_0*} instr*)) = z'; (LABEL_ n `{instr_0*} instr'*)
+def $step_ctxt(z; (LABEL_ n `{instr_0*} instr*)) = z'; (LABEL_ n `{instr_0*} instr'*)
   -- Step: z; instr* ~> z'; instr'*
 ;;;;;;;;;;;;;;;;;;; FRAME_
-def $dispatch_step_ctxt(z; (FRAME_ n `{f} val^n)) = z; val^n
+def $step_ctxt(z; (FRAME_ n `{f} val^n)) = z; val^n
 ;; return_call_ref
-def $dispatch_step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; TRAP
+def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; TRAP
     -- if $find_first_instr(instr''*) = (val* (REF.NULL ht), RETURN_CALL_REF yy, instr*)
-def $dispatch_step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)
+def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)
     -- if $find_first_instr(instr''*) = (val''* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, instr*)
     -- if val''* = val'* val^n
     ----
     -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
 ;; return
-def $dispatch_step_ctxt(z; (FRAME_ n `{f} instr''*)) = z; val^n
+def $step_ctxt(z; (FRAME_ n `{f} instr''*)) = z; val^n
     -- if $find_first_instr(instr''*) = (val'* val^n, RETURN, instr*)
 ;; throw_ref
-def $dispatch_step_ctxt(z; (FRAME_ n `{f} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
+def $step_ctxt(z; (FRAME_ n `{f} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
 ;; trap
-def $dispatch_step_ctxt(z; (FRAME_ n `{f} TRAP)) = z; TRAP
+def $step_ctxt(z; (FRAME_ n `{f} TRAP)) = z; TRAP
 ;; ctxt-frame
-def $dispatch_step_ctxt(s; f; (FRAME_ n `{f'} instr*)) = s'; f; (FRAME_ n `{f''} instr'*)
+def $step_ctxt(s; f; (FRAME_ n `{f'} instr*)) = s'; f; (FRAME_ n `{f''} instr'*)
   -- Step: s; f'; instr* ~> s'; f''; instr'*
 ;;;;;;;;;;;;;;;;;;; HANDLER_
-def $dispatch_step_ctxt(z; (HANDLER_ n `{catch*} val*)) = z; val*
+def $step_ctxt(z; (HANDLER_ n `{catch*} val*)) = z; val*
 ;; br
-def $dispatch_step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* (BR l)
+def $step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* (BR l)
     -- if $find_first_instr(instr''*) = (val*, BR l, instr*)
 ;; return_call_ref
-def $dispatch_step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* (RETURN_CALL_REF yy)
+def $step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* (RETURN_CALL_REF yy)
     -- if $find_first_instr(instr''*) = (val*, RETURN_CALL_REF yy, instr*)
 ;; return
-def $dispatch_step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* RETURN
+def $step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* RETURN
     -- if $find_first_instr(instr''*) = (val*, RETURN, instr*)
 ;; throw_ref
-def $dispatch_step_ctxt(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = z; instr_1*
+def $step_ctxt(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = z; instr_1*
     -- if $Step_read_throw_ref_handler(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = instr_1*
 
 
@@ -169,7 +136,6 @@ def $reduce(s; f; instr*) = eps
 
 def $step(config) : config
 def $step(config) = config'  -- if $reduce(config) = config'
-def $step(config) = config   -- otherwise  ;; -- if $reduce(config) = eps
 
 def $steps(config) : config
 def $steps(config) = config_2

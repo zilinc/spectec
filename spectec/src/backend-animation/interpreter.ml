@@ -19,12 +19,11 @@ module RI = Reference_interpreter
 
 let verbose : string list ref =
   ref [
-      (* "log"; *)
       (* "table"; *)
       (* "assertion"; *)
       (* "eval"; *)          (* Evaluation of expressions. *)
-      (* "assign";      *)      (* Matching, but for terms only. *)
-      (* "match";       *)    (* Matching of other types. *)
+      (* "assign"; *)        (* Matching, but for terms only. *)
+      (* "match";  *)        (* Matching of other types. *)
       (* "match_info";  *)
       (* "steps";       *)
       (* "call"; *)
@@ -112,7 +111,6 @@ let error_eval etyp exp onotes =
   | None     -> ""
   | Some msg -> "\n  ▹ " ^ msg
   in
-  info "log" exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes);
   error exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes)
 
 let fail_assign at lhs rhs msg =
@@ -122,7 +120,10 @@ let fail_assign at lhs rhs msg =
   fail ()
 
 let string_of_exp exp = Il.Print.string_of_exp exp |> Lib.String.shorten
-let string_of_args args = Il.Print.string_of_args args |> Lib.String.shorten
+let string_of_arg arg = Il.Print.string_of_arg arg |> Lib.String.shorten
+let string_of_args = function
+  | [] -> ""
+  | as_ -> "(" ^ concat ", " (List.map string_of_arg as_) ^ ")"
 
 (* Environments *)
 
@@ -799,10 +800,8 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
   match clauses with
-  | [] -> fail_info "match_info" at ("No function clause matches the input arguments in function `" ^ fname ^ "`")
+  | [] -> fail_info "match_info" at ("No clause of function `" ^ fname ^ "` is matched. ♣")
   | cl :: cls ->
-    info "match_info" at ("Match the " ^ string_of_int nth ^ "-th clause of function `" ^ fname ^ "`\n" ^
-                          if nth = 1 then ("args: " ^ string_of_args args) else "");
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
     (* Add bindings to [il_env]. *)
@@ -815,7 +814,8 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
         begin match eval_prems ctx prems |> run_opt with
-        | Some ctx' -> info "match_info" at (fname ^ " ▪"); eval_exp ctx' exp
+        | Some ctx' -> info "match_info" at ("The " ^ string_of_int nth ^ "-th clause of `" ^ fname ^ "` is matched. ■");
+                       eval_exp ctx' exp
         | None      -> match_clause at fname (nth+1) cls args
         end
       | None -> match_clause at fname (nth+1) cls args
@@ -828,11 +828,13 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
 
 and eval_func name func_def args : exp OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
+  info "match_info" func_def.at ("Calling `" ^ name ^ "` with " ^ string_of_args args);
   match_clause no_region name 1 fcs args
 
 
 and call_func name args : exp OptMonad.m =
   time ("Calling `" ^ name ^ "`") (uncurry call_func') (name, args)
+  (* call_func' name args *)
 
 and call_func' name args =
   info "call" no ("call_func " ^ name);
