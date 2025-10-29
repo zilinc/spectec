@@ -2,6 +2,8 @@ open Il_util
 open Construct
 open Def
 open Util
+open Lib.Time
+open Lib.Fun
 open Error
 open Il.Ast
 open Il.Print
@@ -21,16 +23,22 @@ let verbose : string list ref =
       (* "table"; *)
       (* "assertion"; *)
       (* "eval"; *)          (* Evaluation of expressions. *)
-      (* "assign";     *)     (* Matching, but for terms only. *)
-      (* "match";      *)      (* Matching of other types. *)
-      (* "match_info"; *)
-      (* "steps";      *)
+      (* "assign";      *)      (* Matching, but for terms only. *)
+      (* "match";       *)    (* Matching of other types. *)
+      (* "match_info";  *)
+      (* "steps";       *)
+      (* "call"; *)
       (* "iter"; *)          (* Low-level debugging. *)
       ]
 
 
 let error at msg = Error.error at "(Meta)Interpreter" msg
 let error_np msg = error no_region msg
+
+let error_value name exp = error exp.at ("Invalid " ^ name ^ ": " ^ string_of_exp exp)
+let error_values name exps =
+  let at = over_region (List.map (fun e -> e.at) exps) in
+  error at ("Invalid " ^ name ^ ": " ^ String.concat ", " (List.map string_of_exp exps))
 
 let string_of_error at msg = string_of_region at ^ " (Meta)Interpreter error:\n" ^ msg
 
@@ -45,6 +53,7 @@ let assert_msg cond msg = if not cond then info "assertion" no msg; assert cond
 
 
 (* Helper *)
+
 
 let (--) start end_ : int list = List.init (end_ - start) (fun i -> start + i)
 
@@ -94,6 +103,8 @@ end
 open OptMonad
 
 
+type builtin = { name : string; f : exp list -> exp OptMonad.m }
+
 let fail_info cat at msg = info cat at msg; fail ()
 
 let error_eval etyp exp onotes =
@@ -111,6 +122,7 @@ let fail_assign at lhs rhs msg =
   fail ()
 
 let string_of_exp exp = Il.Print.string_of_exp exp |> Lib.String.shorten
+let string_of_args args = Il.Print.string_of_args args |> Lib.String.shorten
 
 (* Environments *)
 
@@ -133,12 +145,12 @@ let dummy : exp = varE ~note:(t_var "dummyT") "dummyE"
 let as_opt_exp e =
   match e.it with
   | OptE eo -> eo
-  | _ -> failwith "as_opt_exp"
+  | _ -> error_value "OptE" e
 
 let as_list_exp e =
   match e.it with
   | ListE es -> es
-  | _ -> failwith "as_list_exp"
+  | _ -> error_value "ListE" e
 
 
 let vctx_to_subst ctx : Il.Subst.subst =
@@ -151,7 +163,7 @@ let vctx_to_subst ctx : Il.Subst.subst =
 (** [lhs] is the pattern, and [rhs] is the expression. *)
 let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
   let* rhs' = eval_exp ctx rhs in
-  info "assign" lhs.at ("Add to vcontext: " ^ string_of_exp lhs ^ " ↦ " ^ string_of_exp rhs');
+  info "assign" lhs.at ("Assignment: " ^ string_of_exp lhs ^ " ↦ " ^ string_of_exp rhs');
   match lhs.it, rhs'.it with
   | VarE name, _ ->
     VContext.add_varid ctx name rhs' |> return
@@ -240,17 +252,19 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
 
 
 and is_value : exp -> bool = Il.Eval.is_normal_exp
+and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
 
-and eval_exp ctx exp : exp OptMonad.m =
+and eval_exp ?full:(full=true) ctx exp : exp OptMonad.m =
   let open Xl in
   match exp.it with
   | _ when is_value exp -> return exp
+  | _ when is_hnf exp && not full -> return exp
   | VarE v -> (match VContext.Map.find_opt v.it ctx.varid with
               | Some v' -> return v'
               | None -> error exp.at (sprintf "Variable `%s` is not in the value context.\n  ▹ vctx: %s" v.it
                                        (string_of_varset (VContext.dom_varid ctx)))
               )
-  | BoolE _ | NumE _ | TextE _ -> return exp
+  (* | BoolE _ | NumE _ | TextE _ -> return exp *)
   | UnE (op, _, e1) ->
     let* e1' = eval_exp ctx e1 in
     (match op, e1'.it with
@@ -293,12 +307,12 @@ and eval_exp ctx exp : exp OptMonad.m =
     | _ -> error_eval "Comparison expression" exp None
     ) $> exp |> return
   | IdxE (e1, e2) ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full:false ctx e1 in
     let* e2' = eval_exp ctx e2 in
     (match e1'.it, e2'.it with
     | ListE es, NumE (`Nat i) ->
       if i < Z.of_int (List.length es) then
-        List.nth es (Z.to_int i) |> return
+        List.nth es (Z.to_int i) |> eval_exp ~full ctx
       else
         error_eval "Indexing expression" exp
           (Some ("Index out-of-range:\n" ^
@@ -311,7 +325,7 @@ and eval_exp ctx exp : exp OptMonad.m =
              (Some ("seq = " ^ string_of_exp e1' ^ "; idx = " ^ string_of_exp e2'))
     )
   | SliceE (e1, e2, e3) ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full ctx e1 in
     let* e2' = eval_exp ctx e2 in
     let* e3' = eval_exp ctx e3 in
     (match e1'.it, e2'.it, e3'.it with
@@ -327,8 +341,8 @@ and eval_exp ctx exp : exp OptMonad.m =
              (Some (string_of_exp e1' ^ "[" ^ string_of_exp e2' ^ ":" ^ string_of_exp e3' ^ "]"))
     )
   | UpdE (e1, p, e2) ->
-    let* e1' = eval_exp ctx e1 in
-    let* e2' = eval_exp ctx e2 in
+    let* e1' = eval_exp ~full ctx e1 in
+    let* e2' = eval_exp ~full ctx e2 in
     eval_path ctx e1' p
       (fun e' p' ->
         if p'.it = RootP
@@ -336,25 +350,25 @@ and eval_exp ctx exp : exp OptMonad.m =
         else error_eval "Sequence update expression" exp None
       )
   | ExtE (e1, p, e2) ->
-    let* e1' = eval_exp ctx e1 in
-    let* e2' = eval_exp ctx e2 in
+    let* e1' = eval_exp ~full ctx e1 in
+    let* e2' = eval_exp ~full ctx e2 in
     eval_path ctx e1' p
       (fun e' p' ->
         if p'.it = RootP
-        then eval_exp ctx (CatE (e', e2') $> e')
+        then eval_exp ~full ctx (CatE (e', e2') $> e')
         else error_eval "Sequence extension expression" exp None
       )
   | StrE efs -> let* efs' = mapM (eval_expfield ctx) efs in StrE efs' $> exp |> return
   | DotE (e1, atom) ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full:false ctx e1 in
     (match e1'.it with
     | StrE efs -> snd (List.find (fun (atomN, _) -> Atom.eq atomN atom) efs) |> return
     | _ -> error_eval "Struct dot expression" exp None
     )
   | CompE (e1, e2) ->
     (* TODO(4, rossberg): avoid overlap with CatE? *)
-    let* e1' = eval_exp ctx e1 in
-    let* e2' = eval_exp ctx e2 in
+    let* e1' = eval_exp ~full ctx e1 in
+    let* e2' = eval_exp ~full ctx e2 in
     (match e1'.it, e2'.it with
     | ListE es1, ListE es2 -> ListE (es1 @ es2) |> return
     | OptE None, OptE _ -> e2'.it |> return
@@ -362,7 +376,7 @@ and eval_exp ctx exp : exp OptMonad.m =
     | StrE efs1, StrE efs2 ->
       let merge (atom1, e1) (atom2, e2) =
         assert (Atom.eq atom1 atom2);
-        let* e12' = eval_exp ctx (CompE (e1, e2) $> e1) in
+        let* e12' = eval_exp ~full ctx (CompE (e1, e2) $> e1) in
         return (atom1, e12')
       in
       let* efs12' = mapM (Lib.Fun.uncurry merge) (List.combine efs1 efs2) in
@@ -378,16 +392,16 @@ and eval_exp ctx exp : exp OptMonad.m =
     | OptE (Some e2') when Il.Eval.is_normal_exp e1' && Il.Eval.is_normal_exp e2' -> BoolE false
     | ListE [] -> BoolE false
     | ListE es2' when List.exists (Il.Eq.eq_exp e1') es2' -> BoolE true
-    | ListE es2' when Il.Eval.is_normal_exp e1' && List.for_all Il.Eval.is_normal_exp es2' -> BoolE false
+    | ListE _ -> BoolE false
     | _ -> error_eval "Membership expression" exp None
     ) $> exp |> return
   | LenE e1 ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full:false ctx e1 in
     (match e1'.it with
     | ListE es -> NumE (`Nat (Z.of_int (List.length es))) $> exp |> return
     | _ -> error_eval "Sequence length expression" exp None
     )
-  | TupE es -> let* es' = mapM (eval_exp ctx) es in TupE es' $> exp |> return
+  | TupE es -> let* es' = mapM (eval_exp ~full ctx) es in TupE es' $> exp |> return
   | CallE (fid, args) ->
     let* args' = mapM (eval_arg ctx) args in
     call_func fid.it args'
@@ -408,14 +422,15 @@ and eval_exp ctx exp : exp OptMonad.m =
             let* b' = eval_exp c b in
             VContext.add_varid c a b' |> return
           ) ctx (List.combine ids es1') in
-          eval_exp ctx' e1
+          let* e1' = eval_exp ~full ctx' e1 in
+          OptE (Some e1') $> exp |> return
         else
           error_eval "Iterated epxression" exp (Some "?-iterator inflow expressions don't match.")
       | List | List1 ->
         let n = List.length (as_list_exp (List.hd es')) in
         if iter' = List || n >= 1 then
           let en = NumE (`Nat (Z.of_int n)) $$ exp.at % (NumT `NatT $ exp.at) in
-          eval_exp ctx (IterE (e1, (ListN (en, None), xes')) $> exp)
+          eval_exp ~full ctx (IterE (e1, (ListN (en, None), xes')) $> exp)
         else
           error_eval "Iterated expression" exp (Some "Using +-iterator but sequence length is 0")
       | ListN ({it = NumE (`Nat n'); _}, ido) ->
@@ -431,7 +446,7 @@ and eval_exp ctx exp : exp OptMonad.m =
                 let en = NumE (`Nat (Z.of_int i)) $$ id.at % (NumT `NatT $ id.at) in
                 VContext.add_varid ctx' id en
               )
-            in eval_exp ctx'' e1
+            in eval_exp ~full ctx'' e1
           ) (0 -- n)
           in
           ListE e1s' $> exp |> return
@@ -440,13 +455,13 @@ and eval_exp ctx exp : exp OptMonad.m =
       | ListN _ -> error_eval "Iterated expression" exp None
       )
   | ProjE (e1, i) ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full ctx e1 in
     (match e1'.it with
     | TupE es -> List.nth es i |> return
     | _ -> error_eval "Tuple projection expression" exp None
     )
   | UncaseE (e1, mixop) ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full ctx e1 in
     (match e1'.it with
     | CaseE (mixop', e11') when Il.Eq.eq_mixop mixop mixop' -> return e11'
     | _ -> error_eval "Constructor unwrapping expression" exp
@@ -454,29 +469,29 @@ and eval_exp ctx exp : exp OptMonad.m =
     )
   | OptE oe1 -> let* oe1' = opt_mapM (eval_exp ctx) oe1 in OptE oe1' $> exp |> return
   | TheE e1 ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full ctx e1 in
     (match e1'.it with
     | OptE (Some e11) -> return e11
     | _ -> error_eval "THE expression" exp None
     )
-  | ListE es -> let* es' = mapM (eval_exp ctx) es in ListE es' $> exp |> return
+  | ListE es -> let* es' = mapM (eval_exp ~full ctx) es in ListE es' $> exp |> return
   | LiftE e1 ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full ctx e1 in
     (match e1'.it with
     | OptE None -> ListE []
     | OptE (Some e11') -> ListE [e11']
     | _ -> error_eval "Option lifting expression" exp None
     ) $> exp |> return
   | CatE (e1, e2) ->
-    let* e1' = eval_exp ctx e1 in
-    let* e2' = eval_exp ctx e2 in
+    let* e1' = eval_exp ~full ctx e1 in
+    let* e2' = eval_exp ~full ctx e2 in
     (match e1'.it, e2'.it with
     | ListE es1, ListE es2 -> ListE (es1 @ es2)
     | OptE None, OptE _ -> e2'.it
     | OptE _, OptE None -> e1'.it
     | _ -> error_eval "Sequence concatenation expression" exp None
     ) $> exp |> return
-  | CaseE (op, e1) -> let* e1' = eval_exp ctx e1 in CaseE (op, e1') $> exp |> return
+  | CaseE (op, e1) -> let* e1' = eval_exp ~full ctx e1 in CaseE (op, e1') $> exp |> return
   | CvtE (e1, _nt1, nt2) ->
     let* e1' = eval_exp ctx e1 in
     (match e1'.it with
@@ -489,11 +504,11 @@ and eval_exp ctx exp : exp OptMonad.m =
     )
   | SubE (e1, t1, t2) when Il.Eval.equiv_typ !il_env t1 t2 -> eval_exp ctx e1
   | SubE (e1, t1, t2) ->
-    let* e1' = eval_exp ctx e1 in
+    let* e1' = eval_exp ~full ctx e1 in
     let t1' = Il.Eval.reduce_typ !il_env t1 in
     let t2' = Il.Eval.reduce_typ !il_env t2 in
     (match e1'.it with
-    | SubE (e11', t11', _t12') -> eval_exp ctx (SubE (e11', t11', t2') $> exp)  (* FIXME(zilinc): I don't think this can ever happen. *)
+    | SubE (e11', t11', _t12') -> eval_exp ~full ctx (SubE (e11', t11', t2') $> exp)  (* FIXME(zilinc): I don't think this can ever happen. *)
     | CaseE (mixop, tup) ->
       let tcs = as_variant_typ !il_env t2' in
       (match List.find_map (fun (mixop', _, _) -> if Il.Eq.eq_mixop mixop mixop' then Some mixop' else None) tcs with
@@ -514,7 +529,7 @@ and eval_exp ctx exp : exp OptMonad.m =
             let* e2I' = eval_exp ctx (Il.Subst.subst_exp s2 e2I) in
             let* s1' = try Il.Eval.match_exp !il_env s1 eI e1I' |> opt_lift with Il.Eval.Irred -> fail () in
             let* s2' = try Il.Eval.match_exp !il_env s2 eI e2I' |> opt_lift with Il.Eval.Irred -> fail () in
-            let* eI' = eval_exp ctx (SubE (eI, t1I', t2I') $$ eI.at % t2I') in
+            let* eI' = eval_exp ~full ctx (SubE (eI, t1I', t2I') $$ eI.at % t2I') in
             return (s1', s2', eI'::res')
           ) (Il.Subst.empty, Il.Subst.empty, []) (List.combine es' (List.combine ets1 ets2))
         in
@@ -540,7 +555,7 @@ and eval_iterexp ctx (iter, xes) : iterexp OptMonad.m =
   let* xes'' = mapM (fun (id, e) -> let* e' = eval_exp ctx e in return (id, e')) xes' in
   return (iter', xes'')
 
-and eval_expfield ctx (atom, e) : expfield OptMonad.m =
+and eval_expfield ?full:(full=true) ctx (atom, e) : expfield OptMonad.m =
   let* e' = eval_exp ctx e in return (atom, e')
 
 and eval_path ctx e p (f: exp -> path -> exp OptMonad.m) : exp OptMonad.m =
@@ -787,17 +802,15 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
   | [] -> fail_info "match_info" at ("No function clause matches the input arguments in function `" ^ fname ^ "`")
   | cl :: cls ->
     info "match_info" at ("Match the " ^ string_of_int nth ^ "-th clause of function `" ^ fname ^ "`\n" ^
-                          if nth = 1 then ("args: " ^ Lib.String.shorten (string_of_args args)) else "");
+                          if nth = 1 then ("args: " ^ string_of_args args) else "");
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
     (* Add bindings to [il_env]. *)
     let _ = Animate.env_of_binds binds il_env in
     assert_msg (List.length pargs = List.length args)
       (sprintf "Function `%s`%s (%d) but got arguments %s (%d)" fname
-        (string_of_args pargs |> Lib.String.shorten)
-        (List.length pargs)
-        (string_of_args args  |> Lib.String.shorten)
-        (List.length args));
+        (string_of_args pargs) (List.length pargs)
+        (string_of_args args ) (List.length args ));
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
@@ -819,47 +832,167 @@ and eval_func name func_def args : exp OptMonad.m =
 
 
 and call_func name args : exp OptMonad.m =
-  let builtin_name, is_builtin =
-    match Il.Env.find_func_hint !il_env name "builtin" with
-    | None -> (name, false)
-    | Some hint ->
-      match hint.hintexp.it with
-      | SeqE []     -> (name , true)  (* hint(builtin) *)
-      | TextE fname -> (fname, true)  (* hint(builtin "g") *)
-      | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
-  in
-  match Def.find_dl_func_def name !dl with
+  time ("Calling `" ^ name ^ "`") (uncurry call_func') (name, args)
+
+and call_func' name args =
+  info "call" no ("call_func " ^ name);
+  match name with
   (* Hardcoded functions *)
-  | _ when name = "Step"      -> step      args
-  | _ when name = "Step_pure" -> step_pure args
-  | _ when name = "Step_read" -> step_read args
-  (* Regular function definition. *)
-  | Some fdef when not is_builtin -> eval_func name fdef args
-  (* Numerics *)
-  | Some { it = (_, _, _, [], _); _ } when is_builtin ->
-    (* TODO(zilinc): This is actually wrong. We need to do it all in IL. *)
-    if I.Numerics.mem builtin_name then
-      Numerics.call_numerics builtin_name args |> return
-    else
-      error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
-  | _ when is_builtin ->
-    error no (sprintf "Numeric function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
-  (* Relation *)
-  (* There may be function definitions in DL, but we ignore them and use the hardcoded rules. *)
-  | _ when relation_mem name -> call_rule name args |> return
-  | None -> error no (sprintf "There is no function named `%s`." name)
+  | "Steps" -> call_func "steps" args
+  | "Step"  -> call_func "step"  args
+  (* Others *)
+  | _ ->
+    let builtin_name, is_builtin =
+      match Il.Env.find_func_hint !il_env name "builtin" with
+      | None -> (name, false)
+      | Some hint ->
+        match hint.hintexp.it with
+        | SeqE []     -> (name , true)  (* hint(builtin) *)
+        | TextE fname -> (fname, true)  (* hint(builtin "g") *)
+        | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
+    in
+    (match Def.find_dl_func_def name !dl with
+    (* Regular function definition. *)
+    | Some fdef when not is_builtin -> eval_func name fdef args
+    (* Builtins and numerics *)
+    | Some { it = (_, _, _, [], _); at; _ } when is_builtin ->
+      if Numerics.mem builtin_name then
+        Numerics.call_numerics builtin_name args |> return
+      else if builtins_mem builtin_name then
+        call_builtins builtin_name args
+      else
+        error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
+    | _ when is_builtin ->
+      error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
+    (* Relation *)
+    (* There may be function definitions in DL, but we ignore them and use the hardcoded rules. *)
+    | _ when relation_mem name -> call_rule name args
+    | None -> error no (sprintf "There is no function named `%s`." name)
+    )
+
+(* Built-in functions (meta.spectec) *)
+
+
+and use_step : builtin = {
+  name = "use_step";
+  f =
+    function
+    | [instr] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, _, _) -> boolE (rel_name = "Step") |> return
+      | None -> boolE false |> return
+      )
+    | es -> error_values ("Args to $use_step") es
+}
+and use_step_pure = {
+  name = "use_step_pure";
+  f =
+    function
+    | [instr] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, _, _) -> boolE (rel_name = "Step_pure") |> return
+      | None -> boolE false |> return
+      )
+    | es -> error_values ("Args to $use_step_pure") es
+}
+and use_step_read = {
+  name = "use_step_read";
+  f =
+    function
+    | [instr] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, _, _) -> boolE (rel_name = "Step_read") |> return
+      | None -> boolE false |> return
+      )
+    | es -> error_values ("Args to $use_step_read") es
+}
+and use_step_ctxt = {
+  name = "use_step_ctxt";
+  f =
+    function
+    | [instr] ->
+      let mixop, _ = match_caseE "instr" instr in
+      List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"] |> boolE |> return
+    | es -> error_values ("Args to $use_step_ctxt") es
+}
+
+
+and dispatch_step = {
+  name = "dispatch_step";
+  f =
+    function
+    | [instr; arg] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, rule_name, _) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [expA arg]
+      | _ -> error instr.at ("No $Step rule for instr" ^ string_of_exp instr)
+      )
+    | es -> error_values ("Args to $dispatch_step") es
+}
+and dispatch_step_pure = {
+  name = "dispatch_step_pure";
+  f =
+    function
+    | [instr; arg] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [expA arg]
+      | _ -> error instr.at ("No $Step_pure rule for instr" ^ string_of_exp instr)
+      )
+    | es -> error_values ("Args to $dispatch_step_pure") es
+}
+and dispatch_step_read = {
+  name = "dispatch_step_read";
+  f =
+    function
+    | [instr; arg] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [expA arg]
+      | _ -> error instr.at ("No $Step_read rule for instr" ^ string_of_exp instr)
+      )
+    | es -> error_values ("Args to $dispatch_step_read") es
+}
+
+and step_read_throw_ref_handler = {
+  name = "Step_read_throw_ref_handler";
+  f =
+    function
+    | [arg] -> call_func "Step_read/throw_ref" [expA arg]
+}
+
+and builtin_list : builtin list = [
+  use_step; use_step_pure; use_step_read; use_step_ctxt;
+  dispatch_step; dispatch_step_pure; dispatch_step_read;
+  step_read_throw_ref_handler
+  ]
+
+and call_builtins fname args : exp OptMonad.m =
+  match List.find_opt (fun numerics -> numerics.name = fname) builtin_list with
+  | Some builtin ->
+    let args' = List.map (fun a -> match a.it with
+    | ExpA e -> e
+    | _ -> raise (Failure ("Wrong argument to builtin function " ^ fname ^ ": " ^ string_of_arg a))
+    ) args in
+    builtin.f args'
+  | None -> raise (Failure ("Unknown builtin: " ^ fname))
+
+and builtins_mem fname =
+  List.exists (fun builtin -> builtin.name = fname) builtin_list
 
 
 (* Hard-coded relations *)
 
-and call_rule name (args: arg list) : exp =
+and call_rule name (args: arg list) : exp OptMonad.m =
   let nargs = List.length args in
   match name with
-  | "Ref_ok"        when nargs = 2 -> ref_ok        (List.nth args 0) (List.nth args 1)
-  | "Module_ok"     when nargs = 1 -> module_ok     (List.nth args 0)
-  | "Externaddr_ok" when nargs = 3 -> externaddr_ok (List.nth args 0) (List.nth args 1) (List.nth args 2)
-  | "Val_ok"        when nargs = 3 -> val_ok        (List.nth args 0) (List.nth args 1) (List.nth args 2)
-  | "Steps"         when nargs = 1 -> steps         (List.nth args 0)
+  | "Ref_ok"        when nargs = 2 -> ref_ok        (List.nth args 0) (List.nth args 1) |> return
+  | "Module_ok"     when nargs = 1 -> module_ok     (List.nth args 0)                   |> return
+  | "Externaddr_ok" when nargs = 3 -> externaddr_ok (List.nth args 0) (List.nth args 1) (List.nth args 2) |> return
+  | "Val_ok"        when nargs = 3 -> val_ok        (List.nth args 0) (List.nth args 1) (List.nth args 2) |> return
   | _ -> error no ("Rule `" ^ name ^ "` has the wrong number (" ^ string_of_int nargs ^ ") of arguments.")
 
 
@@ -976,6 +1109,7 @@ let expand = function
 
 
 (* $Steps : config -> config *)
+(*
 and steps arg : exp =
   let instr_ops = as_variant_typ !il_env (t_var "instr") |> List.map (fun (mixop, _, _) -> mixop) in
   let val_ops   = as_variant_typ !il_env (t_var "val")   |> List.map (fun (mixop, _, _) -> mixop) in
@@ -1064,21 +1198,10 @@ and steps arg : exp =
         | None -> conf  (* Steps/refl *)
         )
       )
-
-and step args : exp OptMonad.m = todo ""
-and step_pure args : exp OptMonad.m = todo ""
-and step_read args : exp OptMonad.m = todo ""
-
-and step' conf : exp = todo "step"
-
-and step_pure' instrs : exp = todo "step_pure"
-
-and step_read' conf : exp = todo "step_read"
-
+*)
 
 and relation_mem name =
   List.mem name ["Ref_ok"; "Module_ok"; "Externaddr_ok"; "Val_ok"; "Steps"]
-
 
 
 (* Wasm interpreter entry *)
@@ -1088,7 +1211,9 @@ let instantiate (args: arg list) : exp =
   | Some v -> v
   | None -> raise (Failure "`instantiate` failed to run.")
 
-let invoke (args: arg list) : exp = 
-  match call_func "invoke" args |> run_opt with
-  | Some v -> v |> expA |> steps
+let invoke (args: arg list) : exp =
+  match (let* r = call_func "invoke" args in
+         call_func "steps" [expA r]) |> run_opt
+  with
+  | Some r' -> r'
   | None -> raise (Failure "`invoke` failed to run.")

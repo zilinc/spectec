@@ -370,13 +370,20 @@ let () =
 
     | Animate ->
       log "Translating to DL and animate...";
+      let pre_anim = Sys.time () in
       let (env, dl) = Backend_animation.Main_animate.run il !print_dl in
-      log "DL Validating...";
+      let post_anim = Sys.time () in
+      log (string_of_float (post_anim -. pre_anim));
+      log "DL Validating... ";
       Backend_animation.Valid.valid dl;
+      let post_val = Sys.time () in
+      log (string_of_float (post_val -. post_anim));
       (match !new_interpreter_args with
       | Some args ->
         log "Interpreting...";
-        Backend_animation.Main_interpret.run env dl args
+        Backend_animation.Main_interpret.run env dl args;
+        let post_interp = Sys.time () in
+        log (string_of_float (post_interp -. post_val))
       | None -> ()
       )
     );
