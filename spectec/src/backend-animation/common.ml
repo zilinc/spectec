@@ -1,3 +1,5 @@
+let typ_infers = []
+let typ_checks = []
 
 let step_relids = ["Step"; "Step_pure"; "Step_read"]
 

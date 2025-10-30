@@ -840,9 +840,14 @@ and call_func name args : exp OptMonad.m =
 and call_func' name args =
   info "call" no ("call_func " ^ name);
   match name with
-  (* Hardcoded functions *)
-  | "Steps" -> call_func "steps" args
-  | "Step"  -> call_func "step"  args
+  (* Hardcoded functions defined in meta.spectec *)
+  | "Steps"  -> call_func "steps"      args
+  | "Step"   -> call_func "step"       args
+  (* Hardcoded functions defined in the compiler. *)
+  | "Module_ok"     -> module_ok     args |> return
+  | "Externaddr_ok" -> externaddr_ok args |> return
+  | "Ref_ok"        -> ref_ok        args |> return
+  | "Val_ok"        -> val_ok        args |> return
   (* Others *)
   | _ ->
     let builtin_name, is_builtin =
@@ -867,9 +872,6 @@ and call_func' name args =
         error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
     | _ when is_builtin ->
       error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
-    (* Relation *)
-    (* There may be function definitions in DL, but we ignore them and use the hardcoded rules. *)
-    | _ when relation_mem name -> call_rule name args
     | None -> error no (sprintf "There is no function named `%s`." name)
     )
 
@@ -989,82 +991,23 @@ and builtins_mem fname =
 
 (* Hard-coded relations *)
 
-and call_rule name (args: arg list) : exp OptMonad.m =
-  let nargs = List.length args in
-  match name with
-  | "Ref_ok"        when nargs = 2 -> ref_ok        (List.nth args 0) (List.nth args 1) |> return
-  | "Module_ok"     when nargs = 1 -> module_ok     (List.nth args 0)                   |> return
-  | "Externaddr_ok" when nargs = 3 -> externaddr_ok (List.nth args 0) (List.nth args 1) (List.nth args 2) |> return
-  | "Val_ok"        when nargs = 3 -> val_ok        (List.nth args 0) (List.nth args 1) (List.nth args 2) |> return
-  | _ -> error no ("Rule `" ^ name ^ "` has the wrong number (" ^ string_of_int nargs ^ ") of arguments.")
-
-
-(* $Ref_ok : store -> ref -> reftype *)
-and ref_ok s ref : exp = todo "$Ref_ok"
-(*
-  (* TODO: some / none *)
-  let null = some "NULL" in
-  let nonull = none "NULL" in
-  let none = nullary "NONE" in
-  let nofunc = nullary "NOFUNC" in
-  let noexn = nullary "NOEXN" in
-  let noextern = nullary "NOEXTERN" in
-
-  let match_heaptype v1 v2 =
-    let ht1 = Construct.al_to_heaptype v1 in
-    let ht2 = Construct.al_to_heaptype v2 in
-    Match.match_reftype [] (Types.Null, ht1) (Types.Null, ht2)
-  in
-
-  match ref with
-  (* null *)
-  | [CaseV ("REF.NULL", [ ht ]) as v] ->
-    if match_heaptype none ht then
-      CaseV ("REF", [ null; none])
-    else if match_heaptype nofunc ht then
-      CaseV ("REF", [ null; nofunc])
-    else if match_heaptype noexn ht then
-      CaseV ("REF", [ null; noexn])
-    else if match_heaptype noextern ht then
-      CaseV ("REF", [ null; noextern])
-    else
-      Numerics.error_typ_value "$Reftype" "null reference" v
-  (* i31 *)
-  | [CaseV ("REF.I31_NUM", [ _ ])] -> CaseV ("REF", [ nonull; nullary "I31"])
-  (* host *)
-  | [CaseV ("REF.HOST_ADDR", [ _ ])] -> CaseV ("REF", [ nonull; nullary "ANY"])
-  (* exception *)
-  | [CaseV ("REF.EXN_ADDR", [ _ ])] -> CaseV ("REF", [ nonull; nullary "EXN"])
-  (* array/func/struct addr *)
-  | [CaseV (name, [ NumV (`Nat i) ])]
-  when String.starts_with ~prefix:"REF." name && String.ends_with ~suffix:"_ADDR" name ->
-    let field_name = String.sub name 4 (String.length name - 9) in
-    let object_ = listv_nth (Ds.Store.access (field_name ^ "S")) (Z.to_int i) in
-    let dt = strv_access "TYPE" object_ in
-    CaseV ("REF", [ nonull; dt])
-  (* extern *)
-  (* TODO: check null *)
-  | [CaseV ("REF.EXTERN", [ _ ])] -> CaseV ("REF", [ nonull; nullary "EXTERN"])
-  | vs -> Numerics.error_values "$Reftype" vs
-*)
 
 (* $Module_ok : module -> moduletype *)
-and module_ok (module_: arg) : exp =
-  match module_.it with
-  | ExpA m ->
-    let module_' = il_to_module m in
+and module_ok args : exp =
+  match args with
+  | [ {it = ExpA module_; _} ] ->
+    let module_' = il_to_module module_ in
     let ModuleT (its, ets) = RI.Valid.check_module module_' in
     let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> il_of_externtype xt) its in
     let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> il_of_externtype xt) ets in
     mk_case' "moduletype" [[];["->"];[]] [ listE (t_star "externtype") importtypes; listE (t_star "externtype") exporttypes ]
-  | _ -> error module_.at ("Wrong argument sort to function $Module_ok. Got: " ^ string_of_arg module_)
-
+  | _ -> error no ("Wrong number/type of arguments to $Module_ok.")
 
 (* $Externaddr_ok : store -> externaddr -> externtype -> bool *)
-and externaddr_ok s eaddr etype =
-  match s.it, eaddr.it, etype.it with
-  | ExpA s', ExpA eaddr', ExpA etype' ->
-    (match match_caseE "externaddr" eaddr' with
+and externaddr_ok args =
+  match List.map it args with
+  | [ ExpA s; ExpA eaddr; ExpA etype ] ->
+    (match match_caseE "externaddr" eaddr with
     | [[name];[]], [{it = NumE (`Nat z); _}] ->
       print_endline ("@@@ name = " ^ name);
       let addr = Z.to_int z in
@@ -1077,25 +1020,24 @@ and externaddr_ok s eaddr etype =
         |> fun type_ -> mk_case' "externtype" [[name];[]] [type_]
         |> Construct.il_to_externtype
       in
-      let externtype = Construct.il_to_externtype etype' in
+      let externtype = Construct.il_to_externtype etype in
       boolE (RI.Match.match_externtype [] externaddr_type externtype)
-    | _ -> error_value "$Externaddr_ok (externaddr)" eaddr'
+    | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
     )
-  | _ -> error eaddr.at ("Non-expression argument to function $Externaddr_ok.")
-
+  | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
 
 (* $Val_ok : store -> val -> valtype -> bool *)
-and val_ok s val_ valtype = boolE true  (* TODO(zilinc) *)
-(*
-function
-  | [ v; t ] ->
-    let value = Construct.al_to_value v in
-    let valtype = Construct.al_to_valtype t in
-    (try
-      boolV (Match.match_valtype [] (Value.type_of_value value) valtype)
-    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ())))
-  | vs -> Numerics.error_values "$Val_ok" vs
-*)
+and val_ok args =
+  match List.map it args with
+  | [ ExpA s; ExpA val_; ExpA valtype ] ->
+    let value   = Construct.il_to_value   val_    in
+    let valtype = Construct.il_to_valtype valtype in
+    boolE (RI.Match.match_valtype [] (RI.Value.type_of_value value) valtype)
+  | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
+
+(* $Ref_ok : store -> ref -> reftype *)
+and ref_ok args = todo "ref_ok"
+
 
 (*
 (* Rule `Expand` has been compiled to `$expanddt` in animation.ml *)
@@ -1109,10 +1051,6 @@ let expand = function
     with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ())))
   | vs -> Numerics.error_values "$Expand" vs
 *)
-
-
-and relation_mem name =
-  List.mem name ["Ref_ok"; "Module_ok"; "Externaddr_ok"; "Val_ok"; "Steps"]
 
 
 (* Wasm interpreter entry *)
