@@ -24,8 +24,8 @@ let il_of_spectest () : exp =
     let code = mk_nullary' "instr" (String.uppercase_ascii name) in  (* instr *)
     let param_types = List.map (mk_nullary' "numtype") ptypes  (* list(valtype) *) in
     let comptype = mk_case' "comptype" [["FUNC"];["->"];[]] [
-      listE (t_var "resulttype") param_types;
-      listE (t_var "resulttype") []
+      Construct.il_of_list' (t_var "resulttype") param_types;
+      Construct.il_of_list' (t_var "resulttype") []
     ] in
     let subtype = mk_case' "subtype" [["SUB"];[];[];[]] [
       optE (t_var "fin") (Some (mk_nullary' "" "FINAL"));
@@ -33,7 +33,7 @@ let il_of_spectest () : exp =
       comptype
     ] in
     let rectype = mk_case' "rectype" [["REC"];[]] [
-      listE (t_app "list" [typA (t_var "subtype")]) [subtype]
+      Construct.il_of_list' (t_app "list" [typA (t_var "subtype")]) [subtype]
     ] in
     let deftype = mk_case' "deftype" [["_DEF"];[];[]] [
       rectype; mk_nat 0

@@ -1,6 +1,7 @@
 open Il_util
 open Construct
 open Def
+open State
 open Util
 open Lib.Time
 open Lib.Fun
@@ -1062,26 +1063,26 @@ and module_ok (module_: arg) : exp =
 (* $Externaddr_ok : store -> externaddr -> externtype -> bool *)
 and externaddr_ok s eaddr etype =
   match s.it, eaddr.it, etype.it with
-  | ExpA s', ExpA eaddr', ExpA etype' -> boolE true  (* TODO(zilinc) *)
-  | _ -> error eaddr.at ("Non-expression argument to function $Externaddr_ok.")
-(* match eaddr with
-  | [ CaseV (name, [ NumV (`Nat z) ]); t ] ->
-    (try
+  | ExpA s', ExpA eaddr', ExpA etype' ->
+    (match match_caseE "externaddr" eaddr' with
+    | [[name];[]], [{it = NumE (`Nat z); _}] ->
+      print_endline ("@@@ name = " ^ name);
       let addr = Z.to_int z in
       let externaddr_type =
         name^"S"
         |> Store.access
-        |> unwrap_listv_to_array
-        |> fun arr -> Array.get arr addr
-        |> strv_access "TYPE"
-        |> fun type_ -> CaseV (name, [type_])
-        |> Construct.al_to_externtype
+        |> elts_of_list
+        |> Fun.flip List.nth addr
+        |> find_str_field "TYPE"
+        |> fun type_ -> mk_case' "externtype" [[name];[]] [type_]
+        |> Construct.il_to_externtype
       in
-      let externtype = Construct.al_to_externtype t in
-      boolV (Match.match_externtype [] externaddr_type externtype)
-    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ())))
-  | vs -> Numerics.error_values "$Externaddr_ok" vs
-*)
+      let externtype = Construct.il_to_externtype etype' in
+      boolE (RI.Match.match_externtype [] externaddr_type externtype)
+    | _ -> error_value "$Externaddr_ok (externaddr)" eaddr'
+    )
+  | _ -> error eaddr.at ("Non-expression argument to function $Externaddr_ok.")
+
 
 (* $Val_ok : store -> val -> valtype -> bool *)
 and val_ok s val_ valtype = boolE true  (* TODO(zilinc) *)

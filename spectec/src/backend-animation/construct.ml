@@ -995,6 +995,7 @@ let il_to_opt (f: exp -> 'a) exp : 'a option = unwrap_opt exp |> Option.map f
 
 let il_to_list (f: exp -> 'a) exp : 'a list = elts_of_list exp |> List.map f
 
+(* For `syntax list(x)`. *)
 let il_to_list' (f: exp -> 'a) exp : 'a list =
   match match_caseE "list" exp with
   | [[];[]], [l] -> il_to_list f l
