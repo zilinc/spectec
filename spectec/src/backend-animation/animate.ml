@@ -1326,41 +1326,56 @@ let lift_otherwise_prem prems =
   let (ow_pr, rest) = List.partition is_otherwise prems in
   ow_pr @ rest
 
+let animate_clause_no_arg id envr (c: clause) : func_clause =
+  let lenvr = ref !envr in
+  let DefD (binds, args, exp, prems) = c.it in
+  let lenvr = env_of_binds binds lenvr in
+  let ins = (free_list (free_arg false) args).varid in
+  let ous = (free_exp false exp).varid in
+  let prems' = animate_prems lenvr c.at ins ous prems |> lift_otherwise_prem in
+  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
+  let binds'' = sort_binds id binds' in
+  (DefD (binds'', args, exp, prems')) $ c.at
+
+let animate_clause id envr (c: clause) : func_clause =
+  let lenvr = ref !envr in
+  let DefD (binds, args, exp, prems) = c.it in
+  let lenvr = env_of_binds binds lenvr in
+  let n_args = List.length args in
+  let blob = List.mapi (fun i arg -> match arg.it with
+    | ExpA exp' ->
+      begin match new_bind_exp lenvr (Some ("a" ^ string_of_int i)) exp' None `Lhs with
+      | (_lenvr, v, ve, Some prem_v) ->
+        let fv_exp' = (free_exp false exp').varid in
+        (ExpA ve $ v.at, Some prem_v, Some v, fv_exp')
+      | (_lenvr, v, ve, None) -> (arg, None, Some v, Set.empty)
+      end
+    | _ -> (arg, None, None, Set.empty)
+  ) args
+  in
+  let (args', o_prem_args, ovs, fv_args) = Lib.List.unzip4 blob in
+  let prems_args = List.filter_map Fun.id o_prem_args in
+  let vs = List.filter_map Fun.id ovs in
+  let ins = (free_list free_varid vs).varid in
+  let ous = (free_exp false exp).varid in
+  let prems' = animate_prems lenvr c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
+  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
+  let binds'' = sort_binds id binds' in
+  (DefD (binds'', args', exp, prems')) $ c.at
+
+
 (* The variant that doesn't try to animate the [lhs] of the rule, as we know that
    it's very difficult.
 *)
-let animate_rule_red_no_arg envr rule : clause' =
-  let lenvr = ref !envr in
+let animate_rule_red_no_arg envr rule : func_clause =
   let (id, binds, lhs, rhs, prems) = rule.it in
-  let lenvr = env_of_binds binds lenvr in
-  let lhs_vars = (free_exp false lhs).varid in
-  let rhs_vars = (free_exp false rhs).varid in
-  (* Input and output variables in the conclusion *)
-  let in_vars  = lhs_vars in
-  let out_vars = rhs_vars in
-  let prems' = animate_prems lenvr rule.at in_vars out_vars prems in
-  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
-  let binds'' = sort_binds id binds' in
-  DefD (binds'', [ExpA lhs $ lhs.at], rhs, prems')
+  let clause = DefD (binds, [ExpA lhs $ lhs.at], rhs, prems) $ rule.at in
+  animate_clause_no_arg id envr clause
 
-
-(* TODO(zilinc): First reduce to func and then animate.
-   Currently it only converts [lhs] to one function argument.
-*)
-let animate_rule_red envr rule : clause' =
-  let lenvr = ref !envr in
+let animate_rule_red envr rule : func_clause =
   let (id, binds, lhs, rhs, prems) = rule.it in
-  let lenvr = env_of_binds binds lenvr in
-  let (lenvr', v, ve, oprem_v) = new_bind_exp lenvr (Some "lhs") lhs None `Lhs in
-  let rhs_vars = (free_exp false rhs).varid in
-  (* Input and output variables in the conclusion *)
-  let in_vars = (free_varid v).varid in
-  let out_vars = rhs_vars in
-  let prems' = animate_prems lenvr' rule.at in_vars out_vars (Option.to_list oprem_v @ prems) in
-  let binds' = binds_of_env (Il.Env.env_diff !lenvr' !envr) in
-  let binds'' = sort_binds id binds' in
-  DefD (binds'', [ExpA ve $ ve.at], rhs, prems')
-
+  let clause = DefD (binds, [ExpA lhs $ lhs.at], rhs, prems) $ rule.at in
+  animate_clause id envr clause
 
 
 (* Many $Step rules are dependent in their arguments. For example,
@@ -1421,7 +1436,7 @@ let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * 
     ([ExpB (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
   | _ -> [], in_stack, out_stack, prems
 
-let transform_step_rule envr (r: rule_clause) : clause' =
+let transform_step_rule envr (r: rule_clause) : func_clause =
   let (rule_id, binds, lhs, rhs, prems) = r.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
@@ -1434,12 +1449,12 @@ let transform_step_rule envr (r: rule_clause) : clause' =
   let rhs' = CaseE (out_mixop, out_tup') $> rhs in
   animate_rule_red envr ((rule_id, binds @ binds', lhs', rhs', prems') $> r)
 
-let transform_step_pure_rule envr (r: rule_clause) : clause' =
+let transform_step_pure_rule envr (r: rule_clause) : func_clause =
   let (rule_id, binds, in_stack, out_stack, prems) = r.it in
   let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   animate_rule_red envr ((rule_id, binds @ binds', in_stack', out_stack', prems') $> r)
 
-let transform_step_read_rule envr (r: rule_clause) : clause' =
+let transform_step_read_rule envr (r: rule_clause) : func_clause =
   let (rule_id, binds, lhs, out_stack, prems) = r.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
@@ -1447,63 +1462,6 @@ let transform_step_read_rule envr (r: rule_clause) : clause' =
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
   animate_rule_red envr ((rule_id, binds @ binds', lhs', out_stack', prems') $> r)
-
-
-let animate_rule envr at rel_id rule_name (r: rule_clause) : func_clause =
-  let (rule_id, _, _, _, _) = r.it in
-  let clause' =
-    if is_unanimatable "rule_lhs" rule_id.it rel_id then
-      animate_rule_red_no_arg envr r
-    else if is_step_rule rel_id then
-      transform_step_rule envr r
-    else if is_step_pure_rule rel_id then
-      transform_step_pure_rule envr r
-    else if is_step_read_rule rel_id then
-      transform_step_read_rule envr r
-    else
-      animate_rule_red envr r
-  in
-  clause' $ at
-
-let animate_rules envr at rel_id rule_name rs = List.map (animate_rule envr at rel_id rule_name) rs
-
-let animate_clause_no_arg id envr (c: clause) : func_clause =
-  let lenvr = ref !envr in
-  let DefD (binds, args, exp, prems) = c.it in
-  let lenvr = env_of_binds binds lenvr in
-  let ins = (free_list (free_arg false) args).varid in
-  let ous = (free_exp false exp).varid in
-  let prems' = animate_prems lenvr c.at ins ous prems |> lift_otherwise_prem in
-  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
-  let binds'' = sort_binds id binds' in
-  (DefD (binds'', args, exp, prems')) $ c.at
-
-let animate_clause id envr (c: clause) : func_clause =
-  let lenvr = ref !envr in
-  let DefD (binds, args, exp, prems) = c.it in
-  let lenvr = env_of_binds binds lenvr in
-  let n_args = List.length args in
-  let blob = List.mapi (fun i arg -> match arg.it with
-    | ExpA exp' ->
-      begin match new_bind_exp lenvr (Some ("a" ^ string_of_int i)) exp' None `Lhs with
-      | (_lenvr, v, ve, Some prem_v) ->
-        let fv_exp' = (free_exp false exp').varid in
-        (ExpA ve $ v.at, Some prem_v, Some v, fv_exp')
-      | (_lenvr, v, ve, None) -> (arg, None, Some v, Set.empty)
-      end
-    | _ -> (arg, None, None, Set.empty)
-  ) args
-  in
-  let (args', o_prem_args, ovs, fv_args) = Lib.List.unzip4 blob in
-  let prems_args = List.filter_map Fun.id o_prem_args in
-  let vs = List.filter_map Fun.id ovs in
-  let ins = (free_list free_varid vs).varid in
-  let ous = (free_exp false exp).varid in
-  let prems' = animate_prems lenvr c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
-  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
-  let binds'' = sort_binds id binds' in
-  (DefD (binds'', args', exp, prems')) $ c.at
-
 
 (* $step_ctxt: config -> config *)
 let transform_step_ctxt_clause id envr (c: clause) : func_clause =
@@ -1518,6 +1476,23 @@ let transform_step_ctxt_clause id envr (c: clause) : func_clause =
   let out_tup' = TupE [out_z; out_stack'] $> out_tup in
   let rhs' = CaseE (out_mixop, out_tup') $> rhs in
   animate_clause id envr (DefD (binds @ binds', [expA lhs'], rhs', prems) $> c)
+
+
+let animate_rule envr at rel_id rule_name (r: rule_clause) : func_clause =
+  let (rule_id, _, _, _, _) = r.it in
+  if is_unanimatable "rule_lhs" rule_id.it rel_id then
+    animate_rule_red_no_arg envr r
+  else if is_step_rule rel_id then
+    transform_step_rule envr r
+  else if is_step_pure_rule rel_id then
+    transform_step_pure_rule envr r
+  else if is_step_read_rule rel_id then
+    transform_step_read_rule envr r
+  else
+    animate_rule_red envr r
+
+let animate_rules envr at rel_id rule_name rs = List.map (animate_rule envr at rel_id rule_name) rs
+
 
 
 let animate_rule_def envr (rdef: rule_def) : func_def =
