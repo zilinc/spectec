@@ -548,8 +548,8 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     let fncall = CallE (id, [expA arg]) $$ at % res.note in
     (res, fncall)
   (* Predicate rules. *)
-  | _, TupE tup when List.mem id.it ["Externtype_sub"; "Val_ok"; "Externaddr_ok"] ->
-    let fncall = CallE (id, List.map expA tup) $$ at % (BoolT $ at) in
+  | _, TupE [s; obj; typ] when List.mem id.it ["Externtype_sub"; "Val_ok"; "Externaddr_ok"] ->
+    let fncall = CallE (id, [expA s; expA obj; expA typ]) $$ at % (BoolT $ at) in
     let res = boolE true in
     (fncall, res)
   (* Other rules, mostly from validation:
@@ -560,7 +560,6 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   *)
   | _, TupE es when List.length es >= 2 ->
     let lhss, rhs = Lib.List.split_last es in
-    let expA (e: exp) = ExpA e $ e.at in
     let fncall = CallE (id, List.map expA lhss) $$ at % rhs.note in
     (rhs, fncall)
   | _ -> error at ("Unknown rule form: " ^ id.it ^ "(" ^ string_of_region id.at ^")")
@@ -1344,6 +1343,10 @@ let animate_rule_red_no_arg envr rule : clause' =
   let binds'' = sort_binds id binds' in
   DefD (binds'', [ExpA lhs $ lhs.at], rhs, prems')
 
+
+(* TODO(zilinc): First reduce to func and then animate.
+   Currently it only converts [lhs] to one function argument.
+*)
 let animate_rule_red envr rule : clause' =
   let lenvr = ref !envr in
   let (id, binds, lhs, rhs, prems) = rule.it in
@@ -1446,7 +1449,7 @@ let transform_step_read_rule envr (r: rule_clause) : clause' =
   animate_rule_red envr ((rule_id, binds @ binds', lhs', out_stack', prems') $> r)
 
 
-let animate_rule envr at rel_id rule_name (r: rule_clause) : clause =
+let animate_rule envr at rel_id rule_name (r: rule_clause) : func_clause =
   let (rule_id, _, _, _, _) = r.it in
   let clause' =
     if is_unanimatable "rule_lhs" rule_id.it rel_id then

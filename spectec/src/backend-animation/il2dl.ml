@@ -45,14 +45,22 @@ let error at msg = Util.Error.error at "IL -> DL" msg
 let il2dl_rule_clause rel_id rule : rule_clause =
   let RuleD (id, binds, _, exp, prems) = rule.it in
   match exp.it with
-  | TupE [ lhs; rhs ] when List.mem rel_id.it Common.step_relids
-  -> (id, binds, lhs, rhs, prems) $ rule.at
-  | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr"
-  -> let at1 = over_region [z1.at; lhs.at] in
-     let at2 = over_region [z2.at; rhs.at] in
-     let lhs' = mk_case' ~at:at1 "config" [[];[";"];[]] [z1; lhs] in
-     let rhs' = mk_case' ~at:at1 "config" [[];[";"];[]] [z2; rhs] in
-     (id, binds, lhs', rhs', prems) $ rule.at
+  | TupE [ lhs; rhs ] when List.mem rel_id.it Common.step_relids ->
+    (id, binds, lhs, rhs, prems) $ rule.at
+  | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr" ->
+    let at1 = over_region [z1.at; lhs.at] in
+    let at2 = over_region [z2.at; rhs.at] in
+    let lhs' = mk_case' ~at:at1 "config" [[];[";"];[]] [z1; lhs] in
+    let rhs' = mk_case' ~at:at1 "config" [[];[";"];[]] [z2; rhs] in
+    (id, binds, lhs', rhs', prems) $ rule.at
+  | TupE [ ctx; obj; typ ] when List.mem rel_id.it Common.typ_infers ->
+    let lhs' = TupE [ ctx; obj ] $$ exp.at
+               % (TupT [ (varE ~note:ctx.note "_", ctx.note)
+                       ; (varE ~note:obj.note "_", obj.note)
+                       ] $ exp.at) in
+    (id, binds, lhs', typ, prems) $ rule.at
+  | _ when List.mem rel_id.it Common.typ_checks ->
+    (id, binds, exp, boolE true, prems) $ rule.at
   | _ -> error exp.at ("Wrong exp form of reduction rule: [" ^ rel_id.it ^ "]" ^ Il.Print.string_of_exp exp)
 
 let il2dl_rule_def rule_name rel_id typ rules at : rule_def =
@@ -65,6 +73,10 @@ let il2dl_rule_def rule_name rel_id typ rules at : rule_def =
       let at1 = over_region [(fst et11).at; (snd et12).at] in
       let at2 = over_region [(fst et21).at; (snd et22).at] in
       t_var ~at:at1 "config", t_var ~at:at2 "config"
+    | TupT [ ctx; obj; (_, typ) ] when List.mem rel_id.it Common.typ_infers ->
+      TupT [ ctx; obj ] $ typ.at, typ
+    | _ when List.mem rel_id.it Common.typ_checks ->
+      typ, BoolT $ no
     | _ -> error at ("Invalid rule type: " ^ string_of_typ typ)
     )
   in

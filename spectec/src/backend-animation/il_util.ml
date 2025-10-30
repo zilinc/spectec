@@ -84,6 +84,11 @@ let elts_of_list lst : exp list =
   | ListE es -> es
   | _ -> error lst.at ("elts_of_list: Input expression is not a list: " ^ string_of_exp lst)
 
+let elts_of_tuple tup : exp list =
+  match tup.it with
+  | TupE es -> es
+  | _ -> error tup.at ("elts_of_tup: Input expression is not a tuple: " ^ string_of_exp tup)
+
 let args_of_case case : exp list =
   match case.it with
   | CaseE (_, tup) ->
