@@ -68,8 +68,8 @@ module Store = struct
       |> Record.add "STRUCTS" (listE (t_star "structinst" ) [])
       |> Record.add "ARRAYS"  (listE (t_star "arrayinst"  ) [])
       |> Record.add "EXNS"    (listE (t_star "exninst"    ) [])
-    ;
-    Ds.Store.init ()
+
+    (* Ds.Store.init () *)  (* NOTE: I don't think there's anything that depends on Ds. / zilinc *)
 
 
   let get () = mk_str "store" (List.map (fun (f, er) -> (f, !er)) !store)

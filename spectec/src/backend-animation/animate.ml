@@ -205,27 +205,31 @@ module AnimState = struct
 
   let get_prems : t -> prem list = fun t -> t.prems
   let put_prems : prem list -> t -> t = fun ps t -> { t with prems = ps }
-  let push_prems : prem -> t -> t = fun p t ->
+  let push_prem : prem -> t -> t = fun p t ->
     let ps = get_prems t in
     let ps' = p::ps in
     put_prems ps' t
-  let pop_prems : t -> (prem * t) = fun t ->
+  let push_prems : prem list -> t -> t = fun ps t ->
+    let ps'  = get_prems t in
+    let ps'' = ps @ ps' in
+    put_prems ps'' t
+  let pop_prem : t -> (prem * t) = fun t ->
     let ps = get_prems t in
     match ps with
     | [] -> error_np "no premise to pop from the stack."
     | p::ps' -> let t' = put_prems ps' t in (p, t')
-  let peek_prems : t -> prem = fun t ->
+  let peek_prem : t -> prem = fun t ->
     let ps = get_prems t in
     match ps with
     | [] -> error_np "no premise to peek from the stack."
     | p::_ -> p
-  let enqueue_prems : prem -> t -> t = fun p t ->
+  let enqueue_prem : prem -> t -> t = fun p t ->
     let ps = get_prems t in
     put_prems (ps @ [p]) t
 
   let get_prems' : t -> prem list = fun t -> t.prems'
   let put_prems' : prem list -> t -> t = fun ps t -> { t with prems' = ps }
-  let push_prems' : prem -> t -> t = fun p t ->
+  let push_prem' : prem -> t -> t = fun p t ->
     let ps = get_prems' t in
     let ps' = p::ps in
     put_prems' ps' t
@@ -543,12 +547,9 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     let res = mk_case' ~at:at "config" [[];[";"];[]] [z';rhs] in
     let fncall = CallE (id, [expA arg]) $$ at % res.note in
     (res, fncall)
-  | "Externaddr_ok", TupE [store; externaddr; externtype] ->
-    let fncall = CallE (id, [expA store; expA externaddr; expA externtype]) $$ at % (BoolT $ at) in
-    let res = boolE true in
-    (fncall, res)
-  | "Val_ok", TupE [store; val_; valtype] ->
-    let fncall = CallE (id, [expA store; expA val_; expA valtype]) $$ at % (BoolT $ at) in
+  (* Predicate rules. *)
+  | _, TupE tup when List.mem id.it ["Externtype_sub"; "Val_ok"; "Externaddr_ok"] ->
+    let fncall = CallE (id, List.map expA tup) $$ at % (BoolT $ at) in
     let res = boolE true in
     (fncall, res)
   (* Other rules, mostly from validation:
@@ -602,6 +603,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   | VarE v ->
     let* () = update (add_knowns (Set.singleton v.it)) in
     E.return [ LetPr (lhs, rhs, [v.it]) $ at ]
+  (* Treated as atomic. *)
+  (* | DotE (lhs', mixop) -> _  *)
   (* function call; invert it. *)
   | CallE (fid, args) when can_invert s ->
     let varid = fun s -> s.varid in
@@ -838,9 +841,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       end
     end
   | TupE es ->
-    (* Bind to a new variable, so that [rhs] doesn't need to be re-evaluated
-       again and again in the following projections.
-    *)
+    (* simp *)
     let prems = Fun.flip List.mapi es (fun i e ->
       let bool_t = BoolT $ e.at in
       let proj_rhs = ProjE (rhs, i) $$ rhs.at % e.note in
@@ -848,16 +849,13 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       info "case" rhs.at ("RHS " ^ string_of_exp rhs ^ "'s type is " ^ string_of_typ rhs.note);
       IfPr (CmpE (`EqOp, `BoolT, e, proj_rhs) $$ e.at % bool_t) $ at)
     in
-    (* We start an inner loop to animate the components of TupE. This is needed
+    (* Need to animate the components in a loop. This is needed
        if we have premises like `(... x ..., x) = (e1, e2)`, where the first
        component cannot be animated when `x` is unknown. By solving the second
        first, we turn the first into a check.
     *)
-    let* s' = get () in
-    let s_new = { (init ()) with prems; knowns = get_knowns s' } in
-    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
-    let* () = update (put_knowns (get_knowns s_new')) in
-    E.return prems'
+    let* () = update (push_prems prems) in
+    E.return []
   | CvtE (lhs', t1, t2) ->
     (* TODO(zilinc): Conversion is not checked. *)
     animate_exp_eq envr at lhs' (CvtE (rhs, t2, t1) $$ rhs.at % lhs'.note)
@@ -1050,16 +1048,15 @@ and animate_if_prem envr at exp : prem list E.m =
                                  "  ▹ e2 = " ^ string_of_exp e2 ^ "\n" ^
                                  "    unknowns: " ^ string_of_varset unknowns2))
   )
-  (* Break up conjunctions. We have to push the two conjuncts on the stack
+  (* simp: Break up conjunctions. We have to push the two conjuncts on the stack
      and hand over the control to the outer loops, because these two conjuncts
      may need to be animated in different iterations.
    *)
   | BinE (`AndOp, _, e1, e2) ->
-    (* This should be the only place that we manipulate the stack, because the conjuncts
+    (* This should be the few places where we manipulate the stack, because the conjuncts
        are totally independent of each other and can be flattened into the main loop.
      *)
-    let* () = update (push_prems (IfPr e2 $ e2.at) >>>
-                      push_prems (IfPr e1 $ e1.at)) in
+    let* () = update (push_prems [IfPr e2 $ e2.at; IfPr e1 $ e1.at]) in
     E.return []
   (* Membership or nondeterministic choice: e1 ∈ e2 *)
   | MemE (e1, e2) ->
@@ -1285,13 +1282,13 @@ and animate_prems' envr at : prem list E.m =
   | _ -> let ( let* ) = S.( >>= ) in
          E.exceptT (
            let* s = S.get () in
-           let (prem, s') = pop_prems s in
+           let (prem, s') = pop_prem s in
            let* () = S.put s' in
            let* r = animate_prem envr prem |> E.run_exceptT in
            match r with
            | Error e ->
              (* Recover from failure. NOTE: Need to also restore old known set. *)
-             let* () = S.update (push_prems' prem >>> set_failure e >>> put_knowns (get_knowns s')) in
+             let* () = S.update (push_prem' prem >>> set_failure e >>> put_knowns (get_knowns s')) in
              animate_prems' envr at |> E.run_exceptT
            | Ok prems -> E.run_exceptT (
                let ( let* ) = E.( >>= ) in
