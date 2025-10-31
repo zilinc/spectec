@@ -125,14 +125,16 @@ def $step_ctxt(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = z; instr_
 
 
 def $reduce(config) : config?
-def $reduce(s; f; instr*) = eps
-    -- if $find_first_instr(instr*) = (val*, eps, eps)
 def $reduce(s; f; instr*) = s'; f'; instr_2* instr_1'*
-    -- if $find_first_instr(instr*) = (val_1*, instr_1, instr_1'*)
-    -- if $dispatch_reduce(instr_1, s; f; val_1* instr_1) = s'; f'; instr_2*
+    -- if $find_first_instr(instr*) = (val*, instr_1, instr_1'*)
+    -- if $dispatch_reduce(instr_1, s; f; val* instr_1) = s'; f'; instr_2*
 def $reduce(s; f; instr*) = eps
-    -- if $find_first_instr(instr*) = (val_1*, instr_1, instr_1'*)
-    -- if $dispatch_reduce(instr_1, s; f; val_1* instr_1) = eps
+    -- otherwise
+;; def $reduce(s; f; instr*) = eps
+;;     -- if $find_first_instr(instr*) = (val*, eps, eps)
+;; def $reduce(s; f; instr*) = eps
+;;     -- if $find_first_instr(instr*) = (val*, instr_1, instr_1'*)
+;;     -- if $dispatch_reduce(instr_1, s; f; val* instr_1) = eps
 
 def $step(config) : config
 def $step(config) = config'  -- if $reduce(config) = config'
