@@ -505,6 +505,7 @@ and eval_exp ?full:(full=true) ctx exp : exp OptMonad.m =
     | _ -> error_eval "Numeric type conversion" exp (Some ("Not a numeric:" ^ string_of_exp e1))
     )
   | SubE (e1, t1, t2) when Il.Eval.equiv_typ !il_env t1 t2 -> eval_exp ctx e1
+  (* Pushes down the SubE node into the leaves of the value. *)
   | SubE (e1, t1, t2) ->
     let* e1' = eval_exp ~full ctx e1 in
     let t1' = Il.Eval.reduce_typ !il_env t1 in
@@ -841,8 +842,8 @@ and call_func' name args =
   info "call" no ("call_func " ^ name);
   match name with
   (* Hardcoded functions defined in meta.spectec *)
-  | "Steps"  -> call_func "steps"      args
-  | "Step"   -> call_func "step"       args
+  | "Steps"  -> call_func "steps"    args
+  | "Step"   -> call_func "step"     args
   (* Hardcoded functions defined in the compiler. *)
   | "Module_ok"     -> module_ok     args |> return
   | "Externaddr_ok" -> externaddr_ok args |> return

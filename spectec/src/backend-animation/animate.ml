@@ -671,7 +671,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
           else None
         ) xes |> Option.get in
         let* () = update (add_knowns (Set.singleton v_question.it)) in
-        let prem' = LetPr (IterE (VarE v $> lhs', iterexp) $> lhs', rhs, [v_question.it]) $ at in
+        let prem' = LetPr (IterE (ve, iterexp) $> lhs', rhs, [v_question.it]) $ at in
         E.return [prem']
       | Some prem_v ->
         let v' = Frontend.Dim.annot_varid v [iter] in
