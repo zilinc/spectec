@@ -155,7 +155,7 @@ module TypeMap = Map.Make(String)
 module Set = Set.Make(String) 
 
 (* A State+Writer monad: 
-   The State keeps track of type definitions, known and bound
+   The State keeps track of type definitions, known/bound/type/fresh
    variables, the Writer accumulates type-casting functions *)
 module TypeM = struct
 
@@ -164,7 +164,8 @@ module TypeM = struct
     mutable typeconvfuncs : Set.t; (* keeps track of type-conversion functions *)
     mutable knowns : Set.t; (* need this to determine inflow/outflow *)
     mutable typecasts : string; (* type-casted function arguments to be moved to the body *)
-    mutable freshvaridx : int
+    mutable freshvaridx : int;
+    mutable typevars : Set.t (* type variables currently in scope *)
   }
 
   type 'a t = state -> 'a * state * string  
@@ -191,6 +192,10 @@ module TypeM = struct
   let put (st' : state) : unit t = fun _ -> ((), st', "")
   let modify f : unit t = fun st -> ((), f st, "")
   let get_knowns : Set.t t = fun st -> st.knowns, st, ""
+
+  let add_typedef (name : string) (typedef : Def.dl_def) : unit t =
+    modify (fun st -> { st with typemap = TypeMap.add name typedef st.typemap })
+
   let get_typedef (typename : string) : Def.dl_def option t = fun st -> ((TypeMap.find_opt typename st.typemap), st, "")
 
   let get_freshvar () : string t = fun st ->
@@ -228,6 +233,18 @@ module TypeM = struct
 
   let add_func (x : string) : unit t =
     modify (fun st -> { st with typeconvfuncs = Set.add x st.typeconvfuncs })
+
+  let add_typevar (x : string) : unit t =
+    modify (fun st -> { st with typevars = Set.add x st.typevars })
+
+  let get_typevars () : Set.t t =
+    fun st -> (st.typevars, st, "")
+
+  let set_typevars (s : Set.t) : unit t =
+    modify (fun st -> { st with typevars = s })
+
+  let is_typevar (x : string) : bool t =
+    fun st -> (Set.mem x st.typevars, st, "")
 
   let concat_nonempty sep xs =
   xs |> List.filter (fun s -> s <> "") |> String.concat sep
@@ -279,7 +296,8 @@ module TypeM = struct
     typeconvfuncs = Set.empty;
     knowns = Set.empty;
     typecasts = "";
-    freshvaridx = 0
+    freshvaridx = 0;
+    typevars = Set.empty
     } in 
     let (a, _, w) = m st0 in (a, w) 
 

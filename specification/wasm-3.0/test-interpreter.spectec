@@ -1,7 +1,0 @@
-;;
-;; Testing OCaml Code Generation
-;;
-
-def $first_local(state) : val?
-def $first_local((s; f)) = f.LOCALS[0]
-
