@@ -11,7 +11,6 @@ let compare mixop1 mixop2 =
 let eq mixop1 mixop2 =
   compare mixop1 mixop2 = 0
 
-
 let to_string = function
   | [{it = Atom.Atom a; _}]::tail when List.for_all ((=) []) tail -> a
   | mixop ->
@@ -21,6 +20,12 @@ let to_string = function
       )
     in
     "`" ^ s ^ "`"
+
+let to_string_verbose xss : string =
+  let go xs =
+    "[" ^ String.concat ", " (List.map Atom.to_string xs) ^ "]"
+  in
+  "[" ^ (String.concat ", " (List.map go xss)) ^ "]"
 
 let name mixop =
   String.concat "" (List.map Atom.name mixop)

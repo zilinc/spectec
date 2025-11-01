@@ -2,45 +2,8 @@ open Il.Ast
 open Util.Error
 open Util.Source
 open Il_util
-module Ds = Backend_interpreter.Ds
+open State
 module RI = Reference_interpreter
-
-(* Register, Modules *)
-
-module Register = Ds.Register(struct type t = exp end)
-module Modules  = Ds.Modules
-
-(* Record *)
-
-module Record   = Util.Record
-
-
-(* Store *)
-
-module Store = struct
-  type t = exp
-
-  let store = ref Record.empty
-
-  let init () =
-    store := Record.empty
-      |> Record.add "TAGS"    (listE (t_star "taginst"    ) [])
-      |> Record.add "GLOBALS" (listE (t_star "globalinst" ) [])
-      |> Record.add "MEMS"    (listE (t_star "meminst"    ) [])
-      |> Record.add "TABLES"  (listE (t_star "tableinst"  ) [])
-      |> Record.add "FUNCS"   (listE (t_star "funcinst"   ) [])
-      |> Record.add "DATAS"   (listE (t_star "datainst"   ) [])
-      |> Record.add "ELEMS"   (listE (t_star "eleminst"   ) [])
-      |> Record.add "STRUCTS" (listE (t_star "structinst" ) [])
-      |> Record.add "ARRAYS"  (listE (t_star "arrayinst"  ) [])
-      |> Record.add "EXNS"    (listE (t_star "exninst"    ) [])
-
-  let get () = mk_str "store" (List.map (fun (f, er) -> (f, !er)) !store)
-
-  let access field = Record.find field !store
-  let update field f = let v = access field in
-                       store := Record.add field (f v) !store
-end
 
 
 (* Host *)
@@ -48,8 +11,8 @@ end
 let il_of_spectest () : exp =
 
   (* Helper functions *)
-  let i32_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I32"; Construct.il_of_nat32   i ] in
-  let i64_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I64"; Construct.il_of_nat64   i ] in
+  let i32_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I32"; Construct.il_of_uN_32   i ] in
+  let i64_to_const i = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "I64"; Construct.il_of_uN_64   i ] in
   let f32_to_const f = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "F32"; Construct.il_of_float32 f ] in
   let f64_to_const f = mk_case' "instr" [["CONST"];[]] [ mk_nullary' "numtype" "F64"; Construct.il_of_float64 f ] in
 
@@ -61,8 +24,8 @@ let il_of_spectest () : exp =
     let code = mk_nullary' "instr" (String.uppercase_ascii name) in  (* instr *)
     let param_types = List.map (mk_nullary' "numtype") ptypes  (* list(valtype) *) in
     let comptype = mk_case' "comptype" [["FUNC"];["->"];[]] [
-      listE (t_var "resulttype") param_types;
-      listE (t_var "resulttype") []
+      Construct.il_of_list' (t_var "resulttype") param_types;
+      Construct.il_of_list' (t_var "resulttype") []
     ] in
     let subtype = mk_case' "subtype" [["SUB"];[];[];[]] [
       optE (t_var "fin") (Some (mk_nullary' "" "FINAL"));
@@ -70,7 +33,7 @@ let il_of_spectest () : exp =
       comptype
     ] in
     let rectype = mk_case' "rectype" [["REC"];[]] [
-      listE (t_app "list" [typA (t_var "subtype")]) [subtype]
+      Construct.il_of_list' (t_app "list" [typA (t_var "subtype")]) [subtype]
     ] in
     let deftype = mk_case' "deftype" [["_DEF"];[];[]] [
       rectype; mk_nat 0
@@ -123,7 +86,7 @@ let il_of_spectest () : exp =
     let memtype = mk_case' "memtype" [[];[];["PAGE"]] [
       addrtype; limits
     ] in
-    let zeros = listE (t_star "byte") (List.init 0x10000 (Fun.const (mk_nat 0))) in
+    let zeros = listE (t_star "byte") (List.init 0x20 (Fun.const (mk_nat 0))) in  (* 0x10000 *)
     mk_str "meminst" [ ("TYPE", memtype); ("BYTES", zeros) ] in
 
   (* Builtin functions *)

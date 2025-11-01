@@ -29,7 +29,7 @@ let is_unary_variantT : deftyp -> bool = fun deft ->
 (* Destruct *)
 
 
-let il_to_nat e : Xl.Num.nat =
+let il_to_nat e : Z.t =
   match e.it with
   | NumE (`Nat n) -> n
   | _ -> error e.at ("Il expression not a nat: " ^ string_of_exp e)
@@ -59,6 +59,11 @@ let as_tup_typ env t : (exp * typ) list =
   | TupT ets -> ets
   | _ -> error t.at ("Input type is not a tuple type: " ^ string_of_typ t)
 
+let has_str_field atom str : bool =
+  match str.it with
+  | StrE fes -> List.exists (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes
+  | _ -> error str.at ("Input expression is not a struct: " ^ string_of_exp str)
+
 let find_str_field atom str : exp =
   match str.it with
   | StrE fes -> List.find (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes |> snd
@@ -66,13 +71,23 @@ let find_str_field atom str : exp =
 
 let find_list_elem p lst : exp =
   match lst.it with
-  | ListE es -> List.find (fun e -> p e) es
-  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
+  | ListE es -> List.find p es
+  | _ -> error lst.at ("find_list_elem: Input expression is not a list: " ^ string_of_exp lst)
 
 let nth_of_list lst (idx: Z.t) : exp =
   match lst.it with
   | ListE es -> List.nth es (Z.to_int idx)
-  | _ -> error lst.at ("Input expression is not a list: " ^ string_of_exp lst)
+  | _ -> error lst.at ("nth_of_list: Input expression is not a list: " ^ string_of_exp lst)
+
+let elts_of_list lst : exp list =
+  match lst.it with
+  | ListE es -> es
+  | _ -> error lst.at ("elts_of_list: Input expression is not a list: " ^ string_of_exp lst)
+
+let elts_of_tuple tup : exp list =
+  match tup.it with
+  | TupE es -> es
+  | _ -> error tup.at ("elts_of_tup: Input expression is not a tuple: " ^ string_of_exp tup)
 
 let args_of_case case : exp list =
   match case.it with
@@ -82,6 +97,27 @@ let args_of_case case : exp list =
     | _ -> [tup]
     )
   | _ -> error case.at ("Input expression is not a case: " ^ string_of_exp case)
+
+let unwrap_case case : exp =
+  match case.it with
+  | CaseE ([[];[]], { it = TupE [e]; _ }) -> e
+  | _ -> error case.at ("Input expression is not a singleton variant: " ^ string_of_exp case)
+
+let case_mixop case : mixop =
+  match case.it with
+  | CaseE (mixop, _) -> mixop
+  | _ -> error case.at ("Input expression is not a case: " ^ string_of_exp case)
+
+let unwrap_num num : num =
+  match num.it with
+  | NumE num' -> num'
+  | _ -> error num.at ("Input expression is not a number: " ^ string_of_exp num)
+
+let unwrap_opt opt : exp option =
+  match opt.it with
+  | OptE e -> e
+  | _ -> error opt.at ("Input expression is not a optional: " ^ string_of_exp opt)
+
 
 let text_to_string txt : string =
   match txt.it with
@@ -96,6 +132,8 @@ let of_num_exp = function
   | NumE n -> Some n
   | _ -> None
 
+let mixop_to_text mixop : string list list =
+  List.map (fun ops -> List.map Xl.Atom.to_string ops) mixop
 
 
 (* Construct *)
@@ -147,6 +185,9 @@ and optE' ?(at = no) oe : exp = match oe with
   | Some e -> let t = iterT (e.note) in optE t oe
 and strE ?(at = no) ~note r = StrE r |> mk_expr at note
 and subE ?(at = no) id t1 t2 = SubE (id, t1, t2) |> mk_expr at t2
+and eqE ?(at = no) lhs rhs = CmpE (`EqOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
+
+
 (*
 and unE ?(at = no) ~note (unop, t, e) = UnE (unop, t, e) |> mk_expr at note
 and binE ?(at = no) ~note (binop, t, e1, e2) = BinE (binop, t, e1, e2) |> mk_expr at note
@@ -202,64 +243,64 @@ and mk_cvt_sub ?(at = no) e1 e2 : exp =
 
 and mk_atom ?(at = no) ~info (atom: string) : Xl.Atom.atom =
   Xl.Atom.(match atom with
-  | "->" -> Arrow
-  | _    -> Atom atom
+    | "infinity" -> Infinity
+    | "_|_"      -> Bot
+    | "^|^"      -> Top
+    | "."        -> Dot
+    | ".."       -> Dot2
+    | "..."      -> Dot3
+    | ";"        -> Semicolon
+    | "\\"       -> Backslash
+    | "<-"       -> Mem
+    | "->"       -> Arrow
+    | "=>"       -> Arrow2
+    | "->_"      -> ArrowSub
+    | "=>_"      -> Arrow2Sub
+    | ":"        -> Colon
+    | ":_"       -> ColonSub
+    | "<:"       -> Sub
+    | ":>"       -> Sup
+    | ":="       -> Assign
+    | "="        -> Equal
+    | "=_"       -> EqualSub
+    | "=/="      -> NotEqual
+    | "<"        -> Less
+    | ">"        -> Greater
+    | "<="       -> LessEqual
+    | ">="       -> GreaterEqual
+    | "=="       -> Equiv
+    | "==_"      -> EquivSub
+    | "~~"       -> Approx
+    | "~~_"      -> ApproxSub
+    | "~>"       -> SqArrow
+    | "~>_"      -> SqArrowSub
+    | "~>*"      -> SqArrowStar
+    | "~>*_"     -> SqArrowStarSub
+    | "<<"       -> Prec
+    | ">>"       -> Succ
+    | "|-"       -> Turnstile
+    | "|-_"      -> TurnstileSub
+    | "-|"       -> Tilesturn
+    | "-|_"      -> TilesturnSub
+    | "?"        -> Quest
+    | "+"        -> Plus
+    | "*"        -> Star
+    | ","        -> Comma
+    | "++"       -> Cat
+    | "|"        -> Bar
+    | "(/\\)"    -> BigAnd
+    | "(\\/)"    -> BigOr
+    | "(+)"      -> BigAdd
+    | "(*)"      -> BigMul
+    | "(++)"     -> BigCat
+    | "("        -> LParen
+    | "["        -> LBrack
+    | "{"        -> LBrace
+    | ")"        -> RParen
+    | "]"        -> RBrack
+    | "}"        -> RBrace
+    | _          -> Atom atom
   ) $$ at % info
-  (*
-  | Infinity                     (* infinity *)
-  | Bot                          (* `_|_` *)
-  | Top                          (* `^|^` *)
-  | Dot                          (* `.` *)
-  | Dot2                         (* `..` *)
-  | Dot3                         (* `...` *)
-  | Semicolon                    (* `;` *)
-  | Backslash                    (* `\` *)
-  | Mem                          (* `<-` *)
-  | Arrow                        (* `->` *)
-  | Arrow2                       (* ``=>` *)
-  | ArrowSub                     (* `->_` *)
-  | Arrow2Sub                    (* ``=>_` *)
-  | Colon                        (* `:` *)
-  | ColonSub                     (* `:_` *)
-  | Sub                          (* `<:` *)
-  | Sup                          (* `:>` *)
-  | Assign                       (* `:=` *)
-  | Equal                        (* ``=` *)
-  | EqualSub                     (* ``=_` *)
-  | NotEqual                     (* ``=/=` *)
-  | Less                         (* ``<` *)
-  | Greater                      (* ``>` *)
-  | LessEqual                    (* ``<=` *)
-  | GreaterEqual                 (* ``>=` *)
-  | Equiv                        (* `==` *)
-  | EquivSub                     (* `==_` *)
-  | Approx                       (* `~~` *)
-  | ApproxSub                    (* `~~_` *)
-  | SqArrow                      (* `~>` *)
-  | SqArrowSub                   (* `~>_` *)
-  | SqArrowStar                  (* `~>*` *)
-  | SqArrowStarSub               (* `~>*_` *)
-  | Prec                         (* `<<` *)
-  | Succ                         (* `>>` *)
-  | Turnstile                    (* `|-` *)
-  | TurnstileSub                 (* `|-_` *)
-  | Tilesturn                    (* `-|` *)
-  | TilesturnSub                 (* `-|_` *)
-  | Quest                        (* ``?` *)
-  | Plus                         (* ``+` *)
-  | Star                         (* ``*` *)
-  | Comma                        (* ``,` *)
-  | Cat                          (* ``++` *)
-  | Bar                          (* ``|` *)
-  | BigAnd                       (* `(/\)` *)
-  | BigOr                        (* `(\/)` *)
-  | BigAdd                       (* `(+)` *)
-  | BigMul                       (* `( * )` *)
-  | BigCat                       (* `(++)` *)
-  | LParen | RParen              (* ``(` `)` *)
-  | LBrack | RBrack              (* ``[` `]` *)
-  | LBrace | RBrace              (* ``{` `}` *)
-  *)
 
 and mk_mixop' ?(at = no) ~info (atom: string) arity : mixop =
   [mk_atom ~info atom] :: List.init arity (Fun.const [])
@@ -294,12 +335,15 @@ and mk_str ?(at = no) tname fes : exp =
   in
   strE ~note:(t_var tname) (List.map mk_field fes)
 
+and mk_singleton ?(at = no) e : exp = listE' [e]
 
 and mk_none ?(at = no) t : exp = optE t None
 and mk_some ?(at = no) t e : exp = optE t (Some e)
 
 let to_bool_exp b = BoolE b
 let to_num_exp n = NumE n
+
+let int_of_bool b = Stdlib.Bool.to_int b
 
 
 (* Construct data structure *)
@@ -309,3 +353,8 @@ let il_of_seq t f s = List.of_seq s |> il_of_list f t
 let il_of_opt t f opt = Option.map f opt |> optE t
 let il_of_tup t fel = List.map (fun (f, e) -> f e) fel |> tupE ~note:t
 
+
+
+(* Helper functions *)
+
+let eq_mixop (cons: string list list) mixop = Il.Eq.eq_mixop (mk_mixop ~info:(Xl.Atom.info "") cons) mixop

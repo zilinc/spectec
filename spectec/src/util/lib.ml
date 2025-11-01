@@ -14,6 +14,10 @@ struct
     | n, _::xs' when n > 0 -> drop (n - 1) xs'
     | _ -> failwith "drop"
 
+
+  let take_from_back n xs =
+    List.rev xs |> take n |> List.rev
+
   let rec split n xs =
     match n, xs with
     | 0, _ -> [], xs
@@ -147,15 +151,17 @@ struct
   let replace pattern replacement s =
     Str.global_replace (Str.regexp_string pattern) replacement s
 
-  let shorten ?(cap=200) s =
+  let shorten ?(cap=100) s =
     let l = String.length s in
-    if l > cap then String.sub s 0 (cap/2) ^ "..." ^ String.sub s (l-1-cap/2) (cap/2) else s
+    if l > cap then String.sub s 0 cap ^ "..." ^ String.sub s (l-cap) cap else s
 end
 
 module Fun =
 struct
   let curry f a b = f (a, b)
   let uncurry f (a, b) = f a b
+  let curry3 f a b c = f (a, b, c)
+  let uncurry3 f (a, b, c) = f a b c
   let both f (a1, a2) = (f a1, f a2)
   let (>>>) f g = fun x -> x |> f |> g
   let (<***>) f g (a, b) = (f a, g b)
@@ -181,6 +187,17 @@ struct
     | None -> []
     | Some ls -> ls
 end
+
+module Time =
+struct
+  let time msg f a =
+    let start = Sys.time () in
+    let b = f a in
+    let lapsed = Sys.time () -. start in
+    print_endline (msg ^ ": " ^ Printf.sprintf "%.5fs." lapsed);
+    b
+end
+
 
 module type Monad =
 sig

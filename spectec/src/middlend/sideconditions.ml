@@ -84,7 +84,6 @@ let rec t_exp env e : prem list =
   | CaseE (_, exp)
   | CvtE (exp, _, _)
   | SubE (exp, _, _)
-  | SupE (exp, _, _)
   -> t_exp env exp
   | BinE (_, _, exp1, exp2)
   | CmpE (_, _, exp1, exp2)

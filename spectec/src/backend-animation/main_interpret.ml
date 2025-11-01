@@ -1,9 +1,13 @@
 open Def
 open Script
+open State
 open Il_util
 open Il.Ast
+open Il.Print
 open Util
 open Error
+open Lib.Time
+open Lib.Fun
 open Backend_interpreter.Construct
 module I = Backend_interpreter
 module R = Reference_interpreter
@@ -25,6 +29,7 @@ let logging = ref false
 
 let log fmt = Printf.(if !logging then fprintf stderr fmt else ifprintf stderr fmt)
 
+let print_name n = if n = "" then "[_]" else n
 
 
 (* Result *)
@@ -61,11 +66,6 @@ let sum_results_with_time l =
   let l', times = List.split l in
   sum_results l', sum_float times
 
-let try_run runner target =
-  let start_time = Sys.time () in
-  let result = runner target in
-  result, Sys.time () -. start_time
-
 let print_runner_result name result =
   let (num_success, total), execution_time = result in
   let percentage =
@@ -77,14 +77,12 @@ let print_runner_result name result =
     Printf.printf "Total [%d/%d] (%.2f%%)\n\n" num_success total percentage
   else
     Printf.printf "- %d/%d (%.2f%%)\n\n" num_success total percentage;
-  log "%s took %f ms.\n" name (execution_time *. 1000.)
+  log "%s took %.5f s.\n" name execution_time
 
 let get_export name moduleinst_name =
-  moduleinst_name
-  |> Register.find
+  Register.find moduleinst_name
   |> find_str_field "EXPORTS"
-  |> find_list_elem
-    (fun export -> text_to_string (find_str_field "NAME" export) = name)
+  |> find_list_elem (fun export -> text_to_string (find_str_field "NAME" export) = name)
 
 let get_externaddr import =
   let R.Ast.Import (module_name, item_name, _) = import.it in
@@ -109,10 +107,7 @@ let get_export_addr name moduleinst_name : exp =
     failwith ("Function export doesn't contain function address")
 
 let get_global_value module_name globalname : exp (* val *) =
-  log "[Getting %s...]\n" globalname;
-
-  let index = get_export_addr globalname module_name in
-  index
+  get_export_addr globalname module_name
   |> il_to_nat
   |> nth_of_list (Store.access "GLOBALS")
   |> find_str_field "VALUE"
@@ -120,23 +115,42 @@ let get_global_value module_name globalname : exp (* val *) =
 
 (** Main functions **)
 
-let instantiate module_ : exp =
+let rec instantiate module_ : exp =
+  time "Instantiate" instantiate' module_
+
+and instantiate' module_ : exp =
   log "[Instantiating module...]\n";
 
   match C.il_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | il_module, externaddrs ->
     let store = Store.get () in
-    Interpreter.instantiate [ expA store ; expA il_module; listE (t_star "externaddr") externaddrs |> expA ]
+    let config' = Interpreter.instantiate [ expA store ; expA il_module; listE (t_star "externaddr") externaddrs |> expA ] in
+    let CaseE (_, tup1) = config'.it in
+    let TupE [state'; _] = tup1.it in
+    let CaseE (_, tup2) = state'.it in
+    let TupE [store'; frame'] = tup2.it in
+    let StrE [_; (fname, moduleinst)] = frame'.it in
+    assert (Il.Eq.eq_atom (mk_atom ~info:(Xl.Atom.info "") "MODULE") fname);
+    Store.put store';
+    moduleinst
 
 
-let invoke moduleinst_name funcname args : exp =
-  log "[Invoking %s %s...]\n" funcname (R.Value.string_of_values args |> Lib.String.shorten);
+let rec invoke moduleinst_name funcname args =
+  time "Invoke" (uncurry3 invoke') (moduleinst_name, funcname, args)
 
+and invoke' moduleinst_name funcname args : exp =
+  log "[Invoking %s %s in module instance %s...]\n"
+    funcname (R.Value.string_of_values args |> Lib.String.shorten) (print_name moduleinst_name);
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
-  Interpreter.invoke [ expA store; expA funcaddr; il_of_list (t_star "val") C.il_of_value args |> expA ]
-
+  let config' = Interpreter.invoke [ expA store; expA funcaddr; il_of_list (t_star "val") C.il_of_value args |> expA ] in
+  let CaseE (_, tup1) = config'.it in
+  let TupE [state'; instrs'] = tup1.it in
+  let CaseE (_, tup2) = state'.it in
+  let TupE [store'; _] = tup2.it in
+  Store.put store';
+  instrs'
 
 
 (** Wast runner **)
@@ -147,24 +161,24 @@ let module_of_def def =
   | Encoded (name, bs) -> R.Decode.decode name bs.it
   | Quoted (_, s) -> R.Parse.Module.parse_string s.it |> textual_to_module
 
-let run_action action =
+let run_action action : exp =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
     invoke (Register.get_module_name var_opt) (Utf8.encode funcname) (List.map it args)
   | Get (var_opt, globalname) ->
-    get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname)
+    [ get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname) ] |> listE (t_star "val")
 
 let test_assertion assertion =
   let open R in
   match assertion.it with
   | AssertReturn (action, expected) ->
-    let result = run_action action |> Interpreter.exp_to_val |> al_to_list al_to_value in
+    let result = run_action action |> elts_of_list |> List.map Construct.il_to_value in
     Run.assert_results no_region result expected;
     success
   | AssertTrap (action, re) -> (
     try
-      let result = run_action action |> Interpreter.exp_to_val in
-      Run.assert_message assertion.at "runtime" (Al.Print.string_of_value result |> Util.Lib.String.shorten) re;
+      let result = run_action action |> Construct.il_to_value in
+      Run.assert_message assertion.at "runtime" (RI.Value.string_of_value result |> Util.Lib.String.shorten) re;
       fail
     with I.Exception.Trap -> success
   )
@@ -199,13 +213,15 @@ let test_assertion assertion =
 
 let run_command' command =
   let open R in
-  match command.it with
+  let res = match command.it with
   | Module (var_opt, def) ->
+    log "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     def
     |> module_of_def
     |> Modules.add_with_var var_opt;
     success
   | Instance (var1_opt, var2_opt) ->
+    log "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
     Modules.find (Modules.get_module_name var2_opt)
     |> instantiate
     |> Register.add_with_var var1_opt;
@@ -218,13 +234,17 @@ let run_command' command =
     ignore (run_action a); success
   | Assertion a -> test_assertion a
   | Meta _ -> pass
+  in
+  res
+
+
 
 let run_command command =
   let start_time = Sys.time () in
   let result =
     let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) (Lib.String.shorten msg) in
     try
-      run_command' command
+      time "Running command" run_command' command
     with
     | I.Exception.Error (at, msg, step) ->
       let msg' = msg ^ " (interpreting " ^ step ^ " at " ^ Source.string_of_region at ^ ")" in
@@ -248,12 +268,10 @@ let run_command command =
 
 let run_wast name script =
   Store.init ();
-  (* Intialize spectest *)
   log ("[run_wast...]\n");
+  (* Intialise spectest *)
   let spectest = il_of_spectest () in
-  log "[built `spectest`.]\n";
   Register.add "spectest" spectest;  (* spectest is a `moduleinst`. *)
-  log ("[registered `spectec`.]\n");
 
   let result =
     script
@@ -267,18 +285,15 @@ let run_wast name script =
 
 let run_wasm' args module_ =
   Store.init ();
-  (* Intialize spectest *)
   log ("[run_wasm'...]\n");
+  (* Intialise spectest *)
   let spectest = il_of_spectest () in
-  log "[built `spectest`.]\n";
   Register.add "spectest" spectest;
-  log ("[registered `spectec`.]\n");
 
   (* Instantiate *)
   module_
   |> instantiate
   |> Register.add_with_var None;
-  log ("[instantiated module.]\n");
 
   (* TODO: Only Int32 arguments/results are acceptable *)
   match args with
@@ -290,8 +305,7 @@ let run_wasm' args module_ =
     (* Print invocation result. We don't really have to convert it to reference
        interpreter's value type though.
     *)
-    |> Interpreter.exp_to_val
-    |> al_to_list al_to_value
+    |> Construct.il_to_list Construct.il_to_value
     |> R.Value.string_of_values
     |> Lib.String.shorten
     |> print_endline;
@@ -316,9 +330,7 @@ let parse_file name parser_ file =
   log "===========================\n\n%s\n\n" name;
 
   try
-    let x = parser_ file in
-    log "[finished parsing.]\n";
-    x
+    parser_ file
   with e ->
     let bt = Printexc.get_raw_backtrace () in
     print_endline ("- Failed to parse " ^ name ^ "\n");
@@ -373,6 +385,7 @@ and run_dir path =
 let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
   Interpreter.dl     := dl;
   Interpreter.il_env := env;
+
   match args with
   | path :: args' when Sys.file_exists path ->
     (* Run file *)

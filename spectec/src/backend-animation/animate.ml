@@ -205,27 +205,31 @@ module AnimState = struct
 
   let get_prems : t -> prem list = fun t -> t.prems
   let put_prems : prem list -> t -> t = fun ps t -> { t with prems = ps }
-  let push_prems : prem -> t -> t = fun p t ->
+  let push_prem : prem -> t -> t = fun p t ->
     let ps = get_prems t in
     let ps' = p::ps in
     put_prems ps' t
-  let pop_prems : t -> (prem * t) = fun t ->
+  let push_prems : prem list -> t -> t = fun ps t ->
+    let ps'  = get_prems t in
+    let ps'' = ps @ ps' in
+    put_prems ps'' t
+  let pop_prem : t -> (prem * t) = fun t ->
     let ps = get_prems t in
     match ps with
     | [] -> error_np "no premise to pop from the stack."
     | p::ps' -> let t' = put_prems ps' t in (p, t')
-  let peek_prems : t -> prem = fun t ->
+  let peek_prem : t -> prem = fun t ->
     let ps = get_prems t in
     match ps with
     | [] -> error_np "no premise to peek from the stack."
     | p::_ -> p
-  let enqueue_prems : prem -> t -> t = fun p t ->
+  let enqueue_prem : prem -> t -> t = fun p t ->
     let ps = get_prems t in
     put_prems (ps @ [p]) t
 
   let get_prems' : t -> prem list = fun t -> t.prems'
   let put_prems' : prem list -> t -> t = fun ps t -> { t with prems' = ps }
-  let push_prems' : prem -> t -> t = fun p t ->
+  let push_prem' : prem -> t -> t = fun p t ->
     let ps = get_prems' t in
     let ps' = p::ps in
     put_prems' ps' t
@@ -336,22 +340,18 @@ let update f = S.update f |> E.lift
 
 type direction = [ `Lhs | `Rhs ]
 
-let rec new_bind_exp envr oname exp ot dir : Il.Env.t ref * id * exp * prem option =
+(* Returns the following:
+    + Updated env.
+    + Set of variable names that are newly introduced.
+    + The newly created expression that binds to the argument [exp].
+    + Either 0 or 1 premise for the newly introduced binding.
+      - `Lhs: need to animate the premises.
+      - `Rhs: already animated premises.
+*)
+let new_bind_exp envr oname exp ot dir : Il.Env.t ref * string list * exp * prem option =
   let ( let* ) = Result.bind in
   match exp.it with
-  | VarE v -> (envr, v, exp, None)
-  | SubE (exp', t1, t2) ->
-    let (envr, v, ve, oprem_eq) = new_bind_exp envr oname exp' None dir in
-    let ve' = SubE (ve, t1, t2) $> exp in
-    (envr, v, ve', oprem_eq)
-  | SupE (exp', t1, t2) ->
-    let (envr, v, ve, oprem_eq) = new_bind_exp envr oname exp' None dir in
-    let ve' = SupE (ve, t1, t2) $> exp in
-    (envr, v, ve', oprem_eq)
-  | CvtE (exp', t1, t2) ->
-    let (envr, v, ve, oprem_eq) = new_bind_exp envr oname exp' None dir in
-    let ve' = CvtE (ve, t1, t2) $> exp in
-    (envr, v, ve', oprem_eq)
+  | VarE v -> (envr, [v.it], exp, None)
   | _ ->
     let v = fresh_id oname exp.at in
     let t = match ot with Some t' -> t' | None -> exp.note in
@@ -361,7 +361,34 @@ let rec new_bind_exp envr oname exp ot dir : Il.Env.t ref * id * exp * prem opti
     | `Lhs -> IfPr (CmpE (`EqOp, `BoolT, ve, exp) $$ exp.at % (BoolT $ exp.at)) $ exp.at
     | `Rhs -> LetPr (ve, exp, [v.it]) $ exp.at
     in
-    (envr, v, ve, Some prem_v)
+    (envr, [v.it], ve, Some prem_v)
+
+let anf_exp envr oname exp ot dir : Il.Env.t ref * string list * exp * prem list =
+  let ( let* ) = Result.bind in
+  match exp.it with
+  | SubE (exp', t1, t2) ->
+    let (envr, vs, ve, oprem_eq) = new_bind_exp envr oname exp' None dir in
+    let ve' = SubE (ve, t1, t2) $> exp in
+    (envr, vs, ve', Option.to_list oprem_eq)
+  | CvtE (exp', t1, t2) ->
+    let (envr, vs, ve, oprem_eq) = new_bind_exp envr oname exp' None dir in
+    let ve' = CvtE (ve, t1, t2) $> exp in
+    (envr, vs, ve', Option.to_list oprem_eq)
+  | CaseE (mixop, tup) ->
+    (match tup.it with
+    | TupE es ->
+      let (envr, vs, ves, prems_e) = List.fold_left (fun acc e ->
+        let (envr, vss, ves, premss_e) = acc in
+        let (envr, vs, ve, oprem_e) = new_bind_exp envr oname e None dir in
+        (envr, vss @ vs, ves @ [ve], premss_e @ Option.to_list oprem_e)
+      ) (envr, [], [], []) es in
+      let tup' = TupE ves $> tup in
+      let ve' = CaseE (mixop, tup') $> exp in
+      (envr, vs, ve', prems_e)
+    | _ -> error exp.at ("CaseE payload is not a tuple: " ^ string_of_exp tup)
+    )
+  | _ -> let (envr, vs, ve, oprem_v) = new_bind_exp envr oname exp ot dir in
+         (envr, vs, ve, Option.to_list oprem_v)
 
 
 (** Run animation in a new state, and return the result and the new state. *)
@@ -399,27 +426,27 @@ let string_of_state (s: AnimState.t) =
 
 let throw_log e = let () = info "log" no_region e in E.throw e
 
-(* A whitelist of rules/defs that cannot be easily animated.
+(* A list of rules/defs that cannot be easily animated.
    The map is "reason" ↦ [("rel_id", "rule_name")]
 *)
 let cannot_animate : (string * string) list Map.t =
   Map.of_list
-    [ ("rule_lhs",
-      [
+    [ ("rule_lhs", [
         ("Step_pure", "br-label-zero");
         ("Step_pure", "br-label-succ");
         ("Step_pure", "br-handler");
+        ("Step_pure", "return-frame");
+        ("Step_pure", "return-label");
+        ("Step_pure", "return-handler");
+        ("Step_pure", "trap-instrs");
 
         ("Step_read", "return_call_ref-label");
         ("Step_read", "return_call_ref-handler");
         ("Step_read", "return_call_ref-frame-null");
         ("Step_read", "return_call_ref-frame-addr");
-
-        ("Step_pure", "return-frame");
-        ("Step_pure", "return-label");
-        ("Step_pure", "return-handler");
-
         ("Step_read", "throw_ref-instrs");
+
+        ("Step", "ctxt-instrs");
       ])
     ]
 
@@ -427,6 +454,10 @@ let is_unanimatable reason rule_name rel_id : bool =
   match Map.find_opt reason cannot_animate with
   | None -> false
   | Some ls -> List.exists (fun l -> l = (rel_id, rule_name)) ls
+
+let is_step_rule rel_id : bool = rel_id = "Step"
+let is_step_pure_rule rel_id : bool = rel_id = "Step_pure"
+let is_step_read_rule rel_id : bool = rel_id = "Step_read"
 
 
 (* Mode analysis *)
@@ -531,7 +562,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   let* s = get () in
   let knowns = get_knowns s in
   let (res, fncall) = match id.it, exp.it with
-  | _, TupE [lhs; rhs] when List.mem id.it ["Step"; "Step_read"; "Step_pure"] ->
+  | _, TupE [lhs; rhs] when List.mem id.it Common.step_relids ->
     let fncall = CallE (id, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
     (rhs, fncall)
   | "Expand", TupE [lhs; rhs] ->
@@ -539,16 +570,23 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     let fncall = CallE (fid, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
     (rhs, fncall)
   | "Eval_expr", TupE [z; lhs; z'; rhs] ->
-    let fncall = CallE (id, [ExpA z $ z.at; ExpA lhs $ lhs.at]) $$ at % rhs.note in
-    let res = TupE [z'; rhs] $$ z'.at % (t_tup [z'.note; rhs.note]) in
+    let arg = mk_case' ~at:at "config" [[];[";"];[]] [z;lhs] in
+    let res = mk_case' ~at:at "config" [[];[";"];[]] [z';rhs] in
+    let fncall = CallE (id, [expA arg]) $$ at % res.note in
     (res, fncall)
-  (* Other rules, mostly from validation.
-     We don't allow inverting rules, so the LHS (i.e. all args expect the last one)
+  (* Predicate rules. *)
+  | _, TupE [s; obj; typ] when List.mem id.it ["Externtype_sub"; "Val_ok"; "Externaddr_ok"] ->
+    let fncall = CallE (id, [expA s; expA obj; expA typ]) $$ at % (BoolT $ at) in
+    let res = boolE true in
+    (fncall, res)
+  (* Other rules, mostly from validation:
+     * Ref_ok : (store, ref) -> reftype
+     * Module_ok : module -> moduletype
+     We don't allow inverting rules, so the LHS (i.e. all args except the last one)
      of a rule must be known.
   *)
   | _, TupE es when List.length es >= 2 ->
     let lhss, rhs = Lib.List.split_last es in
-    let expA (e: exp) = ExpA e $ e.at in
     let fncall = CallE (id, List.map expA lhss) $$ at % rhs.note in
     (rhs, fncall)
   | _ -> error at ("Unknown rule form: " ^ id.it ^ "(" ^ string_of_region id.at ^")")
@@ -576,10 +614,10 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
 and animate_exp_eq envr at lhs rhs : prem list E.m =
   let ( let* ) = E.( >>= ) in
   info "anf" at ("lhs = " ^ string_of_exp lhs ^ "; rhs = " ^ string_of_exp rhs);
-  let (envr', v, rhs', oprems_v) = new_bind_exp envr None rhs None `Rhs in
-  let* () = update (AnimState.add_knowns (Set.singleton v.it)) in
-  let* prems = animate_exp_eq' envr' at lhs rhs' in
-  E.return (Option.to_list oprems_v @ prems)
+  let (envr, vs_rhs, rhs', oprem_rhs) = new_bind_exp envr None rhs None `Rhs in
+  let* () = update (AnimState.add_knowns (Set.of_list vs_rhs)) in
+  let* prems = animate_exp_eq' envr at lhs rhs' in
+  E.return (Option.to_list oprem_rhs @ prems)
 
 and animate_exp_eq' envr at lhs rhs : prem list E.m =
   let open AnimState in
@@ -591,6 +629,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   | VarE v ->
     let* () = update (add_knowns (Set.singleton v.it)) in
     E.return [ LetPr (lhs, rhs, [v.it]) $ at ]
+  (* Treated as atomic. *)
+  (* | DotE (lhs', mixop) -> _  *)
   (* function call; invert it. *)
   | CallE (fid, args) when can_invert s ->
     let varid = fun s -> s.varid in
@@ -646,28 +686,32 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     begin match iter with
     (* Special case *)
     | Opt ->
-      let (envr, v, ve, oprem_lhs) = new_bind_exp envr None lhs' None `Lhs in
+      let (envr, vs, ve, oprem_lhs) = new_bind_exp envr None lhs' None `Lhs in
       begin match oprem_lhs with
       | None ->
         (* Find the out-flowing `v?`. *)
         let v_question = List.find_map (fun (x, e) ->
-          if Il.Eq.eq_id v x then
+          if List.mem x.it vs then
             match e.it with
             | VarE v_question -> Some v_question
             | _ -> None
           else None
         ) xes |> Option.get in
         let* () = update (add_knowns (Set.singleton v_question.it)) in
-        let prem' = LetPr (IterE (VarE v $> lhs', iterexp) $> lhs', rhs, [v_question.it]) $ at in
+        let prem' = LetPr (IterE (ve, iterexp) $> lhs', rhs, [v_question.it]) $ at in
         E.return [prem']
-      | Some prem_v ->
-        let v' = Frontend.Dim.annot_varid v [iter] in
-        let v_question = fresh_id (Some v'.it) ve.at in
-        let ve_question = VarE v_question $$ ve.at % rhs.note in
-        envr := bind_var !envr v_question rhs.note;
-        let prem_opt = LetPr (IterE (ve, (iter, [(v, ve_question)])) $$ lhs.at % lhs'.note, rhs, [v_question.it]) $ at in
-        let* () = update (add_knowns (Set.singleton v.it)) in
-        let* prems_iter' = animate_prem envr (IterPr ([prem_v], (iter, (v, ve_question)::xes)) $ at) in
+      | Some prem_lhs ->
+        let blob = List.map (fun v ->
+          let v' = Frontend.Dim.annot_varid (v $ no) [iter] in
+          let v_question = fresh_id (Some v'.it) ve.at in
+          let ve_question = VarE v_question $$ ve.at % rhs.note in
+          envr := bind_var !envr v_question rhs.note;
+          (v $ no, v_question, ve_question)
+        ) vs in
+        let xes', v_questions = Lib.List.unzip3 blob |> fun (xs, ys, zs) -> (List.combine xs zs, List.map it ys) in
+        let prem_opt = LetPr (IterE (ve, (iter, xes')) $$ lhs.at % lhs'.note, rhs, v_questions) $ at in
+        let* () = update (add_knowns (Set.of_list vs)) in
+        let* prems_iter' = animate_prem envr (IterPr ([prem_lhs], (iter, xes'@xes)) $ at) in
         E.return (prem_opt :: prems_iter')
       end
     (* Base case *)
@@ -729,16 +773,16 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return prems'
   | SubE (exp, t1, t2) ->
-    let rhs' = SupE (rhs, t2, t1) $$ rhs.at % t1 in
-    animate_exp_eq envr at exp rhs'
-  | SupE (exp, t1, t2) ->
-    let rhs' = SubE (rhs, t2, t1) $$ rhs.at % t1 in
-    animate_exp_eq envr at exp rhs'
+    let (envr, vs, ve, oprem_v) = new_bind_exp envr None exp None `Lhs in
+    let prem' = LetPr (SubE (ve, t1, t2) $> lhs, rhs, vs) $ at in
+    let* () = update (add_knowns (Set.of_list vs)) in
+    let* prems_v' = E.(opt_mapM (animate_prem envr) oprem_v <&> opt_list) in
+    E.return (prem' :: prems_v')
   | OptE None -> assert false  (* Because lhs must contain unknowns *)
   | OptE (Some exp) ->
-    let (envr', v, ve, oprem_v) = new_bind_exp envr None exp None `Lhs in
-    let prem_opt = LetPr (OptE (Some ve) $$ lhs.at % rhs.note, rhs, [v.it]) $ at in
-    let* () = update (add_knowns (Set.singleton v.it)) in
+    let (envr', vs, ve, oprem_v) = new_bind_exp envr None exp None `Lhs in
+    let prem_opt = LetPr (OptE (Some ve) $$ lhs.at % rhs.note, rhs, vs) $ at in
+    let* () = update (add_knowns (Set.of_list vs)) in
     let* prems_v' = E.(opt_mapM (animate_prem envr) oprem_v <&> opt_list) in
     E.return (prem_opt :: prems_v')
   | ListE [] ->
@@ -769,6 +813,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     E.return ([prem_len] @ prems')
   | CaseE (mixop, lhs') ->
     info "case" at ("The payload of constructor " ^ string_of_mixop mixop ^ " is " ^ string_of_exp lhs');
+    info "case" at ("The LHS: (" ^ string_of_exp lhs ^ ") type is " ^ string_of_typ lhs.note);
     info "case" at ("The RHS: (" ^ string_of_exp rhs ^ ") type is " ^ string_of_typ rhs.note);
     begin match as_variant_typ !envr rhs.note with
     | [] -> assert false
@@ -791,13 +836,13 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       | TupE es ->
         let (_, (_bs, t', _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
         let ets = as_tup_typ !envr t' in
-        let* (envr, vs, ves, prem_vs) = E.foldlM (fun acc (e, (_, t)) ->
+        let (envr, vs, ves, prem_vs) = List.fold_left (fun acc (e, (_, t)) ->
           let (envr, vs, ves, prem_vs) = acc in
           (* NOTE: If we use `t` to type the new variable below, then it's possible that some of them
              do not reduce, and will cause later pattern matching on the types to fail.
           *)
-          let (envr', v, ve, oprem_v) = new_bind_exp envr None e None `Lhs in
-          E.return (envr', vs@[v.it], ves@[ve], prem_vs @ Option.to_list oprem_v)
+          let (envr', vs', ve, oprem_v) = new_bind_exp envr None e None `Lhs in
+          (envr', vs @ vs', ves@[ve], prem_vs @ Option.to_list oprem_v)
         ) (envr, [], [], []) (List.combine es ets) in
         let prem_case = LetPr (CaseE (mixop, TupE ves $$ lhs.at % lhs.note) $$ lhs.at % rhs.note, rhs, vs) $ at in
         info "case" at ("CaseE-TupE prem_vs: " ^ String.concat "\n" (List.map string_of_prem prem_vs));
@@ -826,9 +871,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       end
     end
   | TupE es ->
-    (* Bind to a new variable, so that [rhs] doesn't need to be re-evaluated
-       again and again in the following projections.
-    *)
+    (* simp *)
     let prems = Fun.flip List.mapi es (fun i e ->
       let bool_t = BoolT $ e.at in
       let proj_rhs = ProjE (rhs, i) $$ rhs.at % e.note in
@@ -836,16 +879,13 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       info "case" rhs.at ("RHS " ^ string_of_exp rhs ^ "'s type is " ^ string_of_typ rhs.note);
       IfPr (CmpE (`EqOp, `BoolT, e, proj_rhs) $$ e.at % bool_t) $ at)
     in
-    (* We start an inner loop to animate the components of TupE. This is needed
+    (* Need to animate the components in a loop. This is needed
        if we have premises like `(... x ..., x) = (e1, e2)`, where the first
        component cannot be animated when `x` is unknown. By solving the second
        first, we turn the first into a check.
     *)
-    let* s' = get () in
-    let s_new = { (init ()) with prems; knowns = get_knowns s' } in
-    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
-    let* () = update (put_knowns (get_knowns s_new')) in
-    E.return prems'
+    let* () = update (push_prems prems) in
+    E.return []
   | CvtE (lhs', t1, t2) ->
     (* TODO(zilinc): Conversion is not checked. *)
     animate_exp_eq envr at lhs' (CvtE (rhs, t2, t1) $$ rhs.at % lhs'.note)
@@ -913,8 +953,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   (* [e1; e2; ...; en] ++ exp2 *)
   | CatE (({ it = ListE exps; _ } as exp1), exp2) ->
     let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
-    let (envr, v_len_rhs, len_rhs', oprem_v_len_rhs) = new_bind_exp envr None len_rhs None `Rhs in
-    let* () = update (add_knowns (Set.singleton v_len_rhs.it)) in
+    let (envr, vs_len_rhs, len_rhs', oprem_v_len_rhs) = new_bind_exp envr None len_rhs None `Rhs in
+    let* () = update (add_knowns (Set.of_list vs_len_rhs)) in
     let len_lhs1 = mk_nat ~at:lhs.at (List.length exps) in
     let prem_len = IfPr (CmpE (`LeOp, `NatT, len_lhs1, len_rhs') $$ len_rhs'.at % (BoolT $ len_rhs'.at)) $ len_rhs'.at in
     let prems1 = List.mapi (fun i exp ->
@@ -938,8 +978,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   (* exp1 ++ [e1; e2; ...; en] *)
   | CatE (exp1, ({ it = ListE exps; _ } as exp2)) ->
     let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
-    let (envr, v_len_rhs, len_rhs', oprem_v_len_rhs) = new_bind_exp envr None len_rhs None `Rhs in
-    let* () = update (add_knowns (Set.singleton v_len_rhs.it)) in
+    let (envr, vs_len_rhs, len_rhs', oprem_v_len_rhs) = new_bind_exp envr None len_rhs None `Rhs in
+    let* () = update (add_knowns (Set.of_list vs_len_rhs)) in
     let len_lhs2 = mk_nat ~at:lhs.at (List.length exps) in
     let prem_len = IfPr (CmpE (`LeOp, `NatT, len_lhs2, len_rhs') $$ len_rhs'.at % (BoolT $ len_rhs'.at)) $ len_rhs'.at in
     let prems2 = List.mapi (fun i exp ->
@@ -960,6 +1000,34 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return (Option.to_list oprem_v_len_rhs @ prem_len :: prems')
+  (* exp1 ++ exp2'^n where n is known *)
+  | CatE (exp1, ({ it = IterE (exp2', (ListN(len_lhs2, _), xes)); _} as exp2))
+    when Set.subset ((free_exp false len_lhs2).varid) knowns ->
+    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
+    let (envr, vs_len_rhs, len_rhs', oprem_v_len_rhs) = new_bind_exp envr None len_rhs None `Rhs in
+    let* () = update (add_knowns (Set.of_list vs_len_rhs)) in
+    let prem_len = IfPr (CmpE (`LeOp, `NatT, len_lhs2, len_rhs') $$ len_rhs'.at % (BoolT $ len_rhs'.at)) $ len_rhs'.at in
+    let start1 = mk_nat 0 in
+    let len_lhs1 = mk_cvt_sub ~at:exp1.at len_rhs' len_lhs2 in
+    let rhs1' = SliceE (rhs, start1, len_lhs1) $> rhs in
+    let rhs2' = SliceE (rhs, len_lhs1, len_lhs2) $> rhs in
+    let prem1 = IfPr (eqE ~at:exp1.at exp1 rhs1') $ at in
+    let prem2 = IfPr (eqE ~at:exp2.at exp2 rhs2') $ at in
+    (* Start an inner loop, in case of any dependencies between the list elements.
+    *)
+    let* s' = get () in
+    let s_new = { (init ()) with prems = [prem1; prem2]; knowns = get_knowns s' } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return (Option.to_list oprem_v_len_rhs @ prem_len :: prems')
+  (* exp1* ++ [X] ++ exp2* *)
+  (*
+  | CatE ({ it = CatE ({ it = IterE (exp1', (List, xes1)); _ },
+                       { it = ListE [{ it = CaseE _; _ }]; _ })
+          ; _ },
+          { it = IterE (exp2', (List, xes2)); _ }) ->
+    todo "maybe better off just handle the rules manually."
+  *)
   | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs))
 
 (** ASSUMES: [e] contains unknown vars, whereas [es] is fully known.
@@ -1010,16 +1078,15 @@ and animate_if_prem envr at exp : prem list E.m =
                                  "  ▹ e2 = " ^ string_of_exp e2 ^ "\n" ^
                                  "    unknowns: " ^ string_of_varset unknowns2))
   )
-  (* Break up conjunctions. We have to push the two conjuncts on the stack
+  (* simp: Break up conjunctions. We have to push the two conjuncts on the stack
      and hand over the control to the outer loops, because these two conjuncts
      may need to be animated in different iterations.
    *)
   | BinE (`AndOp, _, e1, e2) ->
-    (* This should be the only place that we manipulate the stack, because the conjuncts
+    (* This should be the few places where we manipulate the stack, because the conjuncts
        are totally independent of each other and can be flattened into the main loop.
      *)
-    let* () = update (push_prems (IfPr e2 $ e2.at) >>>
-                      push_prems (IfPr e1 $ e1.at)) in
+    let* () = update (push_prems [IfPr e2 $ e2.at; IfPr e1 $ e1.at]) in
     E.return []
   (* Membership or nondeterministic choice: e1 ∈ e2 *)
   | MemE (e1, e2) ->
@@ -1211,7 +1278,7 @@ and animate_prem envr prem : prem list E.m =
     let* (e_prems1', s_end') = run_inner s_end (animate_prems' envr prem.at) in
     let* () = update (put_knowns (get_knowns s_end')) in
     E.return ((IterPr (prems_body', (iter, xes @ xes')) $ prem.at) :: e_prems1' @ e_prems2)
-  | IterPr (prems, iterexp) -> assert false
+  | _ -> error prem.at ("Unable to animate premise: " ^ string_of_prem prem)
 
 
 (* The main loop. We handle the ordering of the premises in this function. *)
@@ -1245,13 +1312,13 @@ and animate_prems' envr at : prem list E.m =
   | _ -> let ( let* ) = S.( >>= ) in
          E.exceptT (
            let* s = S.get () in
-           let (prem, s') = pop_prems s in
+           let (prem, s') = pop_prem s in
            let* () = S.put s' in
            let* r = animate_prem envr prem |> E.run_exceptT in
            match r with
            | Error e ->
              (* Recover from failure. NOTE: Need to also restore old known set. *)
-             let* () = S.update (push_prems' prem >>> set_failure e >>> put_knowns (get_knowns s')) in
+             let* () = S.update (push_prem' prem >>> set_failure e >>> put_knowns (get_knowns s')) in
              animate_prems' envr at |> E.run_exceptT
            | Ok prems -> E.run_exceptT (
                let ( let* ) = E.( >>= ) in
@@ -1290,49 +1357,6 @@ let lift_otherwise_prem prems =
   let (ow_pr, rest) = List.partition is_otherwise prems in
   ow_pr @ rest
 
-(* The variant that doesn't try to animate the [lhs] of the rule, as we know that
-   it's very difficult.
-*)
-let animate_rule_red_no_arg envr rule : clause' =
-  let lenvr = ref !envr in
-  let (id, binds, lhs, rhs, prems) = rule.it in
-  let lenvr = env_of_binds binds lenvr in
-  let lhs_vars = (free_exp false lhs).varid in
-  let rhs_vars = (free_exp false rhs).varid in
-  (* Input and output variables in the conclusion *)
-  let in_vars  = lhs_vars in
-  let out_vars = rhs_vars in
-  let prems' = animate_prems lenvr rule.at in_vars out_vars prems in
-  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
-  let binds'' = sort_binds id binds' in
-  DefD (binds'', [ExpA lhs $ lhs.at], rhs, prems')
-
-let animate_rule_red envr rule : clause' =
-  let lenvr = ref !envr in
-  let (id, binds, lhs, rhs, prems) = rule.it in
-  let lenvr = env_of_binds binds lenvr in
-  let (lenvr', v, ve, oprem_v) = new_bind_exp lenvr (Some "lhs") lhs None `Lhs in
-  let rhs_vars = (free_exp false rhs).varid in
-  (* Input and output variables in the conclusion *)
-  let in_vars = (free_varid v).varid in
-  let out_vars = rhs_vars in
-  let prems' = animate_prems lenvr' rule.at in_vars out_vars (Option.to_list oprem_v @ prems) in
-  let binds' = binds_of_env (Il.Env.env_diff !lenvr' !envr) in
-  let binds'' = sort_binds id binds' in
-  DefD (binds'', [ExpA ve $ ve.at], rhs, prems')
-
-let animate_rule envr at rel_id (r : rule_clause) : clause =
-  let (rule_id, _, _, _, _) = r.it in
-  let clause' =
-    if is_unanimatable "rule_lhs" rule_id.it rel_id then
-      animate_rule_red_no_arg envr r
-    else
-      animate_rule_red envr r
-  in
-  clause' $ at
-
-let animate_rules envr at rel_id rs = List.map (animate_rule envr at rel_id) rs
-
 let animate_clause_no_arg id envr (c: clause) : func_clause =
   let lenvr = ref !envr in
   let DefD (binds, args, exp, prems) = c.it in
@@ -1349,37 +1373,169 @@ let animate_clause id envr (c: clause) : func_clause =
   let DefD (binds, args, exp, prems) = c.it in
   let lenvr = env_of_binds binds lenvr in
   let n_args = List.length args in
-  let blob = List.mapi (fun i arg -> match arg.it with
+  let (vss, args', prems_args) = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
-      begin match new_bind_exp lenvr (Some ("a" ^ string_of_int i)) exp' None `Lhs with
-      | (_lenvr, v, ve, Some prem_v) ->
-        let fv_exp' = (free_exp false exp').varid in
-        (ExpA ve $ v.at, Some prem_v, Some v, fv_exp')
-      | (_lenvr, v, ve, None) -> (arg, None, Some v, Set.empty)
-      end
-    | _ -> (arg, None, None, Set.empty)
-  ) args
+      let (lenvr, vs, ve, prems_v) = anf_exp lenvr (Some ("a" ^ string_of_int i)) exp' None `Lhs in
+      (vs, ExpA ve $> arg, prems_v)
+    | _ -> ([], arg, [])
+  ) args |> Lib.List.unzip3
   in
-  let (args', o_prem_args, ovs, fv_args) = Lib.List.unzip4 blob in
-  let prems_args = List.filter_map Fun.id o_prem_args in
-  let vs = List.filter_map Fun.id ovs in
-  let ins = (free_list free_varid vs).varid in
+  let ins = List.concat vss |> Set.of_list in
   let ous = (free_exp false exp).varid in
-  let prems' = animate_prems lenvr c.at ins ous (prems_args @ prems) |> lift_otherwise_prem in
+  let prems' = animate_prems lenvr c.at ins ous (List.concat prems_args @ prems) |> lift_otherwise_prem in
   let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
   let binds'' = sort_binds id binds' in
   (DefD (binds'', args', exp, prems')) $ c.at
 
-let animate_clauses id envr cs = List.map (animate_clause id envr) cs
+
+(* The variant that doesn't try to animate the [lhs] of the rule, as we know that
+   it's very difficult.
+*)
+let animate_rule_red_no_arg envr rule : func_clause =
+  let (id, binds, lhs, rhs, prems) = rule.it in
+  let clause = DefD (binds, [ExpA lhs $ lhs.at], rhs, prems) $ rule.at in
+  animate_clause_no_arg id envr clause
+
+let animate_rule_red envr rule : func_clause =
+  let (id, binds, lhs, rhs, prems) = rule.it in
+  let clause = DefD (binds, [ExpA lhs $ lhs.at], rhs, prems) $ rule.at in
+  animate_clause id envr clause
+
+
+(* Many $Step rules are dependent in their arguments. For example,
+  ```
+  rule Step_read/block:
+    z; val^m ( BLOCK bt instr* )  ~>  ( LABEL_ n `{eps} val^m instr* )
+    -- if $blocktype_(z, bt) = t_1^m -> t_2^n
+  ```
+  `m` is initially unknown, and we need to use the second part of the pattern
+  `( BLOCK bt instr* )` and the premise to compute `m` and then to determine
+  what values this pattern can match. This violates the precondition that all
+  variables in the input (or LHS of a rule) are known.
+  This transformation eliminates this circularity:
+  ```
+  rule Step_read/block:
+    z; val* ( BLOCK bt instr* )  ~>  rest* ( LABEL_ n `{eps} val^m instr* )
+    -- if $blocktype_(z, bt) = t_1^m -> t_2^n
+    -- if rest* val^m = val*
+  ```
+  so that we can match the first part of the argument unconditionally and then
+  compute `m` in the premises.
+ *)
+
+let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * prem list =
+  match in_stack.it with
+  | CatE ({ it = IterE (vals, (ListN(n, _), xes)); _ } as in_vals, in_stack2) ->
+    let iter' = List in
+    let val_ = fresh_id (Some "val") vals.at in
+    let val_e = VarE val_ $$ vals.at % (t_var "val") in
+    let val_e' = SubE (val_e, t_var "val", t_var "instr") $$ vals.at % t_var "instr" in
+    let val_star = Frontend.Dim.annot_varid val_ [iter'] in
+    let val_star_e = IterE (val_e', (iter', [(val_, VarE val_star $$ vals.at % t_star "val")])) $> vals in
+    let rest = fresh_id (Some "rest") vals.at in
+    let rest_e = VarE rest $> val_e in
+    let rest_e' = SubE (rest_e, t_var "val", t_var "instr") $> val_e' in
+    let rest_star = Frontend.Dim.annot_varid rest [iter'] in
+    let rest_star_e = IterE (rest_e', (iter', [(rest, VarE rest_star $$ vals.at % t_star "val")])) $> vals in
+    let in_vals' = val_star_e in
+    let in_stack' = CatE (in_vals', in_stack2) $> in_stack in
+    let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
+    let prems' = (IfPr (eqE ~at:rest_star_e.at in_vals' (CatE (rest_star_e, in_vals) $> in_vals)) $ rest_star_e.at) :: prems in
+    ([ExpB (rest_star, t_star "val") $ rest_star_e.at;
+      ExpB (val_star, t_star "val") $ val_star_e.at],
+     in_stack', out_stack', prems')
+  (* In this case, the LHS pattern is not circular dependent as the above case, but we still
+     generalise it so that we can pass in the entire value stack, instead of manually pick a
+     certain number of operands to feed to the instruction.
+  *)
+  | ListE instrs ->
+    let iter' = List in
+    let rest = fresh_id (Some "rest") in_stack.at in
+    let rest_e = VarE rest $$ in_stack.at % (t_var "val") in
+    let rest_e' = SubE (rest_e, t_var "val", t_var "instr") $> in_stack in
+    let rest_star = Frontend.Dim.annot_varid rest [iter'] in
+    let rest_star_e = IterE (rest_e', (iter', [(rest, VarE rest_star $$ in_stack.at % t_star "val")])) $> in_stack in
+    let in_stack' = CatE (rest_star_e, in_stack) $> in_stack in
+    let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
+    ([ExpB (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
+  | _ -> [], in_stack, out_stack, prems
+
+let transform_step_rule envr (r: rule_clause) : func_clause =
+  let (rule_id, binds, lhs, rhs, prems) = r.it in
+  let CaseE (in_mixop, in_tup) = lhs.it in
+  let TupE [in_z; in_stack] = in_tup.it in
+  let CaseE (out_mixop, out_tup) = rhs.it in
+  let TupE [out_z; out_stack] = out_tup.it in
+  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  let in_tup' = TupE [in_z; in_stack'] $> in_tup in
+  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
+  let out_tup' = TupE [out_z; out_stack'] $> out_tup in
+  let rhs' = CaseE (out_mixop, out_tup') $> rhs in
+  animate_rule_red envr ((rule_id, binds @ binds', lhs', rhs', prems') $> r)
+
+let transform_step_pure_rule envr (r: rule_clause) : func_clause =
+  let (rule_id, binds, in_stack, out_stack, prems) = r.it in
+  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  animate_rule_red envr ((rule_id, binds @ binds', in_stack', out_stack', prems') $> r)
+
+let transform_step_read_rule envr (r: rule_clause) : func_clause =
+  let (rule_id, binds, lhs, out_stack, prems) = r.it in
+  let CaseE (in_mixop, in_tup) = lhs.it in
+  let TupE [in_z; in_stack] = in_tup.it in
+  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  let in_tup' = TupE [in_z; in_stack'] $> in_tup in
+  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
+  animate_rule_red envr ((rule_id, binds @ binds', lhs', out_stack', prems') $> r)
+
+(* $step_ctxt: config -> config *)
+let transform_step_ctxt_clause id envr (c: clause) : func_clause =
+  let DefD (binds, [{it = ExpA lhs; _}], rhs, prems) = c.it in
+  let CaseE (out_mixop, out_tup) = rhs.it in
+  let CaseE (in_mixop, in_tup) = lhs.it in
+  let TupE [in_z; in_stack] = in_tup.it in
+  let TupE [out_z; out_stack] = out_tup.it in
+  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  let in_tup' = TupE [in_z; in_stack'] $> in_tup in
+  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
+  let out_tup' = TupE [out_z; out_stack'] $> out_tup in
+  let rhs' = CaseE (out_mixop, out_tup') $> rhs in
+  animate_clause id envr (DefD (binds @ binds', [expA lhs'], rhs', prems) $> c)
+
+
+let animate_rule envr at rel_id rule_name (r: rule_clause) : func_clause =
+  let (rule_id, _, _, _, _) = r.it in
+  if is_unanimatable "rule_lhs" rule_id.it rel_id then
+    animate_rule_red_no_arg envr r
+  else if is_step_rule rel_id then
+    transform_step_rule envr r
+  else if is_step_pure_rule rel_id then
+    transform_step_pure_rule envr r
+  else if is_step_read_rule rel_id then
+    transform_step_read_rule envr r
+  else
+    animate_rule_red envr r
+
+let animate_rules envr at rel_id rule_name rs = List.map (animate_rule envr at rel_id rule_name) rs
+
+
 
 let animate_rule_def envr (rdef: rule_def) : func_def =
-  let (_, rel_id, t1, t2, rules) = rdef.it in
+  let (rule_name, rel_id, t1, t2, rules) = rdef.it in
   let params = [ExpP ("_" $ t1.at, t1) $ t1.at] in
-  (rel_id, params, t2, animate_rules envr rdef.at rel_id.it rules, None) $ rdef.at
+  if List.mem rel_id.it Common.step_relids then
+    ((rel_id.it ^ "/" ^ rule_name) $> rel_id, params, t2,
+     animate_rules envr rdef.at rel_id.it rule_name rules, None) $ rdef.at
+  else
+    (rel_id, params, t2,
+     animate_rules envr rdef.at rel_id.it rule_name rules, None) $ rdef.at
+
 
 let animate_func_def' envr (id, ps, typ, clauses, opartial) =
-  (id, ps, typ, animate_clauses id envr clauses, opartial)
+  match id.it with
+  | "step_ctxt" -> (id, ps, typ, List.map (transform_step_ctxt_clause id envr) clauses, opartial)
+  | _           -> (id, ps, typ, List.map (animate_clause             id envr) clauses, opartial)
 let animate_func_def envr (hdef: func_def) : func_def = animate_func_def' envr hdef.it $ hdef.at
+
 
 let rec animate_def envr (d: dl_def): dl_def = match d with
 | TypeDef tdef -> TypeDef tdef
@@ -1388,22 +1544,60 @@ let rec animate_def envr (d: dl_def): dl_def = match d with
 | RecDef  defs -> RecDef (List.map (animate_def envr) defs)
 
 
-(* Merge all rules that have the same rel_id. *)
+(* Merge all rules that have the same rel_id.
+   We've generated functions for each rule_name like:
+     $Rel_id/rule_name1(params) : t
+     $Rel_id/rule_name2(params) : t
+   We also want to create an umbralla function definition that tries all
+   different rules, like:
+     $Rel_id(params) : t
+     $Rel_id(vs) = $Rel_id/rule_name1(vs)
+     $Rel_id(vs) = $Rel_id/rule_name2(vs)
+   So that we can use the former more efficient version when we want,
+   and leave the rest to the latter more pattern-match heavy one.
+   This requires a special semantics in the interpreter, that
+   even the patterns all overlap, if a clause fails, it still falls
+   through to try later cases. It is a bit tricky to directly translate
+   it into OCaml though.
+*)
 let rec merge_defs (defs: dl_def list) : dl_def list =
   match defs with
   | [] -> []
   | (FuncDef {it = (fid0, params, typ, _, opartial); _} as f) :: fs ->
-    let func_id = function
-    | FuncDef {it = (fid, _, _, _, _); _} -> Some fid
+    let rel_id = function
+    | FuncDef {it = (fid, _, _, _, _); _} -> Some (String.split_on_char '/' fid.it |> List.hd)
     | _ -> None
     in
-    let func_clauses (FuncDef {it = (_, _, _, cls, _); _}) = cls in
+    let rel_id0 = String.split_on_char '/' fid0.it |> List.hd in
     let fs_same, fs_diff =
-      List.partition (fun f -> func_id f = Some fid0) fs in
-    let clauses = f :: fs_same |> List.concat_map func_clauses in
-    let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
-    let f' = FuncDef ((fid0, params, typ, clauses, opartial) $ at) in
-    f' :: merge_defs fs_diff
+      List.partition (fun f -> rel_id f = Some rel_id0) fs in
+    let fs =
+      if List.mem rel_id0 Common.step_relids then
+        let mk_clause = function
+        | FuncDef {it = (fid, ps, t, _, _); at; _} ->
+          let args, binds = List.map (fun p -> (match p.it with
+            | ExpP (v, t') ->
+              let v' = if v.it = "_" then fresh_id (Some "a") v.at else v in
+              ExpA (VarE v' $$ v.at % t') $ p.at, ExpB (v', t') $ p.at
+            | TypP s -> TypA (VarT (s, []) $ s.at) $ p.at, TypB s $ p.at
+            | DefP (f, ps', t') -> DefA f $ p.at, DefB (f, ps', t') $ p.at
+            | GramP (v, t') -> todo "merge_def: GramP"
+            )
+          ) ps |> Lib.List.unzip in
+          let e = CallE (fid, args) $$ at % t in
+          DefD (binds, args, e, []) $ at in
+        let clauses = f :: fs_same |> List.map mk_clause in
+        let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
+        let f' = FuncDef ((rel_id0 $> fid0, params, typ, clauses, opartial) $ at) in
+        f :: fs_same @ [f']
+      else
+        let func_clauses (FuncDef {it = (_, _, _, cls, _); _}) = cls in
+        let clauses = f :: fs_same |> List.concat_map func_clauses in
+        let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
+        let f' = FuncDef ((fid0, params, typ, clauses, opartial) $ at) in
+        [f']
+    in
+    fs @ merge_defs fs_diff
   | ((RecDef defs') as f) :: fs ->
     RecDef (merge_defs defs') :: merge_defs fs
   | f :: fs -> f :: merge_defs fs

@@ -3,7 +3,7 @@ open Il.Print
 open Il2al.Il2al_util
 open Util.Source
 open Def
-
+open Il_util
 
 (* Debug *)
 
@@ -45,17 +45,43 @@ let error at msg = Util.Error.error at "IL -> DL" msg
 let il2dl_rule_clause rel_id rule : rule_clause =
   let RuleD (id, binds, _, exp, prems) = rule.it in
   match exp.it with
-  | TupE [ lhs; rhs ] when List.mem rel_id.it [ "Step"; "Step_read"; "Step_pure" ]
-  -> (id, binds, lhs, rhs, prems) $ rule.at
-  | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr"
-  -> (id, binds, {exp with it = TupE [z1; lhs]}, {exp with it = TupE [z2; rhs]}, prems) $ rule.at
+  | TupE [ lhs; rhs ] when List.mem rel_id.it Common.step_relids ->
+    (id, binds, lhs, rhs, prems) $ rule.at
+  | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr" ->
+    let at1 = over_region [z1.at; lhs.at] in
+    let at2 = over_region [z2.at; rhs.at] in
+    let lhs' = mk_case' ~at:at1 "config" [[];[";"];[]] [z1; lhs] in
+    let rhs' = mk_case' ~at:at1 "config" [[];[";"];[]] [z2; rhs] in
+    (id, binds, lhs', rhs', prems) $ rule.at
+  | TupE [ ctx; obj; typ ] when List.mem rel_id.it Common.typ_infers ->
+    let lhs' = TupE [ ctx; obj ] $$ exp.at
+               % (TupT [ (varE ~note:ctx.note "_", ctx.note)
+                       ; (varE ~note:obj.note "_", obj.note)
+                       ] $ exp.at) in
+    (id, binds, lhs', typ, prems) $ rule.at
+  | _ when List.mem rel_id.it Common.typ_checks ->
+    (id, binds, exp, boolE true, prems) $ rule.at
   | _ -> error exp.at ("Wrong exp form of reduction rule: [" ^ rel_id.it ^ "]" ^ Il.Print.string_of_exp exp)
 
 let il2dl_rule_def rule_name rel_id typ rules at : rule_def =
   let rule_clauses = List.map (il2dl_rule_clause rel_id) rules in
-  match typ.it with
-  | TupT [(_, t1); (_, t2)] -> (rule_name, rel_id, t1, t2, rule_clauses) $ at
-  | _ -> error at ("Invalid rule type: " ^ string_of_typ typ)
+  let t1, t2 =
+    (match typ.it with
+    | TupT [ (_, t1); (_, t2) ] when List.mem rel_id.it Common.step_relids ->
+      t1, t2
+    | TupT [ et11; et12; et21; et22 ] when rel_id.it = "Eval_expr" ->
+      let at1 = over_region [(fst et11).at; (snd et12).at] in
+      let at2 = over_region [(fst et21).at; (snd et22).at] in
+      t_var ~at:at1 "config", t_var ~at:at2 "config"
+    | TupT [ ctx; obj; (_, typ) ] when List.mem rel_id.it Common.typ_infers ->
+      TupT [ ctx; obj ] $ typ.at, typ
+    | _ when List.mem rel_id.it Common.typ_checks ->
+      typ, BoolT $ no
+    | _ -> error at ("Invalid rule type: " ^ string_of_typ typ)
+    )
+  in
+  (rule_name, rel_id, t1, t2, rule_clauses) $ at
+
 
 (* Group reduction rules that have same rule name. *)
 let rec group_rules : (id * typ * rule) list -> rule_def list = function
@@ -97,7 +123,7 @@ let rec il2dl (il: script) : dl_def list =
     | DecD (id, params, typ, clauses) ->
       let partial = if List.mem id partial_funcs then Partial else Total in
       [FuncDef ((id, params, typ, clauses, Some partial) $ def.at)]
-    | RelD (rel_id, _, typ, rules) -> 
+    | RelD (rel_id, _, typ, rules) ->
       let rules = List.map (fun rule -> (rel_id, typ, rule)) rules in
       let rule_def = group_rules rules in
       List.map (fun r -> RuleDef r) rule_def
