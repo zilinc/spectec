@@ -45,7 +45,7 @@ let get_type e =
   | TupT _ -> "todo"
   | IterT _ -> "todo"
 
-(* FOR NOW,, we do not error if the type is NOT a tuple as the IL elaboration converts a Tup [t] into t. depending on how the parser is defined and used this can cause issues later *)
+(* as of now, we do not error if the type is NOT a tuple as the IL elaboration converts a Tup [t] into t. depending on how the parser is defined and used this can cause issues later *)
 let rec get_tupsize (t : typ) : int option t =
   match t.it with
   | TupT ts -> return (Some (List.length ts))
@@ -262,7 +262,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     Printf.printf "-----\n";
     let* typ_annot = ocaml_of_typ e.note in 
     return (Printf.sprintf "(%s : %s)" (sanitize_name ~typearg id.it) typ_annot)
-  | SupE (e1, typ1, typ2) | SubE (e1, typ1, typ2) ->
+  | SubE (e1, typ1, typ2) ->
     (* if an argument is of the form e : t1 <: t2, 
        the function expects an arg of type t1 but casts it to a type t2 in the body. so we have to add "let e = t2_of_t1 arg" to make it typecheck *)
     let* freshvarname = get_freshvar () in
@@ -275,6 +275,25 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let* typ2str = ocaml_of_typ typ2 in
     let* () =  add_typecast ("  let " ^ e1str ^ " = " ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ freshvarname ^ " in") in
     return (Printf.sprintf "(%s : %s)" freshvarname typ2str)
+  | CaseE (mixop, e1) -> 
+    (* todo: deal with nested cons and tuples *)
+    let* newvararity = begin match e1.it with 
+    | VarE id | TupE [{it = VarE id; _}] -> let* () = add_known id.it in return 1
+    | _ -> raise CannotAnimate
+    end in
+    let retvals = match newvararity with
+    | 0 -> error e.at "function arg is a type constructor with no args: shouldn't happen"
+    | 1 -> "freshvar_0"
+    | n -> "(" ^ (String.concat ", " (List.init n (fun i -> Printf.sprintf "freshvar_%d" i))) ^ ")" 
+    in
+    let* argtypcons = resolve_variant e.note in
+    let* argtyp = ocaml_of_typ ~consannot:true (Option.get argtypcons) in
+    let mixopstr = (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop)) ^ "_" ^ argtyp in
+    let* freshvar = get_freshvar () in
+    let* e1str = ocaml_of_exp e1 in
+    let uncasing = Printf.sprintf "  let* %s = match %s with\n  | %s -> Some %s\n  | _ -> None\n  in" e1str freshvar (append_sep mixopstr retvals " ") retvals in
+    let* () = add_typecast uncasing in
+    return freshvar
   | _ -> return "TODO non-variable arguments"
   end else match e.it with
   | NumE n -> return (Num.to_string n)
@@ -406,12 +425,6 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
         return "(* TODO: IterE with multiple-bindings and non-list iterator *)"
       end
     end
-  | SupE (e1, typ1, typ2) ->
-    let* () = generate_type_conv typ1 typ2 in
-    let* e1str = ocaml_of_exp e1 in
-    let* typ1str = ocaml_of_typ typ1 in
-    let* typ2str = ocaml_of_typ typ2 in
-    return ("(" ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ e1str ^ ")")
   | SubE (e1, typ1, typ2) ->
     let* () = generate_type_conv typ1 typ2 in
     let* e1str = ocaml_of_exp e1 in
@@ -675,8 +688,8 @@ and ocaml_of_typbind ?(typearg=false) ?(consannot=false) (e, t) =
     return (estr ^ " : " ^ tstr)*)
   | _ -> ocaml_of_typ ~typearg ~consannot t
 
-(* funcdef/funcall refer to whether the argument is part of a function definition or function call. When _defining_ a function, an argument can only be a (possibly super/sub typed) variable but when calling functions, it can be any expr. We ignore dependent types for now so type variables in func calls/defs are ignored.
-typedecl/def refers to whether the arg is from a type declaration, like: "type x list", or type defintion, like: "type a = Cons of x" OR "type a = nat list". right now, we only support arguments that are types themselves (polymorphic types). we dont support an arg like "N: nat" (dependent types).
+(* funcdef/funcall refer to whether the argument is part of a function definition or function call. When _defining_ a function, an argument can only be a (possibly super/sub typed or cased) variable, but when calling functions, it can be any expr. We ignore dependent types for now so type variables in func calls/defs are ignored.
+typearg refers to whether the arg is from a type declaration, like: "type x list", or type defintion, like: "type a = Cons of x" OR "type a = nat list". right now, we only support arguments that are types themselves (polymorphic types). we dont support an arg like "N: nat" (dependent types).
 TODO: idk what a defA / GramA arg is *)
 and ocaml_of_arg ?(typearg=true) ?(funcdef=false) ?(funccall=false) a =
   match a.it with
@@ -732,7 +745,7 @@ let get_idx_list (iterlist : (id * exp) list) id_opt region =
 let gen_case_arm i e : string t = 
   match e.it with 
   | VarE _ -> return (Printf.sprintf "freshvar_%d" i)
-  | SubE (e1, t1, t2) | SupE (e1, t1, t2) -> 
+  | SubE (e1, t1, t2) ->
       let* t1str = ocaml_of_typ t1 in
       let* t2str = ocaml_of_typ t2 in
       let* () = generate_type_conv t1 t2 in
@@ -791,6 +804,12 @@ let rec ocaml_of_prems (prems : prem list) : string t =
             return (vardef ^ outflow_def)
           | _ -> return "(* TODO: LetPr LHS is IterOpt with multiple bindings *)"
           end
+        | SubE (lhs', t1, t2) -> 
+          let* () = generate_type_conv t1 t2 in 
+          let* t1name = ocaml_of_typ t1 in
+          let* t2name = ocaml_of_typ t2 in
+          let* lhs_str = ocaml_of_exp lhs' in
+          return (Printf.sprintf "  let %s = %s_of_%s (%s) in" lhs_str t1name t2name rhs_str)
         | _ -> error p.at "LetPr ill-formed: LHS must be one of: variable, optional value/iterator, cased expression."
       end 
     | IfPr cond ->
