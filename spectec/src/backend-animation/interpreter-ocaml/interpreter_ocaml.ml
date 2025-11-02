@@ -9,6 +9,8 @@ open Util.Error
 module TypeM   = Util_ocaml.TypeM
 open TypeM
 
+exception CannotAnimate
+
 let rec get_dl_def_region (dl_def : dl_def) : region =
   match dl_def with
   | FuncDef fd -> fd.at
@@ -25,11 +27,36 @@ let typevars_of_params (ps : param list) : Set.t =
        | _ -> None)
   |> Set.of_list
 
+let collect_vars (e : exp) : string list t = match e.it with 
+  | VarE id -> 
+    let* () = add_known id.it in 
+    return [sanitize_name id.it]
+  | TupE es ->
+      let rec go acc = function
+        | [] -> return (List.rev acc)
+        | {it = VarE id; _} :: rest ->
+            let* () = add_known id.it in
+            go (sanitize_name id.it :: acc) rest
+        | _ :: _ -> raise CannotAnimate
+      in
+      go [] es
+  | _ -> raise CannotAnimate
+
+(* generate a tuple of fresh variables for cased expressions *)
+let fresh_tuple n : string =
+  match n with
+  | 0 -> "()"
+  | 1 -> "freshvar_0"
+  | n ->
+      "(" ^ String.concat ", "
+               (List.init n (fun i -> Printf.sprintf "freshvar_%d" i))
+      ^ ")"
+
 (* TODOs: 
 MAJOR REFACTOR 
+the above functions should be reused when the LHS of a let pr is case e
 do not import the typeM stuff above
 compose funcdefs and calls need types *)
-exception CannotAnimate
 
 (* This exception is raised when the OCaml generator sees a pattern that it does not expect (for example, if ruled out by validation) / unreachable code *) 
 let error at msg = error at "OCaml CodeGen" msg
@@ -252,7 +279,7 @@ let ocaml_of_cmpop op =
 let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : exp) : string t =
   (* for now, we don't support dependent types. *)
   if typearg then return "(* TODO:typearg *)" else 
-  (* function arguments must be (subtyped/supertyped) variables *)
+  (* function arguments must be (subtyped/supertyped/cased) variables *)
   if funcdef then begin match e.it with 
   | VarE id -> 
     let* () = add_known id.it in 
@@ -276,25 +303,20 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let* () =  add_typecast ("  let " ^ e1str ^ " = " ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ freshvarname ^ " in") in
     return (Printf.sprintf "(%s : %s)" freshvarname typ2str)
   | CaseE (mixop, e1) -> 
-    (* todo: deal with nested cons and tuples *)
-    let* newvararity = begin match e1.it with 
-    | VarE id | TupE [{it = VarE id; _}] -> let* () = add_known id.it in return 1
-    | _ -> raise CannotAnimate
-    end in
-    let retvals = match newvararity with
-    | 0 -> error e.at "function arg is a type constructor with no args: shouldn't happen"
-    | 1 -> "freshvar_0"
-    | n -> "(" ^ (String.concat ", " (List.init n (fun i -> Printf.sprintf "freshvar_%d" i))) ^ ")" 
+    (* todo: deal with nested cons *)
+    let* cased_vars = collect_vars e1 in
+    let newvararity = List.length cased_vars in
+    let lhsvars = if (newvararity = 0) then "()" else 
+      String.concat "," cased_vars 
     in
-    let* argtypcons = resolve_variant e.note in
-    let* argtyp = ocaml_of_typ ~consannot:true (Option.get argtypcons) in
-    let mixopstr = (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop)) ^ "_" ^ argtyp in
     let* freshvar = get_freshvar () in
-    let* e1str = ocaml_of_exp e1 in
-    let uncasing = Printf.sprintf "  let* %s = match %s with\n  | %s -> Some %s\n  | _ -> None\n  in" e1str freshvar (append_sep mixopstr retvals " ") retvals in
+    let* mixopstr = ocaml_of_mixop mixop e.note in
+    let retvals = fresh_tuple newvararity in
+    let mixopargs = if (newvararity = 0) then "" else retvals in 
+    let uncasing = Printf.sprintf "  let* %s = match %s with\n  | %s -> Some %s\n  | _ -> None\n  in" lhsvars freshvar (append_sep mixopstr mixopargs " ") retvals in
     let* () = add_typecast uncasing in
     return freshvar
-  | _ -> return "TODO non-variable arguments"
+  | _ -> raise CannotAnimate
   end else match e.it with
   | NumE n -> return (Num.to_string n)
   | TextE s -> return (Printf.sprintf "%S" s)
@@ -335,7 +357,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let binopstr = ocaml_of_binop ~float op in
     let e1str' = floatify e1str e1type float binopstr in
     let e2str' = floatify e2str e2type float binopstr in
-    (* if both e1 and e2 were ints, but we used the float power operater, we need to convert the result back to an int *)
+    (* if both e1 and e2 were ints, but we used the float power operator, we need to convert the result back to an int *)
     if (e1type = "int") && (e2type = "int") && (binopstr = "**") then
       return ("(int_of_float (" ^ e1str' ^ " " ^ binopstr ^ " " ^ e2str' ^ "))")
     else return ("(" ^ e1str' ^ " " ^ binopstr ^ " " ^ e2str' ^ ")")
@@ -519,6 +541,14 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let* e1str = ocaml_of_exp e1 in
     return ("(Option.get " ^ e1str ^ ")")
 
+and ocaml_of_mixop mixop typnote : string t = 
+  let* typcons = resolve_variant typnote in
+  let* typname = ocaml_of_typ ~consannot:true (Option.get typcons) in
+  let label =
+    sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop)
+  in
+  return (label ^ "_" ^ typname)
+
 (* an "uncase exp typcons" function will strip the typecons from the exp (a variant type). but each constructor can take a different number / type of arguments, meaning uncase_type will have different return types for each cons. so we have to generate a separate function for each cons. *)
 and generate_uncase tcs typename : unit t =
   let* typevars = get_typevars () in 
@@ -613,7 +643,7 @@ and typ_is_list (typname : typ) : bool t =
   | Some _ -> return false
   | None -> error typname.at "Non-composable type: shouldn't happen."
 
-and build_fields (tfs : typfield list) : unit t = 
+and build_fields (tfs : typfield list) typename : unit t = 
   (* Verify every field is composable *)
   let* composable = allM is_composable tfs in 
   if not composable then return () else
@@ -632,11 +662,11 @@ and build_fields (tfs : typfield list) : unit t =
 (* Assuming that the top-level is a struct. The nested fields may be lists or structs *)
 and generate_compose (dt : deftyp) (typename : string) : unit t =
   match dt.it with
-  | StructT tfs -> build_fields tfs
+  | StructT tfs -> build_fields tfs typename
   | AliasT inner_type -> begin
     let* tfs = resolve_struct inner_type true in 
     match tfs with 
-    | Some tfs' -> build_fields tfs'
+    | Some tfs' -> build_fields tfs' typename
     | None -> return ()
     end
   | VariantT _ -> return ()
