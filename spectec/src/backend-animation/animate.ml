@@ -630,7 +630,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* () = update (add_knowns (Set.singleton v.it)) in
     E.return [ LetPr (lhs, rhs, [v.it]) $ at ]
   (* Treated as atomic. *)
-  (* | DotE (lhs', mixop) -> _  *)
+  (* | DotE (lhs', mixop) -> _ *)
   (* function call; invert it. *)
   | CallE (fid, args) when can_invert s ->
     let varid = fun s -> s.varid in

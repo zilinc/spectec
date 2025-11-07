@@ -1,7 +1,8 @@
 open Il_util
-open Construct
+open Construct_v
 open Def
 open State
+open Value
 open Util
 open Lib.Time
 open Lib.Fun
@@ -34,11 +35,6 @@ let verbose : string list ref =
 
 let error at msg = Error.error at "(Meta)Interpreter" msg
 let error_np msg = error no_region msg
-
-let error_value name exp = error exp.at ("Invalid " ^ name ^ ": " ^ string_of_exp exp)
-let error_values name exps =
-  let at = over_region (List.map (fun e -> e.at) exps) in
-  error at ("Invalid " ^ name ^ ": " ^ String.concat ", " (List.map string_of_exp exps))
 
 let string_of_error at msg = string_of_region at ^ " (Meta)Interpreter error:\n" ^ msg
 
@@ -103,7 +99,7 @@ end
 open OptMonad
 
 
-type builtin = { name : string; f : exp list -> exp OptMonad.m }
+type builtin = { name : string; f : value list -> value OptMonad.m }
 
 let fail_info cat at msg = info cat at msg; fail ()
 
@@ -117,7 +113,7 @@ let error_eval etyp exp onotes =
 let fail_assign at lhs rhs msg =
   info "assign" at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
                    "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
-                   "  ▹ value: " ^ string_of_exp rhs);
+                   "  ▹ value: " ^ string_of_value rhs);
   fail ()
 
 let string_of_exp exp = Il.Print.string_of_exp exp |> Lib.String.shorten
@@ -129,10 +125,14 @@ let string_of_args = function
 (* Environments *)
 
 module VContext = struct
-  include Il.Subst
-  type t = subst
+  module Map = Map.Make(String)
+  type t = value Map.t
 
-  let dom_varid ctx : Set.t = ctx.varid |> Map.bindings |> List.map fst |> Set.of_list
+  let empty : t = Map.empty
+
+  let add_varid ctx (s: id) (v: value) = Map.add s.it v ctx
+  let find_varid ctx (s : id) : value = Map.find s.it ctx
+  let dom_varid ctx : Set.t = ctx |> Map.bindings |> List.map fst |> Set.of_list
 end
 
 
@@ -144,17 +144,6 @@ let il_env : Il.Env.t ref = ref Il.Env.empty
 let dummy : exp = varE ~note:(t_var "dummyT") "dummyE"
 
 
-let as_opt_exp e =
-  match e.it with
-  | OptE eo -> eo
-  | _ -> error_value "OptE" e
-
-let as_list_exp e =
-  match e.it with
-  | ListE es -> es
-  | _ -> error_value "ListE" e
-
-
 let vctx_to_subst ctx : Il.Subst.subst =
   VContext.Map.fold (fun var value subst ->
     Il.Subst.add_varid subst (var $ no_region) value
@@ -163,391 +152,309 @@ let vctx_to_subst ctx : Il.Subst.subst =
 
 
 (** [lhs] is the pattern, and [rhs] is the expression. *)
-let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
-  let* rhs' = eval_exp ctx rhs in
-  info "assign" lhs.at ("Assignment: " ^ string_of_exp lhs ^ " ↦ " ^ string_of_exp rhs');
-  match lhs.it, rhs'.it with
+let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
+  info "assign" lhs.at ("Assignment: " ^ string_of_exp lhs ^ " ↦ " ^ string_of_value rhs);
+  match lhs.it, rhs with
   | VarE name, _ ->
-    VContext.add_varid ctx name rhs' |> return
-  | IterE ({ it = VarE x1; _ }, ((List|List1), [(x2, lhs')])), ListE _ when Il.Eq.eq_id x1 x2 ->
-    assign ctx lhs' rhs'
+    VContext.add_varid ctx name rhs |> return
+  | IterE ({ it = VarE x1; _ }, ((List|List1), [(x2, lhs')])), ListV _ when Il.Eq.eq_id x1 x2 ->
+    assign ctx lhs' rhs
   | IterE ({ it = VarE x1; _ }, (Opt, [x2, lhs'])), _ when Il.Eq.eq_id x1 x2 ->
-    assign ctx lhs' rhs'
+    assign ctx lhs' rhs
   | IterE (e, (Opt, xes)), _ ->
     assert false  (* Animation shouldn't output this. *)
-  | IterE (e, ((ListN _|List|List1) as iter, xes)), ListE es ->
-    let* ctxs = mapM (assign VContext.empty e) es in
+  | IterE (e, ((ListN _|List|List1) as iter, xes)), ListV vs ->
+    let* ctxs = mapM (assign VContext.empty e) (Array.to_list !vs) in
     (* Assign length variable *)
     let* ctx' =
       match iter with
       | ListN (expr, None) ->
-        let length = il_of_nat (List.length es) in
+        let length = vl_of_nat (Array.length !vs) in
         assign ctx expr length
       | ListN _ ->
-        fail_assign lhs.at lhs rhs' ("invalid assignment: iter with index cannot be an assignment target")
+        fail_assign lhs.at lhs rhs ("invalid assignment: iter with index cannot be an assignment target")
       | _ -> return ctx
     in
     foldlM (fun ctx (x, e) ->
       let vs = List.map (Fun.flip VContext.find_varid x) ctxs in
       let v = match iter with
-      | Opt -> optE e.note (List.nth_opt vs 0)
-      | _   -> listE e.note vs
+      | Opt -> optV (List.nth_opt vs 0)
+      | _   -> listV_of_list vs
       in
       assign ctx e v
     ) ctx' xes
-  | TupE lhs_s, TupE rhs_s when List.length lhs_s = List.length rhs_s ->
+  | TupE lhs_s, TupV rhs_s when List.length lhs_s = List.length rhs_s ->
     foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s rhs_s)
-  | CaseE (lhs_tag, lhs_s), CaseE (rhs_tag, rhs_s) ->
-    begin match lhs_s.it, rhs_s.it with
-    | TupE lhs_s', TupE rhs_s' ->
-      if Il.Eq.eq_mixop lhs_tag rhs_tag && List.length lhs_s' = List.length rhs_s' then
-        foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s' rhs_s')
+  | CaseE (lhs_tag, lhs_s), CaseV (rhs_tag, rhs_s) ->
+    begin match lhs_s.it with
+    | TupE lhs_s' ->
+      if vl_of_mixop lhs_tag = rhs_tag && List.length lhs_s' = List.length rhs_s then
+        foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s' rhs_s)
       else
-        fail_assign lhs.at lhs rhs' ("tag or payload doesn't match")
-    | _ -> fail_assign lhs.at lhs rhs' "not a TupE inside a CaseE"
+        fail_assign lhs.at lhs rhs ("tag or payload doesn't match")
+    | _ -> fail_assign lhs.at lhs rhs "not a TupE inside a CaseE"
     end
-  | OptE (Some lhs'), OptE (Some rhs'') -> assign ctx lhs' rhs''
-  | CvtE (e1, nt, _), NumE n ->
+  | OptE (Some lhs'), OptV (Some rhs'') -> assign ctx lhs' rhs''
+  | CvtE (e1, nt, _), NumV n ->
     (match Xl.Num.cvt nt n with
-    | Some n' -> assign ctx e1 (mk_expr rhs'.at (NumT nt $ rhs'.at) (NumE n'))
-    | None -> fail_assign lhs.at lhs rhs' ("inverse conversion not defined for " ^ string_of_exp rhs')
+    | Some n' -> assign ctx e1 (NumV n')
+    | None -> fail_assign lhs.at lhs rhs ("inverse conversion not defined for " ^ string_of_value rhs)
     )
-  | SubE (p, pt1, pt2), SubE (e, et1, et2) when Il.Eq.eq_typ pt1 et1 && Il.Eq.eq_typ pt2 et2 -> assign ctx p e
-  | SubE (p, t1, t2), _ when Il.Eq.eq_typ t1 rhs'.note -> assign ctx p rhs'
-  | SubE (p, t1, t2), CaseE (mixop, tup) when Il.Eq.eq_typ t2 rhs'.note ->
+  | SubE (p, t1, t2), CaseV (mixop, vs) ->
     let tcs = as_variant_typ !il_env t1 in
     info "assign" lhs.at ("tcs = " ^ String.concat ", " (List.map (fun (m, _, _) -> string_of_mixop m) tcs));
-    info "assign" lhs.at ("mixop = " ^ string_of_mixop mixop);
-    (match List.find_map (fun (mixop', _, _) -> if Il.Eq.eq_mixop mixop mixop' then Some mixop' else None) tcs with
-    | Some mixop' ->
-      let rhs'' = CaseE (mixop', tup) $$ rhs'.at % t1 in
-      assign ctx p rhs''
+    info "assign" lhs.at ("mixop = " ^ Value.string_of_mixop mixop);
+    (match List.find_map (fun (mixop', _, _) -> if vl_of_mixop mixop' = mixop then Some mixop' else None) tcs with
+    | Some mixop' -> assign ctx p rhs
     | None ->
-      fail_assign lhs.at lhs rhs' ("Variant doesn't have the corresponding subtype " ^ string_of_typ t1)
+      fail_assign lhs.at lhs rhs ("Variant doesn't have the corresponding subtype " ^ string_of_typ t1)
     )
-  (*
-    if sub_typ env e1.note t21 then
-      match_exp' env s (reduce_exp env (SubE (e1, e1.note, t21) $> e21)) e21
-    else if is_head_normal_exp e1 then
-      let t21' = reduce_typ env t21 in
-      if
-        match e1.it, t21'.it with
-        | BoolE _, BoolT
-        | NumE _, NumT _
-        | TextE _, TextT -> true
-        | CaseE (op, _), VarT _ ->
-          (match (reduce_typdef env t21).it with
-          | VariantT tcs ->
-            (* Assumes that we only have shallow subtyping. *)
-            List.exists (fun (opN, _, _) -> Eq.eq_mixop opN op) tcs
-          | _ -> false
-          )
-        | VarE id1, _ ->
-          let t1 = reduce_typ env (Env.find_var env id1) in
-          sub_typ env t1 t21 || raise Irred
-        | _, _ -> false
-      then match_exp' env s {e1 with note = t21} e21
-      else None
-    else raise Irred
-  *)
-  | _, _ -> fail_assign lhs.at lhs rhs' "Invalid pattern-matching"
+  | _, _ -> fail_assign lhs.at lhs rhs "Invalid pattern-matching"
 
 
 and is_value : exp -> bool = Il.Eval.is_normal_exp
 and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
 
-and eval_exp ?full:(full=true) ctx exp : exp OptMonad.m =
+and eval_exp ctx exp : value OptMonad.m =
   let open Xl in
   match exp.it with
-  | _ when is_value exp -> return exp
-  | _ when is_hnf exp && not full -> return exp
-  | VarE v -> (match VContext.Map.find_opt v.it ctx.varid with
+  | VarE v -> (match VContext.Map.find_opt v.it ctx with
               | Some v' -> return v'
               | None -> error exp.at (sprintf "Variable `%s` is not in the value context.\n  ▹ vctx: %s" v.it
                                        (string_of_varset (VContext.dom_varid ctx)))
               )
   (* | BoolE _ | NumE _ | TextE _ -> return exp *)
   | UnE (op, _, e1) ->
-    let* e1' = eval_exp ctx e1 in
-    (match op, e1'.it with
-    | #Bool.unop as op', BoolE b1 -> BoolE (Bool.un op' b1) $> exp |> return
-    | #Num.unop  as op', NumE  n1 ->
+    let* v1 = eval_exp ctx e1 in
+    (match op, v1 with
+    | #Bool.unop as op', BoolV b1 -> boolV (Bool.un op' b1) |> return
+    | #Num.unop  as op', NumV  n1 ->
       (match Num.un op' n1 with
-      | Some v -> NumE v $> exp |> return
+      | Some v -> NumV v |> return
       | None -> error_eval "Numeric unary expression" exp None
       )
     | _ -> error_eval "Unary expression" exp None
     )
   | BinE (op, ot, e1, e2) ->
-    let* e1' = eval_exp ctx e1 in
-    let* e2' = eval_exp ctx e2 in
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
     (match op with
     | #Bool.binop as op' ->
-      (match Bool.bin_partial op' e1'.it e2'.it of_bool_exp to_bool_exp with
-      | Some v -> v $> exp |> return
+      (match Bool.bin_partial op' v1 v2 of_bool_value to_bool_value with
+      | Some v -> return v
       | None -> error_eval "Boolean binary expression" exp None
       )
     | #Xl.Num.binop as op' ->
-      (match Num.bin_partial op' e1'.it e2'.it of_num_exp to_num_exp with
-      | Some v -> v $> exp |> return
+      (match Num.bin_partial op' v1 v2 of_num_value to_num_value with
+      | Some v -> return v
       | None -> error_eval "Numeric binary expression" exp None
       )
     )
   | CmpE (op, ot, e1, e2) ->
-    let* e1' = eval_exp ctx e1 in
-    let* e2' = eval_exp ctx e2 in
-    (match op, e1'.it, e2'.it with
-    | `EqOp, _, _ when Il.Eq.eq_exp e1' e2' -> BoolE true
-    | `NeOp, _, _ when Il.Eq.eq_exp e1' e2' -> BoolE false
-    | `EqOp, _, _ when Il.Eval.is_normal_exp e1' && Il.Eval.is_normal_exp e2' -> BoolE false
-    | `NeOp, _, _ when Il.Eval.is_normal_exp e1' && Il.Eval.is_normal_exp e2' -> BoolE true
-    | #Num.cmpop as op', NumE n1, NumE n2 ->
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
+    (match op, v1, v2 with
+    | `EqOp, _, _ -> boolV (eq_value v1 v2)
+    | `NeOp, _, _ -> boolV (eq_value v1 v2 |> not)
+    | #Num.cmpop as op', NumV n1, NumV n2 ->
       (match Num.cmp op' n1 n2 with
-      | Some b -> BoolE b
+      | Some b -> boolV b
       | None -> error_eval "Numeric comparison expresion" exp None
       )
     | _ -> error_eval "Comparison expression" exp None
-    ) $> exp |> return
+    ) |> return
   | IdxE (e1, e2) ->
-    let* e1' = eval_exp ~full:false ctx e1 in
-    let* e2' = eval_exp ctx e2 in
-    (match e1'.it, e2'.it with
-    | ListE es, NumE (`Nat i) ->
-      if i < Z.of_int (List.length es) then
-        List.nth es (Z.to_int i) |> eval_exp ~full ctx
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
+    (match v1, v2 with
+    | ListV vs, NumV (`Nat i) ->
+      if i < Z.of_int (Array.length !vs) then
+        Array.get !vs (Z.to_int i) |> return
       else
         error_eval "Indexing expression" exp
           (Some ("Index out-of-range:\n" ^
-                 "seq   = " ^ string_of_exp e1' ^ "\n" ^
-                 "|seq| = " ^ string_of_int (List.length es) ^ "\n" ^
+                 "seq   = " ^ string_of_value v1 ^ "\n" ^
+                 "|seq| = " ^ string_of_int (Array.length !vs) ^ "\n" ^
                  "idx   = " ^ string_of_int (Z.to_int i)
                 )
           )
     | _ -> error_eval "Indexing expression" exp
-             (Some ("seq = " ^ string_of_exp e1' ^ "; idx = " ^ string_of_exp e2'))
+             (Some ("seq = " ^ string_of_value v1 ^ "; idx = " ^ string_of_value v2))
     )
   | SliceE (e1, e2, e3) ->
-    let* e1' = eval_exp ~full ctx e1 in
-    let* e2' = eval_exp ctx e2 in
-    let* e3' = eval_exp ctx e3 in
-    (match e1'.it, e2'.it, e3'.it with
-    | ListE es, NumE (`Nat i), NumE (`Nat n) ->
-      if Z.(i + n) <= Z.of_int (List.length es) then
-        ListE (Lib.List.take (Z.to_int n) (Lib.List.drop (Z.to_int i) es)) $> exp |> return
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
+    let* v3 = eval_exp ctx e3 in
+    (match v1, v2, v3 with
+    | ListV vs, NumV (`Nat i), NumV (`Nat n) ->
+      if Z.(i + n) <= Z.of_int (Array.length !vs) then
+        ListV (Array.sub !vs (Z.to_int i) (Z.to_int n) |> ref) |> return
       else
         error_eval "Slicing expression" exp
-          (Some ("|es| = " ^ string_of_int (List.length es) ^
+          (Some ("|es| = " ^ string_of_int (Array.length !vs) ^
                  "; i = " ^ string_of_int (Z.to_int i) ^
                  "; n = " ^ string_of_int (Z.to_int n)))
     | _ -> error_eval "Slicing expression" exp
-             (Some (string_of_exp e1' ^ "[" ^ string_of_exp e2' ^ ":" ^ string_of_exp e3' ^ "]"))
+             (Some (string_of_value v1 ^ "[" ^ string_of_value v2 ^ ":" ^ string_of_value v3 ^ "]"))
     )
   | UpdE (e1, p, e2) ->
-    let* e1' = eval_exp ~full ctx e1 in
-    let* e2' = eval_exp ~full ctx e2 in
-    eval_path ctx e1' p
-      (fun e' p' ->
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
+    eval_path exp.at ctx v1 p
+      (fun v p' ->
         if p'.it = RootP
-        then return e2'
+        then return v2
         else error_eval "Sequence update expression" exp None
       )
   | ExtE (e1, p, e2) ->
-    let* e1' = eval_exp ~full ctx e1 in
-    let* e2' = eval_exp ~full ctx e2 in
-    eval_path ctx e1' p
-      (fun e' p' ->
-        if p'.it = RootP
-        then eval_exp ~full ctx (CatE (e', e2') $> e')
-        else error_eval "Sequence extension expression" exp None
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
+    eval_path exp.at ctx v1 p
+      (fun v p' ->
+        match v, v2, p'.it with
+        | ListV vs, ListV vs2, RootP ->
+          listV (Array.append !vs !vs2) |> return
+        | _ -> error_eval "Sequence extension expression" exp None
       )
-  | StrE efs -> let* efs' = mapM (eval_expfield ctx) efs in StrE efs' $> exp |> return
+  | StrE vfs -> let* vfs' = mapM (eval_expfield ctx) vfs in StrV vfs' |> return
   | DotE (e1, atom) ->
-    let* e1' = eval_exp ~full:false ctx e1 in
-    (match e1'.it with
-    | StrE efs -> snd (List.find (fun (atomN, _) -> Atom.eq atomN atom) efs) |> return
+    let* v1 = eval_exp ctx e1 in
+    (match v1 with
+    | StrV vfs -> !(snd (List.find (fun (atomN, _) -> atomN = Xl.Atom.to_string atom) vfs)) |> return
     | _ -> error_eval "Struct dot expression" exp None
     )
   | CompE (e1, e2) ->
     (* TODO(4, rossberg): avoid overlap with CatE? *)
-    let* e1' = eval_exp ~full ctx e1 in
-    let* e2' = eval_exp ~full ctx e2 in
-    (match e1'.it, e2'.it with
-    | ListE es1, ListE es2 -> ListE (es1 @ es2) |> return
-    | OptE None, OptE _ -> e2'.it |> return
-    | OptE _, OptE None -> e1'.it |> return
-    | StrE efs1, StrE efs2 ->
-      let merge (atom1, e1) (atom2, e2) =
-        assert (Atom.eq atom1 atom2);
-        let* e12' = eval_exp ~full ctx (CompE (e1, e2) $> e1) in
-        return (atom1, e12')
-      in
-      let* efs12' = mapM (Lib.Fun.uncurry merge) (List.combine efs1 efs2) in
-      StrE efs12' |> return
-    | _ -> error_eval "Sequence composition expression" exp None
-    ) <&> (fun e' -> e' $> exp)
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
+    compose exp.at v1 v2
   | MemE (e1, e2) ->
-    let* e1' = eval_exp ctx e1 in
-    let* e2' = eval_exp ctx e2 in
-    (match e2'.it with
-    | OptE None -> BoolE false
-    | OptE (Some e2') when Il.Eq.eq_exp e1' e2' -> BoolE true
-    | OptE (Some e2') when Il.Eval.is_normal_exp e1' && Il.Eval.is_normal_exp e2' -> BoolE false
-    | ListE [] -> BoolE false
-    | ListE es2' when List.exists (Il.Eq.eq_exp e1') es2' -> BoolE true
-    | ListE _ -> BoolE false
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
+    (match v2 with
+    | OptV None -> boolV false
+    | OptV (Some v2') -> boolV (eq_value v1 v2')
+    | ListV vs2 -> boolV (Array.exists (eq_value v1) !vs2)
     | _ -> error_eval "Membership expression" exp None
-    ) $> exp |> return
+    ) |> return
   | LenE e1 ->
-    let* e1' = eval_exp ~full:false ctx e1 in
-    (match e1'.it with
-    | ListE es -> NumE (`Nat (Z.of_int (List.length es))) $> exp |> return
+    let* v1 = eval_exp ctx e1 in
+    (match v1 with
+    | ListV vs -> vl_of_nat (Array.length !vs) |> return
     | _ -> error_eval "Sequence length expression" exp None
     )
-  | TupE es -> let* es' = mapM (eval_exp ~full ctx) es in TupE es' $> exp |> return
+  | TupE es -> let* vs = mapM (eval_exp ctx) es in TupV vs |> return
   | CallE (fid, args) ->
     let* args' = mapM (eval_arg ctx) args in
     call_func fid.it args'
-  | IterE (e1, iterexp) ->
-    let* (iter', xes') as iterexp' = eval_iterexp ctx iterexp in
-    let ids, es' = List.split xes' in
-    if iter' <= List1 && es' = [] then
+  | IterE (e1, ((_, xes) as iterexp)) ->
+    let* (iter', xvs) as iterval = eval_iterexp ctx iterexp in
+    let ids, vs = List.split xvs in
+    if iter' <= List1 && vs = [] then
       error_eval "Iterated expression" exp (Some "Inadequate information about the iteration scheme.")
     else
       (match iter' with
       | Opt ->
-        let eos' = List.map as_opt_exp es' in
-        if List.for_all Option.is_none eos' then
-          OptE None $> exp |> return
-        else if List.for_all Option.is_some eos' then
-          let es1' = List.map Option.get eos' in
+        let ovs = List.map as_opt_value vs in
+        if List.for_all Option.is_none ovs then
+          OptV None |> return
+        else if List.for_all Option.is_some ovs then
+          let vs1 = List.map Option.get ovs in
           let* ctx' = foldlM (fun c (a, b) ->
-            let* b' = eval_exp c b in
-            VContext.add_varid c a b' |> return
-          ) ctx (List.combine ids es1') in
-          let* e1' = eval_exp ~full ctx' e1 in
-          OptE (Some e1') $> exp |> return
+            VContext.add_varid c a b |> return
+          ) ctx (List.combine ids vs1) in
+          let* v1 = eval_exp ctx' e1 in
+          OptV (Some v1) |> return
         else
           error_eval "Iterated epxression" exp (Some "?-iterator inflow expressions don't match.")
       | List | List1 ->
-        let n = List.length (as_list_exp (List.hd es')) in
+        let n = Array.length (!(as_list_value (List.hd vs))) in
         if iter' = List || n >= 1 then
           let en = NumE (`Nat (Z.of_int n)) $$ exp.at % (NumT `NatT $ exp.at) in
-          eval_exp ~full ctx (IterE (e1, (ListN (en, None), xes')) $> exp)
+          eval_exp ctx (IterE (e1, (ListN (en, None), xes)) $> exp)
         else
           error_eval "Iterated expression" exp (Some "Using +-iterator but sequence length is 0")
-      | ListN ({it = NumE (`Nat n'); _}, ido) ->
-        let ess' = List.map as_list_exp es' in
-        let ns = List.map List.length ess' in
+      | ListN (NumV (`Nat n'), oi) ->
+        let vss = List.map as_list_value vs in
+        let ns = List.map (fun vs -> Array.length !vs) vss in
         let n = Z.to_int n' in
         if List.for_all ((=) n) ns then
-          let* e1s' = mapM (fun i ->
-            let esI' = List.map (fun es -> List.nth es i) ess' in
-            let ctx' = List.fold_left2 VContext.add_varid ctx ids esI' in
+          let* vs1 = mapM (fun i ->
+            let vsI = List.map (fun vs -> Array.get !vs i) vss in
+            let ctx' = List.fold_left2 VContext.add_varid ctx ids vsI in
             let ctx'' =
-              Option.fold ido ~none:ctx' ~some:(fun id ->
-                let en = NumE (`Nat (Z.of_int i)) $$ id.at % (NumT `NatT $ id.at) in
-                VContext.add_varid ctx' id en
+              Option.fold oi ~none:ctx' ~some:(fun id ->
+                let vn = NumV (`Nat (Z.of_int i)) in
+                VContext.add_varid ctx' id vn
               )
-            in eval_exp ~full ctx'' e1
+            in eval_exp ctx'' e1
           ) (0 -- n)
           in
-          ListE e1s' $> exp |> return
+          listV_of_list vs1 |> return
         else
           error_eval "Iterated expression" exp (Some "Inflow sequences don't agree on the length")
       | ListN _ -> error_eval "Iterated expression" exp None
       )
   | ProjE (e1, i) ->
-    let* e1' = eval_exp ~full ctx e1 in
-    (match e1'.it with
-    | TupE es -> List.nth es i |> return
+    let* v1 = eval_exp ctx e1 in
+    (match v1 with
+    | TupV vs -> List.nth vs i |> return
     | _ -> error_eval "Tuple projection expression" exp None
     )
   | UncaseE (e1, mixop) ->
-    let* e1' = eval_exp ~full ctx e1 in
-    (match e1'.it with
-    | CaseE (mixop', e11') when Il.Eq.eq_mixop mixop mixop' -> return e11'
+    let* v1 = eval_exp ctx e1 in
+    (match v1 with
+    | CaseV (mixop', vs1) when Value.vl_of_mixop mixop = mixop' -> return (TupV vs1)
     | _ -> error_eval "Constructor unwrapping expression" exp
-                     (Some ("e1 ⤳ " ^ string_of_exp e1' ^ "; mixop = " ^ string_of_mixop mixop))
+                     (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; mixop = " ^ string_of_mixop mixop))
     )
-  | OptE oe1 -> let* oe1' = opt_mapM (eval_exp ctx) oe1 in OptE oe1' $> exp |> return
+  | OptE oe1 -> let* ov1 = opt_mapM (eval_exp ctx) oe1 in OptV ov1 |> return
   | TheE e1 ->
-    let* e1' = eval_exp ~full ctx e1 in
-    (match e1'.it with
-    | OptE (Some e11) -> return e11
+    let* v1 = eval_exp ctx e1 in
+    (match v1 with
+    | OptV (Some v11) -> return v11
     | _ -> error_eval "THE expression" exp None
     )
-  | ListE es -> let* es' = mapM (eval_exp ~full ctx) es in ListE es' $> exp |> return
+  | ListE es -> let* vs = mapM (eval_exp ctx) es in ListV (ref (Array.of_list vs)) |> return
   | LiftE e1 ->
-    let* e1' = eval_exp ~full ctx e1 in
-    (match e1'.it with
-    | OptE None -> ListE []
-    | OptE (Some e11') -> ListE [e11']
+    let* v1 = eval_exp ctx e1 in
+    (match v1 with
+    | OptV None -> ListV (ref [||])
+    | OptV (Some v11) -> ListV (ref [|v11|])
     | _ -> error_eval "Option lifting expression" exp None
-    ) $> exp |> return
+    ) |> return
   | CatE (e1, e2) ->
-    let* e1' = eval_exp ~full ctx e1 in
-    let* e2' = eval_exp ~full ctx e2 in
-    (match e1'.it, e2'.it with
-    | ListE es1, ListE es2 -> ListE (es1 @ es2)
-    | OptE None, OptE _ -> e2'.it
-    | OptE _, OptE None -> e1'.it
+    let* v1 = eval_exp ctx e1 in
+    let* v2 = eval_exp ctx e2 in
+    (match v1, v2 with
+    | ListV vs1, ListV vs2 -> ListV (ref (Array.append !vs1 !vs2))
+    | OptV None, OptV _ -> v2
+    | OptV _, OptV None -> v1
     | _ -> error_eval "Sequence concatenation expression" exp None
-    ) $> exp |> return
-  | CaseE (op, e1) -> let* e1' = eval_exp ~full ctx e1 in CaseE (op, e1') $> exp |> return
+    ) |> return
+  | CaseE (op, e1) -> let* v1 = eval_exp ctx e1 in CaseV (vl_of_mixop op, [v1]) |> return
   | CvtE (e1, _nt1, nt2) ->
-    let* e1' = eval_exp ctx e1 in
-    (match e1'.it with
-    | NumE n ->
+    let* v1 = eval_exp ctx e1 in
+    (match v1 with
+    | NumV n ->
       (match Num.cvt nt2 n with
-      | Some n' -> NumE n' $> exp |> return
+      | Some n' -> NumV n' |> return
       | None -> error_eval "Numeric type conversion" exp (Some "Cannot perform conversion.")
       )
     | _ -> error_eval "Numeric type conversion" exp (Some ("Not a numeric:" ^ string_of_exp e1))
     )
-  | SubE (e1, t1, t2) when Il.Eval.equiv_typ !il_env t1 t2 -> eval_exp ctx e1
-  (* Pushes down the SubE node into the leaves of the value. *)
-  | SubE (e1, t1, t2) ->
-    let* e1' = eval_exp ~full ctx e1 in
-    let t1' = Il.Eval.reduce_typ !il_env t1 in
-    let t2' = Il.Eval.reduce_typ !il_env t2 in
-    (match e1'.it with
-    | SubE (e11', t11', _t12') -> eval_exp ~full ctx (SubE (e11', t11', t2') $> exp)  (* FIXME(zilinc): I don't think this can ever happen. *)
-    | CaseE (mixop, tup) ->
-      let tcs = as_variant_typ !il_env t2' in
-      (match List.find_map (fun (mixop', _, _) -> if Il.Eq.eq_mixop mixop mixop' then Some mixop' else None) tcs with
-      | Some mixop' -> CaseE (mixop', tup) $$ e1'.at % t2' |> return
-      | None -> error_eval "Subtyping expression" exp
-                           (Some ("Mixop " ^ string_of_mixop mixop ^ " not in the supertype " ^ string_of_typ t2'))
-      )
-    | TupE es' ->
-      (* FIXME(zilinc): Do it properly. *)
-      (match t1.it, t2.it with
-      | TupT ets1, TupT ets2 ->
-        let* (_, _, res') =
-          foldlM (fun opt (eI, ((e1I, t1I), (e2I, t2I))) ->
-            let (s1, s2, res') = opt in
-            let t1I' = Il.Subst.subst_typ s1 t1I in
-            let t2I' = Il.Subst.subst_typ s2 t2I in
-            let* e1I' = eval_exp ctx (Il.Subst.subst_exp s1 e1I) in
-            let* e2I' = eval_exp ctx (Il.Subst.subst_exp s2 e2I) in
-            let* s1' = try Il.Eval.match_exp !il_env s1 eI e1I' |> opt_lift with Il.Eval.Irred -> fail () in
-            let* s2' = try Il.Eval.match_exp !il_env s2 eI e2I' |> opt_lift with Il.Eval.Irred -> fail () in
-            let* eI' = eval_exp ~full ctx (SubE (eI, t1I', t2I') $$ eI.at % t2I') in
-            return (s1', s2', eI'::res')
-          ) (Il.Subst.empty, Il.Subst.empty, []) (List.combine es' (List.combine ets1 ets2))
-        in
-        TupE (List.rev res') $> exp |> return
-      | _ -> error_eval "Subtyping expression" exp (Some "Invalid type for tuple expression.")
-      )
-    | _ -> SubE (e1', t1, t2) $> exp |> return
-    )
+  | SubE (e1, t1, t2) -> eval_exp ctx e1
   (* | _ -> todo "eval_exp: unmatched cases" *)
 
 and eval_iter ctx = function
-  | ListN (e, ido) -> let* e' = eval_exp ctx e in ListN (e', ido) |> return
-  | iter -> return iter
+  | Opt   -> return Value.Opt
+  | List  -> return Value.List
+  | List1 -> return Value.List1
+  | ListN (e, oi) ->
+    let* v = eval_exp ctx e in
+    Value.ListN (v, oi) |> return
 
-and eval_iterexp ctx (iter, xes) : iterexp OptMonad.m =
+and eval_iterexp ctx (iter, xes) : (Value.iter * (id * value) list) OptMonad.m =
   let* iter' = eval_iter ctx iter in
   let excl_ids = match iter with
   | ListN(_, Some i) -> [i.it]
@@ -555,74 +462,97 @@ and eval_iterexp ctx (iter, xes) : iterexp OptMonad.m =
   in
   (* Remove the outflowing binding. *)
   let xes' = List.filter (fun (x, e) -> List.mem x.it excl_ids |> not) xes in
-  let* xes'' = mapM (fun (id, e) -> let* e' = eval_exp ctx e in return (id, e')) xes' in
+  let* xes'' = mapM (fun (id, e) -> let* v = eval_exp ctx e in return (id, v)) xes' in
   return (iter', xes'')
 
-and eval_expfield ?full:(full=true) ctx (atom, e) : expfield OptMonad.m =
-  let* e' = eval_exp ctx e in return (atom, e')
+and compose at v1 v2 : value OptMonad.m =
+  (match v1, v2 with
+  | ListV vs1, ListV vs2 -> listV (Array.append !vs1 !vs2) |> return
+  | OptV None, OptV _ -> return v2
+  | OptV _, OptV None -> return v1
+  | StrV vfs1, StrV vfs2 ->
+    let merge (atom1, v1) (atom2, v2) =
+      assert (atom1 = atom2);
+      let* v12 = compose at !v1 !v2 in
+      return (atom1, ref v12)
+    in
+    let* vfs12 = mapM (Lib.Fun.uncurry merge) (List.combine vfs1 vfs2) in
+    StrV vfs12 |> return
+  | _ -> error at ("Composition error: \n" ^
+                   " ▹ v1 = " ^ string_of_value v1 ^ "\n" ^
+                   " ▹ v2 = " ^ string_of_value v2 ^ ".")
+  )
 
-and eval_path ctx e p (f: exp -> path -> exp OptMonad.m) : exp OptMonad.m =
+and eval_expfield ctx (atom, e) : (string * value ref) OptMonad.m =
+  let* v = eval_exp ctx e in return (Xl.Atom.to_string atom, ref v)
+
+and eval_path at ctx v p (f: value -> path -> value OptMonad.m) : value OptMonad.m =
   match p.it with
-  | RootP -> f e p
+  | RootP -> f v p
   | IdxP (p1, e1) ->
-    let* e1' = eval_exp ctx e1 in
-    let f' e' p1' =
-      match e'.it, e1'.it with
-      | ListE es, NumE (`Nat i) when i < Z.of_int (List.length es) ->
-        let* es' = mapiM (fun j eJ -> if Z.of_int j = i then f eJ p1' else return eJ) es in
-        ListE es' $> e' |> return
-      | _ -> error e.at ("Index path failed to evaluate:\n" ^
-                         "  ▹ e: " ^ string_of_exp e ^ "\n" ^
-                         "  ▹ p: " ^ string_of_path p)
+    let* v1 = eval_exp ctx e1 in
+    let f' v' p1' =
+      match v', v1 with
+      | ListV vs, NumV (`Nat i) when i < Z.of_int (Array.length !vs) ->
+        let* vs' = mapiM (fun j vJ -> if Z.of_int j = i then f vJ p1' else return vJ) (Array.to_list !vs) in
+        listV_of_list vs' |> return
+      | _ -> error at ("Index path failed to evaluate:\n" ^
+                       "  ▹ v: " ^ string_of_value v ^ "\n" ^
+                       "  ▹ p: " ^ string_of_path p)
     in
-    eval_path ctx e p1 f'
+    eval_path at ctx v p1 f'
   | SliceP (p1, e1, e2) ->
-    let* e1' = eval_exp ctx e1 in
-    let* e2' = eval_exp ctx e2 in
-    let f' e' p1' =
-      match e'.it, e1'.it, e2'.it with
-      | ListE es, NumE (`Nat i), NumE (`Nat n) when Z.(i + n) < Z.of_int (List.length es) ->
-        let e1' = ListE Lib.List.(take (Z.to_int i) es) $> e' in
-        let e2' = ListE Lib.List.(take (Z.to_int n) (drop (Z.to_int i) es)) $> e' in
-        let e3' = ListE Lib.List.(drop Z.(to_int (i + n)) es) $> e' in
-        let* e2'' = f e2' p1' in
-        eval_exp ctx (CatE (e1', CatE (e2'', e3') $> e') $> e')
-      | _ -> error e.at ("Slice path failed to evaluate:\n" ^
-                         "  ▹ e: " ^ string_of_exp e ^ "\n" ^
-                         "  ▹ p: " ^ string_of_path p)
+    let* vi = eval_exp ctx e1 in
+    let* vn = eval_exp ctx e2 in
+    let f' v p1' =
+      match v, vi, vn with
+      | ListV vs, NumV (`Nat i), NumV (`Nat n) when Z.(i + n) < Z.of_int (Array.length !vs) ->
+        let vs1 = Array.sub !vs 0 (Z.to_int i) in
+        let v2  = listV (Array.sub !vs (Z.to_int i) (Z.to_int n)) in
+        let vs3 = Array.sub !vs Z.(to_int (i + n)) (Array.length !vs - Z.to_int Z.(i + n)) in
+        let* v2' = f v2 p1' in
+        (match v2' with
+        | ListV vs2 -> listV (Array.append (Array.append vs1 !vs2) vs3) |> return
+        | _ -> assert false
+        )
+      | _ -> error at ("Slice path failed to evaluate:\n" ^
+                       "  ▹ v: " ^ string_of_value v ^ "\n" ^
+                       "  ▹ p: " ^ string_of_path p)
     in
-    eval_path ctx e p1 f'
+    eval_path at ctx v p1 f'
   | DotP (p1, atom) ->
-    let f' e' p1' =
-      match e'.it with
-      | StrE efs ->
-        let* efs' = mapM (fun (atomI, eI) ->
-          if Il.Eq.eq_atom atomI atom
-          then let* eI' = f eI p1' in return (atomI, eI')
-          else return (atomI, eI)
-        ) efs in
-        StrE efs' $> e' |> return
-      | _ -> error e.at ("Dot path failed to evaluate:\n" ^
-                         "  ▹ e: " ^ string_of_exp e ^ "\n" ^
-                         "  ▹ p: " ^ string_of_path p)
+    let f' v p1' =
+      match v with
+      | StrV vfs ->
+        let* vfs' = mapM (fun (atomI, vI) ->
+          if atomI = Xl.Atom.to_string atom
+          then let* vI' = f !vI p1' in return (atomI, ref vI')
+          else return (atomI, vI)
+        ) vfs in
+        StrV vfs' |> return
+      | _ -> error at ("Dot path failed to evaluate:\n" ^
+                       "  ▹ v: " ^ string_of_value v ^ "\n" ^
+                       "  ▹ p: " ^ string_of_path p)
     in
-    eval_path ctx e p1 f'
+    eval_path at ctx v p1 f'
 
-and eval_arg ctx a : arg OptMonad.m =
+and eval_arg ctx a : Value.arg OptMonad.m =
   match a.it with
-  | ExpA  e  -> let* e' = eval_exp ctx e in ExpA e' $ a.at |> return
-  | TypA _t  -> return a  (* types are reduced on demand *)
-  | DefA _id -> return a
-  | GramA _g -> return a
+  | ExpA  e  -> let* v = eval_exp ctx e in valA v |> return
+  | TypA t  -> return (Value.TypA t)  (* types are reduced on demand *)
+  | DefA id -> return (Value.DefA id)
+  | GramA g -> return (Value.GramA g)
 
 and eval_prem ctx prem : VContext.t OptMonad.m =
   (* info "match_info" prem.at ("Match premise: " ^ string_of_prem prem); *)
   match prem.it with
   | ElsePr -> return ctx
-  | LetPr (lhs, rhs, _vs) -> assign ctx lhs rhs
+  | LetPr (lhs, rhs, _vs) ->
+    let* rhs' = eval_exp ctx rhs in
+    assign ctx lhs rhs'
   | IfPr e ->
     let* b = eval_exp ctx e in
-    if b.it = BoolE true then return ctx
+    if b = boolV true then return ctx
     else
       fail_info "match" prem.at ("If premise failed: " ^ string_of_exp e)
   | IterPr (prems, (iter, xes)) ->
@@ -637,10 +567,10 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
     begin match iter with
     | ListN (n, Some i) ->
       let* n' = eval_exp ctx n in
-      let* n'' = begin match n'.it with
-      | NumE (`Nat n'') -> return (Z.to_int n'')
-      | n'' -> fail_info "match" n.at ("Expression " ^ string_of_exp n ^ " ~> " ^
-                                       string_of_exp (n'' $> n) ^ " is not a nat.")
+      let* n'' = begin match n' with
+      | NumV (`Nat n'') -> return (Z.to_int n'')
+      | _ -> fail_info "match" n.at ("Expression " ^ string_of_exp n ^ " ⤳ " ^
+                                       string_of_value n' ^ " is not a nat.")
       end in
       info "iter" n.at ("Iter length n' = " ^ string_of_int n'');
       let il_env0 = !il_env in
@@ -659,15 +589,15 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       let ctx' = List.fold_left (fun ctx (x, e) ->
         match e.it with
         | VarE x_star ->
-          let vx_star = ListE [] $$ no_region % e.note in
-          info "iter" prem.at ("Initialise " ^ x_star.it ^ " to " ^ string_of_exp vx_star);
+          let vx_star = ListV (ref [||]) in
+          info "iter" prem.at ("Initialise " ^ x_star.it ^ " to " ^ string_of_value vx_star);
           VContext.add_varid ctx x_star vx_star
         | _ -> assert false
       ) ctx out_binds in
       (* Run the loop *)
       let* ctx'' = foldlM (fun ctx idx ->
         let lctxr = ref ctx in
-        lctxr := VContext.add_varid !lctxr i (mk_nat idx);
+        lctxr := VContext.add_varid !lctxr i (vl_of_nat idx);
         (* In-flow *)
         let* () = iterM (fun (x, e) ->
           let t = Il.Env.find_var !il_env x in
@@ -683,12 +613,12 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           match e.it with
           | VarE x_star ->
             let vx = VContext.find_varid !lctxr x in
-            let opt_vx_star = VContext.Map.find_opt x_star.it !lctxr.varid in
+            let opt_vx_star = VContext.Map.find_opt x_star.it !lctxr in
             begin match opt_vx_star with
             | Some vx_star ->
-              begin match vx_star.it with
-              | ListE es -> let vx_star' = ListE (es @ [vx]) $> vx_star in
-                            info "iter" prem.at ("Outflow: " ^ x_star.it ^ " := " ^ string_of_exp vx_star');
+              begin match vx_star with
+              | ListV vs -> let vx_star' = listV (Array.append !vs (Array.of_list [vx])) in
+                            info "iter" prem.at ("Outflow: " ^ x_star.it ^ " := " ^ string_of_value vx_star');
                             lctxr := VContext.add_varid !lctxr x_star vx_star'
               | _ -> assert false
               end
@@ -715,25 +645,25 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       info "iter" prem.at ("in-binds are: " ^ string_of_iterexp (iter, in_binds) ^ "\n" ^
                            "out-binds are: " ^ string_of_iterexp (iter, out_binds));
       (* Need to figure out whether it runs or not. *)
-      let* in_vals = mapM (fun (x, e) -> let* e' = eval_exp ctx e in return (x, e')) in_binds in
+      let* in_vals = mapM (fun (x, e) -> let* v = eval_exp ctx e in return (x, v)) in_binds in
       assert (List.length in_vals > 0);
-      let run_opt = match (List.hd in_vals |> snd).it with
-      | OptE None     -> false
-      | OptE (Some _) -> true
+      let run_opt = match List.hd in_vals |> snd with
+      | OptV None     -> false
+      | OptV (Some _) -> true
       | _ -> assert false
       in
       (* Check that all inputs agree. *)
       List.iter (fun (_, opt_val) ->
-        match opt_val.it, run_opt with
-        | OptE None, false -> ()
-        | OptE (Some _), true -> ()
+        match opt_val, run_opt with
+        | OptV None, false -> ()
+        | OptV (Some _), true -> ()
         | _ -> assert false
       ) in_vals;
       let* ctx' = begin if not run_opt then
       (* When the optional is None, all outflow variables should be None. *)
         List.fold_left (fun ctx (x, e) ->
           match e.it with
-          | VarE x_question -> VContext.add_varid ctx x_question (mk_none e.note)
+          | VarE x_question -> VContext.add_varid ctx x_question none
           | _ -> assert false
         ) ctx out_binds |> return
       else
@@ -741,7 +671,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
         let lctxr = ref ctx in
         (* In-flow *)
         List.iter (fun (x, opt_val) ->
-          let OptE (Some val_) = opt_val.it in
+          let OptV (Some val_) = opt_val in
           lctxr := VContext.add_varid !lctxr x val_
         ) in_vals;
         let* lctx = eval_prems !lctxr prems in
@@ -751,10 +681,10 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           match e.it with
           | VarE x_question ->
             let vx = VContext.find_varid !lctxr x in
-            let opt_vx_question = VContext.Map.find_opt x_question.it !lctxr.varid in
+            let opt_vx_question = VContext.Map.find_opt x_question.it !lctxr in
             begin match opt_vx_question with
             | Some vx_question -> assert false
-            | None -> let some_vx = mk_some e.note vx in
+            | None -> let some_vx = some vx in
                       lctxr := VContext.add_varid !lctxr x_question some_vx
             end
           | _ -> assert false
@@ -776,20 +706,19 @@ and eval_prems ctx prems : VContext.t OptMonad.m =
 
 and match_typ ctx at (pat: typ) (arg: typ) : VContext.t OptMonad.m =
   match pat.it, arg.it with
-  | VarT (pid, []), _ ->
-    let arg' = Il.Eval.reduce_typ !il_env arg in
-    VContext.add_typid ctx pid arg' |> return
+  | VarT (pid, []), _ -> return ctx  (* FIXME(zilinc): Do we need to do anything here for poly-functions? *)
   | _ -> fail_info "match" at ("Type argument doesn't match:\n" ^
                                "  ▹ pat: " ^ string_of_typ pat ^ "\n" ^
                                "  ▹ arg: " ^ string_of_typ arg)
 
-and match_arg ctx at (pat: arg) (arg: arg) : VContext.t OptMonad.m =
-  match pat.it, arg.it with
-  | TypA ptyp , TypA atyp -> match_typ ctx at ptyp atyp
-  | ExpA pexp , ExpA aexp -> assign ctx pexp aexp
-  | DefA pid  , DefA _    -> todo "match_arg DefA"
-  | GramA psym, GramA _   -> todo "match_arg GramA"
-  | _ -> fail_info "match" at ("Wrong argument sort: " ^ string_of_arg arg ^ " doesn't match pattern " ^ string_of_arg pat)
+and match_arg ctx at (pat: arg) (arg: Value.arg) : VContext.t OptMonad.m =
+  match pat.it, arg with
+  | TypA ptyp , Value.TypA atyp -> match_typ ctx at ptyp atyp
+  | ExpA pexp , Value.ValA aval -> assign ctx pexp aval
+  | DefA pid  , Value.DefA _    -> todo "match_arg DefA"
+  | GramA psym, Value.GramA _   -> todo "match_arg GramA"
+  | _ -> fail_info "match" at ("Wrong argument sort: " ^ Value.string_of_arg arg ^
+                               " doesn't match pattern " ^ string_of_arg pat)
 
 
 and match_args ctx at pargs args : VContext.t OptMonad.m =
@@ -800,7 +729,7 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
     let* ctx'' = match_args ctx' at pargs' args' in
     return ctx''
 
-and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
+and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
   match clauses with
   | [] -> fail_info "match_info" at ("No clause of function `" ^ fname ^ "` is matched. ♣")
   | cl :: cls ->
@@ -811,7 +740,7 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
     assert_msg (List.length pargs = List.length args)
       (sprintf "Function `%s`%s (%d) but got arguments %s (%d)" fname
         (string_of_args pargs) (List.length pargs)
-        (string_of_args args ) (List.length args ));
+        (Value.string_of_args args ) (List.length args ));
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
@@ -828,13 +757,13 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
     return val_
 
 
-and eval_func name func_def args : exp OptMonad.m =
+and eval_func name func_def args : value OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
-  info "match_info" func_def.at ("Calling `" ^ name ^ "` with " ^ string_of_args args);
+  info "match_info" func_def.at ("Calling `" ^ name ^ "` with " ^ Value.string_of_args args);
   match_clause no_region name 1 fcs args
 
 
-and call_func name args : exp OptMonad.m =
+and call_func name args : value OptMonad.m =
   time ("Calling `" ^ name ^ "`") (uncurry call_func') (name, args)
   (* call_func' name args *)
 
@@ -865,8 +794,8 @@ and call_func' name args =
     | Some fdef when not is_builtin -> eval_func name fdef args
     (* Builtins and numerics *)
     | Some { it = (_, _, _, [], _); at; _ } when is_builtin ->
-      if Numerics.mem builtin_name then
-        Numerics.call_numerics builtin_name args |> return
+      if Numerics_v.mem builtin_name then
+        Numerics_v.call_numerics builtin_name args |> return
       else if builtins_mem builtin_name then
         call_builtins builtin_name args
       else
@@ -884,22 +813,22 @@ and use_step : builtin = {
   f =
     function
     | [instr] ->
-      let mixop, _ = match_caseE "instr" instr in
+      let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> boolE (rel_name = "Step") |> return
-      | None -> boolE false |> return
+      | Some (rel_name, _, _) -> boolV (rel_name = "Step") |> return
+      | None -> BoolV false |> return
       )
-    | es -> error_values ("Args to $use_step") es
+    | vs -> error_values ("Args to $use_step") vs
 }
 and use_step_pure = {
   name = "use_step_pure";
   f =
     function
     | [instr] ->
-      let mixop, _ = match_caseE "instr" instr in
+      let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> boolE (rel_name = "Step_pure") |> return
-      | None -> boolE false |> return
+      | Some (rel_name, _, _) -> BoolV (rel_name = "Step_pure") |> return
+      | None -> BoolV false |> return
       )
     | es -> error_values ("Args to $use_step_pure") es
 }
@@ -908,10 +837,10 @@ and use_step_read = {
   f =
     function
     | [instr] ->
-      let mixop, _ = match_caseE "instr" instr in
+      let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> boolE (rel_name = "Step_read") |> return
-      | None -> boolE false |> return
+      | Some (rel_name, _, _) -> boolV (rel_name = "Step_read") |> return
+      | None -> boolV false |> return
       )
     | es -> error_values ("Args to $use_step_read") es
 }
@@ -920,8 +849,8 @@ and use_step_ctxt = {
   f =
     function
     | [instr] ->
-      let mixop, _ = match_caseE "instr" instr in
-      List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"] |> boolE |> return
+      let mixop, _ = match_caseV "instr" instr in
+      List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"] |> boolV |> return
     | es -> error_values ("Args to $use_step_ctxt") es
 }
 
@@ -931,10 +860,10 @@ and dispatch_step = {
   f =
     function
     | [instr; arg] ->
-      let mixop, _ = match_caseE "instr" instr in
+      let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [expA arg]
-      | _ -> error instr.at ("No $Step rule for instr" ^ string_of_exp instr)
+      | Some (rel_name, rule_name, _) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | _ -> error no ("No $Step rule for instr" ^ string_of_value instr)
       )
     | es -> error_values ("Args to $dispatch_step") es
 }
@@ -943,10 +872,10 @@ and dispatch_step_pure = {
   f =
     function
     | [instr; arg] ->
-      let mixop, _ = match_caseE "instr" instr in
+      let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [expA arg]
-      | _ -> error instr.at ("No $Step_pure rule for instr" ^ string_of_exp instr)
+      | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | _ -> error no ("No $Step_pure rule for instr" ^ string_of_value instr)
       )
     | es -> error_values ("Args to $dispatch_step_pure") es
 }
@@ -955,10 +884,10 @@ and dispatch_step_read = {
   f =
     function
     | [instr; arg] ->
-      let mixop, _ = match_caseE "instr" instr in
+      let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [expA arg]
-      | _ -> error instr.at ("No $Step_read rule for instr" ^ string_of_exp instr)
+      | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | _ -> error no ("No $Step_read rule for instr" ^ string_of_value instr)
       )
     | es -> error_values ("Args to $dispatch_step_read") es
 }
@@ -967,7 +896,7 @@ and step_read_throw_ref_handler = {
   name = "Step_read_throw_ref_handler";
   f =
     function
-    | [arg] -> call_func "Step_read/throw_ref" [expA arg]
+    | [arg] -> call_func "Step_read/throw_ref" [valA arg]
 }
 
 and builtin_list : builtin list = [
@@ -976,12 +905,12 @@ and builtin_list : builtin list = [
   step_read_throw_ref_handler
   ]
 
-and call_builtins fname args : exp OptMonad.m =
+and call_builtins fname args : value OptMonad.m =
   match List.find_opt (fun numerics -> numerics.name = fname) builtin_list with
   | Some builtin ->
-    let args' = List.map (fun a -> match a.it with
-    | ExpA e -> e
-    | _ -> raise (Failure ("Wrong argument to builtin function " ^ fname ^ ": " ^ string_of_arg a))
+    let args' = List.map (function
+    | ValA v -> v
+    | a -> raise (Failure ("Wrong argument to builtin function " ^ fname ^ ": " ^ Value.string_of_arg a))
     ) args in
     builtin.f args'
   | None -> raise (Failure ("Unknown builtin: " ^ fname))
@@ -994,22 +923,21 @@ and builtins_mem fname =
 
 
 (* $Module_ok : module -> moduletype *)
-and module_ok args : exp =
+and module_ok args : value =
   match args with
-  | [ {it = ExpA module_; _} ] ->
-    let module_' = il_to_module module_ in
+  | [ ValA module_ ] ->
+    let module_' = vl_to_module module_ in
     let ModuleT (its, ets) = RI.Valid.check_module module_' in
-    let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> il_of_externtype xt) its in
-    let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> il_of_externtype xt) ets in
-    mk_case' "moduletype" [[];["->"];[]] [ listE (t_star "externtype") importtypes; listE (t_star "externtype") exporttypes ]
+    let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
+    let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
+    caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ]
   | _ -> error no ("Wrong number/type of arguments to $Module_ok.")
 
 (* $Externaddr_ok : store -> externaddr -> externtype -> bool *)
-and externaddr_ok args =
-  match List.map it args with
-  | [ ExpA s; ExpA eaddr; ExpA etype ] ->
-    (match match_caseE "externaddr" eaddr with
-    | [[name];[]], [{it = NumE (`Nat z); _}] ->
+and externaddr_ok = function
+  | [ ValA s; ValA eaddr; ValA etype ] ->
+    (match match_caseV "externaddr" eaddr with
+    | [[name];[]], [NumV (`Nat z)] ->
       let addr = Z.to_int z in
       let externaddr_type =
         name^"S"
@@ -1018,21 +946,20 @@ and externaddr_ok args =
         |> Fun.flip List.nth addr
         |> find_str_field "TYPE"
         |> fun type_ -> mk_case' "externtype" [[name];[]] [type_]
-        |> Construct.il_to_externtype
+        |> vl_to_externtype
       in
-      let externtype = Construct.il_to_externtype etype in
-      boolE (RI.Match.match_externtype [] externaddr_type externtype)
+      let externtype = vl_to_externtype etype in
+      boolV (RI.Match.match_externtype [] externaddr_type externtype)
     | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
     )
   | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
 
 (* $Val_ok : store -> val -> valtype -> bool *)
-and val_ok args =
-  match List.map it args with
-  | [ ExpA s; ExpA val_; ExpA valtype ] ->
-    let value   = Construct.il_to_value   val_    in
-    let valtype = Construct.il_to_valtype valtype in
-    boolE (RI.Match.match_valtype [] (RI.Value.type_of_value value) valtype)
+and val_ok = function
+  | [ ValA s; ValA val_; ValA valtype ] ->
+    let value   = vl_to_value   val_    in
+    let valtype = vl_to_valtype valtype in
+    BoolV (RI.Match.match_valtype [] (RI.Value.type_of_value value) valtype)
   | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
 
 (* $Ref_ok : store -> ref -> reftype *)
@@ -1055,14 +982,14 @@ let expand = function
 
 (* Wasm interpreter entry *)
 
-let instantiate (args: arg list) : exp =
+let instantiate (args: Value.arg list) : value =
   match call_func "instantiate" args |> run_opt with
   | Some v -> v
   | None -> raise (Failure "`instantiate` failed to run.")
 
-let invoke (args: arg list) : exp =
+let invoke (args: Value.arg list) : value =
   match (let* r = call_func "invoke" args in
-         call_func "steps" [expA r]) |> run_opt
+         call_func "steps" [ValA r]) |> run_opt
   with
   | Some r' -> r'
   | None -> raise (Failure "`invoke` failed to run.")

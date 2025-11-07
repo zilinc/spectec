@@ -17,10 +17,15 @@
     script
     state
     valid
+    value
     ; interpreter-ocaml
     main_interpreter_ocaml
     interpreter_ocaml
     util_ocaml
+    ; VL
+    construct_v
+    interpreter_v
+    numerics_v
   )
 )
 
