@@ -44,15 +44,15 @@ let il_of_spectest () : value =
       listV_of_list [code]
     ] in
     name, strV [
-      "TYPE"  , deftype;
-      "MODULE", (strV []); (* dummy module *)
-      "CODE"  , funccode
+      "TYPE"  , ref deftype;
+      "MODULE", ref (strV []); (* dummy module *)
+      "CODE"  , ref funccode
     ] in
 
   let create_globalinst t v =
     let valtype = nullary t in
     let globaltype = caseV [[];[]] [ none; valtype ] in
-    strV [ ("TYPE", globaltype); ("VALUE" , v ) ]
+    strV [ ("TYPE", ref globaltype); ("VALUE" , ref v ) ]
   in
 
   let create_tableinst t =
@@ -68,8 +68,8 @@ let il_of_spectest () : value =
       addrtype; limits; reftype
     ] in
     let func = nullary "FUNC" in
-    let nulls = listV (Array.init 10 (Fun.const (caseV [["REF.NULL"];[]] [func]))) in
-    strV [ ("TYPE", tabletype); ("REFS", nulls) ]
+    let nulls = listV (Array.make 10 (caseV [["REF.NULL"];[]] [func])) in
+    strV [ ("TYPE", ref tabletype); ("REFS", ref nulls) ]
   in
 
   let create_meminst t =
@@ -80,8 +80,8 @@ let il_of_spectest () : value =
     let memtype = caseV [[];[];["PAGE"]] [
       addrtype; limits
     ] in
-    let zeros = listV (Array.init 0x20 (Fun.const (vl_of_nat 0))) in  (* 0x10000 *)
-    strV [ ("TYPE", memtype); ("BYTES", zeros) ] in
+    let zeros = listV (Array.make 0x20 (vl_of_nat 0)) in  (* 0x10000 *)
+    strV [ ("TYPE", ref memtype); ("BYTES", ref zeros) ] in
 
   (* Builtin functions *)
   let funcs = [
@@ -128,7 +128,7 @@ let il_of_spectest () : value =
       | _ -> assert false
     in
     let new_inst =
-      strV [ ("NAME", textV name); ("ADDR", caseV [[kind];[]] [ vl_of_nat addr ]) ]
+      strV [ ("NAME", textV name |> ref); ("ADDR", caseV [[kind];[]] [ vl_of_nat addr ] |> ref) ]
     in
 
     (* Update Store *)
@@ -158,15 +158,15 @@ let il_of_spectest () : value =
   in
 
   let moduleinst = strV
-                          [ ("TYPES"  , listV [||])
-                          ; ("TAGS"   , listV [||])
-                          ; ("GLOBALS", listV [||])
-                          ; ("MEMS"   , listV [||])
-                          ; ("TABLES" , listV [||])
-                          ; ("FUNCS"  , listV [||])
-                          ; ("ELEMS"  , listV [||])
-                          ; ("DATAS"  , listV [||])
-                          ; ("EXPORTS", exportinsts)
+                          [ ("TYPES"  , ref (listV [||]))
+                          ; ("TAGS"   , ref (listV [||]))
+                          ; ("GLOBALS", ref (listV [||]))
+                          ; ("MEMS"   , ref (listV [||]))
+                          ; ("TABLES" , ref (listV [||]))
+                          ; ("FUNCS"  , ref (listV [||]))
+                          ; ("ELEMS"  , ref (listV [||]))
+                          ; ("DATAS"  , ref (listV [||]))
+                          ; ("EXPORTS", ref exportinsts)
                           ]
   in
   moduleinst

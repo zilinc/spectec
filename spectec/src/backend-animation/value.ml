@@ -183,7 +183,7 @@ let textV s = TextV s
 let optV ov = OptV ov
 let caseV mixop vs = CaseV (mixop, vs)
 let tupV vs = TupV vs
-let strV fvs = StrV (List.map (fun (f, v) -> (f, ref v)) fvs)
+let strV fvs = StrV fvs
 
 
 let int_of_bool b = Stdlib.Bool.to_int b

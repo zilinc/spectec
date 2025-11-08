@@ -541,7 +541,10 @@ and assign_param lhs rhs env =
 
 (* Step *)
 
-and step_instr (fname: string) (ctx: AlContext.t) (env: value Env.t) (instr: instr) : AlContext.t =
+and step_instr fname ctx env instr : AlContext.t =
+  Lib.Time.time ("Step instruction `" ^ fname ^ "`") (fun (a,b,c,d) -> step_instr' a b c d) (fname, ctx, env, instr)
+
+and step_instr' (fname: string) (ctx: AlContext.t) (env: value Env.t) (instr: instr) : AlContext.t =
   (Info.find instr.note).covered <- true;
 
   let rec is_true = function
