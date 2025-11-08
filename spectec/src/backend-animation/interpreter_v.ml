@@ -1,7 +1,7 @@
 open Il_util
 open Construct_v
 open Def
-open State
+open State_v
 open Value
 open Util
 open Lib.Time
@@ -30,6 +30,7 @@ let verbose : string list ref =
       (* "steps";       *)
       (* "call"; *)
       (* "iter"; *)          (* Low-level debugging. *)
+      "log";
       ]
 
 
@@ -108,6 +109,7 @@ let error_eval etyp exp onotes =
   | None     -> ""
   | Some msg -> "\n  ▹ " ^ msg
   in
+  info "log" exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes);  (* FIXME(zilinc): remove *)
   error exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes)
 
 let fail_assign at lhs rhs msg =
@@ -223,7 +225,9 @@ and eval_exp ctx exp : value OptMonad.m =
               | None -> error exp.at (sprintf "Variable `%s` is not in the value context.\n  ▹ vctx: %s" v.it
                                        (string_of_varset (VContext.dom_varid ctx)))
               )
-  (* | BoolE _ | NumE _ | TextE _ -> return exp *)
+  | BoolE b -> BoolV b |> return
+  | NumE  n -> NumV  n |> return
+  | TextE s -> TextV s |> return
   | UnE (op, _, e1) ->
     let* v1 = eval_exp ctx e1 in
     (match op, v1 with
@@ -240,12 +244,12 @@ and eval_exp ctx exp : value OptMonad.m =
     let* v2 = eval_exp ctx e2 in
     (match op with
     | #Bool.binop as op' ->
-      (match Bool.bin_partial op' v1 v2 of_bool_value to_bool_value with
+      (match Bool.bin_partial op' v1 v2 of_bool_value boolV with
       | Some v -> return v
       | None -> error_eval "Boolean binary expression" exp None
       )
     | #Xl.Num.binop as op' ->
-      (match Num.bin_partial op' v1 v2 of_num_value to_num_value with
+      (match Num.bin_partial op' v1 v2 of_num_value numV with
       | Some v -> return v
       | None -> error_eval "Numeric binary expression" exp None
       )
@@ -404,9 +408,14 @@ and eval_exp ctx exp : value OptMonad.m =
   | UncaseE (e1, mixop) ->
     let* v1 = eval_exp ctx e1 in
     (match v1 with
-    | CaseV (mixop', vs1) when Value.vl_of_mixop mixop = mixop' -> return (TupV vs1)
+    | CaseV (mixop', vs) ->
+      if Value.vl_of_mixop mixop = mixop' then
+        return (TupV vs)
+      else
+        error_eval "Constructor unwrapping expression" exp
+                   (Some ("mixop = " ^ string_of_mixop mixop ^ "; mixop' = " ^ Value.string_of_mixop mixop'))
     | _ -> error_eval "Constructor unwrapping expression" exp
-                     (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; mixop = " ^ string_of_mixop mixop))
+                      (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; mixop = " ^ string_of_mixop mixop))
     )
   | OptE oe1 -> let* ov1 = opt_mapM (eval_exp ctx) oe1 in OptV ov1 |> return
   | TheE e1 ->
@@ -432,7 +441,11 @@ and eval_exp ctx exp : value OptMonad.m =
     | OptV _, OptV None -> v1
     | _ -> error_eval "Sequence concatenation expression" exp None
     ) |> return
-  | CaseE (op, e1) -> let* v1 = eval_exp ctx e1 in CaseV (vl_of_mixop op, [v1]) |> return
+  | CaseE (op, e1) ->
+    (match e1.it with
+    | TupE es -> let* vs = mapM (eval_exp ctx) es in CaseV (vl_of_mixop op, vs) |> return
+    | _ -> let* v = eval_exp ctx e1 in CaseV (vl_of_mixop op, [v]) |> return
+    )
   | CvtE (e1, _nt1, nt2) ->
     let* v1 = eval_exp ctx e1 in
     (match v1 with
@@ -444,7 +457,7 @@ and eval_exp ctx exp : value OptMonad.m =
     | _ -> error_eval "Numeric type conversion" exp (Some ("Not a numeric:" ^ string_of_exp e1))
     )
   | SubE (e1, t1, t2) -> eval_exp ctx e1
-  (* | _ -> todo "eval_exp: unmatched cases" *)
+
 
 and eval_iter ctx = function
   | Opt   -> return Value.Opt
@@ -617,7 +630,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
             begin match opt_vx_star with
             | Some vx_star ->
               begin match vx_star with
-              | ListV vs -> let vx_star' = listV (Array.append !vs (Array.of_list [vx])) in
+              | ListV vs -> let vx_star' = listV (Array.append !vs ([|vx|])) in
                             info "iter" prem.at ("Outflow: " ^ x_star.it ^ " := " ^ string_of_value vx_star');
                             lctxr := VContext.add_varid !lctxr x_star vx_star'
               | _ -> assert false
@@ -942,10 +955,11 @@ and externaddr_ok = function
       let externaddr_type =
         name^"S"
         |> Store.access
-        |> elts_of_list
-        |> Fun.flip List.nth addr
-        |> find_str_field "TYPE"
-        |> fun type_ -> mk_case' "externtype" [[name];[]] [type_]
+        |> as_list_value
+        |> (!)
+        |> Fun.flip Array.get addr
+        |> as_str_field "TYPE"
+        |> fun type_ -> caseV [[name];[]] [type_]
         |> vl_to_externtype
       in
       let externtype = vl_to_externtype etype in

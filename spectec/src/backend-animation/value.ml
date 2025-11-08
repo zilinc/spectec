@@ -46,7 +46,8 @@ let rec string_of_mixop =
            | _   -> raise (Failure "Ill-formed mixop [1].")
   in
   function
-  | []    -> ""
+  | []    -> assert false
+  | [l]   -> go l
   | l::ls -> go l ^ "%" ^ string_of_mixop ls
 
 let rec string_of_value = function
@@ -54,17 +55,18 @@ let rec string_of_value = function
   | NumV  n -> Num.to_string n
   | TextV t -> "\"" ^ String.escaped t ^ "\""
   | ListV a -> "[" ^ string_of_array a ^ "]"
-  | TupV vs ->  "(" ^ string_of_values ", " vs ^ ")"
+  | TupV vs -> "(" ^ string_of_values ", " vs ^ ")"
   | OptV ov -> "?(" ^ string_of_values "" (Option.to_list ov) ^ ")"
   | CaseV (m, vs) -> string_of_mixop m ^ "(" ^ string_of_values ", " vs ^ ")"
   | StrV  r -> string_of_record r
 
 and string_of_values delim = function
   | [] -> ""
+  | [v] -> string_of_value v
   | v::vs -> string_of_value v ^ delim ^ string_of_values delim vs
 
 and string_of_array (a: value growable_array) =
-  Array.fold_left (fun str v -> str ^ "; " ^ string_of_value v) "" !a
+  string_of_values "; " (Array.to_list !a)
 
 and string_of_record r =
   let str = List.fold_left (fun str (k, v) -> str ^ ", " ^ k ^ " = " ^ string_of_value !v) "" r in
@@ -104,11 +106,56 @@ let rec eq_value v1 v2 = match v1, v2 with
 
 let as_opt_value = function
   | OptV ov -> ov
-  | v -> error no ("Not an OptV: " ^ string_of_value v)
+  | v -> error no ("as_opt_value: " ^ string_of_value v)
 
 let as_list_value = function
-  | ListV es -> es
-  | v -> error no ("Not a ListV: " ^ string_of_value v)
+  | ListV vs -> vs
+  | v -> error no ("as_list_value: " ^ string_of_value v)
+
+let as_list_value' v = !(as_list_value v) |> Array.to_list
+
+let find_list_elem p = function
+  | ListV vs -> Array.find_opt p !vs |> Option.get
+  | v -> error no ("find_list_elem: " ^ string_of_value v)
+
+let as_num_value = function
+  | NumV num' -> num'
+  | v -> error no ("as_num_value: " ^ string_of_value v)
+
+let as_nat_value : value -> Z.t = function
+  | NumV (`Nat n) -> n
+  | v -> error no ("as_nat_value: " ^ string_of_value v)
+
+let as_int_value : value -> Z.t = function
+  | NumV (`Int n) -> n
+  | v -> error no ("as_int_value: " ^ string_of_value v)
+
+let as_text_value : value -> string = function
+  | TextV s -> s
+  | v -> error no ("as_text_value: " ^ string_of_value v)
+
+let as_singleton_case = function
+  | CaseV ([[];[]], [v]) -> v
+  | v -> error no ("as_singleton_case: " ^ string_of_value v)
+
+let as_case = function
+  | CaseV (_, vs) -> vs
+  | v ->  error no ("as_case: " ^ string_of_value v)
+
+let has_str_field atom str : bool =
+  match str with
+  | StrV fvs -> List.exists (fun (atom', _) -> atom' = atom) fvs
+  | _ -> error no ("has_str_field: " ^ string_of_value str)
+
+let as_str_field atom str : value =
+  match str with
+  | StrV fvs -> !(List.find (fun (atom', _) -> atom' = atom) fvs |> snd)
+  | _ -> error no ("as_str_field: " ^ string_of_value str)
+
+let nth_of_list lst (idx: Z.t) : value =
+  match lst with
+  | ListV vs -> Array.get !vs (Z.to_int idx)
+  | _ -> error no ("nth_of_list: " ^ string_of_value lst)
 
 let of_bool_value = function
   | BoolV b -> Some b
@@ -123,21 +170,36 @@ let match_caseV name v : string list list * value list =
   | CaseV (tag, vs) -> tag, vs
   | _ -> error_value (name ^ " (match_caseV)") v
 
-let to_bool_value b = BoolV b
-let to_num_value n = NumV n
 
-
-let vl_of_nat : int -> value = function
-  | n -> NumV (`Nat (Z.of_int n))
 
 let listV a = ListV (ref a)
 let listV_of_list l = Array.of_list l |> listV
-let optV ov = OptV ov
+
+let natV z = NumV (`Nat z)
+let intV z = NumV (`Int z)
+let numV n = NumV n
 let boolV b = BoolV b
+let textV s = TextV s
+let optV ov = OptV ov
 let caseV mixop vs = CaseV (mixop, vs)
+let tupV vs = TupV vs
+let strV fvs = StrV (List.map (fun (f, v) -> (f, ref v)) fvs)
+
+
+let int_of_bool b = Stdlib.Bool.to_int b
+
+let vl_of_nat (n: int): value = natV (Z.of_int n)
+let vl_of_int (n: int): value = intV (Z.of_int n)
+
+let vl_of_list f l = List.map f l |> listV_of_list
+let vl_of_seq f s = List.of_seq s |> vl_of_list f
+let vl_of_opt f opt = Option.map f opt |> optV
+let vl_of_tup fvl = List.map (fun (f, v) -> f v) fvl |> tupV
 
 let valA a = ValA a
 let typA a = TypA a
 
 let none = optV None
 let some v = optV (Some v)
+let nullary con = caseV [[String.uppercase_ascii con]] []
+let singleton v = listV [|v|]

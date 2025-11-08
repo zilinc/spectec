@@ -1,8 +1,7 @@
 open Util
 open Error
 open Source
-open Il_util
-open Construct
+open Construct_v
 open Value
 
 
@@ -23,8 +22,8 @@ let ibytes : numerics =
     (* TODO: Handle the case where n > 16 (i.e. for v128 ) *)
     f =
       (function
-      | [ {it = NumE (`Nat n); _}; i ] ->
-        let NumE (`Nat i') = (unwrap_case i).it in
+      | [ NumV (`Nat n); i ] ->
+        let NumV (`Nat i') = as_singleton_case i in
         let rec decompose n bits =
           if n = Z.zero then
             []
@@ -32,8 +31,8 @@ let ibytes : numerics =
             Z.(bits land of_int 0xff) :: decompose Z.(n - of_int 8) Z.(shift_right bits 8)
           in
         assert Z.(n >= Z.zero && rem n (of_int 8) = zero);
-        decompose n i' |> List.map natE |> listE'
-      | es -> error_values "ibytes" es
+        decompose n i' |> List.map natV |> listV_of_list
+      | vs -> error_values "ibytes" vs
       );
   }
 
@@ -42,18 +41,18 @@ let inv_ibytes : numerics =
     name = "inv_ibytes";
     f =
       (function
-      | [ {it = NumE (`Nat n); _}; {it = ListE bs; _} ] ->
+      | [ NumV (`Nat n); ListV bs ] ->
           assert (
             (* numtype *)
-            n = Z.of_int (List.length bs * 8) ||
+            n = Z.of_int (Array.length !bs * 8) ||
             (* packtype *)
-            (n = Z.of_int 32 && List.length bs <= 2)
+            (n = Z.of_int 32 && Array.length !bs <= 2)
           );
-          natE (List.fold_right (fun b acc ->
-            match b.it with
-            | NumE (`Nat b) when Z.zero <= b && b < Z.of_int 256 -> Z.add b (Z.shift_left acc 8)
+          natV (Array.fold_right (fun b acc ->
+            match b with
+            | NumV (`Nat b) when Z.zero <= b && b < Z.of_int 256 -> Z.add b (Z.shift_left acc 8)
             | _ -> error_value "inv_ibytes (byte)" b
-          ) bs Z.zero)
+          ) !bs Z.zero)
       | es -> error_values "inv_ibytes" es
       );
   }
@@ -262,60 +261,60 @@ let inv_concatn : numerics =
 let signed : numerics =
   {
     name = "signed";
-    f = fun es ->
-      (match List.map it es with
-      | [ NumE (`Nat z); NumE (`Nat n) ] ->
+    f =
+      (function
+      | [ NumV (`Nat z); NumV (`Nat n) ] ->
         let z = Z.to_int z in
-        (if Z.lt n (Z.shift_left Z.one (z - 1)) then n else Z.(sub n (shift_left one z))) |> il_of_z_int
-      | _ -> error_values "signed" es
+        (if Z.lt n (Z.shift_left Z.one (z - 1)) then n else Z.(sub n (shift_left one z))) |> vl_of_z_int
+      | vs -> error_values "signed" vs
       )
   }
 
 let inv_signed =
   {
     name = "inv_signed";
-    f = fun es ->
-      (match List.map it es with
-      | [ NumE (`Nat z); NumE (`Int n) ] ->
+    f =
+      (function
+      | [ NumV (`Nat z); NumV (`Int n) ] ->
         let z = Z.to_int z in
-        (if Z.(geq n zero) then n else Z.(add n (shift_left one z))) |> il_of_z_nat
-      | _ -> error_values "inv_signed" es
+        (if Z.(geq n zero) then n else Z.(add n (shift_left one z))) |> vl_of_z_nat
+      | vs -> error_values "inv_signed" vs
       )
   }
 
 let truncz : numerics =
   {
     name = "truncz";
-    f = fun es ->
-      (match List.map it es with
-      | [ NumE (`Rat q) ] ->
-        Q.to_bigint q |> il_of_z_int
-      | _ -> error_values "truncz" es
+    f =
+      (function
+      | [ NumV (`Rat q) ] ->
+        Q.to_bigint q |> vl_of_z_int
+      | vs -> error_values "truncz" vs
       )
   }
 
 let sat_u : numerics =
   {
     name = "sat_u";
-    f = fun es ->
-      (match List.map it es with
-      | [ NumE (`Nat z); NumE (`Int i) ] ->
+    f =
+      (function
+      | [ NumV (`Nat z); NumV (`Int i) ] ->
         if Z.(gt i (shift_left one (Z.to_int z) |> pred)) then
-          Z.(shift_left one (Z.to_int z) |> pred) |> il_of_z_nat
+          Z.(shift_left one (Z.to_int z) |> pred) |> vl_of_z_nat
         else if Z.(lt i zero) then
-          Z.zero |> il_of_z_nat
+          Z.zero |> vl_of_z_nat
         else
-          il_of_z_nat i
-      | _ -> error_values "sat_u" es
+          vl_of_z_nat i
+      | vs -> error_values "sat_u" vs
       );
   }
 
 let sat_s : numerics =
   {
     name = "sat_s";
-    f = fun es ->
-      (match List.map it es with
-      | [ NumE (`Nat z); NumE (`Int i) ] ->
+    f =
+      (function
+      | [ NumV (`Nat z); NumV (`Int i) ] ->
         let n = Z.to_int z - 1 in
         let j =
           if Z.(lt i (shift_left one n |> neg)) then
@@ -324,8 +323,8 @@ let sat_s : numerics =
             Z.(shift_left one n |> pred)
           else
             i
-        in inv_signed.f [ il_of_z_nat z; il_of_z_int j ]
-      | _ -> error_values "sat_s" es
+        in inv_signed.f [ vl_of_z_nat z; vl_of_z_int j ]
+      | vs -> error_values "sat_s" vs
       );
   }
 
@@ -334,10 +333,10 @@ let inot : numerics =
     name = "inot";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        Z.(logand (lognot m') (maskN z)) |> il_of_iN
-      | es -> error_values "inot" es
+      | [ NumV (`Nat z); m ] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        Z.(logand (lognot m') (maskN z)) |> vl_of_iN
+      | vs -> error_values "inot" vs
       );
   }
 
@@ -346,16 +345,16 @@ let irev : numerics =
     name = "irev";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
+      | [ NumV (`Nat z); m ] ->
+        let NumV (`Nat m') = as_singleton_case m in
         let rec loop z m n =
           if z = Z.zero then
             n
           else
             let n' = Z.(logor (shift_left n 1) (logand m one)) in
             loop Z.(sub z one) (Z.shift_right m 1) n'
-        in loop z m' Z.zero |> il_of_iN
-      | es -> error_values "irev" es
+        in loop z m' Z.zero |> vl_of_iN
+      | vs -> error_values "irev" vs
       );
   }
 
@@ -364,11 +363,11 @@ let iand : numerics =
     name = "iand";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m; n ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        Z.(logand (logand m' n') (maskN z)) |> il_of_iN
-      | es -> error_values "iand" es
+      | [ NumV (`Nat z); m; n ] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        Z.(logand (logand m' n') (maskN z)) |> vl_of_iN
+      | vs -> error_values "iand" vs
       );
   }
 
@@ -377,11 +376,11 @@ let iandnot : numerics =
     name = "iandnot";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m; n ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        Z.(logand (logand m' (lognot n')) (maskN z)) |> il_of_iN
-      | es -> error_values "iandnot" es
+      | [ NumV (`Nat z); m; n ] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        Z.(logand (logand m' (lognot n')) (maskN z)) |> vl_of_iN
+      | vs -> error_values "iandnot" vs
       );
   }
 
@@ -390,11 +389,11 @@ let ior : numerics =
     name = "ior";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m; n ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        Z.(logand (logor m' n') (maskN z)) |> il_of_iN
-      | es -> error_values "ior" es
+      | [ NumV (`Nat z); m; n ] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        Z.(logand (logor m' n') (maskN z)) |> vl_of_iN
+      | vs -> error_values "ior" vs
       );
   }
 
@@ -403,11 +402,11 @@ let ixor : numerics =
     name = "ixor";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m; n ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        Z.(logand (logxor m' n') (maskN z)) |> il_of_iN
-      | es -> error_values "ixor" es
+      | [ NumV (`Nat z); m; n ] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        Z.(logand (logxor m' n') (maskN z)) |> vl_of_iN
+      | vs -> error_values "ixor" vs
       );
   }
 
@@ -416,10 +415,10 @@ let ishl : numerics =
     name = "ishl";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m; n ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        Z.(logand (shift_left m' (Z.to_int (rem n' z))) (maskN z)) |> il_of_iN
+      | [ NumV (`Nat z); m; n ] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        Z.(logand (shift_left m' (Z.to_int (rem n' z))) (maskN z)) |> vl_of_iN
       | vs -> error_values "ishl" vs
       );
   }
@@ -429,21 +428,21 @@ let ishr : numerics =
     name = "ishr";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; sx; m; n] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        (match match_caseE "sx" sx with
-        | [["U"]], [] -> Z.(shift_right m' (Z.to_int (rem n' z))) |> il_of_iN
+      | [ NumV (`Nat z); sx; m; n] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        (match match_caseV "sx" sx with
+        | [["U"]], [] -> Z.(shift_right m' (Z.to_int (rem n' z))) |> vl_of_iN
         | [["S"]], [] ->
           let n'' = Z.(to_int (rem n' z)) in
           let s = Z.to_int z in
           let d = s - n'' in
           let msb = Z.shift_right m' (s - 1) in
           let pad = Z.(mul (shift_left one s - shift_left one d) msb) in
-          Z.(logor pad (shift_right m' n'')) |> il_of_iN
+          Z.(logor pad (shift_right m' n'')) |> vl_of_iN
         | _ -> error_value "sx" sx
         )
-      | es -> error_values "ishr" es
+      | vs -> error_values "ishr" vs
       );
   }
 
@@ -452,12 +451,12 @@ let irotl : numerics =
     name = "irotl";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m; n ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
+      | [ NumV (`Nat z); m; n ] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
         let n'' = Z.to_int (Z.rem n' z) in
-        (Z.logor (Z.logand (Z.shift_left m' n'') (maskN z)) (Z.shift_right m' ((Z.to_int z - n'')))) |> il_of_iN
-      | es -> error_values "irotl" es
+        (Z.logor (Z.logand (Z.shift_left m' n'') (maskN z)) (Z.shift_right m' ((Z.to_int z - n'')))) |> vl_of_iN
+      | vs -> error_values "irotl" vs
       );
   }
 
@@ -466,12 +465,12 @@ let irotr : numerics =
     name = "irotr";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m; n ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
+      | [ NumV (`Nat z); m; n ] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
         let n'' = Z.to_int (Z.rem n' z) in
-        (Z.logor (Z.shift_right m' n'') (Z.logand (Z.shift_left m' ((Z.to_int z - n''))) (maskN z))) |> il_of_iN
-      | es -> error_values "irotr" es
+        (Z.logor (Z.shift_right m' n'') (Z.logand (Z.shift_left m' ((Z.to_int z - n''))) (maskN z))) |> vl_of_iN
+      | vs -> error_values "irotr" vs
       );
   }
 
@@ -480,10 +479,10 @@ let iclz : numerics =
     name = "iclz";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
+      | [ NumV (`Nat z); m ] ->
+        let NumV (`Nat m') = as_singleton_case m in
         if m' = Z.zero then
-          z |> il_of_iN
+          z |> vl_of_iN
         else
           let z = Z.to_int z in
           let rec loop acc n =
@@ -491,8 +490,8 @@ let iclz : numerics =
               loop (1 + acc) (Z.shift_left n 1)
             else
               acc
-          in loop 0 m' |> Z.of_int |> il_of_iN
-      | es -> error_values "iclz" es
+          in loop 0 m' |> Z.of_int |> vl_of_iN
+      | vs -> error_values "iclz" vs
       );
   }
 
@@ -501,18 +500,18 @@ let ictz : numerics =
     name = "ictz";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
+      | [ NumV (`Nat z); m ] ->
+        let NumV (`Nat m') = as_singleton_case m in
         if m' = Z.zero then
-          z |> il_of_iN
+          z |> vl_of_iN
         else
           let rec loop acc n =
             if Z.(equal (logand n one) zero) then
               loop (1 + acc) (Z.shift_right n 1)
             else
               acc
-          in loop 0 m' |> Z.of_int |> il_of_iN
-      | es -> error_values "ictz" es
+          in loop 0 m' |> Z.of_int |> vl_of_iN
+      | vs -> error_values "ictz" vs
       );
   }
 
@@ -521,16 +520,16 @@ let ipopcnt : numerics =
     name = "ipopcnt";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; m ] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
+      | [ NumV (`Nat z); m ] ->
+        let NumV (`Nat m') = as_singleton_case m in
         let rec loop acc i n =
           if i = 0 then
             acc
           else
             let acc' = if Z.(equal (logand n one) one) then acc + 1 else acc in
             loop acc' (i - 1) (Z.shift_right n 1)
-        in loop 0 (Z.to_int z) m' |> Z.of_int |> il_of_iN
-      | es -> error_values "ipopcnt" es
+        in loop 0 (Z.to_int z) m' |> Z.of_int |> vl_of_iN
+      | vs -> error_values "ipopcnt" vs
       );
   }
 
@@ -539,18 +538,18 @@ let ilt : numerics =
     name = "ilt";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; sx; m; n] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        (match match_caseE "sx" sx with
-        | [["U"]], [] -> m' < n' |> int_of_bool |> Z.of_int |> il_of_iN
+      | [ NumV (`Nat _) as z; sx; m; n] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        (match match_caseV "sx" sx with
+        | [["U"]], [] -> m' < n' |> int_of_bool |> Z.of_int |> vl_of_iN
         | [["S"]], [] ->
-          let m'' = signed.f [ z; m ] |> il_to_nat in
-          let n'' = signed.f [ z; n ] |> il_to_nat in
-          m'' < n'' |> int_of_bool |> Z.of_int |> il_of_iN
+          let m'' = signed.f [ z; m ] |> as_nat_value in
+          let n'' = signed.f [ z; n ] |> as_nat_value in
+          m'' < n'' |> int_of_bool |> Z.of_int |> vl_of_iN
         | _ -> error_value "sx" sx
         )
-      | es -> error_values "ilt" es
+      | vs -> error_values "ilt" vs
       );
   }
 
@@ -559,18 +558,18 @@ let igt : numerics =
     name = "igt";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; sx; m; n] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        (match match_caseE "sx" sx with
-        | [["U"]], [] -> m' > n' |> int_of_bool |> Z.of_int |> il_of_iN
+      | [ NumV (`Nat _) as z; sx; m; n] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        (match match_caseV "sx" sx with
+        | [["U"]], [] -> m' > n' |> int_of_bool |> Z.of_int |> vl_of_iN
         | [["S"]], [] ->
-          let m'' = signed.f [ z; m ] |> il_to_nat in
-          let n'' = signed.f [ z; n ] |> il_to_nat in
-          m'' > n'' |> int_of_bool |> Z.of_int |> il_of_iN
+          let m'' = signed.f [ z; m ] |> as_nat_value in
+          let n'' = signed.f [ z; n ] |> as_nat_value in
+          m'' > n'' |> int_of_bool |> Z.of_int |> vl_of_iN
         | _ -> error_value "sx" sx
         )
-      | es -> error_values "igt" es
+      | vs -> error_values "igt" vs
       );
   }
 
@@ -579,12 +578,12 @@ let ibitselect : numerics =
     name = "ibitselect";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; i1; i2; i3] ->
-        let NumE (`Nat _) = (unwrap_case i1).it in
-        let NumE (`Nat _) = (unwrap_case i2).it in
-        let NumE (`Nat _) = (unwrap_case i3).it in
+      | [ NumV (`Nat _) as z; i1; i2; i3] ->
+        let NumV (`Nat _) = as_singleton_case i1 in
+        let NumV (`Nat _) = as_singleton_case i2 in
+        let NumV (`Nat _) = as_singleton_case i3 in
         ior.f [ z; iand.f [ z; i1; i3 ]; iand.f [ z; i2; inot.f [ z; i3 ]]]
-      | es -> error_values "ibitselect" es
+      | vs -> error_values "ibitselect" vs
       );
   }
 
@@ -593,12 +592,12 @@ let irelaxed_laneselect : numerics =
     name = "irelaxed_laneselect";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; n1; n2; n3] ->
-        let NumE (`Nat _) = (unwrap_case n1).it in
-        let NumE (`Nat _) = (unwrap_case n2).it in
-        let NumE (`Nat _) = (unwrap_case n3).it in
-        ibitselect.f [ z; n1; n2; n3 ] |> mk_singleton (* use deterministic behaviour *)
-      | es -> error_values "irelaxed_laneselect" es
+      | [ NumV (`Nat _) as z; n1; n2; n3] ->
+        let NumV (`Nat _) = as_singleton_case n1 in
+        let NumV (`Nat _) = as_singleton_case n2 in
+        let NumV (`Nat _) = as_singleton_case n3 in
+        ibitselect.f [ z; n1; n2; n3 ] |> singleton (* use deterministic behaviour *)
+      | vs -> error_values "irelaxed_laneselect" vs
       );
   }
 
@@ -607,11 +606,11 @@ let imin : numerics =
     name = "imin";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; {it = CaseE _; _} as sx; m; n] ->
-        let NumE (`Nat _) = (unwrap_case m).it in
-        let NumE (`Nat _) = (unwrap_case n).it in
-        (if il_to_nat (ilt.f [ z; sx; m; n ]) = Z.one then m else n)
-      | es -> error_values "imin" es
+      | [ NumV (`Nat _) as z; CaseV _ as sx; m; n] ->
+        let NumV (`Nat _) = as_singleton_case m in
+        let NumV (`Nat _) = as_singleton_case n in
+        (if as_nat_value (ilt.f [ z; sx; m; n ]) = Z.one then m else n)
+      | vs -> error_values "imin" vs
       );
   }
 
@@ -620,11 +619,11 @@ let imax : numerics =
     name = "imax";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; {it = CaseE _; _} as sx; m; n] ->
-        let NumE (`Nat _) = (unwrap_case m).it in
-        let NumE (`Nat _) = (unwrap_case n).it in
-        (if il_to_nat (igt.f [ z; sx; m; n ]) = Z.one then m else n)
-      | es -> error_values "imax" es
+      | [ NumV (`Nat _) as z; CaseV _ as sx; m; n] ->
+        let NumV (`Nat _) = as_singleton_case m in
+        let NumV (`Nat _) = as_singleton_case n in
+        (if as_nat_value (igt.f [ z; sx; m; n ]) = Z.one then m else n)
+      | vs -> error_values "imax" vs
       );
   }
 
@@ -633,18 +632,18 @@ let iavgr : numerics =
     name = "iavgr";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; sx; m; n] ->
-        let NumE (`Nat m') = (unwrap_case m).it in
-        let NumE (`Nat n') = (unwrap_case n).it in
-        (match match_caseE "sx" sx with
-        | [["U"]], [] ->  Z.((m' + n' + one) / of_int 2) |> il_of_iN
+      | [ NumV (`Nat _) as z; sx; m; n] ->
+        let NumV (`Nat m') = as_singleton_case m in
+        let NumV (`Nat n') = as_singleton_case n in
+        (match match_caseV "sx" sx with
+        | [["U"]], [] ->  Z.((m' + n' + one) / of_int 2) |> vl_of_iN
         | [["S"]], [] ->
-          let m'' = signed.f [ z; natE m' ] |> il_to_int |> Z.of_int in
-          let n'' = signed.f [ z; natE n' ] |> il_to_int |> Z.of_int in
-          Z.((m'' + n'' + one) / Z.of_int 2) |> il_of_iN
+          let m'' = signed.f [ z; natV m' ] |> as_int_value in
+          let n'' = signed.f [ z; natV n' ] |> as_int_value in
+          Z.((m'' + n'' + one) / Z.of_int 2) |> vl_of_iN
         | _ -> error_value "sx" sx
         )
-      | es -> error_values "iavgr" es
+      | vs -> error_values "iavgr" vs
       );
   }
 
@@ -654,17 +653,17 @@ let iq15mulr_sat : numerics =
     name = "iq15mulr_sat";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; sx; m; n] ->
-        let NumE (`Nat _) = (unwrap_case m).it in
-        let NumE (`Nat _) = (unwrap_case n).it in
-        let m' = signed.f [ z; m ] |> il_to_int |> Z.of_int in
-        let n' = signed.f [ z; n ] |> il_to_int |> Z.of_int in
-        (match match_caseE "sx" sx with
-        | [["U"]], _ -> sat_u.f [ z; sx; Z.(shift_right (mul m' n' + of_int 0x4000) 15) |> intE ]
-        | [["S"]], _ -> sat_s.f [ z; sx; Z.(shift_right (mul m' n' + of_int 0x4000) 15) |> intE ]
+      | [ NumV (`Nat _) as z; sx; m; n] ->
+        let NumV (`Nat _) = as_singleton_case m in
+        let NumV (`Nat _) = as_singleton_case n in
+        let m' = signed.f [ z; m ] |> as_int_value in
+        let n' = signed.f [ z; n ] |> as_int_value in
+        (match match_caseV "sx" sx with
+        | [["U"]], _ -> sat_u.f [ z; sx; Z.(shift_right (mul m' n' + of_int 0x4000) 15) |> intV ]
+        | [["S"]], _ -> sat_s.f [ z; sx; Z.(shift_right (mul m' n' + of_int 0x4000) 15) |> intV ]
         | _ -> error_value "sx" sx
         )
-      | es -> error_values "iq15mulr_sat" es
+      | vs -> error_values "iq15mulr_sat" vs
       );
   }
 
@@ -673,9 +672,9 @@ let irelaxed_q15mulr : numerics =
     name = "irelaxed_q15mulr";
     f =
       (function
-      | [ {it = NumE (`Nat _); _} as z; sx; m; n] ->
-        iq15mulr_sat.f [z; sx; m; n] |> mk_singleton (* use deterministic behaviour *)
-      | es -> error_values "irelaxed_q15mulr" es
+      | [ NumV (`Nat _) as z; sx; m; n] ->
+        iq15mulr_sat.f [z; sx; m; n] |> singleton (* use deterministic behaviour *)
+      | vs -> error_values "irelaxed_q15mulr" vs
       );
   }
 
@@ -684,11 +683,11 @@ let fgt : numerics =
     name = "fgt";
     f =
       (function
-      | [ {it = NumE (`Nat z); _}; {it = CaseE _; _} as f1; {it = CaseE _; _} as f2; ] when z = Z.of_int 32 ->
-        RI.F32.gt (il_to_float32 f1) (il_to_float32 f2) |> int_of_bool |> Z.of_int |> il_of_iN
-      | [ {it = NumE (`Nat z); _}; {it = CaseE _; _} as f1; {it = CaseE _; _} as f2; ] when z = Z.of_int 64 ->
-        RI.F64.gt (il_to_float64 f1) (il_to_float64 f2) |> int_of_bool |> Z.of_int |> il_of_iN
-      | es -> error_values "fgt" es
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        RI.F32.gt (vl_to_float32 f1) (vl_to_float32 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        RI.F64.gt (vl_to_float64 f1) (vl_to_float64 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
+      | vs -> error_values "fgt" vs
       );
   }
 
