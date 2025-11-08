@@ -26,6 +26,9 @@
     construct_v
     interpreter_v
     numerics_v
+    state_v
+    script_v
+    main_interpret_v
   )
 )
 

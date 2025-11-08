@@ -60,6 +60,7 @@ let print_al = ref false
 let print_al_o = ref ""
 let print_no_pos = ref false
 let new_interpreter_args = ref None
+let vl = ref false
 
 let generate_ocaml = ref None
 
@@ -127,7 +128,8 @@ let argspec = Arg.align (
   "-o", Arg.Unit (fun () -> file_kind := Output), " Output files";
   "-l", Arg.Set logging, " Log execution steps";
   "-ll", Arg.Unit (fun () -> Backend_interpreter.Runner.logging := true;
-                             Backend_animation.Main_interpret.logging := true), " Log interpreter execution";
+                             Backend_animation.Main_interpret.logging := true;
+                             Backend_animation.Main_interpret_v.logging := true), " Log interpreter execution";
   "-dl", Arg.String (fun s -> Util.Debug_log.(active := s :: !active)),
     " Debug-log function";
   "-w", Arg.Unit (fun () -> warn_math := true; warn_prose := true),
@@ -150,6 +152,7 @@ let argspec = Arg.align (
   "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args), " Generate interpreter";
   "--animate", Arg.Unit (fun () -> target := Animate), " Animate";
   "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), "New meta-interpreter";
+  "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), "New meta-interpreter VL";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),
@@ -343,7 +346,10 @@ let () =
       (match !new_interpreter_args with
       | Some args ->
         log "Interpreting...";
-        Backend_animation.Main_interpret.run env dl args;
+        if !vl then
+          Backend_animation.Main_interpret_v.run env dl args
+        else
+          Backend_animation.Main_interpret.run env dl args;
       | None -> ()
       )
     );
