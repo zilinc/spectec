@@ -71,7 +71,7 @@ module Store = struct
     (* Ds.Store.init () *)  (* NOTE: I don't think there's anything that depends on Ds. / zilinc *)
 
 
-  let get () = strV (List.map (fun (f, er) -> (f, !er)) !store)
+  let get () = strV !store
 
   let access field = Record.find field !store
   let update field f = let v = access field in

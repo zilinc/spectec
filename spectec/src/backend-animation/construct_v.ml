@@ -658,8 +658,8 @@ let vl_of_packshape = function
   | RI.Pack.Pack32x2 -> [vl_of_nat 32; vl_of_nat 2]
 
 let vl_of_memop f idx (memop: (RI.Types.numtype, 'p) RI.Ast.memop) =
-  let str = [("ALIGN" , vl_of_nat   memop.align );
-             ("OFFSET", vl_of_nat64 memop.offset)]
+  let str = [("ALIGN" , vl_of_nat   memop.align  |> ref);
+             ("OFFSET", vl_of_nat64 memop.offset |> ref)]
   in
   [vl_of_numtype memop.ty; f memop.pack; vl_of_memidx idx; strV str]
 
