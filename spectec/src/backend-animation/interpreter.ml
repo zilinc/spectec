@@ -252,7 +252,7 @@ and is_value : exp -> bool = Il.Eval.is_normal_exp
 and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
 
 and eval_exp ?full:(full=true) ctx exp =
-  time ("eval_exp: " ^ string_of_exp exp) (fun () -> eval_exp' ~full ctx exp) ()
+  eval_exp' ~full ctx exp
 
 and eval_exp' ?full:(full=true) ctx exp : exp OptMonad.m =
   let open Xl in
@@ -614,7 +614,7 @@ and eval_arg ctx a : arg OptMonad.m =
   | GramA _g -> return a
 
 and eval_prem ctx prem =
-  time ("eval_prem " ^ string_of_prem prem) (fun () -> eval_prem' ctx prem) ()
+  eval_prem' ctx prem
 
 and eval_prem' ctx prem : VContext.t OptMonad.m =
   (* info "match_info" prem.at ("Match premise: " ^ string_of_prem prem); *)
@@ -769,7 +769,7 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
 
 
 and eval_prems ctx prems : VContext.t OptMonad.m =
-  time ("eval_prems") (fun () -> eval_prems' ctx prems) ()
+  eval_prems' ctx prems
 
 and eval_prems' ctx prems : VContext.t OptMonad.m =
   match prems with
@@ -790,7 +790,7 @@ and match_typ ctx at (pat: typ) (arg: typ) : VContext.t OptMonad.m =
 
 
 and match_arg ctx at (pat: arg) (arg: arg) : VContext.t OptMonad.m =
-  time ("match_arg " ^ string_of_arg arg) (fun () -> match_arg' ctx at pat arg) ()
+  match_arg' ctx at pat arg
 
 and match_arg' ctx at (pat: arg) (arg: arg) : VContext.t OptMonad.m =
   match pat.it, arg.it with
@@ -810,9 +810,7 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
     return ctx''
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
-  time ("match " ^ string_of_int nth ^ "-th clause" ) (fun () ->
     match_clause' at fname nth clauses args
-  ) ()
 
 and match_clause' at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
   match clauses with
@@ -849,7 +847,7 @@ and eval_func name func_def args : exp OptMonad.m =
 
 
 and call_func name args : exp OptMonad.m =
-  time ("call_func: " ^ name) (fun () -> call_func' name args) ()
+  call_func' name args
   (* call_func' name args *)
 
 and call_func' name args =
