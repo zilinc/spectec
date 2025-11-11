@@ -139,19 +139,6 @@ let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
 
 
-let as_opt_exp e =
-  match e.it with
-  | OptE eo -> eo
-  | _ -> error_value "OptE" e
-
-let as_list_exp e =
-  match e.it with
-  | ListE es -> es
-  | _ -> error_value "ListE" e
-
-
-
-
 (** [lhs] is the pattern, and [rhs] is the expression. *)
 let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
   let* rhs' = eval_exp ctx rhs in
@@ -402,7 +389,7 @@ and eval_exp ?full:(full=true) ctx exp : exp OptMonad.m =
     else
       (match iter' with
       | Opt ->
-        let eos' = List.map as_opt_exp es' in
+        let eos' = List.map unwrap_opt es' in
         if List.for_all Option.is_none eos' then
           OptE None $> exp |> return
         else if List.for_all Option.is_some eos' then
@@ -416,14 +403,14 @@ and eval_exp ?full:(full=true) ctx exp : exp OptMonad.m =
         else
           error_eval "Iterated epxression" exp (Some "?-iterator inflow expressions don't match.")
       | List | List1 ->
-        let n = List.length (as_list_exp (List.hd es')) in
+        let n = List.length (elts_of_list (List.hd es')) in
         if iter' = List || n >= 1 then
           let en = NumE (`Nat (Z.of_int n)) $$ exp.at % (NumT `NatT $ exp.at) in
           eval_exp ~full ctx (IterE (e1, (ListN (en, None), xes')) $> exp)
         else
           error_eval "Iterated expression" exp (Some "Using +-iterator but sequence length is 0")
       | ListN ({it = NumE (`Nat n'); _}, ido) ->
-        let ess' = List.map as_list_exp es' in
+        let ess' = List.map elts_of_list es' in
         let ns = List.map List.length ess' in
         let n = Z.to_int n' in
         if List.for_all ((=) n) ns then

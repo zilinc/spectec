@@ -257,13 +257,13 @@
 )
 
 
-;; (assert_return (invoke "binop") (i32.const 46))
-;; (assert_return (invoke "testop") (i32.const 1))
-;; (assert_return (invoke "relop_i32") (i32.const 0))
-;; (assert_return (invoke "relop_f32") (i32.const 0))
-;; (assert_return (invoke "nop") (i64.const 0))
-;; (assert_return (invoke "drop") (f64.const 3.1))
-;; (assert_return (invoke "select") (f64.const -0.0))
+(assert_return (invoke "binop") (i32.const 46))
+(assert_return (invoke "testop") (i32.const 1))
+(assert_return (invoke "relop_i32") (i32.const 0))
+(assert_return (invoke "relop_f32") (i32.const 0))
+(assert_return (invoke "nop") (i64.const 0))
+(assert_return (invoke "drop") (f64.const 3.1))
+(assert_return (invoke "select") (f64.const -0.0))
 
 ;; (assert_return (invoke "local_set" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 8))
 ;; (assert_return (invoke "local_get" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 7))
@@ -275,7 +275,8 @@
 
 ;; (assert_return (invoke "call_nop") (i32.const 0))
 ;; (assert_return (invoke "call_add") (i32.const 3))
-(assert_return (invoke "call_sum") (i32.const 55))
+
+;; (assert_return (invoke "call_sum") (i32.const 55))
 ;; (assert_return (invoke "call_add_return_frame") (i32.const 3))
 ;; (assert_return (invoke "call_add_return_label") (i32.const 3))
 ;; (assert_return (invoke "block") (i32.const -1))
