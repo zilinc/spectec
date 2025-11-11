@@ -815,13 +815,10 @@ and match_clause' at (fname: string) (nth: int) (clauses: clause list) (args: ar
   match clauses with
   | [] -> fail_info "match_info" at ("No clause of function `" ^ fname ^ "` is matched. ♣")
   | cl :: cls ->
-    let t1 = Sys.time () in
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = ref !il_env in
-    let t2 = Sys.time () in
     (* Add bindings to [il_env]. *)
     let _ = Animate.env_of_binds binds il_env in
-    let t3 = Sys.time () in
     assert_msg (List.length pargs = List.length args)
       (sprintf "Function `%s`%s (%d) but got arguments %s (%d)" fname
         (string_of_args pargs) (List.length pargs)
@@ -838,16 +835,7 @@ and match_clause' at (fname: string) (nth: int) (clauses: clause list) (args: ar
       )
     in
     (* Resume global environment. *)
-    let t4 = Sys.time () in
     il_env := !old_env;
-    let t5 = Sys.time () in
-    print_endline ("match_clause: \n" ^
-       "t1-2 = " ^ string_of_float (t2 -. t1) ^ "\n" ^
-       "t2-3 = " ^ string_of_float (t3 -. t2) ^ "\n" ^
-       "t3-4 = " ^ string_of_float (t4 -. t3) ^ "\n" ^
-       "t4-5 = " ^ string_of_float (t5 -. t4) ^ "\n" ^
-       "t1-5 = " ^ string_of_float (t5 -. t1) ^ "\n"
-      );
     return val_
 
 
