@@ -140,10 +140,6 @@ let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
 
 
-(* FIXME(zilinc): Implement the _ok rules properly. *)
-let dummy : exp = varE ~note:(t_var "dummyT") "dummyE"
-
-
 let as_opt_exp e =
   match e.it with
   | OptE eo -> eo
@@ -256,7 +252,10 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
 and is_value : exp -> bool = Il.Eval.is_normal_exp
 and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
 
-and eval_exp ?full:(full=true) ctx exp : exp OptMonad.m =
+and eval_exp ?full:(full=true) ctx exp =
+  time ("eval_exp: " ^ string_of_exp exp) (fun () -> eval_exp' ~full ctx exp) ()
+
+and eval_exp' ?full:(full=true) ctx exp : exp OptMonad.m =
   let open Xl in
   match exp.it with
   | _ when is_value exp -> return exp
@@ -615,7 +614,10 @@ and eval_arg ctx a : arg OptMonad.m =
   | DefA _id -> return a
   | GramA _g -> return a
 
-and eval_prem ctx prem : VContext.t OptMonad.m =
+and eval_prem ctx prem =
+  time ("eval_prem " ^ string_of_prem prem) (fun () -> eval_prem' ctx prem) ()
+
+and eval_prem' ctx prem : VContext.t OptMonad.m =
   (* info "match_info" prem.at ("Match premise: " ^ string_of_prem prem); *)
   match prem.it with
   | ElsePr -> return ctx
@@ -766,7 +768,11 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
     end
   | _ -> assert false
 
+
 and eval_prems ctx prems : VContext.t OptMonad.m =
+  time ("eval_prems") (fun () -> eval_prems' ctx prems) ()
+
+and eval_prems' ctx prems : VContext.t OptMonad.m =
   match prems with
   | [] -> return ctx
   | prem :: prems ->
@@ -783,7 +789,11 @@ and match_typ ctx at (pat: typ) (arg: typ) : VContext.t OptMonad.m =
                                "  ▹ pat: " ^ string_of_typ pat ^ "\n" ^
                                "  ▹ arg: " ^ string_of_typ arg)
 
+
 and match_arg ctx at (pat: arg) (arg: arg) : VContext.t OptMonad.m =
+  time ("match_arg " ^ string_of_arg arg) (fun () -> match_arg' ctx at pat arg) ()
+
+and match_arg' ctx at (pat: arg) (arg: arg) : VContext.t OptMonad.m =
   match pat.it, arg.it with
   | TypA ptyp , TypA atyp -> match_typ ctx at ptyp atyp
   | ExpA pexp , ExpA aexp -> assign ctx pexp aexp
@@ -796,18 +806,26 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
   match pargs, args with
   | [], [] -> return ctx
   | parg::pargs', arg::args' ->
-    let* ctx'  = match_arg ctx at parg arg in
+    let* ctx'  = match_arg  ctx  at parg   arg   in
     let* ctx'' = match_args ctx' at pargs' args' in
     return ctx''
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
+  time ("match " ^ string_of_int nth ^ "-th clause" ) (fun () ->
+    match_clause' at fname nth clauses args
+  ) ()
+
+and match_clause' at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
   match clauses with
   | [] -> fail_info "match_info" at ("No clause of function `" ^ fname ^ "` is matched. ♣")
   | cl :: cls ->
+    let t1 = Sys.time () in
     let DefD (binds, pargs, exp, prems) = cl.it in
-    let old_env = !il_env in
+    let old_env = ref !il_env in
+    let t2 = Sys.time () in
     (* Add bindings to [il_env]. *)
     let _ = Animate.env_of_binds binds il_env in
+    let t3 = Sys.time () in
     assert_msg (List.length pargs = List.length args)
       (sprintf "Function `%s`%s (%d) but got arguments %s (%d)" fname
         (string_of_args pargs) (List.length pargs)
@@ -824,18 +842,27 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
       )
     in
     (* Resume global environment. *)
-    il_env := old_env;
+    let t4 = Sys.time () in
+    il_env := !old_env;
+    let t5 = Sys.time () in
+    print_endline ("match_clause: \n" ^
+       "t1-2 = " ^ string_of_float (t2 -. t1) ^ "\n" ^
+       "t2-3 = " ^ string_of_float (t3 -. t2) ^ "\n" ^
+       "t3-4 = " ^ string_of_float (t4 -. t3) ^ "\n" ^
+       "t4-5 = " ^ string_of_float (t5 -. t4) ^ "\n" ^
+       "t1-5 = " ^ string_of_float (t5 -. t1) ^ "\n"
+      );
     return val_
 
 
 and eval_func name func_def args : exp OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
   info "match_info" func_def.at ("Calling `" ^ name ^ "` with " ^ string_of_args args);
-  match_clause no_region name 1 fcs args
+  time ("eval_func: " ^ name) (fun () -> match_clause no_region name 1 fcs args) ()
 
 
 and call_func name args : exp OptMonad.m =
-  time ("Calling `" ^ name ^ "`") (uncurry call_func') (name, args)
+  time ("Calling `" ^ name ^ "`") (fun () -> call_func' name args) ()
   (* call_func' name args *)
 
 and call_func' name args =
