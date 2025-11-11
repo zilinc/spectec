@@ -89,6 +89,12 @@ let elts_of_tuple tup : exp list =
   | TupE es -> es
   | _ -> error tup.at ("elts_of_tup: Input expression is not a tuple: " ^ string_of_exp tup)
 
+let unwrap_opt e =
+  match e.it with
+  | OptE eo -> eo
+  | _ -> error e.at ("as_opt_exp: Input expression is not an option: " ^ string_of_exp e)
+
+
 let args_of_case case : exp list =
   match case.it with
   | CaseE (_, tup) ->
