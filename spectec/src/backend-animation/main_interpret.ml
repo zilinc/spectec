@@ -115,12 +115,8 @@ let get_global_value module_name globalname : exp (* val *) =
 
 (** Main functions **)
 
-let rec instantiate module_ : exp =
-  time "Instantiate" instantiate' module_
-
-and instantiate' module_ : exp =
+and instantiate module_ : exp =
   log "[Instantiating module...]\n";
-
   match C.il_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | il_module, externaddrs ->
@@ -136,12 +132,8 @@ and instantiate' module_ : exp =
     moduleinst
 
 
-let rec invoke moduleinst_name funcname args =
-  time "Invoke" (uncurry3 invoke') (moduleinst_name, funcname, args)
-
-and invoke' moduleinst_name funcname args : exp =
-  log "[Invoking %s %s in module instance %s...]\n"
-    funcname (R.Value.string_of_values args |> Lib.String.shorten) (print_name moduleinst_name);
+and invoke moduleinst_name funcname args : exp =
+  log "[Invoking %s...]\n" funcname;
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
   let config' = Interpreter.invoke [ expA store; expA funcaddr; il_of_list (t_star "val") C.il_of_value args |> expA ] in
@@ -244,7 +236,7 @@ let run_command command =
   let result =
     let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) (Lib.String.shorten msg) in
     try
-      time "Running command" run_command' command
+      run_command' command
     with
     | I.Exception.Error (at, msg, step) ->
       let msg' = msg ^ " (interpreting " ^ step ^ " at " ^ Source.string_of_region at ^ ")" in
