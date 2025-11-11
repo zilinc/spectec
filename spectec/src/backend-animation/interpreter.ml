@@ -16,8 +16,6 @@ module I = Backend_interpreter
 module RI = Reference_interpreter
 
 
-let _ = timer_off ()
-let time msg f a = f a
 
 (* Errors *)
 
@@ -118,9 +116,6 @@ let error_eval etyp exp onotes =
   error exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes)
 
 let fail_assign at lhs rhs msg =
-  info "assign" at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
-                   "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
-                   "  ▹ value: " ^ string_of_exp rhs);
   fail ()
 
 let string_of_exp exp = Il.Print.string_of_exp exp |> Lib.String.shorten
@@ -160,7 +155,6 @@ let as_list_exp e =
 (** [lhs] is the pattern, and [rhs] is the expression. *)
 let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
   let* rhs' = eval_exp ctx rhs in
-  info "assign" lhs.at ("Assignment: " ^ string_of_exp lhs ^ " ↦ " ^ string_of_exp rhs');
   match lhs.it, rhs'.it with
   | VarE name, _ ->
     VContext.add_varid ctx name rhs' |> return
@@ -211,8 +205,6 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
   | SubE (p, t1, t2), _ when Il.Eq.eq_typ t1 rhs'.note -> assign ctx p rhs'
   | SubE (p, t1, t2), CaseE (mixop, tup) when Il.Eq.eq_typ t2 rhs'.note ->
     let tcs = as_variant_typ !il_env t1 in
-    info "assign" lhs.at ("tcs = " ^ String.concat ", " (List.map (fun (m, _, _) -> string_of_mixop m) tcs));
-    info "assign" lhs.at ("mixop = " ^ string_of_mixop mixop);
     (match List.find_map (fun (mixop', _, _) -> if Il.Eq.eq_mixop mixop mixop' then Some mixop' else None) tcs with
     | Some mixop' ->
       let rhs'' = CaseE (mixop', tup) $$ rhs'.at % t1 in
@@ -251,10 +243,7 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
 and is_value : exp -> bool = Il.Eval.is_normal_exp
 and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
 
-and eval_exp ?full:(full=true) ctx exp =
-  eval_exp' ~full ctx exp
-
-and eval_exp' ?full:(full=true) ctx exp : exp OptMonad.m =
+and eval_exp ?full:(full=true) ctx exp : exp OptMonad.m =
   let open Xl in
   match exp.it with
   | _ when is_value exp -> return exp
@@ -613,11 +602,7 @@ and eval_arg ctx a : arg OptMonad.m =
   | DefA _id -> return a
   | GramA _g -> return a
 
-and eval_prem ctx prem =
-  eval_prem' ctx prem
-
-and eval_prem' ctx prem : VContext.t OptMonad.m =
-  (* info "match_info" prem.at ("Match premise: " ^ string_of_prem prem); *)
+and eval_prem ctx prem : VContext.t OptMonad.m =
   match prem.it with
   | ElsePr -> return ctx
   | LetPr (lhs, rhs, _vs) -> assign ctx lhs rhs
@@ -625,7 +610,7 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
     let* b = eval_exp ctx e in
     if b.it = BoolE true then return ctx
     else
-      fail_info "match" prem.at ("If premise failed: " ^ string_of_exp e)
+      fail ()
   | IterPr (prems, (iter, xes)) ->
     (* Work out which variables are inflow and which are outflow. *)
     let in_binds, out_binds = List.fold_right (fun (x, e) (ins, ous) ->
@@ -640,10 +625,8 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
       let* n' = eval_exp ctx n in
       let* n'' = begin match n'.it with
       | NumE (`Nat n'') -> return (Z.to_int n'')
-      | n'' -> fail_info "match" n.at ("Expression " ^ string_of_exp n ^ " ~> " ^
-                                       string_of_exp (n'' $> n) ^ " is not a nat.")
+      | n'' -> fail ()
       end in
-      info "iter" n.at ("Iter length n' = " ^ string_of_int n'');
       let il_env0 = !il_env in
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
@@ -654,14 +637,11 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
           il_env := Il.Env.(bind_var !il_env x t);
         | _ -> assert false
       ) (in_binds @ out_binds);
-      info "iter" prem.at ("in-binds are: " ^ string_of_iterexp (iter, in_binds) ^ "\n" ^
-                            "out-binds are: " ^ string_of_iterexp (iter, out_binds));
       (* Initialise the out-vars, so that even when n' = 0 they are still assigned to `eps`. *)
       let ctx' = List.fold_left (fun ctx (x, e) ->
         match e.it with
         | VarE x_star ->
           let vx_star = ListE [] $$ no_region % e.note in
-          info "iter" prem.at ("Initialise " ^ x_star.it ^ " to " ^ string_of_exp vx_star);
           VContext.add_varid ctx x_star vx_star
         | _ -> assert false
       ) ctx out_binds in
@@ -689,7 +669,6 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
             | Some vx_star ->
               begin match vx_star.it with
               | ListE es -> let vx_star' = ListE (es @ [vx]) $> vx_star in
-                            info "iter" prem.at ("Outflow: " ^ x_star.it ^ " := " ^ string_of_exp vx_star');
                             lctxr := VContext.add_varid !lctxr x_star vx_star'
               | _ -> assert false
               end
@@ -713,8 +692,6 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
           il_env := Il.Env.(bind_var !il_env x t);
         | _ -> assert false
       ) (in_binds @ out_binds);
-      info "iter" prem.at ("in-binds are: " ^ string_of_iterexp (iter, in_binds) ^ "\n" ^
-                           "out-binds are: " ^ string_of_iterexp (iter, out_binds));
       (* Need to figure out whether it runs or not. *)
       let* in_vals = mapM (fun (x, e) -> let* e' = eval_exp ctx e in return (x, e')) in_binds in
       assert (List.length in_vals > 0);
@@ -769,9 +746,6 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
 
 
 and eval_prems ctx prems : VContext.t OptMonad.m =
-  eval_prems' ctx prems
-
-and eval_prems' ctx prems : VContext.t OptMonad.m =
   match prems with
   | [] -> return ctx
   | prem :: prems ->
@@ -784,21 +758,16 @@ and match_typ ctx at (pat: typ) (arg: typ) : VContext.t OptMonad.m =
   | VarT (pid, []), _ ->
     let arg' = Il.Eval.reduce_typ !il_env arg in
     VContext.add_typid ctx pid arg' |> return
-  | _ -> fail_info "match" at ("Type argument doesn't match:\n" ^
-                               "  ▹ pat: " ^ string_of_typ pat ^ "\n" ^
-                               "  ▹ arg: " ^ string_of_typ arg)
+  | _ -> fail ()
 
 
 and match_arg ctx at (pat: arg) (arg: arg) : VContext.t OptMonad.m =
-  match_arg' ctx at pat arg
-
-and match_arg' ctx at (pat: arg) (arg: arg) : VContext.t OptMonad.m =
   match pat.it, arg.it with
   | TypA ptyp , TypA atyp -> match_typ ctx at ptyp atyp
   | ExpA pexp , ExpA aexp -> assign ctx pexp aexp
   | DefA pid  , DefA _    -> todo "match_arg DefA"
   | GramA psym, GramA _   -> todo "match_arg GramA"
-  | _ -> fail_info "match" at ("Wrong argument sort: " ^ string_of_arg arg ^ " doesn't match pattern " ^ string_of_arg pat)
+  | _ -> fail ()
 
 
 and match_args ctx at pargs args : VContext.t OptMonad.m =
@@ -810,11 +779,8 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
     return ctx''
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
-    match_clause' at fname nth clauses args
-
-and match_clause' at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
   match clauses with
-  | [] -> fail_info "match_info" at ("No clause of function `" ^ fname ^ "` is matched. ♣")
+  | [] -> fail ()
   | cl :: cls ->
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = ref !il_env in
@@ -828,8 +794,7 @@ and match_clause' at (fname: string) (nth: int) (clauses: clause list) (args: ar
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
         begin match eval_prems ctx prems |> run_opt with
-        | Some ctx' -> info "match_info" at ("The " ^ string_of_int nth ^ "-th clause of `" ^ fname ^ "` is matched. ■");
-                       eval_exp ctx' exp
+        | Some ctx' -> eval_exp ctx' exp
         | None      -> match_clause at fname (nth+1) cls args
         end
       | None -> match_clause at fname (nth+1) cls args
@@ -842,16 +807,10 @@ and match_clause' at (fname: string) (nth: int) (clauses: clause list) (args: ar
 
 and eval_func name func_def args : exp OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
-  info "match_info" func_def.at ("Calling `" ^ name ^ "` with " ^ string_of_args args);
   match_clause no_region name 1 fcs args
 
 
 and call_func name args : exp OptMonad.m =
-  call_func' name args
-  (* call_func' name args *)
-
-and call_func' name args =
-  info "call" no ("call_func " ^ name);
   match name with
   (* Hardcoded functions defined in meta.spectec *)
   | "Steps"  -> call_func "steps"    args
