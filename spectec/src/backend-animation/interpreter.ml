@@ -843,7 +843,7 @@ and match_clause' at (fname: string) (nth: int) (clauses: clause list) (args: ar
 and eval_func name func_def args : exp OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
   info "match_info" func_def.at ("Calling `" ^ name ^ "` with " ^ string_of_args args);
-  time ("eval_func: " ^ name) (fun () -> match_clause no_region name 1 fcs args) ()
+  match_clause no_region name 1 fcs args
 
 
 and call_func name args : exp OptMonad.m =
