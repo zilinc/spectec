@@ -16,6 +16,9 @@ module I = Backend_interpreter
 module RI = Reference_interpreter
 
 
+let _ = timer_off ()
+let time msg f a = f a
+
 (* Errors *)
 
 let verbose : string list ref =
@@ -846,7 +849,7 @@ and eval_func name func_def args : exp OptMonad.m =
 
 
 and call_func name args : exp OptMonad.m =
-  time ("Calling `" ^ name ^ "`") (fun () -> call_func' name args) ()
+  time ("call_func: " ^ name) (fun () -> call_func' name args) ()
   (* call_func' name args *)
 
 and call_func' name args =
