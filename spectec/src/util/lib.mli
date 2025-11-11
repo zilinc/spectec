@@ -80,6 +80,7 @@ end
 
 module Time:
 sig
+  val timer_off : unit -> unit
   val time : string -> ('a -> 'b) -> 'a -> 'b
 end
 

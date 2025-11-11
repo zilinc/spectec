@@ -132,6 +132,7 @@ module VContext = struct
   include Il.Subst
   type t = subst
 
+  let find_opt_varid : subst -> id -> exp option = fun ctx n -> Map.find_opt n.it ctx.varid
   let dom_varid ctx : Set.t = ctx.varid |> Map.bindings |> List.map fst |> Set.of_list
 end
 
@@ -150,11 +151,6 @@ let as_list_exp e =
   | ListE es -> es
   | _ -> error_value "ListE" e
 
-
-let vctx_to_subst ctx : Il.Subst.subst =
-  VContext.Map.fold (fun var value subst ->
-    Il.Subst.add_varid subst (var $ no_region) value
-  ) ctx Il.Subst.empty
 
 
 
@@ -260,7 +256,7 @@ and eval_exp' ?full:(full=true) ctx exp : exp OptMonad.m =
   match exp.it with
   | _ when is_value exp -> return exp
   | _ when is_hnf exp && not full -> return exp
-  | VarE v -> (match VContext.Map.find_opt v.it ctx.varid with
+  | VarE v -> (match VContext.find_opt_varid ctx v with
               | Some v' -> return v'
               | None -> error exp.at (sprintf "Variable `%s` is not in the value context.\n  ▹ vctx: %s" v.it
                                        (string_of_varset (VContext.dom_varid ctx)))
@@ -685,7 +681,7 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
           match e.it with
           | VarE x_star ->
             let vx = VContext.find_varid !lctxr x in
-            let opt_vx_star = VContext.Map.find_opt x_star.it !lctxr.varid in
+            let opt_vx_star = VContext.find_opt_varid !lctxr x_star in
             begin match opt_vx_star with
             | Some vx_star ->
               begin match vx_star.it with
@@ -753,7 +749,7 @@ and eval_prem' ctx prem : VContext.t OptMonad.m =
           match e.it with
           | VarE x_question ->
             let vx = VContext.find_varid !lctxr x in
-            let opt_vx_question = VContext.Map.find_opt x_question.it !lctxr.varid in
+            let opt_vx_question = VContext.find_opt_varid !lctxr x_question in
             begin match opt_vx_question with
             | Some vx_question -> assert false
             | None -> let some_vx = mk_some e.note vx in
