@@ -190,12 +190,17 @@ end
 
 module Time =
 struct
+  let timer : bool ref = ref true
+  let timer_off () = timer := false
   let time msg f a =
-    let start = Sys.time () in
-    let b = f a in
-    let lapsed = Sys.time () -. start in
-    print_endline (msg ^ ": " ^ Printf.sprintf "%.5fs." lapsed);
-    b
+    if !timer then
+      let start = Sys.time () in
+      let b = f a in
+      let lapsed = Sys.time () -. start in
+      print_endline (msg ^ ": " ^ Printf.sprintf "%.5fs." lapsed);
+      b
+    else
+      f a
 end
 
 
