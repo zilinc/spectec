@@ -116,6 +116,7 @@ let get_global_value module_name globalname : exp (* val *) =
 (** Main functions **)
 
 and instantiate module_ : exp =
+  let t1 = Sys.time () in
   log "[Instantiating module...]\n";
   match C.il_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
@@ -129,10 +130,13 @@ and instantiate module_ : exp =
     let StrE [_; (fname, moduleinst)] = frame'.it in
     assert (Il.Eq.eq_atom (mk_atom ~info:(Xl.Atom.info "") "MODULE") fname);
     Store.put store';
+    let t2 = Sys.time () in
+    print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
     moduleinst
 
 
 and invoke moduleinst_name funcname args : exp =
+  let t1 = Sys.time () in
   log "[Invoking %s...]\n" funcname;
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
@@ -142,6 +146,8 @@ and invoke moduleinst_name funcname args : exp =
   let CaseE (_, tup2) = state'.it in
   let TupE [store'; _] = tup2.it in
   Store.put store';
+  let t2 = Sys.time () in
+  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s");
   instrs'
 
 
@@ -169,8 +175,8 @@ let test_assertion assertion =
     success
   | AssertTrap (action, re) -> (
     try
-      let result = run_action action |> Construct.il_to_value in
-      Run.assert_message assertion.at "runtime" (RI.Value.string_of_value result |> Util.Lib.String.shorten) re;
+      let result = run_action action in
+      Run.assert_message assertion.at "runtime" (string_of_exp result) re;
       fail
     with I.Exception.Trap -> success
   )

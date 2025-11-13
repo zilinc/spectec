@@ -80,7 +80,7 @@ let il_of_spectest () : value =
     let memtype = caseV [[];[];["PAGE"]] [
       addrtype; limits
     ] in
-    let zeros = listV (Array.make 0x20 (vl_of_nat 0)) in  (* 0x10000 *)
+    let zeros = listV (Array.make 0x10000 (vl_of_nat 0)) in
     strV [ ("TYPE", ref memtype); ("BYTES", ref zeros) ] in
 
   (* Builtin functions *)

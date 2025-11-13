@@ -83,7 +83,7 @@ let il_of_spectest () : exp =
     let memtype = mk_case' "memtype" [[];[];["PAGE"]] [
       addrtype; limits
     ] in
-    let zeros = listE (t_star "byte") (List.init 0x20 (Fun.const (mk_nat 0))) in  (* 0x10000 *)
+    let zeros = listE (t_star "byte") (List.init 0x10000 (Fun.const (mk_nat 0))) in
     mk_str "meminst" [ ("TYPE", memtype); ("BYTES", zeros) ] in
 
   (* Builtin functions *)

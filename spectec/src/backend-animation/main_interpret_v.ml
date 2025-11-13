@@ -114,12 +114,9 @@ let get_global_value module_name globalname : value (* val *) =
 
 (** Main functions **)
 
-let rec instantiate module_ : value =
-  time "Instantiate" instantiate' module_
-
-and instantiate' module_ : value =
+and instantiate module_ : value =
+  let t1 = Sys.time () in
   log "[Instantiating module...]\n";
-
   match C.vl_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | il_module, externaddrs ->
@@ -129,13 +126,13 @@ and instantiate' module_ : value =
     let StrV [_; (fname, moduleinst)] = frame' in
     assert ("MODULE" = fname);
     Store.put store';
+    let t2 = Sys.time () in
+    print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
     !moduleinst
 
 
-let rec invoke moduleinst_name funcname args =
-  time "Invoke" (uncurry3 invoke') (moduleinst_name, funcname, args)
-
-and invoke' moduleinst_name funcname args : value =
+and invoke moduleinst_name funcname args : value =
+  let t1 = Sys.time () in
   log "[Invoking %s %s in module instance %s...]\n"
     funcname (R.Value.string_of_values args |> Lib.String.shorten) (print_name moduleinst_name);
   let store = Store.get () in
@@ -143,6 +140,8 @@ and invoke' moduleinst_name funcname args : value =
   let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; vl_of_list C.vl_of_value args |> valA ] in
   let CaseV (_, [store'; _]) = state' in
   Store.put store';
+  let t2 = Sys.time () in
+  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s");
   instrs'
 
 
@@ -170,8 +169,8 @@ let test_assertion assertion =
     success
   | AssertTrap (action, re) -> (
     try
-      let result = run_action action |> C.vl_to_value in
-      Run.assert_message assertion.at "runtime" (RI.Value.string_of_value result |> Util.Lib.String.shorten) re;
+      let result = run_action action in
+      Run.assert_message assertion.at "runtime" (string_of_value result) re;
       fail
     with I.Exception.Trap -> success
   )
@@ -237,7 +236,7 @@ let run_command command =
   let result =
     let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) (Lib.String.shorten msg) in
     try
-      time "Running command" run_command' command
+      run_command' command
     with
     | I.Exception.Error (at, msg, step) ->
       let msg' = msg ^ " (interpreting " ^ step ^ " at " ^ Source.string_of_region at ^ ")" in

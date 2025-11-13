@@ -541,10 +541,7 @@ and assign_param lhs rhs env =
 
 (* Step *)
 
-and step_instr fname ctx env instr : AlContext.t =
-  Lib.Time.time ("Step instruction `" ^ fname ^ "`") (fun (a,b,c,d) -> step_instr' a b c d) (fname, ctx, env, instr)
-
-and step_instr' (fname: string) (ctx: AlContext.t) (env: value Env.t) (instr: instr) : AlContext.t =
+and step_instr (fname: string) (ctx: AlContext.t) (env: value Env.t) (instr: instr) : AlContext.t =
   (Info.find instr.note).covered <- true;
 
   let rec is_true = function
@@ -769,10 +766,7 @@ and create_context (name: string) (args: value list) : AlContext.mode =
 
   AlContext.al (name, params, body, env, 0)
 
-and call_func name args =
-  Lib.Time.time ("Calling `" ^ name ^ "`") (Lib.Fun.uncurry call_func') (name, args)
-
-and call_func' (name: string) (args: value list) : value option =
+and call_func (name: string) (args: value list) : value option =
    let builtin_name, is_builtin =
      match Il.Env.find_func_hint !Al.Valid.il_env name "builtin" with
      | None -> name, false

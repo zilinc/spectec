@@ -681,8 +681,8 @@ let il_of_packshape = function
   | RI.Pack.Pack32x2 -> [mk_nat 32; mk_nat 2]
 
 let il_of_memop f idx (memop: (RI.Types.numtype, 'p) RI.Ast.memop) =
-  let str = [("ALIGN" , il_of_nat   memop.align );
-             ("OFFSET", il_of_nat64 memop.offset)]
+  let str = [("ALIGN" , memop.align  |> Z.of_int |> il_of_uN);
+             ("OFFSET", memop.offset |> il_of_uN_64)]
   in
   [il_of_numtype memop.ty; f memop.pack; il_of_memidx idx; mk_str "memarg" str]
 
@@ -1676,7 +1676,7 @@ let il_to_memop (f: exp -> 'p) exps : RI.Ast.idx * (RI.Types.numtype, 'p) RI.Ast
     il_to_idx idx,
     {
       ty = il_to_numtype nt;
-      align  = find_str_field "ALIGN"  str |> il_to_nat |> Z.to_int;
+      align  = find_str_field "ALIGN"  str |> unwrap_case |> il_to_nat |> Z.to_int;
       offset = find_str_field "OFFSET" str |> il_to_uN_64;
       pack = f p;
     }
