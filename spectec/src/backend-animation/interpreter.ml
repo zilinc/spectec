@@ -116,6 +116,9 @@ let error_eval etyp exp onotes =
   error exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes)
 
 let fail_assign at lhs rhs msg =
+  info "assign" at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
+                   "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
+                   "  ▹ value: " ^ string_of_exp rhs);
   fail ()
 
 let string_of_exp exp = Il.Print.string_of_exp exp |> Lib.String.shorten
@@ -159,8 +162,7 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
       | ListN (expr, None) ->
         let length = il_of_nat (List.length es) in
         assign ctx expr length
-      | ListN _ ->
-        fail_assign lhs.at lhs rhs' ("invalid assignment: iter with index cannot be an assignment target")
+      | ListN _ -> fail ()
       | _ -> return ctx
     in
     foldlM (fun ctx (x, e) ->
@@ -179,14 +181,14 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
       if Il.Eq.eq_mixop lhs_tag rhs_tag && List.length lhs_s' = List.length rhs_s' then
         foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s' rhs_s')
       else
-        fail_assign lhs.at lhs rhs' ("tag or payload doesn't match")
-    | _ -> fail_assign lhs.at lhs rhs' "not a TupE inside a CaseE"
+        fail ()
+    | _ -> fail ()
     end
   | OptE (Some lhs'), OptE (Some rhs'') -> assign ctx lhs' rhs''
   | CvtE (e1, nt, _), NumE n ->
     (match Xl.Num.cvt nt n with
     | Some n' -> assign ctx e1 (mk_expr rhs'.at (NumT nt $ rhs'.at) (NumE n'))
-    | None -> fail_assign lhs.at lhs rhs' ("inverse conversion not defined for " ^ string_of_exp rhs')
+    | None -> fail ()
     )
   | SubE (p, pt1, pt2), SubE (e, et1, et2) when Il.Eq.eq_typ pt1 et1 && Il.Eq.eq_typ pt2 et2 -> assign ctx p e
   | SubE (p, t1, t2), _ when Il.Eq.eq_typ t1 rhs'.note -> assign ctx p rhs'
@@ -196,8 +198,7 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
     | Some mixop' ->
       let rhs'' = CaseE (mixop', tup) $$ rhs'.at % t1 in
       assign ctx p rhs''
-    | None ->
-      fail_assign lhs.at lhs rhs' ("Variant doesn't have the corresponding subtype " ^ string_of_typ t1)
+    | None -> fail ()
     )
   (*
     if sub_typ env e1.note t21 then
@@ -224,7 +225,7 @@ let rec assign ctx (lhs: exp) (rhs: exp) : VContext.t OptMonad.m =
       else None
     else raise Irred
   *)
-  | _, _ -> fail_assign lhs.at lhs rhs' "Invalid pattern-matching"
+  | _, _ -> fail ()
 
 
 and is_value : exp -> bool = Il.Eval.is_normal_exp
@@ -240,7 +241,7 @@ and eval_exp ?full:(full=true) ctx exp : exp OptMonad.m =
               | None -> error exp.at (sprintf "Variable `%s` is not in the value context.\n  ▹ vctx: %s" v.it
                                        (string_of_varset (VContext.dom_varid ctx)))
               )
-  (* | BoolE _ | NumE _ | TextE _ -> return exp *)
+  | BoolE _ | NumE _ | TextE _ -> return exp
   | UnE (op, _, e1) ->
     let* e1' = eval_exp ctx e1 in
     (match op, e1'.it with
@@ -773,10 +774,7 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
     let old_env = ref !il_env in
     (* Add bindings to [il_env]. *)
     let _ = Animate.env_of_binds binds il_env in
-    assert_msg (List.length pargs = List.length args)
-      (sprintf "Function `%s`%s (%d) but got arguments %s (%d)" fname
-        (string_of_args pargs) (List.length pargs)
-        (string_of_args args ) (List.length args ));
+    assert (List.length pargs = List.length args);
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
