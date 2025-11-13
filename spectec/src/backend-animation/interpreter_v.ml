@@ -141,17 +141,6 @@ let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
 
 
-(* FIXME(zilinc): Implement the _ok rules properly. *)
-let dummy : exp = varE ~note:(t_var "dummyT") "dummyE"
-
-
-let vctx_to_subst ctx : Il.Subst.subst =
-  VContext.Map.fold (fun var value subst ->
-    Il.Subst.add_varid subst (var $ no_region) value
-  ) ctx Il.Subst.empty
-
-
-
 (** [lhs] is the pattern, and [rhs] is the expression. *)
 let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
   match lhs.it, rhs with
@@ -419,7 +408,7 @@ and eval_exp ctx exp : value OptMonad.m =
     | OptV (Some v11) -> return v11
     | _ -> error_eval "THE expression" exp None
     )
-  | ListE es -> let* vs = mapM (eval_exp ctx) es in ListV (ref (Array.of_list vs)) |> return
+  | ListE es -> let* vs = mapM (eval_exp ctx) es in listV (Array.of_list vs) |> return
   | LiftE e1 ->
     let* v1 = eval_exp ctx e1 in
     (match v1 with
@@ -573,11 +562,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
     ) xes ([], []) in
     begin match iter with
     | ListN (n, Some i) ->
-      let* n' = eval_exp ctx n in
-      let* n'' = begin match n' with
-      | NumV (`Nat n'') -> return (Z.to_int n'')
-      | _ -> fail ()
-      end in
+      let* n' = eval_exp ctx n <&> as_nat_value in
       let il_env0 = !il_env in
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
@@ -615,20 +600,14 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           match e.it with
           | VarE x_star ->
             let vx = VContext.find_varid !lctxr x in
-            let opt_vx_star = VContext.Map.find_opt x_star.it !lctxr in
-            begin match opt_vx_star with
-            | Some vx_star ->
-              begin match vx_star with
-              | ListV vs -> let vx_star' = listV (Array.append !vs ([|vx|])) in
-                            lctxr := VContext.add_varid !lctxr x_star vx_star'
-              | _ -> assert false
-              end
-            | _ -> assert false
-            end
+            let vx_star = VContext.Map.find_opt x_star.it !lctxr |> Option.get in
+            let vs = as_list_value vx_star in
+            let vx_star' = listV (Array.append !vs ([|vx|])) in
+            lctxr := VContext.add_varid !lctxr x_star vx_star'
           | _ -> assert false
         ) out_binds;
         return !lctxr
-      ) ctx' (0 -- n'') in
+      ) ctx' (0 -- Z.to_int n') in
       il_env := il_env0;  (* Resume old environment *)
       return ctx''
     | ListN (_, None) | List | List1 -> assert false  (* Should have been compiled away by animation. *)
