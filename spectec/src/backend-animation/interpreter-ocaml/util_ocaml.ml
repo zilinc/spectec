@@ -55,7 +55,8 @@ let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfi
     ')', "_rbrackro";
     '-', "_dash";
     '>', "_right";
-    ';', "_semi"
+    ';', "_semi";
+    '/', "slash"
   ] in
   let replaced = List.fold_left (fun acc (ch, repl) ->
     String.concat repl (String.split_on_char ch acc)
@@ -141,6 +142,8 @@ let unzip3 (lst : ('a * 'b * 'c) list) : ('a list * 'b list * 'c list) =
   in
   aux [] [] [] lst
 
+let unzip_opt1 opt_a = Some opt_a
+
 let map1 = List.map
 let rec map2 (f : 'a -> 'b -> 'c) (lst : ('a * 'b) list) : ('c list) =
   match lst with 
@@ -150,6 +153,11 @@ let rec map3 (f : 'a -> 'b -> 'c -> 'd) (lst : ('a * 'b * 'c) list) : ('d list) 
   match lst with
   | [] -> []
   | (x, y, z) :: rest -> (f x y z) :: (map3 f rest)
+
+let map_opt1 (f : 'a -> 'b) (opt_a : 'a option) : 'b =
+  match opt_a with
+  | Some a -> f a 
+  | None -> failwith "TODO: optional iterator with None"
 
 module TypeMap = Map.Make(String) 
 module Set = Set.Make(String) 
@@ -303,7 +311,7 @@ module TypeM = struct
 
 end
 
-(* I DO NOT KNOW IF THIS IS HOW I WANT TO DO THIS*)
+(* dont think this is used anymore *)
 module NumConversions = struct
   type nat = int 
   type real = float 
@@ -318,3 +326,11 @@ end
 let val_or_fail = function 
   | Some v -> v
   | None -> failwith "No matching clause"
+
+(* Using the standard mplus operator defined as :
+    Some v <|> RHS -> Some v
+    does not work because the RHS is evaluated eagerly. So if the RHS throws an error, it will be raised immediately. To delay the evaluation we pass a thunk instead. *)
+let mplus (a : 'a option) (b : unit -> 'a option) : 'a option =
+  match a with
+  | Some _ -> a 
+  | None -> b ()

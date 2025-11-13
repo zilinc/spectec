@@ -7,8 +7,8 @@ let capsfirst s =
 
 (* Generate a dune file for the dl_interpreter library *)
 let generate_dune_file () =
-  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"] in
-  let libraries = ["backend_animation"] in
+  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; "construct_ocaml"] in
+  let libraries = ["backend_animation"; "backend_interpreter"] in
   (* Dune file content *)
   let lib_def = Printf.sprintf
     "(include_subdirs no)\n(library\n  (name interpreter_ocaml)\n  (modules %s)\n  (libraries %s))"
@@ -21,8 +21,8 @@ let generate_dune_file () =
   output_string oc (lib_def ^ "\n" ^ exec_def);
   close_out oc
 
-let generate_runner () =
-  let num_tests = 3 in
+(*let generate_runner () =
+  let num_tests = 4 in
   let calls =
   String.concat "; "
     (List.init num_tests (fun i -> Printf.sprintf "Interpreter_ocaml.Dl_codegen.run_tests%d ()" (i+2)))
@@ -32,16 +32,19 @@ let generate_runner () =
       "let () =\n\
       \  let results = [ %s ] in\n\
       \  if List.for_all ((=) 1) results then (print_endline \"ALL TESTS PASSED\"; exit 0)\n\
-      \  else (print_endline \"SOME TESTS FAILED\"; exit 1)\n"
+      \  else (print_endline \"SOME TESTS FAILED\"; exit 1)\n\
+      let parser = Backend_interpreter.Reference_interpreter.Script.parse_file\n\n\
+      let run_wasm file = \n\
+      \  let _ = parser file in\n\
+      \  ()\n"
       calls
   in
   let oc = open_out (basepath ^ "dl_runner.ml") in
   output_string oc runner_content;
-  close_out oc
+  close_out oc*)
 
 let generate_ocaml dl ocamlfile = 
   generate_dune_file ();
-  generate_runner ();
   let ocaml_filename = Option.value ~default:"dl_codegen-0" ocamlfile in
   if not (Sys.file_exists basepath) then
     Sys.mkdir basepath 0o644;

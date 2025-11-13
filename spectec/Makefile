@@ -21,7 +21,9 @@ ci: all
 SPEC ?= ../specification/wasm-3.0/*
 
 build_ocamlprog: exe
-	mkdir src/backend-animation/interpreter-ocaml/build
+	mkdir -p src/backend-animation/interpreter-ocaml/build
+	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
 	./spectec $(SPEC) --animate --generate-ocaml "dl_codegen" --print-dl > dl.log
 	@echo "#### spectec finished, compiling generated code"
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
@@ -34,14 +36,14 @@ EXE = exe-$(NAME)/main.exe
 SRCDIR = src
 OUTDIR = _build/default/src
 ROOTDIR = ..
-INTERPRETERDIR = $(ROOTDIR)/interpreter
+INTERPRETERDIR = $(ROOTDIR)/interpreter/reference-interpreter
 CLONEDIR = src/backend-interpreter/reference-interpreter
 CLONERM = dune-project jslib
+RUNNER = $(ROOTDIR)/src/backend-animation/interpreter-ocaml
 
 .PHONY: exe
 
 exe: $(CLONEDIR)
-	rm -rf src/backend-animation/interpreter-ocaml/build
 	rm -f ./$(NAME)
 	dune build $(SRCDIR)/$(EXE)
 	ln -f $(OUTDIR)/$(EXE) ./$(NAME)
