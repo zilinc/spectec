@@ -732,11 +732,12 @@ and eval_func name func_def args : value OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
   match_clause no_region name 1 fcs args
 
-
+(*
 and call_func name args =
   time ("calling " ^ name) (fun () -> call_func' name args) ()
+*)
 
-and call_func' name args =
+and call_func name args =
   match name with
   (* Hardcoded functions defined in meta.spectec *)
   | "Steps"  -> call_func "steps"    args
