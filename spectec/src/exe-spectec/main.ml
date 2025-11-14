@@ -61,6 +61,7 @@ let print_al_o = ref ""
 let print_no_pos = ref false
 let new_interpreter_args = ref None
 let vl = ref false
+let animate_inline = ref false
 
 let generate_ocaml = ref None
 
@@ -151,6 +152,7 @@ let argspec = Arg.align (
   "--prose-rst", Arg.Unit (fun () -> target := Prose false), " Generate prose";
   "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args), " Generate interpreter";
   "--animate", Arg.Unit (fun () -> target := Animate), " Animate";
+  "--inline", Arg.Unit (fun () -> animate_inline := true), "Enable inlining after animation";
   "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), "New meta-interpreter";
   "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), "New meta-interpreter VL";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
@@ -340,7 +342,7 @@ let () =
 
     | Animate ->
       log "Translating to DL and animate...";
-      let (env, dl) = Backend_animation.Main_animate.run il !print_dl in
+      let (env, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
       log "DL Validating... ";
       Backend_animation.Valid.valid dl;
       (match !new_interpreter_args with

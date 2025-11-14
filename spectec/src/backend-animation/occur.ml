@@ -23,8 +23,7 @@ type occ = Occ.t Map.t
 
 let string_of_occ occ : string =
   Map.fold (fun k v acc ->
-    acc ^ "\n" ^
-    k ^ " ↦ " ^ Occ.to_string v
+    acc ^ k ^ " ↦ " ^ Occ.to_string v ^ "\n"
   ) occ ""
 
 
@@ -94,7 +93,11 @@ and occ_prem pred m occ prem : occ =
       | _ -> assert false
     ) occ xes in
     let occ2 = occ_prems (fun v -> pred v && not (List.mem v (List.map fst xes))) `Many occ1 prems in
-    occ2
+    let occ3 = (match iter with
+    | ListN (n, _) -> occ_exp pred m occ2 n
+    | _ -> occ2
+    ) in
+    occ3
   | _ -> assert false
 
 and occ_prems pred m occ prems : occ =

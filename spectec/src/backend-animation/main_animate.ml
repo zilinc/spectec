@@ -65,14 +65,14 @@ let rec remove_or def =
 
 
 (* Entry *)
-let run il print_dl =
+let run il print_dl inline =
   let (env, dl) = il
                   |> List.filter_map is_anim_target
                   |> List.map remove_or
                   |> Il2dl.il2dl
                   |> fun dl -> (dl, il)
                   |> Animate.animate
-                  |> fun (il_env, dl) -> (il_env, List.map Inline.inline_dl_def dl)
+                  |> fun (il_env, dl) -> (il_env, if inline then List.map Inline.inline_dl_def dl else dl)
   in
   (* Il2dl.list_all_dl_defs dl; *)
   if print_dl then
