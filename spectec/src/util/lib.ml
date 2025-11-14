@@ -237,8 +237,128 @@ sig
   val run_state : 'a m -> s -> ('a * s)
 end
 
+
+module State (S : sig type t end) : MonadState with type s = S.t = struct
+  type s = S.t
+  type 'a m = State of (s -> ('a * s))
+  let state f = State f
+  let run_state (State m) s = m s
+  let get () = state (fun s -> (s, s))
+  let put s = state (fun _ -> ((), s))
+  let return a = state (fun s -> (a, s))
+  let fail () = raise (Failure "State")
+  let ( >>= ) ma f = state (fun s -> let (a, s') = run_state ma s in
+                                     run_state (f a) s')
+  let ( let* ) = ( >>= )
+  let ( >=> ) f g = fun x -> (f x >>= fun y -> g y)
+  let ( >> ) ma f = ma >>= fun _ -> f
+  let ( <$> ) f (State r) = State (fun s -> let (a, s') = r s in (f a, s'))
+  let ( <&> ) ma f = f <$> ma
+  let rec mapM f = function
+    | [] -> return []
+    | x::xs -> let* x'  = f x in
+               let* xs' = mapM f xs in
+               return (x'::xs')
+  let mapiM f xs =
+    let rec mapiM' f i = function
+    | [] -> return []
+    | x::xs -> let* x'  = f i x in
+               let* xs' = mapiM' f (i+1) xs in
+               return (x'::xs')
+    in
+    mapiM' f 0 xs
+  let iterM f xs = mapM f xs >> return ()
+  let opt_mapM f = function
+    | None -> return None
+    | Some a -> let* b = f a in return (Some b)
+  let forM xs f = mapM f xs
+  let rec foldlM f b = function
+    | []    -> return b
+    | x::xs -> f b x >>= fun x' -> foldlM f x' xs
+  let foldlM1 f = function
+    | [] -> raise (Invalid_argument "empty list is invalid")
+    | x::xs -> foldlM f x xs
+  let update f = let* s = get () in put (f s)
+  let update_get_old f = let* s = get () in put (f s) >> return s
+  let update_get_new f = let* s = get () in let s' = f s in put s' >> return s'
+end
+
 module type MonadTrans = functor (M : Monad) ->
 sig
   include Monad
   val lift : 'a M.m -> 'a m
 end
+
+module type Error = sig
+  type t
+  val string_of_error : t -> string
+end
+
+
+module type MonadError = functor (E : Error) ->
+sig
+  include Monad
+  val throw : E.t -> 'a m
+end
+
+module type MonadErrorTrans = functor (E : Error) (M : Monad) ->
+sig
+  include Monad
+  val throw : E.t -> 'a m
+  val lift : 'a M.m -> 'a m
+end
+
+
+module ExceptT = functor (E : Error) (M : Monad) ->
+struct
+  open Result
+  type 'a m = ExceptT of (('a, E.t) result) M.m
+  let run_exceptT (ExceptT m) = m
+  let exceptT m = ExceptT m
+  let return x = ExceptT (Ok x |> M.return)
+  let fail x = ExceptT (M.fail x)
+  let ( >>= ) ma f = ExceptT (
+    let open M in
+    run_exceptT ma >>= function
+    | Error e -> return (Error e)
+    | Ok    a -> run_exceptT (f a))
+  let ( let* ) = ( >>= )
+  let ( >=> ) f g = fun x -> (f x >>= fun y -> g y)
+  let ( >> ) ma f = ma >>= fun _ -> f
+  let ( <$> ) f (ExceptT m) = ExceptT (
+    let open M in
+    let* r = m in
+    (match r with
+    | Ok a -> Ok (f a)
+    | Error e -> Error e
+    ) |> return
+  )
+  let ( <&> ) ma f = f <$> ma
+  let rec mapM f = function
+    | [] -> return []
+    | x::xs -> let* x'  = f x in
+               let* xs' = mapM f xs in
+               return (x'::xs')
+  let mapiM f xs =
+    let rec mapiM' f i = function
+    | [] -> return []
+    | x::xs -> let* x'  = f i x in
+               let* xs' = mapiM' f (i+1) xs in
+               return (x'::xs')
+    in
+    mapiM' f 0 xs
+  let iterM f xs = mapM f xs >> return ()
+  let opt_mapM f = function
+    | None -> return None
+    | Some a -> let* b = f a in return (Some b)
+  let forM xs f = mapM f xs
+  let rec foldlM f b = function
+    | []    -> return b
+    | x::xs -> f b x >>= fun x' -> foldlM f x' xs
+  let foldlM1 f = function
+    | [] -> raise (Invalid_argument "empty list is invalid")
+    | x::xs -> foldlM f x xs
+  let lift m = ExceptT (let open M in let* x = m in return (Ok x))
+  let throw e = ExceptT (M.return (Error e))
+end
+

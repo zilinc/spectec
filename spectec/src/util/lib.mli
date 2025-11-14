@@ -104,6 +104,7 @@ sig
   val foldlM1 : ('a -> 'a -> 'a m) -> 'a list -> 'a m
 end
 
+
 module type MonadState =
 sig
   include Monad
@@ -117,8 +118,39 @@ sig
   val run_state : 'a m -> s -> ('a * s)
 end
 
+module State (S : sig type t end) : MonadState with type s = S.t
+
+
 module type MonadTrans = functor (M : Monad) ->
 sig
   include Monad
+  val lift : 'a M.m -> 'a m
+end
+
+module type Error =
+sig
+  type t
+  val string_of_error : t -> string
+end
+
+
+module type MonadError = functor (E : Error) ->
+sig
+  include Monad
+  val throw : E.t -> 'a m
+end
+
+module type MonadErrorTrans = functor (E : Error) (M : Monad) ->
+sig
+  include Monad
+  val throw : E.t -> 'a m
+  val lift : 'a M.m -> 'a m
+end
+
+module ExceptT (E : Error) (M : Monad) : sig
+  include Monad
+  val run_exceptT : 'a m -> ('a, E.t) result M.m
+  val exceptT : ('a, E.t) result M.m -> 'a m
+  val throw : E.t -> 'a m
   val lift : 'a M.m -> 'a m
 end
