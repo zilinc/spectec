@@ -72,6 +72,7 @@ let run il print_dl =
                   |> Il2dl.il2dl
                   |> fun dl -> (dl, il)
                   |> Animate.animate
+                  |> fun (il_env, dl) -> (il_env, List.map Inline.inline_dl_def dl)
   in
   (* Il2dl.list_all_dl_defs dl; *)
   if print_dl then
