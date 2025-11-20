@@ -146,12 +146,12 @@ let vl_of_blocktype = function
   | RI.Ast.ValBlockType vt_opt -> caseV [["_RESULT"];[]] [vl_of_opt vl_of_valtype vt_opt]
 
 let vl_of_limits default (limits: RT.limits) =
-  let max =
+  let omax =
     match limits.max with
-    | Some v -> vl_of_uN_64 v
-    | None   -> vl_of_uN_64 default
+    | Some v -> some (vl_of_uN_64 v)
+    | None   -> none
   in
-  caseV [["["];[".."];["]"]] [vl_of_uN_64 limits.min; max]
+  caseV [["["];[".."];["]"]] [vl_of_uN_64 limits.min; omax]
 
 let vl_of_tagtype = function
   | RT.TagT tu -> vl_of_typeuse tu
@@ -1174,13 +1174,8 @@ let vl_to_blocktype v : RI.Ast.blocktype =
 
 let vl_to_limits (default: int64) v : RI.Types.limits =
   match match_caseV "limits" v with
-  | [["["];[".."];["]"]], [min; max] ->
-    let max' =
-      match vl_to_uN_64 max with
-      | i64 when default = i64 -> None
-      | _ -> Some (vl_to_uN_64 max)
-    in
-    { min = vl_to_uN_64 min; max = max' }
+  | [["["];[".."];["]"]], [min; omax] ->
+    { min = vl_to_uN_64 min; max = vl_to_opt vl_to_uN_64 omax }
   | _ -> error_value "limits" v
 
 let vl_to_globaltype v : RI.Types.globaltype =

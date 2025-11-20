@@ -10,7 +10,7 @@ val reduce_exp : env -> exp -> exp
 val reduce_typ : env -> typ -> typ
 val reduce_typdef : env -> typ -> deftyp
 val reduce_arg : env -> arg -> arg
-val reduce_prems : env -> subst -> prem list -> subst option
+val reduce_prems : env -> prem list -> bool option
 val reduce_exp_call : env -> id -> arg list -> Util.Source.region -> clause list -> exp option
 
 val equiv_functyp : env -> param list * typ -> param list * typ -> bool

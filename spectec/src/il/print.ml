@@ -216,9 +216,9 @@ and string_of_prem' lv prem =
     "(" ^
     concat "" (List.map (prefix pre string_of_prem) prems') ^
     "\n" ^ spaces ^ ")" ^ string_of_iterexp iter
+  | NegPr prem' -> "~ " ^ string_of_prem prem'
 
 and string_of_prem prem = string_of_prem' 2 prem
-  | NegPr prem' -> "~ " ^ string_of_prem prem'
 
 
 (* Definitions *)
