@@ -324,7 +324,7 @@ let rec prem_to_instrs prem =
       | OtherRel,       _             -> print_yet_prem prem "prem_to_instrs"; [ YetS "TODO: prem_to_instrs for RulePr" ]
       | _,              _             -> assert false )
     )
-  | Ast.IterPr (prem, iter) ->
+  | Ast.IterPr ([prem], iter) ->
     (match iter with
     | Ast.Opt, [(id, _)] -> [ IfS (isDefinedE (varE id.it ~note:no_note) ~note:no_note, prem_to_instrs prem) ]
     | Ast.(List | ListN _), vars ->
@@ -335,6 +335,7 @@ let rec prem_to_instrs prem =
         [ ForallS (List.map to_iter vars, prem_to_instrs prem) ]
     | _ -> print_yet_prem prem "prem_to_instrs"; [ YetS "TODO: prem_to_intrs iter" ]
     )
+  | Ast.IterPr (_, _) -> assert false
   | _ ->
     let s = Il.Print.string_of_prem prem in
     print_yet_prem prem "prem_to_instrs"; [ YetS s ]

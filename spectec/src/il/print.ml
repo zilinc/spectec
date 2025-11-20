@@ -149,6 +149,8 @@ and string_of_exp e =
     "(" ^ string_of_exp e1 ^ " : " ^ string_of_numtyp nt1 ^ " <:> " ^ string_of_numtyp nt2 ^ ")"
   | SubE (e1, t1, t2) ->
     "(" ^ string_of_exp e1 ^ " : " ^ string_of_typ t1 ^ " <: " ^ string_of_typ t2 ^ ")"
+  | SupE (e1, t1, t2) ->
+    "(" ^ string_of_exp e1 ^ " : " ^ string_of_typ t1 ^ " :> " ^ string_of_typ t2 ^ ")"
 
 and string_of_exp_args e =
   match e.it with
@@ -206,10 +208,13 @@ and string_of_prem prem =
     "where " ^ string_of_exp e1 ^ " = " ^ string_of_exp e2 ^
     " {" ^ (String.concat ", " (List.map string_of_id ids')) ^ "}"
   | ElsePr -> "otherwise"
-  | IterPr ({it = IterPr _; _} as prem', iter) ->
+  | IterPr ([{it = IterPr _; _} as prem'], iter) ->
     string_of_prem prem' ^ string_of_iterexp iter
-  | IterPr (prem', iter) ->
+  | IterPr ([prem'], iter) ->
     "(" ^ string_of_prem prem' ^ ")" ^ string_of_iterexp iter
+  | IterPr (prems', iter) ->
+    "[" ^ String.concat "\n" (List.map string_of_prem prems') ^ "\n" ^
+    "]" ^ string_of_iterexp iter
   | NegPr prem' -> "~ " ^ string_of_prem prem'
 
 

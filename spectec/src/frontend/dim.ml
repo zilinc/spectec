@@ -487,6 +487,9 @@ and annot_exp env e : Il.Ast.exp * occur =
     | SubE (e1, t1, t2) ->
       let e1', occur1 = annot_exp env e1 in
       SubE (e1', t1, t2), occur1
+    | SupE (e1, t1, t2) ->
+      let e1', occur1 = annot_exp env e1 in
+      SupE (e1', t1, t2), occur1
   in {e with it}, occur
 
 and annot_expfield env (atom, e) : Il.Ast.expfield * occur =
@@ -596,10 +599,11 @@ and annot_prem env prem : Il.Ast.prem * occur =
       LetPr (e1', e2', ids), union occur1 occur2
     | ElsePr ->
       ElsePr, Env.empty
-    | IterPr (prem1, iter) ->
+    | IterPr ([prem1], iter) ->
       let prem1', occur1 = annot_prem env prem1 in
       let iter', occur' = annot_iterexp env occur1 iter prem.at in
-      IterPr (prem1', iter'), occur'
+      IterPr ([prem1'], iter'), occur'
+    | IterPr (_, _) -> assert false
     | NegPr prem1 ->
       let prem1', occur1 = annot_prem env prem1 in
       NegPr prem1', occur1

@@ -1,4 +1,5 @@
 open Util
+open Error
 open Lib.Fun
 open Source
 open Il.Ast
@@ -9,9 +10,6 @@ open Il2al.Def
 open Il2al.Free
 open Backend_ast
 
-(* WIP *)
-
-let todo msg = Obj.magic ("TODO: " ^ msg)
 
 
 (* Errors *)
@@ -291,22 +289,22 @@ and vartyp_exp v exp : typ option =
   | IdxE (exp1, exp2)
   -> Lib.Option.mplus (vartyp_exp v exp1) (vartyp_exp v exp2)
   | TupE exps | ListE exps
-  -> Lib.Option.mconcat (List.map (vartyp_exp v) exps)
+  -> Lib.Option.mconcat_map (vartyp_exp v) exps
   | OptE oexp -> Option.map (vartyp_exp v) oexp |> Option.join
   | StrE expfields
   -> let exps = List.map snd expfields in
-     Lib.Option.mconcat (List.map (vartyp_exp v) exps)
+     Lib.Option.mconcat_map (vartyp_exp v) exps
   | SliceE (exp1, exp2, exp3)
-  -> Lib.Option.mconcat (List.map (vartyp_exp v) [exp1; exp2; exp3])
+  -> Lib.Option.mconcat_map (vartyp_exp v) [exp1; exp2; exp3]
   | CallE (_, args)
-  -> Lib.Option.mconcat (List.map (vartyp_arg v) args)
+  -> Lib.Option.mconcat_map (vartyp_arg v) args
   | IterE (exp, (iter, xes))
   -> let len = match iter with
      | List | Opt | List1 -> []
      | ListN(n, _) -> [n]
      in
      let exps = List.map snd xes in
-     Lib.Option.mconcat (List.map (vartyp_exp v) (exp :: len @ exps))
+     Lib.Option.mconcat_map (vartyp_exp v) (exp :: len @ exps)
   | CvtE (exp, _, _)
   | SubE (exp, _, _)
   -> vartyp_exp v exp
@@ -317,7 +315,7 @@ let rec vartyp_prem (v: text) prem : typ option =
   | IfPr exp -> vartyp_exp v exp
   | LetPr (lhs, rhs, _) -> Lib.Option.mplus (vartyp_exp v lhs) (vartyp_exp v rhs)
   | ElsePr -> None
-  | IterPr (prem, iterexp) -> vartyp_prem v prem
+  | IterPr (prems, iterexp) -> Lib.Option.mconcat_map (vartyp_prem v) prems
 
 
 let get () = S.get () |> E.lift
@@ -546,7 +544,7 @@ and animate_exp_eq at lhs rhs : prem list E.m =
         let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
         bracket (add_knowns (Set.singleton i.it))
                 (remove_knowns (Set.singleton i.it))
-                (animate_prem (IterPr (prem_body, iterexp) $ at))
+                (animate_prem (IterPr ([prem_body], iterexp) $ at))
       else
         (* Inductive case where [len] is unknown. *)
         let len_rhs = LenE rhs $$ rhs.at % (mk_natT rhs.at) in 
@@ -788,7 +786,7 @@ and animate_if_prem at exp : prem list E.m =
                                  "  ▹ e2 = " ^ string_of_exp e2))
     )
   | IterE (exp', iterexp) ->
-    animate_prem (IterPr (IfPr exp' $ exp'.at, iterexp) $ at)
+    animate_prem (IterPr ([IfPr exp' $ exp'.at], iterexp) $ at)
   | _ -> let unknowns = Set.diff fv_exp knowns in
          E.throw (string_of_error at (
                    "Can't animate if premise: " ^ string_of_exp exp ^ ".\n" ^
@@ -811,7 +809,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
     error prem.at ("Can't animate LetPr: " ^ string_of_prem prem)
   | ElsePr ->
     E.return [ prem ]
-  | IterPr (prem', ((iter, xes) as iterexp)) ->
+  | IterPr ([prem'], ((iter, xes) as iterexp)) ->
     (* The animation algorithm for IterPr goes as follows:
        Base case 1: (-- if exp)^iter where exp and iter are fully known.
          -- (if exp)^iter
@@ -848,7 +846,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
            should be { v <- v* }, plus those for the inputs.
            We can approximate it as all the free variables.
     *)
-    match prem'.it, iter with
+    begin match prem'.it, iter with
     | IfPr exp, _ when Set.is_empty (Set.diff fv_prem knowns) ->
       (* Base case 1 *)
       E.return [ prem ]
@@ -888,7 +886,7 @@ and animate_prem : prem -> prem list E.m = fun prem ->
     (* Inductive cases, where the body is -- let v = rhs but the iterator is not ^(i<N). *)
     | LetPr (_, _, binders), ListN(len, None) ->
       let i = fresh_id len.at in
-      animate_prem (IterPr (prem', (ListN(len, Some i), xes)) $ prem.at)
+      animate_prem (IterPr ([prem'], (ListN(len, Some i), xes)) $ prem.at)
     | LetPr (_, rhs, binders), _ ->
       let len_rhs = LenE rhs $$ rhs.at % mk_natT rhs.at in
       let len_v = fresh_id len_rhs.at in
@@ -905,29 +903,14 @@ and animate_prem : prem -> prem list E.m = fun prem ->
       | None -> E.return []
       | Some prem_len -> animate_prem prem_len
       in
-      let* prems' = animate_prem (IterPr (prem', (ListN(len, Some i), xes)) $ prem.at) in
+      let* prems' = animate_prem (IterPr ([prem'], (ListN(len, Some i), xes)) $ prem.at) in
       E.return (prems_len_v @ prems_len @ prems')
     (* Inductive case: arbitrary prem, arbitrary iter *)
     | _ ->
-      (* Propagate knowns from the high-dim expressions to their lower-dim variable. *)
+      (* Propagating knowns into the iteration. *)
       let iNs = match iter with
       | ListN(len, Some i) -> [(i, len)]
       | _ -> []
-      in
-      (* Propagating knowns into the iteration. *)
-      (* The set of variables in the iteration body that are static. E.g.
-         (k = s + j)^(i<N) {k <- k*, j <- j*}
-         Across the whole iteration, it's just the same s. It's equiv. to
-         k_0 = s + j_0; k_1 = s + j_1; ...; k_(N-1) = s + j_(N-1).
-         We need to remember these static varibles from the original iteration, and not
-         add them to the xes list in the animated iterations. Otherwise,
-         we may end up having an iteration that looks like
-         (k = s + k)* {k <- k*, j <- j*, s <- s*} but s* is not a known from the context,
-         while fv = {k*, j*, s*}.
-      *)
-      let static_vars = Lib.List.filter_not (fun v ->
-        List.exists (fun (x, e) -> x.it = v) xes
-      ) ((free_prem false prem').varid |> Set.elements) |> Set.of_list
       in
       let knowns_inner = List.filter_map (fun (x, e) ->
         let fv_e = (free_exp false e).varid in
@@ -936,27 +919,20 @@ and animate_prem : prem -> prem list E.m = fun prem ->
       ) (xes @ iNs) |> Set.of_list in
       let s_body = { (init ()) with prems = [prem']; knowns = (Set.union knowns knowns_inner) } in
       let* (prems_body', s_body') = run_inner s_body (animate_prems' prem'.at) in
-      let prems_iter = List.map (fun p ->
-        let fv_p = (free_prem false p).varid in
-        let xes' = List.filter_map (fun v ->
-          (* For all non-static free variable x, if { x <- e } is already in [xes],
-             then use [e], otherwise make a fresh variable and add { x <- fresh }
-             into the binding list.
-          *)
-          if Set.mem v static_vars then None else
-          match List.find_opt (fun (x, e) -> x.it = v) xes with
-          | None    -> let v' = fresh_id p.at in
-                       let Some typ_v = vartyp_prem v p in
-                       Some (v $ p.at, VarE v' $$ p.at % (IterT (typ_v, iter) $ p.at))
-          | Some xe -> Some xe
-        ) (Set.elements fv_p)
-        in
-        IterPr (p, (iter, xes')) $ p.at
-      ) prems_body' in
-      let s_iter = { (init ()) with prems = prems_iter; knowns } in
-      let* (prems_iter', s_iter') = run_inner s_iter (animate_prems' prem.at) in
-      let* () = update (put_knowns (get_knowns s_iter')) in
-      E.return prems_iter'
+      (* Propagate knowns to the outside of the iterator. *)
+      let knowns' = get_knowns s_body' in
+      let knowns_outer = List.filter_map (fun (x, e) ->
+        if Set.mem x.it knowns' then
+          let fv_e = (free_exp false e).varid in
+          let unknowns_e = Set.diff fv_e knowns' in
+          Some (Set.elements unknowns_e)
+        else
+          None
+      ) xes |> List.concat |> Set.of_list in
+      let* () = update (add_knowns knowns_outer) in
+      E.return [IterPr (prems_body', iterexp) $ prem.at]
+    end
+  | IterPr (prems, iterexp) -> todo "animate_prem"
 
 
 (* The main loop. We handle the ordering of the premises in this function. *)

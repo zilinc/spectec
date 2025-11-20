@@ -52,6 +52,7 @@ let rec transform_exp t e =
     | MemE (e1, e2) -> MemE (t_exp e1, t_exp e2)
     | CaseE (mixop, e1) -> CaseE (mixop, t_exp e1)
     | SubE (e1, _t1, t2) -> SubE (t_exp e1, _t1, t2)
+    | SupE (e1, _t1, t2) -> SupE (t_exp e1, _t1, t2)
   in
   f { e with it }
 
@@ -74,7 +75,7 @@ and transform_prem t p =
     | IfPr e -> IfPr (transform_exp t e)
     | LetPr (e1, e2, ss) -> LetPr (transform_exp t e1, transform_exp t e2, ss)
     | ElsePr -> ElsePr
-    | IterPr (p, ie) -> IterPr (transform_prem t p, transform_iterexp t ie)
+    | IterPr (ps, ie) -> IterPr (List.map (transform_prem t) ps, transform_iterexp t ie)
     | NegPr p -> NegPr (transform_prem t p)
   in
   f { p with it }
