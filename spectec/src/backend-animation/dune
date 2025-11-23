@@ -31,7 +31,8 @@
   main_interpreter_ocaml
   interpreter_ocaml
   util_ocaml
-  temp_print))
+  temp_print
+  runner))
 
 (env
  (dev

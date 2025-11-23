@@ -56,7 +56,7 @@ let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfi
     '-', "_dash";
     '>', "_right";
     ';', "_semi";
-    '/', "slash"
+    '/', "_slash"
   ] in
   let replaced = List.fold_left (fun acc (ch, repl) ->
     String.concat repl (String.split_on_char ch acc)
@@ -144,20 +144,58 @@ let unzip3 (lst : ('a * 'b * 'c) list) : ('a list * 'b list * 'c list) =
 
 let unzip_opt1 opt_a = Some opt_a
 
-let map1 = List.map
-let rec map2 (f : 'a -> 'b -> 'c) (lst : ('a * 'b) list) : ('c list) =
-  match lst with 
-  | [] -> []
-  | (x, y) :: rest -> (f x y) :: (map2 f rest)
-let rec map3 (f : 'a -> 'b -> 'c -> 'd) (lst : ('a * 'b * 'c) list) : ('d list) =
+let unzip1M lst = lst 
+
+let unzip2M (lst : ('a * 'b) list option) : (('a list * 'b list) option) =
   match lst with
-  | [] -> []
-  | (x, y, z) :: rest -> (f x y z) :: (map3 f rest)
+  | None -> None
+  | Some pairs -> Some (unzip2 pairs)
+
+let unzip3M (lst : ('a * 'b * 'c) list option) : (('a list * 'b list * 'c list) option) =
+  match lst with
+  | None -> None
+  | Some pairs -> Some (unzip3 pairs)
+
+let map1 = List.map
+
+let rec map2 f xs ys =
+  match xs, ys with
+  | x::xt, y::yt -> (f x y) :: map2 f xt yt
+  | _ -> []
+
+let rec map3 f xs ys zs =
+  match xs, ys, zs with
+  | x::xt, y::yt, z::zt -> (f x y z) :: map3 f xt yt zt
+  | _ -> []
+
+let rec map1M (f : 'a -> 'b option) (lst : 'a list) : ('b list option) =
+  match lst with 
+  | [] -> Some []
+  | x :: rest -> 
+    match f x with 
+    | None -> None 
+    | Some y -> 
+      match map1M f rest with 
+      | None -> None 
+      | Some ys -> Some (y :: ys)
+
+let rec map2M (f : 'a -> 'b -> 'c option) (lst1 : 'a list) (lst2 : 'b list) : (('a * 'b) list option) =
+  match lst1, lst2 with 
+  | [], [] -> Some []
+  | x :: rest1, y :: rest2 -> 
+    match f x y with 
+    | None -> None 
+    | Some y -> 
+      match map2M f rest1 rest2 with 
+      | None -> None 
+      | Some ys -> Some (y :: ys)
 
 let map_opt1 (f : 'a -> 'b) (opt_a : 'a option) : 'b =
   match opt_a with
   | Some a -> f a 
   | None -> failwith "TODO: optional iterator with None"
+
+(* monadic (optional) maps for generated code *)
 
 module TypeMap = Map.Make(String) 
 module Set = Set.Make(String) 
@@ -321,6 +359,7 @@ module NumConversions = struct
 
   let rat_of_int (i : int) : rat = float_of_int i
   let rat_of_nat (n : nat) : rat = float_of_int n
+  let nat_of_rat (n : rat) : nat = int_of_float n
 end
 
 let val_or_fail = function 

@@ -6,6 +6,8 @@ let ocaml_of_list f lst = DL.C_pct__list_ (List.map f lst)
 
 (* todo: possibly a better way of doing this since we want a way to express dependent types anyway,, also int32 translates to nat for now but probably should not *)
 let ocaml_of_typeidx (n : RT.typeidx) : DL.typeidx = C_pct__uc_un (Int32.to_int n)
+
+let ocaml_of_ast_typeidx (n : RI.Ast.typeidx) : DL.typeidx = C_pct__uc_un (Int32.to_int n.it)
 let ocaml_of_int32 (n : int32) : DL.nat = Int32.to_int n
 let ocaml_of_mut mut = match mut with 
   | RT.Cons -> None
@@ -40,6 +42,7 @@ let ocaml_of_final = function
   | RT.NoFinal -> None
   | RT.Final   -> Some DL.FINAL_uc_final
 
+(* not used i think; remove *)
 let ocaml_of_packtype s vt =
   if s = "storagetype" then match vt with 
     | RT.I8T  -> DL.I8_storagetype
@@ -108,20 +111,42 @@ and ocaml_of_heaptype = function
 let ocaml_of_type (ty: RI.Ast.type_) =
   DL.TYPE_type_ (ocaml_of_rectype ty.it)
 
-(*let ocaml_of_func (func: Ast.func) =
-  let Func (idx, locals, body) = func.it in
-  caseV [["FUNC"];[];[];[]] [
-    ocaml_of_idx idx;
-    ocaml_of_list ocaml_of_local locals;
-    ocaml_of_list ocaml_of_instr body;
-  ]
+let ocaml_of_local (local: RI.Ast.local) =
+  let RI.Ast.Local vt = local.it in
+  DL.LOCAL_local (ocaml_of_valtype vt)
 
-let ocaml_of_export (export: Ast.export) =
-  let Export (name, exix) = expoit in
+let ocaml_of_instr (instr: RI.Ast.instr) =
+  match instr.it with
+  | RI.Ast.Unreachable      -> DL.UNREACHABLE_instr
+  | RI.Ast.Nop              -> DL.NOP_instr
+  | RI.Ast.Drop             -> DL.DROP_instr
+  | RI.Ast.Select None      -> DL.SELECT_instr None
+  | RI.Ast.Select (Some vt) -> DL.SELECT_instr (Some (List.map ocaml_of_valtype vt))
+  | RI.Ast.Const num        -> begin match num.it with 
+    | RI.Value.I32 n        -> DL.CONST_instr (DL.I32_numtype, DL.C_pct__uc_un (Int32.to_int n))
+    | RI.Value.I64 n        -> failwith "I64 not implemented yet"
+    | RI.Value.F32 n        -> failwith "F32 not implemented yet"
+    | RI.Value.F64 n        -> failwith "F64 not implemented yet"
+    end
+  | RI.Ast.Binary binop     -> begin match binop with 
+    | RI.Value.I32 RI.Ast.IntOp.Add -> DL.BINOP_instr (DL.I32_numtype, DL.ADD_binop_)
+    | _ -> failwith "non-addition binary op not implemented yet"
+    end
+  | _                       -> failwith "instruction not implemented yet"
+
+  let ocaml_of_func (func: RI.Ast.func) =
+  let RI.Ast.Func (idx, locals, instrs) = func.it in
+  DL.FUNC_func (
+    ocaml_of_ast_typeidx idx,
+    List.map ocaml_of_local locals,
+    List.map ocaml_of_instr instrs
+  )
+
+(* let ocaml_of_export (export: Ast.export) =
+  let Export (name, exix) = export in
   caseV [["EXPORT"];[];[]] [ocaml_of_name name; ocaml_of_externidx exix]*)
 
 (* only do types, funcs and exports for now *)
-(* idk why there's no 'imports' in the spectec module ??? *)
 let ocaml_of_module (module_: RI.Ast.module_) : DL.module_ = DL.MODULE_module_ (
   List.map ocaml_of_type module_.it.types,
   [],
@@ -129,7 +154,7 @@ let ocaml_of_module (module_: RI.Ast.module_) : DL.module_ = DL.MODULE_module_ (
   [],
   [],
   [],
-  [], (* do this *)
+  List.map ocaml_of_func module_.it.funcs,
   [],
   [],
   None,

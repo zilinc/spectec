@@ -21,6 +21,56 @@ let string_of_start_opt (string_of_start : Ast.start option) =
   | None -> "<none>"
   | Some _ -> "<some>"
 
+let string_of_final = function
+  | Types.NoFinal -> "no final"
+  | Types.Final   -> "final"
+
+let string_of_null = function
+  | Types.Null    -> "null"
+  | Types.NoNull -> "no null"
+
+let string_of_heaptype = function
+  | _ -> "heaptype"
+
+let rec string_of_valtype vt = match vt with 
+  | Types.RefT (null, ht) -> sprintf "null: %s;\n heaptype: %s" (string_of_null null) (string_of_heaptype ht)
+  | Types.NumT nt -> "numtype val"
+  | Types.VecT _  -> "V128_valtype"
+  | Types.BotT    -> "BOT_valtype"
+
+and string_of_storagetype = function
+  | Types.ValStorageT  vt -> begin match vt with 
+    | Types.NumT nt         -> "numtype_storage"
+    | Types.VecT _          -> "V128_storagetype"
+    | Types.RefT (null, ht) -> "REF_storagetype (string_of_null null, string_of_heaptype ht)"
+    | Types.BotT            -> "BOT_storagetype"
+    end
+  | Types.PackStorageT pt -> begin match pt with 
+    | Types.I8T  -> "I8_storagetype"
+    | Types.I16T -> "I16_storagetype"
+    end
+
+and string_of_resulttype rt = String.concat "; " (List.map string_of_valtype rt)
+
+and string_of_fieldtype = function
+  | Types.FieldT (mut, st) -> "fieldtype"
+
+and string_of_typeuse = function
+  | Types.Idx idx -> "IDX typeuse " ^ Int32.to_string idx
+  | Types.Rec n   -> "REC typeuse " ^ Int32.to_string n
+  | Types.Def (DefT (rt, n))  -> "DEF typeuse " ^ Int32.to_string n
+
+and string_of_comptype _ = "comptype"
+and string_of_subtype = function
+  | Types.SubT (fin, tul, st) -> sprintf "final: %s; typeuses: [%s]; comp: %s" (string_of_final fin) (String.concat ", " (List.map string_of_typeuse tul)) (string_of_comptype st)
+
+let string_of_rectype (rt : Types.rectype) = match rt with 
+  | Types.RecT stl -> 
+    let st_strs = List.map (fun st -> string_of_subtype st) stl in
+    sprintf "RecT([%s])" (String.concat "; " st_strs)
+
+let string_of_type_ (ty : Ast.type_) = string_of_rectype ty.it
+
 let string_of_mod_ (m : Ast.module_) =
   sprintf "{\n \
   \ types : [%s];
@@ -35,7 +85,7 @@ let string_of_mod_ (m : Ast.module_) =
   \ imports : [%s];
   \ exports : [%s];
 }" 
-  (String.concat "; " (List.map (fun _ -> "type") m.it.types))
+  (String.concat "; " (List.map string_of_type_ m.it.types))
   (String.concat "; " (List.map (fun _ -> "tag") m.it.tags))
   (String.concat "; " (List.map (fun _ -> "global") m.it.globals))
   (String.concat "; " (List.map (fun _ -> "memory") m.it.memories))
