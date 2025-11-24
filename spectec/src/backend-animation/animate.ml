@@ -34,7 +34,7 @@ let verbose : string list ref =
         (* "anf"       ; *)
       ]
 
-let error at msg = Error.error at "IL animation" msg
+let error at msg = Error.error at "animation/animate" msg
 let error_np msg = error no_region msg
 
 let string_of_error at msg = string_of_region at ^ " IL animation error:\n" ^ msg
