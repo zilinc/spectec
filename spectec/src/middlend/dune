@@ -6,5 +6,10 @@
     totalize
     unthe
     sideconditions
+    typefamilyremoval
+    else
+    undep
+    utils
+    aliasDemut
   )
 )

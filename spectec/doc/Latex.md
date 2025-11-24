@@ -391,7 +391,7 @@ The default macro names can be overridden by macro hints.
 * `hint(macro none)` selectively suppresses macro generation for an individual identifier,
   and is likewise recognised for all definitions that bind identifiers.
 
-* `hint(macro "text1" "text2")` is avalaible for type definitions,
+* `hint(macro "text1" "text2")` is available for type definitions,
   and chooses alternative macro names for both the type identifier (`text1`)
   and for all atoms in its definition (`text2`).
   The latter typically uses `%` to adapt to each case.

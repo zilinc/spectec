@@ -115,12 +115,9 @@ let get_global_value module_name globalname : exp (* val *) =
 
 (** Main functions **)
 
-let rec instantiate module_ : exp =
-  time "Instantiate" instantiate' module_
-
-and instantiate' module_ : exp =
+and instantiate module_ : exp =
+  let t1 = Sys.time () in
   log "[Instantiating module...]\n";
-
   match C.il_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | il_module, externaddrs ->
@@ -133,15 +130,14 @@ and instantiate' module_ : exp =
     let StrE [_; (fname, moduleinst)] = frame'.it in
     assert (Il.Eq.eq_atom (mk_atom ~info:(Xl.Atom.info "") "MODULE") fname);
     Store.put store';
+    let t2 = Sys.time () in
+    print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
     moduleinst
 
 
-let rec invoke moduleinst_name funcname args =
-  time "Invoke" (uncurry3 invoke') (moduleinst_name, funcname, args)
-
-and invoke' moduleinst_name funcname args : exp =
-  log "[Invoking %s %s in module instance %s...]\n"
-    funcname (R.Value.string_of_values args |> Lib.String.shorten) (print_name moduleinst_name);
+and invoke moduleinst_name funcname args : exp =
+  let t1 = Sys.time () in
+  log "[Invoking %s...]\n" funcname;
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
   let config' = Interpreter.invoke [ expA store; expA funcaddr; il_of_list (t_star "val") C.il_of_value args |> expA ] in
@@ -150,6 +146,8 @@ and invoke' moduleinst_name funcname args : exp =
   let CaseE (_, tup2) = state'.it in
   let TupE [store'; _] = tup2.it in
   Store.put store';
+  let t2 = Sys.time () in
+  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s");
   instrs'
 
 
@@ -177,8 +175,8 @@ let test_assertion assertion =
     success
   | AssertTrap (action, re) -> (
     try
-      let result = run_action action |> Construct.il_to_value in
-      Run.assert_message assertion.at "runtime" (RI.Value.string_of_value result |> Util.Lib.String.shorten) re;
+      let result = run_action action in
+      Run.assert_message assertion.at "runtime" (string_of_exp result) re;
       fail
     with I.Exception.Trap -> success
   )
@@ -244,7 +242,7 @@ let run_command command =
   let result =
     let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) (Lib.String.shorten msg) in
     try
-      time "Running command" run_command' command
+      run_command' command
     with
     | I.Exception.Error (at, msg, step) ->
       let msg' = msg ^ " (interpreting " ^ step ^ " at " ^ Source.string_of_region at ^ ")" in

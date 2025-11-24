@@ -166,6 +166,7 @@ and t_prem' env = function
   | LetPr (e1, e2, ids) -> LetPr (t_exp env e1, t_exp env e2, ids)
   | ElsePr -> ElsePr
   | IterPr (prems, iterexp) -> IterPr (List.map (t_prem env) prems, t_iterexp env iterexp)
+  | NegPr prem -> NegPr (t_prem env prem)
 
 and t_prem env x = { x with it = t_prem' env x.it }
 
@@ -214,7 +215,7 @@ let rec t_def' env = function
         | ExpP (_, typI) ->
           let x = ("x" ^ string_of_int i) $ no_region in
           [ExpB (x, typI) $ x.at], ExpA (VarE x $$ no_region % typI) $ no_region
-        | TypP id -> [], TypA (VarT (id, []) $ no_region) $ no_region
+        | TypP id -> [TypB id $ no_region], TypA (VarT (id, []) $ no_region) $ no_region
         | DefP (id, _, _) -> [], DefA id $ no_region
         | GramP (id, _) -> [], GramA (VarG (id, []) $ no_region) $ no_region
         ) params' |> List.split in

@@ -75,6 +75,7 @@ and transform_prem t p =
     | LetPr (e1, e2, ss) -> LetPr (transform_exp t e1, transform_exp t e2, ss)
     | ElsePr -> ElsePr
     | IterPr (ps, ie) -> IterPr (List.map (transform_prem t) ps, transform_iterexp t ie)
+    | NegPr p -> NegPr (transform_prem t p)
   in
   f { p with it }
 

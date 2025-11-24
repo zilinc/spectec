@@ -13,7 +13,9 @@ type target =
  | Prose of bool
  | Splice of Backend_splice.Config.t
  | Animate
+ | Animate
  | Interpreter of string list
+ | RunThrough
  | RunThrough
 
 type pass =
@@ -21,6 +23,10 @@ type pass =
   | Totalize
   | Unthe
   | Sideconditions
+  | TypeFamilyRemoval
+  | Else
+  | Undep
+  | AliasDemut
 
 (* This list declares the intended order of passes.
 
@@ -28,8 +34,8 @@ Because passes have dependencies, and because some flags enable multiple
 passers (--all-passes, some targets), we do _not_ want to use the order of
 flags on the command line.
 *)
-let _skip_passes = [ Sub; Unthe ]  (* Not clear how to extend them to indexed types *)
-let all_passes = [ Totalize; Sideconditions ]
+let _skip_passes = [ Unthe ]  (* Not clear how to extend them to indexed types *)
+let all_passes = [ TypeFamilyRemoval; Undep; Totalize; Else; Sideconditions; Sub; AliasDemut ]
 
 type file_kind =
   | Spec
@@ -55,11 +61,14 @@ let print_el = ref false
 let print_elab_il = ref false
 let print_final_il = ref false
 let print_all_il = ref false
+let print_all_il_to = ref ""
 let print_dl = ref false
 let print_al = ref false
 let print_al_o = ref ""
 let print_no_pos = ref false
 let new_interpreter_args = ref None
+let vl = ref false
+let animate_inline = ref false
 
 let generate_ocaml = ref None
 
@@ -73,6 +82,16 @@ let enable_pass pass = selected_passes := PS.add pass !selected_passes
 let print_il il =
   Printf.printf "%s\n%!" (Il.Print.string_of_script ~suppress_pos:(!print_no_pos) il)
 
+let print_il_to pass_name pass_count il =
+  let pass_name = if pass_name = "" then "elab" else pass_name in
+  let pass_name = Printf.sprintf "%02d-%s" pass_count pass_name in
+  if !print_all_il_to <> "" then
+    let filename = Str.replace_first (Str.regexp "%s") pass_name !print_all_il_to in
+    Out_channel.with_open_text filename (fun oc ->
+      Out_channel.output_string oc (Il.Print.string_of_script ~suppress_pos:(!print_no_pos) il);
+      Out_channel.output_string oc "\n"
+    )
+
 
 (* Il pass metadata *)
 
@@ -81,18 +100,31 @@ let pass_flag = function
   | Totalize -> "totalize"
   | Unthe -> "the-elimination"
   | Sideconditions -> "sideconditions"
+  | TypeFamilyRemoval -> "typefamily-removal"
+  | AliasDemut -> "alias-demut"
+  | Else -> "else"
+  | Undep -> "remove-indexed-types"
 
 let pass_desc = function
   | Sub -> "Synthesize explicit subtype coercions"
   | Totalize -> "Run function totalization"
   | Unthe -> "Eliminate the ! operator in relations"
   | Sideconditions -> "Infer side conditions"
+  | TypeFamilyRemoval -> "Transform Type families into sum types"
+  | Else -> "Eliminate the otherwise premise in relations"
+  | Undep -> "Transform indexed types into types with well-formedness predicates"
+  | AliasDemut -> "Lifts type aliases out of mutual groups"
+
 
 let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
   | Sub -> Middlend.Sub.transform
   | Totalize -> Middlend.Totalize.transform
   | Unthe -> Middlend.Unthe.transform
   | Sideconditions -> Middlend.Sideconditions.transform
+  | TypeFamilyRemoval -> Middlend.Typefamilyremoval.transform
+  | Else -> Middlend.Else.transform
+  | Undep -> Middlend.Undep.transform
+  | AliasDemut -> Middlend.AliasDemut.transform
 
 
 (* Argument parsing *)
@@ -127,7 +159,8 @@ let argspec = Arg.align (
   "-o", Arg.Unit (fun () -> file_kind := Output), " Output files";
   "-l", Arg.Set logging, " Log execution steps";
   "-ll", Arg.Unit (fun () -> Backend_interpreter.Runner.logging := true;
-                             Backend_animation.Main_interpret.logging := true), " Log interpreter execution";
+                             Backend_animation.Main_interpret.logging := true;
+                             Backend_animation.Main_interpret_v.logging := true), " Log interpreter execution";
   "-dl", Arg.String (fun s -> Util.Debug_log.(active := s :: !active)),
     " Debug-log function";
   "-w", Arg.Unit (fun () -> warn_math := true; warn_prose := true),
@@ -139,6 +172,7 @@ let argspec = Arg.align (
 
   "--check", Arg.Unit (fun () -> target := Check), " Check only (default)";
   "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
+  "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
   "--ast", Arg.Unit (fun () -> target := Ast), " Generate AST";
   "--latex", Arg.Unit (fun () -> target := Latex), " Generate Latex";
   "--splice-latex", Arg.Unit (fun () -> target := Splice Backend_splice.Config.latex),
@@ -149,7 +183,9 @@ let argspec = Arg.align (
   "--prose-rst", Arg.Unit (fun () -> target := Prose false), " Generate prose";
   "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args), " Generate interpreter";
   "--animate", Arg.Unit (fun () -> target := Animate), " Animate";
+  "--inline", Arg.Unit (fun () -> animate_inline := true), "Enable inlining after animation";
   "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), "New meta-interpreter";
+  "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), "New meta-interpreter VL";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),
@@ -161,10 +197,13 @@ let argspec = Arg.align (
   "--print-il", Arg.Set print_elab_il, " Print IL (after elaboration)";
   "--print-final-il", Arg.Set print_final_il, " Print final IL";
   "--print-all-il", Arg.Set print_all_il, " Print IL after each step";
+  "--print-all-il-to", Arg.Set_string print_all_il_to, " Print IL after each step to file (with %s replaced by pass numer and name)";
   "--print-dl", Arg.Set print_dl, " Print dl";
   "--print-al", Arg.Set print_al, " Print al";
   "--print-al-o", Arg.Set_string print_al_o, " Print al with given name";
   "--print-no-pos", Arg.Set print_no_pos, " Suppress position info in output";
+  "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
+    " Generate OCaml code for DL types and functions";
   "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
     " Generate OCaml code for DL types and functions";
 ] @ List.map pass_argspec all_passes @ [
@@ -184,6 +223,7 @@ let log s = if !logging then Printf.printf "== %s\n%!" s
 let () =
   Printexc.record_backtrace true;
   let last_pass = ref "" in
+  let pass_count = ref 0 in
   try
     Arg.parse argspec add_arg usage;
     log "Parsing...";
@@ -193,11 +233,12 @@ let () =
     log "Elaboration...";
     let il, elab_env = Frontend.Elab.elab el in
     if !print_elab_il || !print_all_il then print_il il;
+    print_il_to !last_pass !pass_count il;
     log "IL Validation...";
     Il.Valid.valid il;
 
     (match !target with
-    | Prose _ | Splice _ | Interpreter _ | Animate ->
+    | Prose _ | Splice _ | Interpreter _ | Animate | Animate ->
       enable_pass Sideconditions;
     | _ when !print_al || !print_al_o <> "" ->
       enable_pass Sideconditions;
@@ -209,9 +250,11 @@ let () =
         if not (PS.mem pass !selected_passes) then il else
         (
           last_pass := pass_flag pass;
+          pass_count := !pass_count + 1;
           log ("Running pass " ^ pass_flag pass ^ "...");
           let il = run_pass pass il in
           if !print_all_il then print_il il;
+          print_il_to !last_pass !pass_count il;
           log ("IL Validation after pass " ^ pass_flag pass ^ "...");
           Il.Valid.valid il;
           il
@@ -224,7 +267,8 @@ let () =
 
     let al =
       if not !print_al && !print_al_o = "" &&
-         (!target = Check || !target = Ast || !target = Latex || !target = Animate) then []
+        
+         (!target = Check || !target = Ast || !target = Latex || !target = Animate || !target = Animate) then []
       else (
         log "Translating to AL...";
         let interp = match !target with
@@ -256,7 +300,7 @@ let () =
     *)
 
     (match !target with
-    | Check | RunThrough -> ()
+    | Check | RunThrough | RunThrough -> ()
 
     | Ast ->
       log "AST Generation...";
@@ -337,7 +381,7 @@ let () =
 
     | Animate ->
       log "Translating to DL and animate...";
-      let (env, dl) = Backend_animation.Main_animate.run il !print_dl in
+      let (env, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
       log "DL Validating... ";
       Backend_animation.Valid.valid dl;
       (match !generate_ocaml with
@@ -349,7 +393,10 @@ let () =
       (match !new_interpreter_args with
       | Some args ->
         log "Interpreting...";
-        Backend_animation.Main_interpret.run env dl args;
+        if !vl then
+          Backend_animation.Main_interpret_v.run env dl args
+        else
+          Backend_animation.Main_interpret.run env dl args;
       | None -> ()
       )
     );

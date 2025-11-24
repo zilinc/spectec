@@ -152,12 +152,12 @@ let il_of_blocktype = function
   | RI.Ast.ValBlockType vt_opt -> mk_case' "blocktype" [["_RESULT"];[]] [il_of_opt (t_opt "valtype") il_of_valtype vt_opt]
 
 let il_of_limits default (limits: RT.limits) =
-  let max =
+  let omax =
     match limits.max with
-    | Some v -> il_of_uN_64 v
-    | None   -> il_of_uN_64 default
+    | Some v -> il_of_uN_64 v |> mk_some (t_opt "u64")
+    | None   -> mk_none (t_opt "u64")
   in
-  mk_case' "limits" [["["];[".."];["]"]] [il_of_uN_64 limits.min; max]
+  mk_case' "limits" [["["];[".."];["]"]] [il_of_uN_64 limits.min; omax]
 
 let il_of_tagtype = function
   | RT.TagT tu -> il_of_typeuse tu
@@ -681,8 +681,8 @@ let il_of_packshape = function
   | RI.Pack.Pack32x2 -> [mk_nat 32; mk_nat 2]
 
 let il_of_memop f idx (memop: (RI.Types.numtype, 'p) RI.Ast.memop) =
-  let str = [("ALIGN" , il_of_nat   memop.align );
-             ("OFFSET", il_of_nat64 memop.offset)]
+  let str = [("ALIGN" , memop.align  |> Z.of_int |> il_of_uN);
+             ("OFFSET", memop.offset |> il_of_uN_64)]
   in
   [il_of_numtype memop.ty; f memop.pack; il_of_memidx idx; mk_str "memarg" str]
 
@@ -1213,13 +1213,8 @@ let il_to_blocktype exp : RI.Ast.blocktype =
 
 let il_to_limits (default: int64) exp : RI.Types.limits =
   match match_caseE "limits" exp with
-  | [["["];[".."];["]"]], [min; max] ->
-    let max' =
-      match il_to_uN_64 max with
-      | i64 when default = i64 -> None
-      | _ -> Some (il_to_uN_64 max)
-    in
-    { min = il_to_uN_64 min; max = max' }
+  | [["["];[".."];["]"]], [min; omax] ->
+    { min = il_to_uN_64 min; max = il_to_opt il_to_uN_64 omax }
   | _ -> error_value "limits" exp
 
 let il_to_globaltype exp : RI.Types.globaltype =
@@ -1676,7 +1671,7 @@ let il_to_memop (f: exp -> 'p) exps : RI.Ast.idx * (RI.Types.numtype, 'p) RI.Ast
     il_to_idx idx,
     {
       ty = il_to_numtype nt;
-      align  = find_str_field "ALIGN"  str |> il_to_nat |> Z.to_int;
+      align  = find_str_field "ALIGN"  str |> unwrap_case |> il_to_nat |> Z.to_int;
       offset = find_str_field "OFFSET" str |> il_to_uN_64;
       pack = f p;
     }

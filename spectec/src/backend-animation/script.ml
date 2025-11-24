@@ -38,9 +38,6 @@ let il_of_spectest () : exp =
     let deftype = mk_case' "deftype" [["_DEF"];[];[]] [
       rectype; mk_nat 0
     ] in
-    let func = mk_case' "func" [["FUNC"];[];[];[]] [
-
-    ] in
     let funccode = mk_case' "funccode" [["FUNC"];[];[];[]] [
       mk_nat 0;
       listE (t_star "local") [];
@@ -86,7 +83,7 @@ let il_of_spectest () : exp =
     let memtype = mk_case' "memtype" [[];[];["PAGE"]] [
       addrtype; limits
     ] in
-    let zeros = listE (t_star "byte") (List.init 0x20 (Fun.const (mk_nat 0))) in  (* 0x10000 *)
+    let zeros = listE (t_star "byte") (List.init 0x10000 (Fun.const (mk_nat 0))) in
     mk_str "meminst" [ ("TYPE", memtype); ("BYTES", zeros) ] in
 
   (* Builtin functions *)

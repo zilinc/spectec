@@ -120,10 +120,14 @@ let get_export_addr name modulename =
 (** Main functions **)
 
 let invoke module_name funcname args =
+  let t1 = Sys.time () in
   log "[Invoking %s %s...]\n" funcname (Value.string_of_values args);
 
   let funcaddr = get_export_addr funcname module_name in
-  Interpreter.invoke [funcaddr; al_of_list al_of_value args]
+  let r = Interpreter.invoke [funcaddr; al_of_list al_of_value args] in
+  let t2 = Sys.time () in
+  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s");
+  r
 
 
 let get_global_value module_name globalname =
@@ -138,12 +142,16 @@ let get_global_value module_name globalname =
   |> listV
 
 let instantiate module_ =
+  let t1 = Sys.time () in
   log "[Instantiating module...]\n";
 
   match al_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | al_module, externaddrs ->
-    Interpreter.instantiate [ al_module; listV_of_list externaddrs ]
+    let r = Interpreter.instantiate [ al_module; listV_of_list externaddrs ] in
+    let t2 = Sys.time () in
+    print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
+    r
 
 
 (** Wast runner **)

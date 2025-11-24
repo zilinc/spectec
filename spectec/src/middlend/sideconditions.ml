@@ -140,6 +140,9 @@ let rec t_prem env prem =
      let env' = env_under_iter env iterexp in
      List.map (fun pr -> iterPr ([pr], iterexp) $ prem'.at) (t_prem env' prem')
   | IterPr (_, _) -> assert false
+  | NegPr _prem' -> 
+    (* We do not want to infer anything from NegPr *)
+    []
   ) @ [prem]
 
 let t_prems env = List.concat_map (t_prem env)
@@ -193,4 +196,3 @@ and t_def x = { x with it = t_def' x.it }
 
 let transform (defs : script) =
   List.map t_def defs
-

@@ -208,6 +208,9 @@ and t_prem' n prem : eqns * prem' =
     let iterexp''' = update_iterexp_vars (Il.Free.free_prem prem') iterexp'' in
     eqns1' @ eqns2, IterPr ([prem'], iterexp''')
   | IterPr (_, _) -> assert false
+  | NegPr prem ->
+    let eqns1, prem' = t_prem n prem in
+    eqns1, NegPr (prem')
 
 let t_prems n k  = t_list t_prem n k (fun x -> x)
 
