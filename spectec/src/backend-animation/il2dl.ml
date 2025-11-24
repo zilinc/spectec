@@ -50,8 +50,8 @@ let il2dl_rule_clause rel_id rule : rule_clause =
   | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr" ->
     let at1 = over_region [z1.at; lhs.at] in
     let at2 = over_region [z2.at; rhs.at] in
-    let lhs' = mk_case' ~at:at1 "config" [[];[";"];[]] [z1; lhs] in
-    let rhs' = mk_case' ~at:at1 "config" [[];[";"];[]] [z2; rhs] in
+    let lhs' = mk_tup [z1; lhs] in
+    let rhs' = mk_tup [z2; rhs] in
     (id, binds, lhs', rhs', prems) $ rule.at
   | TupE [ ctx; obj; typ ] when List.mem rel_id.it Common.typ_infers ->
     let lhs' = TupE [ ctx; obj ] $$ exp.at
@@ -72,7 +72,7 @@ let il2dl_rule_def rule_name rel_id typ rules at : rule_def =
     | TupT [ et11; et12; et21; et22 ] when rel_id.it = "Eval_expr" ->
       let at1 = over_region [(fst et11).at; (snd et12).at] in
       let at2 = over_region [(fst et21).at; (snd et22).at] in
-      t_var ~at:at1 "config", t_var ~at:at2 "config"
+      t_tup [t_var "state"; t_var "expr"], t_tup [t_var "state"; t_star "val"]
     | TupT [ ctx; obj; (_, typ) ] when List.mem rel_id.it Common.typ_infers ->
       TupT [ ctx; obj ] $ typ.at, typ
     | _ when List.mem rel_id.it Common.typ_checks ->
