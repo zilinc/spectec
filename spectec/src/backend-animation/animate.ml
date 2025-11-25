@@ -453,8 +453,8 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     let fncall = CallE (fid, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
     (rhs, fncall)
   | "Eval_expr", TupE [z; lhs; z'; rhs] ->
-    let arg = mk_case' ~at:at "config" [[];[";"];[]] [z;lhs] in
-    let res = mk_case' ~at:at "config" [[];[";"];[]] [z';rhs] in
+    let arg = mk_tup [z ; lhs] in
+    let res = mk_tup [z'; rhs] in
     let fncall = CallE (id, [expA arg]) $$ at % res.note in
     (res, fncall)
   (* Predicate rules. *)
