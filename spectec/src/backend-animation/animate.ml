@@ -225,7 +225,7 @@ type direction = [ `Lhs | `Rhs ]
 
 (* Returns the following:
     + Updated env.
-    + Set of variable names that are newly introduced.
+    + The variable that corresponds to the returned binder expression.
     + The newly created expression that binds to the argument [exp].
     + Either 0 or 1 premise for the newly introduced binding.
       - `Lhs: need to animate the premises.
@@ -917,22 +917,19 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     ENSURES: When it returns Error, it means that the original premise should be
     used as the animated premise.
  *)
-and animate_exp_mem at e es : prem list E.m =
+and animate_exp_mem envr at e es : prem list E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in
-  match e.it with
-  (* Base case: choose the first alternative. *)
-  | VarE v ->
-    let zero = NumE (`Nat Z.zero) $$ e.at % (natT ~at:e.at ()) in
-    let es_0 = IdxE (es, zero) $$ es.at % e.note in
-    let fv_e = (free_exp false e).varid in
-    let* () = update (add_knowns (Set.singleton v.it)) in
-    E.return [ LetPr (e, es_0, [v.it]) $ at ]
-  | _ ->
-    (* TODO(zilinc): E.g. (x, a) ∈ e, where a is known and x is unknown, e is fully known.
-       It will become Let (x, a) = y ; Let y ∈ e. It is obviously not animated.
-    *)
-    E.throw (string_of_error at "Can't handle `<-` operator when the LHS has knowns and unknowns.")
+  let (envr, vs, e', prems_v) = anf_exp envr None e None `Lhs in
+  let (envr, vs', es', oprem_es) = new_bind_exp envr None es None `Rhs in
+  let* () = update (add_knowns (Set.of_list vs')) in
+  let prem_len_es = IfPr (gtE ~at:at (lenE ~at:(es'.at) es') (natE ~at:at Z.zero)) $ at in
+  let zero = NumE (`Nat Z.zero) $$ e'.at % (natT ~at:e'.at ()) in
+  let es_0 = IdxE (es', zero) $$ es'.at % e'.note in
+  let* () = update (add_knowns (Set.of_list vs)) in
+  let prem' = LetPr (e', es_0, vs) $ at in
+  let* prems_v' = E.(mapM (animate_prem envr) prems_v <&> List.concat) in
+  E.return (Option.to_list oprem_es @ [prem_len_es; prem'] @ prems_v')
 
 and animate_if_prem envr at exp : prem list E.m =
   let open AnimState in
@@ -982,7 +979,7 @@ and animate_if_prem envr at exp : prem list E.m =
     | true , false -> E.throw (string_of_error at (
                                 "e2 in e1 ∈ e2 contains unknowns.\n" ^
                                 "  ▹ e2 = " ^ string_of_exp e2))
-    | false, true  -> animate_exp_mem exp.at e1 e2
+    | false, true  -> animate_exp_mem envr exp.at e1 e2
     | false, false -> E.throw (string_of_error at (
                                  "e1 ∈ e2 where both sides have unknowns.\n" ^
                                  "  ▹ e1 = " ^ string_of_exp e1 ^ "\n" ^

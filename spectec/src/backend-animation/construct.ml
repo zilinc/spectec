@@ -10,7 +10,7 @@ module BI = Backend_interpreter
 open Xl.Atom
 
 
-let error at msg = Util.Error.error at "ani.../int.../construct" msg
+let error at msg = Util.Error.error at "animation/construct" msg
 let error_value name exp = error exp.at ("Invalid " ^ name ^ ": " ^ string_of_exp exp)
 let error_values name exps =
   let at = over_region (List.map (fun e -> e.at) exps) in

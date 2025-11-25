@@ -83,7 +83,7 @@ and string_of_args = function
   | as_ -> "(" ^ String.concat ", " (List.map string_of_arg as_) ^ ")"
 
 
-let error at msg = Error.error at "ani.../value" msg
+let error at msg = Error.error at "animation/value" msg
 let error_value ?(at = no) name val_ = error at ("Invalid " ^ name ^ ": " ^ string_of_value val_)
 let error_values ?(at = no) name vals = error at ("Invalid " ^ name ^ ": " ^ string_of_values ", " vals)
 

@@ -1,10 +1,12 @@
-open Util.Error
+open Util
 open Util.Source
 open Value
 open State_v
 open Construct_v
 module RI = Reference_interpreter
 
+
+let error at msg = Error.error at "animation/script_v" msg
 
 (* Host *)
 
@@ -17,11 +19,7 @@ let il_of_spectest () : value =
   let f64_to_const f = caseV [["CONST"];[]] [ nullary "F64"; vl_of_float64 f ] in
 
 
-  (* TODO: Change this into host function instance, instead of current normal function instance.
-     TODO(zilinc): what does it mean?
-  *)
   let create_funcinst name ptypes =
-    let code = nullary (String.uppercase_ascii name) in  (* instr *)
     let param_types = List.map nullary ptypes  (* list(valtype) *) in
     let comptype = caseV [["FUNC"];["->"];[]] [
       vl_of_list' param_types;
@@ -38,10 +36,8 @@ let il_of_spectest () : value =
     let deftype = caseV [["_DEF"];[];[]] [
       rectype; vl_of_nat 0
     ] in
-    let funccode = caseV [["FUNC"];[];[];[]] [
-      vl_of_nat 0;
-      listV_of_list [];
-      listV_of_list [code]
+    let funccode = caseV [["_HOSTFUNC"];[]] [
+      textV name
     ] in
     name, strV [
       "TYPE"  , ref deftype;
@@ -170,62 +166,4 @@ let il_of_spectest () : value =
                           ]
   in
   moduleinst
-
-
-(* Host instructions *)
-
-let is_host = function
-  | "PRINT" | "PRINT_I32" | "PRINT_I64" | "PRINT_F32" | "PRINT_F64" | "PRINT_I32_F32" | "PRINT_F64_F64" -> true
-  | _ -> false
-
-(*
-let call name =
-  let local =
-    WasmContext.get_current_context "FRAME_"
-    |> unwrap_framev
-    |> strv_access "LOCALS"
-    |> listv_nth
-  in
-  let as_const ty = function
-  | CaseV ("CONST", [ CaseV (ty', []) ; n ])
-  | OptV (Some (CaseV ("CONST", [ CaseV (ty', []) ; n ]))) when ty = ty' -> n
-  | v -> raise (Exception.ArgMismatch ("Not " ^ ty ^ ".CONST: " ^ string_of_value v)) in
-
-  match name with
-  | "PRINT" -> print_endline "- print: ()"
-  | "PRINT_I32" ->
-    local 0
-    |> as_const "I32"
-    |> al_to_nat32
-    |> I32.to_string_s
-    |> Printf.printf "- print_i32: %s\n"
-  | "PRINT_I64" ->
-    local 0
-    |> as_const "I64"
-    |> al_to_nat64
-    |> I64.to_string_s
-    |> Printf.printf "- print_i64: %s\n"
-  | "PRINT_F32" ->
-    local 0
-    |> as_const "F32"
-    |> al_to_float32
-    |> F32.to_string
-    |> Printf.printf "- print_f32: %s\n"
-  | "PRINT_F64" ->
-    local 0
-    |> as_const "F64"
-    |> al_to_float64
-    |> F64.to_string
-    |> Printf.printf "- print_f64: %s\n"
-  | "PRINT_I32_F32" ->
-    let i32 = local 0 |> as_const "I32" |> al_to_nat32 |> I32.to_string_s in
-    let f32 = local 1 |> as_const "F32" |> al_to_float32 |> F32.to_string in
-    Printf.printf "- print_i32_f32: %s %s\n" i32 f32
-  | "PRINT_F64_F64" ->
-    let f64 = local 0 |> as_const "F64" |> al_to_float64 |> F64.to_string in
-    let f64' = local 1 |> as_const "F64" |> al_to_float64 |> F64.to_string in
-    Printf.printf "- print_f64_f64: %s %s\n" f64 f64'
-  | name -> raise (Exception.UnknownFunc ("No spectest function: " ^ name))
-
-*)
 

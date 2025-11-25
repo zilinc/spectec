@@ -34,7 +34,7 @@ let verbose : string list ref =
       ]
 
 
-let error at msg = Error.error at "(Meta)Interpreter" msg
+let error at msg = Error.error at "animation/interpreter_v" msg
 let error_np msg = error no_region msg
 
 let string_of_error at msg = string_of_region at ^ " (Meta)Interpreter error:\n" ^ msg
@@ -732,11 +732,6 @@ and eval_func name func_def args : value OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
   match_clause no_region name 1 fcs args
 
-(*
-and call_func name args =
-  time ("calling " ^ name) (fun () -> call_func' name args) ()
-*)
-
 and call_func name args =
   match name with
   (* Hardcoded functions defined in meta.spectec *)
@@ -747,6 +742,7 @@ and call_func name args =
   | "Externaddr_ok" -> externaddr_ok args |> return
   | "Ref_ok"        -> ref_ok        args |> return
   | "Val_ok"        -> val_ok        args |> return
+  (* | "hostcall"      -> hostcall      args |> return *)
   (* Others *)
   | _ ->
     let builtin_name, is_builtin =
@@ -774,8 +770,79 @@ and call_func name args =
     | None -> error no (sprintf "There is no function named `%s`." name)
     )
 
-(* Built-in functions (meta.spectec) *)
 
+(* Host instructions *)
+
+and is_host = function
+  | "print" | "print_i32" | "print_i64" | "print_f32" | "print_f64" | "print_i32_f32" | "print_f64_f64" -> true
+  | _ -> false
+
+and call_hostfunc name s vs =
+  (* ty ∈ {"I32", "I64", "F32", "F64"} *)
+  let as_const ty = function
+  | CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n])
+  | OptV (Some (CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]))) when ty = ty' -> n
+  | v -> error no ("Host function call: Not " ^ ty ^ ".CONST: " ^ string_of_value v)
+  in
+  let argc = List.length vs in
+  (match name with
+  | "print" when argc = 0 -> print_endline "- print: ()"
+  | "print_i32" when argc = 1 ->
+    List.hd vs
+    |> as_const "I32"
+    |> vl_to_uN_32
+    |> RI.I32.to_string_s
+    |> Printf.printf "- print_i32: %s\n"
+  | "print_i64" when argc = 1 ->
+    List.hd vs
+    |> as_const "I64"
+    |> vl_to_uN_64
+    |> RI.I64.to_string_s
+    |> Printf.printf "- print_i64: %s\n"
+  | "print_f32" when argc = 1 ->
+    List.hd vs
+    |> as_const "F32"
+    |> vl_to_float32
+    |> RI.F32.to_string
+    |> Printf.printf "- print_f32: %s\n"
+  | "print_f64" when argc = 1 ->
+    List.hd vs
+    |> as_const "F64"
+    |> vl_to_float64
+    |> RI.F64.to_string
+    |> Printf.printf "- print_f64: %s\n"
+  | "print_i32_f32" when argc = 2 ->
+    let [v1; v2] = vs in
+    let i32 = v1 |> as_const "I32" |> vl_to_nat32   |> RI.I32.to_string_s in
+    let f32 = v2 |> as_const "F32" |> vl_to_float32 |> RI.F32.to_string   in
+    Printf.printf "- print_i32_f32: %s %s\n" i32 f32
+  | "print_f64_f64" when argc = 2 ->
+    let [v1; v2] = vs in
+    let f64  = v1 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
+    let f64' = v2 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
+    Printf.printf "- print_f64_f64: %s %s\n" f64 f64'
+  | name -> error no ("Invalid host function call: " ^ name)
+  );
+  (s, caseV [["_VALS"];[]] [listV [||]])
+
+
+and hostcall = {
+  name = "hostcall";
+  f =
+    function
+    | [hostfunc; s; args] ->
+      (match match_caseV "hostfunc" hostfunc with
+      | [["_HOSTFUNC"]; []], [TextV fname] ->
+        let vs = as_list_value' args in
+        let s', result = call_hostfunc fname s vs in
+        listV [| tupV [s'; result] |] |> return
+      | _ -> error_value ("Not a hostfunc") hostfunc
+      )
+    | vs -> error_values ("Args to $hostcall") vs
+}
+
+
+(* Built-in functions (meta.spectec) *)
 
 and use_step : builtin = {
   name = "use_step";
@@ -799,7 +866,7 @@ and use_step_pure = {
       | Some (rel_name, _, _) -> BoolV (rel_name = "Step_pure") |> return
       | None -> BoolV false |> return
       )
-    | es -> error_values ("Args to $use_step_pure") es
+    | vs -> error_values ("Args to $use_step_pure") vs
 }
 and use_step_read = {
   name = "use_step_read";
@@ -811,7 +878,7 @@ and use_step_read = {
       | Some (rel_name, _, _) -> boolV (rel_name = "Step_read") |> return
       | None -> boolV false |> return
       )
-    | es -> error_values ("Args to $use_step_read") es
+    | vs -> error_values ("Args to $use_step_read") vs
 }
 and use_step_ctxt = {
   name = "use_step_ctxt";
@@ -820,7 +887,7 @@ and use_step_ctxt = {
     | [instr] ->
       let mixop, _ = match_caseV "instr" instr in
       List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"] |> boolV |> return
-    | es -> error_values ("Args to $use_step_ctxt") es
+    | vs -> error_values ("Args to $use_step_ctxt") vs
 }
 
 
@@ -834,7 +901,7 @@ and dispatch_step = {
       | Some (rel_name, rule_name, _) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step rule for instr" ^ string_of_value instr)
       )
-    | es -> error_values ("Args to $dispatch_step") es
+    | vs -> error_values ("Args to $dispatch_step") vs
 }
 and dispatch_step_pure = {
   name = "dispatch_step_pure";
@@ -846,7 +913,7 @@ and dispatch_step_pure = {
       | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_pure rule for instr" ^ string_of_value instr)
       )
-    | es -> error_values ("Args to $dispatch_step_pure") es
+    | vs -> error_values ("Args to $dispatch_step_pure") vs
 }
 and dispatch_step_read = {
   name = "dispatch_step_read";
@@ -858,7 +925,7 @@ and dispatch_step_read = {
       | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_read rule for instr" ^ string_of_value instr)
       )
-    | es -> error_values ("Args to $dispatch_step_read") es
+    | vs -> error_values ("Args to $dispatch_step_read") vs
 }
 
 and step_read_throw_ref_handler = {
@@ -866,12 +933,14 @@ and step_read_throw_ref_handler = {
   f =
     function
     | [arg] -> call_func "Step_read/throw_ref" [valA arg]
+    | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
+
 
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler
+  step_read_throw_ref_handler; hostcall;
   ]
 
 and call_builtins fname args : value OptMonad.m =

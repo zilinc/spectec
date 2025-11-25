@@ -182,8 +182,8 @@ rule Step_read/call_ref-func:
   -- if f = {LOCALS val^n ($default_(t))*, MODULE fi.MODULE}
 
 
-
-def $hostcall(hostfunc, store, val*) : (store, result)  hint(show %(%, %))
+;; Essentially a relation.
+def $hostcall(hostfunc, store, val*) : (store, result)*  hint(show %4 <- %1(%2, %3))
 def $hostcall hint(builtin)
 
 def $lift_result(result) : instr*  hint(show %)
@@ -191,13 +191,21 @@ def $lift_result(_VALS val*) = val*
 def $lift_result(`(REF.EXN_ADDR a) THROW_REF) = (REF.EXN_ADDR a) THROW_REF
 def $lift_result(TRAP) = TRAP
 
-rule Step/call_ref-hostfunc:
+rule Step/call_ref-hostfunc-res:
   s; f; val^n (REF.FUNC_ADDR a) (CALL_REF yy)  ~>  s'; f; $lift_result(result)
   ----
   -- if $funcinst((s; f))[a] = fi
   -- Expand: fi.TYPE ~~ FUNC t_1^n -> t_2^m
   -- if fi.CODE = _HOSTFUNC hf
-  -- if $hostcall(_HOSTFUNC hf, s, val^n) = (s', result)
+  -- if (s', result) <- $hostcall(_HOSTFUNC hf, s, val^n)
+
+rule Step/call_ref-hostfunc-div:
+  s; f; val^n (REF.FUNC_ADDR a) (CALL_REF yy)  ~>  s; f; (REF.FUNC_ADDR a) (CALL_REF yy)
+  ----
+  -- if $funcinst((s; f))[a] = fi
+  -- Expand: fi.TYPE ~~ FUNC t_1^n -> t_2^m
+  -- if fi.CODE = _HOSTFUNC hf
+  -- otherwise  ;; if eps <- $hostcall(_HOSTFUNC hf, s, val^n)
 
 
 rule Step_read/return_call:
