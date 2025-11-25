@@ -13,9 +13,7 @@ type target =
  | Prose of bool
  | Splice of Backend_splice.Config.t
  | Animate
- | Animate
  | Interpreter of string list
- | RunThrough
  | RunThrough
 
 type pass =
@@ -238,7 +236,7 @@ let () =
     Il.Valid.valid il;
 
     (match !target with
-    | Prose _ | Splice _ | Interpreter _ | Animate | Animate ->
+    | Prose _ | Splice _ | Interpreter _ | Animate ->
       enable_pass Sideconditions;
     | _ when !print_al || !print_al_o <> "" ->
       enable_pass Sideconditions;
@@ -300,7 +298,7 @@ let () =
     *)
 
     (match !target with
-    | Check | RunThrough | RunThrough -> ()
+    | Check | RunThrough -> ()
 
     | Ast ->
       log "AST Generation...";

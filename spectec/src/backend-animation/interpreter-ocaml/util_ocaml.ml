@@ -179,11 +179,11 @@ let rec map1M (f : 'a -> 'b option) (lst : 'a list) : ('b list option) =
       | None -> None 
       | Some ys -> Some (y :: ys)
 
-let rec map2M (f : 'a -> 'b -> 'c option) (lst1 : 'a list) (lst2 : 'b list) : (('a * 'b) list option) =
+let rec map2M (f : 'a -> 'b -> 'c option) (lst1 : 'a list) (lst2 : 'b list) : ('c list option) =
   match lst1, lst2 with 
   | [], [] -> Some []
-  | x :: rest1, y :: rest2 -> 
-    match f x y with 
+  | x :: rest1, y :: rest2 ->
+    match f x y with
     | None -> None 
     | Some y -> 
       match map2M f rest1 rest2 with 

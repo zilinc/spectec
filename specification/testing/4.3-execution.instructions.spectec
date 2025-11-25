@@ -1088,8 +1088,8 @@ rule Step_read/call_ref-null:
 ;; 
 ;; Expressions
 ;; 
-relation Eval_expr: state; expr ~>* state; val*  hint(name "E-expr") hint(macro "steptostar") hint(tabular)
-
-rule Eval_expr:
-  z; instr*  ~>*  z'; val*
-  -- Steps: z; instr*  ~>*  z'; val*
+;; relation Eval_expr: state; expr ~>* state; val*  hint(name "E-expr") hint(macro "steptostar") hint(tabular)
+;; 
+;; rule Eval_expr:
+;;   z; instr*  ~>*  z'; val*
+;;   -- Steps: z; instr*  ~>*  z'; val*

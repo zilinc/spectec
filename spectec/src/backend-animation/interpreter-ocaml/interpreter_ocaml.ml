@@ -422,7 +422,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
         if (not (idstr = x)) || (idstr = "") then return ("(* TODO: outflow in IterE *)")
         else 
         let* body_str = ocaml_of_exp e1 in 
-        return ("(List.init (" ^ lenstr ^ ") (fun " ^ idstr ^ " -> " ^ body_str ^ "))")
+        return ("(List.init (" ^ lenstr ^ ") (fun " ^ (sanitize_name idstr) ^ " -> " ^ body_str ^ "))")
     | _ -> return "(* TODO: multiple outflows in IterE *)"
     end else begin
     let* prev_knowns = get_knowns in 
@@ -439,7 +439,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
           | None -> "_"
         in
         let* () = set_knowns prev_knowns in 
-        return ("List.init (" ^ lenstr ^ ") (fun " ^ idstr ^ " -> " ^ body_str ^ ")")
+        return ("(List.init (" ^ lenstr ^ ") (fun " ^ idstr ^ " -> " ^ body_str ^ "))")
       | _ -> let* () = set_knowns prev_knowns in  
         return "(* TODO: IterE with no bindings and non-length iterator *)"
       end 
@@ -881,6 +881,11 @@ let rec ocaml_of_prems (prems : prem list) : string t =
       (* if x* is known then x <- x* is an inflow.
         Otherwise, it is an outflow. *)
       let* prev_knowns = get_knowns in 
+      (* any inner premise needs to know what the inflows are. these inflows will not affect the output of the `partition` function below and will be removed by the reset in the end before adding the outflows - they are only in scope for the inner premises. *)
+      let inflows = List.map (fun (x, _) -> sanitize_name x.it) ((List.filter (fun (id, e) -> 
+        Il.Free.Set.subset (Set.map sanitize_name (Valid.free_vars_exp e)) prev_knowns
+      ) iterlist)) in
+      let* () = add_knowns inflows in
       (* this will add new things to knowns, but their scope is limited *)
       let* prem_strs = ocaml_of_prems prems in
       let monadic = is_monadic prems in
@@ -904,6 +909,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
         let* () = set_knowns prev_knowns in
         (* now add whatever outflows *)
         let* outflow_listvars = mapM ocaml_of_exp (List.map snd outflows) in
+        (*Printf.printf "Outflow list vars: %s\n" (String.concat ", " outflow_listvars);*)
         let* () = add_knowns outflow_listvars in
         if (List.length outflows) = 0 then 
           return "TODO: no outflows in iteropt"
@@ -931,6 +937,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
         let* () = set_knowns prev_knowns in
         (* now add whatever outflows *)
         let* outflow_listvars = mapM ocaml_of_exp (List.map snd outflows) in
+        (*Printf.printf "Outflow list vars: %s\n" (String.concat ", " outflow_listvars);*)
         let* () = add_knowns outflow_listvars in
         let inflowsize = if idx_list = "" then (List.length inflows + 1) else (List.length inflows) in
         if (List.length outflows) = 0 then 

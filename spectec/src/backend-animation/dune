@@ -35,7 +35,7 @@
   interpreter_ocaml
   util_ocaml
   temp_print
-  runners
+  runner
   ; VL
   construct_v
   interpreter_v
