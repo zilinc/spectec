@@ -7,7 +7,16 @@ let ocaml_of_list f lst = DL.C_pct__list_ (List.map f lst)
 (* todo: possibly a better way of doing this since we want a way to express dependent types anyway,, also int32 translates to nat for now but probably should not *)
 let ocaml_of_typeidx (n : RT.typeidx) : DL.typeidx = C_pct__uc_un (Int32.to_int n)
 
-let ocaml_of_ast_typeidx (n : RI.Ast.typeidx) : DL.typeidx = C_pct__uc_un (Int32.to_int n.it)
+let ocaml_of_idx (n : RI.Ast.idx) : DL.idx = C_pct__uc_un (Int32.to_int n.it)
+let ocaml_of_ast_typeidx (n : RI.Ast.typeidx) : DL.typeidx = ocaml_of_idx n
+let ocaml_of_funcidx (n : RI.Ast.funcidx) : DL.funcidx = ocaml_of_idx n
+let ocaml_of_tableidx (n : RI.Ast.tableidx) : DL.tableidx = ocaml_of_idx n
+let ocaml_of_elemidx (n : RI.Ast.elemidx) : DL.elemidx = ocaml_of_idx n
+let ocaml_of_dataidx (n : RI.Ast.dataidx) : DL.dataidx = ocaml_of_idx n
+let ocaml_of_memoryidx (n : RI.Ast.memoryidx) : DL.memidx = ocaml_of_idx n
+let ocaml_of_localidx (n : RI.Ast.localidx) : DL.localidx = ocaml_of_idx n
+
+let ocaml_typeuse_of_typeidx (n : DL.typeidx) = DL.C_IDX_typeuse n 
 let ocaml_of_int32 (n : int32) : DL.nat = Int32.to_int n
 let ocaml_of_mut mut = match mut with 
   | RT.Cons -> None
@@ -109,6 +118,7 @@ and ocaml_of_heaptype = function
   | RT.BotHT -> DL.BOT_heaptype
 
 let ocaml_of_type (ty: RI.Ast.type_) =
+  Printf.printf "Generating OCaml for type...\n";
   DL.TYPE_type_ (ocaml_of_rectype ty.it)
 
 let ocaml_of_local (local: RI.Ast.local) =
@@ -132,15 +142,28 @@ let ocaml_of_instr (instr: RI.Ast.instr) =
     | RI.Value.I32 RI.Ast.IntOp.Add -> DL.BINOP_instr (DL.I32_numtype, DL.ADD_binop_)
     | _ -> failwith "non-addition binary op not implemented yet"
     end
-  | _                       -> failwith "instruction not implemented yet"
+  | RI.Ast.Call funcidx     -> DL.CALL_instr (ocaml_of_funcidx funcidx)
+  | RI.Ast.CallRef typeidx  -> DL.CALL_REF_instr (ocaml_typeuse_of_typeidx (ocaml_of_ast_typeidx typeidx))
+  | RI.Ast.RefNull heaptype -> DL.REF_dot_NULL_instr (ocaml_of_heaptype heaptype)
+  | RI.Ast.TableInit 
+    (tableidx, elemidx)     -> DL.TABLE_dot_INIT_instr (ocaml_of_tableidx tableidx, ocaml_of_elemidx elemidx)
+  | RI.Ast.ElemDrop elemidx -> DL.ELEM_dot_DROP_instr (ocaml_of_elemidx elemidx)
+  | RI.Ast.MemoryInit 
+    (memoryidx, dataidx)    -> DL.MEMORY_dot_INIT_instr (ocaml_of_memoryidx memoryidx, ocaml_of_dataidx dataidx)
+  | RI.Ast.DataDrop dataidx -> DL.DATA_dot_DROP_instr (ocaml_of_dataidx dataidx)  
+  | RI.Ast.LocalGet localidx -> DL.LOCAL_dot_GET_instr (ocaml_of_localidx localidx)   
+  | _                       -> 
+    let instr_str = Backend_animation.Temp_print.string_of_instr instr in
+    failwith ("instruction not implemented yet: " ^ instr_str)
 
   let ocaml_of_func (func: RI.Ast.func) =
-  let RI.Ast.Func (idx, locals, instrs) = func.it in
-  DL.FUNC_func (
-    ocaml_of_ast_typeidx idx,
-    List.map ocaml_of_local locals,
-    List.map ocaml_of_instr instrs
-  )
+    Printf.printf "Generating OCaml for function...\n";
+    let RI.Ast.Func (idx, locals, instrs) = func.it in
+    DL.FUNC_func (
+      ocaml_of_ast_typeidx idx,
+      List.map ocaml_of_local locals,
+      List.map ocaml_of_instr instrs
+    )
 
 (* let ocaml_of_export (export: Ast.export) =
   let Export (name, exix) = export in
@@ -160,3 +183,8 @@ let ocaml_of_module (module_: RI.Ast.module_) : DL.module_ = DL.MODULE_module_ (
   None,
   [] (* do this *)
 )
+
+(*let ocaml_of_value (v : RI.Value.value) : DL.val_ =
+  match v.it with
+  | RI.Value.I32 n -> DL.CONST_val_ (DL.I32_numtype) (DL.C_pct__uc_un (Int32.to_int n))
+  | _ -> failwith "TODO: implement non-I32 values"*)

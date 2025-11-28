@@ -772,9 +772,9 @@ rule Step_read/call_ref-null:
 ;; 
 ;; ;; Local instructions
 ;; 
-;; rule Step_read/local.get:
-;;   z; (LOCAL.GET x)  ~>  val
-;;   -- if $local(z, x) = val
+rule Step_read/local.get:
+  z; (LOCAL.GET x)  ~>  val
+  -- if $local(z, x) = val
 ;; 
 ;; rule Step/local.set:
 ;;   z; val (LOCAL.SET x)  ~>  $with_local(z, x, val); eps

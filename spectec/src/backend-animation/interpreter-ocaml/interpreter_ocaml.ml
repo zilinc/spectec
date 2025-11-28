@@ -452,13 +452,15 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
         let* () = add_knowns listnames in 
         let lists = String.concat " " listnames in
         return (Printf.sprintf "(map%d (fun %s -> %s) %s)" (List.length bindings) varnames body_str lists)
-      | Opt -> 
+      | Opt ->
+        (* assumption: if, in any of the bindings x <- x*, `x*` is None, we return None for the whole computation since `x` cannot have a value in that case *)
         let* listnames = mapM ocaml_of_exp es in
         let varnames = List.map (fun (id, _) -> (sanitize_name id.it)) bindings in 
-        let get_opts = String.concat " " (List.map2 (fun i e -> (Printf.sprintf "let %s = Option.get %s in" i e)) varnames listnames) in 
+        let get_opts = String.concat "\n" (List.map2 (fun i e -> (Printf.sprintf "    let %s = Option.get %s in" i e)) varnames listnames) in 
         let* () = set_knowns prev_knowns in 
         let* () = add_knowns listnames in 
-        return ("(Some (" ^ get_opts ^ " " ^ body_str ^ "))")
+        return (Printf.sprintf "(try (\n%s\n    Some(%s))\n  with Invalid_argument _ ->  None)" get_opts body_str)
+        (*return ("(Some (" ^ get_opts ^ " " ^ body_str ^ "))")*)
       | _ -> 
         return "(* TODO: IterE with multiple-bindings and non-list iterator *)"
       end
@@ -855,13 +857,16 @@ let rec ocaml_of_prems (prems : prem list) : string t =
           return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
         | IterE ({ it = VarE lhs_var; _ }, (Opt, xes)) -> begin
           match xes with 
-          (* add case where RHS_str is NONE *)
+          (* x?{x <- `x?`} = y; it looks like `x?` just takes the value of y - translating to `x? = y` for now. *)
           | [(varname, listname)] -> 
-            let vardef = Printf.sprintf "  let %s = Option.get %s in\n" (sanitize_name varname.it) rhs_str in
+            let* liststr = ocaml_of_exp listname in 
+            let* () = add_known liststr in
+            return (Printf.sprintf "  let %s = %s in\n" liststr rhs_str)
+            (*let vardef = Printf.sprintf "  let %s = Option.get %s in\n" (sanitize_name varname.it) rhs_str in
             let* liststr = ocaml_of_exp listname in 
             let outflow_def = Printf.sprintf "  let %s = Some %s in" liststr (sanitize_name varname.it) in 
             let* () = add_known liststr in 
-            return (vardef ^ outflow_def)
+            return (vardef ^ outflow_def)*)
           | _ -> return "(* TODO: LetPr LHS is IterOpt with multiple bindings *)"
           end
         | SubE (lhs', t1, t2) -> 

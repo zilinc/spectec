@@ -1,14 +1,6 @@
 open Xl
 open Il.Ast
 
-(* FIXME: we project on ocaml lists/tuples not DL lists *)
-let projE lst n =
-  match lst with
-  | ListE es -> (match List.nth_opt es n with
-    | Some v -> v
-    | None -> failwith "list too short")
-  | _ -> failwith "projE: expected ListE"
-
 let is_letter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
 let is_capital c = 'A' <= c && c <= 'Z'
 
@@ -142,7 +134,7 @@ let unzip3 (lst : ('a * 'b * 'c) list) : ('a list * 'b list * 'c list) =
   in
   aux [] [] [] lst
 
-let unzip_opt1 opt_a = Some opt_a
+let unzip_opt1 opt_a = opt_a
 
 let unzip1M lst = lst 
 
@@ -190,14 +182,14 @@ let rec map2M (f : 'a -> 'b -> 'c option) (lst1 : 'a list) (lst2 : 'b list) : ('
       | None -> None 
       | Some ys -> Some (y :: ys)
 
-let map_opt1 (f : 'a -> 'b) (opt_a : 'a option) : 'b =
+let map_opt1 (f : 'a -> 'b) (opt_a : 'a option) : 'b option =
   match opt_a with
-  | Some a -> f a 
-  | None -> failwith "TODO: optional iterator with None"
+  | Some a -> Some (f a)
+  | None -> None
 
 (* monadic (optional) maps for generated code *)
 
-module TypeMap = Map.Make(String) 
+module Map = Map.Make(String) 
 module Set = Set.Make(String) 
 
 (* A State+Writer monad: 
@@ -206,7 +198,7 @@ module Set = Set.Make(String)
 module TypeM = struct
 
   type state = {
-    mutable typemap : Def.dl_def TypeMap.t; (* maps types to their definitions *)
+    mutable typemap : Def.dl_def Map.t; (* maps types to their definitions *)
     mutable typeconvfuncs : Set.t; (* keeps track of type-conversion functions *)
     mutable knowns : Set.t; (* need this to determine inflow/outflow *)
     mutable typecasts : string; (* type-casted function arguments to be moved to the body *)
@@ -240,9 +232,9 @@ module TypeM = struct
   let get_knowns : Set.t t = fun st -> st.knowns, st, ""
 
   let add_typedef (name : string) (typedef : Def.dl_def) : unit t =
-    modify (fun st -> { st with typemap = TypeMap.add name typedef st.typemap })
+    modify (fun st -> { st with typemap = Map.add name typedef st.typemap })
 
-  let get_typedef (typename : string) : Def.dl_def option t = fun st -> ((TypeMap.find_opt typename st.typemap), st, "")
+  let get_typedef (typename : string) : Def.dl_def option t = fun st -> ((Map.find_opt typename st.typemap), st, "")
 
   let get_freshvar () : string t = fun st ->
       let var = Printf.sprintf "v%d" st.freshvaridx in
@@ -338,7 +330,7 @@ module TypeM = struct
       foldM f acc' xs
 
   let eval m = 
-    let st0 = { typemap = TypeMap.empty; 
+    let st0 = { typemap = Map.empty; 
     typeconvfuncs = Set.empty;
     knowns = Set.empty;
     typecasts = "";
@@ -368,8 +360,38 @@ let val_or_fail = function
 
 (* Using the standard mplus operator defined as :
     Some v <|> RHS -> Some v
-    does not work because the RHS is evaluated eagerly. So if the RHS throws an error, it will be raised immediately. To delay the evaluation we pass a thunk instead. *)
+    Does not work because the RHS is evaluated eagerly. If the RHS throws an error, it will be raised immediately. 
+    To delay the evaluation we pass a thunk instead. *)
 let mplus (a : 'a option) (b : unit -> 'a option) : 'a option =
   match a with
   | Some _ -> a 
   | None -> b ()
+
+(* Copied from ds.ml for now; but we use the generated ocaml types instead of the reference interpreter types *)
+module Register (T : sig type t end) = struct
+  type t = T.t
+  let _register : t Map.t ref = ref Map.empty
+  let _latest = ""
+
+  let add name moduleinst = _register := Map.add name moduleinst !_register
+
+  let add_with_var var moduleinst =
+    let open Reference_interpreter.Source in
+    add _latest moduleinst;
+    match var with
+    | Some name -> add name.it moduleinst
+    | _ -> ()
+
+  exception ModuleNotFound of string
+
+  let find name =
+    match Map.find_opt name !_register with
+    | Some x -> x
+    | None -> raise @@ ModuleNotFound name
+
+  let get_module_name var =
+    let open Reference_interpreter.Source in
+    match var with
+    | Some name -> name.it
+    | None -> _latest
+end

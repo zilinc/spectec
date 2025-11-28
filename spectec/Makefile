@@ -17,7 +17,6 @@ ci: all
 
 .PHONY: build_ocamlprog
 
-# Default spec path (can be overridden on the command line)
 SPEC ?= ../specification/wasm-3.0/*
 
 build_ocamlprog: exe
@@ -30,13 +29,21 @@ build_ocamlprog: exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "
 	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 
+run_ocaml: 
+	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
+	@echo "#### compiling generated code"
+	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+	@echo "#### dl-interpreter code compiled successfully, running tests ... "
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+
 # Executable
 
 EXE = exe-$(NAME)/main.exe
 SRCDIR = src
 OUTDIR = _build/default/src
 ROOTDIR = ..
-INTERPRETERDIR = $(ROOTDIR)/interpreter/reference-interpreter
+INTERPRETERDIR = $(ROOTDIR)/interpreter
 CLONEDIR = src/backend-interpreter/reference-interpreter
 CLONERM = dune-project jslib
 RUNNER = $(ROOTDIR)/src/backend-animation/interpreter-ocaml

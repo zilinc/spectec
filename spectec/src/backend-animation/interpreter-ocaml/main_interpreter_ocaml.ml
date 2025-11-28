@@ -8,14 +8,14 @@ let capsfirst s =
 (* Generate a dune file for the dl_interpreter library *)
 let generate_dune_file () =
   let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; "construct_ocaml"] in
-  let libraries = ["backend_animation"; "backend_interpreter"] in
+  let libraries = ["backend_animation"; "backend_interpreter"; "reference_interpreter"] in
   (* Dune file content *)
   let lib_def = Printf.sprintf
     "(include_subdirs no)\n(library\n  (name interpreter_ocaml)\n  (modules %s)\n  (libraries %s))"
     (String.concat " " modules) (String.concat " " libraries)
   in
   let exec_def = Printf.sprintf
-    "(executable\n  (name dl_runner)\n  (modules dl_runner)\n  (libraries interpreter_ocaml))"
+    "(executable\n  (name dl_runner)\n  (modules dl_runner)\n  (libraries interpreter_ocaml reference_interpreter))"
   in
   let oc = open_out (basepath ^ "dune") in
   output_string oc (lib_def ^ "\n" ^ exec_def);
@@ -62,3 +62,21 @@ let generate_ocaml dl ocamlfile =
   write_file (basepath ^ ocaml_filename ^ ".ml") (sup_redundant ^ type_import ^ util_import ^ main);
   write_file (basepath ^ ocaml_filename ^ "_types.ml") types;
   write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ typeconv)
+
+(*let generate_runner inputfile = 
+  let cmds = Runner.get_commands inputfile in
+  let runner_content =
+    Printf.sprintf
+      "module Register = Backend_interpreter.Ds.Register(struct type t = module_ end)\n\
+      \ module Modules = Backend_interpreter.Ds.Register(struct type t = module_ end)\n\n\
+      \ let run_command cmd =\n\
+      \  match cmd.it with\n\
+      \ | Module (var_opt, def) ->\n\
+      \    Printf.printf \"[Defining module %%s...]\\n\" (Option.fold ~none:\"[_]\" ~some:(fun var -> var.it) var_opt);\n\
+      \    def\n\
+      \  ()\n"
+      inputfile
+  in
+  let oc = open_out (basepath ^ "dl_runner.ml") in
+  output_string oc runner_content;
+  close_out oc*)
