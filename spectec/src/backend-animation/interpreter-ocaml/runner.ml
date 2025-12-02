@@ -3,7 +3,7 @@ open Backend_interpreter.Ds
 open R.Script
 open R.Source
 
-let test_file = "./test-ocaml/sample.wat"
+let test_file = "./test-ocaml/sample.wast"
 let parser = R.Parse.Script.parse_file
 
 let module_of_def def =

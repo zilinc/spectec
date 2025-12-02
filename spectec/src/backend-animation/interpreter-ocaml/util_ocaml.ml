@@ -160,6 +160,7 @@ let rec map3 f xs ys zs =
   | x::xt, y::yt, z::zt -> (f x y z) :: map3 f xt yt zt
   | _ -> []
 
+(* monadic (optional) maps for generated code *)
 let rec map1M (f : 'a -> 'b option) (lst : 'a list) : ('b list option) =
   match lst with 
   | [] -> Some []
@@ -187,8 +188,6 @@ let map_opt1 (f : 'a -> 'b) (opt_a : 'a option) : 'b option =
   | Some a -> Some (f a)
   | None -> None
 
-(* monadic (optional) maps for generated code *)
-
 module Map = Map.Make(String) 
 module Set = Set.Make(String) 
 
@@ -199,6 +198,7 @@ module TypeM = struct
 
   type state = {
     mutable typemap : Def.dl_def Map.t; (* maps types to their definitions *)
+    mutable funcmap : unit Map.t; (* TEMPORARY: keep track of defined funcs *)
     mutable typeconvfuncs : Set.t; (* keeps track of type-conversion functions *)
     mutable knowns : Set.t; (* need this to determine inflow/outflow *)
     mutable typecasts : string; (* type-casted function arguments to be moved to the body *)
@@ -236,10 +236,16 @@ module TypeM = struct
 
   let get_typedef (typename : string) : Def.dl_def option t = fun st -> ((Map.find_opt typename st.typemap), st, "")
 
+  let add_funcdef (name : string) : unit t =
+    modify (fun st -> { st with funcmap = Map.add name () st.funcmap })
+
+  let func_is_defined (funname : string) : bool t = fun st ->
+    (Map.mem funname st.funcmap, st, "")
+
   let get_freshvar () : string t = fun st ->
-      let var = Printf.sprintf "v%d" st.freshvaridx in
-      st.freshvaridx <- st.freshvaridx + 1;
-      (var, st, "")
+    let var = Printf.sprintf "v%d" st.freshvaridx in
+    st.freshvaridx <- st.freshvaridx + 1;
+    (var, st, "")
 
   let get_typecasts () : string t =
     fun st -> (st.typecasts, st, "")
@@ -331,6 +337,7 @@ module TypeM = struct
 
   let eval m = 
     let st0 = { typemap = Map.empty; 
+    funcmap = Map.empty;
     typeconvfuncs = Set.empty;
     knowns = Set.empty;
     typecasts = "";
@@ -354,9 +361,9 @@ module NumConversions = struct
   let nat_of_rat (n : rat) : nat = int_of_float n
 end
 
-let val_or_fail = function 
+let val_or_fail name val_ = match val_ with
   | Some v -> v
-  | None -> failwith "No matching clause"
+  | None -> failwith (name ^ ": No matching clause")
 
 (* Using the standard mplus operator defined as :
     Some v <|> RHS -> Some v

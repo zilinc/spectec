@@ -4,6 +4,7 @@ open Interpreter_ocaml.Dl_codegen_util
 open Interpreter_ocaml.Construct_ocaml
 open Reference_interpreter.Script
 open Reference_interpreter.Source
+open Reference_interpreter.Run
 
 module Register = Backend_interpreter.Ds.Register(struct type t = moduleinst end)
 module Modules = Backend_interpreter.Ds.Register(struct type t = module_ end)
@@ -21,19 +22,29 @@ let globalstore = ref {
   uc_exns_store = []
 }
 
+let int_of_ocamlchar (char : DL.char) : int = match char with
+  | DL.C_pct__char n -> n
+let string_of_ocamlname = function
+  | DL.C_pct__name chars ->
+      chars |> List.map int_of_ocamlchar |> Util.Utf8.encode
+
 let externaddr_from_import import = failwith "TODO: implement externaddr_from_import"
 
-(*let get_export name moduleinst_name =
-  (Register.find moduleinst_name).uc_exports_moduleinst
-  |> List.find (fun export -> export.name = name)
+let get_export name moduleinst_name =
+  Printf.printf "Getting export %s from moduleinst %s...\n" name moduleinst_name;
+  let exports = (Register.find moduleinst_name).uc_exports_moduleinst in 
+  Printf.printf "number of exports: %d\n" (List.length exports);
+  List.iter (fun export -> Printf.printf "Export: %s\n" (string_of_ocamlname export.uc_name_exportinst)) exports;
+  List.find (fun export -> (string_of_ocamlname export.uc_name_exportinst) = name) exports
 
 let get_export_addr name moduleinst_name =
   let export_addr = get_export name moduleinst_name in
-  match export_addr with
-  | FUNC_externaddr funcaddr -> funcaddr
-  | _ -> failwith ("Export " ^ Utf8.decode name ^ " is not a function.")
+  Printf.printf "Getting funcaddr %s from moduleinst %s...\n" name moduleinst_name;
+  match export_addr.uc_addr_exportinst with
+  | DL.FUNC_externaddr funcaddr -> funcaddr
+  | _ -> failwith ("Export " ^ name ^ " is not a function.")
 
-let get_externaddr import =
+(*let get_externaddr import =
   let R.Ast.Import (module_name, item_name, _) = import.it in
   module_name
   |> Utf8.encode
@@ -54,29 +65,32 @@ let get_moduleinst config =
 let instantiate_helper (m : module_) = 
   Printf.printf "Calling instantiate_helper module...\n";
   let imports = match m with 
-  | MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) -> imports 
+  | MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) -> imports
   in 
   let externaddrs = List.map externaddr_from_import imports in
   let config' = instantiate !globalstore m externaddrs in 
   get_moduleinst config'
 
 let invoke_helper module_ funcname args = 
-  Printf.printf "[Invoking %s...]\n" funcname
-  (*invoke !globalstore 0 (List.map ocaml_of_value args)*)
+  Printf.printf "[Invoking %s...]\n" funcname;
+  let funcaddr = get_export_addr funcname module_ in
+  invoke !globalstore funcaddr (List.map ocaml_of_literal args)
 
 let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
-    (*invoke (Register.get_module_name var_opt) (Utf8.encode funcname) (List.map it args)*)
-    invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args
+    let config' = invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args in 
+    uc_steps config'
   | _ -> failwith "TODO: implement other actions"
 
 let test_assertion assertion =
   match assertion.it with
-  | AssertReturn (action, expected) -> run_action action
-    (*let result = run_action action |> elts_of_list |> List.map Construct.il_to_value in
-    Run.assert_results no_region result expected;
-    success*)
+  | AssertReturn (action, expected) ->
+    let C_pct__semi_pct__config (_, vals) = run_action action in 
+    List.iter (fun val_ -> Printf.printf "%s\n" (string_of_dlinstr val_)) vals;
+    let result = List.map val_of_ocaml vals in 
+    assert_results no_region result expected;
+    ()
   | _ -> failwith "TODO: implement other assertions"
 
 let run_command cmd = match cmd.it with 

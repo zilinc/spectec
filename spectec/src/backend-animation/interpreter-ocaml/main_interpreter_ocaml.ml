@@ -7,7 +7,7 @@ let capsfirst s =
 
 (* Generate a dune file for the dl_interpreter library *)
 let generate_dune_file () =
-  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; "construct_ocaml"] in
+  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; "construct_ocaml"; "builtin"] in
   let libraries = ["backend_animation"; "backend_interpreter"; "reference_interpreter"] in
   (* Dune file content *)
   let lib_def = Printf.sprintf

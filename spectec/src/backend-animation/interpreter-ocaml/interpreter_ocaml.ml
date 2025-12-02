@@ -962,16 +962,52 @@ let ocaml_of_typ_args t =
   | TupT _ -> ocaml_of_typ ~typearg:true t
   | _ -> let* argstr = ocaml_of_typ ~typearg:true t in return ("(" ^ argstr ^ ")")
 
+(* Hardcoded for now: i dont know how to deal with this
+   without creating a cyclic dependency otherwise 
+   & a lot of problems *)
+let build_stepcases step = 
+  let* instrs = get_typedef "instr" in 
+  let (TypeDef {it = (_, _, {it = InstD (_, _, instrsdt); _}::_); _}) = Option.get instrs in
+  let (VariantT instr_tcs) = instrsdt.it in
+  concat_mapM "\n" (fun (op, (_, t, _), _) -> 
+    let consname = sanitize_name ~typename:false (Util_ocaml.mixop_to_atom_str op) in 
+    let funcname = sanitize_name (Printf.sprintf "Step_%s/%s" step consname) in
+    let* is_defined = func_is_defined funcname in
+    let* args = ocaml_of_typ_args t in
+    let args_str = if args = "" then "" else " _" in 
+    if is_defined then begin
+      return (Printf.sprintf "  | %s_instr%s -> %s instrs" consname args_str funcname)
+    end else 
+      return (Printf.sprintf "  | %s_instr%s -> failwith \"%s not defined.\"" consname args_str funcname)
+  ) instr_tcs
+
+let build_dispatch step = 
+  let* instr_cases = build_stepcases step in
+  return ([Printf.sprintf
+  "dispatch_step_%s instr instrs : (instr list) =\n\
+  \  if (Builtin.use_step_%s instr) then match instr with \n%s\n\
+  \  else failwith \"Instruction is not a %s instruction.\"\n"
+  step step instr_cases step])
+
 (* Each clause is it's own function *)
 let ocaml_of_func_def (fdef : func_def) : string list t =
   let id, params, rettyp, clauses, _ = fdef.it in
   let name = sanitize_name id.it in
+  let* () = add_funcdef name in
   let params' = List.filter rmv_nonexp params in
   let num_params = List.length params' in 
   let argslist = if num_params = 0 then "()" else 
   String.concat " " (List.init num_params (fun i -> Printf.sprintf "a%d" i)) in
-  if (List.length clauses) = 0 then 
-  return [Printf.sprintf "%s %s = failwith \"Built-in functions not supported yet\"" name argslist] else begin
+  (* horrible way to do hardcoded things for now *)
+  if (List.length clauses) = 0 then begin 
+    match id.it with 
+    | "Step_read_throw_ref_handler" -> 
+      return [name ^ " = uc_step_read_slashthrow_ref\n"]
+    (* URGENT change this when access to internet lol *)
+    | "dispatch_step_pure" -> build_dispatch "pure"
+    | "dispatch_step_read" -> build_dispatch "read"
+    | _ -> return [name ^ " = Builtin." ^ name ^ "\n"]
+  end else begin
   let typevars = typevars_of_params params in
   (*Printf.printf "defining func: %s\n" id.it;
   Set.iter (Printf.printf "%s\n") typevars;*)
@@ -1016,7 +1052,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     clauses
   in
   let clause_names = String.concat "\n  <|> " clause_calls in
-  let main_func = (Printf.sprintf "%s %s =\n (%s) |> val_or_fail" name argslist clause_names) in
+  let main_func = (Printf.sprintf "%s %s =\n (%s) |> val_or_fail \"%s\"" name argslist clause_names name) in
   return (clause_funcs @ [main_func])
   end
 
@@ -1098,11 +1134,27 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
         return ("", "type " ^ typestrs)
     | (RuleDef _)::_ -> error (get_dl_def_region def) "Recursive RuleDef: should not happen"
 
+(* Not sure what the most efficient way of doing step/dispatches is for now.
+Right now I try to match Zilin's spec so I need a string representation of instructions to be 
+able to call the right step_(pure or read or table)/<instr_name> *)
+let gen_instr_strs () = 
+  let* instrs = get_typedef "instr" in 
+  let (TypeDef {it = (_, _, {it = InstD (_, _, instrsdt); _}::_); _}) = Option.get instrs in
+  let (VariantT instr_tcs) = instrsdt.it in
+  let* cases = concat_mapM "\n" (fun (op, (_, t, _), _) -> 
+    let consname = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str op) in 
+    let* args = ocaml_of_typ_args t in
+    let args_str = if args = "" then "" else " _" in 
+    return (Printf.sprintf "| %s_instr%s -> \"%s\"" consname args_str consname)
+  ) instr_tcs in
+  tell (Printf.sprintf "let instr_to_string = function\n%s\n" cases)
+
 let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
   let* def_strs : (string * string) list = mapM ocaml_of_dl_def defs in
   let func_defs, type_defs = List.split def_strs in
   let func_str = concat_nonempty "\n" func_defs in
   let type_str = concat_nonempty "\n" type_defs in
+  let* () = gen_instr_strs () in
   return (func_str, type_str)
 
 let generate_ocaml (dl_defs : dl_def list) : string * string * string =

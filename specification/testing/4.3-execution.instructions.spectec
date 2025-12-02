@@ -230,13 +230,13 @@ rule Step_read/call_ref-null:
 ;;   -- if a = |$exninst(z)|
 ;;   -- if exn = {TAG $tagaddr(z)[x], FIELDS val^n}
 ;; 
-;; rule Step_read/throw_ref-null:
-;;   z; (REF.NULL ht) THROW_REF  ~>  TRAP
-;; 
-;; rule Step_read/throw_ref-instrs:
-;;   z; val* (REF.EXN_ADDR a) THROW_REF instr*  ~>  (REF.EXN_ADDR a) THROW_REF
-;;   -- if val* =/= eps \/ instr* =/= eps
-;; 
+rule Step_read/throw_ref-null:
+  z; (REF.NULL ht) THROW_REF  ~>  TRAP
+
+rule Step_read/throw_ref-instrs:
+  z; val* (REF.EXN_ADDR a) THROW_REF instr*  ~>  (REF.EXN_ADDR a) THROW_REF
+  -- if val* =/= eps \/ instr* =/= eps
+
 ;; rule Step_read/throw_ref-label:
 ;;   z; (LABEL_ n `{instr'*} (REF.EXN_ADDR a) THROW_REF)  ~>  (REF.EXN_ADDR a) THROW_REF
 ;; 
