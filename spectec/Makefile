@@ -24,7 +24,7 @@ build_ocamlprog: exe
 	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
 	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
 	cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
-	./spectec $(SPEC) --animate --generate-ocaml "dl_codegen" --print-dl > dl.log
+	./spectec $(SPEC) --animate --inline --generate-ocaml "dl_codegen"
 	@echo "#### spectec finished, compiling generated code"
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "

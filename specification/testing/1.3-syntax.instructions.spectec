@@ -226,23 +226,23 @@ syntax instr/parametric hint(desc "parametric instruction") =
 ;;   | IF blocktype instr* ELSE instr*
 ;;   | ...
 ;; 
-;; syntax instr/br hint(desc "branch instruction") = ...
-;;   | BR labelidx
+syntax instr/br hint(desc "branch instruction") = ...
+  | BR labelidx
 ;;   | BR_IF labelidx
 ;;   | BR_TABLE labelidx* labelidx
 ;;   | BR_ON_NULL labelidx
 ;;   | BR_ON_NON_NULL labelidx
 ;;   | BR_ON_CAST labelidx reftype reftype
 ;;   | BR_ON_CAST_FAIL labelidx reftype reftype
-;;   | ...
+  | ...
 ;; 
 syntax instr/call hint(desc "function instruction") = ...
   | CALL funcidx
   | CALL_REF typeuse
 ;;   | CALL_INDIRECT tableidx typeuse
-;;   | RETURN
+  | RETURN
 ;;   | RETURN_CALL funcidx
-;;   | RETURN_CALL_REF typeuse
+  | RETURN_CALL_REF typeuse
 ;;   | RETURN_CALL_INDIRECT tableidx typeuse
   | ...
 ;; 

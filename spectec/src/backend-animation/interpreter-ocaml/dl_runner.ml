@@ -80,6 +80,8 @@ let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
     let config' = invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args in 
+    let C_pct__semi_pct__config (_, instrs) = config' in 
+    List.iter (fun instr -> Printf.printf "%s\n" (string_of_dlinstr instr)) instrs;
     uc_steps config'
   | _ -> failwith "TODO: implement other actions"
 

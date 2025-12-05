@@ -66,47 +66,47 @@ def $Step_read_throw_ref_handler           hint(builtin)
 
 
 ;;;;;;;;;;;;;;;;;;; LABEL_
-;; def $step_ctxt(z; (LABEL_ n `{instr*} val*)) = z; val*
-;; ;; br
-;; def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val^n instr'*
-;;     -- if $find_first_instr(instr''*) = (val'* val^n, BR l, instr*)
-;;     -- if l = 0
-;; def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* (BR $(l - 1))
-;;     -- if $find_first_instr(instr''*) = (val*, BR l, instr*)
-;;     -- if l > 0
-;; ;; return_call_ref
-;; def $step_ctxt(z; (LABEL_ k `{instr'*} instr''*)) = z; val* (RETURN_CALL_REF yy)
-;;     -- if $find_first_instr(instr''*) = (val*, RETURN_CALL_REF yy, instr*)
-;; ;; return
-;; def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* RETURN
-;;     -- if $find_first_instr(instr''*) = (val*, RETURN, instr*)
-;; ;; throw_ref
-;; def $step_ctxt(z; (LABEL_ n `{instr'*} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
-;; ;; trap
-;; def $step_ctxt(z; (LABEL_ n `{instr'*} TRAP)) = z; TRAP
-;; ;; ctxt-label
-;; def $step_ctxt(z; (LABEL_ n `{instr_0*} instr*)) = z'; (LABEL_ n `{instr_0*} instr'*)
-;;   -- Step: z; instr* ~> z'; instr'*
-;; ;;;;;;;;;;;;;;;;;;; FRAME_
-;; def $step_ctxt(z; (FRAME_ n `{f} val^n)) = z; val^n
-;; ;; return_call_ref
-;; def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; TRAP
-;;     -- if $find_first_instr(instr''*) = (val* (REF.NULL ht), RETURN_CALL_REF yy, instr*)
-;; def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)
-;;     -- if $find_first_instr(instr''*) = (val''* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, instr*)
-;;     -- if val''* = val'* val^n
-;;     ----
-;;     -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
-;; ;; return
-;; def $step_ctxt(z; (FRAME_ n `{f} instr''*)) = z; val^n
-;;     -- if $find_first_instr(instr''*) = (val'* val^n, RETURN, instr*)
-;; ;; throw_ref
-;; def $step_ctxt(z; (FRAME_ n `{f} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
-;; ;; trap
-;; def $step_ctxt(z; (FRAME_ n `{f} TRAP)) = z; TRAP
-;; ;; ctxt-frame
-;; def $step_ctxt(s; f; (FRAME_ n `{f'} instr*)) = s'; f; (FRAME_ n `{f''} instr'*)
-;;   -- Step: s; f'; instr* ~> s'; f''; instr'*
+def $step_ctxt(z; (LABEL_ n `{instr*} val*)) = z; val*
+;; br
+def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val^n instr'*
+    -- if $find_first_instr(instr''*) = (val'* val^n, BR l, instr*)
+    -- if l = 0
+def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* (BR $(l - 1))
+    -- if $find_first_instr(instr''*) = (val*, BR l, instr*)
+    -- if l > 0
+;; return_call_ref
+def $step_ctxt(z; (LABEL_ k `{instr'*} instr''*)) = z; val* (RETURN_CALL_REF yy)
+    -- if $find_first_instr(instr''*) = (val*, RETURN_CALL_REF yy, instr*)
+;; return
+def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* RETURN
+    -- if $find_first_instr(instr''*) = (val*, RETURN, instr*)
+;; throw_ref
+def $step_ctxt(z; (LABEL_ n `{instr'*} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
+;; trap
+def $step_ctxt(z; (LABEL_ n `{instr'*} TRAP)) = z; TRAP
+;; ctxt-label
+def $step_ctxt(z; (LABEL_ n `{instr_0*} instr*)) = z'; (LABEL_ n `{instr_0*} instr'*)
+  -- Step: z; instr* ~> z'; instr'*
+;;;;;;;;;;;;;;;;;;; FRAME_
+def $step_ctxt(z; (FRAME_ n `{f} val^n)) = z; val^n
+;; return_call_ref
+def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; TRAP
+    -- if $find_first_instr(instr''*) = (val* (REF.NULL ht), RETURN_CALL_REF yy, instr*)
+def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)
+    -- if $find_first_instr(instr''*) = (val''* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, instr*)
+    -- if val''* = val'* val^n
+    ----
+    -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
+;; return
+def $step_ctxt(z; (FRAME_ n `{f} instr''*)) = z; val^n
+    -- if $find_first_instr(instr''*) = (val'* val^n, RETURN, instr*)
+;; throw_ref
+def $step_ctxt(z; (FRAME_ n `{f} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
+;; trap
+def $step_ctxt(z; (FRAME_ n `{f} TRAP)) = z; TRAP
+;; ctxt-frame
+def $step_ctxt(s; f; (FRAME_ n `{f'} instr*)) = s'; f; (FRAME_ n `{f''} instr'*)
+  -- Step: s; f'; instr* ~> s'; f''; instr'*
 ;; ;;;;;;;;;;;;;;;;;;; HANDLER_
 ;; def $step_ctxt(z; (HANDLER_ n `{catch*} val*)) = z; val*
 ;; ;; br
@@ -139,11 +139,22 @@ def $reduce(s; f; instr*) = eps
 def $step(config) : config
 def $step(config) = config'  -- if $reduce(config) = config'
 
-def $Steps(config) : config
-def $Steps(config) = config_2
+;; originally, this was "steps" - 
+;; but "Steps" is re-directed to call "steps" so i'm just changing this to "Steps" to simulate that behaviour but I may be wrong  
+;; def $Steps(config) : config
+;; def $Steps(config) = config_2
+;;     -- if $reduce(config) = config_1
+;;     -- if $Steps(config_1) = config_2
+;; def $Steps(config) = config
+;;     -- if $reduce(config) = eps
+;;     ;; -- otherwise
+
+;; original 
+def $steps(config) : config
+def $steps(config) = config_2
     -- if $reduce(config) = config_1
-    -- if $Steps(config_1) = config_2
-def $Steps(config) = config
+    -- if $steps(config_1) = config_2
+def $steps(config) = config
     -- if $reduce(config) = eps
     ;; -- otherwise
 

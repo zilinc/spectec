@@ -172,16 +172,16 @@ rule Step_read/call:
 
 rule Step_read/call_ref-null:
   z; (REF.NULL ht) (CALL_REF yy)  ~>  TRAP
-;; 
-;; rule Step_read/call_ref-func:
-;;   z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)  ~>  (FRAME_ m `{f} (LABEL_ m `{eps} instr*))
-;;   ----
-;;   -- if $funcinst(z)[a] = fi
-;;   -- Expand: fi.TYPE ~~ FUNC t_1^n -> t_2^m
-;;   -- if fi.CODE = FUNC x (LOCAL t)* (instr*)
-;;   -- if f = {LOCALS val^n ($default_(t))*, MODULE fi.MODULE}
-;; 
-;; 
+
+rule Step_read/call_ref-func:
+  z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)  ~>  (FRAME_ m `{f} (LABEL_ m `{eps} instr*))
+  ----
+  -- if $funcinst(z)[a] = fi
+  -- Expand: fi.TYPE ~~ FUNC t_1^n -> t_2^m
+  -- if fi.CODE = FUNC x (LOCAL t)* (instr*)
+  -- if f = {LOCALS val^n ($default_(t))*, MODULE fi.MODULE}
+
+
 ;; rule Step_read/return_call:
 ;;   z; (RETURN_CALL x)  ~>  (REF.FUNC_ADDR a) (RETURN_CALL_REF $funcinst(z)[a].TYPE)
 ;;   -- if $moduleinst(z).FUNCS[x] = a
@@ -299,13 +299,13 @@ rule Step_read/throw_ref-instrs:
 ;;   -- if $unop_(nt, unop, c_1) = eps
 ;; 
 ;; 
-;; rule Step_pure/binop-val:
-;;   (CONST nt c_1) (CONST nt c_2) (BINOP nt binop)  ~>  (CONST nt c)
-;;   -- if c <- $binop_(nt, binop, c_1, c_2)
-;; 
-;; rule Step_pure/binop-trap:
-;;   (CONST nt c_1) (CONST nt c_2) (BINOP nt binop)  ~>  TRAP
-;;   -- if $binop_(nt, binop, c_1, c_2) = eps
+rule Step_pure/binop-val:
+  (CONST nt c_1) (CONST nt c_2) (BINOP nt binop)  ~>  (CONST nt c)
+  -- if c <- $binop_(nt, binop, c_1, c_2)
+
+rule Step_pure/binop-trap:
+  (CONST nt c_1) (CONST nt c_2) (BINOP nt binop)  ~>  TRAP
+  -- if $binop_(nt, binop, c_1, c_2) = eps
 ;; 
 ;; 
 ;; rule Step_pure/testop:

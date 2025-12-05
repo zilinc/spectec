@@ -55,7 +55,7 @@ let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfi
   ) raw replacements in
   match replaced with
   | "match" | "type" | "let" | "val" | "list" | "in" | "module" -> replaced ^ "_"
-  | _ -> replaced
+  | _ -> replaced 
 
 let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
   let lowercase name = sanitize_name ~typename:false ~recordfield name in

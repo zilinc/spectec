@@ -137,8 +137,8 @@ syntax frame hint(desc "frame") hint(macro "%" "A%") =
 syntax instr/admin hint(desc "administrative instruction") =
   | ...
   | addrref
-;;   | LABEL_ n `{instr*} instr*   hint(show LABEL_%#% %%)
-;;   | FRAME_ n `{frame} instr*    hint(show FRAME_%#% %%)
+  | LABEL_ n `{instr*} instr*   hint(show LABEL_%#% %%)
+  | FRAME_ n `{frame} instr*    hint(show FRAME_%#% %%)
 ;;   | HANDLER_ n `{catch*} instr* hint(show HANDLER_%#% %%)
   | TRAP
 

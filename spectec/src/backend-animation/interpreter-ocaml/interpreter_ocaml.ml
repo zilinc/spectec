@@ -1030,6 +1030,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
         let* argnames = if num_params = 0 then return "()" else (ocaml_of_args ~typearg:false ~funcdef:true params) in
         let* typecasts = get_typecasts () in
         let* () = set_typecasts "" in
+        (* debugging stuff remove later
+        let debug = Printf.sprintf "Printf.printf \"calling clause_%s_%d\\n\";" name i in*)
         let bodycode = typecasts ^ prems_block in
         if bodycode = "" then
           return (Printf.sprintf "clause_%s_%d %s : (%s) option = Some (%s)\n" name i argnames rettypstr retvalue)
@@ -1111,7 +1113,8 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
   | FuncDef fdef -> 
     let* funcslist = ocaml_of_func_def fdef in 
     let funcstr = "let " ^ (String.concat "\nlet " funcslist) in
-    return (funcstr, "")
+    let id, _, _, _, _ = fdef.it in
+    return (funcstr ^ "\n", "")
   | RecDef dl_defs ->
     match dl_defs with
     | [] -> return ("", "")
@@ -1122,7 +1125,11 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
       let* func_blocks = mapM ocaml_of_func_def fdefs in
       let func_strs = List.concat func_blocks in  
       if func_strs = [] then return ("", "") else
-      return ("let rec " ^ String.concat "\nand " func_strs, "")
+      (* hardcoded - we want "Steps" to redirect to "steps" immediately. defining it in another file will cause a cyclic dependency and we have to define it after "steps" is defined but before it is called *)
+      let fdef = List.hd fdefs in
+      let id, _, _, _, _ = fdef.it in
+      let steps = if (sanitize_name id.it) = "steps" then " let uc_steps = steps\n" else "" in
+      return ("let rec " ^ String.concat "\nand " func_strs ^ "\n" ^ steps, "")
     | (TypeDef _)::_ -> let typedefs = List.map (fun def -> match def with
         | TypeDef typedef -> typedef
         | _ -> error (get_dl_def_region def) "RecDef not consistent: should not happen"
