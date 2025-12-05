@@ -136,11 +136,10 @@ def $reduce(s; f; instr*) = eps
 ;;     -- if $find_first_instr(instr*) = (val*, instr_1, instr_1'*)
 ;;     -- if $dispatch_reduce(instr_1, s; f; val* instr_1) = eps
 
-def $step(config) : config
-def $step(config) = config'  -- if $reduce(config) = config'
-
-;; originally, this was "steps" - 
-;; but "Steps" is re-directed to call "steps" so i'm just changing this to "Steps" to simulate that behaviour but I may be wrong  
+;; "Step(s)" is re-directed to call "step(s)" so i'm just changing these to "Step(s)" to simulate that behaviour but I may be wrong  
+;; def $Step(config) : config
+;; def $Step(config) = config'  -- if $reduce(config) = config'
+;; 
 ;; def $Steps(config) : config
 ;; def $Steps(config) = config_2
 ;;     -- if $reduce(config) = config_1
@@ -150,6 +149,10 @@ def $step(config) = config'  -- if $reduce(config) = config'
 ;;     ;; -- otherwise
 
 ;; original 
+;;
+def $step(config) : config
+def $step(config) = config'  -- if $reduce(config) = config'
+
 def $steps(config) : config
 def $steps(config) = config_2
     -- if $reduce(config) = config_1
