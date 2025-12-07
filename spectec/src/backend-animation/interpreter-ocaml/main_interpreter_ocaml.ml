@@ -58,10 +58,11 @@ let generate_ocaml dl ocamlfile =
   let main, types, typeconv = Interpreter_ocaml.generate_ocaml dl in
   let type_import = Printf.sprintf "open %s_types\n" (capsfirst ocaml_filename) in
   let util_import = Printf.sprintf "open %s_util\n" (capsfirst ocaml_filename) in
+  let util_ocaml = Printf.sprintf "open Backend_animation.Util_ocaml\n" in
   let sup_redundant = "[@@@ocaml.warning \"-11\"]\n\n" in
   write_file (basepath ^ ocaml_filename ^ ".ml") (sup_redundant ^ type_import ^ util_import ^ main);
   write_file (basepath ^ ocaml_filename ^ "_types.ml") types;
-  write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ typeconv)
+  write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ util_ocaml ^ typeconv)
 
 (*let generate_runner inputfile = 
   let cmds = Runner.get_commands inputfile in

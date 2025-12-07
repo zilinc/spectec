@@ -11,7 +11,8 @@ open TypeM
 
 exception CannotAnimate
 
-(* used to catch refutable patterns inside iterators, so the maps may be made monadic as well *)
+(* used to catch refutable patterns inside iterators, so the maps may be made monadic as well 
+not used anymore because we just use exceptions i think *)
 let rec is_monadic (prems : prem list) = 
   List.exists (fun p -> match p.it with 
     | LetPr (lhs_exp, _, _) -> begin match lhs_exp.it with
@@ -39,6 +40,7 @@ let typevars_of_params (ps : param list) : Set.t =
        | _ -> None)
   |> Set.of_list
 
+(* todo: add support for nested cons *)
 let collect_vars (e : exp) : string list t = match e.it with 
   | VarE id -> 
     let* () = add_known id.it in 
@@ -208,7 +210,7 @@ let generate_type_arms t1name t2name td1 td2 =
             let cons1 = (sanitize_name ~typecons:true ~typename:false consname) ^ "_" ^ t1name in
             let cons2 = (sanitize_name ~typecons:true ~typename:false consname) ^ "_" ^ t2name in
             let _, argstr, retstr = get_cons_args typargs in
-            Printf.sprintf "  | %s -> Some (%s)" (append_sep cons1 argstr " ") (append_sep cons2 argstr " ")
+            Printf.sprintf "  | %s -> %s" (append_sep cons1 argstr " ") (append_sep cons2 argstr " ")
           ) common_consts in
         String.concat "\n" arms (*^ "\n  | _ -> None\n"*)
       | _ -> "TODO: non-variant type conversion not implemented yet" in
@@ -250,9 +252,9 @@ let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
     let type_defs = List.map typedef_of_dl_def dl_defs in
     match type_defs with
     | [Some _lhs_def; Some _rhs_def] ->
-      let func = Printf.sprintf "let %s_of_%s (arg : %s) : (%s option) =\n  match arg with\n" rhs lhs lhs rhs in
+      let func = Printf.sprintf "let %s_of_%s (arg : %s) : %s =\n  match arg with\n" rhs lhs lhs rhs in
       let arms = generate_type_arms lhs rhs _lhs_def.it _rhs_def.it in
-      let failcase = "  | _ -> None\n" in 
+      let failcase = "\n  | _ -> raise SubtypingFailed\n" in 
       tell (func ^ arms ^ failcase)
     | [None; _] -> error t1.at (Printf.sprintf "Type %s: appears in sub/super type but is not defined" lhs)
     | [_; None] -> error t2.at (Printf.sprintf "Type %s: appears in sub/super type but is not defined" rhs)
@@ -315,14 +317,17 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     in 
     let* typ1str = ocaml_of_typ typ1 in
     let* typ2str = ocaml_of_typ typ2 in
-    let* () =  add_typecast ("  let* " ^ e1str ^ " = " ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ freshvarname ^ " in") in
+    let* () =  add_typecast ("  let " ^ e1str ^ " = " ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ freshvarname ^ " in") in
     return (Printf.sprintf "(%s : %s)" freshvarname typ2str)
   | CaseE (mixop, e1) -> 
-    (* todo: deal with nested cons *)
+    (* todo: deal with nested cons - i think this should be fixed *)
     let* cased_vars = collect_vars e1 in
     let newvararity = List.length cased_vars in
     let lhsvars = if (newvararity = 0) then "()" else 
-      String.concat "," cased_vars 
+      (String.concat "," cased_vars)
+    in
+    let lhsvars' = if (newvararity = 0) then "" else 
+      "(" ^ (String.concat "," cased_vars) ^ ")"
     in
     let* freshvar = get_freshvar () in
     let* mixopstr = ocaml_of_mixop mixop e.note in
@@ -330,7 +335,9 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let retvals = fresh_tuple newvararity in
     let mixopargs = if (newvararity = 0) then "" else retvals in 
     let uncasing = Printf.sprintf "  let* %s = match %s with\n  | %s -> Some %s\n  | _ -> None\n  in" lhsvars freshvar (append_sep mixopstr mixopargs " ") retvals in
-    let* () = add_typecast uncasing in
+    let uncasing' = Printf.sprintf "  let %s = %s in" (append_sep mixopstr lhsvars' " ") freshvar in
+    (*let* () = add_typecast uncasing in*)
+    let* () = add_typecast uncasing' in
     return (Printf.sprintf "(%s : %s)" freshvar typannot)
   | _ -> raise CannotAnimate
   end else match e.it with
@@ -472,7 +479,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let* e1str = ocaml_of_exp e1 in
     let* typ1str = ocaml_of_typ typ1 in
     let* typ2str = ocaml_of_typ typ2 in
-    return ("(Option.get (" ^ typ2str ^ "_of_" ^ typ1str ^ " " ^ e1str ^ "))")
+    return ("(" ^ typ2str ^ "_of_" ^ typ1str ^ " " ^ e1str ^ ")")
   | CvtE (e1, typ1, typ2) ->
     let* e1str = ocaml_of_exp e1 in
     return ("(" ^ ocaml_of_numtyp typ2 ^ "_of_" ^ ocaml_of_numtyp typ1 ^ " " ^ e1str ^ ")")
@@ -834,7 +841,15 @@ let rec ocaml_of_prems (prems : prem list) : string t =
         | VarE id ->
           return (Printf.sprintf "  let %s = %s in" lhs_str rhs_str)
         | CaseE (mixop, e) -> begin
-          let let_lhs = match vars with
+          (* this can fail and raise a Match Failure exception, which will be caught by the try_clauses function *)
+          let let_lhs = String.concat ", " vars in
+          let* rhstypcons = resolve_variant rhs.note in 
+          let* rhstyp = ocaml_of_typ ~consannot:true (Option.get rhstypcons) in
+          let mixopstr = (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop)) ^ "_" ^ rhstyp in
+          let indent = "    " in 
+          return (Printf.sprintf "  let %s (%s) = %s in" mixopstr let_lhs rhs_str)
+          end
+          (*let let_lhs = match vars with
             | []   -> error p.at "LetPr with no bound vars: shouldn't happen"
             | [v]  -> v
             | vs   -> String.concat ", " vs
@@ -851,10 +866,11 @@ let rec ocaml_of_prems (prems : prem list) : string t =
           let indent = "    " in 
           let* retvalues = gen_case_arms e in
           return (Printf.sprintf "  let* %s = match %s with\n%s| %s %s -> %s\n%s| _ -> %s\n  in" let_lhs rhs_str indent mixopstr newvars retvalues indent failcase)
-          end
+          end*)
         | OptE (Some {it = VarE id; _}) -> 
+          (* Option.get can raise (not sure?) Invalid_argument but this will be caught by the try_clauses function *)
           let lhs_str = sanitize_name id.it in 
-          return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
+          return (Printf.sprintf "  let %s = Option.get (%s) in" lhs_str rhs_str)
         | IterE ({ it = VarE lhs_var; _ }, (Opt, xes)) -> begin
           match xes with 
           (* x?{x <- `x?`} = y; it looks like `x?` just takes the value of y - translating to `x? = y` for now. *)
@@ -874,12 +890,12 @@ let rec ocaml_of_prems (prems : prem list) : string t =
           let* t1name = ocaml_of_typ t1 in
           let* t2name = ocaml_of_typ t2 in
           let* lhs_str = ocaml_of_exp lhs' in
-          return (Printf.sprintf "  let* %s = %s_of_%s (%s) in" lhs_str t1name t2name rhs_str)
+          return (Printf.sprintf "  let %s = %s_of_%s (%s) in" lhs_str t1name t2name rhs_str)
         | _ -> error p.at "LetPr ill-formed: LHS must be one of: variable, optional value/iterator, cased expression."
       end 
     | IfPr cond ->
         let* cond_str = ocaml_of_exp cond in
-        return (Printf.sprintf "  if not (%s) then None else" cond_str)
+        return (Printf.sprintf "  if not (%s) then raise CondFailed else" cond_str)
     | RulePr _ -> return "(* TODO: RulePr *)"
     | ElsePr -> return ""
     | IterPr (prems, (iter, iterlist)) -> begin 
@@ -893,7 +909,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
       let* () = add_knowns inflows in
       (* this will add new things to knowns, but their scope is limited *)
       let* prem_strs = ocaml_of_prems prems in
-      let monadic = is_monadic prems in
+      (*let monadic = is_monadic prems in*)
       let* new_knowns = get_knowns in 
       let partition id_opt = 
         List.partition (fun (id', e) -> 
@@ -947,9 +963,9 @@ let rec ocaml_of_prems (prems : prem list) : string t =
         let inflowsize = if idx_list = "" then (List.length inflows + 1) else (List.length inflows) in
         if (List.length outflows) = 0 then 
           (* if there are no outflows, the nested premises must be "ifs" *)
-          return (def_idx_list ^ Printf.sprintf "  let* () = map%d (fun %s -> %s Some ()) %s in" (List.length inflows) inflow_vars prem_strs inflow_lists)
-        else if monadic then 
-          return (def_idx_list ^ Printf.sprintf "  let* %s = unzip%dM (map%dM (fun %s -> %s Some (%s)) %s) in" outflow_lists (List.length outflows) (List.length inflows) inflow_vars prem_strs outflow_vars inflow_lists) 
+          return (def_idx_list ^ Printf.sprintf "  let () = map%d (fun %s -> %s Some ()) %s in" (List.length inflows) inflow_vars prem_strs inflow_lists)
+        (*else if monadic then 
+          return (def_idx_list ^ Printf.sprintf "  let* %s = unzip%dM (map%dM (fun %s -> %s Some (%s)) %s) in" outflow_lists (List.length outflows) (List.length inflows) inflow_vars prem_strs outflow_vars inflow_lists)*)
         else
           return (def_idx_list ^ Printf.sprintf "  let %s = unzip%d (map%d (fun %s -> %s %s) %s) in" outflow_lists (List.length outflows) (List.length inflows) inflow_vars prem_strs outflow_vars inflow_lists) 
         end     
@@ -998,6 +1014,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
   let num_params = List.length params' in 
   let argslist = if num_params = 0 then "()" else 
   String.concat " " (List.init num_params (fun i -> Printf.sprintf "a%d" i)) in
+  let argslist' = if num_params = 0 then "" else 
+  String.concat " " (List.init num_params (fun i -> Printf.sprintf "a%d" i)) in
   (* horrible way to do hardcoded things for now *)
   if (List.length clauses) = 0 then begin 
     match id.it with 
@@ -1034,13 +1052,13 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
         let debug = Printf.sprintf "Printf.printf \"calling clause_%s_%d\\n\";" name i in*)
         let bodycode = typecasts ^ prems_block in
         if bodycode = "" then
-          return (Printf.sprintf "clause_%s_%d %s : (%s) option = Some (%s)\n" name i argnames rettypstr retvalue)
+          return (Printf.sprintf "clause_%s_%d %s : %s = %s\n" name i argnames rettypstr retvalue)
         else
-          return (Printf.sprintf "clause_%s_%d %s : (%s) option =\n%s\n  Some (%s)\n" name i argnames rettypstr bodycode retvalue))
+          return (Printf.sprintf "clause_%s_%d %s : %s =\n%s\n  %s\n" name i argnames rettypstr bodycode retvalue))
       (function 
       | CannotAnimate ->
         let argnames  = String.concat " " (List.init (List.length params) (fun i -> Printf.sprintf "unanimated%d" i)) in
-        return (Printf.sprintf "clause_%s_%d %s = None\n" name i argnames)
+        return (Printf.sprintf "clause_%s_%d %s = raise (UnanimatedArg \"%s\")\n" name i argnames name)
       | e -> raise e)
   ) clauses
   in
@@ -1053,9 +1071,16 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
        else Printf.sprintf "(fun () -> clause_%s_%d %s)" name i argslist)
     clauses
   in
+  let clause_calls' = List.mapi
+    (fun i _ -> Printf.sprintf "clause_%s_%d" name i)
+    clauses
+  in
   let clause_names = String.concat "\n  <|> " clause_calls in
+  let clause_names' = String.concat ";\n  " clause_calls' in
+  let err_msg = "function: " ^ name in  
+  let main_func' = Printf.sprintf "%s %s = try_clauses_%d [\n  %s\n] %s \"%s\"" name argslist num_params clause_names' argslist' err_msg in 
   let main_func = (Printf.sprintf "%s %s =\n (%s) |> val_or_fail \"%s\"" name argslist clause_names name) in
-  return (clause_funcs @ [main_func])
+  return (clause_funcs @ [main_func'])
   end
 
 (* ignoring the dependent type annotations for now *)

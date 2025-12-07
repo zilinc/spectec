@@ -402,3 +402,82 @@ module Register (T : sig type t end) = struct
     | Some name -> name.it
     | None -> _latest
 end
+
+(* a clause may fail when
+   * an expression does not match a pattern, i.e. in `let pattern = exp`
+     (Match_failure)
+   * subtyping/supertyping failure (SubtypingFailed)
+   * an if premise is not satisfied (CondFailed)
+   * a nested function call fails (NoMatchingClause) 
+   * an option type is none (not sure if this can happen) *)
+
+exception SubtypingFailed
+exception NoMatchingClause of string
+exception CondFailed
+exception UnanimatedArg of string
+
+(* maybe I can just generate these *)
+let rec try_clauses_0 clauses err_msg = 
+  match clauses with 
+  | [] -> raise (NoMatchingClause err_msg)
+  | cl :: rest -> 
+    try cl () with 
+    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
+    | CondFailed | Invalid_argument _ -> try_clauses_0 rest err_msg
+    | e -> raise e
+
+let rec try_clauses_1 clauses arg err_msg = 
+  match clauses with 
+  | [] -> raise (NoMatchingClause err_msg)
+  | cl :: rest -> 
+    try cl arg with 
+    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
+    | CondFailed | Invalid_argument _ -> try_clauses_1 rest arg err_msg
+    | e -> raise e
+
+let rec try_clauses_2 clauses arg1 arg2 err_msg = 
+  match clauses with 
+  | [] -> raise (NoMatchingClause err_msg)
+  | cl :: rest -> 
+    try cl arg1 arg2 with 
+    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
+    | CondFailed | Invalid_argument _ -> try_clauses_2 rest arg1 arg2 err_msg
+    | e -> raise e
+
+let rec try_clauses_3 clauses arg1 arg2 arg3 err_msg = 
+  match clauses with 
+  | [] -> raise (NoMatchingClause err_msg)
+  | cl :: rest -> 
+    try cl arg1 arg2 arg3 with 
+    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
+    | CondFailed | Invalid_argument _ -> try_clauses_3 rest arg1 arg2 arg3 err_msg
+    | e -> raise e
+
+let rec try_clauses_4 clauses arg1 arg2 arg3 arg4 err_msg = 
+  match clauses with 
+  | [] -> raise (NoMatchingClause err_msg)
+  | cl :: rest -> 
+    try cl arg1 arg2 arg3 arg4 with 
+    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
+    | CondFailed | Invalid_argument _ -> try_clauses_4 rest arg1 arg2 arg3 arg4 err_msg
+    | e -> raise e
+
+let rec try_clauses_5 clauses arg1 arg2 arg3 arg4 arg5 err_msg = 
+  match clauses with 
+  | [] -> raise (NoMatchingClause err_msg)
+  | cl :: rest -> 
+    try cl arg1 arg2 arg3 arg4 arg5 with 
+    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
+    | CondFailed | Invalid_argument _ -> try_clauses_5 rest arg1 arg2 arg3 arg4 arg5 err_msg
+    | e -> raise e
+
+let rec try_clauses_6 clauses arg1 arg2 arg3 arg4 arg5 arg6 err_msg = 
+  match clauses with 
+  | [] -> raise (NoMatchingClause err_msg)
+  | cl :: rest -> 
+    try cl arg1 arg2 arg3 arg4 arg5 arg6 with 
+    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
+    | CondFailed | Invalid_argument _ -> try_clauses_6 rest arg1 arg2 arg3 arg4 arg5 arg6 err_msg
+    | e -> raise e
+  
+
