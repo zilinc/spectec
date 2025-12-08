@@ -10,6 +10,7 @@ module TypeM   = Util_ocaml.TypeM
 open TypeM
 
 exception CannotAnimate
+exception CannotSplit of string 
 
 (* used to catch refutable patterns inside iterators, so the maps may be made monadic as well 
 not used anymore because we just use exceptions i think *)
@@ -40,22 +41,6 @@ let typevars_of_params (ps : param list) : Set.t =
        | _ -> None)
   |> Set.of_list
 
-(* todo: add support for nested cons *)
-let collect_vars (e : exp) : string list t = match e.it with 
-  | VarE id -> 
-    let* () = add_known id.it in 
-    return [sanitize_name id.it]
-  | TupE es ->
-      let rec go acc = function
-        | [] -> return (List.rev acc)
-        | {it = VarE id; _} :: rest ->
-            let* () = add_known id.it in
-            go (sanitize_name id.it :: acc) rest
-        | _ :: _ -> raise CannotAnimate
-      in
-      go [] es
-  | _ -> raise CannotAnimate
-
 (* generate a tuple of fresh variables for cased expressions *)
 let fresh_tuple n : string =
   match n with
@@ -70,8 +55,10 @@ let fresh_tuple n : string =
 REFACTOR (always)
 the above functions should be reused when the LHS of a let pr is case e
 do not import the typeM stuff above
-compose funcdefs and calls need types to be resolved correctly
-the typecasts writer should be renamed, now it may also contain uncasings *)
+the typecasts writer should be renamed, now it may also contain uncasings
+known variables should be sanitized or NOT consistently 
+change the casing stuff to be uncased in the argument itself not inside the func 
+when generating the split or typecasts or uncasing we need to make the code generic so it can handle an arbitrary combination or nesting of these things *)
 
 (* This exception is raised when the OCaml generator sees a pattern that it does not expect (for example, if ruled out by validation) / unreachable code *) 
 let error at msg = error at "OCaml CodeGen" msg
@@ -124,7 +111,7 @@ let get_unknown_vars (es : (id * exp) list) : string list t =
   foldM (fun acc (id, e) ->
     match e.it with
     | VarE id' -> let* known = is_known (sanitize_name id'.it) in 
-      if known then return acc else return (id.it :: acc)
+      if known then return acc else (Printf.printf "%s is unknown\n" (sanitize_name id'.it); return (id.it :: acc))
     | _ -> error e.at "Invalid Iterator expression x <- e: e must be a variable."
   ) [] es
 
@@ -292,7 +279,9 @@ let ocaml_of_cmpop op =
   | "=/=" -> "<>"
   | s -> s
 
-let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : exp) : string t =
+(* horrible way of flipping subtyping direction 
+todo: check at which point we should pass all the flags *)
+let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) ?(flipsub=false) (e : exp) : string t =
   (* for now, we don't support dependent types. *)
   if typearg then return "(* TODO:typearg *)" else 
   (* function arguments must be (subtyped/supertyped/cased) variables *)
@@ -308,7 +297,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     return (Printf.sprintf "(%s : %s)" (sanitize_name ~typearg id.it) typ_annot)
   | SubE (e1, typ1, typ2) ->
     (* if an argument is of the form e : t1 <: t2, 
-       the function expects an arg of type t1 but casts it to a type t2 in the body. so we have to add "let e = t2_of_t1 arg" to make it typecheck *)
+       the function expects an arg of type t2 but casts it to a type t1 in the body. so we have to add "let e = t1_of_t2 arg" to make it typecheck *)
     let* freshvarname = get_freshvar () in
     let* () = generate_type_conv typ2 typ1 in
     let* e1str = match e1.it with
@@ -321,7 +310,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     return (Printf.sprintf "(%s : %s)" freshvarname typ2str)
   | CaseE (mixop, e1) -> 
     (* todo: deal with nested cons - i think this should be fixed *)
-    let* cased_vars = collect_vars e1 in
+    let* cased_vars, split = collect_vars e1 in
     let newvararity = List.length cased_vars in
     let lhsvars = if (newvararity = 0) then "()" else 
       (String.concat "," cased_vars)
@@ -338,6 +327,13 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let uncasing' = Printf.sprintf "  let %s = %s in" (append_sep mixopstr lhsvars' " ") freshvar in
     (*let* () = add_typecast uncasing in*)
     let* () = add_typecast uncasing' in
+    let* () = add_typecast split in
+    return (Printf.sprintf "(%s : %s)" freshvar typannot)
+  | CatE _ -> 
+    let* freshvar = get_freshvar () in
+    let* typannot = ocaml_of_typ e.note in
+    let* split = split_arg e freshvar in
+    let* () = add_typecast split in
     return (Printf.sprintf "(%s : %s)" freshvar typannot)
   | _ -> raise CannotAnimate
   end else match e.it with
@@ -435,7 +431,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
     let* prev_knowns = get_knowns in 
     let new_knowns = List.map (fun i -> sanitize_name (fst i).it) bindings in 
     let* () = add_knowns new_knowns in 
-    let* body_str = ocaml_of_exp e1 in
+    let* body_str = ocaml_of_exp ~flipsub e1 in
     match bindings with
     | [] -> 
       begin match iter with 
@@ -473,12 +469,15 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
       end
     end
   | SubE (e1, typ1, typ2) ->
-    (* Subtyping should not be refutable (I think) unless it appears on the LHS of a let or in the argument of a function definition *)
-    (*Printf.printf "sube is non-func arg'\n";*)
-    let* () = generate_type_conv typ1 typ2 in
-    let* e1str = ocaml_of_exp e1 in
+    (* Subtyping should not be refutable (I think) unless it appears on the LHS of a let or in the argument of a function definition
+    this probably does not matter anymore since we use exceptions instead of options *)
+    (*Printf.printf "subE is non-func arg'\n";*)
+    let* () = if flipsub then generate_type_conv typ2 typ1 
+    else generate_type_conv typ1 typ2 in
+    let* e1str = ocaml_of_exp ~flipsub e1 in
     let* typ1str = ocaml_of_typ typ1 in
     let* typ2str = ocaml_of_typ typ2 in
+    if flipsub then return ("(" ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ e1str ^ ")") else 
     return ("(" ^ typ2str ^ "_of_" ^ typ1str ^ " " ^ e1str ^ ")")
   | CvtE (e1, typ1, typ2) ->
     let* e1str = ocaml_of_exp e1 in
@@ -572,6 +571,116 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : ex
   | TheE e1 -> 
     let* e1str = ocaml_of_exp e1 in
     return ("(Option.get " ^ e1str ^ ")")
+
+(* a function argument may be an arbitrary concatenation of lists. it is possible to split a list if it is the right combination of length iterators and singleton lists (containing known element). for now we dont deal with length iterators and only split on known singleton lists. we also don't deal with lists of known elements of length greater than 1, e.g. [a;b;c], but these can be split into singletons anyway *)
+
+(* removes all nested concatenations and returns a flattened list *)
+and get_lists (e : exp) : exp list = 
+  match e.it with 
+  | ListE _ | IterE _ -> [e]
+  | CatE (e1, e2) -> (get_lists e1) @ (get_lists e2)
+  | _ -> 
+    raise (CannotSplit (string_of_exp e))
+
+(* finds the element we can split on, i.e., a singleton list with a known element for now. later this can include length iterators 
+todo: use rev for efficiency *)
+and get_anchor (es : exp list) : exp list * exp * exp list = 
+  Printf.printf "Finding split anchor in list: %s\n" (String.concat "; " (List.map (fun e' -> Printf.sprintf "exp: %s;  at: %s\n" (string_of_exp e') (string_of_region e'.at)) es));
+  let rec aux before after = 
+    match after with 
+    | [] -> raise (CannotSplit "no suitable split anchor found")
+    | e::rest -> 
+      match e.it with 
+      | ListE [e1] ->
+        (* this needs to be a cased expression or something we know!! but idk how to check that or quantify that right now *)
+        begin match e1.it with 
+        | CaseE _ -> Printf.printf "Found split anchor: %s\n" (string_of_exp e1); 
+          before, e1, rest 
+        | _ -> aux (before @ [e]) rest
+        end
+      | _ -> aux (before @ [e]) rest
+  in aux [] es
+
+and split_arg (e : exp) (name : string) : string t = 
+  let es = get_lists e in 
+  split_arg_helper es name
+
+and split_arg_helper (es : exp list) (name : string) : string t =
+  if (List.length es = 1) then 
+    (* if we have only one element left, we don't need to split further *)
+    let* () = add_known name in 
+    (* if this is an iterator of the form <exp>{v <- v*} then we have to generate something of the form let v* = map1 (fun v -> exp) name *)
+    match (List.hd es).it with 
+    | IterE (body, (iter, bindings)) -> begin 
+      match bindings with 
+      | [(id, listname)] ->
+        let* lhsstr = ocaml_of_exp listname in 
+        Printf.printf "adding %s to knowns\n" lhsstr;
+        let* () = add_known (sanitize_name lhsstr) in 
+        let VarE listvar = listname.it in
+        let rhsexp = {(List.hd es) with it = IterE (body, (iter, [(id, {listname with it = VarE {listvar with it = name}})]))} in 
+        let* rhsstr = ocaml_of_exp rhsexp ~flipsub:true in
+        return (Printf.sprintf "  let %s = %s in\n" lhsstr rhsstr)
+      | _ -> failwith "Multiple Bindings in a split-argument"
+      end
+    | _ -> 
+      let* expstr = ocaml_of_exp (List.hd es) in
+      (* add the correct variable to known here and also fix "add_knowns" in general for weird concatenated args *)
+      return (Printf.sprintf "  let %s = %s\n" expstr name)
+  else if (List.length es = 0) then return "" else begin 
+    let before, anchor, after = get_anchor es in
+    let* beforevar = get_freshvar () in
+    let* aftervar = get_freshvar () in
+    (* this thing may need to be sanitized or we need to check its type *)
+    let CaseE (mixop, _) = anchor.it in
+    let split_suffix = sanitize_name (Util_ocaml.mixop_to_atom_str mixop) in
+    let* anchorstr = ocaml_of_exp anchor in
+    let splitanchor = Printf.sprintf "  let %s, %s, %s = split_on_%s %s in\n" beforevar anchorstr aftervar split_suffix name in
+    let* () = generate_split_func split_suffix in 
+    let* split_bfr = split_arg_helper before beforevar in
+    let* split_aftr = split_arg_helper after aftervar in 
+    return (splitanchor ^ split_bfr ^ split_aftr)
+ end
+
+(* use rev here to be more efficient (& and in every other list helper func) *)
+and generate_split_func (s : string) : unit t =
+  let funcname = Printf.sprintf "split_on_%s" s in 
+  let* is_defined = is_defined funcname in
+  if is_defined then return () else
+  let* () = add_func funcname in
+  tell (Printf.sprintf 
+    "let %s (lst : 'a list) : 'a list * 'a * 'a list =\n\
+     \  let rec aux before after =\n\
+     \    match after with\n\
+     \    | [] -> raise (Match_failure (\"\", 0, 0))\n\
+     \    | %s::rest -> before, %s, rest\n\
+     \    | x::xs -> aux (before @ [x]) xs\n\
+     \  in aux [] lst\n"
+    funcname s s)
+
+(* todo: add support for nested cons + add things to knowns correctly *)
+(* if there is a concatenation inside a CaseE, we need to generate a split like we normally do, but it needs to occur AFTER the uncasing *)
+and collect_vars (e : exp) : (string list * string) t = match e.it with 
+  | VarE id -> 
+    let* () = add_known id.it in 
+    return ([sanitize_name id.it], "")
+  | TupE es ->
+      let rec go acc = function
+        | [] -> return ((List.rev acc), "")
+        | {it = VarE id; _} :: rest ->
+            let* () = add_known id.it in
+            go (sanitize_name id.it :: acc) rest
+        | e1 :: rest -> 
+          let* vars, split = collect_vars e1 in
+          let* restvars, restsplit = go (vars @ acc) rest in 
+          return (restvars, split ^ restsplit)
+      in
+      go [] es
+  | CatE _ -> 
+      let* freshvar = get_freshvar () in
+      let* listsplits = split_arg e freshvar in
+      return ([freshvar], listsplits)
+  | _ -> raise CannotAnimate
 
 and ocaml_of_mixop mixop typnote : string t = 
   let* typcons = resolve_variant typnote in
@@ -1027,8 +1136,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     | _ -> return [name ^ " = Builtin." ^ name ^ "\n"]
   end else begin
   let typevars = typevars_of_params params in
-  (*Printf.printf "defining func: %s\n" id.it;
-  Set.iter (Printf.printf "%s\n") typevars;*)
+  Printf.printf "defining func: %s\n" id.it;
+  (*Set.iter (Printf.printf "%s\n") typevars;*)
   let* () = set_typevars (typevars_of_params params) in
   let* rettypstr = ocaml_of_typ rettyp in
   let* clause_funcs =
@@ -1036,21 +1145,21 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     match clause.it with
     | DefD (_, params, body, prems) ->
       (* reset knowns each time for different function *)
-      (*Printf.printf "translating prems:\n";*)
       let* () = set_knowns (Set.empty) in
-      let* prems_block = ocaml_of_prems prems in
-      (*Printf.printf "translating ret value:\n";*)
-      let* retvalue = ocaml_of_exp body in
       catchM
       (fun () -> 
         let num_params = List.length params in
         (*Printf.printf "translating args:\n";*)
         let* argnames = if num_params = 0 then return "()" else (ocaml_of_args ~typearg:false ~funcdef:true params) in
+        (*Printf.printf "translating prems:\n";*)
+        let* prems_block = ocaml_of_prems prems in
+        (*Printf.printf "translating ret value:\n";*)
+        let* retvalue = ocaml_of_exp body in
         let* typecasts = get_typecasts () in
         let* () = set_typecasts "" in
-        (* debugging stuff remove later
-        let debug = Printf.sprintf "Printf.printf \"calling clause_%s_%d\\n\";" name i in*)
-        let bodycode = typecasts ^ prems_block in
+        (* debugging stuff remove later*)
+        let debug = Printf.sprintf "  Printf.printf \"calling clause_%s_%d\\n\";" name i in
+        let bodycode = debug ^ typecasts ^ prems_block in
         if bodycode = "" then
           return (Printf.sprintf "clause_%s_%d %s : %s = %s\n" name i argnames rettypstr retvalue)
         else

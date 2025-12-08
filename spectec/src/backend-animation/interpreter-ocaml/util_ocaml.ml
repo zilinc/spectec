@@ -272,6 +272,8 @@ module TypeM = struct
 
   let are_knowns (xs: Set.t) : bool t = fun st -> 
     (Set.subset xs st.knowns, st, "")
+
+  (* TODO: combine this with func_is_defined *)
   let is_defined (x : string) : bool t =
     fun st -> (Set.mem x st.typeconvfuncs, st, "")
 

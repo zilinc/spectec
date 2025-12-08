@@ -10,6 +10,9 @@ let string_of_dlinstr = function
   | DL.SELECT_instr _ -> "SELECT_instr"
   | DL.CALL_instr _ -> "CALL_instr"
   | DL.CALL_REF_instr _ -> "CALL_REF_instr"
+  | DL.RETURN_instr -> "RETURN_instr"
+  | DL.RETURN_CALL_REF_instr _ -> "RETURN_CALL_REF_instr"
+  | DL.THROW_REF_instr -> "THROW_REF_instr"
   | DL.CONST_instr _ -> "CONST_instr"
   | DL.BINOP_instr _ -> "BINOP_instr"
   | DL.REF_dot_NULL_instr _ -> "REF_dot_NULL_instr"
@@ -26,6 +29,9 @@ let string_of_dlinstr = function
   | DL.REF_dot_HOST_ADDR_instr _ -> "REF_dot_HOST_ADDR_instr"
   | DL.REF_dot_EXTERN_instr _ -> "REF_dot_EXTERN_instr"
   | DL.TRAP_instr -> "TRAP_instr"
+  | DL.BR_instr _ -> "BR_instr"
+  | DL.LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "LABEL"
+  | DL.FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "FRAME"
 
 (* ======== *)
 
@@ -251,11 +257,11 @@ let instr_of_ocaml (instr: DL.instr) : RI.Ast.instr' =
 
 let val_of_ocaml (instr: DL.instr) : RI.Value.value =
   match instr with
-  | DL.CONST_instr (nt, num)    -> 
+  | DL.CONST_instr (nt, num) -> 
     let C_pct__uc_un n = num in 
     begin match nt with 
-    | DL.I32_numtype          -> RI.Value.Num (RI.Value.I32 (Int32.of_int n))
-    | _ -> failwith "TODO: non-I32 const"
+    | DL.I32_numtype -> RI.Value.Num (RI.Value.I32 (Int32.of_int n))
+    | _              -> failwith "TODO: non-I32 const"
     end
   | _ -> 
     let instr_str = string_of_dlinstr instr in
