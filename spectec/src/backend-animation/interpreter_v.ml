@@ -835,7 +835,7 @@ and hostcall = {
       | [["_HOSTFUNC"]; []], [TextV fname] ->
         let vs = as_list_value' args in
         let s', result = call_hostfunc fname s vs in
-        listV [| tupV [s'; result] |] |> return
+        listV [| caseV [["RES"];[];[]] [s'; result] |] |> return
       | _ -> error_value ("Not a hostfunc") hostfunc
       )
     | vs -> error_values ("Args to $hostcall") vs

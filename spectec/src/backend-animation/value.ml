@@ -102,7 +102,7 @@ let rec eq_value v1 v2 = match v1, v2 with
   | OptV ov1, OptV ov2 -> Option.equal eq_value ov1 ov2
   | CaseV (m1, vs1), CaseV (m2, vs2) -> m1 = m2 && List.for_all2 eq_value vs1 vs2
   | StrV r1 , StrV r2  -> eq_record eq_value r1 r2
-
+  | _ -> false
 
 let as_opt_value = function
   | OptV ov -> ov
