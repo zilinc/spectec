@@ -1069,9 +1069,6 @@ and animate_prem envr prem : prem list E.m =
        Intermediate variables are excluded.
        NOTE the side effect of updating [envr].
     *)
-    info "binds" no_region ("Process inner premises: " ^ String.concat "\n" (List.map string_of_prem prems_body'));
-    info "binds" no_region ("Inner bindings: " ^ (!lenvr.vars |> Il.Env.Map.to_list |> List.map fst |> String.concat ","));
-    info "binds" no_region ("New bindings: " ^ ((Il.Env.env_diff !lenvr !envr).vars |> Il.Env.Map.to_list |> List.map fst |> String.concat ","));
     let xes' = List.concat_map (fun x ->
       if String.starts_with ~prefix:"__v" x || List.exists (fun (x', _) -> x'.it = x) xes
       then
@@ -1154,7 +1151,7 @@ and animate_prem envr prem : prem list E.m =
     let knowns_outer2, e_prems2 = Lib.List.unzip blob2 |> Lib.Fun.(<***>) List.concat List.concat in
     let* () = update (add_knowns (Set.of_list (knowns_outer1 @ knowns_outer2))) in
     let* s_outer = get () in
-    let s_end = { (init ()) with prems = e_prems1; knowns = get_knowns s_outer} in
+    let s_end = { (init ()) with prems = e_prems1; knowns = get_knowns s_outer } in
     let* (e_prems1', s_end') = run_inner s_end (animate_prems' envr prem.at) in
     let* () = update (put_knowns (get_knowns s_end')) in
     E.return ((IterPr (prems_body', (iter, xes @ xes')) $ prem.at) :: e_prems1' @ e_prems2)
