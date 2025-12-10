@@ -10,8 +10,7 @@ open Source
 
 (* Error *)
 
-let string_of_error at msg = string_of_region at ^ " DL animation validation error:\n" ^ msg
-let error at msg = Error.error at "DL validation" msg
+let error at msg = Error.error at "animation/valid" msg
 let error_pr at msg prem = error at (msg ^ "\n" ^ "In premise: " ^ string_of_prem prem)
 
 let free_vars_exp e = (Il2al.Free.free_exp false e).varid

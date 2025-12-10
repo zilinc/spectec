@@ -83,7 +83,7 @@ and string_of_args = function
   | as_ -> "(" ^ String.concat ", " (List.map string_of_arg as_) ^ ")"
 
 
-let error at msg = Error.error at "ani.../value" msg
+let error at msg = Error.error at "animation/value" msg
 let error_value ?(at = no) name val_ = error at ("Invalid " ^ name ^ ": " ^ string_of_value val_)
 let error_values ?(at = no) name vals = error at ("Invalid " ^ name ^ ": " ^ string_of_values ", " vals)
 
@@ -102,7 +102,7 @@ let rec eq_value v1 v2 = match v1, v2 with
   | OptV ov1, OptV ov2 -> Option.equal eq_value ov1 ov2
   | CaseV (m1, vs1), CaseV (m2, vs2) -> m1 = m2 && List.for_all2 eq_value vs1 vs2
   | StrV r1 , StrV r2  -> eq_record eq_value r1 r2
-
+  | _ -> false
 
 let as_opt_value = function
   | OptV ov -> ov

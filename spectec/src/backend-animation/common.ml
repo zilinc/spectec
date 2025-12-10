@@ -103,6 +103,7 @@ let step_table : (string * string * int) Map.t ref =
   ] |> List.map (fun (op, nargs) -> op, ("Step_read", String.lowercase_ascii op, nargs))
   in
   let step_table = [
+    ("CALL_REF"            , 0);
     ("THROW"               , 0);
     ("STRUCT.NEW"          , 0);
     ("STRUCT.SET"          , 0);

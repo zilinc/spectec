@@ -33,7 +33,7 @@ let verbose : string list ref =
       ]
 
 
-let error at msg = Error.error at "(Meta)Interpreter" msg
+let error at msg = Error.error at "animation/interpreter" msg
 let error_np msg = error no_region msg
 
 let error_value name exp = error exp.at ("Invalid " ^ name ^ ": " ^ string_of_exp exp)

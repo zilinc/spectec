@@ -7,7 +7,7 @@ open Il_util
 open Construct
 
 
-let error at msg = Error.error at "ani.../int.../numerics" msg
+let error at msg = Error.error at "animation/numerics" msg
 let error_value name exp = error exp.at ("Invalid " ^ name ^ ": " ^ string_of_exp exp)
 let error_values name exps =
   let at = over_region (List.map (fun e -> e.at) exps) in

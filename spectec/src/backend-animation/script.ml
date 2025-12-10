@@ -1,10 +1,12 @@
 open Il.Ast
-open Util.Error
+open Util
 open Util.Source
 open Il_util
 open State
 module RI = Reference_interpreter
 
+
+let error at msg = Error.error at "animation/script" msg
 
 (* Host *)
 

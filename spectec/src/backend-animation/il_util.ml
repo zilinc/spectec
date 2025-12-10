@@ -192,7 +192,8 @@ and optE' ?(at = no) oe : exp = match oe with
 and strE ?(at = no) ~note r = StrE r |> mk_expr at note
 and subE ?(at = no) id t1 t2 = SubE (id, t1, t2) |> mk_expr at t2
 and eqE ?(at = no) lhs rhs = CmpE (`EqOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
-
+and gtE ?(at = no) lhs rhs = CmpE (`GtOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
+and lenE ?(at = no) e = LenE e $$ at % (natT ~at:at ())
 
 (*
 and unE ?(at = no) ~note (unop, t, e) = UnE (unop, t, e) |> mk_expr at note

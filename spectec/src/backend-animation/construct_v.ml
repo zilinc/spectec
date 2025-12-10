@@ -7,7 +7,7 @@ module BI = Backend_interpreter
 open Xl.Atom
 
 
-let error at msg = Util.Error.error at "ani.../int.../construct" msg
+let error at msg = Util.Error.error at "animation/construct_v" msg
 let error_value ?(at = no) name val_ = error at ("Invalid " ^ name ^ ": " ^ string_of_value val_)
 let error_values ?(at = no) name vals =
   error at ("Invalid " ^ name ^ ": " ^ string_of_values ", " vals)
