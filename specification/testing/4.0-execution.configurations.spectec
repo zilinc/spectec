@@ -45,9 +45,8 @@ syntax ref hint(desc "reference value")  hint(macro "reff") =
   | addrref
   | REF.NULL heaptype
 
-syntax val hint(desc "value") =
-  | num | ref
-;;  | num | vec | ref
+syntax val hint(desc "value") = | num | ref
+;;   | num | vec | ref
 
 syntax result hint(desc "result") =
   | _VALS val* | `(REF.EXN_ADDR exnaddr) THROW_REF | TRAP
@@ -58,7 +57,7 @@ var res : result
 
 ;; Instances
 
-syntax hostfunc hint(desc "host function") hint(macro "%" "FI%") = `...
+syntax hostfunc hint(desc "host function") hint(macro "%" "FI%") = _HOSTFUNC text
 syntax funccode hint(show code) hint(macro "funccode") = func | hostfunc
 
 syntax taginst hint(desc "tag instance") hint(macro "%" "HI%") =
@@ -167,7 +166,7 @@ var ai : arrayinst
 var fv : fieldval
 var pv : packval
 
-var s : store
+;;var s : store
 var z : state
 
 
@@ -315,11 +314,29 @@ def $growtable(tableinst, nat, ref) : tableinst hint(partial)
 def $growmem(meminst, nat) : meminst            hint(partial)
 
 def $growtable(tableinst, n, r) = tableinst'
-  -- if tableinst = { TYPE (at `[i .. j] rt), REFS r'* }
-  -- if tableinst' = { TYPE (at `[i' .. j] rt), REFS r'* r^n }
-  -- if $(i' = |r'*| + n <= j)
+  -- if tableinst = { TYPE (at `[i .. j?] rt), REFS r'* }
+  -- if tableinst' = { TYPE (at `[i' .. j?] rt), REFS r'* r^n }
+  -- if $(i' = |r'*| + n)
+  -- (if i' <= j)?
 
 def $growmem(meminst, n) = meminst'
-  -- if meminst = { TYPE (at `[i .. j] PAGE), BYTES b* }
-  -- if meminst' = { TYPE (at `[i' .. j] PAGE), BYTES b* (0x00)^(n * $($(64 * $Ki))) }
-  -- if $(i' = |b*| / (64 * $Ki) + n <= j)
+  -- if meminst = { TYPE (at `[i .. j?] PAGE), BYTES b* }
+  -- if meminst' = { TYPE (at `[i' .. j?] PAGE), BYTES b* (0x00)^(n * $($(64 * $Ki))) }
+  -- if $(i' = |b*| / (64 * $Ki) + n)
+  -- (if i' <= j)?
+
+
+;; Host functions
+
+syntax hostcallresult =
+  | RES store result hint(show %, %)
+  | BOT
+
+;; Essentially a relation.
+def $hostcall(hostfunc, store, val*) : hostcallresult*  hint(show %4 <- %1(%2, %3))
+def $hostcall hint(builtin)
+
+def $lift_result(result) : instr*  hint(show %)
+def $lift_result(_VALS val*) = val*
+def $lift_result(`(REF.EXN_ADDR a) THROW_REF) = (REF.EXN_ADDR a) THROW_REF
+def $lift_result(TRAP) = TRAP 

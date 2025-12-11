@@ -35,3 +35,5 @@ let utf8 a0 = failwith "TODO: implement Built-in function utf8"
 let dispatch_step a0 a1 = failwith "TODO: implement Built-in function dispatch_step"
 let dispatch_step_read a0 a1 = failwith "TODO: implement Built-in function dispatch_step_pure"
 let step_ctxt a0 = failwith "TODO: implement Built-in function step_ctxt"
+
+let hostcall a0 = failwith "TODO: implement Built-in function hostcall"

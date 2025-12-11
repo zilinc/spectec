@@ -12,19 +12,10 @@ open TypeM
 exception CannotAnimate
 exception CannotSplit of string 
 
-(* used to catch refutable patterns inside iterators, so the maps may be made monadic as well 
-not used anymore because we just use exceptions i think *)
-let rec is_monadic (prems : prem list) = 
-  List.exists (fun p -> match p.it with 
-    | LetPr (lhs_exp, _, _) -> begin match lhs_exp.it with
-      | CaseE _ | OptE _ | SubE _ -> true
-      | _ -> false
-      end
-    | IterPr (inner_prems, _) -> is_monadic inner_prems
-    | _ -> false
-  ) prems
+(* This exception is raised when the OCaml generator sees a pattern that it does not expect (for example, if ruled out by validation) / unreachable code *) 
+let error at msg = error at "OCaml CodeGen" msg
 
-
+(* for error messages *)
 let rec get_dl_def_region (dl_def : dl_def) : region =
   match dl_def with
   | FuncDef fd -> fd.at
@@ -32,7 +23,7 @@ let rec get_dl_def_region (dl_def : dl_def) : region =
   | RecDef (rd :: _) -> get_dl_def_region rd
   | RuleDef rd -> rd.at
 
-(* type variables need to be prefixed with '*)
+(* type variables need to be prefixed with ' *)
 let typevars_of_params (ps : param list) : Set.t =
   ps
   |> List.filter_map (fun p ->
@@ -51,17 +42,69 @@ let fresh_tuple n : string =
                (List.init n (fun i -> Printf.sprintf "freshvar_%d" i))
       ^ ")"
 
+(* hardcoded things: `Step` needs to be re-defined manually to call `step`. This makes a group of functions (specifically those on any call path from `step` to `Step`) mutually recursive. Since these functions are not recursive in the original spec, we need to mark them as such manually. *)
+let find_recdefs (funcdefs : dl_def list) = 
+  Printf.printf "finding mutually recursive functions ...\n";
+  flush stdout; 
+  let visited = Hashtbl.create (List.length funcdefs) in
+  let rec dfs visited start target = 
+    Printf.printf "start is: %s\n" start;
+    flush stdout; 
+    let fdef = find_fdef funcdefs start in
+    match Hashtbl.find_opt visited start with
+    | Some children -> children 
+    | None ->
+      Hashtbl.add visited start Set.empty;
+      (* if this call-path has reached `Step`, we can add to the recursive functions *)
+      if start = target then begin 
+        let s = Set.singleton start in
+        Hashtbl.add visited start s;
+        s
+      end else begin
+        Hashtbl.add visited start Set.empty; (* to avoid cycles *)
+        let children = f_calls fdef in 
+        let reachable = List.fold_left Set.union Set.empty (List.map (fun child -> dfs visited child target) (Set.to_list children)) in
+        (* if `Step` is reachable from any of the children then it is reachable from `start` *)
+        let result = 
+          if Set.is_empty reachable then Set.empty
+          else Set.add start reachable 
+        in 
+        Hashtbl.add visited start result;
+        result end
+  in
+  dfs visited "step" "Step"
+
+let hardcode_step (funcdefs : dl_def list) : dl_def list =
+  Printf.printf "Hardcoding Step function...\n";
+  flush stdout; 
+  let rec_funcs = find_recdefs funcdefs in
+  (* we need to insert the recursive functions at the same index we removed them from *)
+  let index = -1 in 
+  let rec mark idx acc rest recdefs = 
+    match rest with 
+    | [] -> acc, recdefs, idx
+    | def :: rest' -> 
+      begin match def with 
+      | FuncDef {it = ({it=name;_}, _, _, _, _); _} ->
+        if Set.mem name rec_funcs then
+          let index = if index <> -1 then index else idx in 
+          mark (idx+1) acc rest' (recdefs @ [def]) 
+        else mark (idx+1) (acc @ [def]) rest' recdefs
+      | _ -> mark (idx+1) (acc @ [def]) rest' recdefs
+      end
+  in
+  let rest, recdefs, idx = mark 0 [] funcdefs [] in 
+  (List.take idx rest) @ recdefs @ (List.drop idx rest)
+
 (* TODOs: 
 REFACTOR (always)
 the above functions should be reused when the LHS of a let pr is case e
+for now, add the flipsub flag everywehre but later figure if there is a better way to do it
 do not import the typeM stuff above
 the typecasts writer should be renamed, now it may also contain uncasings
 known variables should be sanitized or NOT consistently 
 change the casing stuff to be uncased in the argument itself not inside the func 
 when generating the split or typecasts or uncasing we need to make the code generic so it can handle an arbitrary combination or nesting of these things *)
-
-(* This exception is raised when the OCaml generator sees a pattern that it does not expect (for example, if ruled out by validation) / unreachable code *) 
-let error at msg = error at "OCaml CodeGen" msg
 
 let get_type e = 
   match e.note.it with
@@ -81,7 +124,7 @@ let rec get_tupsize (t : typ) : int option t =
   | VarT (id, _) -> 
     let* typedef = get_typedef id.it in 
     let td = match typedef with
-    | Some (TypeDef td) -> td 
+    | Some td -> td 
     | _ -> error t.at "Unknown typevariable in projection"
     in begin
     match td.it with 
@@ -210,7 +253,7 @@ let generate_proj n i : unit t =
   let funcname = Printf.sprintf "proj_%d_%d" n i in
   let* is_defined = is_defined funcname in
   if is_defined then return () else
-  let* () = add_func funcname in
+  let* () = add_funcdef funcname in
   let type_vars = List.init n (fun i -> String.make 1 Char.(chr (code 'a' + i))) in
   let tuple_ty = String.concat " * " (List.map (fun v -> "'" ^ v) type_vars) in
   let ret_ty = "'" ^ List.nth type_vars i in
@@ -219,11 +262,6 @@ let generate_proj n i : unit t =
   let body = List.nth xs i in
   tell (Printf.sprintf "let %s : %s -> %s = function\n  | %s -> %s\n"
     funcname tuple_ty ret_ty pat body)
-
-let typedef_of_dl_def (def : dl_def option) : type_def option =
-  match def with
-  | Some (TypeDef td) -> Some td
-  | _ -> None
 
 let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
   match t1.it, t2.it with
@@ -234,9 +272,8 @@ let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
     (*Printf.printf "generating %s:\n" funcname;*)
     let* is_defined = is_defined funcname in
     if is_defined then return () else begin
-    let* () = add_func funcname in
-    let* dl_defs = mapM (get_typedef) [lhs; rhs] in
-    let type_defs = List.map typedef_of_dl_def dl_defs in
+    let* () = add_funcdef funcname in
+    let* type_defs = mapM (get_typedef) [lhs; rhs] in
     match type_defs with
     | [Some _lhs_def; Some _rhs_def] ->
       let func = Printf.sprintf "let %s_of_%s (arg : %s) : %s =\n  match arg with\n" rhs lhs lhs rhs in
@@ -255,7 +292,7 @@ let generate_numtype_conv (t1 : numtyp) (t2 : numtyp) : string t =
   if is_defined then return "" else begin
   let funcdef = "let " ^ funcname ^ " (arg : " ^ ocaml_of_numtyp t2 ^ ") : " ^ ocaml_of_numtyp t1 ^ " =\n" in
   let funcbody = "Num.cvt " ^ ocaml_of_numtyp t1 ^  " arg\n" in
-  let* () = add_func funcname in
+  let* () = add_funcdef funcname in
   return (funcdef ^ funcbody)
   end
 
@@ -324,7 +361,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) ?(flips
     let retvals = fresh_tuple newvararity in
     let mixopargs = if (newvararity = 0) then "" else retvals in 
     let uncasing = Printf.sprintf "  let* %s = match %s with\n  | %s -> Some %s\n  | _ -> None\n  in" lhsvars freshvar (append_sep mixopstr mixopargs " ") retvals in
-    let uncasing' = Printf.sprintf "  let %s = %s in" (append_sep mixopstr lhsvars' " ") freshvar in
+    let uncasing' = Printf.sprintf "  let %s = %s in\n" (append_sep mixopstr lhsvars' " ") freshvar in
     (*let* () = add_typecast uncasing in*)
     let* () = add_typecast uncasing' in
     let* () = add_typecast split in
@@ -647,7 +684,7 @@ and generate_split_func (s : string) : unit t =
   let funcname = Printf.sprintf "split_on_%s" s in 
   let* is_defined = is_defined funcname in
   if is_defined then return () else
-  let* () = add_func funcname in
+  let* () = add_funcdef funcname in
   tell (Printf.sprintf 
     "let %s (lst : 'a list) : 'a list * 'a * 'a list =\n\
      \  let rec aux before after =\n\
@@ -719,7 +756,7 @@ and generate_uncase tcs typename : unit t =
 and lookup (typename : string) : deftyp option t =
   let* typdef = get_typedef typename in
   match typdef with
-  | Some (TypeDef {it = (_, _, {it = InstD (_, _, dt); _}::_); _}) -> return (Some dt)
+  | Some {it = (_, _, {it = InstD (_, _, dt); _}::_); _} -> return (Some dt)
   | _ -> return None
 
 (* Resolve a typ to a StructT fields if it denotes a record type.
@@ -1018,7 +1055,6 @@ let rec ocaml_of_prems (prems : prem list) : string t =
       let* () = add_knowns inflows in
       (* this will add new things to knowns, but their scope is limited *)
       let* prem_strs = ocaml_of_prems prems in
-      (*let monadic = is_monadic prems in*)
       let* new_knowns = get_knowns in 
       let partition id_opt = 
         List.partition (fun (id', e) -> 
@@ -1042,7 +1078,8 @@ let rec ocaml_of_prems (prems : prem list) : string t =
         (*Printf.printf "Outflow list vars: %s\n" (String.concat ", " outflow_listvars);*)
         let* () = add_knowns outflow_listvars in
         if (List.length outflows) = 0 then 
-          return "TODO: no outflows in iteropt"
+          (* if there are no outflows, the nested premises must be "ifs" *)
+          return (Printf.sprintf "  let _ = map_opt%d (fun %s -> %s ()) %s in" (List.length inflows) inflow_vars prem_strs inflow_lists)
         else 
           return (Printf.sprintf "  let %s = unzip_opt%d (map_opt%d (fun %s -> %s %s) %s) in" outflow_lists (List.length outflows) (List.length inflows) inflow_vars prem_strs outflow_vars inflow_lists) 
         end
@@ -1088,16 +1125,15 @@ let ocaml_of_typ_args t =
   | _ -> let* argstr = ocaml_of_typ ~typearg:true t in return ("(" ^ argstr ^ ")")
 
 (* Hardcoded for now: i dont know how to deal with this
-   without creating a cyclic dependency otherwise 
-   & a lot of problems *)
+   without creating a cyclic dependency & a lot of problems otherwise *)
 let build_stepcases step = 
   let* instrs = get_typedef "instr" in 
-  let (TypeDef {it = (_, _, {it = InstD (_, _, instrsdt); _}::_); _}) = Option.get instrs in
+  let {it = (_, _, {it = InstD (_, _, instrsdt); _}::_); _} = Option.get instrs in
   let (VariantT instr_tcs) = instrsdt.it in
   concat_mapM "\n" (fun (op, (_, t, _), _) -> 
     let consname = sanitize_name ~typename:false (Util_ocaml.mixop_to_atom_str op) in 
     let funcname = sanitize_name (Printf.sprintf "Step_%s/%s" step consname) in
-    let* is_defined = func_is_defined funcname in
+    let* is_defined = is_defined funcname in
     let* args = ocaml_of_typ_args t in
     let args_str = if args = "" then "" else " _" in 
     if is_defined then begin
@@ -1172,24 +1208,14 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
   ) clauses
   in
   let* () = set_typevars (Set.empty) in
-  let clause_calls =
-  List.mapi
-    (fun i _ ->
-       if i = 0
-       then Printf.sprintf "clause_%s_%d %s" name i argslist
-       else Printf.sprintf "(fun () -> clause_%s_%d %s)" name i argslist)
-    clauses
-  in
-  let clause_calls' = List.mapi
+  let clause_calls = List.mapi
     (fun i _ -> Printf.sprintf "clause_%s_%d" name i)
     clauses
   in
-  let clause_names = String.concat "\n  <|> " clause_calls in
-  let clause_names' = String.concat ";\n  " clause_calls' in
+  let clause_names = String.concat ";\n  " clause_calls in
   let err_msg = "function: " ^ name in  
-  let main_func' = Printf.sprintf "%s %s = try_clauses_%d [\n  %s\n] %s \"%s\"" name argslist num_params clause_names' argslist' err_msg in 
-  let main_func = (Printf.sprintf "%s %s =\n (%s) |> val_or_fail \"%s\"" name argslist clause_names name) in
-  return (clause_funcs @ [main_func'])
+  let main_func = Printf.sprintf "%s %s = try_clauses_%d [\n  %s\n] %s \"%s\"" name argslist num_params clause_names argslist' err_msg in 
+  return (clause_funcs @ [main_func])
   end
 
 (* ignoring the dependent type annotations for now *)
@@ -1219,7 +1245,7 @@ let ocaml_of_deftyp dt name =
 let ocaml_of_typedef (typedef : type_def) : string t =
   match typedef with
   | {it=(id, ps, insts); _} ->
-    let* () = add_typedef (sanitize_name id.it) (TypeDef typedef) in
+    let* () = add_typedef (sanitize_name id.it) typedef in
     (*Printf.printf "typedef: %s\n" id.it;*)
     let* () = set_typevars (typevars_of_params ps) in
     match insts with
@@ -1275,12 +1301,10 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
         return ("", "type " ^ typestrs)
     | (RuleDef _)::_ -> error (get_dl_def_region def) "Recursive RuleDef: should not happen"
 
-(* Not sure what the most efficient way of doing step/dispatches is for now.
-Right now I try to match Zilin's spec so I need a string representation of instructions to be 
-able to call the right step_(pure or read or table)/<instr_name> *)
+(* just for debugging - can remove later *)
 let gen_instr_strs () = 
   let* instrs = get_typedef "instr" in 
-  let (TypeDef {it = (_, _, {it = InstD (_, _, instrsdt); _}::_); _}) = Option.get instrs in
+  let {it = (_, _, {it = InstD (_, _, instrsdt); _}::_); _} = Option.get instrs in
   let (VariantT instr_tcs) = instrsdt.it in
   let* cases = concat_mapM "\n" (fun (op, (_, t, _), _) -> 
     let consname = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str op) in 
@@ -1291,6 +1315,8 @@ let gen_instr_strs () =
   tell (Printf.sprintf "let instr_to_string = function\n%s\n" cases)
 
 let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
+  Printf.printf "Calling hardcode step...\n";
+  let processed_defs = hardcode_step defs in
   let* def_strs : (string * string) list = mapM ocaml_of_dl_def defs in
   let func_defs, type_defs = List.split def_strs in
   let func_str = concat_nonempty "\n" func_defs in

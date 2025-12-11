@@ -59,10 +59,10 @@ let ocaml_typeuse_of_typeidx (n : DL.typeidx) = DL.C_IDX_typeuse n
 let ocaml_of_int32 (n : int32) : DL.nat = Int32.to_int n
 let ocaml_of_mut mut = match mut with 
   | RT.Cons -> None
-  | RT.Var  -> Some DL.MUT_uc_mut
+  | RT.Var  -> Some DL.MUT_mut
 
 let ocaml_of_null = function
-  | RT.Null    -> Some DL.NULL_uc_null
+  | RT.Null    -> Some DL.NULL_null
   | RT.NoNull -> None
 
 let ocaml_of_numtype = function 
@@ -88,7 +88,7 @@ let ocaml_of_vectype_storage _ = DL.V128_storagetype
 
 let ocaml_of_final = function
   | RT.NoFinal -> None
-  | RT.Final   -> Some DL.FINAL_uc_final
+  | RT.Final   -> Some DL.FINAL_final
 
 (* not used i think; remove *)
 let ocaml_of_packtype s vt =

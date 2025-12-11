@@ -44,6 +44,7 @@ let generate_dune_file () =
   close_out oc*)
 
 let generate_ocaml dl ocamlfile = 
+  Printf.printf "Generating OCaml code...\n";
   generate_dune_file ();
   let ocaml_filename = Option.value ~default:"dl_codegen-0" ocamlfile in
   if not (Sys.file_exists basepath) then

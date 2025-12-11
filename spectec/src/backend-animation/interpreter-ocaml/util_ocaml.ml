@@ -1,5 +1,6 @@
 open Xl
 open Il.Ast
+open Def 
 
 let is_letter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
 let is_capital c = 'A' <= c && c <= 'Z'
@@ -60,48 +61,20 @@ let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfi
 let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
   let lowercase name = sanitize_name ~typename:false ~recordfield name in
   match mixop with
-  | [{it = Atom.Atom a; _}]::tail when List.for_all ((=) []) tail -> (*"Atom " ^*) lowercase a
+  | [{it = Atom.Atom a; _}]::tail when List.for_all ((=) []) tail -> lowercase a
   | mixop ->
     let s =
       String.concat "_pct_" (List.map (
         fun atoms -> String.concat "" (List.map (fun x -> x |> Atom.to_string |> lowercase) atoms)) mixop
       )
     in
-    (*"Atom " ^*) s
-
-(* let slice (lst : 'a list) (start : int) (len : int) : 'a list option =
-  if start < 0 || len < 0 then None else
-  let rec drop n l =
-    match n, l with
-    | 0, l -> Some l
-    | _, [] -> None
-    | n, _ :: tl -> drop (n-1) tl
-  in
-  let rec take n l =
-    match n, l with
-    | 0, _ -> Some []
-    | _, [] -> None
-    | n, x :: tl ->
-        match take (n-1) tl with
-        | Some rest -> Some (x :: rest)
-        | None -> None
-  in
-  match drop start lst with
-  | None -> None
-  | Some after_drop -> take len after_drop
-
-let rec lookup (x : id) (pairs : (id * 'b) list) : 'b option =
-  match pairs with
-  | [] -> None
-  | (k,v) :: rest ->
-      if k.it = x.it then Some v else lookup x rest*)
+    s
 
 let rec update_at i v = function
   | _ :: xs when i = 0 -> v :: xs
   | x :: xs            -> x :: update_at (i - 1) v xs
-  | [] -> failwith "update_at: index out of bounds" (* todo this is also a codegen error *)
+  | [] -> failwith "update_at: index out of bounds" 
 
-(* todo: does update also take start and len or start and end?*)
 let update_slice l i len l' =
   let n = List.length l in
   if i < 0 || len < 0 || i + len > n || List.length l' <> len then
@@ -136,18 +109,6 @@ let unzip3 (lst : ('a * 'b * 'c) list) : ('a list * 'b list * 'c list) =
 
 let unzip_opt1 opt_a = opt_a
 
-let unzip1M lst = lst 
-
-let unzip2M (lst : ('a * 'b) list option) : (('a list * 'b list) option) =
-  match lst with
-  | None -> None
-  | Some pairs -> Some (unzip2 pairs)
-
-let unzip3M (lst : ('a * 'b * 'c) list option) : (('a list * 'b list * 'c list) option) =
-  match lst with
-  | None -> None
-  | Some pairs -> Some (unzip3 pairs)
-
 let map1 = List.map
 
 let rec map2 f xs ys =
@@ -159,29 +120,6 @@ let rec map3 f xs ys zs =
   match xs, ys, zs with
   | x::xt, y::yt, z::zt -> (f x y z) :: map3 f xt yt zt
   | _ -> []
-
-(* monadic (optional) maps for generated code *)
-let rec map1M (f : 'a -> 'b option) (lst : 'a list) : ('b list option) =
-  match lst with 
-  | [] -> Some []
-  | x :: rest -> 
-    match f x with 
-    | None -> None 
-    | Some y -> 
-      match map1M f rest with 
-      | None -> None 
-      | Some ys -> Some (y :: ys)
-
-let rec map2M (f : 'a -> 'b -> 'c option) (lst1 : 'a list) (lst2 : 'b list) : ('c list option) =
-  match lst1, lst2 with 
-  | [], [] -> Some []
-  | x :: rest1, y :: rest2 ->
-    match f x y with
-    | None -> None 
-    | Some y -> 
-      match map2M f rest1 rest2 with 
-      | None -> None 
-      | Some ys -> Some (y :: ys)
 
 let map_opt1 (f : 'a -> 'b) (opt_a : 'a option) : 'b option =
   match opt_a with
@@ -197,9 +135,8 @@ module Set = Set.Make(String)
 module TypeM = struct
 
   type state = {
-    mutable typemap : Def.dl_def Map.t; (* maps types to their definitions *)
-    mutable funcmap : unit Map.t; (* TEMPORARY: keep track of defined funcs *)
-    mutable typeconvfuncs : Set.t; (* keeps track of type-conversion functions *)
+    mutable typemap : Def.type_def Map.t; (* maps types to their definitions *)
+    mutable functions : unit Map.t; (* defined functions *)
     mutable knowns : Set.t; (* need this to determine inflow/outflow *)
     mutable typecasts : string; (* type-casted function arguments to be moved to the body *)
     mutable freshvaridx : int;
@@ -231,16 +168,16 @@ module TypeM = struct
   let modify f : unit t = fun st -> ((), f st, "")
   let get_knowns : Set.t t = fun st -> st.knowns, st, ""
 
-  let add_typedef (name : string) (typedef : Def.dl_def) : unit t =
+  let add_typedef (name : string) (typedef : Def.type_def) : unit t =
     modify (fun st -> { st with typemap = Map.add name typedef st.typemap })
 
-  let get_typedef (typename : string) : Def.dl_def option t = fun st -> ((Map.find_opt typename st.typemap), st, "")
+  let get_typedef (typename : string) : Def.type_def option t = fun st -> ((Map.find_opt typename st.typemap), st, "")
 
   let add_funcdef (name : string) : unit t =
-    modify (fun st -> { st with funcmap = Map.add name () st.funcmap })
+    modify (fun st -> { st with functions = Map.add name () st.functions })
 
-  let func_is_defined (funname : string) : bool t = fun st ->
-    (Map.mem funname st.funcmap, st, "")
+  let is_defined (funname : string) : bool t = fun st ->
+    (Map.mem funname st.functions, st, "")
 
   let get_freshvar () : string t = fun st ->
     let var = Printf.sprintf "v%d" st.freshvaridx in
@@ -272,13 +209,6 @@ module TypeM = struct
 
   let are_knowns (xs: Set.t) : bool t = fun st -> 
     (Set.subset xs st.knowns, st, "")
-
-  (* TODO: combine this with func_is_defined *)
-  let is_defined (x : string) : bool t =
-    fun st -> (Set.mem x st.typeconvfuncs, st, "")
-
-  let add_func (x : string) : unit t =
-    modify (fun st -> { st with typeconvfuncs = Set.add x st.typeconvfuncs })
 
   let add_typevar (x : string) : unit t =
     modify (fun st -> { st with typevars = Set.add x st.typevars })
@@ -339,8 +269,7 @@ module TypeM = struct
 
   let eval m = 
     let st0 = { typemap = Map.empty; 
-    funcmap = Map.empty;
-    typeconvfuncs = Set.empty;
+    functions = Map.empty;
     knowns = Set.empty;
     typecasts = "";
     freshvaridx = 0;
@@ -482,4 +411,58 @@ let rec try_clauses_6 clauses arg1 arg2 arg3 arg4 arg5 arg6 err_msg =
     | CondFailed | Invalid_argument _ -> try_clauses_6 rest arg1 arg2 arg3 arg4 arg5 arg6 err_msg
     | e -> raise e
   
+(* get a list of all functions (transitively) called by a particular function *)
+let rec exp_calls (e: exp) : Set.t = 
+  match e.it with
+  | NumE _ | TextE _ | BoolE _| VarE _ | OptE None -> Set.empty
+  | ListE es | TupE es -> 
+    List.fold_left Set.union Set.empty (List.map exp_calls es)
+  | CallE (id, args) ->
+    Set.add id.it (List.fold_left Set.union Set.empty (List.map arg_calls args))
+  | CaseE (_, e1) | UnE (_, _, e1) | UncaseE (e1, _)
+  | ProjE (e1, _) | IterE (e1, _) | SubE (e1, _, _) 
+  | CvtE (e1, _, _) | OptE (Some e1) | LenE e1 
+  | SliceE (e1, _, _) | DotE (e1, _) | LiftE e1 
+  | TheE e1 -> exp_calls e1
+  | BinE (_, _, e1, e2) | CmpE (_, _, e1, e2) 
+  | IdxE (e1, e2) | CatE (e1, e2) | MemE (e1, e2) 
+  | UpdE (e1, _, e2) | ExtE (e1, _, e2) 
+  | CompE (e1, e2) -> Set.union (exp_calls e1) (exp_calls e2)
+  | StrE expfieldlst -> 
+    List.fold_left Set.union Set.empty (List.map (fun (_, e) -> exp_calls e) expfieldlst)
 
+and arg_calls (arg : arg) : Set.t = 
+  match arg.it with
+  | ExpA e -> exp_calls e
+  | _      -> Set.empty (* not sure if this is the case but works for now *)
+
+let rec prem_calls (p : prem) : Set.t = 
+  match p.it with
+  | IfPr e | LetPr (_, e, _) -> exp_calls e
+  | IterPr (prems, _) -> List.fold_left Set.union Set.empty (List.map prem_calls prems)
+  | _ -> Set.empty
+
+let f_calls (fdef : func_def) : Set.t =
+  let (_, _, _, clauses, _) = fdef.it in
+  List.fold_left Set.union Set.empty (List.map (fun (clause : clause) ->
+    let DefD (_, _, e, prems) = clause.it in
+    let from_e = exp_calls e in
+    let from_prems = List.fold_left Set.union Set.empty (List.map prem_calls prems) in
+    Set.union from_e from_prems
+  ) clauses)
+
+(* using a list for now, I think this is called very rarely *)
+let rec find_fdef (flist : dl_def list) (name : string) : func_def =
+  match flist with 
+  | [] -> raise Not_found
+  | FuncDef fdef :: rest -> 
+    let (id, _, _, _, _) = fdef.it in 
+    if id.it = name then fdef else 
+    find_fdef rest name
+  | (RecDef defs) :: rest -> 
+    begin try 
+      find_fdef defs name
+    with Not_found -> 
+      find_fdef rest name
+    end
+  | _ :: rest -> find_fdef rest name
