@@ -33,7 +33,7 @@ syntax num_(Inn) = iN($sizenn(Inn))
 ;; syntax unop_(Fnn) = ABS | NEG | SQRT | CEIL | FLOOR | TRUNC | NEAREST
 ;; 
 syntax binop_(numtype)
-syntax binop_(Inn) = ADD 
+syntax binop_(Inn) = ADD | SUB
 ;;   | ADD | SUB | MUL | DIV sx hint(show DIV#_#%) | REM sx hint(show REM#_#%)
 ;;   | AND | OR | XOR | SHL | SHR sx hint(show SHR#_#%) | ROTL | ROTR
 ;; syntax binop_(Fnn) =

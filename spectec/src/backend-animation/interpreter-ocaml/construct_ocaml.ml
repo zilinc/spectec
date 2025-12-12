@@ -179,6 +179,7 @@ let ocaml_of_instr (instr: RI.Ast.instr) =
     end
   | RI.Ast.Binary binop     -> begin match binop with 
     | RI.Value.I32 RI.Ast.IntOp.Add -> DL.BINOP_instr (DL.I32_numtype, DL.ADD_binop_)
+    | RI.Value.I32 RI.Ast.IntOp.Sub -> DL.BINOP_instr (DL.I32_numtype, DL.SUB_binop_)
     | _ -> failwith "non-addition binary op not implemented yet"
     end
   | RI.Ast.Call funcidx     -> DL.CALL_instr (ocaml_of_funcidx funcidx)

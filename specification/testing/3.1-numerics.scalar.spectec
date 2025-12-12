@@ -105,7 +105,7 @@
 ;; def $iextend_(N, M, sx, iN(N)) : iN(N)          hint(show $iextend_((%,%))^(%)#((%)))
 ;; 
 def $iadd_(N, iN(N), iN(N)) : iN(N)
-;; def $isub_(N, iN(N), iN(N)) : iN(N)
+def $isub_(N, iN(N), iN(N)) : iN(N)
 ;; def $imul_(N, iN(N), iN(N)) : iN(N)
 ;; def $idiv_(N, sx, iN(N), iN(N)) : iN(N)?        hint(show $idiv__#%2#$_(%1,%3,%4))
 ;; def $irem_(N, sx, iN(N), iN(N)) : iN(N)?        hint(show $irem__#%2#$_(%1,%3,%4))
@@ -164,8 +164,8 @@ def $iadd_(N, iN(N), iN(N)) : iN(N)
 
 def $iadd_(N, i_1, i_2) = $((i_1 + i_2) \ 2^N)
 
-;; def $isub_(N, i_1, i_2) = $((2^N + i_1 - i_2) \ 2^N)
-;; 
+def $isub_(N, i_1, i_2) = $((2^N + i_1 - i_2) \ 2^N)
+
 ;; def $imul_(N, i_1, i_2) = $((i_1 * i_2) \ 2^N)
 ;; 
 ;; def $idiv_(N, U, i_1, 0)   = eps
@@ -386,7 +386,7 @@ def $binop_(numtype, binop_(numtype), num_(numtype), num_(numtype)) : num_(numty
 ;; def $unop_(Fnn, NEAREST, f) = $fnearest_($sizenn(Fnn), f)
 ;; 
 def $binop_(Inn, ADD, i_1, i_2) = $iadd_($sizenn(Inn), i_1, i_2)
-;; def $binop_(Inn, SUB, i_1, i_2) = $isub_($sizenn(Inn), i_1, i_2)
+def $binop_(Inn, SUB, i_1, i_2) = $isub_($sizenn(Inn), i_1, i_2)
 ;; def $binop_(Inn, MUL, i_1, i_2) = $imul_($sizenn(Inn), i_1, i_2)
 ;; def $binop_(Inn, DIV sx, i_1, i_2) = $idiv_($sizenn(Inn), sx, i_1, i_2)
 ;; def $binop_(Inn, REM sx, i_1, i_2) = $irem_($sizenn(Inn), sx, i_1, i_2)
