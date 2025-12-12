@@ -162,7 +162,7 @@ let get_unknown_vars (es : (id * exp) list) : string list t =
   foldM (fun acc (id, e) ->
     match e.it with
     | VarE id' -> let* known = is_known (sanitize_name id'.it) in 
-      if known then return acc else (Printf.printf "%s is unknown\n" (sanitize_name id'.it); return (id.it :: acc))
+      if known then return acc else (*(Printf.printf "%s is unknown\n" (sanitize_name id'.it);*) return (id.it :: acc)
     | _ -> error e.at "Invalid Iterator expression x <- e: e must be a variable."
   ) [] es
 
@@ -630,7 +630,7 @@ and get_lists (e : exp) : exp list =
 (* finds the element we can split on, i.e., a singleton list with a known element for now. later this can include length iterators 
 todo: use rev for efficiency *)
 and get_anchor (es : exp list) : exp list * exp * exp list = 
-  Printf.printf "Finding split anchor in list: %s\n" (String.concat "; " (List.map (fun e' -> Printf.sprintf "exp: %s;  at: %s\n" (string_of_exp e') (string_of_region e'.at)) es));
+  (*Printf.printf "Finding split anchor in list: %s\n" (String.concat "; " (List.map (fun e' -> Printf.sprintf "exp: %s;  at: %s\n" (string_of_exp e') (string_of_region e'.at)) es));*)
   let rec aux before after = 
     match after with 
     | [] -> raise (CannotSplit "no suitable split anchor found")
@@ -639,7 +639,7 @@ and get_anchor (es : exp list) : exp list * exp * exp list =
       | ListE [e1] ->
         (* this needs to be a cased expression or something we know!! but idk how to check that or quantify that right now *)
         begin match e1.it with 
-        | CaseE _ -> Printf.printf "Found split anchor: %s\n" (string_of_exp e1); 
+        | CaseE _ -> (*Printf.printf "Found split anchor: %s\n" (string_of_exp e1);*)
           before, e1, rest 
         | _ -> aux (before @ [e]) rest
         end
@@ -660,7 +660,7 @@ and split_arg_helper (es : exp list) (name : string) : string t =
       match bindings with 
       | [(id, listname)] ->
         let* lhsstr = ocaml_of_exp listname in 
-        Printf.printf "adding %s to knowns\n" lhsstr;
+        (*Printf.printf "adding %s to knowns\n" lhsstr;*)
         let* () = add_known (sanitize_name lhsstr) in 
         let VarE listvar = listname.it in
         let rhsexp = {(List.hd es) with it = IterE (body, (iter, [(id, {listname with it = VarE {listvar with it = name}})]))} in 
