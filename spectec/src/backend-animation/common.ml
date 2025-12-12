@@ -66,7 +66,6 @@ let step_table : (string * string * int) Map.t ref =
     ("BR_ON_CAST"          , 0);
     ("BR_ON_CAST_FAIL"     , 0);
     ("CALL"                , 0);
-    ("CALL_REF"            , 0);
     ("RETURN_CALL"         , 0);
     ("RETURN_CALL_REF"     , 0);
     ("THROW_REF"           , 0);
