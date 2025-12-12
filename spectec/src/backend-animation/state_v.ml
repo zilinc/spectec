@@ -48,6 +48,45 @@ module Context = struct
 end
 
 
+(* Host state *)
+
+module HostState = struct
+  (* Global host state *)
+  let timestamp : int ref = ref 0
+  let state () : value = vl_of_nat !timestamp
+  let inc_timestamp () = timestamp := !timestamp + 1
+  let reset_timestamp () = timestamp := 0
+
+  module EffectDomain : Map.OrderedType with type t = int * string = struct
+    type t = int * string
+    let compare = Stdlib.compare
+  end
+
+  module Map = Map.Make(EffectDomain)
+
+  type effect = Print of string
+
+  let effect_map : ((value * effect list) Map.t) ref = ref Map.empty
+
+  let add_effect (hf_name: string) res eff =
+      effect_map := Map.add (!timestamp, hf_name) (res, eff) !effect_map
+
+  (* Local host state *)
+  let mk_state ts : value = vl_of_nat ts
+
+
+  (* Functions *)
+  type ts_cmp = Earlier | Good | Later
+
+  let chk_state hs : ts_cmp =
+    let global_ts = !timestamp in
+    let local_ts = as_nat_value hs |> Z.to_int in
+    if local_ts < global_ts then Earlier
+    else if local_ts = global_ts then Good
+    else Later
+end
+
+
 (* Store *)
 
 module Store = struct
@@ -67,6 +106,7 @@ module Store = struct
       |> Record.add "STRUCTS" (listV [||])
       |> Record.add "ARRAYS"  (listV [||])
       |> Record.add "EXNS"    (listV [||])
+      |> Record.add "HOST"    (HostState.mk_state 0)
 
     (* Ds.Store.init () *)  (* NOTE: I don't think there's anything that depends on Ds. / zilinc *)
 
@@ -88,6 +128,7 @@ module Store = struct
     let structs = as_str_field "STRUCTS" s in
     let arrays  = as_str_field "ARRAYS"  s in
     let exns    = as_str_field "EXNS"    s in
+    let hstate  = as_str_field "HOST"    s in
     update "TAGS"    (Fun.const tags   );
     update "GLOBALS" (Fun.const globals);
     update "MEMS"    (Fun.const mems   );
@@ -98,4 +139,5 @@ module Store = struct
     update "STRUCTS" (Fun.const structs);
     update "ARRAYS"  (Fun.const arrays );
     update "EXNS"    (Fun.const exns   );
+    update "HOST"    (Fun.const hstate );
 end
