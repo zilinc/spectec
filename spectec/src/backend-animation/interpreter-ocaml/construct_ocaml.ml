@@ -157,7 +157,7 @@ and ocaml_of_heaptype = function
   | RT.BotHT -> DL.BOT_heaptype
 
 let ocaml_of_type (ty: RI.Ast.type_) =
-  Printf.printf "Generating OCaml for type...\n";
+  (*Printf.printf "Generating OCaml for type...\n";*)
   DL.TYPE_type_ (ocaml_of_rectype ty.it)
 
 let ocaml_of_local (local: RI.Ast.local) =
@@ -196,7 +196,7 @@ let ocaml_of_instr (instr: RI.Ast.instr) =
     failwith ("instruction not implemented yet: " ^ instr_str)
 
   let ocaml_of_func (func: RI.Ast.func) =
-    Printf.printf "Generating OCaml for function...\n";
+    (*Printf.printf "Generating OCaml for function...\n";*)
     let RI.Ast.Func (idx, locals, instrs) = func.it in
     DL.FUNC_func (
       ocaml_of_ast_typeidx idx,

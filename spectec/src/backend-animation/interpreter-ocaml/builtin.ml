@@ -6,22 +6,30 @@ let use_step_pure = function
   | UNREACHABLE_instr
   | DROP_instr 
   | SELECT_instr _
+  | BR_instr _
+  | RETURN_instr
+  | RETURN_CALL_REF_instr _
   | BINOP_instr _ 
   | REF_dot_I31_NUM_instr _ 
   | TRAP_instr               -> true 
-  | _                        -> false 
+  | _                        -> false
 
 let use_step_read = function
-  | CALL_instr _ | CALL_REF_instr _ | REF_dot_NULL_instr _ 
-  | LOCAL_dot_GET_instr _ | TABLE_dot_INIT_instr _
+  | CALL_instr _ 
+  | THROW_REF_instr 
+  | REF_dot_NULL_instr _ 
+  | LOCAL_dot_GET_instr _ 
+  | TABLE_dot_INIT_instr _
   | MEMORY_dot_INIT_instr _ -> true 
-  | _ -> false
+  | _ -> false 
 
 let use_step = function 
   | ELEM_dot_DROP_instr _
-  | DATA_dot_DROP_instr _ -> true 
+  | DATA_dot_DROP_instr _ 
+  | CALL_REF_instr _      -> true 
   | _ -> false
 
+(* this is outdated i guess?? *)
 let use_step_ctxt = function 
   | LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _
   | FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> true
@@ -36,4 +44,4 @@ let dispatch_step a0 a1 = failwith "TODO: implement Built-in function dispatch_s
 let dispatch_step_read a0 a1 = failwith "TODO: implement Built-in function dispatch_step_pure"
 let step_ctxt a0 = failwith "TODO: implement Built-in function step_ctxt"
 
-let hostcall a0 = failwith "TODO: implement Built-in function hostcall"
+let hostcall a0 a1 = failwith "TODO: implement Built-in function hostcall"

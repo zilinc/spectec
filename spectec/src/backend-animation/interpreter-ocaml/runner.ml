@@ -14,7 +14,7 @@ let module_of_def def =
 
 let get_commands file = 
   let commands = parser file in
-  Temp_print.pp_script commands;
+  (*Temp_print.pp_script commands;*)
   commands
   
-let run () = get_commands test_file
+let run () = Printf.printf "Running test file \"%s\"\n" test_file; get_commands test_file

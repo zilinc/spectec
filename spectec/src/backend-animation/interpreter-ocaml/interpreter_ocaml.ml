@@ -44,12 +44,12 @@ let fresh_tuple n : string =
 
 (* hardcoded things: `Step` needs to be re-defined manually to call `step`. This makes a group of functions (specifically those on any call path from `step` to `Step`) mutually recursive. Since these functions are not recursive in the original spec, we need to mark them as such manually. *)
 let find_recdefs (funcdefs : dl_def list) = 
-  Printf.printf "finding mutually recursive functions ...\n";
-  flush stdout; 
+  (*Printf.printf "finding mutually recursive functions ...\n";
+  flush stdout; *)
   let visited = Hashtbl.create (List.length funcdefs) in
   let rec dfs visited start target = 
-    Printf.printf "start is: %s\n" start;
-    flush stdout; 
+    (*Printf.printf "start is: %s\n" start;
+    flush stdout; *)
     let fdef = find_fdef funcdefs start in
     match Hashtbl.find_opt visited start with
     | Some children -> children 
@@ -59,15 +59,17 @@ let find_recdefs (funcdefs : dl_def list) =
       if start = target then begin 
         let s = Set.singleton start in
         Hashtbl.add visited start s;
+        (*Printf.printf "%s reached: adding to visited\n" target;*)
         s
       end else begin
         Hashtbl.add visited start Set.empty; (* to avoid cycles *)
         let children = f_calls fdef in 
+        (*Printf.printf "%s calls: %s\n" start (String.concat ", " (Set.to_list children));*)
         let reachable = List.fold_left Set.union Set.empty (List.map (fun child -> dfs visited child target) (Set.to_list children)) in
         (* if `Step` is reachable from any of the children then it is reachable from `start` *)
         let result = 
           if Set.is_empty reachable then Set.empty
-          else Set.add start reachable 
+          else Set.add start reachable
         in 
         Hashtbl.add visited start result;
         result end
@@ -75,26 +77,32 @@ let find_recdefs (funcdefs : dl_def list) =
   dfs visited "step" "Step"
 
 let hardcode_step (funcdefs : dl_def list) : dl_def list =
-  Printf.printf "Hardcoding Step function...\n";
-  flush stdout; 
+  (*Printf.printf "Hardcoding Step function...\n";
+  flush stdout; *)
   let rec_funcs = find_recdefs funcdefs in
-  (* we need to insert the recursive functions at the same index we removed them from *)
-  let index = -1 in 
-  let rec mark idx acc rest recdefs = 
+  (*Set.iter (Printf.printf "Mutually recursive function: %s\n") rec_funcs;*)
+  (* we need to insert the recursive functions at the (last) index we removed them from *)
+  let rec mark idx acc rest recdefs insert = 
     match rest with 
-    | [] -> acc, recdefs, idx
+    | [] -> acc, recdefs, insert
     | def :: rest' -> 
+      (* todo: also need to check every redef oops *)
       begin match def with 
       | FuncDef {it = ({it=name;_}, _, _, _, _); _} ->
         if Set.mem name rec_funcs then
-          let index = if index <> -1 then index else idx in 
-          mark (idx+1) acc rest' (recdefs @ [def]) 
-        else mark (idx+1) (acc @ [def]) rest' recdefs
-      | _ -> mark (idx+1) (acc @ [def]) rest' recdefs
+            (*(Printf.printf "updated insert index: %d\n" insert;*)
+            mark (idx+1) acc rest' (recdefs @ [def]) idx
+        else 
+          mark (idx+1) (acc @ [def]) rest' recdefs insert
+      | _ -> mark (idx+1) (acc @ [def]) rest' recdefs insert
       end
   in
-  let rest, recdefs, idx = mark 0 [] funcdefs [] in 
-  (List.take idx rest) @ recdefs @ (List.drop idx rest)
+  let rest, recdefs, insert = mark 1 [] funcdefs [] (-1) in 
+  (*Printf.printf "length of recdefs: %d; length of total list: %d; inserting at position: %d\n" (List.length recdefs) (List.length funcdefs) insert;
+  Printf.printf "taking first %d elems of list\n" (insert - List.length recdefs);
+  Printf.printf "taking last %d elems of list\n" (List.length funcdefs - insert);
+  Printf.printf "inserted recdef at index: %d\n" insert;*)
+  (List.take (insert - List.length recdefs) rest) @ [RecDef recdefs] @ (List.drop (insert - List.length recdefs) rest)
 
 (* TODOs: 
 REFACTOR (always)
@@ -1132,7 +1140,7 @@ let build_stepcases step =
   let (VariantT instr_tcs) = instrsdt.it in
   concat_mapM "\n" (fun (op, (_, t, _), _) -> 
     let consname = sanitize_name ~typename:false (Util_ocaml.mixop_to_atom_str op) in 
-    let funcname = sanitize_name (Printf.sprintf "Step_%s/%s" step consname) in
+    let funcname = sanitize_name (Printf.sprintf "Step%s/%s" step consname) in
     let* is_defined = is_defined funcname in
     let* args = ocaml_of_typ_args t in
     let args_str = if args = "" then "" else " _" in 
@@ -1143,12 +1151,14 @@ let build_stepcases step =
   ) instr_tcs
 
 let build_dispatch step = 
-  let* instr_cases = build_stepcases step in
+  let suffix = if step = "" then "" else "_" ^ step in
+  let* instr_cases = build_stepcases suffix in
+  let rettype = if step = "" then "config" else "instr list" in
   return ([Printf.sprintf
-  "dispatch_step_%s instr instrs : (instr list) =\n\
-  \  if (Builtin.use_step_%s instr) then match instr with \n%s\n\
-  \  else failwith \"Instruction is not a %s instruction.\"\n"
-  step step instr_cases step])
+  "dispatch_step%s instr instrs : (%s) =\n\
+  \  if (Builtin.use_step%s instr) then match instr with \n%s\n\
+  \  else failwith \"Instruction is not a step%s instruction.\"\n"
+  suffix rettype suffix instr_cases step])
 
 (* Each clause is it's own function *)
 let ocaml_of_func_def (fdef : func_def) : string list t =
@@ -1166,13 +1176,14 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     match id.it with 
     | "Step_read_throw_ref_handler" -> 
       return [name ^ " = uc_step_read_slashthrow_ref\n"]
-    (* URGENT change this when access to internet lol *)
     | "dispatch_step_pure" -> build_dispatch "pure"
     | "dispatch_step_read" -> build_dispatch "read"
+    | "dispatch_step"      -> build_dispatch ""
     | _ -> return [name ^ " = Builtin." ^ name ^ "\n"]
-  end else begin
+  end else if (id.it = "Step") then return ["uc_step a0 = step a0\n"] (* this is re-defined to called `step` instead *) 
+  else begin
   let typevars = typevars_of_params params in
-  Printf.printf "defining func: %s\n" id.it;
+  (*Printf.printf "defining func: %s\n" id.it;*)
   (*Set.iter (Printf.printf "%s\n") typevars;*)
   let* () = set_typevars (typevars_of_params params) in
   let* rettypstr = ocaml_of_typ rettyp in
@@ -1194,8 +1205,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
         let* typecasts = get_typecasts () in
         let* () = set_typecasts "" in
         (* debugging stuff remove later*)
-        let debug = Printf.sprintf "  Printf.printf \"calling clause_%s_%d\\n\";" name i in
-        let bodycode = debug ^ typecasts ^ prems_block in
+        (*let debug = Printf.sprintf "  Printf.printf \"calling clause_%s_%d\\n\";" name i in*)
+        let bodycode = typecasts ^ prems_block in
         if bodycode = "" then
           return (Printf.sprintf "clause_%s_%d %s : %s = %s\n" name i argnames rettypstr retvalue)
         else
@@ -1246,7 +1257,7 @@ let ocaml_of_typedef (typedef : type_def) : string t =
   match typedef with
   | {it=(id, ps, insts); _} ->
     let* () = add_typedef (sanitize_name id.it) typedef in
-    (*Printf.printf "typedef: %s\n" id.it;*)
+   (*Printf.printf "defining typedef: %s\n" id.it;*)
     let* () = set_typevars (typevars_of_params ps) in
     match insts with
     (* TODO: for now, we ignore all instances of a type except the first one *)
@@ -1288,7 +1299,7 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
       (* hardcoded - we want "Steps" to redirect to "steps" immediately. defining it in another file will cause a cyclic dependency and we have to define it after "steps" is defined but before it is called *)
       let fdef = List.hd fdefs in
       let id, _, _, _, _ = fdef.it in
-      let steps = if (sanitize_name id.it) = "steps" then " let uc_steps = steps\n" else "" in
+      let steps = if (sanitize_name id.it) = "steps" then "let uc_steps a0 = steps a0\n" else "" in
       return ("let rec " ^ String.concat "\nand " func_strs ^ "\n" ^ steps, "")
     | (TypeDef _)::_ -> let typedefs = List.map (fun def -> match def with
         | TypeDef typedef -> typedef
@@ -1315,9 +1326,10 @@ let gen_instr_strs () =
   tell (Printf.sprintf "let instr_to_string = function\n%s\n" cases)
 
 let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
-  Printf.printf "Calling hardcode step...\n";
+  (*Printf.printf "Calling hardcode step...\n";*)
   let processed_defs = hardcode_step defs in
-  let* def_strs : (string * string) list = mapM ocaml_of_dl_def defs in
+  (*Printf.printf "length after hardcoding step: %d...\n"(List.length processed_defs);*)
+  let* def_strs : (string * string) list = mapM ocaml_of_dl_def processed_defs in
   let func_defs, type_defs = List.split def_strs in
   let func_str = concat_nonempty "\n" func_defs in
   let type_str = concat_nonempty "\n" type_defs in

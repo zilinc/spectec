@@ -31,15 +31,12 @@ let string_of_ocamlname = function
 let externaddr_from_import import = failwith "TODO: implement externaddr_from_import"
 
 let get_export name moduleinst_name =
-  Printf.printf "Getting export %s from moduleinst %s...\n" name moduleinst_name;
   let exports = (Register.find moduleinst_name).uc_exports_moduleinst in 
-  Printf.printf "number of exports: %d\n" (List.length exports);
-  List.iter (fun export -> Printf.printf "Export: %s\n" (string_of_ocamlname export.uc_name_exportinst)) exports;
   List.find (fun export -> (string_of_ocamlname export.uc_name_exportinst) = name) exports
 
 let get_export_addr name moduleinst_name =
   let export_addr = get_export name moduleinst_name in
-  Printf.printf "Getting funcaddr %s from moduleinst %s...\n" name moduleinst_name;
+  (*Printf.printf "Getting funcaddr %s from moduleinst %s...\n" name moduleinst_name;*)
   match export_addr.uc_addr_exportinst with
   | DL.FUNC_externaddr funcaddr -> funcaddr
   | _ -> failwith ("Export " ^ name ^ " is not a function.")
@@ -63,7 +60,6 @@ let get_moduleinst config =
   frame'.uc_module_frame
 
 let instantiate_helper (m : module_) = 
-  Printf.printf "Calling instantiate_helper module...\n";
   let imports = match m with 
   | MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) -> imports
   in 
@@ -80,8 +76,6 @@ let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
     let config' = invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args in 
-    let C_pct__semi_pct__config (_, instrs) = config' in 
-    List.iter (fun instr -> Printf.printf "%s\n" (string_of_dlinstr instr)) instrs;
     uc_steps config'
   | _ -> failwith "TODO: implement other actions"
 
@@ -89,7 +83,6 @@ let test_assertion assertion =
   match assertion.it with
   | AssertReturn (action, expected) ->
     let C_pct__semi_pct__config (_, vals) = run_action action in 
-    List.iter (fun val_ -> Printf.printf "%s\n" (string_of_dlinstr val_)) vals;
     let result = List.map val_of_ocaml vals in 
     assert_results no_region result expected;
     ()
@@ -109,10 +102,9 @@ let run_command cmd = match cmd.it with
     |> Register.add_with_var var1_opt
   (*| Action a ->
     ignore (run_action a); success*)
-  | Assertion a -> test_assertion a
+  | Assertion a -> test_assertion a; Printf.printf "[Assertion passed]\n"
   | _ -> failwith "TODO: implement other commands"
 
 let () = 
-  Printf.printf "Running test file..\n";
   let cmds = Backend_animation.Runner.run () in 
   List.iter run_command cmds
