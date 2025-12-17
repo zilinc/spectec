@@ -66,27 +66,27 @@ rule Step_pure/select-false:
 
 ;; Block instructions
 
-;; def $blocktype_(state, blocktype) : instrtype hint(macro "fblocktype")
-;; def $blocktype_(z, _IDX x) = t_1* -> t_2*  -- Expand: $type(z, x) ~~ FUNC t_1* -> t_2*
-;; def $blocktype_(z, _RESULT t?) = eps -> t?
-;; 
-;; rule Step_read/block:
-;;   z; val^m (BLOCK bt instr*)  ~>  (LABEL_ n `{eps} val^m instr*)
-;;   -- if $blocktype_(z, bt) = t_1^m -> t_2^n
-;; 
-;; rule Step_read/loop:
-;;   z; val^m (LOOP bt instr*)  ~>  (LABEL_ m `{LOOP bt instr*} val^m instr*)
-;;   -- if $blocktype_(z, bt) = t_1^m -> t_2^n
-;; 
-;; rule Step_pure/if-true:
-;;   (CONST I32 c) (IF bt instr_1* ELSE instr_2*)  ~>  (BLOCK bt instr_1*)
-;;   -- if c =/= 0
-;; 
-;; rule Step_pure/if-false:
-;;   (CONST I32 c) (IF bt instr_1* ELSE instr_2*)  ~>  (BLOCK bt instr_2*)
-;;   -- if c = 0
-;; 
-;; 
+def $blocktype_(state, blocktype) : instrtype hint(macro "fblocktype")
+def $blocktype_(z, _IDX x) = t_1* -> t_2*  -- Expand: $type(z, x) ~~ FUNC t_1* -> t_2*
+def $blocktype_(z, _RESULT t?) = eps -> t?
+
+rule Step_read/block:
+  z; val^m (BLOCK bt instr*)  ~>  (LABEL_ n `{eps} val^m instr*)
+  -- if $blocktype_(z, bt) = t_1^m -> t_2^n
+
+rule Step_read/loop:
+  z; val^m (LOOP bt instr*)  ~>  (LABEL_ m `{LOOP bt instr*} val^m instr*)
+  -- if $blocktype_(z, bt) = t_1^m -> t_2^n
+
+rule Step_pure/if-true:
+  (CONST I32 c) (IF bt instr_1* ELSE instr_2*)  ~>  (BLOCK bt instr_1*)
+  -- if c =/= 0
+
+rule Step_pure/if-false:
+  (CONST I32 c) (IF bt instr_1* ELSE instr_2*)  ~>  (BLOCK bt instr_2*)
+  -- if c = 0
+
+
 ;; rule Step_pure/label-vals:
 ;;   (LABEL_ n `{instr*} val*)  ~>  val*
 ;; 
@@ -428,18 +428,18 @@ rule Step_read/local.get:
 ;;   z; (ELEM.DROP x)  ~>  $with_elem(z, x, eps); eps
 ;; 
 ;; 
-;; ;; Memory instructions
+;; Memory instructions
+
+rule Step_read/load-num-oob:
+  z; (CONST at i) (LOAD nt x ao)  ~>  TRAP
+  ----
+  -- if $(i + ao.OFFSET + $size(nt)/8 > |$mem(z, x).BYTES|)
 ;; 
-;; rule Step_read/load-num-oob:
-;;   z; (CONST at i) (LOAD nt x ao)  ~>  TRAP
-;;   ----
-;;   -- if $(i + ao.OFFSET + $size(nt)/8 > |$mem(z, x).BYTES|)
-;; 
-;; rule Step_read/load-num-val:
-;;   z; (CONST at i) (LOAD nt x ao)  ~>  (CONST nt c)
-;;   ----
-;;   -- if $nbytes_(nt, c) = $mem(z, x).BYTES[i + ao.OFFSET : $size(nt)/8]
-;; 
+rule Step_read/load-num-val:
+  z; (CONST at i) (LOAD nt x ao)  ~>  (CONST nt c)
+  ----
+  -- if $nbytes_(nt, c) = $mem(z, x).BYTES[i + ao.OFFSET : $size(nt)/8]
+
 ;; rule Step_read/load-pack-oob:
 ;;   z; (CONST at i) (LOAD Inn (n _ sx) x ao)  ~>  TRAP
 ;;   ----

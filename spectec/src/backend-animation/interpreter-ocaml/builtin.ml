@@ -1,25 +1,96 @@
 open Dl_codegen_types
 
-(* for now, do the very inefficient thing - actually it might not be that bad, the compiler may optimise constructor-matching since we ignore the arguments *)
 let use_step_pure = function 
   | NOP_instr
   | UNREACHABLE_instr
   | DROP_instr 
   | SELECT_instr _
+  | IF_pct__pct_ELSE_pct__instr _
   | BR_instr _
+  | BR_IF_instr _
+  | BR_TABLE_instr _
+  | BR_ON_NULL_instr _
+  (*| BR_ON_NON_NULL _
+  | CALL_INDIRECT
+  | RETURN_CALL_INDIRECT*)
   | RETURN_instr
+  (* | UNOP *)
   | RETURN_CALL_REF_instr _
   | BINOP_instr _ 
+  (* | TESTOP_instr
+  | RELOP_instr
+  | CVTOP_instr 
+  | REF_dot_IS_NULL_instr
+  | REF_dot_AS_NON_NULL_instr
+  | REF_dot_EQ_instr
+  | I31_dot_GET_instr
+  | ARRAY_dot_NEW_instr
+  | EXTERN_dot_CONVERT_ANY_instr
+  | ANY_dot_CONVERT_EXTERN_instr
+  | VVUNOP_instr
+  | VVBINOP_instr
+  | VVTERNOP_instr
+  | VVTESTOP_instr
+  | VUNOP_instr 
+  | VBINOP_instr
+  | VTERNOP_instr
+  | VTESTOP_instr
+  | VRELOP_instr
+  | VSHIFTOP_instr
+  | VBITMASK_instr
+  | VSWIZZLOP_instr
+  | VSHUFFLE_instr
+  | VSPLAT_instr
+  | VEXTRACT_LANE_instr
+  | VREPLACE_LANE_instr
+  | VEXTUNOP_instr
+  | VEXTBINOP_instr
+  | VEXTTERNOP_instr
+  | VNARROW_instr
+  | VCVTOP_instr
+  | LOCAL_dot_TEE_instr *)
   | REF_dot_I31_NUM_instr _ 
   | TRAP_instr               -> true 
   | _                        -> false
 
 let use_step_read = function
-  | CALL_instr _ 
-  | THROW_REF_instr 
-  | REF_dot_NULL_instr _ 
-  | LOCAL_dot_GET_instr _ 
+  | BLOCK_instr _
+  | LOOP_instr _
+  (* | BR_ON_CAST_instr
+  | BR_ON_CAST_FAIL_instr *)
+  | CALL_instr _
+  (* | RETURN_CALL_instr *)
+  | RETURN_CALL_REF_instr _
+  | THROW_REF_instr
+  (* | TRY_TABLE_instr *)
+  | REF_dot_NULL_instr _
+  | REF_dot_FUNC_ADDR_instr _ (* not sure if this is the same *)
+  (* | REF_dot_TEST_instr
+  | REF_dot_CAST_instr
+  | STRUCT_dot_NEW_DEFAULT_instr
+  | STRUCT_dot_GET_instr
+  | ARRAY_dot_NEW_DEFAULT_instr
+  | ARRAY_dot_NEW_ELEM_instr
+  | ARRAY_dot_NEW_DATA_instr
+  | ARRAY_dot_GET_instr
+  | ARRAY_dot_LEN_instr
+  | ARRAY_dot_FILL_instr
+  | ARRAY_dot_COPY_instr
+  | ARRAY_dot_INIT_DATA_instr
+  | ARRAY_dot_INIT_ELEM_instr *)
+  | LOCAL_dot_GET_instr _
+  (* | GLOBAL_dot_GET_instr
+  | TABLE_dot_GET_instr
+  | TABLE_dot_SIZE_instr
+  | TABLE_dot_FILL_instr
+  | TABLE_dot_COPY_instr *)
   | TABLE_dot_INIT_instr _
+  | LOAD_instr _
+  (* | VLOAD_instr
+  | VLOAD_LANE_instr
+  | MEMORY_dot_SIZE_instr
+  | MEMORY_dot_FILL_instr
+  | MEMORY_dot_COPY_instr *)
   | MEMORY_dot_INIT_instr _ -> true 
   | _ -> false 
 
@@ -29,7 +100,6 @@ let use_step = function
   | CALL_REF_instr _      -> true 
   | _ -> false
 
-(* this is outdated i guess?? *)
 let use_step_ctxt = function 
   | LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _
   | FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> true
@@ -44,4 +114,12 @@ let dispatch_step a0 a1 = failwith "TODO: implement Built-in function dispatch_s
 let dispatch_step_read a0 a1 = failwith "TODO: implement Built-in function dispatch_step_pure"
 let step_ctxt a0 = failwith "TODO: implement Built-in function step_ctxt"
 
-let hostcall a0 a1 = failwith "TODO: implement Built-in function hostcall"
+let hostcall a0 a1 a2 = failwith "TODO: implement Built-in function hostcall"
+
+let nbytes_ a0 = failwith "TODO: implement Built-in function nbytes"
+
+let inv_nbytes_ a0 a1 = failwith "TODO: implement Built-in function nbytes"
+
+let idiv_ a0 a1 = failwith "TODO: implement Built-in function idiv_"
+let irem_ a0 a1 = failwith "TODO: implement Built-in function irem_"
+let imin_ a0 a1 = failwith "TODO: implement Built-in function imin_"

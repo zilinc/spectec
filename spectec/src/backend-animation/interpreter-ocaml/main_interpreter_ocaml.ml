@@ -60,8 +60,11 @@ let generate_ocaml dl ocamlfile =
   let type_import = Printf.sprintf "open %s_types\n" (capsfirst ocaml_filename) in
   let util_import = Printf.sprintf "open %s_util\n" (capsfirst ocaml_filename) in
   let util_ocaml = Printf.sprintf "open Backend_animation.Util_ocaml\n" in
-  let sup_redundant = "[@@@ocaml.warning \"-11\"]\n\n" in
-  write_file (basepath ^ ocaml_filename ^ ".ml") (sup_redundant ^ type_import ^ util_import ^ main);
+  (* ignore redundant cases in pattern matching for now - todo: probably not this *)
+  let sup_redundant = "[@@@ocaml.warning \"-11\"]\n" in
+  (* ignore warnings that updates re-write all fields in a record *)
+  let sup_uselessrec = "[@@@ocaml.warning \"-23\"]\n\n" in
+  write_file (basepath ^ ocaml_filename ^ ".ml") (sup_redundant ^ sup_uselessrec ^ type_import ^ util_import ^ main);
   write_file (basepath ^ ocaml_filename ^ "_types.ml") types;
   write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ util_ocaml ^ typeconv)
 

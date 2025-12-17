@@ -41,7 +41,7 @@ let ocaml_of_codepoint (cp: RI.Utf8.codepoint) : DL.char = DL.C_pct__char cp
 let ocaml_of_name (name : RI.Ast.name) : DL.name = 
   DL.C_pct__name (List.map ocaml_of_codepoint name)
 
-(* todo: possibly a better way of doing this since we want a way to express dependent types anyway,, also int32 translates to nat for now but probably should not *)
+(* int32 translates to nat for now but probably should not *)
 let ocaml_of_typeidx (n : RT.typeidx) : DL.typeidx = C_pct__uc_un (Int32.to_int n)
 
 let ocaml_of_idx (n : RI.Ast.idx) : DL.idx = C_pct__uc_un (Int32.to_int n.it)
@@ -55,8 +55,13 @@ let ocaml_of_localidx (n : RI.Ast.localidx) : DL.localidx = ocaml_of_idx n
 let ocaml_of_tagidx (n : RI.Ast.tagidx) : DL.tagidx = ocaml_of_idx n
 let ocaml_of_globalidx (n : RI.Ast.globalidx) : DL.globalidx = ocaml_of_idx n
 
+let ocaml_of_labelidx (n : RI.Ast.labelidx) : DL.labelidx = ocaml_of_idx n
+
 let ocaml_typeuse_of_typeidx (n : DL.typeidx) = DL.C_IDX_typeuse n 
 let ocaml_of_int32 (n : int32) : DL.nat = Int32.to_int n
+
+let ocaml_unsigned_of_int (n : int) : DL.uc_un = DL.C_pct__uc_un n
+let ocaml_unsigned_of_int64 (n : int64) : DL.uc_un = DL.C_pct__uc_un (Int64.to_int n)
 let ocaml_of_mut mut = match mut with 
   | RT.Cons -> None
   | RT.Var  -> Some DL.MUT_mut
@@ -164,38 +169,155 @@ let ocaml_of_local (local: RI.Ast.local) =
   let RI.Ast.Local vt = local.it in
   DL.LOCAL_local (ocaml_of_valtype vt)
 
-let ocaml_of_instr (instr: RI.Ast.instr) =
-  match instr.it with
-  | RI.Ast.Unreachable      -> DL.UNREACHABLE_instr
-  | RI.Ast.Nop              -> DL.NOP_instr
-  | RI.Ast.Drop             -> DL.DROP_instr
-  | RI.Ast.Select None      -> DL.SELECT_instr None
-  | RI.Ast.Select (Some vt) -> DL.SELECT_instr (Some (List.map ocaml_of_valtype vt))
-  | RI.Ast.Const num        -> begin match num.it with 
-    | RI.Value.I32 n        -> DL.CONST_instr (DL.I32_numtype, DL.C_pct__uc_un (Int32.to_int n))
-    | RI.Value.I64 n        -> failwith "I64 not implemented yet"
-    | RI.Value.F32 n        -> failwith "F32 not implemented yet"
-    | RI.Value.F64 n        -> failwith "F64 not implemented yet"
-    end
-  | RI.Ast.Binary binop     -> begin match binop with 
-    | RI.Value.I32 RI.Ast.IntOp.Add -> DL.BINOP_instr (DL.I32_numtype, DL.ADD_binop_)
-    | RI.Value.I32 RI.Ast.IntOp.Sub -> DL.BINOP_instr (DL.I32_numtype, DL.SUB_binop_)
-    | _ -> failwith "non-addition binary op not implemented yet"
-    end
-  | RI.Ast.Call funcidx     -> DL.CALL_instr (ocaml_of_funcidx funcidx)
-  | RI.Ast.CallRef typeidx  -> DL.CALL_REF_instr (ocaml_typeuse_of_typeidx (ocaml_of_ast_typeidx typeidx))
-  | RI.Ast.RefNull heaptype -> DL.REF_dot_NULL_instr (ocaml_of_heaptype heaptype)
-  | RI.Ast.TableInit 
-    (tableidx, elemidx)     -> DL.TABLE_dot_INIT_instr (ocaml_of_tableidx tableidx, ocaml_of_elemidx elemidx)
-  | RI.Ast.ElemDrop elemidx -> DL.ELEM_dot_DROP_instr (ocaml_of_elemidx elemidx)
-  | RI.Ast.MemoryInit 
-    (memoryidx, dataidx)    -> DL.MEMORY_dot_INIT_instr (ocaml_of_memoryidx memoryidx, ocaml_of_dataidx dataidx)
-  | RI.Ast.DataDrop dataidx -> DL.DATA_dot_DROP_instr (ocaml_of_dataidx dataidx)  
-  | RI.Ast.LocalGet localidx -> DL.LOCAL_dot_GET_instr (ocaml_of_localidx localidx)   
-  | _                       -> 
-    let instr_str = Backend_animation.Temp_print.string_of_instr instr in
-    failwith ("instruction not implemented yet: " ^ instr_str)
+(* not sure if this is correct *)
+let ocaml_of_packsize (packsize : RI.Pack.packsize) =
+  match packsize with 
+  | RI.Pack.Pack8  -> DL.C_pct__sz 8
+  | RI.Pack.Pack16 -> DL.C_pct__sz 16
+  | RI.Pack.Pack32 -> DL.C_pct__sz 32
+  | RI.Pack.Pack64 -> DL.C_pct__sz 64
 
+let ocaml_of_sx (sx : RI.Pack.sx) =
+  match sx with 
+  | RI.Pack.S -> DL.S_sx
+  | RI.Pack.U -> DL.U_sx
+  
+let ocaml_of_loadop (loadop : RI.Ast.loadop) =
+  match loadop.pack with 
+  | Some (packsize, sx) -> Some (DL.C_pct___pct__loadop_ (ocaml_of_packsize packsize, ocaml_of_sx sx))
+  | None -> None
+
+let ocaml_mem_of_loadop (loadop : RI.Ast.loadop) : DL.memarg =
+  let align = loadop.align in
+  let offset = loadop.offset in
+  { uc_align_memarg = ocaml_unsigned_of_int align; uc_offset_memarg = ocaml_unsigned_of_int64 offset }
+
+let ocaml_of_blocktype (bt : RI.Ast.blocktype) : DL.blocktype =
+  match bt with 
+  | RI.Ast.VarBlockType typeidx -> DL.C_IDX_blocktype (ocaml_of_ast_typeidx typeidx)
+  | ValBlockType vt_opt         -> DL.C_RESULT_blocktype (Option.map ocaml_of_valtype vt_opt)
+
+let rec ocaml_of_instr (instr: RI.Ast.instr) =
+  match instr.it with
+  | RI.Ast.Unreachable       -> DL.UNREACHABLE_instr
+  | RI.Ast.Nop               -> DL.NOP_instr
+  | RI.Ast.Drop              -> DL.DROP_instr
+  | RI.Ast.Select None       -> DL.SELECT_instr None
+  | RI.Ast.Select (Some vt)  -> DL.SELECT_instr (Some (List.map ocaml_of_valtype vt))
+  | RI.Ast.Block _           -> failwith "Block instruction not implemented yet"
+  | RI.Ast.Loop _            -> failwith "Loop instruction not implemented yet"
+  | RI.Ast.If (blocktype, instrs, instrs')
+                             -> IF_pct__pct_ELSE_pct__instr (ocaml_of_blocktype blocktype, List.map ocaml_of_instr instrs, List.map ocaml_of_instr instrs')
+  | RI.Ast.Br labelidx       -> DL.BR_instr (ocaml_of_labelidx labelidx)
+  | RI.Ast.BrIf _            -> failwith "BrIf instruction not implemented yet"
+  | RI.Ast.BrTable _         -> failwith "BrTable instruction not implemented yet"
+  | RI.Ast.BrOnNull _        -> failwith "BrOnNull instruction not implemented yet"
+  | RI.Ast.BrOnNonNull _     -> failwith "BrOnNonNull instruction not implemented yet"
+  | RI.Ast.BrOnCast _        -> failwith "BrOnCast instruction not implemented yet"
+  | RI.Ast.BrOnCastFail _    -> failwith "BrOnCastFail instruction not implemented yet"
+  | RI.Ast.Return            -> failwith "Return instruction not implemented yet"
+  | RI.Ast.Call funcidx      -> DL.CALL_instr (ocaml_of_funcidx funcidx)
+  | RI.Ast.CallRef typeidx   -> DL.CALL_REF_instr (ocaml_typeuse_of_typeidx (ocaml_of_ast_typeidx typeidx))
+  | RI.Ast.CallIndirect _    -> failwith "CallIndirect instruction not implemented yet"
+  | RI.Ast.ReturnCall _      -> failwith "ReturnCall instruction not implemented yet"
+  | RI.Ast.ReturnCallRef _   -> failwith "ReturnCallRef instruction not implemented yet"
+  | RI.Ast.ReturnCallIndirect _
+                             -> failwith "ReturnCallIndirect instruction not implemented yet"
+  | RI.Ast.Throw _           -> failwith "Throw instruction not implemented yet"
+  | RI.Ast.ThrowRef          -> failwith "ThrowRef instruction not implemented yet"
+  | RI.Ast.TryTable _        -> failwith "TryTable instruction not implemented yet"
+  | RI.Ast.LocalGet localidx -> DL.LOCAL_dot_GET_instr (ocaml_of_localidx localidx) 
+  | RI.Ast.LocalSet _        -> failwith "LocalSet instruction not implemented yet"
+  | RI.Ast.LocalTee _        -> failwith "LocalTee instruction not implemented yet"
+  | RI.Ast.GlobalGet _       -> failwith "GlobalGet instruction not implemented yet"
+  | RI.Ast.GlobalSet _       -> failwith "GlobalSet instruction not implemented yet"
+  | RI.Ast.TableGet _        -> failwith "TableGet instruction not implemented yet"
+  | RI.Ast.TableSet _        -> failwith "TableSet instruction not implemented yet"
+  | RI.Ast.TableSize _       -> failwith "TableSize instruction not implemented yet"
+  | RI.Ast.TableGrow _       -> failwith "TableGrow instruction not implemented yet"
+  | RI.Ast.TableFill _       -> failwith "TableFill instruction not implemented yet"
+  | RI.Ast.TableCopy _       -> failwith "TableCopy instruction not implemented yet"
+  | RI.Ast.TableInit 
+    (tableidx, elemidx)      -> DL.TABLE_dot_INIT_instr (ocaml_of_tableidx tableidx, ocaml_of_elemidx elemidx)
+  | RI.Ast.ElemDrop elemidx  -> DL.ELEM_dot_DROP_instr (ocaml_of_elemidx elemidx)
+  | RI.Ast.Load (memidx, loadop)
+                             -> DL.LOAD_instr (ocaml_of_numtype loadop.ty, ocaml_of_loadop loadop, ocaml_of_memoryidx memidx, ocaml_mem_of_loadop loadop)
+  | RI.Ast.Store _           -> failwith "Store instruction not implemented yet"
+  | RI.Ast.VecLoad _         -> failwith "VecLoad instruction not implemented yet"
+  | RI.Ast.VecStore _        -> failwith "VecStore instruction not implemented yet"
+  | RI.Ast.VecLoadLane _     -> failwith "VecLoadLane instruction not implemented yet"
+  | RI.Ast.VecStoreLane _    -> failwith "VecStoreLane instruction not implemented yet"
+  | RI.Ast.MemorySize _      -> failwith "MemorySize instruction not implemented yet"
+  | RI.Ast.MemoryGrow _      -> failwith "MemoryGrow instruction not implemented yet"
+  | RI.Ast.MemoryFill _      -> failwith "MemoryFill instruction not implemented yet"
+  | RI.Ast.MemoryCopy _      -> failwith "MemoryCopy instruction not implemented yet"
+  | RI.Ast.MemoryInit 
+    (memoryidx, dataidx)     -> DL.MEMORY_dot_INIT_instr (ocaml_of_memoryidx memoryidx, ocaml_of_dataidx dataidx)
+  | RI.Ast.DataDrop dataidx  -> DL.DATA_dot_DROP_instr (ocaml_of_dataidx dataidx)  
+  | RI.Ast.RefNull heaptype  -> DL.REF_dot_NULL_instr (ocaml_of_heaptype heaptype)
+  | RI.Ast.RefFunc _         -> failwith "RefFunc instruction not implemented yet"
+  | RI.Ast.RefIsNull         -> failwith "RefIsNull instruction not implemented yet"
+  | RI.Ast.RefAsNonNull      -> failwith "RefAsNonNull instruction not implemented yet"
+  | RI.Ast.RefTest _         -> failwith "RefTest instruction not implemented yet"
+  | RI.Ast.RefCast _         -> failwith "RefCast instruction not implemented yet"
+  | RI.Ast.RefEq             -> failwith "RefEq instruction not implemented yet"
+  | RI.Ast.RefI31            -> failwith "RefI31 instruction not implemented yet"
+  | RI.Ast.I31Get _          -> failwith "I31Get instruction not implemented yet"
+  | RI.Ast.StructNew _       -> failwith "StructNew instruction not implemented yet"
+  | RI.Ast.StructGet _       -> failwith "StructGet instruction not implemented yet"
+  | RI.Ast.StructSet _       -> failwith "StructSet instruction not implemented yet"
+  | RI.Ast.ArrayNew _        -> failwith "ArrayNew instruction not implemented yet"
+  | RI.Ast.ArrayNewFixed _   -> failwith "ArrayNewFixed instruction not implemented yet"
+  | RI.Ast.ArrayNewData _    -> failwith "ArrayNewData instruction not implemented yet"
+  | RI.Ast.ArrayNewElem _    -> failwith "ArrayNewElem instruction not implemented yet"
+  | RI.Ast.ArrayGet _        -> failwith "ArrayGet instruction not implemented yet"
+  | RI.Ast.ArraySet _        -> failwith "ArraySet instruction not implemented yet"
+  | RI.Ast.ArrayLen          -> failwith "ArrayLen instruction not implemented yet"
+  | RI.Ast.ArrayCopy _       -> failwith "ArrayCopy instruction not implemented yet"
+  | RI.Ast.ArrayFill _       -> failwith "ArrayFill instruction not implemented yet"
+  | RI.Ast.ArrayInitData _   -> failwith "ArrayInitData instruction not implemented yet"
+  | RI.Ast.ArrayInitElem _   -> failwith "ArrayInitElem instruction not implemented yet"
+  | RI.Ast.ExternConvert _   -> failwith "ExternConvert instruction not implemented yet"
+  | RI.Ast.Const num         -> begin match num.it with 
+    | RI.Value.I32 n         -> DL.CONST_instr (DL.I32_numtype, DL.C_pct__uc_un (Int32.to_int n))
+    | RI.Value.I64 n         -> failwith "I64 not implemented yet"
+    | RI.Value.F32 n         -> failwith "F32 not implemented yet"
+    | RI.Value.F64 n         -> failwith "F64 not implemented yet"
+    end
+  | RI.Ast.Test _            -> failwith "Test instruction not implemented yet"
+  | RI.Ast.Compare _         -> failwith "Compare instruction not implemented yet"
+  | RI.Ast.Unary _           -> failwith "Unary instruction not implemented yet"
+  | RI.Ast.Binary binop      -> begin match binop with 
+    | RI.Value.I32 RI.Ast.IntOp.Add    -> DL.BINOP_instr (DL.I32_numtype, DL.ADD_binop_)
+    | RI.Value.I32 RI.Ast.IntOp.Sub    -> DL.BINOP_instr (DL.I32_numtype, DL.SUB_binop_)
+    | RI.Value.I32 RI.Ast.IntOp.Mul    -> DL.BINOP_instr (DL.I32_numtype, DL.MUL_binop_)
+    | RI.Value.I32 RI.Ast.IntOp.Div sx -> DL.BINOP_instr (DL.I32_numtype, DL.DIV_binop_ (ocaml_of_sx sx))
+    | RI.Value.I32 RI.Ast.IntOp.Rem sx -> DL.BINOP_instr (DL.I32_numtype, DL.REM_binop_ (ocaml_of_sx sx))
+    | RI.Value.I32 RI.Ast.IntOp.Or     -> DL.BINOP_instr (DL.I32_numtype, DL.OR_binop_)
+    | RI.Value.I32 RI.Ast.IntOp.Xor    -> DL.BINOP_instr (DL.I32_numtype, DL.XOR_binop_)
+    | RI.Value.I32 RI.Ast.IntOp.Shl    -> DL.BINOP_instr (DL.I32_numtype, DL.SHL_binop_)
+    | RI.Value.I32 RI.Ast.IntOp.Shr sx -> DL.BINOP_instr (DL.I32_numtype, DL.SHR_binop_ (ocaml_of_sx sx))
+    | RI.Value.I32 RI.Ast.IntOp.Rotl   -> DL.BINOP_instr (DL.I32_numtype, DL.ROTL_binop_)
+    | RI.Value.I32 RI.Ast.IntOp.Rotr   -> DL.BINOP_instr (DL.I32_numtype, DL.ROTR_binop_)
+    | _ -> failwith "non-i32 binary op not implemented yet"
+    end
+  | RI.Ast.Convert _         -> failwith "Convert instruction not implemented yet"
+  | RI.Ast.VecConst _        -> failwith "VecConst instruction not implemented yet"
+  | RI.Ast.VecTest _         -> failwith "VecTest instruction not implemented yet"
+  | RI.Ast.VecCompare _      -> failwith "VecCompare instruction not implemented yet"
+  | RI.Ast.VecUnary _        -> failwith "VecUnary instruction not implemented yet"
+  | RI.Ast.VecBinary _       -> failwith "VecBinary instruction not implemented yet"
+  | RI.Ast.VecTernary _      -> failwith "VecTernary instruction not implemented yet"
+  | RI.Ast.VecConvert _      -> failwith "VecConvert instruction not implemented yet"
+  | RI.Ast.VecShift _        -> failwith "VecShift instruction not implemented yet"
+  | RI.Ast.VecBitmask _      -> failwith "VecBitmask instruction not implemented yet"
+  | RI.Ast.VecTestBits _     -> failwith "VecTestBits instruction not implemented yet"
+  | RI.Ast.VecUnaryBits _    -> failwith "VecUnaryBits instruction not implemented yet"
+  | RI.Ast.VecBinaryBits _   -> failwith "VecBinaryBits instruction not implemented yet"
+  | RI.Ast.VecTernaryBits _  -> failwith "VecTernaryBits instruction not implemented yet"
+  | RI.Ast.VecSplat _        -> failwith "VecSplat instruction not implemented yet"
+  | RI.Ast.VecExtract _      -> failwith "VecExtract instruction not implemented yet"
+  | RI.Ast.VecReplace _      -> failwith "VecReplace instruction not implemented yet"
   let ocaml_of_func (func: RI.Ast.func) =
     (*Printf.printf "Generating OCaml for function...\n";*)
     let RI.Ast.Func (idx, locals, instrs) = func.it in

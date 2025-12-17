@@ -3,7 +3,7 @@
 NAME = spectec
 EXT = $(NAME)
 LOG = _log
-
+PRINT_DL ?= 0
 
 # Main targets
 
@@ -19,16 +19,24 @@ ci: all
 
 SPEC ?= ../specification/wasm-3.0/*
 
+ifeq ($(PRINT_DL),1)
+SPECTEC_FLAGS = --animate --inline --print-dl --generate-ocaml "dl_codegen"
+else
+SPECTEC_FLAGS = --animate --inline --generate-ocaml "dl_codegen"
+endif
+
+TEST ?= test-ocaml/sample.wast
+
 build_ocamlprog: exe
 	mkdir -p src/backend-animation/interpreter-ocaml/build
 	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
 	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
 	cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
-	./spectec $(SPEC) --animate --inline --generate-ocaml "dl_codegen"
+	./spectec $(SPEC) $(SPECTEC_FLAGS)
 	@echo "#### spectec finished, compiling generated code"
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "
-	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST)
 
 run_ocaml: 
 	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/

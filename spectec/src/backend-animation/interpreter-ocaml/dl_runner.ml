@@ -105,6 +105,12 @@ let run_command cmd = match cmd.it with
   | Assertion a -> test_assertion a; Printf.printf "[Assertion passed]\n"
   | _ -> failwith "TODO: implement other commands"
 
-let () = 
-  let cmds = Backend_animation.Runner.run () in 
+let () =
+  if Array.length Sys.argv <> 2 then (
+    prerr_endline "Usage: program <.wast file>";
+    exit 1
+  );
+
+  let filename = Sys.argv.(1) in
+  let cmds = Backend_animation.Runner.run filename in
   List.iter run_command cmds

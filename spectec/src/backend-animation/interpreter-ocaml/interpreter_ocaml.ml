@@ -676,19 +676,19 @@ and split_arg_helper (es : exp list) (name : string) : string t =
     let before, anchor, after = get_anchor es in
     let* beforevar = get_freshvar () in
     let* aftervar = get_freshvar () in
-    (* this thing may need to be sanitized or we need to check its type *)
     let CaseE (mixop, _) = anchor.it in
     let split_suffix = sanitize_name (Util_ocaml.mixop_to_atom_str mixop) in
     let* anchorstr = ocaml_of_exp anchor in
     let splitanchor = Printf.sprintf "  let %s, %s, %s = split_on_%s %s in\n" beforevar anchorstr aftervar split_suffix name in
-    let* () = generate_split_func split_suffix in 
+    let* mixopstr = ocaml_of_exp anchor in
+    let* () = generate_split_func split_suffix mixopstr in 
     let* split_bfr = split_arg_helper before beforevar in
     let* split_aftr = split_arg_helper after aftervar in 
     return (splitanchor ^ split_bfr ^ split_aftr)
  end
 
 (* use rev here to be more efficient (& and in every other list helper func) *)
-and generate_split_func (s : string) : unit t =
+and generate_split_func (s : string) (pattern : string) : unit t =
   let funcname = Printf.sprintf "split_on_%s" s in 
   let* is_defined = is_defined funcname in
   if is_defined then return () else
@@ -698,10 +698,10 @@ and generate_split_func (s : string) : unit t =
      \  let rec aux before after =\n\
      \    match after with\n\
      \    | [] -> raise (Match_failure (\"\", 0, 0))\n\
-     \    | %s::rest -> before, %s, rest\n\
+     \    | (%s)::rest -> before, %s, rest\n\
      \    | x::xs -> aux (before @ [x]) xs\n\
      \  in aux [] lst\n"
-    funcname s s)
+    funcname pattern pattern)
 
 (* todo: add support for nested cons + add things to knowns correctly *)
 (* if there is a concatenation inside a CaseE, we need to generate a split like we normally do, but it needs to occur AFTER the uncasing *)
@@ -882,7 +882,7 @@ and ocaml_of_iter iter : string t =
       in
       return ("ListN (" ^ e_str ^ ", " ^ id_str ^ ")")
 
-(* For a variant type type V = A | B ..., we annotate the constructors with the typename like A_V, B_V, etc (since OCaml type inference is not accurate with duplicate constructors). A constructor annotation does not need type arguments. todo: could probably rename to type annotation since we also use it in function definitions *)
+(* For a variant type type V = A | B ..., we annotate the constructors with the typename like A_V, B_V, etc (since OCaml type inference is not accurate with duplicate constructors). A constructor annotation does not need type arguments. *)
 and ocaml_of_typ ?(typearg=false) ?(consannot=false) (t : typ) : string t =
   match t.it with
   | VarT (id, args) -> (*Printf.printf "VarT: %s\n" id.it;*) let name = sanitize_name id.it in
@@ -1139,8 +1139,10 @@ let build_stepcases step =
   let {it = (_, _, {it = InstD (_, _, instrsdt); _}::_); _} = Option.get instrs in
   let (VariantT instr_tcs) = instrsdt.it in
   concat_mapM "\n" (fun (op, (_, t, _), _) -> 
-    let consname = sanitize_name ~typename:false (Util_ocaml.mixop_to_atom_str op) in 
-    let funcname = sanitize_name (Printf.sprintf "Step%s/%s" step consname) in
+    (* check: the function name should match exactly with the head of the list in the mixop?? *)
+    let funcsuffix = sanitize_name ~typename:false (Util_ocaml.mixop_to_atom_str ([List.hd op])) in
+    let consname = sanitize_name ~typename:false (Util_ocaml.mixop_to_atom_str op) in
+    let funcname = sanitize_name (Printf.sprintf "Step%s/%s" step funcsuffix) in
     let* is_defined = is_defined funcname in
     let* args = ocaml_of_typ_args t in
     let args_str = if args = "" then "" else " _" in 
@@ -1224,7 +1226,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     clauses
   in
   let clause_names = String.concat ";\n  " clause_calls in
-  let err_msg = "function: " ^ name in  
+  let err_msg = "function: " ^ name in
+  (*let debug = Printf.sprintf "  Printf.printf \"Calling function: %s\\n\";" name in*)
   let main_func = Printf.sprintf "%s %s = try_clauses_%d [\n  %s\n] %s \"%s\"" name argslist num_params clause_names argslist' err_msg in 
   return (clause_funcs @ [main_func])
   end

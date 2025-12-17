@@ -3,7 +3,6 @@ open Backend_interpreter.Ds
 open R.Script
 open R.Source
 
-let test_file = "./test-ocaml/sample.wast"
 let parser = R.Parse.Script.parse_file
 
 let module_of_def def =
@@ -14,7 +13,9 @@ let module_of_def def =
 
 let get_commands file = 
   let commands = parser file in
-  (*Temp_print.pp_script commands;*)
+  let oc = open_out "parsed.log" in  
+    List.iter (fun c -> Printf.fprintf oc "%s\n" (Temp_print.string_of_command c)) commands;
+  close_out oc;
   commands
   
-let run () = Printf.printf "Running test file \"%s\"\n" test_file; get_commands test_file
+let run testfile = Printf.printf "Parsing test file \"%s\"\n" testfile; get_commands testfile

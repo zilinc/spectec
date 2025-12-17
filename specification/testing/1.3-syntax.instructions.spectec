@@ -1,46 +1,46 @@
-;; ;;
-;; ;; Syntax of Instructions
-;; ;;
-;; 
-;; ;; Constants
-;; 
+;;
+;; Syntax of Instructions
+;;
+
+;; Constants
+
 syntax num_(numtype)
 syntax num_(Inn) = iN($sizenn(Inn))
 ;; syntax num_(Fnn) = fN($sizenn(Fnn))
-;; 
-;; syntax pack_(Pnn) = iN($psizenn(Pnn))
-;; 
-;; syntax lane_(lanetype)
-;; syntax lane_(numtype) = num_(numtype)
+
+syntax pack_(Pnn) = iN($psizenn(Pnn))
+
+syntax lane_(lanetype)
+syntax lane_(numtype) = num_(numtype)
 ;; syntax lane_(packtype) = pack_(packtype)
 ;; syntax lane_(Jnn) = iN($lsize(Jnn))  ;; HACK
-;; 
-;; syntax vec_(Vnn) = vN($vsize(Vnn))
-;; 
-;; syntax lit_(storagetype)
-;; syntax lit_(numtype) = num_(numtype)
+
+syntax vec_(Vnn) = vN($vsize(Vnn))
+
+syntax lit_(storagetype)
+syntax lit_(numtype) = num_(numtype)
 ;; syntax lit_(vectype) = vec_(vectype)
 ;; syntax lit_(packtype) = pack_(packtype)
 ;; 
 ;; 
-;; ;; Numeric operators
-;; 
-;; syntax sz hint(desc "pack size") = `8 | `16 | `32 | `64
-;; syntax sx hint(desc "signedness") = U | S
-;; 
-;; syntax unop_(numtype)
-;; syntax unop_(Inn) = CLZ | CTZ | POPCNT | EXTEND sz hint(show EXTEND#%#_#S) -- if $(sz < $sizenn(Inn))
+;; Numeric operators
+
+syntax sz hint(desc "pack size") = `8 | `16 | `32 | `64
+syntax sx hint(desc "signedness") = U | S
+
+syntax unop_(numtype)
+syntax unop_(Inn) = CLZ | CTZ | POPCNT | EXTEND sz hint(show EXTEND#%#_#S) -- if $(sz < $sizenn(Inn))
 ;; syntax unop_(Fnn) = ABS | NEG | SQRT | CEIL | FLOOR | TRUNC | NEAREST
-;; 
+
 syntax binop_(numtype)
-syntax binop_(Inn) = ADD | SUB
-;;   | ADD | SUB | MUL | DIV sx hint(show DIV#_#%) | REM sx hint(show REM#_#%)
-;;   | AND | OR | XOR | SHL | SHR sx hint(show SHR#_#%) | ROTL | ROTR
+syntax binop_(Inn) = 
+  | ADD | SUB | MUL | DIV sx hint(show DIV#_#%) | REM sx hint(show REM#_#%)
+  | AND | OR | XOR | SHL | SHR sx hint(show SHR#_#%) | ROTL | ROTR
 ;; syntax binop_(Fnn) =
 ;;   | ADD | SUB | MUL | DIV | MIN hint(macro "FMIN") | MAX hint(macro "FMAX") | COPYSIGN
-;; 
-;; syntax testop_(numtype)
-;; syntax testop_(Inn) = EQZ
+
+syntax testop_(numtype)
+syntax testop_(Inn) = EQZ
 ;; ;; syntax testop_(Fnn) = |      ;; uninhabited
 ;; 
 ;; syntax relop_(numtype)
@@ -182,55 +182,55 @@ syntax binop_(Inn) = ADD | SUB
 ;;     -- if $(2 * $sizenn1(Fnn_1)) = $sizenn2(Fnn_2)
 ;; 
 ;; 
-;; ;; Memory operators
-;; 
-;; syntax memarg hint(desc "memory argument") = {ALIGN u32, OFFSET u32}
-;; 
-;; var ao : memarg
-;; 
-;; syntax loadop_(numtype)
-;; syntax loadop_(Inn) = sz _ sx hint(show %0#_#%2) -- if sz < $sizenn(Inn)
-;; 
-;; syntax storeop_(numtype)
-;; syntax storeop_(Inn) = sz                        -- if sz < $sizenn(Inn)
-;; 
+;; Memory operators
+
+syntax memarg hint(desc "memory argument") = {ALIGN u32, OFFSET u32}
+
+var ao : memarg
+
+syntax loadop_(numtype)
+syntax loadop_(Inn) = sz _ sx hint(show %0#_#%2) -- if sz < $sizenn(Inn)
+
+syntax storeop_(numtype)
+syntax storeop_(Inn) = sz                        -- if sz < $sizenn(Inn)
+
 ;; syntax vloadop_(vectype) hint(macro "%" "L%") =
 ;;   | SHAPE sz X M _ sx  hint(show %1#X#%3#_#%5) hint(macro "%shape") -- if $(sz * M = $vsize(vectype)/2)
 ;;   | SPLAT sz           hint(show %#_#SPLAT)
 ;;   | ZERO sz            hint(show %#_#ZERO) -- if sz >= `32
-;; 
-;; 
-;; ;; Block types
-;; 
-;; syntax blocktype hint(desc "block type") =
-;;   | _RESULT valtype?
-;;   | _IDX funcidx
-;; 
-;; var bt : blocktype
-;; 
-;; 
-;; ;; Instructions
-;; 
+
+
+;; Block types
+
+syntax blocktype hint(desc "block type") =
+  | _RESULT valtype?
+  | _IDX funcidx
+
+var bt : blocktype
+
+
+;; Instructions
+
 syntax instr hint(desc "instruction")
-;; 
+
 syntax instr/parametric hint(desc "parametric instruction") =
   | NOP
   | UNREACHABLE
   | DROP
   | SELECT (valtype*)?
   | ...
-;; 
-;; syntax instr/block hint(desc "block instruction") = ...
-;;   | BLOCK blocktype instr*
-;;   | LOOP blocktype instr*
-;;   | IF blocktype instr* ELSE instr*
-;;   | ...
-;; 
+
+syntax instr/block hint(desc "block instruction") = ...
+  | BLOCK blocktype instr*
+  | LOOP blocktype instr*
+  | IF blocktype instr* ELSE instr*
+  | ...
+
 syntax instr/br hint(desc "branch instruction") = ...
   | BR labelidx
-;;   | BR_IF labelidx
-;;   | BR_TABLE labelidx* labelidx
-;;   | BR_ON_NULL labelidx
+  | BR_IF labelidx
+  | BR_TABLE labelidx* labelidx
+  | BR_ON_NULL labelidx
 ;;   | BR_ON_NON_NULL labelidx
 ;;   | BR_ON_CAST labelidx reftype reftype
 ;;   | BR_ON_CAST_FAIL labelidx reftype reftype
@@ -370,8 +370,8 @@ syntax instr/elem hint(desc "element instruction") = ...
   | ...
 ;; 
 syntax instr/memory hint(desc "memory instruction") = ...
-;;   | LOAD numtype loadop_(numtype)? memidx memarg   hint(show %.LOAD % %) hint(show %.LOAD# ##% % %)
-;;   | STORE numtype storeop_(numtype)? memidx memarg hint(show %.STORE % %) hint(show %.STORE#% % %)
+  | LOAD numtype loadop_(numtype)? memidx memarg   hint(show %.LOAD % %) hint(show %.LOAD# ##% % %)
+  | STORE numtype storeop_(numtype)? memidx memarg hint(show %.STORE % %) hint(show %.STORE#% % %)
 ;;   | VLOAD vectype vloadop_(vectype)? memidx memarg hint(show %.LOAD % %) hint(show %.LOAD# ##% % %) hint(macro "V%")
 ;;   | VLOAD_LANE vectype sz memidx memarg laneidx    hint(show %.LOAD#%#_#LANE % % %) hint(macro "V%")
 ;;   | VSTORE vectype memidx memarg                   hint(show %.STORE % %) hint(macro "V%")
@@ -386,22 +386,22 @@ syntax instr/memory hint(desc "memory instruction") = ...
 syntax instr/data hint(desc "data instruction") = ...
   | DATA.DROP dataidx
   | ...
-;; 
-;; 
-;; ;; Expressions
-;; 
+
+
+;; Expressions
+
 syntax expr hint(desc "expression") =
   instr*
-;; 
-;; 
-;; ;; Meta variables
-;; 
+
+
+;; Meta variables
+
 var in : instr
 var e : expr
-;; 
-;; 
-;; ;; Shorthands
-;; 
+
+
+;; Shorthands
+
 ;; def $memarg0 : memarg  hint(show )
 ;; def $memarg0 = {ALIGN 0, OFFSET 0}
 ;; 

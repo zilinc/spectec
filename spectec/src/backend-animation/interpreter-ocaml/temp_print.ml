@@ -256,9 +256,3 @@ let string_of_instr (instr : Ast.instr) : string = match instr.it with
   | VecSplat _ -> "VecSplat"
   | VecExtract _ -> "VecExtract"
   | VecReplace _ -> "VecReplace"
-
-let pp_command (c : Script.command) : unit =
-  print_endline (string_of_command c)
-
-let pp_script (cmds : Script.script) : unit =
-  List.iter (fun c -> pp_command c; print_endline "--------------------") cmds
