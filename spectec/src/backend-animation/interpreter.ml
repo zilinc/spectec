@@ -832,6 +832,85 @@ and call_func name args : exp OptMonad.m =
     | None -> error no (sprintf "There is no function named `%s`." name)
     )
 
+
+(* Host instructions *)
+
+and is_host = function
+  | "print" | "print_i32" | "print_i64" | "print_f32" | "print_f64" | "print_i32_f32" | "print_f64_f64" -> true
+  | _ -> false
+
+and call_hostfunc name s vs =
+  (* ty ∈ {"I32", "I64", "F32", "F64"} *)
+  let as_const ty e = match e.it with
+  | CaseE (tag, { it = TupE [nt; n]; _ })
+  | OptE (Some {it = CaseE (tag, { it = TupE [nt; n]; _ }); _})
+  -> if mixop_to_text tag = [["CONST"];[];[]] then
+      (match match_caseE "numtype" nt with
+      | [[ty']], [] when ty = ty' -> n
+      | _ -> error_value "numtype" nt
+      )
+     else
+      error_value "const" e
+  | _ -> error no ("Host function call: Not " ^ ty ^ ".CONST: " ^ string_of_exp e)
+  in
+  let argc = List.length vs in
+  (match name with
+  | "print" when argc = 0 -> print_endline "- print: ()"
+  | "print_i32" when argc = 1 ->
+    List.hd vs
+    |> as_const "I32"
+    |> il_to_uN_32
+    |> RI.I32.to_string_s
+    |> Printf.printf "- print_i32: %s\n"
+  | "print_i64" when argc = 1 ->
+    List.hd vs
+    |> as_const "I64"
+    |> il_to_uN_64
+    |> RI.I64.to_string_s
+    |> Printf.printf "- print_i64: %s\n"
+  | "print_f32" when argc = 1 ->
+    List.hd vs
+    |> as_const "F32"
+    |> il_to_float32
+    |> RI.F32.to_string
+    |> Printf.printf "- print_f32: %s\n"
+  | "print_f64" when argc = 1 ->
+    List.hd vs
+    |> as_const "F64"
+    |> il_to_float64
+    |> RI.F64.to_string
+    |> Printf.printf "- print_f64: %s\n"
+  | "print_i32_f32" when argc = 2 ->
+    let [v1; v2] = vs in
+    let i32 = v1 |> as_const "I32" |> il_to_nat32   |> RI.I32.to_string_s in
+    let f32 = v2 |> as_const "F32" |> il_to_float32 |> RI.F32.to_string   in
+    Printf.printf "- print_i32_f32: %s %s\n" i32 f32
+  | "print_f64_f64" when argc = 2 ->
+    let [v1; v2] = vs in
+    let f64  = v1 |> as_const "F64" |> il_to_float64 |> RI.F64.to_string in
+    let f64' = v2 |> as_const "F64" |> il_to_float64 |> RI.F64.to_string in
+    Printf.printf "- print_f64_f64: %s %s\n" f64 f64'
+  | name -> error no ("Invalid host function call: " ^ name)
+  );
+  (s, mk_case (t_var "result") [["_VALS"];[]] [listE (t_star "val") []])
+
+
+and hostcall = {
+  name = "hostcall";
+  f =
+    function
+    | [hostfunc; s; args] ->
+      (match match_caseE "hostfunc" hostfunc with
+      | [["_HOSTFUNC"]; []], [{it = TextE fname; _}] ->
+        let vs = elts_of_list args in
+        let s', result = call_hostfunc fname s vs in
+        mk_singleton (mk_case (t_var "hostcallresult") [["RES"];[];[]] [s'; result]) |> return
+      | _ -> error_value ("Not a hostfunc") hostfunc
+      )
+    | vs -> error_values ("Args to $hostcall") vs
+}
+
+
 (* Built-in functions (meta.spectec) *)
 
 
@@ -929,7 +1008,7 @@ and step_read_throw_ref_handler = {
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler
+  step_read_throw_ref_handler; hostcall;
   ]
 
 and call_builtins fname args : exp OptMonad.m =
