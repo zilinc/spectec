@@ -204,8 +204,10 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
   | RI.Ast.Drop              -> DL.DROP_instr
   | RI.Ast.Select None       -> DL.SELECT_instr None
   | RI.Ast.Select (Some vt)  -> DL.SELECT_instr (Some (List.map ocaml_of_valtype vt))
-  | RI.Ast.Block _           -> failwith "Block instruction not implemented yet"
-  | RI.Ast.Loop _            -> failwith "Loop instruction not implemented yet"
+  | RI.Ast.Block (blocktype, instrs)
+                             -> DL.BLOCK_instr (ocaml_of_blocktype blocktype, List.map ocaml_of_instr instrs)
+  | RI.Ast.Loop (blocktype, instrs)
+                             -> DL.LOOP_instr (ocaml_of_blocktype blocktype, List.map ocaml_of_instr instrs)
   | RI.Ast.If (blocktype, instrs, instrs')
                              -> IF_pct__pct_ELSE_pct__instr (ocaml_of_blocktype blocktype, List.map ocaml_of_instr instrs, List.map ocaml_of_instr instrs')
   | RI.Ast.Br labelidx       -> DL.BR_instr (ocaml_of_labelidx labelidx)
@@ -215,7 +217,7 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
   | RI.Ast.BrOnNonNull _     -> failwith "BrOnNonNull instruction not implemented yet"
   | RI.Ast.BrOnCast _        -> failwith "BrOnCast instruction not implemented yet"
   | RI.Ast.BrOnCastFail _    -> failwith "BrOnCastFail instruction not implemented yet"
-  | RI.Ast.Return            -> failwith "Return instruction not implemented yet"
+  | RI.Ast.Return            -> DL.RETURN_instr
   | RI.Ast.Call funcidx      -> DL.CALL_instr (ocaml_of_funcidx funcidx)
   | RI.Ast.CallRef typeidx   -> DL.CALL_REF_instr (ocaml_typeuse_of_typeidx (ocaml_of_ast_typeidx typeidx))
   | RI.Ast.CallIndirect _    -> failwith "CallIndirect instruction not implemented yet"
@@ -227,10 +229,12 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
   | RI.Ast.ThrowRef          -> failwith "ThrowRef instruction not implemented yet"
   | RI.Ast.TryTable _        -> failwith "TryTable instruction not implemented yet"
   | RI.Ast.LocalGet localidx -> DL.LOCAL_dot_GET_instr (ocaml_of_localidx localidx) 
-  | RI.Ast.LocalSet _        -> failwith "LocalSet instruction not implemented yet"
-  | RI.Ast.LocalTee _        -> failwith "LocalTee instruction not implemented yet"
-  | RI.Ast.GlobalGet _       -> failwith "GlobalGet instruction not implemented yet"
-  | RI.Ast.GlobalSet _       -> failwith "GlobalSet instruction not implemented yet"
+  | RI.Ast.LocalSet localidx -> DL.LOCAL_dot_SET_instr (ocaml_of_localidx localidx) 
+  | RI.Ast.LocalTee localidx -> DL.LOCAL_dot_TEE_instr (ocaml_of_localidx localidx) 
+  | RI.Ast.GlobalGet globalidx 
+                             -> DL.GLOBAL_dot_GET_instr (ocaml_of_globalidx globalidx) 
+  | RI.Ast.GlobalSet globalidx
+                             -> DL.GLOBAL_dot_SET_instr (ocaml_of_globalidx globalidx) 
   | RI.Ast.TableGet _        -> failwith "TableGet instruction not implemented yet"
   | RI.Ast.TableSet _        -> failwith "TableSet instruction not implemented yet"
   | RI.Ast.TableSize _       -> failwith "TableSize instruction not implemented yet"
@@ -284,8 +288,19 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
     | RI.Value.F32 n         -> failwith "F32 not implemented yet"
     | RI.Value.F64 n         -> failwith "F64 not implemented yet"
     end
-  | RI.Ast.Test _            -> failwith "Test instruction not implemented yet"
-  | RI.Ast.Compare _         -> failwith "Compare instruction not implemented yet"
+  | RI.Ast.Test testop       -> begin match testop with 
+    | RI.Value.I32 RI.Ast.IntOp.Eqz -> DL.TESTOP_instr (DL.I32_numtype, DL.EQZ_testop_)
+    | _ -> failwith "non-i32 testop not implemented yet"
+    end
+  | RI.Ast.Compare relop     -> begin match relop with 
+    | RI.Value.I32 RI.Ast.IntOp.Eq     -> DL.RELOP_instr (DL.I32_numtype, DL.EQ_relop_)
+    | RI.Value.I32 RI.Ast.IntOp.Ne     -> DL.RELOP_instr (DL.I32_numtype, DL.NE_relop_)
+    | RI.Value.I32 RI.Ast.IntOp.Lt sx  -> DL.RELOP_instr (DL.I32_numtype, DL.LT_relop_ (ocaml_of_sx sx))
+    | RI.Value.I32 RI.Ast.IntOp.Le sx  -> DL.RELOP_instr (DL.I32_numtype, DL.LE_relop_ (ocaml_of_sx sx))
+    | RI.Value.I32 RI.Ast.IntOp.Ge sx  -> DL.RELOP_instr (DL.I32_numtype, DL.GE_relop_ (ocaml_of_sx sx))
+    | RI.Value.I32 RI.Ast.IntOp.Gt sx  -> DL.RELOP_instr (DL.I32_numtype, DL.GT_relop_ (ocaml_of_sx sx))
+    | _                                -> failwith "non-i32 relop not implemented yet"
+    end
   | RI.Ast.Unary _           -> failwith "Unary instruction not implemented yet"
   | RI.Ast.Binary binop      -> begin match binop with 
     | RI.Value.I32 RI.Ast.IntOp.Add    -> DL.BINOP_instr (DL.I32_numtype, DL.ADD_binop_)
@@ -334,16 +349,23 @@ let ocaml_of_externidx exix =
   | RI.Ast.MemoryX memoryidx -> DL.MEM_externidx (ocaml_of_memoryidx memoryidx)
   | RI.Ast.TableX tableidx   -> DL.TABLE_externidx (ocaml_of_tableidx tableidx)
   | RI.Ast.FuncX funcidx     -> DL.FUNC_externidx (ocaml_of_funcidx funcidx)
-let ocaml_of_export (export: RI.Ast.export) : DL.export =
+let ocaml_of_export (export : RI.Ast.export) : DL.export =
   let Export (name, exix) = export.it in
   EXPORT_export (ocaml_of_name name, ocaml_of_externidx exix.it)
 
-(* only do types, funcs and exports for now *)
+let ocaml_of_globaltype (globaltype : RT.globaltype) : DL.globaltype =
+  let RT.GlobalT (mut, vt) = globaltype in
+  DL.C_pct__pct__globaltype (ocaml_of_mut mut, ocaml_of_valtype vt)
+
+let ocaml_of_global (global : RI.Ast.global) : DL.global =
+  let RI.Ast.Global (globaltype, const) = global.it in
+  DL.GLOBAL_global (ocaml_of_globaltype globaltype, (List.map ocaml_of_instr const.it))
+
 let ocaml_of_module (module_: RI.Ast.module_) : DL.module_ = DL.MODULE_module_ (
   List.map ocaml_of_type module_.it.types,
+  [], (* tags *)
   [],
-  [],
-  [],
+  List.map ocaml_of_global module_.it.globals,
   [],
   [],
   List.map ocaml_of_func module_.it.funcs,

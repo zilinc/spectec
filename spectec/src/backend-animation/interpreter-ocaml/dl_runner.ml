@@ -68,9 +68,13 @@ let instantiate_helper (m : module_) =
   get_moduleinst config'
 
 let invoke_helper module_ funcname args = 
+  let t1 = Sys.time () in
   Printf.printf "[Invoking %s...]\n" funcname;
   let funcaddr = get_export_addr funcname module_ in
-  invoke !globalstore funcaddr (List.map ocaml_of_literal args)
+  let result = invoke !globalstore funcaddr (List.map ocaml_of_literal args) in
+  let t2 = Sys.time () in
+  Printf.printf "invoke %s took %f s :)\n" funcname (t2 -. t1);
+  result
 
 let run_action action =
   match action.it with
@@ -102,7 +106,7 @@ let run_command cmd = match cmd.it with
     |> Register.add_with_var var1_opt
   (*| Action a ->
     ignore (run_action a); success*)
-  | Assertion a -> test_assertion a; Printf.printf "[Assertion passed]\n"
+  | Assertion a -> test_assertion a; Printf.printf "[Assertion passed :D]\n"
   | _ -> failwith "TODO: implement other commands"
 
 let () =
@@ -110,7 +114,6 @@ let () =
     prerr_endline "Usage: program <.wast file>";
     exit 1
   );
-
   let filename = Sys.argv.(1) in
   let cmds = Backend_animation.Runner.run filename in
   List.iter run_command cmds

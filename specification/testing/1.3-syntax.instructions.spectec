@@ -43,11 +43,11 @@ syntax testop_(numtype)
 syntax testop_(Inn) = EQZ
 ;; ;; syntax testop_(Fnn) = |      ;; uninhabited
 ;; 
-;; syntax relop_(numtype)
-;; syntax relop_(Inn) =
-;;   | EQ | NE \
-;;   | LT sx hint(show LT#_#%) | GT sx hint(show GT#_#%) \
-;;   | LE sx hint(show LE#_#%) | GE sx hint(show GE#_#%)
+syntax relop_(numtype)
+syntax relop_(Inn) =
+  | EQ | NE \
+  | LT sx hint(show LT#_#%) | GT sx hint(show GT#_#%) \
+  | LE sx hint(show LE#_#%) | GE sx hint(show GE#_#%)
 ;; syntax relop_(Fnn) =
 ;;   | EQ | NE | LT | GT | LE | GE
 ;; 
@@ -263,8 +263,8 @@ syntax instr/num hint(desc "numeric instruction") = ...
   | CONST numtype num_(numtype)      hint(show %.CONST %)
 ;;   | UNOP numtype unop_(numtype)      hint(show %.##%)
   | BINOP numtype binop_(numtype)    hint(show %.##%)
-;;   | TESTOP numtype testop_(numtype)  hint(show %.##%)
-;;   | RELOP numtype relop_(numtype)    hint(show %.##%)
+  | TESTOP numtype testop_(numtype)  hint(show %.##%)
+  | RELOP numtype relop_(numtype)    hint(show %.##%)
 ;;   | CVTOP numtype_1 numtype_2 cvtop__(numtype_2, numtype_1)  hint(show %1.##%3#_#%2)
   | ...
 ;; 
@@ -346,15 +346,15 @@ syntax instr/ref hint(desc "reference instruction") = ...
 ;; 
 syntax instr/local hint(desc "local instruction") = ...
   | LOCAL.GET localidx
-;;   | LOCAL.SET localidx
-;;   | LOCAL.TEE localidx
+  | LOCAL.SET localidx
+  | LOCAL.TEE localidx
   | ...
-;; 
-;; syntax instr/global hint(desc "global instruction") = ...
-;;   | GLOBAL.GET globalidx
-;;   | GLOBAL.SET globalidx
-;;   | ...
-;; 
+
+syntax instr/global hint(desc "global instruction") = ...
+  | GLOBAL.GET globalidx
+  | GLOBAL.SET globalidx
+  | ...
+
 syntax instr/table hint(desc "table instruction") = ...
 ;;   | TABLE.GET tableidx
 ;;   | TABLE.SET tableidx

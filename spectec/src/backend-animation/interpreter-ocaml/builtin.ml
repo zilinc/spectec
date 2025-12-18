@@ -17,9 +17,9 @@ let use_step_pure = function
   (* | UNOP *)
   | RETURN_CALL_REF_instr _
   | BINOP_instr _ 
-  (* | TESTOP_instr
-  | RELOP_instr
-  | CVTOP_instr 
+  | TESTOP_instr _
+  | RELOP_instr _
+  (*| CVTOP_instr 
   | REF_dot_IS_NULL_instr
   | REF_dot_AS_NON_NULL_instr
   | REF_dot_EQ_instr
@@ -47,8 +47,8 @@ let use_step_pure = function
   | VEXTBINOP_instr
   | VEXTTERNOP_instr
   | VNARROW_instr
-  | VCVTOP_instr
-  | LOCAL_dot_TEE_instr *)
+  | VCVTOP_instr *)
+  | LOCAL_dot_TEE_instr _
   | REF_dot_I31_NUM_instr _ 
   | TRAP_instr               -> true 
   | _                        -> false
@@ -79,8 +79,8 @@ let use_step_read = function
   | ARRAY_dot_INIT_DATA_instr
   | ARRAY_dot_INIT_ELEM_instr *)
   | LOCAL_dot_GET_instr _
-  (* | GLOBAL_dot_GET_instr
-  | TABLE_dot_GET_instr
+  | GLOBAL_dot_GET_instr _
+  (* | TABLE_dot_GET_instr
   | TABLE_dot_SIZE_instr
   | TABLE_dot_FILL_instr
   | TABLE_dot_COPY_instr *)
@@ -94,10 +94,12 @@ let use_step_read = function
   | MEMORY_dot_INIT_instr _ -> true 
   | _ -> false 
 
-let use_step = function 
+let use_step = function
+  | CALL_REF_instr _
   | ELEM_dot_DROP_instr _
-  | DATA_dot_DROP_instr _ 
-  | CALL_REF_instr _      -> true 
+  | LOCAL_dot_SET_instr _
+  | GLOBAL_dot_SET_instr _
+  | DATA_dot_DROP_instr _ -> true 
   | _ -> false
 
 let use_step_ctxt = function 
