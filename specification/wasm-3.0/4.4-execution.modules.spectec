@@ -13,9 +13,9 @@ def $alloctypes(type'* type) = deftype'* deftype*
   -- if x = |deftype'*|
 
 def $alloctag(store, tagtype) : (store, tagaddr)
-def $alloctag(s, tagtype) = (s[.TAGS = taginst ++ taginst'], |s.TAGS|)
+def $alloctag(s, tagtype) = (s[.TAGS = taginst* ++ taginst'], |taginst*|)
   ---- ----
-  -- if taginst  = s.TAGS
+  -- if taginst* = s.TAGS
   -- if taginst' = { TYPE tagtype }
 
 def $alloctags(store, tagtype*) : (store, tagaddr*) hint(show $alloctag*#((%,%))) hint(prose_allocxs)
@@ -25,9 +25,9 @@ def $alloctags(s, tagtype tagtype'*) = (s_2, ja ja'*)
   -- if (s_2, ja'*) = $alloctags(s_1, tagtype'*)
 
 def $allocglobal(store, globaltype, val) : (store, globaladdr)
-def $allocglobal(s, globaltype, val) = (s[.GLOBALS = globalinst ++ globalinst'], |s.GLOBALS|)
+def $allocglobal(s, globaltype, val) = (s[.GLOBALS = globalinst* ++ globalinst'], |globalinst*|)
   ---- ----
-  -- if globalinst  = s.GLOBALS
+  -- if globalinst* = s.GLOBALS
   -- if globalinst' = { TYPE globaltype, VALUE val }
 
 def $allocglobals(store, globaltype*, val*) : (store, globaladdr*) hint(show $allocglobal*#((%,%,%))) hint(prose_allocxs)
@@ -37,9 +37,9 @@ def $allocglobals(s, globaltype globaltype'*, val val'*) = (s_2, ga ga'*)
   -- if (s_2, ga'*) = $allocglobals(s_1, globaltype'*, val'*)
 
 def $allocmem(store, memtype) : (store, memaddr)
-def $allocmem(s, at `[i .. j?] PAGE) = (s[.MEMS = meminst ++ meminst'], |s.MEMS|)
+def $allocmem(s, at `[i .. j?] PAGE) = (s[.MEMS = meminst* ++ meminst'], |meminst*|)
   ---- ----
-  -- if meminst  = s.MEMS
+  -- if meminst* = s.MEMS
   -- if meminst' = { TYPE (at `[i .. j?] PAGE), BYTES (0x00)^(i * $($(64 * $Ki))) }
 
 def $allocmems(store, memtype*) : (store, memaddr*) hint(show $allocmem*#((%,%))) hint(prose_allocxs)
@@ -49,9 +49,9 @@ def $allocmems(s, memtype memtype'*) = (s_2, ma ma'*)
   -- if (s_2, ma'*) = $allocmems(s_1, memtype'*)
 
 def $alloctable(store, tabletype, ref) : (store, tableaddr)
-def $alloctable(s, at `[i .. j?] rt, ref) = (s[.TABLES = tableinst ++ tableinst'], |s.TABLES|)
+def $alloctable(s, at `[i .. j?] rt, ref) = (s[.TABLES = tableinst* ++ tableinst'], |tableinst*|)
   ---- ----
-  -- if tableinst  = s.TABLES
+  -- if tableinst* = s.TABLES
   -- if tableinst' = { TYPE (at `[i .. j?] rt), REFS ref^i }
 
 def $alloctables(store, tabletype*, ref*) : (store, tableaddr*) hint(show $alloctable*#((%,%,%))) hint(prose_allocxs)
@@ -61,9 +61,9 @@ def $alloctables(s, tabletype tabletype'*, ref ref'*) = (s_2, ta ta'*)
   -- if (s_2, ta'*) = $alloctables(s_1, tabletype'*, ref'*)
 
 def $allocfunc(store, deftype, funccode, moduleinst) : (store, funcaddr)
-def $allocfunc(s, deftype, funccode, moduleinst) = (s[.FUNCS = funcinst ++ funcinst'], |s.FUNCS|)
+def $allocfunc(s, deftype, funccode, moduleinst) = (s[.FUNCS = funcinst* ++ funcinst'], |funcinst*|)
   ---- ----
-  -- if funcinst  = s.FUNCS
+  -- if funcinst* = s.FUNCS
   -- if funcinst' = { TYPE deftype, MODULE moduleinst, CODE funccode }
 
 def $allocfuncs(store, deftype*, funccode*, moduleinst*) : (store, funcaddr*) hint(show $allocfunc*#((%,%,%,%))) hint(prose_allocxs)
@@ -73,9 +73,9 @@ def $allocfuncs(s, dt dt'*, funccode funccode'*, moduleinst moduleinst'*) = (s_2
   -- if (s_2, fa'*) = $allocfuncs(s_1, dt'*, funccode'*, moduleinst'*)
 
 def $allocdata(store, datatype, byte*) : (store, dataaddr)
-def $allocdata(s, OK, byte*) = (s[.DATAS = datainst ++ datainst'], |s.DATAS|)
+def $allocdata(s, OK, byte*) = (s[.DATAS = datainst* ++ datainst'], |datainst*|)
   ---- ----
-  -- if datainst  = s.DATAS
+  -- if datainst* = s.DATAS
   -- if datainst' = { BYTES byte* }
 
 def $allocdatas(store, datatype*, (byte*)*) : (store, dataaddr*) hint(show $allocdata*#((%,%,%))) hint(prose_allocxs)
@@ -85,9 +85,9 @@ def $allocdatas(s, ok ok'*, (b*) (b'*)*) = (s_2, da da'*)
   -- if (s_2, da'*) = $allocdatas(s_1, ok'*, (b'*)*)
 
 def $allocelem(store, elemtype, ref*) : (store, elemaddr)
-def $allocelem(s, elemtype, ref*) = (s[.ELEMS = eleminst ++ eleminst'], |s.ELEMS|)
+def $allocelem(s, elemtype, ref*) = (s[.ELEMS = eleminst* ++ eleminst'], |eleminst*|)
   ---- ----
-  -- if eleminst  = s.ELEMS
+  -- if eleminst* = s.ELEMS
   -- if eleminst' = { TYPE elemtype, REFS ref* }
 
 def $allocelems(store, elemtype*, (ref*)*) : (store, elemaddr*) hint(show $allocelem*#((%,%,%))) hint(prose_allocxs)
