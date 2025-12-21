@@ -40,9 +40,13 @@ let rec valid_pattern lhs (vars: string list) prem : unit =
       | VarE _ -> ()
       | _ -> error_pr e.at ("Component of data constructor payload is not a variable: " ^ string_of_exp e) prem
     ) es;
-    let lhs_vars = List.fold_left Set.union Set.empty (List.map free_vars_exp es) in
+    let e_vars = List.map free_vars_exp es in
+    let lhs_vars = List.fold_left Set.union Set.empty e_vars in
     if Set.equal lhs_vars vars_set |> not then
-      error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " doesn't match binding list " ^ string_of_varset vars_set) prem
+      error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " doesn't match binding list " ^ string_of_varset vars_set) prem;
+    let e_vars' = List.concat (List.map Set.to_list e_vars) in
+    if List.length e_vars' <> List.length (Set.of_list e_vars' |> Set.to_list) then
+      error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " is a non-linear pattern.") prem
   | OptE (Some lhs')
   | SubE (lhs', _, _)
   -> valid_pattern lhs' vars prem
@@ -65,7 +69,7 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     if not (Set.is_empty unknowns) then
       error_pr rhs.at ("LetPr RHS uses unknown variables: " ^ string_of_varset unknowns) prem;
     valid_pattern lhs vars prem;
-    if Set.subset vars_set known then
+    if Set.is_empty (Set.inter vars_set known) |> not then
       error_pr prem.at ("Some -- where premise binders " ^ string_of_varset vars_set ^ " already known.\n" ^
                         "  ▹ Knowns: " ^ string_of_varset known) prem;
     Set.union vars_set known

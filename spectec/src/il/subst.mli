@@ -45,3 +45,6 @@ val subst_binds : subst -> bind list -> bind list * subst
 val subst_params : subst -> param list -> param list * subst
 
 val subst_list : (subst -> 'a -> 'a) -> subst -> 'a list -> 'a list
+
+val string_of_subst : subst -> string
+val string_of_dom_subst : subst -> string

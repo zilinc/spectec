@@ -210,6 +210,7 @@ and subst_sym s g =
 
 (* Premises *)
 
+
 and subst_prem s prem =
   (match prem.it with
   | RulePr (id, op, e) -> RulePr (id, op, subst_exp s e)
@@ -268,3 +269,11 @@ let subst_deftyp s dt = if s = empty then dt else subst_deftyp s dt
 let subst_exp s e = if s = empty then e else subst_exp s e
 let subst_sym s g = if s = empty then g else subst_sym s g
 let subst_prem s pr = if s = empty then pr else subst_prem s pr
+
+let string_of_subst s =
+  let m = s.varid in
+  String.concat "\n" (Map.bindings m |> List.map (fun (x, e) -> x ^ " ↦ " ^ Print.string_of_exp e))
+
+let string_of_dom_subst s =
+  let m = s.varid in
+  String.concat ", " (Map.bindings m |> List.map fst)
