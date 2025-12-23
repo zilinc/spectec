@@ -383,6 +383,7 @@ and run_dir path =
 let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
   Interpreter.dl     := dl;
   Interpreter.il_env := env;
+  Interpreter.setup_il_eval ();  (* Set up the function call hook *)
 
   match args with
   | path :: args' when Sys.file_exists path ->

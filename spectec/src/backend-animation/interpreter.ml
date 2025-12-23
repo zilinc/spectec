@@ -105,6 +105,11 @@ open OptMonad
 
 
 type builtin = { name : string; f : exp list -> exp OptMonad.m }
+type il_builtin = { name : string; f : exp list -> exp }
+
+let get_builtin_name : builtin -> string = fun b -> b.name
+let get_il_builtin_name : il_builtin -> string = fun b -> b.name
+
 
 let fail_info cat at msg = info cat at msg; fail ()
 
@@ -895,7 +900,7 @@ and call_hostfunc name s vs =
   (s, mk_case (t_var "result") [["_VALS"];[]] [listE (t_star "val") []])
 
 
-and hostcall = {
+and hostcall : builtin = {
   name = "hostcall";
   f =
     function
@@ -914,7 +919,7 @@ and hostcall = {
 (* Built-in functions (meta.spectec) *)
 
 
-and use_step : builtin = {
+and use_step : builtin= {
   name = "use_step";
   f =
     function
@@ -926,7 +931,7 @@ and use_step : builtin = {
       )
     | es -> error_values ("Args to $use_step") es
 }
-and use_step_pure = {
+and use_step_pure : builtin = {
   name = "use_step_pure";
   f =
     function
@@ -938,7 +943,7 @@ and use_step_pure = {
       )
     | es -> error_values ("Args to $use_step_pure") es
 }
-and use_step_read = {
+and use_step_read : builtin = {
   name = "use_step_read";
   f =
     function
@@ -950,7 +955,7 @@ and use_step_read = {
       )
     | es -> error_values ("Args to $use_step_read") es
 }
-and use_step_ctxt = {
+and use_step_ctxt : builtin = {
   name = "use_step_ctxt";
   f =
     function
@@ -961,7 +966,7 @@ and use_step_ctxt = {
 }
 
 
-and dispatch_step = {
+and dispatch_step : builtin = {
   name = "dispatch_step";
   f =
     function
@@ -973,7 +978,7 @@ and dispatch_step = {
       )
     | es -> error_values ("Args to $dispatch_step") es
 }
-and dispatch_step_pure = {
+and dispatch_step_pure : builtin = {
   name = "dispatch_step_pure";
   f =
     function
@@ -985,7 +990,7 @@ and dispatch_step_pure = {
       )
     | es -> error_values ("Args to $dispatch_step_pure") es
 }
-and dispatch_step_read = {
+and dispatch_step_read : builtin = {
   name = "dispatch_step_read";
   f =
     function
@@ -998,7 +1003,7 @@ and dispatch_step_read = {
     | es -> error_values ("Args to $dispatch_step_read") es
 }
 
-and step_read_throw_ref_handler = {
+and step_read_throw_ref_handler : builtin = {
   name = "Step_read_throw_ref_handler";
   f =
     function
@@ -1012,7 +1017,7 @@ and builtin_list : builtin list = [
   ]
 
 and call_builtins fname args : exp OptMonad.m =
-  match List.find_opt (fun numerics -> numerics.name = fname) builtin_list with
+  match List.find_opt (fun numerics -> get_builtin_name numerics = fname) builtin_list with
   | Some builtin ->
     let args' = List.map (fun a -> match a.it with
     | ExpA e -> e
@@ -1021,8 +1026,9 @@ and call_builtins fname args : exp OptMonad.m =
     builtin.f args'
   | None -> raise (Failure ("Unknown builtin: " ^ fname))
 
+
 and builtins_mem fname =
-  List.exists (fun builtin -> builtin.name = fname) builtin_list
+  List.exists (fun builtin -> get_builtin_name builtin = fname) builtin_list
 
 
 (* Hard-coded relations *)
@@ -1088,16 +1094,203 @@ let expand = function
 *)
 
 
+let rec il_hostcall = {
+  name = "hostcall";
+  f =
+    function
+    | [hostfunc; s; args] ->
+      (match match_caseE "hostfunc" hostfunc with
+      | [["_HOSTFUNC"]; []], [{it = TextE fname; _}] ->
+        let vs = elts_of_list args in
+        let s', result = call_hostfunc fname s vs in
+        mk_singleton (mk_case (t_var "hostcallresult") [["RES"];[];[]] [s'; result])
+      | _ -> error_value ("Not a hostfunc") hostfunc
+      )
+    | vs -> error_values ("Args to $hostcall") vs
+}
+
+
+(* Built-in functions (meta.spectec) *)
+
+
+and il_use_step = {
+  name = "use_step";
+  f =
+    function
+    | [instr] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, _, _) -> boolE (rel_name = "Step")
+      | None -> boolE false
+      )
+    | es -> error_values ("Args to $use_step") es
+}
+and il_use_step_pure = {
+  name = "use_step_pure";
+  f =
+    function
+    | [instr] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, _, _) -> boolE (rel_name = "Step_pure")
+      | None -> boolE false
+      )
+    | es -> error_values ("Args to $use_step_pure") es
+}
+and il_use_step_read = {
+  name = "use_step_read";
+  f =
+    function
+    | [instr] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, _, _) -> boolE (rel_name = "Step_read")
+      | None -> boolE false
+      )
+    | es -> error_values ("Args to $use_step_read") es
+}
+and il_use_step_ctxt = {
+  name = "use_step_ctxt";
+  f =
+    function
+    | [instr] ->
+      let mixop, _ = match_caseE "instr" instr in
+      List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"] |> boolE
+    | es -> error_values ("Args to $use_step_ctxt") es
+}
+
+
+and il_dispatch_step = {
+  name = "dispatch_step";
+  f =
+    function
+    | [instr; arg] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, rule_name, _) when rel_name = "Step" -> il_call_func !il_env (rel_name ^ "/" ^ rule_name) [expA arg]
+      | _ -> error instr.at ("No $Step rule for instr" ^ string_of_exp instr)
+      )
+    | es -> error_values ("Args to $dispatch_step") es
+}
+and il_dispatch_step_pure = {
+  name = "dispatch_step_pure";
+  f =
+    function
+    | [instr; arg] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> il_call_func !il_env (rel_name ^ "/" ^ rule_name) [expA arg]
+      | _ -> error instr.at ("No $Step_pure rule for instr" ^ string_of_exp instr)
+      )
+    | es -> error_values ("Args to $dispatch_step_pure") es
+}
+and il_dispatch_step_read = {
+  name = "dispatch_step_read";
+  f =
+    function
+    | [instr; arg] ->
+      let mixop, _ = match_caseE "instr" instr in
+      (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
+      | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> il_call_func !il_env (rel_name ^ "/" ^ rule_name) [expA arg]
+      | _ -> error instr.at ("No $Step_read rule for instr" ^ string_of_exp instr)
+      )
+    | es -> error_values ("Args to $dispatch_step_read") es
+}
+
+and il_step_read_throw_ref_handler = {
+  name = "Step_read_throw_ref_handler";
+  f =
+    function
+    | [arg] -> il_call_func !il_env "Step_read/throw_ref" [expA arg]
+}
+
+and il_builtin_list : il_builtin list = [
+  il_use_step; il_use_step_pure; il_use_step_read; il_use_step_ctxt;
+  il_dispatch_step; il_dispatch_step_pure; il_dispatch_step_read;
+  il_step_read_throw_ref_handler; il_hostcall;
+  ]
+
+and il_builtins_mem fname =
+  List.exists (fun builtin -> get_il_builtin_name builtin = fname) il_builtin_list
+
+and il_call_builtins fname args : exp =
+  match List.find_opt (fun numerics -> get_il_builtin_name numerics = fname) il_builtin_list with
+  | Some il_builtin ->
+    let args' = List.map (fun a -> match a.it with
+    | ExpA e -> e
+    | _ -> raise (Failure ("Wrong argument to builtin function " ^ fname ^ ": " ^ string_of_arg a))
+    ) args in
+    il_builtin.f args'
+  | None -> raise (Failure ("Unknown builtin: " ^ fname))
+
+
+and il_call_func env name args : exp =
+  print_endline ("$ calling " ^ name);
+  match name with
+  (* Hardcoded functions defined in meta.spectec *)
+  | "Steps"  -> il_call_func env "steps"    args
+  | "Step"   -> il_call_func env "step"     args
+  (* Hardcoded functions defined in the compiler. *)
+  | "Module_ok"     -> module_ok     args
+  | "Externaddr_ok" -> externaddr_ok args
+  | "Ref_ok"        -> ref_ok        args
+  | "Val_ok"        -> val_ok        args
+  (* Others *)
+  | _ ->
+    let builtin_name, is_builtin =
+      match Il.Env.find_func_hint env name "builtin" with
+      | None -> (name, false)
+      | Some hint ->
+        match hint.hintexp.it with
+        | SeqE []     -> (name , true)  (* hint(builtin) *)
+        | TextE fname -> (fname, true)  (* hint(builtin "g") *)
+        | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
+    in
+    (match Def.find_dl_func_def name !dl with
+    (* Regular function definition. *)
+    | Some fdef when not is_builtin ->
+      let (id, _ps, t, clauses, _) = fdef.it in
+      let args' = List.map (Il.Eval.reduce_arg env) args in
+      (match Il.Eval.reduce_exp_call env id args' fdef.at clauses with
+      | None -> error no (name ^ " failed to reduce: args' = " ^ string_of_args args')
+      | Some e -> e
+      )
+    (* Builtins and numerics *)
+    | Some { it = (_, _, _, [], _); at; _ } when is_builtin ->
+      if Numerics.mem builtin_name then
+        Numerics.call_numerics builtin_name args
+      else if il_builtins_mem builtin_name then
+        il_call_builtins builtin_name args
+      else
+        error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
+    | _ when is_builtin ->
+      error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
+    | None -> error no (sprintf "There is no function named `%s`." name)
+    )
+
+
 (* Wasm interpreter entry *)
 
+
+let setup_il_eval () : unit =
+  Il.Eval.reduce_fncall_hook := fun env _ _ id args -> il_call_func env id.it args
+
+
 let instantiate (args: arg list) : exp =
-  match call_func "instantiate" args |> run_opt with
-  | Some v -> v
-  | None -> raise (Failure "`instantiate` failed to run.")
+  let r = il_call_func !il_env "instantiate" args in
+  print_endline ("$instantiate get: " ^ string_of_exp r);
+  if Il.Eval.is_normal_exp r then r
+  else
+    raise (Failure "`instantiate` failed to run.")
 
 let invoke (args: arg list) : exp =
-  match (let* r = call_func "invoke" args in
-         call_func "steps" [expA r]) |> run_opt
-  with
-  | Some r' -> r'
-  | None -> raise (Failure "`invoke` failed to run.")
+  let r = il_call_func !il_env "invoke" args in
+  print_endline ("$invoke get: " ^ string_of_exp r);
+  if not (Il.Eval.is_normal_exp r)
+  then
+    raise (Failure "`invoke` failed to run.")
+  else
+    let r' = il_call_func !il_env "steps" [expA r] in
+    print_endline ("$steps get: " ^ string_of_exp r');
+    if Il.Eval.is_normal_exp r' then r'
+    else raise (Failure "The result of `invoke` failed to reduce.")
