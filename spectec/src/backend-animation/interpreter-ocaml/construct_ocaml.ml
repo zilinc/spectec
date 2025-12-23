@@ -59,6 +59,7 @@ let ocaml_of_labelidx (n : RI.Ast.labelidx) : DL.labelidx = ocaml_of_idx n
 
 let ocaml_typeuse_of_typeidx (n : DL.typeidx) = DL.C_IDX_typeuse n 
 let ocaml_of_int32 (n : int32) : DL.nat = Int32.to_int n
+let ocaml_of_int64 (n : int64) : DL.uc_un = DL.C_pct__uc_un (Int64.to_int n)
 
 let ocaml_unsigned_of_int (n : int) : DL.uc_un = DL.C_pct__uc_un n
 let ocaml_unsigned_of_int64 (n : int64) : DL.uc_un = DL.C_pct__uc_un (Int64.to_int n)
@@ -361,16 +362,35 @@ let ocaml_of_global (global : RI.Ast.global) : DL.global =
   let RI.Ast.Global (globaltype, const) = global.it in
   DL.GLOBAL_global (ocaml_of_globaltype globaltype, (List.map ocaml_of_instr const.it))
 
+let ocaml_of_addrtype (addrtype : RT.addrtype) : DL.addrtype =
+  match addrtype with 
+  | RT.I32AT -> DL.I32_addrtype
+  | RT.I64AT -> DL.I64_addrtype
+
+let ocaml_of_limits (limits : RT.limits) : DL.limits =
+  DL.C_lbracksq_pct__dot__dot__pct__rbracksq_limits (ocaml_of_int64 limits.min, Option.map ocaml_of_int64 limits.max)
+
+let ocaml_of_reftype ((null, ht) : RT.reftype) : DL.reftype =
+  DL.REF_reftype (ocaml_of_null null, ocaml_of_heaptype ht)
+
+let ocaml_of_tabletype (tabletype : RT.tabletype) : DL.tabletype =
+  let RT.TableT (addrtype, lim, rt) = tabletype in
+  DL.C_pct__pct__pct__tabletype (ocaml_of_addrtype addrtype, ocaml_of_limits lim, ocaml_of_reftype rt)
+
+let ocaml_of_table (table : RI.Ast.table) : DL.table =
+  let RI.Ast.Table (tabletype, consts) = table.it in
+  DL.TABLE_table (ocaml_of_tabletype tabletype, List.map ocaml_of_instr consts.it)
+
 let ocaml_of_module (module_: RI.Ast.module_) : DL.module_ = DL.MODULE_module_ (
   List.map ocaml_of_type module_.it.types,
+  [], (* imports *)
   [], (* tags *)
-  [],
   List.map ocaml_of_global module_.it.globals,
-  [],
-  [],
+  [], (* mems *)
+  List.map ocaml_of_table module_.it.tables,
   List.map ocaml_of_func module_.it.funcs,
-  [],
-  [],
+  [], (* data *)
+  [], (* elems *)
   None,
   List.map ocaml_of_export module_.it.exports
 )
@@ -384,7 +404,6 @@ let ocaml_of_literal (lit : RI.Script.literal) : DL.val_ =
   ocaml_of_value lit.it
 
 (* convert OCaml values to RI values again to check assertions *)
-
 let phrase_of_ocaml (x : 'a) : 'a RI.Source.phrase = RI.Source.(x @@ no_region)
 let instr_of_ocaml (instr: DL.instr) : RI.Ast.instr' =
   match instr with

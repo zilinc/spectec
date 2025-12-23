@@ -41,10 +41,11 @@ build_ocamlprog: exe
 run_ocaml: 
 	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
 	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
 	@echo "#### compiling generated code"
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "
-	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST)
 
 # Executable
 
