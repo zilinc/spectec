@@ -1225,7 +1225,7 @@ and il_call_builtins fname args : exp =
 
 
 and il_call_func env name args : exp =
-  print_endline ("$ calling " ^ name);
+  print_endline ("$ calling " ^ name ^ " with args: " ^ string_of_args args);
   match name with
   (* Hardcoded functions defined in meta.spectec *)
   | "Steps"  -> il_call_func env "steps"    args
@@ -1251,6 +1251,7 @@ and il_call_func env name args : exp =
     | Some fdef when not is_builtin ->
       let (id, _ps, t, clauses, _) = fdef.it in
       let args' = List.map (Il.Eval.reduce_arg env) args in
+      assert (id.it = name);
       (match Il.Eval.reduce_exp_call env id args' fdef.at clauses with
       | None -> error no (name ^ " failed to reduce: args' = " ^ string_of_args args')
       | Some e -> e

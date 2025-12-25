@@ -5,6 +5,15 @@ open Xl
 open Env
 
 
+let string_of_exp e = Print.string_of_exp e |> Util.Lib.String.shorten
+
+let rtp m   = () (* print_endline ("@@@reduce_typ: " ^ m) *)
+let rep m   = () (* print_endline ("@@@reduce_exp: " ^ m) *)
+let dp id m = () (* print_endline ("@@@reduce_exp_call(" ^ id.it ^ "): " ^ m) *)
+let rpp m   = () (* print_endline ("@@@reduce_prem: " ^ m) *)
+let mep m   = () (* print_endline ("@@@match_exp: " ^ m) *)
+let magp (a1, a2) = () (* print_endline ("@@@match_arg: " ^ Print.string_of_args [a1; a2]) *)
+
 (* Environment *)
 
 type env = Env.t
@@ -96,6 +105,7 @@ let rec reduce_typ env t : typ =
   if is_cnf t then t else
   match t.it with
   | VarT (id, args) ->
+    rtp ("VarT " ^ id.it);
     let args' = List.map (reduce_arg env) args in
     (match reduce_typ_app' env id args' t.at (Env.find_opt_typ env id) with
     | Some {it = AliasT t'; _} -> reduce_typ env t'
@@ -141,13 +151,6 @@ and reduce_typ_app' env id args at = function
 
 (* Expression Reduction *)
 
-
-and rep m   = () (* print_endline ("@@@reduce_exp: " ^ m) *)
-and dp id m = () (* print_endline ("@@@reduce_exp_call(" ^ id.it ^ "): " ^ m) *)
-and rpp m   = () (* print_endline ("@@@reduce_prem: " ^ m) *)
-and mep m   = () (* print_endline ("@@@match_exp: " ^ m) *)
-
-
 and is_head_normal_exp e =
   is_cnf e ||
   match e.it with
@@ -167,7 +170,6 @@ and is_normal_exp e =
   | _ -> false
 
 and reduce_fncall_hook : (env -> region -> typ -> id -> arg list -> exp) ref = ref (fun env at note id args ->
-  (* dp id ("@@@ subtype in context? " ^ string_of_bool (Env.mem_var env ("subtype" $ no_region))); *)
   let args' = List.map (reduce_arg env) args in
   let _ps, _t, clauses = Env.find_def env id in
   (* Allow for uninterpreted functions *)
@@ -308,7 +310,6 @@ and reduce_exp env e: exp =
   | CallE (id, args) -> !reduce_fncall_hook env e.at e.note id args
   | IterE (e1, iterexp) ->
     let (_, xes) = iterexp in
-    (* rep ("IterE xes = " ^ String.concat "\n" (List.map (fun (x, e) -> x.it ^ " ↦ " ^ Print.string_of_exp e) xes)); *)
     (* FIXME(zilinc): If we reduce e1 (is it needed?) and it fails to match the
     arguments because the actual arguments have not been fully normalised
     (because the inflow substitutions have not been worked out), then the
@@ -328,12 +329,8 @@ and reduce_exp env e: exp =
       | _ -> true
     ) xes' in
     let ids, es' = List.split xes'' in
-    let ids111, es'111 = List.split xes' in
-    (* rep ("IterE es'' = " ^ String.concat "\n" (List.map Print.string_of_exp es'));
-    rep ("IterE es'111  = " ^ String.concat "\n" (List.map Print.string_of_exp es'111)); *)
     if not (List.for_all is_head_normal_exp es') || iter' <= List1 && es' = [] then
-      ( (* rep "IterE: iterexp wrong"; *)
-      IterE (e1', iterexp') $> e)
+      IterE (e1', iterexp') $> e
     else
       (match iter' with
       | Opt ->
@@ -348,13 +345,11 @@ and reduce_exp env e: exp =
           IterE (e1', iterexp') $> e
       | List | List1 ->
         let n = List.length (as_list_exp (List.hd es')) in
-        (* rep ("IterE List[1]: n = " ^ string_of_int n); *)
         if iter' = List || n >= 1 then
           let en = NumE (`Nat (Z.of_int n)) $$ e.at % (NumT `NatT $ e.at) in
           reduce_exp env (IterE (e1', (ListN (en, None), xes')) $> e)
         else
-          ( (* rep ("List[1] wrong: n=" ^ string_of_int n); *)
-          IterE (e1', iterexp') $> e)
+          IterE (e1', iterexp') $> e
       | ListN ({it = NumE (`Nat n'); _}, ido) ->
         let ess' = List.map as_list_exp es' in
         let ns = List.map List.length ess' in
@@ -369,17 +364,12 @@ and reduce_exp env e: exp =
                 Subst.add_varid s id en
               )
             in
-            (* rep ("ListN s' = " ^ Subst.string_of_subst s'); *)
-            let e1'' = Subst.subst_exp s' e1' in
-            (* rep ("ListN e1'' = " ^ Print.string_of_exp e1''); *)
-            e1''
+            Subst.subst_exp s' e1'
           )) $> e) |> reduce_exp env
         else
-          ( (* rep "IterE: nss length wrong"; *)
-          IterE (e1', iterexp') $> e)
+          IterE (e1', iterexp') $> e
       | ListN _ ->
-        ( (* rep "IterE: other"; *)
-        IterE (e1', iterexp') $> e)
+        IterE (e1', iterexp') $> e
       )
   | ProjE (e1, i) ->
     let e1' = reduce_exp env e1 in
@@ -527,37 +517,41 @@ and reduce_arg env a : arg =
   | DefA _id -> a
   | GramA _g -> a
 
-and reduce_exp_call env id args at = function
+and reduce_exp_call env id args at =
+  function
   | [] ->
     if !assume_coherent_matches then (dp id "no match"; None) else
     Error.error at "validation"
       ("undefined call to partial function `$" ^ id.it ^ "`")
   | {it = DefD (_binds, args', e, prems); _}::clauses' ->
-    dp id ("list");
+    dp id ("list. e = " ^ string_of_exp e ^ "; |prems| = " ^ string_of_int (List.length prems));
     Debug.(log "il.reduce_exp_call"
       (fun _ -> fmt "$%s(%s) =: $%s(%s)" id.it (il_args args) id.it (il_args args'))
       (function None -> "-" | Some e' -> fmt "%s" (il_exp e'))
     ) @@ fun _ ->
     assert (List.for_all (fun a -> Eq.eq_arg a (reduce_arg env a)) args);
+    dp id ("match_list:\nformal = " ^ Print.string_of_args args' ^ "\nactual = " ^ Print.string_of_args args);
     match match_list match_arg env Subst.empty args args' with
     | exception Irred ->
+      dp id ("-----------------------------> Irred");
       (* FIXME(zilinc): If Irred, which means we don't yet have enough information to uniform them,
          shall we just propagate Irred up? Why do we take it as the match has failed?
        *)
       if not !assume_coherent_matches then
         (dp id ("args not match"); None)
       else
-        (dp id ("next arg:\nformal = " ^ Print.string_of_args args' ^ "\nactual = " ^ Print.string_of_args args);
+        (dp id ("next arg");
         reduce_exp_call env id args at clauses')
-    | None -> dp id "next due to arg"; reduce_exp_call env id args at clauses'
+    | None -> dp id "-----------------------------> next due to arg"; reduce_exp_call env id args at clauses'
     | Some s ->
+      dp id ("-----------------------------> Some");
       match reduce_prems env s prems with
       | `None -> dp id "wrong"; None
       | `False -> dp id "next due to pr"; reduce_exp_call env id args at clauses'
       | `True s' -> dp id "hit";
                     dp id ("s' = " ^ Subst.string_of_dom_subst s');
                     let e' = Subst.subst_exp s' e in
-                    dp id ("e' = " ^ Print.string_of_exp e' |> Util.Lib.String.shorten);
+                    dp id ("e' = " ^ string_of_exp e');
                     Some (reduce_exp env e')
 
 and reduce_prems env s prems : [`True of Subst.t | `False | `None] =
@@ -576,7 +570,7 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
   | IfPr e ->
     (match (reduce_exp env e).it with
     | BoolE b -> if b then `True Subst.empty else `False
-    | e' -> rpp ("non-bool if: " ^ Print.string_of_exp (e' $> e)); `None
+    | e' -> rpp ("non-bool if: " ^ string_of_exp (e' $> e)); `None
     )
   | ElsePr -> `True Subst.empty
   | LetPr (e1, e2, _ids) ->
@@ -612,14 +606,11 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
       | _ -> Set.empty
     in
     let xes_out, xes_in = List.partition (fun (x, _) -> Set.mem x.it (bv prem)) xes' in
-    rpp ("prem: " ^ Print.string_of_prem prem);
-    rpp ("xes_out: " ^ String.concat ", " (List.map (fun (x, _) -> x.it) xes_out));
-    rpp ("xes_in: " ^ String.concat ", " (List.map (fun (x, _) -> x.it) xes_in));
     let xs_out, es_out = List.split xes_out in
     let xs_in, es_in = List.split xes_in in
     if not (List.for_all is_head_normal_exp es_in) || iter' <= List1 && es_in = [] then
       (* We don't know the number of iterations (yet): can't do anything. *)
-      (rpp "num of iter"; `None)
+      `None
     else
       (match iter' with
       | Opt ->
@@ -633,7 +624,7 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
               match_exp' env s (OptE None $> eI) eI
             ) (Some Subst.empty) xes_out
           with
-          | Some s -> rep ("Opt s = " ^ Subst.string_of_dom_subst s); `True s
+          | Some s -> `True s
           | None -> `None
         else if List.for_all Option.is_some eos_in then
           (* All iteration variables are non-empty: reduce body. *)
@@ -642,7 +633,7 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
            * values. *)
           let s = List.fold_left2 Subst.add_varid Subst.empty xs_in es1_in in
           match reduce_prems env s prems with
-          | (`None | `False) as r -> rep "Opt reduce_prems failed"; r
+          | (`None | `False) as r -> r
           | `True s' ->
             (* Body is true: now reverse-match out-bound iteration values
              * against iteration sources. *)
@@ -653,12 +644,12 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
                 match_exp' env s (OptE (Some (Subst.subst_exp s' (VarE xI $$ xI.at % tI))) $> eI) eI
               ) (Some Subst.empty) xes_out
             with
-            | Some s'' -> rep ("Opt s'' = " ^ Subst.string_of_dom_subst s''); `True s''
-            | None -> rpp "xes out"; `None
+            | Some s'' -> `True s''
+            | None -> `None
         else
           (* Inconsistent arity of iteration values: can't perform mapping.
            * (This is a stuck computation, i.e., undefined.) *)
-          (rpp "inconsist arity opt"; `None)
+          `None
       | List | List1 ->
         (* Unspecified iteration count: get length from (first) iteration value
          * and start over; es_in are in hnf, so got to be lists. *)
@@ -711,13 +702,13 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
           in
           (* Reverse-match out-bound list values against iteration sources. *)
           match match_list match_exp env Subst.empty es_out' es_out with
-          | Some s' -> rep ("ListN s'' = " ^ Subst.string_of_dom_subst s');`True s'
-          | None -> rpp "es_out"; `None
+          | Some s' -> `True s'
+          | None -> `None
         else
           (* Inconsistent list lengths: can't perform mapping.
            * (This is a stuck computation, i.e., undefined.) *)
-          (rpp "inconsist arity listN"; `None)
-      | ListN (n, _) -> rpp ("invalid listN: " ^ Print.string_of_exp n) ; `None
+          `None
+      | ListN (n, _) -> `None
       )
   | NegPr _ -> assert false
 
@@ -778,7 +769,9 @@ and match_typbind env s (e1, t1) (e2, t2) =
 (* Expressions *)
 
 and match_exp env s e1 e2 : subst option =
-  match_exp' env s (reduce_exp env e1) e2
+  let e1' = Subst.subst_exp s e1 in
+  let e2' = Subst.subst_exp s e2 in  
+  match_exp' env s (reduce_exp env e1') e2'
 
 and match_exp' env s e1 e2 : subst option =
   Debug.(log "il.match_exp"
@@ -798,7 +791,7 @@ and match_exp' env s e1 e2 : subst option =
   | _, VarE id ->
     (* Treat as a fresh pattern variable. *)
     let e1' = reduce_exp env (SubE (e1, e1.note, e2.note) $$ e1.at % e2.note) in
-    mep ("subst: add " ^ id.it);
+    mep ("subst: add " ^ id.it ^ " ↦ " ^ string_of_exp e1');
     Some (Subst.add_varid s id e1')
   | BoolE b1, BoolE b2 when b1 = b2 -> Some s
   | NumE n1, NumE n2 when n1 = n2 -> Some s
@@ -872,13 +865,13 @@ and match_exp' env s e1 e2 : subst option =
 *)
   | OptE (Some e1'), OptE (Some e2') -> match_exp' env s e1' e2'
   | OptE None, IterE (_e21, (Opt, xes)) ->
-    mep ("opt none. e2 = " ^ Print.string_of_exp e2);
+    mep ("opt none. e2 = " ^ string_of_exp e2);
     List.fold_left (fun s_opt (_xI, eI) ->
       let* s = s_opt in
       match_exp' env s e1 eI
     ) (Some s) xes
   | OptE (Some e11), IterE (e21, (Opt, xes)) ->
-    mep ("opt some. e2 = " ^ Print.string_of_exp e2);
+    mep ("opt some. e2 = " ^ string_of_exp e2);
     let* s' = match_exp' env s e11 e21 in
     let* s'' =
       List.fold_left (fun s_opt (xI, exI) ->
@@ -920,7 +913,7 @@ and match_exp' env s e1 e2 : subst option =
       ) env s' xs exs
     in Some (Subst.union s''' s)  (* re-add possibly locally shadowed bindings *)
   | _, (IterE (e21, iter2) as e2') ->
-    mep ("rest iter. e1 = " ^ Print.string_of_exp e1 ^ "\n  e2' = " ^ Print.string_of_exp (e2' $> e2));
+    mep ("rest iter. e1 = " ^ string_of_exp e1 ^ "\n  e2' = " ^ string_of_exp (e2' $> e2));
     let e11, iter1 = eta_iter_exp env e1 in
     let* s' = match_exp' env s e11 e21 in
     match_iterexp env s' iter1 iter2
@@ -1011,6 +1004,7 @@ and match_sym env s g1 g2 : subst option =
 
 and match_arg env s a1 a2 : subst option =
   Debug.(log_in "il.match_arg" (fun _ -> fmt "%s =: %s" (il_arg a1) (il_arg a2)));
+  magp (a1, a2);
   match a1.it, a2.it with
   | ExpA e1, ExpA e2 -> match_exp env s e1 e2
   | TypA t1, TypA t2 -> match_typ env s t1 t2
