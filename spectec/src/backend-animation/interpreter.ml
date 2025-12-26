@@ -1225,7 +1225,6 @@ and il_call_builtins fname args : exp =
 
 
 and il_call_func env name args : exp =
-  print_endline ("$ calling " ^ name ^ " with args: " ^ string_of_args args);
   match name with
   (* Hardcoded functions defined in meta.spectec *)
   | "Steps"  -> il_call_func env "steps"    args
@@ -1279,19 +1278,16 @@ let setup_il_eval () : unit =
 
 let instantiate (args: arg list) : exp =
   let r = il_call_func !il_env "instantiate" args in
-  print_endline ("$instantiate get: " ^ string_of_exp r);
   if Il.Eval.is_normal_exp r then r
   else
     raise (Failure "`instantiate` failed to run.")
 
 let invoke (args: arg list) : exp =
   let r = il_call_func !il_env "invoke" args in
-  print_endline ("$invoke get: " ^ string_of_exp r);
   if not (Il.Eval.is_normal_exp r)
   then
     raise (Failure "`invoke` failed to run.")
   else
     let r' = il_call_func !il_env "steps" [expA r] in
-    print_endline ("$steps get: " ^ string_of_exp r');
     if Il.Eval.is_normal_exp r' then r'
     else raise (Failure "The result of `invoke` failed to reduce.")
