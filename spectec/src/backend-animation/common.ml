@@ -22,7 +22,6 @@ let step_table : (string * string * int) Map.t ref =
     ("CALL_INDIRECT"       , 0);
     ("RETURN"              , 0);  (* ??? *)
     ("RETURN_CALL_INDIRECT", 0);
-    ("TRAP"                , -1);
     ("UNOP"                , 0);
     ("BINOP"               , 0);
     ("TESTOP"              , 0);

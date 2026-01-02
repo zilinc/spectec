@@ -347,20 +347,24 @@ let throw_log e = let () = info "log" no e in E.throw e
 let cannot_animate : (string * string) list Map.t =
   Map.of_list
     [ ("rule_lhs", [
+        (* These are covered in meta.spectec. The redex is either
+           FRAME_, LABEL_ or HANDLER_.
+         *)
         ("Step_pure", "br-label-zero");
         ("Step_pure", "br-label-succ");
         ("Step_pure", "br-handler");
         ("Step_pure", "return-frame");
         ("Step_pure", "return-label");
         ("Step_pure", "return-handler");
-        ("Step_pure", "trap-instrs");
 
         ("Step_read", "return_call_ref-label");
         ("Step_read", "return_call_ref-handler");
         ("Step_read", "return_call_ref-frame-null");
         ("Step_read", "return_call_ref-frame-addr");
-        ("Step_read", "throw_ref-instrs");
 
+        (* These are structural rules that are hard-coded into the $reduce function in meta.spectec. *)
+        ("Step_pure", "trap-instrs");
+        ("Step_read", "throw_ref-instrs");
         ("Step", "ctxt-instrs");
       ])
     ]
