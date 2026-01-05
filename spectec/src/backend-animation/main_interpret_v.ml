@@ -100,7 +100,7 @@ let get_export_addr name moduleinst_name : value =
     moduleinst_name
     |> get_export name
     |> as_str_field "ADDR"
-    |> as_case
+    |> as_case_value
   in
   try List.hd vl with Failure _ ->
     failwith ("Function export doesn't contain function address")

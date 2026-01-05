@@ -12,8 +12,9 @@ open Il.Print
 open Source
 open Printf
 open Il2al.Free
-module A = Al.Ast
-module I = Backend_interpreter
+module HS = State_v.HostState
+module A  = Al.Ast
+module I  = Backend_interpreter
 module RI = Reference_interpreter
 
 
@@ -742,7 +743,6 @@ and call_func name args =
   | "Externaddr_ok" -> externaddr_ok args |> return
   | "Ref_ok"        -> ref_ok        args |> return
   | "Val_ok"        -> val_ok        args |> return
-  (* | "hostcall"      -> hostcall      args |> return *)
   (* Others *)
   | _ ->
     let builtin_name, is_builtin =
@@ -763,6 +763,8 @@ and call_func name args =
         Numerics_v.call_numerics builtin_name args |> return
       else if builtins_mem builtin_name then
         call_builtins builtin_name args
+      else if builtin_name = "hostcall" then
+        hostcall args
       else
         error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
     | _ when is_builtin ->
@@ -785,47 +787,96 @@ and call_hostfunc name s vs =
   | v -> error no ("Host function call: Not " ^ ty ^ ".CONST: " ^ string_of_value v)
   in
   let argc = List.length vs in
-  (match name with
-  | "print" when argc = 0 -> print_endline "- print: ()"
+  let print_eff s = HS.Print s in
+  let effs = (match name with
+  | "print" when argc = 0 -> [ print_eff "- print: ()\n" ]
   | "print_i32" when argc = 1 ->
     List.hd vs
     |> as_const "I32"
     |> vl_to_uN_32
     |> RI.I32.to_string_s
-    |> Printf.printf "- print_i32: %s\n"
+    |> Printf.sprintf "- print_i32: %s\n"
+    |> print_eff
+    |> fun e -> [e]
   | "print_i64" when argc = 1 ->
     List.hd vs
     |> as_const "I64"
     |> vl_to_uN_64
     |> RI.I64.to_string_s
-    |> Printf.printf "- print_i64: %s\n"
+    |> Printf.sprintf "- print_i64: %s\n"
+    |> print_eff
+    |> fun e -> [e]
   | "print_f32" when argc = 1 ->
     List.hd vs
     |> as_const "F32"
     |> vl_to_float32
     |> RI.F32.to_string
-    |> Printf.printf "- print_f32: %s\n"
+    |> Printf.sprintf "- print_f32: %s\n"
+    |> print_eff
+    |> fun e -> [e]
   | "print_f64" when argc = 1 ->
     List.hd vs
     |> as_const "F64"
     |> vl_to_float64
     |> RI.F64.to_string
-    |> Printf.printf "- print_f64: %s\n"
+    |> Printf.sprintf "- print_f64: %s\n"
+    |> print_eff
+    |> fun e -> [e]
   | "print_i32_f32" when argc = 2 ->
     let [v1; v2] = vs in
     let i32 = v1 |> as_const "I32" |> vl_to_nat32   |> RI.I32.to_string_s in
     let f32 = v2 |> as_const "F32" |> vl_to_float32 |> RI.F32.to_string   in
-    Printf.printf "- print_i32_f32: %s %s\n" i32 f32
+    Printf.sprintf "- print_i32_f32: %s %s\n" i32 f32 |> print_eff |> fun e -> [e]
   | "print_f64_f64" when argc = 2 ->
     let [v1; v2] = vs in
     let f64  = v1 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
     let f64' = v2 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
-    Printf.printf "- print_f64_f64: %s %s\n" f64 f64'
+    Printf.sprintf "- print_f64_f64: %s %s\n" f64 f64' |> print_eff |> fun e -> [e]
   | name -> error no ("Invalid host function call: " ^ name)
-  );
-  (s, caseV [["_VALS"];[]] [listV [||]])
+  )
+  in
+  let get_hoststate store : value =
+    let store' = as_str_value store in
+    Record.find "HOST" store'
+  in
+  let set_hoststate hs store : value =
+    let store' = as_str_value store |> List.map (fun (k, v) -> (k, ref !v)) in  (* Record.clone is not adequate. *)
+    Record.replace "HOST" hs store';
+    StrV store'
+  in
+  let hs' = HS.inc_timestamp (get_hoststate s) in
+  let s' = set_hoststate hs' s in
+  let hostcallresult = caseV [["RES"];[];[]] [s'; caseV [["_VALS"];[]] [listV [||]]] in
+  let res = [ hostcallresult ] |> listV_of_list in
+  (res, effs)
+
+and hostcall : Value.arg list -> value OptMonad.m = function
+  | [ ValA name; ValA s; ValA val_ ] ->
+    let name' = (match name with
+    | CaseV ([["_HOSTFUNC"];[]], [hf]) -> as_text_value hf
+    | _ -> error no ("Not a hostfunc")
+    )
+    in
+    let glb_hs = HS.get_glb_state () in
+    let lcl_hs = as_str_field "HOST" s in
+    let vals = as_list_value' val_ in
+    (match HS.chk_state lcl_hs with
+    | Earlier ->
+      (* Host function has been called already. Look up the effect registry. *)
+      (match HS.lookup_effect name' (HS.get_timestamp lcl_hs) with
+      | Some (res, _effs) -> return res
+      | None -> error no ("No such entry in effect resgistry.")
+      )
+    | Good ->
+      let res, effs = call_hostfunc name' s vals in
+      HS.add_effects name' res effs;
+      return res
+    | Later -> error no ("Host function `" ^ name' ^ "` is calling into the future.")
+    )
+  | _ -> error no ("Invalid arguments to $hostcall")
 
 
+(*
 and hostcall = {
   name = "hostcall";
   f =
@@ -840,7 +891,7 @@ and hostcall = {
       )
     | vs -> error_values ("Args to $hostcall") vs
 }
-
+*)
 
 (* Built-in functions (meta.spectec) *)
 
@@ -940,7 +991,7 @@ and step_read_throw_ref_handler = {
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler; hostcall;
+  step_read_throw_ref_handler;
   ]
 
 and call_builtins fname args : value OptMonad.m =
@@ -955,6 +1006,9 @@ and call_builtins fname args : value OptMonad.m =
 
 and builtins_mem fname =
   List.exists (fun builtin -> builtin.name = fname) builtin_list
+
+
+
 
 
 (* Hard-coded relations *)

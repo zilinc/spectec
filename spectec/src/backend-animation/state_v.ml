@@ -53,9 +53,9 @@ end
 module HostState = struct
   (* Global host state *)
   let timestamp : int ref = ref 0
-  let state () : value = vl_of_nat !timestamp
-  let inc_timestamp () = timestamp := !timestamp + 1
-  let reset_timestamp () = timestamp := 0
+  let get_glb_state () : value = vl_of_nat !timestamp
+  let inc_glb_timestamp () = timestamp := !timestamp + 1
+  let reset_glb_timestamp () = timestamp := 0
 
   module EffectDomain : Map.OrderedType with type t = int * string = struct
     type t = int * string
@@ -63,16 +63,31 @@ module HostState = struct
   end
 
   module Map = Map.Make(EffectDomain)
-
   type effect = Print of string
 
+  (* Global effects map. *)
   let effect_map : ((value * effect list) Map.t) ref = ref Map.empty
 
-  let add_effect (hf_name: string) res eff =
-      effect_map := Map.add (!timestamp, hf_name) (res, eff) !effect_map
+  let add_effects (hf_name: string) res effs =
+    effect_map := Map.add (!timestamp, hf_name) (res, effs) !effect_map;
+    List.iter (function
+    | Print s -> print_string s
+    ) effs;
+    inc_glb_timestamp ()
+
+  let lookup_effect hf_name ts = Map.find_opt (ts, hf_name) !effect_map
+
+  let get_effects () : effect list =
+    Map.bindings !effect_map |> List.map (fun x -> snd (snd x)) |> List.concat
+
 
   (* Local host state *)
   let mk_state ts : value = vl_of_nat ts
+  let get_timestamp hs : int = as_nat_value hs |> Z.to_int
+  let inc_timestamp hs : value =
+    let ts = get_timestamp hs in
+    let ts' = ts + 1 in
+    mk_state ts'
 
 
   (* Functions *)
@@ -139,5 +154,6 @@ module Store = struct
     update "STRUCTS" (Fun.const structs);
     update "ARRAYS"  (Fun.const arrays );
     update "EXNS"    (Fun.const exns   );
-    update "HOST"    (Fun.const hstate );
+    update "HOST"    (Fun.const hstate )
+
 end

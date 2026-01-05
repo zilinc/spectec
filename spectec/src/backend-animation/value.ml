@@ -138,9 +138,13 @@ let as_singleton_case = function
   | CaseV ([[];[]], [v]) -> v
   | v -> error no ("as_singleton_case: " ^ string_of_value v)
 
-let as_case = function
+let as_case_value = function
   | CaseV (_, vs) -> vs
-  | v ->  error no ("as_case: " ^ string_of_value v)
+  | v ->  error no ("as_case_value: " ^ string_of_value v)
+
+let as_str_value = function
+  | StrV str -> str
+  | v -> error no ("as_str_value: " ^ string_of_value v)
 
 let has_str_field atom str : bool =
   match str with
