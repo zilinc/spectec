@@ -71,6 +71,21 @@ let string_of_rectype (rt : Types.rectype) = match rt with
 
 let string_of_type_ (ty : Ast.type_) = string_of_rectype ty.it
 
+let string_of_tabletype (tt : Types.tabletype) =
+  let Types.TableT (addrtype, limits, reftype) = tt in
+  sprintf "TableT(addrtype=%s; limits=%s; reftype=<rt>)" 
+    (match addrtype with
+     | Types.I32AT -> "I32AT"
+     | Types.I64AT -> "I64AT")
+    ((limits.min |> Int64.to_string) ^ 
+     (match limits.max with 
+      | None -> ", max=<none>"
+      | Some m -> ", max=" ^ (Int64.to_string m)))
+
+let string_of_table (table : Ast.table) =
+  let Ast.Table (tabletype, _) = table.it in
+  sprintf "Table(type=%s)" (string_of_tabletype tabletype)
+
 let string_of_mod_ (m : Ast.module_) =
   sprintf "{\n \
   \ types : [%s];
@@ -89,7 +104,7 @@ let string_of_mod_ (m : Ast.module_) =
   (String.concat "; " (List.map (fun _ -> "tag") m.it.tags))
   (String.concat "; " (List.map (fun _ -> "global") m.it.globals))
   (String.concat "; " (List.map (fun _ -> "memory") m.it.memories))
-  (String.concat "; " (List.map (fun _ -> "table") m.it.tables))
+  (String.concat "; " (List.map string_of_table m.it.tables))
   (String.concat "; " (List.map (fun _ -> "func") m.it.funcs))
   (String.concat "; " (List.map (fun _ -> "data") m.it.datas))
   (String.concat "; " (List.map (fun _ -> "elem") m.it.elems))

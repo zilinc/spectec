@@ -62,7 +62,9 @@ let il_of_nat16 i16 = Z.of_int (RI.I16.to_int_u i16) |> il_of_z_nat
 let il_of_nat32 i32 = Z.of_int32_unsigned i32 |> il_of_z_nat
 let il_of_nat64 i64 = Z.of_int64_unsigned i64 |> il_of_z_nat
 
-let il_of_name name = textE (Utf8.encode name)
+(*let il_of_name name = textE (Utf8.encode name)*)
+let il_of_char char = mk_case' "char" [[];[]] [il_of_nat char]
+let il_of_name chars = mk_case' "name" [[];[]] [(il_of_list (t_star "char") il_of_char chars)]
 let il_of_byte byte = Char.code byte |> il_of_nat
 let il_of_bytes bytes = String.to_seq bytes |> il_of_seq il_of_byte (t_star "byte")
 let il_of_float32 f32 = RI.F32.to_bits f32 |> Z.of_int32_unsigned |> il_of_floatN BI.Construct.layout32
@@ -1074,7 +1076,16 @@ let il_to_string exp =
   match exp.it with
   | TextE str -> str
   | _ -> error_value "text" exp
-let il_to_name name = name |> il_to_string |> Utf8.decode
+(*let il_to_name name = name |> il_to_string |> Utf8.decode*)
+let il_to_char exp = 
+  match match_caseE "name" exp with
+  | ([[];[]], [n]) -> il_to_int n
+  | _ -> error_value "char" exp
+let il_to_name exp =
+  match match_caseE "name" exp with
+  | ([[];[]], [chars]) -> il_to_list il_to_char chars
+  | _ -> error_value "name" exp
+
 let il_to_bool exp = match exp.it with
   | BoolE b -> b
   | _ -> error_value "bool" exp

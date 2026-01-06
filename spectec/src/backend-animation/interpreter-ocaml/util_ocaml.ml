@@ -140,52 +140,57 @@ module TypeM = struct
     mutable knowns : Set.t; (* need this to determine inflow/outflow *)
     mutable typecasts : string; (* type-casted function arguments to be moved to the body *)
     mutable freshvaridx : int;
-    mutable typevars : Set.t (* type variables currently in scope *)
+    mutable typevars : Set.t; (* type variables currently in scope *)
   }
 
-  type 'a t = state -> 'a * state * string  
+  type 'a t = state -> 'a * state * string * string (* value, new state, util functions, parser functions *)
 
-  let return x : 'a t = fun st -> (x, st, "")
+  let return x : 'a t = fun st -> (x, st, "", "")
 
   let append_sep a b sep =
     if a = "" then b else if b = "" then a else a ^ sep ^ b
   let append a b = append_sep a b "\n"
 
+  let modify f : unit t = fun st -> ((), f st, "", "")
+
+  (* there has to be a better way of doing this lol *)
   let bind (m : 'a t) (f : 'a -> 'b t) : 'b t =
     fun st0 ->
-      let (a, st1, w1) = m st0 in
-      let (b, st2, w2) = f a st1 in
-      (b, st2, append w1 w2)
+      let (a, st1, w1, p1) = m st0 in
+      let (b, st2, w2, p2) = f a st1 in
+      (b, st2, append w1 w2, append p1 p2)
 
   let ( let* ) = bind
 
-  let tell (w : string) : unit t = fun st -> ((), st, w)
+  let tell (w : string) : unit t = fun st -> ((), st, w, "")
   let tell_if_nonempty (w : string) : unit t =
     if w = "" then return () else tell w
 
-  let get : state t = fun st -> (st, st, "")
-  let put (st' : state) : unit t = fun _ -> ((), st', "")
-  let modify f : unit t = fun st -> ((), f st, "")
-  let get_knowns : Set.t t = fun st -> st.knowns, st, ""
+  let add_construct (f : string) : unit t =
+    fun st -> ((), st, "", f)
+
+  let get : state t = fun st -> (st, st, "", "")
+  let put (st' : state) : unit t = fun _ -> ((), st', "", "")
+  let get_knowns : Set.t t = fun st -> st.knowns, st, "", ""
 
   let add_typedef (name : string) (typedef : Def.type_def) : unit t =
     modify (fun st -> { st with typemap = Map.add name typedef st.typemap })
 
-  let get_typedef (typename : string) : Def.type_def option t = fun st -> ((Map.find_opt typename st.typemap), st, "")
+  let get_typedef (typename : string) : Def.type_def option t = fun st -> ((Map.find_opt typename st.typemap), st, "", "")
 
   let add_funcdef (name : string) : unit t =
     modify (fun st -> { st with functions = Map.add name () st.functions })
 
   let is_defined (funname : string) : bool t = fun st ->
-    (Map.mem funname st.functions, st, "")
+    (Map.mem funname st.functions, st, "", "")
 
   let get_freshvar () : string t = fun st ->
     let var = Printf.sprintf "v%d" st.freshvaridx in
     st.freshvaridx <- st.freshvaridx + 1;
-    (var, st, "")
+    (var, st, "", "")
 
   let get_typecasts () : string t =
-    fun st -> (st.typecasts, st, "")
+    fun st -> (st.typecasts, st, "", "")
 
   let set_typecasts (xs : string) : unit t =
     modify (fun st -> { st with typecasts = xs })
@@ -205,22 +210,22 @@ module TypeM = struct
       { st with knowns = k })
 
   let is_known (x: string) : bool t =
-    fun st -> (Set.mem x st.knowns, st, "")
+    fun st -> (Set.mem x st.knowns, st, "", "")
 
   let are_knowns (xs: Set.t) : bool t = fun st -> 
-    (Set.subset xs st.knowns, st, "")
+    (Set.subset xs st.knowns, st, "", "")
 
   let add_typevar (x : string) : unit t =
     modify (fun st -> { st with typevars = Set.add x st.typevars })
 
   let get_typevars () : Set.t t =
-    fun st -> (st.typevars, st, "")
+    fun st -> (st.typevars, st, "", "")
 
   let set_typevars (s : Set.t) : unit t =
     modify (fun st -> { st with typevars = s })
 
   let is_typevar (x : string) : bool t =
-    fun st -> (Set.mem x st.typevars, st, "")
+    fun st -> (Set.mem x st.typevars, st, "", "")
 
   let concat_nonempty sep xs =
   xs |> List.filter (fun s -> s <> "") |> String.concat sep
@@ -236,6 +241,11 @@ module TypeM = struct
   let concat_mapM sep f xs =
     let* parts = mapM f xs in
     return (concat_nonempty sep parts)
+
+  let concat_mapM2 sep f xs =
+    let* parts = mapM f xs in
+    let (lefts, rights) = List.split parts in 
+    return (concat_nonempty sep lefts, concat_nonempty sep rights)
 
   let mapMi (f : int -> 'a -> 'b t) (xs : 'a list) : 'b list t =
     let rec aux i = function
@@ -275,7 +285,7 @@ module TypeM = struct
     freshvaridx = 0;
     typevars = Set.empty
     } in 
-    let (a, _, w) = m st0 in (a, w) 
+    let (a, st1, w, p) = m st0 in (a, w, p) 
 
 end
 
@@ -292,6 +302,7 @@ module NumConversions = struct
   let nat_of_rat (n : rat) : nat = int_of_float n
 end
 
+(* outdated now probably *)
 let val_or_fail name val_ = match val_ with
   | Some v -> v
   | None -> failwith (name ^ ": No matching clause")
@@ -299,7 +310,8 @@ let val_or_fail name val_ = match val_ with
 (* Using the standard mplus operator defined as :
     Some v <|> RHS -> Some v
     Does not work because the RHS is evaluated eagerly. If the RHS throws an error, it will be raised immediately. 
-    To delay the evaluation we pass a thunk instead. *)
+    To delay the evaluation we pass a thunk instead. 
+    outdated now probably *)
 let mplus (a : 'a option) (b : unit -> 'a option) : 'a option =
   match a with
   | Some _ -> a 
@@ -335,19 +347,18 @@ module Register (T : sig type t end) = struct
 end
 
 (* a clause may fail when
-   * an expression does not match a pattern, i.e. in `let pattern = exp`
-     (Match_failure)
+   * an expression does not match a pattern, i.e. in `let pattern = exp` (Match_failure)
    * subtyping/supertyping failure (SubtypingFailed)
-   * an if premise is not satisfied (CondFailed)
+   * an `-- if premise` is not satisfied (CondFailed)
    * a nested function call fails (NoMatchingClause) 
-   * an option type is none (not sure if this can happen) *)
+   * an option type is none (Invalid_argument) (not sure if this can happen) *)
 
 exception SubtypingFailed
 exception NoMatchingClause of string
 exception CondFailed
 exception UnanimatedArg of string
 
-(* maybe I can just generate these *)
+(* maybe I can just generate these lol *)
 let rec try_clauses_0 clauses err_msg = 
   match clauses with 
   | [] -> raise (NoMatchingClause err_msg)

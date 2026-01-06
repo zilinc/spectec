@@ -105,6 +105,7 @@ let hardcode_step (funcdefs : dl_def list) : dl_def list =
   (List.take (insert - List.length recdefs) rest) @ [RecDef recdefs] @ (List.drop (insert - List.length recdefs) rest)
 
 (* TODOs: 
+check where typevars are used ?? - maybe make them a list instead of a set
 REFACTOR (always)
 the above functions should be reused when the LHS of a let pr is case e
 for now, add the flipsub flag everywehre but later figure if there is a better way to do it
@@ -324,6 +325,80 @@ let ocaml_of_cmpop op =
   | "=/=" -> "<>"
   | s -> s
 
+(* generate a function that will translate an IL exp of typ `name = VariantT tcs` to an ocaml value of the corresponding type *)
+let rec gen_typarg_translation t = 
+  match t.it with
+  | VarT (id, args) -> 
+    (* a polymorphic type like `a list needs an extra function that will translate `a to ocaml *)
+    let* argstr = concat_mapM " " (fun arg -> match arg.it with 
+      | TypA t -> gen_typarg_translation t
+      | _ -> return "") args
+    in
+    let* is_typevar = is_typevar (sanitize_name id.it) in
+    if is_typevar then return ("f_" ^ (sanitize_name id.it))
+    else return ("ocaml_of_" ^ (append_sep (sanitize_name id.it) argstr " "))
+  | BoolT -> return "ocaml_of_bool"
+  | NumT (`NatT) -> return "ocaml_of_nat"
+  | NumT (`IntT) -> return "ocaml_of_int"
+  | NumT _ -> return "todo: non-int/nat num"
+  | TextT -> return "ocaml_of_string"
+  | TupT [] -> return ""
+  | TupT ets -> 
+    let* args = mapM (fun (_, t) -> gen_typarg_translation t) ets in 
+    return ("(" ^ String.concat ", " (List.mapi (fun i arg -> Printf.sprintf "(%s (List.nth es %d))" arg i) args) ^ ")")
+  | IterT (t1, iter) -> 
+    let* t1_str = gen_typarg_translation t1 in 
+    begin match iter with 
+    | List -> return (Printf.sprintf "ocaml_of_list (%s)" t1_str)
+    | Opt  -> return (Printf.sprintf "ocaml_of_opt (%s)" t1_str)
+    | _    -> return "todo: non-list/option iterator"
+    end 
+
+let gen_translation_cases typename tcs = 
+  let (mixop, (_, args, _), _) = tcs in 
+  let consname = sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str mixop) in
+  let* argsstr = gen_typarg_translation args in
+  return (Printf.sprintf " | %S -> %s_%s %s" consname consname typename argsstr)
+
+let gen_var_translation tcs name args : string t =
+  let* typevars = get_typevars () in
+  let polymorphic_args = String.concat " " (List.map (fun arg -> Printf.sprintf "(f_%s : exp -> '%s)" arg arg) (Set.to_list typevars)) in
+  let funcname = "ocaml_of_" ^ name in
+  let name' = "DL." ^ name in
+  let arg = append_sep polymorphic_args "(e : exp)" " " in 
+  let* cases = concat_mapM "\n  " (gen_translation_cases name) tcs in
+  let fail_case = Printf.sprintf " | s -> failwith \"Mixop is: \" ^ s" in
+  let funcdef = Printf.sprintf "%s %s : %s =\n\
+  \ match e.it with\n\
+  \ | CaseE (mixop, {it=TupE es; _}) -> begin match (sanitize_name ~typecons:true ~typename:false (mixop_to_atom_str mixop)) with
+  %s\n\
+  \   end\n\
+  \ | _ -> failwith \"Invalid expression for Variant type %s: should be a CaseE\"\n" funcname arg (append_sep args name' " ") cases name in
+  return funcdef
+
+let gen_translation_typfield name i (atom, (_bs, t, _prems), _hints) =
+  let* typ_str = gen_typarg_translation t in
+  return (Util_ocaml.mixop_to_atom_str ~recordfield:true [[atom]] ^ "_" ^ name ^ "= (" ^ typ_str ^ " e" ^ (string_of_int i) ^ ")")
+
+let gen_match_typfield name i (atom, (_bs, t, _prems), _hints) =
+  let atom_str = Util_ocaml.mixop_to_atom_str [[atom]] in 
+  return (Printf.sprintf "({it=(Atom \"%s\"); _}, e%d)" atom_str i )
+
+let gen_str_translation tfs name : string t =
+  let funcname = "ocaml_of_" ^ name in
+  let name' = "DL." ^ name in
+  let arg = "(e : exp)" in
+  let* matchfields = concat_mapMi ";\n   " (gen_match_typfield name) tfs in
+  let* fields = concat_mapMi ";\n     " (gen_translation_typfield name) tfs in
+  let funcdef = Printf.sprintf "%s %s : %s =\n\
+  \ match e.it with\n\
+  \ | StrE ([\n\
+  \   %s]) -> {
+  \   %s\n\
+  \   }\n\
+  \ | _ -> failwith \"Invalid expression for Record type %s: should be a StrE\"\n" funcname arg name' matchfields fields name in
+  return funcdef
+
 (* horrible way of flipping subtyping direction 
 todo: check at which point we should pass all the flags *)
 let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) ?(flipsub=false) (e : exp) : string t =
@@ -334,6 +409,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) ?(flips
   (* todo: whenever we call ocaml_of_typ here we MAY need to set consannot to true *)
   | VarE id -> 
     let* () = add_known id.it in 
+    (* not needed ? *)
     let* typevars = get_typevars () in
     (*Printf.printf "typevars in scope are: -----\n";
     Set.iter (Printf.printf "%s " ) typevars;
@@ -747,6 +823,7 @@ and generate_uncase tcs typename : unit t =
     let fname  = sanitize_name ("uncase_" ^ typename ^ "_" ^ suffix) in
     (* Figure out arg pattern + return expression shape for this constructor *)
     let numargs, pat_args, ret_expr = get_cons_args typargs in 
+    (* check this ??? *)
     let body =
       Printf.sprintf
         "let %s (arg : %s) =\n\
@@ -759,6 +836,37 @@ and generate_uncase tcs typename : unit t =
   (* Emit one function per constructor *)
   let* _ = mapM gen_one tcs in
   return ()
+
+and generate_type_translation dt name args : string t =
+  match dt.it with
+  | AliasT t ->
+    (* todo: i think this might do the same thng as "gen_typarg_translation" function oops *)
+    begin match t.it with 
+    | VarT (id, args) ->
+      let typedef = "ocaml_of_" ^ (sanitize_name id.it) in
+      (* if t is a polymorphic type initialised with some type t' then we need to pass an argument to translate t' *) 
+      let* argsstr = concat_mapM " " (fun arg -> 
+        match arg.it with 
+        | TypA t -> gen_typarg_translation t
+        | _ -> return ""
+      ) args in 
+      return (Printf.sprintf "ocaml_of_%s e = %s e" name (append_sep typedef argsstr " "))
+    (*| IterT (t1, iter) -> 
+      let* t1_str = gen_typarg_translation t1 in 
+      begin match iter with 
+      | List -> return (Printf.sprintf "ocaml_of_%s = List.map (%s)" name t1_str)
+      | Opt  -> return (Printf.sprintf "ocaml_of_%s = Option.map (%s)" name t1_str)
+      | _    -> return "todo: non-list/option iterator"
+      end*)
+    (*| _ -> 
+      let* typedef = ocaml_of_typ ~consannot:true t in 
+      return (Printf.sprintf "ocaml_of_%s = ocaml_of_%s" name typedef)*)
+    | _ -> 
+      let* typedef = gen_typarg_translation t in
+      return (Printf.sprintf "ocaml_of_%s e = %s e" name typedef)
+    end
+  | StructT tfs -> gen_str_translation tfs name 
+  | VariantT tcs -> gen_var_translation tcs name args
 
 (* Get deftype from an alias *)
 and lookup (typename : string) : deftyp option t =
@@ -1248,15 +1356,16 @@ let ocaml_of_typfield name (atom, (_bs, t, _prems), _hints) =
 let ocaml_of_deftyp dt name =
   let* () = generate_compose dt name in
   match dt.it with
-  | AliasT t -> (*Printf.printf "alias type %s:\n" name;*) ocaml_of_typ t
+  | AliasT t -> ocaml_of_typ t 
   | StructT tfs ->
     let* tfs_str = concat_mapM ";\n  " (ocaml_of_typfield name) tfs in
     return ("{\n  " ^ tfs_str ^ "\n}")
-  | VariantT tcs -> let* () = generate_uncase tcs name in
+  | VariantT tcs -> 
+    let* () = generate_uncase tcs name in
     let* tcs_str = concat_mapM "\n  | " (ocaml_of_typcase name) tcs in
     return ("\n  | " ^ tcs_str)
 
-let ocaml_of_typedef (typedef : type_def) : string t =
+let ocaml_of_typedef (typedef : type_def) : (string * string) t =
   match typedef with
   | {it=(id, ps, insts); _} ->
     let* () = add_typedef (sanitize_name id.it) typedef in
@@ -1270,19 +1379,21 @@ let ocaml_of_typedef (typedef : type_def) : string t =
       let* args_str = ocaml_of_args ~typearg:true as_ in
       let space = if args_str = "" then "" else " " in
       let* dt_str = ocaml_of_deftyp dt (sanitize_name id.it) in
+      let* type_translation = generate_type_translation dt (sanitize_name id.it) args_str in
       let* () = set_typevars Set.empty in
-      return (args_str ^ space ^ (sanitize_name id.it) ^ " = " ^ dt_str ^ "\n")
-    | _ -> return ("(* TODO: no type instances: " ^ (sanitize_name id.it) ^ " = " ^ string_of_params ps ^ " " ^
-    String.concat "\n" (List.map (string_of_inst id) insts) ^ "*)\n")
+      return ((args_str ^ space ^ (sanitize_name id.it) ^ " = " ^ dt_str ^ "\n"), type_translation)
+    | _ -> return (("(* TODO: no type instances: " ^ (sanitize_name id.it) ^ " = " ^ string_of_params ps ^ " " ^
+    String.concat "\n" (List.map (string_of_inst id) insts) ^ "*)\n"), "")
 
 let ocaml_of_dl_def (def : dl_def) : (string * string) t =
   match def with
   | RuleDef rd  -> error rd.at "RuleDef found: should not happen"
-  | TypeDef typedef -> let* typestr = ocaml_of_typedef typedef in 
+  | TypeDef typedef -> let* typestr, type_translation = ocaml_of_typedef typedef in 
     (* because we don't support multiple instances yet *)
     if String.length typestr >= 2 && String.sub typestr 0 2 = "(*" && String.sub typestr 8 7 <> "typearg" then
       return ("", typestr)
     else
+      let* () = add_construct ("let " ^ type_translation) in
       return ("", "type " ^ typestr)
   | FuncDef fdef -> 
     let* funcslist = ocaml_of_func_def fdef in 
@@ -1308,10 +1419,11 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
         | TypeDef typedef -> typedef
         | _ -> error (get_dl_def_region def) "RecDef not consistent: should not happen"
       ) dl_defs in
-      let* typestrs = concat_mapM "\nand " ocaml_of_typedef typedefs in
+      let* typestrs, typetranslations = concat_mapM2 "\nand " ocaml_of_typedef typedefs in
       if String.length typestrs >= 2 && String.sub typestrs 0 2 = "(*" then
         return ("", typestrs)
       else
+        let* () = add_construct ("let rec " ^ typetranslations) in 
         return ("", "type " ^ typestrs)
     | (RuleDef _)::_ -> error (get_dl_def_region def) "Recursive RuleDef: should not happen"
 
@@ -1339,7 +1451,7 @@ let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
   let* () = gen_instr_strs () in
   return (func_str, type_str)
 
-let generate_ocaml (dl_defs : dl_def list) : string * string * string =
+let generate_ocaml (dl_defs : dl_def list) : string * string * string * string =
   let main =
     "open Backend_animation.Util_ocaml\n" ^
     "open Backend_animation.Util_ocaml.NumConversions\n\n" ^
@@ -1347,6 +1459,6 @@ let generate_ocaml (dl_defs : dl_def list) : string * string * string =
     "let (let*) = Option.bind\n"
   in
   let typeimports = "type nat = int\n" in
-  let (funcdefs, typedefs), typeconvfuncs =
+  let (funcdefs, typedefs), typeconvfuncs, parser =
     eval (ocaml_of_dl_defs dl_defs) in
-  (main ^ funcdefs), (typeimports ^ typedefs), typeconvfuncs
+  (main ^ funcdefs), (typeimports ^ typedefs), typeconvfuncs, parser

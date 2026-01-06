@@ -1,13 +1,16 @@
 open Interpreter_ocaml.Dl_codegen_types
 open Interpreter_ocaml.Dl_codegen
 open Interpreter_ocaml.Dl_codegen_util
-open Interpreter_ocaml.Construct_ocaml
+(*open Interpreter_ocaml.Construct_ocaml*)
+open Interpreter_ocaml.Construct_ocaml_new
 open Reference_interpreter.Script
 open Reference_interpreter.Source
+open Reference_interpreter.Value
 open Reference_interpreter.Run
 
 module Register = Backend_interpreter.Ds.Register(struct type t = moduleinst end)
-module Modules = Backend_interpreter.Ds.Register(struct type t = module_ end)
+(*module Modules = Backend_interpreter.Ds.Register(struct type t = module_ end)*)
+module Modules = Backend_interpreter.Ds.Modules
 
 let globalstore = ref {
   uc_tags_store = [];
@@ -28,7 +31,26 @@ let string_of_ocamlname = function
   | DL.C_pct__name chars ->
       chars |> List.map int_of_ocamlchar |> Util.Utf8.encode
 
-let externaddr_from_import import = failwith "TODO: implement externaddr_from_import"
+(* --- copied from manual construct_ocaml for now --- *)
+let ocaml_of_value (v : value) : val_ =
+  match v with
+  | Num (I32 n) -> DL.CONST_val_ (DL.I32_numtype, DL.C_pct__uc_un (Int32.to_int n))
+  | _ -> failwith "TODO: implement non-I32 values"
+
+let ocaml_of_literal (lit : literal) : val_ =
+  ocaml_of_value lit.it
+
+let val_of_ocaml (instr: DL.instr) : value =
+  match instr with
+  | DL.CONST_instr (nt, num) -> 
+    let C_pct__uc_un n = num in 
+    begin match nt with 
+    | DL.I32_numtype -> Num (I32 (Int32.of_int n))
+    | _              -> failwith "TODO: non-I32 const"
+    end
+  | _ -> failwith "TODO: non-CONST instruction"
+
+(* -------- *)
 
 let get_export name moduleinst_name =
   let exports = (Register.find moduleinst_name).uc_exports_moduleinst in 
@@ -41,18 +63,12 @@ let get_export_addr name moduleinst_name =
   | DL.FUNC_externaddr funcaddr -> funcaddr
   | _ -> failwith ("Export " ^ name ^ " is not a function.")
 
-(*let get_externaddr import =
-  let R.Ast.Import (module_name, item_name, _) = import.it in
-  module_name
-  |> Utf8.encode
-  |> get_export (Utf8.encode item_name)
-  |> find_str_field "ADDR"*)
+let externaddr_from_import import = 
+  let IMPORT_import (moduleinst_name, item_name, _) = import in 
+  let export = get_export (string_of_ocamlname item_name) (string_of_ocamlname moduleinst_name) in 
+  export.uc_addr_exportinst
 
-(*let textual_to_module textual =
-  match (snd textual).it with
-  | R.Script.Textual (m, _) -> m
-  | _ -> assert false*)
-
+(* todo change this to not use uncase *)
 let get_moduleinst config =
   let state, _ = uncase_config_c_pct__semi_pct__config config in
   let store', frame' = uncase_state_c_pct__semi_pct__state state in 
@@ -60,11 +76,13 @@ let get_moduleinst config =
   frame'.uc_module_frame
 
 let instantiate_helper (m : module_) = 
-  let imports = match m with 
-  | MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) -> imports
-  in 
+  let t1 = Sys.time () in
+  Printf.printf "[Instantiating module...]\n";  
+  let MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) = m in
   let externaddrs = List.map externaddr_from_import imports in
   let config' = instantiate !globalstore m externaddrs in 
+  let t2 = Sys.time () in
+  Printf.printf "instantiate took %f s :)\n" (t2 -. t1);
   get_moduleinst config'
 
 let invoke_helper module_ funcname args = 
@@ -97,11 +115,12 @@ let run_command cmd = match cmd.it with
     Printf.printf "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     def
     |> Backend_animation.Runner.module_of_def
-    |> ocaml_of_module
     |> Modules.add_with_var var_opt 
   | Instance (var1_opt, var2_opt) ->
     Printf.printf "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
     Modules.find (Modules.get_module_name var2_opt)
+    |> Backend_animation.Construct.il_of_module
+    |> ocaml_of_module_
     |> instantiate_helper
     |> Register.add_with_var var1_opt
   (*| Action a ->
@@ -116,4 +135,8 @@ let () =
   );
   let filename = Sys.argv.(1) in
   let cmds = Backend_animation.Runner.run filename in
+  (* instantiate spectest *)
+  (*let il_spectest = Backend_animation.Script.il_of_spectest () in
+  let ocaml_spectest = ocaml_of_moduleinst il_spectest in
+  Register.add "spectest" ocaml_spectest;*)
   List.iter run_command cmds

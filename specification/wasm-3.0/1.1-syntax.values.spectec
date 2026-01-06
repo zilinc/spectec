@@ -92,6 +92,17 @@ syntax name hint(desc "name") = char*  -- if |$utf8(char*)| < $(2^32)
 
 var nm : name
 
+;; added for testing translation
+
+def $name_length(name) : nat
+def $name_length(randomvar1*) = |randomvar1*|
+
+;; def $name_is_empty(n : name) : bool = $bool(|n| = 0)
+;; 
+;; def $name_head(n : name) : char? = ?() -- if |n| = 0
+;; def $name_head(n : name) : char? = n[0]? -- otherwise
+
+
 
 ;; Indices
 

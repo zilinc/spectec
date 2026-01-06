@@ -7,7 +7,7 @@ let capsfirst s =
 
 (* Generate a dune file for the dl_interpreter library *)
 let generate_dune_file () =
-  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; "construct_ocaml"; "builtin"] in
+  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; "construct_ocaml"; "construct_ocaml_new"; "builtin"] in
   let libraries = ["backend_animation"; "backend_interpreter"; "reference_interpreter"] in
   (* Dune file content *)
   let lib_def = Printf.sprintf
@@ -43,6 +43,29 @@ let generate_dune_file () =
   output_string oc runner_content;
   close_out oc*)
 
+(* translate from numE to int/nat - todo: these 3 functions should be in a util file with the other things from util_ocaml *)
+let basic_types_conv = 
+  "let ocaml_of_int (e : exp) : int =\n\
+  \ match e.it with\n\
+  \ | NumE (`Int i) -> Z.to_int i \n\
+  \ | _ -> failwith \"Invalid type: should be a NumE int\"\n\n\
+  let ocaml_of_nat (e : exp) : DL.nat =\n\
+  \ match e.it with\n\
+  \ | NumE (`Nat n) -> Z.to_int n \n\
+  \ | _ -> failwith \"Invalid type: should be a NumE nat\"\n\n
+  let ocaml_of_list f (e : exp) =\n\
+  \ match e.it with\n\
+  \ | ListE es -> List.map f es\n\
+  \ | _        -> failwith \"Invalid type: should be a ListE\"\n\n
+  let ocaml_of_opt f (e : exp) =\n\
+  \ match e.it with\n\
+  \ | OptE es -> Option.map f es\n\
+  \ | _       -> failwith \"Invalid type: should be a OptE\"\n\n
+  let ocaml_of_string (e : exp) : string =\n\
+  \ match e.it with\n\
+  \ | TextE s -> s\n\
+  \ | _       -> failwith \"Invalid type: should be a TextE\"\n\n"
+
 let generate_ocaml dl ocamlfile = 
   Printf.printf "Generating OCaml code...\n";
   generate_dune_file ();
@@ -56,19 +79,22 @@ let generate_ocaml dl ocamlfile =
     output_string oc content;
     close_out oc
   in
-  let main, types, typeconv = Interpreter_ocaml.generate_ocaml dl in
+  let main, types, typeconv, parser = Interpreter_ocaml.generate_ocaml dl in
   let type_import = Printf.sprintf "open %s_types\n" (capsfirst ocaml_filename) in
+  let module_types = "module DL = Dl_codegen_types\n" in 
   let util_import = Printf.sprintf "open %s_util\n" (capsfirst ocaml_filename) in
   let util_ocaml = Printf.sprintf "open Backend_animation.Util_ocaml\n" in
+  let il_import = "open Il.Ast\n" in
   (* ignore redundant cases in pattern matching for now - todo: probably not this *)
   let sup_redundant = "[@@@ocaml.warning \"-11\"]\n" in
   (* ignore warnings that updates re-write all fields in a record *)
   let sup_uselessrec = "[@@@ocaml.warning \"-23\"]\n\n" in
   write_file (basepath ^ ocaml_filename ^ ".ml") (sup_redundant ^ sup_uselessrec ^ type_import ^ util_import ^ main);
   write_file (basepath ^ ocaml_filename ^ "_types.ml") types;
-  write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ util_ocaml ^ typeconv)
+  write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ util_ocaml ^ typeconv);
+  write_file (basepath ^ "construct_ocaml_new.ml") (util_ocaml ^ il_import ^ "\n" ^ module_types ^ "\n" ^ basic_types_conv ^ parser)
 
-(*let generate_runner inputfile = 
+(*let generate_runner inputfile = s
   let cmds = Runner.get_commands inputfile in
   let runner_content =
     Printf.sprintf
