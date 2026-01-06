@@ -368,7 +368,7 @@ and reduce_exp env e: exp =
   | UncaseE (e1, mixop) ->
     let e1' = reduce_exp env e1 in
     (match e1'.it with
-    | CaseE (_, e11') -> e11'
+    | CaseE (mixop', e11') when Eq.eq_mixop mixop mixop' -> e11'
     | _ -> UncaseE (e1', mixop) $> e
     )
   | OptE eo ->

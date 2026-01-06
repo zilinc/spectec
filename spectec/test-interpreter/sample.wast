@@ -257,13 +257,13 @@
 )
 
 
-;; (assert_return (invoke "binop") (i32.const 46))
-;; (assert_return (invoke "testop") (i32.const 1))
-;; (assert_return (invoke "relop_i32") (i32.const 0))
-;; (assert_return (invoke "relop_f32") (i32.const 0))
-;; (assert_return (invoke "nop") (i64.const 0))
-;; (assert_return (invoke "drop") (f64.const 3.1))
-;; (assert_return (invoke "select") (f64.const -0.0))
+(assert_return (invoke "binop") (i32.const 46))
+(assert_return (invoke "testop") (i32.const 1))
+(assert_return (invoke "relop_i32") (i32.const 0))
+(assert_return (invoke "relop_f32") (i32.const 0))
+(assert_return (invoke "nop") (i64.const 0))
+(assert_return (invoke "drop") (f64.const 3.1))
+(assert_return (invoke "select") (f64.const -0.0))
 ;;
 ;; (assert_return (invoke "local_set" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 8))
 ;; (assert_return (invoke "local_get" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 7))
@@ -286,10 +286,10 @@
 ;; (assert_return (invoke "if_false") (i32.const 45))
 ;; (assert_return (invoke "loop") (i32.const 42))
 ;; (assert_return (invoke "fib" (i32.const 10)) (i32.const 55))
-(assert_return (invoke "check_exit" (i32.const 10)) (i32.const 10))
+;; (assert_return (invoke "check_exit" (i32.const 10)) (i32.const 10))
 
 ;;second module
 ;; (module (func (export "f")))
 ;; (assert_return (invoke "f"))
 
-(invoke $spectest "print_i32" (i32.const 42))
+;; (invoke $spectest "print_i32" (i32.const 42))

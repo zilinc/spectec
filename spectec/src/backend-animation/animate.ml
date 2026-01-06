@@ -13,6 +13,7 @@ open Il2al.Free
 open Backend_ast
 open Def
 open Il_util
+open Lazy
 
 
 (* Errors *)
@@ -43,7 +44,7 @@ let string_of_error at msg = string_of_region at ^ " IL animation error:\n" ^ ms
 let warn at msg = print_endline (string_of_region at ^ " IL animation warning:\n" ^ msg)
 
 let info v at msg = if List.mem v !verbose then
-                      print_endline (string_of_region at ^ " IL animation info[" ^ v ^ "]:\n" ^ msg)
+                      print_endline (string_of_region at ^ " IL animation info[" ^ v ^ "]:\n" ^ force msg)
                     else
                       ()
 
@@ -339,7 +340,7 @@ let string_of_state (s: AnimState.t) =
   "progress: " ^ string_of_bool s.progress ^ "\n" ^
   "inverse : " ^ string_of_bool s.inverse
 
-let throw_log e = let () = info "log" no e in E.throw e
+let throw_log e = let () = info "log" no e in E.throw (force e)
 
 (* A list of rules/defs that cannot be easily animated.
    The map is "reason" ↦ [("rel_id", "rule_name")]
@@ -533,7 +534,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
 and animate_exp_eq envr at lhs rhs : prem list E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in
-  info "anf" at ("lhs = " ^ string_of_exp lhs ^ "; rhs = " ^ string_of_exp rhs);
+  info "anf" at (lazy ("lhs = " ^ string_of_exp lhs ^ "; rhs = " ^ string_of_exp rhs));
   let (envr, vs_rhs, rhs', prems_rhs) = bind_var_exp envr None rhs None `Rhs in
   let* () = update (add_knowns (Set.of_list vs_rhs)) in
   let* prems = animate_exp_eq' envr at lhs rhs' in
@@ -559,14 +560,14 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let oinv_fid = find_func_hint !envr fid.it "inverse" in
     let* inv_fid = match oinv_fid with
     | None ->
-        info "inv_func" at ("No inverse: " ^ string_of_exp lhs ^ " = " ^ string_of_exp rhs);
-        info "inv_func" at ("Knowns: " ^ string_of_varset knowns);
+        info "inv_func" at (lazy ("No inverse: " ^ string_of_exp lhs ^ " = " ^ string_of_exp rhs));
+        info "inv_func" at (lazy ("Knowns: " ^ string_of_varset knowns));
         E.throw (string_of_error at ("No inverse function declared for `" ^ fid.it ^ "`, so can't invert it."))
     | Some hint -> begin match hint.hintexp.it with
       | CallE (fid, []) -> E.return fid
       | _ -> E.throw (string_of_error at ("Ill-formed inverse hint for function `" ^ fid.it ^ "`, so can't invert it."))
       end in
-    let _ = info "inv_func" at ("Function " ^ fid.it ^ " is being inverted") in
+    let _ = info "inv_func" at (lazy ("Function " ^ fid.it ^ " is being inverted")) in
     (* Only the last argument is invertible. *)
     let args_hd, arg_lt = Lib.List.split_last args in
     let o_unknown_arg = List.find_opt (fun arg ->
@@ -742,9 +743,9 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return ([prem_len] @ prems')
   | CaseE (mixop, lhs') ->
-    info "case" at ("The payload of constructor " ^ string_of_mixop mixop ^ " is " ^ string_of_exp lhs');
-    info "case" at ("The LHS: (" ^ string_of_exp lhs ^ ") type is " ^ string_of_typ lhs.note);
-    info "case" at ("The RHS: (" ^ string_of_exp rhs ^ ") type is " ^ string_of_typ rhs.note);
+    info "case" at (lazy ("The payload of constructor " ^ string_of_mixop mixop ^ " is " ^ string_of_exp lhs'));
+    info "case" at (lazy ("The LHS: (" ^ string_of_exp lhs ^ ") type is " ^ string_of_typ lhs.note));
+    info "case" at (lazy ("The RHS: (" ^ string_of_exp rhs ^ ") type is " ^ string_of_typ rhs.note));
     begin match as_variant_typ !envr rhs.note with
     | [] -> assert false
     | [(mixop', (_, t, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
@@ -778,7 +779,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
         let* (subst_vs, tup', prems_ves) = elim_lhs_known_vars envr tup.at tup in
         let vs' = List.map subst_vs vs in
         let prem_case = LetPr (CaseE (mixop, tup') $$ lhs.at % rhs.note, rhs, vs') $ at in
-        info "case" at ("CaseE-TupE prem_vs: " ^ String.concat "\n" (List.map string_of_prem prem_vs));
+        info "case" at (lazy ("CaseE-TupE prem_vs: " ^ String.concat "\n" (List.map string_of_prem prem_vs)));
         let* () = update (add_knowns (Set.of_list vs')) in
         (* FIXME(zilinc): It may not handle patterns like C(v, v, v) correctly. *)
         let* s' = get () in
@@ -812,8 +813,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let prems = Fun.flip List.mapi es (fun i e ->
       let bool_t = BoolT $ e.at in
       let proj_rhs = ProjE (rhs, i) $$ rhs.at % e.note in
-      info "case" rhs.at ("Proj " ^ string_of_exp proj_rhs ^ "'s type is " ^ string_of_typ e.note);
-      info "case" rhs.at ("RHS " ^ string_of_exp rhs ^ "'s type is " ^ string_of_typ rhs.note);
+      info "case" rhs.at (lazy ("Proj " ^ string_of_exp proj_rhs ^ "'s type is " ^ string_of_typ e.note));
+      info "case" rhs.at (lazy ("RHS " ^ string_of_exp rhs ^ "'s type is " ^ string_of_typ rhs.note));
       IfPr (CmpE (`EqOp, `BoolT, e, proj_rhs) $$ e.at % bool_t) $ at)
     in
     (* Need to animate the components in a loop. This is needed
@@ -843,11 +844,11 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     begin match t'.it with
     | VarT _ -> assert false
     | TupT [_] ->
-      info "proj" at ("ProjE.0 on an ordinary singleton TupT type.");
+      info "proj" at (lazy "ProjE.0 on an ordinary singleton TupT type.");
       animate_exp_eq envr at e1 (TupE [rhs] $$ rhs.at % e1.note)
     | NumT _ ->
       (* It is possible that both e1.0 and e1 have the same type. *)
-      info "proj" at ("Num type: " ^ string_of_typ t');
+      info "proj" at (lazy ("Num type: " ^ string_of_typ t'));
       animate_exp_eq envr at e1 (TupE [rhs] $$ rhs.at % e1.note)
     | _ -> E.throw (string_of_error at
                      ("Can't invert ProjE.0: " ^ string_of_exp e1 ^ " of type " ^ string_of_typ t'))
@@ -1057,7 +1058,6 @@ and animate_prem envr prem : prem list E.m =
   let fv_prem = (free_prem false prem).varid in
   match prem.it with
   | RulePr (id, mixop, exp) ->
-    info "rulepr" prem.at ("rule premise: " ^ id.it);
     animate_rule_prem envr prem.at id mixop exp
   | IfPr exp -> animate_if_prem envr prem.at exp
   | LetPr (e1, e2, ids) ->
@@ -1128,7 +1128,7 @@ and animate_prem envr prem : prem list E.m =
     let xes' = List.concat_map (fun x ->
       if String.starts_with ~prefix:"__v" x || List.exists (fun (x', _) -> x'.it = x) xes
       then
-        (info "binds" prem.at ("Variable `" ^ x ^ "` is intermediate or is in binding list"); [])
+        (info "binds" prem.at (lazy ("Variable `" ^ x ^ "` is intermediate or is in binding list")); [])
       else
         (* Not in the binding list and not intermediate variables *)
         let x_star = Frontend.Dim.annot_varid (x $ no) [iter] in
@@ -1136,20 +1136,17 @@ and animate_prem envr prem : prem list E.m =
         let iter' = match iter with Opt -> Opt | _ -> List in
         let t_star = IterT (t, iter') $ x_star.at in
         envr := bind_var !envr x_star t_star;
-        info "binds" prem.at ("Add " ^ x_star.it ^ " to type binding");
+        info "binds" prem.at (lazy ("Add " ^ x_star.it ^ " to type binding"));
         [(x $ x_star.at, VarE x_star $$ x_star.at % t_star)]
     ) (Set.to_list new_knowns) in
     (* Propagate the new binders (type-binding) from the inner premises to the outside. *)
     List.iter (fun (v, t) ->
-      if List.exists (fun (x', _) -> x'.it = v) xes then
-        info "##binds" prem.at ("## Variable " ^ v ^ " in binding list")
-      else
+      if List.exists (fun (x', _) -> x'.it = v) xes |> not then
         (* For those who don't bind to a higher dim variable, add them to the
            top-level type binds. A variable is either bound at the top level,
            or via the iterator binding list [xes].
         *)
         let t = find_var !lenvr (v $ no) in
-        info "##binds" prem.at ("## Add " ^ v ^ " to type binding");
         envr := bind_var !envr  (v $ no) t
     ) ((Il.Env.env_diff !lenvr !envr).vars |> Il.Env.Map.to_list);
     (* Propagate knowns to the outside of the iterator. We traverse [xes] and [xes'],
