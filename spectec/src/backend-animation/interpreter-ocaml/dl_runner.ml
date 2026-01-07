@@ -7,10 +7,43 @@ open Reference_interpreter.Script
 open Reference_interpreter.Source
 open Reference_interpreter.Value
 open Reference_interpreter.Run
+open Reference_interpreter.Types
 
 module Register = Backend_interpreter.Ds.Register(struct type t = moduleinst end)
 (*module Modules = Backend_interpreter.Ds.Register(struct type t = module_ end)*)
 module Modules = Backend_interpreter.Ds.Modules
+
+(* TEMPORARY only for debugging *)
+let string_of_dlinstr = function
+  | DL.NOP_instr -> "NOP_instr"
+  | DL.UNREACHABLE_instr -> "UNREACHABLE_instr"
+  | DL.DROP_instr -> "DROP_instr"
+  | DL.SELECT_instr _ -> "SELECT_instr"
+  | DL.CALL_instr _ -> "CALL_instr"
+  | DL.CALL_REF_instr _ -> "CALL_REF_instr"
+  | DL.RETURN_instr -> "RETURN_instr"
+  | DL.RETURN_CALL_REF_instr _ -> "RETURN_CALL_REF_instr"
+  | DL.THROW_REF_instr -> "THROW_REF_instr"
+  | DL.CONST_instr _ -> "CONST_instr"
+  | DL.BINOP_instr _ -> "BINOP_instr"
+  | DL.REF_dot_NULL_instr _ -> "REF_dot_NULL_instr"
+  | DL.LOCAL_dot_GET_instr _ -> "LOCAL_dot_GET_instr"
+  | DL.TABLE_dot_INIT_instr _ -> "TABLE_dot_INIT_instr"
+  | DL.ELEM_dot_DROP_instr _ -> "ELEM_dot_DROP_instr"
+  | DL.MEMORY_dot_INIT_instr _ -> "MEMORY_dot_INIT_instr"
+  | DL.DATA_dot_DROP_instr _ -> "DATA_dot_DROP_instr"
+  | DL.REF_dot_I31_NUM_instr _ -> "REF_dot_I31_NUM_instr"
+  | DL.REF_dot_STRUCT_ADDR_instr _ -> "REF_dot_STRUCT_ADDR_instr"
+  | DL.REF_dot_ARRAY_ADDR_instr _ -> "REF_dot_ARRAY_ADDR_instr"
+  | DL.REF_dot_FUNC_ADDR_instr _ -> "REF_dot_FUNC_ADDR_instr"
+  | DL.REF_dot_EXN_ADDR_instr _ -> "REF_dot_EXN_ADDR_instr"
+  | DL.REF_dot_HOST_ADDR_instr _ -> "REF_dot_HOST_ADDR_instr"
+  | DL.REF_dot_EXTERN_instr _ -> "REF_dot_EXTERN_instr"
+  | DL.TRAP_instr -> "TRAP_instr"
+  | DL.BR_instr _ -> "BR_instr"
+  | DL.LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "LABEL"
+  | DL.FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "FRAME"
+(* ============ *)
 
 let globalstore = ref {
   uc_tags_store = [];
@@ -24,6 +57,8 @@ let globalstore = ref {
   uc_arrays_store = [];
   uc_exns_store = []
 }
+
+let success = Backend_animation.Main_interpret.success
 
 let int_of_ocamlchar (char : DL.char) : int = match char with
   | DL.C_pct__char n -> n
@@ -40,6 +75,23 @@ let ocaml_of_value (v : value) : val_ =
 let ocaml_of_literal (lit : literal) : val_ =
   ocaml_of_value lit.it
 
+let heaptype_of_ocaml = function
+  | DL.ANY_heaptype -> AnyHT
+  | DL.EQ_heaptype -> EqHT
+  | DL.I31_heaptype -> I31HT
+  | DL.STRUCT_heaptype -> StructHT
+  | DL.ARRAY_heaptype -> ArrayHT
+  | DL.NONE_heaptype -> NoneHT
+  | DL.FUNC_heaptype -> FuncHT
+  | DL.NOFUNC_heaptype -> NoFuncHT
+  | DL.EXN_heaptype -> ExnHT
+  | DL.NOEXN_heaptype -> NoExnHT
+  | DL.EXTERN_heaptype -> ExternHT
+  | DL.NOEXTERN_heaptype -> NoExternHT
+  | DL.BOT_heaptype -> BotHT
+  | DL.C_IDX_heaptype _ -> failwith "TODO: implement C_IDX_heaptype"
+  | DL.REC_heaptype _ -> failwith "TODO: implement REC_heaptype"
+  | DL.C_DEF_heaptype _ -> failwith "TODO: implement C_DEF_heaptype"
 let val_of_ocaml (instr: DL.instr) : value =
   match instr with
   | DL.CONST_instr (nt, num) -> 
@@ -48,7 +100,8 @@ let val_of_ocaml (instr: DL.instr) : value =
     | DL.I32_numtype -> Num (I32 (Int32.of_int n))
     | _              -> failwith "TODO: non-I32 const"
     end
-  | _ -> failwith "TODO: non-CONST instruction"
+  | DL.REF_dot_NULL_instr ht  -> Ref (NullRef (heaptype_of_ocaml ht))
+  | _ -> failwith (Printf.sprintf "TODO: not const or funcref instr/val: %s" (string_of_dlinstr instr))
 
 (* -------- *)
 
@@ -91,7 +144,7 @@ let invoke_helper module_ funcname args =
   let funcaddr = get_export_addr funcname module_ in
   let result = invoke !globalstore funcaddr (List.map ocaml_of_literal args) in
   let t2 = Sys.time () in
-  Printf.printf "invoke %s took %f s :)\n" funcname (t2 -. t1);
+  Printf.printf "invoke %s took %f s :D\n" funcname (t2 -. t1);
   result
 
 let run_action action =
@@ -107,26 +160,32 @@ let test_assertion assertion =
     let C_pct__semi_pct__config (_, vals) = run_action action in 
     let result = List.map val_of_ocaml vals in 
     assert_results no_region result expected;
-    ()
+    success
   | _ -> failwith "TODO: implement other assertions"
 
-let run_command cmd = match cmd.it with 
+let run_command cmd = 
+  let start_time = Sys.time () in
+  let res = begin match cmd.it with
   | Module (var_opt, def) ->
     Printf.printf "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     def
     |> Backend_animation.Runner.module_of_def
-    |> Modules.add_with_var var_opt 
+    |> Modules.add_with_var var_opt;
+    success
   | Instance (var1_opt, var2_opt) ->
     Printf.printf "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
     Modules.find (Modules.get_module_name var2_opt)
     |> Backend_animation.Construct.il_of_module
     |> ocaml_of_module_
     |> instantiate_helper
-    |> Register.add_with_var var1_opt
+    |> Register.add_with_var var1_opt;
+    success
   (*| Action a ->
     ignore (run_action a); success*)
-  | Assertion a -> test_assertion a; Printf.printf "[Assertion passed :D]\n"
+  | Assertion a -> test_assertion a
   | _ -> failwith "TODO: implement other commands"
+  end in 
+  res, Sys.time () -. start_time
 
 let () =
   if Array.length Sys.argv <> 2 then (
@@ -139,4 +198,6 @@ let () =
   (*let il_spectest = Backend_animation.Script.il_of_spectest () in
   let ocaml_spectest = ocaml_of_moduleinst il_spectest in
   Register.add "spectest" ocaml_spectest;*)
-  List.iter run_command cmds
+  List.map run_command cmds 
+  |> Backend_animation.Main_interpret.sum_results_with_time
+  |> Backend_animation.Main_interpret.print_runner_result filename

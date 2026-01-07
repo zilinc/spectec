@@ -53,18 +53,18 @@ def $signed_(N, nat) : int hint(inverse $inv_signed_)
 def $signed_(N, i) = i           -- if $(i < 2^(N-1))
 def $signed_(N, i) = $(i - 2^N)  -- if $(2^(N-1) <= i < 2^N)
 
-;; def $inv_signed_(N, int) : nat    hint(show $signed_(%)^(-1)#((%)))
-;; def $inv_signed_(N, i) = i          -- if $(0 <= i < 2^(N-1))
-;; def $inv_signed_(N, i) = $(i + 2^N) -- if $(-2^(N-1) <= i < 0)
-;; 
-;; 
+def $inv_signed_(N, int) : nat    hint(show $signed_(%)^(-1)#((%)))
+def $inv_signed_(N, i) = i          -- if $(0 <= i < 2^(N-1))
+def $inv_signed_(N, i) = $(i + 2^N) -- if $(-2^(N-1) <= i < 0)
+
+
 ;; def $sx(storagetype) : sx?  hint(show $sx(%))
 ;; def $sx(consttype) = eps
 ;; def $sx(packtype) = S
-;; 
-;; 
-;; ;; Construction
-;; 
+
+
+;; Construction
+
 ;; def $zero(lanetype) : lane_(lanetype) hint(show 0)
 ;; def $zero(Jnn) = 0
 ;; def $zero(Fnn) = $fzero($size(Fnn))

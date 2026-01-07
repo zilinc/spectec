@@ -356,10 +356,10 @@ syntax instr/global hint(desc "global instruction") = ...
   | ...
 
 syntax instr/table hint(desc "table instruction") = ...
-;;   | TABLE.GET tableidx
-;;   | TABLE.SET tableidx
-;;   | TABLE.SIZE tableidx
-;;   | TABLE.GROW tableidx
+  | TABLE.GET tableidx
+  | TABLE.SET tableidx
+  | TABLE.SIZE tableidx
+  | TABLE.GROW tableidx
 ;;   | TABLE.FILL tableidx
 ;;   | TABLE.COPY tableidx tableidx
   | TABLE.INIT tableidx elemidx

@@ -108,9 +108,7 @@ let hardcode_step (funcdefs : dl_def list) : dl_def list =
 check where typevars are used ?? - maybe make them a list instead of a set
 REFACTOR (always)
 the above functions should be reused when the LHS of a let pr is case e
-for now, add the flipsub flag everywehre but later figure if there is a better way to do it
 do not import the typeM stuff above
-the typecasts writer should be renamed, now it may also contain uncasings
 known variables should be sanitized or NOT consistently 
 change the casing stuff to be uncased in the argument itself not inside the func 
 when generating the split or typecasts or uncasing we need to make the code generic so it can handle an arbitrary combination or nesting of these things *)
@@ -195,7 +193,8 @@ let rec flatten_path (p : path) (acc : step_path list) : step_path list =
   | DotP (p, atom) -> flatten_path p (DotSP (atom, p.note) :: acc)
 
 
-(* this is very incomplete, not sure how much is necessary *)
+(* i don't know if checking that the arguments of type constructors are equal is necessary for this  *)
+(* this is mostly not used *)
 let check_eq_exp e1 e2 = 
   match e1.it, e2.it with
   | VarE id1, VarE id2 -> id1.it = id2.it
@@ -209,8 +208,11 @@ let rec check_eq_typs t1 t2 =
   | TextT, TextT -> true
   | TupT ets1, TupT ets2 ->
     List.length ets1 = List.length ets2 &&
-    List.for_all2 (fun (e1, t1) (e2, t2) -> check_eq_exp e1 e2 && check_eq_typs t1 t2) ets1 ets2
+    List.for_all2 (fun (_, t1) (_, t2) -> (*check_eq_exp e1 e2 &&*) check_eq_typs t1 t2) ets1 ets2
   | IterT (t11, iter1), IterT (t21, iter2) ->
+    (*let b1 = check_eq_typs t11 t21 in
+    let b2 = iter1 = iter2 in 
+    Printf.printf "b1: %b and b2: %b\n" b1 b2;*)
     check_eq_typs t11 t21 && iter1 = iter2
   | _ -> false
 
@@ -232,6 +234,8 @@ let ocaml_of_numtyp = Num.string_of_typ
 
 (* may have to change to option type *)
 let generate_type_arms t1name t2name td1 td2 =
+  (* change this to just use pattern matching *)
+  (*Printf.printf "Generating type arms for %s -> %s\n" t1name t2name;*)
   let get_deftyp td = (match td with
   | _, _, [{it = InstD (_, _, dt); _}] -> Some dt
   | _ -> None) in
@@ -401,7 +405,7 @@ let gen_str_translation tfs name : string t =
 
 (* horrible way of flipping subtyping direction 
 todo: check at which point we should pass all the flags *)
-let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) ?(flipsub=false) (e : exp) : string t =
+let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) (e : exp) : string t =
   (* for now, we don't support dependent types. *)
   if typearg then return "(* TODO:typearg *)" else 
   (* function arguments must be (subtyped/supertyped/cased) variables *)
@@ -503,7 +507,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) ?(flips
     else return ("(" ^ e1str' ^ " " ^ binopstr ^ " " ^ e2str' ^ ")")
   | UnE (op, _, e1) ->
     let* e1str = ocaml_of_exp e1 in
-    return (ocaml_of_unop op ^ "(" ^ e1str ^ ")")
+    return ("(" ^ ocaml_of_unop op ^ "(" ^ e1str ^ "))")
   | UncaseE (e1, mixop) -> 
     let* consdef = resolve_variant e1.note in
     let* exptyp = ocaml_of_typ ~consannot:true (Option.get consdef) in 
@@ -552,7 +556,7 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) ?(flips
     let* prev_knowns = get_knowns in 
     let new_knowns = List.map (fun i -> sanitize_name (fst i).it) bindings in 
     let* () = add_knowns new_knowns in 
-    let* body_str = ocaml_of_exp ~flipsub e1 in
+    let* body_str = ocaml_of_exp e1 in
     match bindings with
     | [] -> 
       begin match iter with 
@@ -593,9 +597,11 @@ let rec ocaml_of_exp ?(typearg=false) ?(funcdef=false) ?(funccall=false) ?(flips
     (* Subtyping should not be refutable (I think) unless it appears on the LHS of a let or in the argument of a function definition
     this probably does not matter anymore since we use exceptions instead of options *)
     (*Printf.printf "subE is non-func arg'\n";*)
+    let* flipsub = get_flipsub () in
     let* () = if flipsub then generate_type_conv typ2 typ1 
     else generate_type_conv typ1 typ2 in
-    let* e1str = ocaml_of_exp ~flipsub e1 in
+    let* e1str = ocaml_of_exp e1 in
+    (*(if flipsub then Printf.printf "subtyping direction is flipped for term: %s\n" e1str);*)
     let* typ1str = ocaml_of_typ typ1 in
     let* typ2str = ocaml_of_typ typ2 in
     if flipsub then return ("(" ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ e1str ^ ")") else 
@@ -740,7 +746,7 @@ and split_arg_helper (es : exp list) (name : string) : string t =
         let* () = add_known (sanitize_name lhsstr) in 
         let VarE listvar = listname.it in
         let rhsexp = {(List.hd es) with it = IterE (body, (iter, [(id, {listname with it = VarE {listvar with it = name}})]))} in 
-        let* rhsstr = ocaml_of_exp rhsexp ~flipsub:true in
+        let* rhsstr = ocaml_of_exp rhsexp in
         return (Printf.sprintf "  let %s = %s in\n" lhsstr rhsstr)
       | _ -> failwith "Multiple Bindings in a split-argument"
       end
@@ -1024,7 +1030,9 @@ typearg refers to whether the arg is from a type declaration, like: "type x list
 TODO: idk what a GramA arg is *)
 and ocaml_of_arg ?(typearg=true) ?(funcdef=false) ?(funccall=false) a =
   match a.it with
-  | ExpA e -> ocaml_of_exp ~typearg ~funcdef ~funccall e
+  | ExpA e -> (*let* b = get_flipsub () in
+    Printf.printf "flipsub in ocaml_of_arg: %b\n" b;*)
+    ocaml_of_exp ~typearg ~funcdef ~funccall e
   | TypA t -> if not (funccall || funcdef) then 
     ocaml_of_typ ~typearg t else return ""
   | DefA id -> return (sanitize_name id.it)
@@ -1305,9 +1313,21 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       let* () = set_knowns (Set.empty) in
       catchM
       (fun () -> 
+        (*let* b0 = get_flipsub () in
+        Printf.printf "flipsub at catchM entry: %b\n" b0;*)
         let num_params = List.length params in
         (*Printf.printf "translating args:\n";*)
-        let* argnames = if num_params = 0 then return "()" else (ocaml_of_args ~typearg:false ~funcdef:true params) in
+        let* () = set_flipsub true in
+        let* argnames = 
+          if num_params = 0 then 
+            return "()" 
+          else begin 
+            (*let* b = get_flipsub () in 
+            Printf.printf "flipsub is %b\n" b;*)
+            ocaml_of_args ~typearg:false ~funcdef:true params
+          end 
+        in
+        let* () = set_flipsub false in 
         (*Printf.printf "translating prems:\n";*)
         let* prems_block = ocaml_of_prems prems in
         (*Printf.printf "translating ret value:\n";*)

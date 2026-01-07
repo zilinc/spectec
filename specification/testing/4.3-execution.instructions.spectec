@@ -333,40 +333,40 @@ rule Step/global.set:
   z; val (GLOBAL.SET x)  ~>  $with_global(z, x, val); eps
 
 
-;; ;; Table instructions
-;; 
-;; rule Step_read/table.get-oob:
-;;   z; (CONST at i) (TABLE.GET x)  ~>  TRAP
-;;   -- if i >= |$table(z, x).REFS|
-;; 
-;; rule Step_read/table.get-val:
-;;   z; (CONST at i) (TABLE.GET x)  ~>  $table(z,x).REFS[i]
-;;   -- if i < |$table(z, x).REFS|
-;; 
-;; rule Step/table.set-oob:
-;;   z; (CONST at i) ref (TABLE.SET x)  ~>  z; TRAP
-;;   -- if i >= |$table(z, x).REFS|
-;; 
-;; rule Step/table.set-val:
-;;   z; (CONST at i) ref (TABLE.SET x)  ~>  $with_table(z, x, i, ref); eps
-;;   -- if i < |$table(z, x).REFS|
-;; 
-;; 
-;; rule Step_read/table.size:
-;;   z; (TABLE.SIZE x)  ~>  (CONST at n)
-;;   -- if |$table(z, x).REFS| = n
-;;   -- if $table(z, x).TYPE = at lim rt
-;; 
-;; 
-;; rule Step/table.grow-succeed:
-;;   z; ref (CONST at n) (TABLE.GROW x)  ~>  $with_tableinst(z, x, ti); (CONST at $(|$table(z, x).REFS|))
-;;   ----
-;;   -- if ti = $growtable($table(z, x), n, ref)
-;; 
-;; rule Step/table.grow-fail:
-;;   z; ref (CONST at n) (TABLE.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
-;; 
-;; 
+;; Table instructions
+
+rule Step_read/table.get-oob:
+  z; (CONST at i) (TABLE.GET x)  ~>  TRAP
+  -- if i >= |$table(z, x).REFS|
+
+rule Step_read/table.get-val:
+  z; (CONST at i) (TABLE.GET x)  ~>  $table(z,x).REFS[i]
+  -- if i < |$table(z, x).REFS|
+
+rule Step/table.set-oob:
+  z; (CONST at i) ref (TABLE.SET x)  ~>  z; TRAP
+  -- if i >= |$table(z, x).REFS|
+
+rule Step/table.set-val:
+  z; (CONST at i) ref (TABLE.SET x)  ~>  $with_table(z, x, i, ref); eps
+  -- if i < |$table(z, x).REFS|
+
+
+rule Step_read/table.size:
+  z; (TABLE.SIZE x)  ~>  (CONST at n)
+  -- if |$table(z, x).REFS| = n
+  -- if $table(z, x).TYPE = at lim rt
+
+
+rule Step/table.grow-succeed:
+  z; ref (CONST at n) (TABLE.GROW x)  ~>  $with_tableinst(z, x, ti); (CONST at $(|$table(z, x).REFS|))
+  ----
+  -- if ti = $growtable($table(z, x), n, ref)
+
+rule Step/table.grow-fail:
+  z; ref (CONST at n) (TABLE.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
+
+
 ;; rule Step_read/table.fill-oob:
 ;;   z; (CONST at i) val (CONST at n) (TABLE.FILL x)  ~>  TRAP
 ;;   -- if $(i + n) > |$table(z, x).REFS|

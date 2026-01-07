@@ -141,6 +141,7 @@ module TypeM = struct
     mutable typecasts : string; (* type-casted function arguments to be moved to the body *)
     mutable freshvaridx : int;
     mutable typevars : Set.t; (* type variables currently in scope *)
+    mutable flipsub : bool (* the subtyping direction is different for function arguments *)
   }
 
   type 'a t = state -> 'a * state * string * string (* value, new state, util functions, parser functions *)
@@ -194,6 +195,9 @@ module TypeM = struct
 
   let set_typecasts (xs : string) : unit t =
     modify (fun st -> { st with typecasts = xs })
+
+  let get_flipsub () : bool t = fun st -> (st.flipsub, st, "", "")
+  let set_flipsub b : unit t = modify (fun st -> { st with flipsub = b })
 
   let add_typecast (x : string) : unit t =
     modify (fun st -> { st with typecasts = append_sep st.typecasts x "\n" })
@@ -283,7 +287,8 @@ module TypeM = struct
     knowns = Set.empty;
     typecasts = "";
     freshvaridx = 0;
-    typevars = Set.empty
+    typevars = Set.empty;
+    flipsub = false
     } in 
     let (a, st1, w, p) = m st0 in (a, w, p) 
 

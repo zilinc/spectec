@@ -80,9 +80,9 @@ let use_step_read = function
   | ARRAY_dot_INIT_ELEM_instr *)
   | LOCAL_dot_GET_instr _
   | GLOBAL_dot_GET_instr _
-  (* | TABLE_dot_GET_instr
-  | TABLE_dot_SIZE_instr
-  | TABLE_dot_FILL_instr
+  | TABLE_dot_GET_instr _
+  | TABLE_dot_SIZE_instr _
+  (*| TABLE_dot_FILL_instr
   | TABLE_dot_COPY_instr *)
   | TABLE_dot_INIT_instr _
   | LOAD_instr _
