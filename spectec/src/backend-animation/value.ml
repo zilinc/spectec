@@ -207,3 +207,6 @@ let none = optV None
 let some v = optV (Some v)
 let nullary con = caseV [[String.uppercase_ascii con]] []
 let singleton v = listV [|v|]
+let listv_singleton = function
+  | ListV arr_ref when Array.length !arr_ref = 1 -> Array.get !arr_ref 0
+  | v -> error_value "listv_singleton" v

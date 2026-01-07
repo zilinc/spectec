@@ -686,18 +686,318 @@ let irelaxed_q15mulr : numerics =
       );
   }
 
+let list_f f x = f x |> singleton
+let unlist_f f x = f x |> listv_singleton
+let bop_f32 f f1 f2 = f (vl_to_float32 f1) (vl_to_float32 f2) |> vl_of_float32
+let bop_f64 f f1 f2 = f (vl_to_float64 f1) (vl_to_float64 f2) |> vl_of_float64
+let bop_f32_b f f1 f2 = f (vl_to_float32 f1) (vl_to_float32 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
+let bop_f64_b f f1 f2 = f (vl_to_float64 f1) (vl_to_float64 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
+let uop_f32 f f1 = f (vl_to_float32 f1) |> vl_of_float32
+let uop_f64 f f1 = f (vl_to_float64 f1) |> vl_of_float64
+
+
+let fadd : numerics =
+  {
+    name = "fadd";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32 RI.F32.add f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64 RI.F64.add f1 f2
+      | vs -> error_values "fadd" vs
+      );
+  }
+let fsub : numerics =
+  {
+    name = "fsub";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32 RI.F32.sub f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64 RI.F64.sub f1 f2
+      | vs -> error_values "fsub" vs
+      );
+  }
+let fmul : numerics =
+  {
+    name = "fmul";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32 RI.F32.mul f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64 RI.F64.mul f1 f2
+      | vs -> error_values "fmul" vs
+      );
+  }
+let fdiv : numerics =
+  {
+    name = "fdiv";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32 RI.F32.div f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64 RI.F64.div f1 f2
+      | vs -> error_values "fdiv" vs
+      );
+  }
+let fmin : numerics =
+  {
+    name = "fmin";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32 RI.F32.min f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64 RI.F64.min f1 f2
+      | vs -> error_values "fmin" vs
+      );
+  }
+let fmax : numerics =
+  {
+    name = "fmax";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32 RI.F32.max f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64 RI.F64.max f1 f2
+      | vs -> error_values "fmax" vs
+      );
+  }
+let fcopysign : numerics =
+  {
+    name = "fcopysign";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32 RI.F32.copysign f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64 RI.F64.copysign f1 f2
+      | vs -> error_values "fcopysign" vs
+      );
+  }
+let fabs : numerics =
+  {
+    name = "fabs";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 32 ->
+        uop_f32 RI.F32.abs f
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 64 ->
+        uop_f64 RI.F64.abs f
+      | vs -> error_values "fabs" vs
+      );
+  }
+let fneg : numerics =
+  {
+    name = "fneg";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 32 ->
+        uop_f32 RI.F32.neg f
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 64 ->
+        uop_f64 RI.F64.neg f
+      | vs -> error_values "fneg" vs
+      );
+  }
+let fsqrt : numerics =
+  {
+    name = "fsqrt";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 32 ->
+        uop_f32 RI.F32.sqrt f
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 64 ->
+        uop_f64 RI.F64.sqrt f
+      | vs -> error_values "fsqrt" vs
+      );
+  }
+let fceil : numerics =
+  {
+    name = "fceil";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 32 ->
+        uop_f32 RI.F32.ceil f
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 64 ->
+        uop_f64 RI.F64.ceil f
+      | vs -> error_values "fceil" vs
+      );
+  }
+let ffloor : numerics =
+  {
+    name = "ffloor";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 32 ->
+        uop_f32 RI.F32.floor f
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 64 ->
+        uop_f64 RI.F64.floor f
+      | vs -> error_values "ffloor" vs
+      );
+  }
+let ftrunc : numerics =
+  {
+    name = "ftrunc";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 32 ->
+        uop_f32 RI.F32.trunc f
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 64 ->
+        uop_f64 RI.F64.trunc f
+      | vs -> error_values "ftrunc" vs
+      );
+  }
+let fnearest : numerics =
+  {
+    name = "fnearest";
+    f = list_f
+      (function
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 32 ->
+        uop_f32 RI.F32.nearest f
+      | [ NumV (`Nat z); CaseV _ as f ] when z = Z.of_int 64 ->
+        uop_f64 RI.F64.nearest f
+      | vs -> error_values "fnearest" vs
+      );
+  }
+let feq : numerics =
+  {
+    name = "feq";
+    f =
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32_b RI.F32.eq f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64_b RI.F64.eq f1 f2
+      | vs -> error_values "feq" vs
+      );
+  }
+let fne : numerics =
+  {
+    name = "fne";
+    f =
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32_b RI.F32.ne f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64_b RI.F64.ne f1 f2
+      | vs -> error_values "fne" vs
+      );
+  }
+let flt : numerics =
+  {
+    name = "flt";
+    f =
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32_b RI.F32.lt f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64_b RI.F64.lt f1 f2
+      | vs -> error_values "flt" vs
+      );
+  }
 let fgt : numerics =
   {
     name = "fgt";
     f =
       (function
       | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
-        RI.F32.gt (vl_to_float32 f1) (vl_to_float32 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
+        bop_f32_b RI.F32.gt f1 f2
       | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
-        RI.F64.gt (vl_to_float64 f1) (vl_to_float64 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
+        bop_f64_b RI.F64.gt f1 f2
       | vs -> error_values "fgt" vs
       );
   }
+let fle : numerics =
+  {
+    name = "fle";
+    f =
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32_b RI.F32.le f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64_b RI.F64.le f1 f2
+      | vs -> error_values "fle" vs
+      );
+  }
+let fge : numerics =
+  {
+    name = "fge";
+    f =
+      (function
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 32 ->
+        bop_f32_b RI.F32.ge f1 f2
+      | [ NumV (`Nat z); CaseV _ as f1; CaseV _ as f2; ] when z = Z.of_int 64 ->
+        bop_f64_b RI.F64.ge f1 f2
+      | vs -> error_values "fge" vs
+      );
+  }
+let fpmin : numerics =
+  {
+    name = "fpmin";
+    f = list_f
+      (function
+      | [ NumV _ as z; CaseV _ as f1; CaseV _ as f2; ] ->
+        if (flt.f [ z; f2; f1 ] |> as_singleton_case |> as_nat_value = Z.one) then f2 else f1
+      | vs -> error_values "fpmin" vs
+      );
+  }
+let fpmax : numerics =
+  {
+    name = "fpmax";
+    f = list_f
+      (function
+      | [ NumV _ as z; CaseV _ as f1; CaseV _ as f2; ] ->
+        if (flt.f [ z; f1; f2 ] |> as_singleton_case |> as_nat_value = Z.one) then f2 else f1
+      | vs -> error_values "fpmax" vs
+      );
+  }
+let frelaxed_min : numerics =
+  {
+    name = "frelaxed_min";
+    f =
+      (function
+      | [ NumV _ as z; CaseV _ as f1; CaseV _ as f2; ] ->
+        fmin.f [ z; f1; f2 ]  (* use deterministic behaviour *)
+      | vs -> error_values "frelaxed_min" vs
+      );
+  }
+let frelaxed_max : numerics =
+  {
+    name = "frelaxed_max";
+    f =
+      (function
+      | [ NumV _ as z; CaseV _ as f1; CaseV _ as f2; ] ->
+        fmax.f [ z; f1; f2 ]  (* use deterministic behaviour *)
+      | vs -> error_values "frelaxed_max" vs
+      );
+  }
+
+let frelaxed_madd : numerics =
+  {
+    name = "frelaxed_madd";
+    f =
+      (function
+      | [ NumV _ as z; CaseV _ as f1; CaseV _ as f2; CaseV _ as f3 ] ->
+        fadd.f [ z; unlist_f fmul.f [ z; f1; f2 ]; f3 ]  (* use deterministic behaviour *)
+      | vs -> error_values "frelaxed_madd" vs
+      );
+  }
+let frelaxed_nmadd : numerics =
+  {
+    name = "frelaxed_nmadd";
+    f =
+      (function
+      | [ NumV _ as z; CaseV _ as f1; CaseV _ as f2; CaseV _ as f3 ] ->
+        frelaxed_madd.f [ z; unlist_f fneg.f [ z; f1 ]; f2; f3 ]  (* use deterministic behaviour *)
+      | vs -> error_values "frelaxed_nmadd" vs
+      );
+  }
+
 
 let numerics_list : numerics list = [
   (*
@@ -754,7 +1054,6 @@ let numerics_list : numerics list = [
   iavgr;
   iq15mulr_sat;
   irelaxed_q15mulr;
-  (*
   fadd;
   fsub;
   fmul;
@@ -772,9 +1071,7 @@ let numerics_list : numerics list = [
   feq;
   fne;
   flt;
-  *)
   fgt;
-  (*
   fle;
   fge;
   fpmin;
@@ -783,6 +1080,7 @@ let numerics_list : numerics list = [
   frelaxed_max;
   frelaxed_madd;
   frelaxed_nmadd;
+  (*
   extend;
   trunc;
   trunc_sat;
