@@ -1018,18 +1018,15 @@ let z_to_vec128 i =
 let vl_to_int = function
   | NumV n -> vl_to_z_nat n |> Z.to_int
   | v -> error_value "int" v
-(*
-let al_to_nat8 (v: value): I8.t = al_to_z_nat v |> Z.to_int |> I8.of_int_u
-let al_to_int8 (v: value): I8.t = al_to_z_nat v |> Z.to_int |> I8.of_int_s
-let al_to_int16 (v: value): I16.t = al_to_z_nat v |> Z.to_int |> I16.of_int_s
-*)
 
-
-let vl_to_nat32   exp : RI.I32.t = as_num_value exp |> vl_to_z_nat |> z_to_intN Z.to_int32 Z.to_int32_unsigned
-let vl_to_nat64   exp : RI.I64.t = as_num_value exp |> vl_to_z_nat |> z_to_intN Z.to_int64 Z.to_int64_unsigned
+let vl_to_nat8    exp : RI.I8.t   = as_num_value exp |> vl_to_z_nat |> Z.to_int |> RI.I8.of_int_u
+let vl_to_int8    exp : RI.I8.t   = as_num_value exp |> vl_to_z_nat |> Z.to_int |> RI.I8.of_int_s
+let vl_to_int16   exp : RI.I16.t  = as_num_value exp |> vl_to_z_nat |> Z.to_int |> RI.I16.of_int_s
+let vl_to_nat32   exp : RI.I32.t  = as_num_value exp |> vl_to_z_nat |> z_to_intN Z.to_int32 Z.to_int32_unsigned
+let vl_to_nat64   exp : RI.I64.t  = as_num_value exp |> vl_to_z_nat |> z_to_intN Z.to_int64 Z.to_int64_unsigned
 let vl_to_vec128  exp : RI.V128.t = as_num_value exp |> vl_to_z_nat |> z_to_vec128
-let vl_to_float32 exp : RI.F32.t = vl_to_floatN layout32 exp |> Z.to_int32_unsigned |> RI.F32.of_bits
-let vl_to_float64 exp : RI.F64.t = vl_to_floatN layout64 exp |> Z.to_int64_unsigned |> RI.F64.of_bits
+let vl_to_float32 exp : RI.F32.t  = vl_to_floatN layout32 exp |> Z.to_int32_unsigned |> RI.F32.of_bits
+let vl_to_float64 exp : RI.F64.t  = vl_to_floatN layout64 exp |> Z.to_int64_unsigned |> RI.F64.of_bits
 
 let vl_to_uN_32 exp : RI.I32.t = vl_to_nat32 (as_singleton_case exp)
 let vl_to_uN_64 exp : RI.I64.t = vl_to_nat64 (as_singleton_case exp)

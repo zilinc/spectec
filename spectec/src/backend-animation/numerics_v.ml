@@ -15,6 +15,10 @@ type numerics = { name : string; f : value list -> value }
 
 let maskN n = Z.(pred (shift_left one (to_int n)))
 
+let mask64 = Z.of_int64_unsigned (-1L)
+
+let z_to_int64 z = Z.(to_int64_unsigned (logand mask64 z))
+
 
 let ibytes : numerics =
   {
@@ -53,20 +57,20 @@ let inv_ibytes : numerics =
             | NumV (`Nat b) when Z.zero <= b && b < Z.of_int 256 -> Z.add b (Z.shift_left acc 8)
             | _ -> error_value "inv_ibytes (byte)" b
           ) !bs Z.zero)
-      | es -> error_values "inv_ibytes" es
+      | vs -> error_values "inv_ibytes" vs
       );
   }
 
-(*
+
 let nbytes : numerics =
   {
     name = "nbytes";
     f =
       (function
-      | [ CaseV ("I32", []); n ] -> ibytes.f [ NumV thirtytwo; n ]
-      | [ CaseV ("I64", []); n ] -> ibytes.f [ NumV sixtyfour; n ]
-      | [ CaseV ("F32", []); f ] -> ibytes.f [ NumV thirtytwo; al_to_float32 f |> F32.to_bits |> al_of_nat32 ]
-      | [ CaseV ("F64", []); f ] -> ibytes.f [ NumV sixtyfour; al_to_float64 f |> F64.to_bits |> al_of_nat64 ]
+      | [ CaseV ([["I32"]], []); n ] -> ibytes.f [ NumV thirtytwo; n ]
+      | [ CaseV ([["I64"]], []); n ] -> ibytes.f [ NumV sixtyfour; n ]
+      | [ CaseV ([["F32"]], []); f ] -> ibytes.f [ NumV thirtytwo; vl_to_float32 f |> RI.F32.to_bits |> vl_of_nat32 ]
+      | [ CaseV ([["F64"]], []); f ] -> ibytes.f [ NumV sixtyfour; vl_to_float64 f |> RI.F64.to_bits |> vl_of_nat64 ]
       | vs -> error_values "nbytes" vs
       );
   }
@@ -75,10 +79,10 @@ let inv_nbytes : numerics =
     name = "inv_nbytes";
     f =
       (function
-      | [ CaseV ("I32", []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ]
-      | [ CaseV ("I64", []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ]
-      | [ CaseV ("F32", []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ] |> al_to_nat32 |> F32.of_bits |> al_of_float32
-      | [ CaseV ("F64", []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ] |> al_to_nat64 |> F64.of_bits |> al_of_float64
+      | [ CaseV ([["I32"]], []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ]
+      | [ CaseV ([["I64"]], []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ]
+      | [ CaseV ([["F32"]], []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ] |> vl_to_nat32 |> RI.F32.of_bits |> vl_of_float32
+      | [ CaseV ([["F64"]], []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ] |> vl_to_nat64 |> RI.F64.of_bits |> vl_of_float64
       | vs -> error_values "inv_nbytes" vs
       );
   }
@@ -88,9 +92,9 @@ let vbytes : numerics =
     name = "vbytes";
     f =
       (function
-      | [ CaseV ("V128", []); v ] ->
-        let s = v |> al_to_vec128 |> V128.to_bits in
-        Array.init 16 (fun i -> s.[i] |> Char.code |> al_of_nat) |> listV
+      | [ CaseV ([["V128"]], []); v ] ->
+        let s = v |> vl_to_vec128 |> RI.V128.to_bits in
+        Array.init 16 (fun i -> s.[i] |> Char.code |> vl_of_nat) |> listV
       | vs -> error_values "vbytes" vs
       );
   }
@@ -99,15 +103,13 @@ let inv_vbytes : numerics =
     name = "inv_vbytes";
     f =
       (function
-      | [ CaseV ("V128", []); ListV l ] ->
+      | [ CaseV ([["V128"]], []); ListV l ] ->
         let v1 = inv_ibytes.f [ NumV sixtyfour; Array.sub !l 0 8 |> listV ] in
         let v2 = inv_ibytes.f [ NumV sixtyfour; Array.sub !l 8 8 |> listV ] in
-
         (match v1, v2 with
-        | NumV (`Nat n1), NumV (`Nat n2) -> al_of_vec128 (V128.I64x2.of_lanes [ z_to_int64 n1; z_to_int64 n2 ])
+        | NumV (`Nat n1), NumV (`Nat n2) -> vl_of_vec128 (RI.V128.I64x2.of_lanes [ z_to_int64 n1; z_to_int64 n2 ])
         | _ -> error_values "inv_vbytes" [ v1; v2 ]
         )
-
       | vs -> error_values "inv_vbytes" vs
       );
   }
@@ -117,8 +119,8 @@ let inv_zbytes : numerics =
     name = "inv_zbytes";
     f =
       (function
-      | [ CaseV ("I8", []); l ] -> inv_ibytes.f [ NumV eight; l ]
-      | [ CaseV ("I16", []); l ] -> inv_ibytes.f [ NumV sixteen; l ]
+      | [ CaseV ([["I8" ]], []); l ] -> inv_ibytes.f [ NumV eight  ; l ]
+      | [ CaseV ([["I16"]], []); l ] -> inv_ibytes.f [ NumV sixteen; l ]
       | args -> inv_nbytes.f args
       );
   }
@@ -127,7 +129,7 @@ let inv_cbytes : numerics =
   {
     name = "inv_cbytes";
     f = function
-      | [ CaseV ("V128", []); _ ] as args -> inv_vbytes.f args
+      | [ CaseV ([["V128"]], []); _ ] as args -> inv_vbytes.f args
       | args -> inv_nbytes.f args
   }
 
@@ -152,9 +154,71 @@ let inv_ibits : numerics =
       (function
       | [ NumV (`Nat n); ListV vs ] as vs' ->
         if Z.of_int (Array.length !vs) <> n then error_values "inv_ibits" vs';
-        let na = Array.map (function | NumV (`Nat e) when e = Z.zero || e = Z.one -> e | v -> error_typ_value "inv_ibits" "bit" v) !vs in
+        let na = Array.map (function
+                           | NumV (`Nat e) when e = Z.zero || e = Z.one -> e
+                           | v -> error_value "bit in inv_ibits" v
+                           ) !vs in
         natV (Array.fold_left (fun acc e -> Z.logor e (Z.shift_left acc 1)) Z.zero na)
       | vs -> error_values "inv_ibits" vs
+      );
+  }
+
+let signed : numerics =
+  {
+    name = "signed";
+    f =
+      (function
+      | [ NumV (`Nat z); NumV (`Nat n) ] ->
+        let z = Z.to_int z in
+        (if Z.lt n (Z.shift_left Z.one (z - 1)) then n else Z.(sub n (shift_left one z))) |> vl_of_z_int
+      | vs -> error_values "signed" vs
+      )
+  }
+
+let inv_signed =
+  {
+    name = "inv_signed";
+    f =
+      (function
+      | [ NumV (`Nat z); NumV (`Int n) ] ->
+        let z = Z.to_int z in
+        (if Z.(geq n zero) then n else Z.(add n (shift_left one z))) |> vl_of_z_nat
+      | vs -> error_values "inv_signed" vs
+      )
+  }
+
+let sat_u : numerics =
+  {
+    name = "sat_u";
+    f =
+      (function
+      | [ NumV (`Nat z); NumV (`Int i) ] ->
+        if Z.(gt i (shift_left one (Z.to_int z) |> pred)) then
+          Z.(shift_left one (Z.to_int z) |> pred) |> vl_of_z_nat
+        else if Z.(lt i zero) then
+          Z.zero |> vl_of_z_nat
+        else
+          vl_of_z_nat i
+      | vs -> error_values "sat_u" vs
+      );
+  }
+
+let sat_s : numerics =
+  {
+    name = "sat_s";
+    f =
+      (function
+      | [ NumV (`Nat z); NumV (`Int i) ] ->
+        let n = Z.to_int z - 1 in
+        let j =
+          if Z.(lt i (shift_left one n |> neg)) then
+            Z.(shift_left one n |> neg)
+          else if Z.(gt i (shift_left one n |> pred)) then
+            Z.(shift_left one n |> pred)
+          else
+            i
+        in inv_signed.f [ vl_of_z_nat z; vl_of_z_int j ]
+      | vs -> error_values "sat_s" vs
       );
   }
 
@@ -163,8 +227,10 @@ let narrow : numerics =
     name = "narrow";
     f =
       (function
-      | [ NumV _ as m; NumV _ as n; CaseV (_, []) as sx; NumV _ as i ] ->
-        sat.f [ n; sx; signed.f [ m; i ]]
+      | [ NumV _ as m; NumV _ as n; CaseV ([["S"]], []) as sx; NumV _ as i ] ->
+          sat_s.f [ n; signed.f [ m; i ]]
+      | [ NumV _ as m; NumV _ as n; CaseV ([["U"]], []) as sx; NumV _ as i ] ->
+          sat_u.f [ n; signed.f [ m; i ]]
       | vs -> error_values "narrow" vs);
   }
 
@@ -173,18 +239,18 @@ let lanes : numerics =
     name = "lanes";
     f =
       (function
-      | [ CaseV ("X", [ CaseV ("I8", []); NumV (`Nat z) ]); v ] when z = Z.of_int 16 ->
-        v |> al_to_vec128 |> V128.I8x16.to_lanes |> List.map al_of_nat8 |> listV_of_list
-      | [ CaseV ("X", [ CaseV ("I16", []); NumV (`Nat z) ]); v ] when z = Z.of_int 8 ->
-        v |> al_to_vec128 |> V128.I16x8.to_lanes |> List.map al_of_nat16 |> listV_of_list
-      | [ CaseV ("X", [ CaseV ("I32", []); NumV (`Nat z) ]); v ] when z = Z.of_int 4 ->
-        v |> al_to_vec128 |> V128.I32x4.to_lanes |> List.map al_of_nat32 |> listV_of_list
-      | [ CaseV ("X", [ CaseV ("I64", []); NumV (`Nat z) ]); v ] when z = Z.of_int 2 ->
-        v |> al_to_vec128 |> V128.I64x2.to_lanes |> List.map al_of_nat64 |> listV_of_list
-      | [ CaseV ("X", [ CaseV ("F32", []); NumV (`Nat z) ]); v ] when z = Z.of_int 4 ->
-        v |> al_to_vec128 |> V128.F32x4.to_lanes |> List.map al_of_float32 |> listV_of_list
-      | [ CaseV ("X", [ CaseV ("F64", []); NumV (`Nat z) ]); v ] when z = Z.of_int 2 ->
-        v |> al_to_vec128 |> V128.F64x2.to_lanes |> List.map al_of_float64 |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I8"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 16 ->
+        v |> vl_to_vec128 |> RI.V128.I8x16.to_lanes |> List.map vl_of_nat8 |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I16"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 8 ->
+        v |> vl_to_vec128 |> RI.V128.I16x8.to_lanes |> List.map vl_of_nat16 |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I32"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 4 ->
+        v |> vl_to_vec128 |> RI.V128.I32x4.to_lanes |> List.map vl_of_nat32 |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I64"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 2 ->
+        v |> vl_to_vec128 |> RI.V128.I64x2.to_lanes |> List.map vl_of_nat64 |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["F32"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 4 ->
+        v |> vl_to_vec128 |> RI.V128.F32x4.to_lanes |> List.map vl_of_float32 |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["F64"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 2 ->
+        v |> vl_to_vec128 |> RI.V128.F64x2.to_lanes |> List.map vl_of_float64 |> listV_of_list
       | vs -> error_values "lanes" vs
       );
   }
@@ -193,22 +259,23 @@ let inv_lanes : numerics =
     name = "inv_lanes";
     f =
       (function
-      | [ CaseV ("X",[ CaseV ("I8", []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 16 && Array.length !lanes = 16 ->
-        List.map al_to_int8 (!lanes |> Array.to_list) |> V128.I8x16.of_lanes |> al_of_vec128
-      | [ CaseV ("X",[ CaseV ("I16", []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 8 && Array.length !lanes = 8 ->
-        List.map al_to_int16 (!lanes |> Array.to_list) |> V128.I16x8.of_lanes |> al_of_vec128
-      | [ CaseV ("X",[ CaseV ("I32", []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 4 && Array.length !lanes = 4 ->
-        List.map al_to_nat32 (!lanes |> Array.to_list) |> V128.I32x4.of_lanes |> al_of_vec128
-      | [ CaseV ("X",[ CaseV ("I64", []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 2 && Array.length !lanes = 2 ->
-        List.map al_to_nat64 (!lanes |> Array.to_list) |> V128.I64x2.of_lanes |> al_of_vec128
-      | [ CaseV ("X",[ CaseV ("F32", []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 4 && Array.length !lanes = 4 ->
-        List.map al_to_float32 (!lanes |> Array.to_list) |> V128.F32x4.of_lanes |> al_of_vec128
-      | [ CaseV ("X",[ CaseV ("F64", []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 2 && Array.length !lanes = 2 ->
-        List.map al_to_float64 (!lanes |> Array.to_list) |> V128.F64x2.of_lanes |> al_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I8"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 16 && Array.length !lanes = 16 ->
+        List.map vl_to_int8 (!lanes |> Array.to_list) |> RI.V128.I8x16.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I16"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 8 && Array.length !lanes = 8 ->
+        List.map vl_to_int16 (!lanes |> Array.to_list) |> RI.V128.I16x8.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I32"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 4 && Array.length !lanes = 4 ->
+        List.map vl_to_nat32 (!lanes |> Array.to_list) |> RI.V128.I32x4.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I64"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 2 && Array.length !lanes = 2 ->
+        List.map vl_to_nat64 (!lanes |> Array.to_list) |> RI.V128.I64x2.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["F32"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 4 && Array.length !lanes = 4 ->
+        List.map vl_to_float32 (!lanes |> Array.to_list) |> RI.V128.F32x4.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["F64"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 2 && Array.length !lanes = 2 ->
+        List.map vl_to_float64 (!lanes |> Array.to_list) |> RI.V128.F64x2.of_lanes |> vl_of_vec128
         | vs -> error_values "inv_lanes" vs
       );
   }
 
+(* FIXME(zilinc): How does it handle poly-functions and their type arguments?
 let rec inv_concat_helper = function
   | a :: b :: l ->
     [listV_of_list [a; b]] @ inv_concat_helper l
@@ -258,30 +325,6 @@ let inv_concatn : numerics =
   }
 *)
 
-let signed : numerics =
-  {
-    name = "signed";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Nat n) ] ->
-        let z = Z.to_int z in
-        (if Z.lt n (Z.shift_left Z.one (z - 1)) then n else Z.(sub n (shift_left one z))) |> vl_of_z_int
-      | vs -> error_values "signed" vs
-      )
-  }
-
-let inv_signed =
-  {
-    name = "inv_signed";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Int n) ] ->
-        let z = Z.to_int z in
-        (if Z.(geq n zero) then n else Z.(add n (shift_left one z))) |> vl_of_z_nat
-      | vs -> error_values "inv_signed" vs
-      )
-  }
-
 let truncz : numerics =
   {
     name = "truncz";
@@ -291,41 +334,6 @@ let truncz : numerics =
         Q.to_bigint q |> vl_of_z_int
       | vs -> error_values "truncz" vs
       )
-  }
-
-let sat_u : numerics =
-  {
-    name = "sat_u";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Int i) ] ->
-        if Z.(gt i (shift_left one (Z.to_int z) |> pred)) then
-          Z.(shift_left one (Z.to_int z) |> pred) |> vl_of_z_nat
-        else if Z.(lt i zero) then
-          Z.zero |> vl_of_z_nat
-        else
-          vl_of_z_nat i
-      | vs -> error_values "sat_u" vs
-      );
-  }
-
-let sat_s : numerics =
-  {
-    name = "sat_s";
-    f =
-      (function
-      | [ NumV (`Nat z); NumV (`Int i) ] ->
-        let n = Z.to_int z - 1 in
-        let j =
-          if Z.(lt i (shift_left one n |> neg)) then
-            Z.(shift_left one n |> neg)
-          else if Z.(gt i (shift_left one n |> pred)) then
-            Z.(shift_left one n |> pred)
-          else
-            i
-        in inv_signed.f [ vl_of_z_nat z; vl_of_z_int j ]
-      | vs -> error_values "sat_s" vs
-      );
   }
 
 let inot : numerics =
@@ -706,7 +714,6 @@ let numerics_list : numerics list = [
   *)
   ibytes;
   inv_ibytes;
-  (*
   nbytes;
   vbytes;
   inv_nbytes;
@@ -715,9 +722,15 @@ let numerics_list : numerics list = [
   inv_cbytes;
   bytes;
   inv_bytes;
+  inv_ibits;
+  (*
   inv_concat;
   inv_concatn;
   *)
+  wrap;
+  narrow;
+  lanes;
+  inv_lanes;
   truncz;
   sat_u;
   sat_s;
@@ -771,18 +784,13 @@ let numerics_list : numerics list = [
   frelaxed_madd;
   frelaxed_nmadd;
   extend;
-  wrap;
   trunc;
   trunc_sat;
   relaxed_trunc;
-  narrow;
   promote;
   demote;
   convert;
   reinterpret;
-  lanes;
-  inv_lanes;
-  inv_ibits;
   *)
 ]
 
