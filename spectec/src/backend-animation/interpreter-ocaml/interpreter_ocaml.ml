@@ -884,24 +884,24 @@ and generate_type_translation dt name args : string t =
   | VariantT tcs -> gen_var_translation tcs name args
 
 (* Get deftype from an alias *)
-and lookup (typename : string) : deftyp option t =
+and lookup (typename : string) : ((string * deftyp) option) t =
   let* typdef = get_typedef typename in
   match typdef with
-  | Some {it = (_, _, {it = InstD (_, _, dt); _}::_); _} -> return (Some dt)
+  | Some {it = (id, _, {it = InstD (_, _, dt); _}::_); _} -> return (Some (id.it, dt))
   | _ -> return None
 
 (* Resolve a typ to a StructT fields if it denotes a record type.
    Follows aliases. *)
-and resolve_struct (typname : typ) (toplvl : bool) : typfield list option t =
+and resolve_struct (typname : typ) (toplvl : bool) : ((string * typfield list) option) t =
   match typname.it with
   | VarT (tid, _) -> 
     (* ???????? *)
     let* typedef = lookup tid.it in begin
     match typedef with
-    | Some dt ->
+    | Some (id, dt) ->
         begin match dt.it with
         | AliasT t' -> resolve_struct t' toplvl
-        | StructT fields -> return (Some fields) (* return name here *)
+        | StructT fields -> return (Some (id, fields))
         | VariantT _ -> return None
         end
     | None -> return None
@@ -909,7 +909,7 @@ and resolve_struct (typname : typ) (toplvl : bool) : typfield list option t =
   | IterT (_, iter) -> if toplvl then return None else begin 
     match iter with 
     | Opt -> return None 
-    | _   -> return (Some [])
+    | _   -> return (Some ("", [])) (* this is just used to check if something is composable so we don't need the name *)
     end
   | _ -> return None
 
@@ -921,7 +921,7 @@ and resolve_variant (typname : typ) : typ option t =
     (*Printf.printf "Looking for typedef: %s\n" tid.it;*)
     let* typedef = lookup (sanitize_name tid.it) in begin
     match typedef with
-    | Some dt ->
+    | Some (_, dt) ->
         begin match dt.it with
         | AliasT t' -> resolve_variant t'
         | StructT _ -> return None
@@ -947,15 +947,15 @@ and composable_typ (t : typ) : bool t =
   | _ -> 
     let* tfs = resolve_struct t false in
     match tfs with 
-    | Some fields -> allM is_composable fields
-    | None -> return false
+    | Some (_, fields) -> allM is_composable fields
+    | None             -> return false
 
 and typ_is_list (typname : typ) : bool t = 
   let* tfs = resolve_struct typname false in
   match tfs with 
-  | Some [] -> return true
-  | Some _ -> return false
-  | None -> error typname.at "Non-composable type: shouldn't happen."
+  | Some (_, []) -> return true
+  | Some _       -> return false
+  | None         -> error typname.at "Non-composable type: shouldn't happen."
 
 and build_fields (tfs : typfield list) typename : unit t = 
   (* Verify every field is composable *)
@@ -982,7 +982,9 @@ and generate_compose (dt : deftyp) (typename : string) : unit t =
   | AliasT inner_type -> begin
     let* tfs = resolve_struct inner_type true in 
     match tfs with 
-    | Some tfs' -> build_fields tfs' typename
+    | Some (id, fields) -> 
+      (* call compose for the type that is aliased by this type *)
+      tell (Printf.sprintf "let compose_%s (r1 : %s) (r2 : %s) = compose_%s r1 r2" typename typename typename (sanitize_name id))
     | None -> return ()
     end
   | VariantT _ -> return ()
