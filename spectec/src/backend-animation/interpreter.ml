@@ -768,7 +768,7 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg list) : exp OptMonad.m =
   match clauses with
-  | [] -> fail ()
+  | [] -> Printf.printf "no matching clause\n"; fail ()
   | cl :: cls ->
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = ref !il_env in
@@ -791,6 +791,7 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
 
 
 and eval_func name func_def args : exp OptMonad.m =
+  (*let () = if name = "name_length" then Printf.printf "calling func: %s\n" name else () in*) 
   let (_, params, typ, fcs, _) = func_def.it in
   match_clause no_region name 1 fcs args
 

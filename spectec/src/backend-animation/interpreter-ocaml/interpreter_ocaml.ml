@@ -329,7 +329,7 @@ let ocaml_of_cmpop op =
   | "=/=" -> "<>"
   | s -> s
 
-(* generate a function that will translate an IL exp of typ `name = VariantT tcs` to an ocaml value of the corresponding type *)
+(* generate a function that will translate an IL exp to an ocaml value of the corresponding type *)
 let rec gen_typarg_translation t = 
   match t.it with
   | VarT (id, args) -> 
@@ -347,6 +347,7 @@ let rec gen_typarg_translation t =
   | NumT _ -> return "todo: non-int/nat num"
   | TextT -> return "ocaml_of_string"
   | TupT [] -> return ""
+  (* this is probably still incorrect *)
   | TupT ets -> 
     let* args = mapM (fun (_, t) -> gen_typarg_translation t) ets in 
     return ("(" ^ String.concat ", " (List.mapi (fun i arg -> Printf.sprintf "(%s (List.nth es %d))" arg i) args) ^ ")")
@@ -867,6 +868,14 @@ and generate_type_translation dt name args : string t =
     (*| _ -> 
       let* typedef = ocaml_of_typ ~consannot:true t in 
       return (Printf.sprintf "ocaml_of_%s = ocaml_of_%s" name typedef)*)
+    (* the empty tuple should(?) be the unit type *)
+    | TupT [] -> 
+      return (Printf.sprintf "ocaml_of_%s (e : exp) = ()" name)
+    | TupT ets -> 
+      let argstrs = String.concat ", " (List.mapi (fun i _ -> Printf.sprintf "e%d" i) ets) in
+      let* args = mapM (fun (_, t) -> gen_typarg_translation t) ets in 
+      let body = "(" ^ String.concat ", " (List.mapi (fun i arg -> Printf.sprintf "(%s e%d)" arg i) args) ^ ")" in
+      return (Printf.sprintf "ocaml_of_%s (%s) = %s" name argstrs body)
     | _ -> 
       let* typedef = gen_typarg_translation t in
       return (Printf.sprintf "ocaml_of_%s e = %s e" name typedef)
@@ -886,13 +895,13 @@ and lookup (typename : string) : deftyp option t =
 and resolve_struct (typname : typ) (toplvl : bool) : typfield list option t =
   match typname.it with
   | VarT (tid, _) -> 
-    (* this should not work; lol *)
+    (* ???????? *)
     let* typedef = lookup tid.it in begin
     match typedef with
     | Some dt ->
         begin match dt.it with
         | AliasT t' -> resolve_struct t' toplvl
-        | StructT fields -> return (Some fields)
+        | StructT fields -> return (Some fields) (* return name here *)
         | VariantT _ -> return None
         end
     | None -> return None
@@ -1342,7 +1351,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
         else
           return (Printf.sprintf "clause_%s_%d %s : %s =\n%s\n  %s\n" name i argnames rettypstr bodycode retvalue))
       (function 
-      | CannotAnimate ->
+      | CannotAnimate | CannotSplit _ ->
         let argnames  = String.concat " " (List.init (List.length params) (fun i -> Printf.sprintf "unanimated%d" i)) in
         return (Printf.sprintf "clause_%s_%d %s = raise (UnanimatedArg \"%s\")\n" name i argnames name)
       | e -> raise e)

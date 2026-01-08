@@ -92,6 +92,7 @@ let heaptype_of_ocaml = function
   | DL.C_IDX_heaptype _ -> failwith "TODO: implement C_IDX_heaptype"
   | DL.REC_heaptype _ -> failwith "TODO: implement REC_heaptype"
   | DL.C_DEF_heaptype _ -> failwith "TODO: implement C_DEF_heaptype"
+
 let val_of_ocaml (instr: DL.instr) : value =
   match instr with
   | DL.CONST_instr (nt, num) -> 
@@ -101,7 +102,7 @@ let val_of_ocaml (instr: DL.instr) : value =
     | _              -> failwith "TODO: non-I32 const"
     end
   | DL.REF_dot_NULL_instr ht  -> Ref (NullRef (heaptype_of_ocaml ht))
-  | _ -> failwith (Printf.sprintf "TODO: not const or funcref instr/val: %s" (string_of_dlinstr instr))
+  | _ -> failwith (Printf.sprintf "TODO: not const or null ref instr/val: %s" (string_of_dlinstr instr))
 
 (* -------- *)
 
