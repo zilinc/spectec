@@ -1,3 +1,35 @@
+;; ********************************************************
+;;             Algorithmic value validation
+;; ********************************************************
+
+def $ref_infer(store, ref) : reftype
+def $ref_infer(s, REF.NULL ht) = REF NULL NONE
+    -- Heaptype_sub: {} |- NONE <: ht
+def $ref_infer(s, REF.NULL ht) = REF NULL NOFUNC
+    -- Heaptype_sub: {} |- NOFUNC <: ht
+def $ref_infer(s, REF.NULL ht) = REF NULL NOEXN
+    -- Heaptype_sub: {} |- NOEXN <: ht
+def $ref_infer(s, REF.NULL ht) = REF NULL NOEXTERN
+    -- Heaptype_sub: {} |- NOEXTERN <: ht
+def $ref_infer(s, REF.I31_NUM i) = REF I31
+def $ref_infer(s, REF.STRUCT_ADDR a) = REF dt
+  -- if s.STRUCTS[a].TYPE = dt
+def $ref_infer(s, REF.ARRAY_ADDR a) = REF dt
+  -- if s.ARRAYS[a].TYPE = dt
+def $ref_infer(s, REF.FUNC_ADDR a) = REF dt
+  -- if s.FUNCS[a].TYPE = dt
+def $ref_infer(s, REF.EXN_ADDR a) = REF EXN
+  -- if s.EXNS[a] = exn
+def $ref_infer(s, REF.HOST_ADDR a) = REF ANY
+def $ref_infer(s, REF.EXTERN addrref) = REF EXTERN
+  -- if $ref_infer(s, addrref) = REF ANY
+
+
+
+;; ********************************************************
+;;                      Reduction
+;; ********************************************************
+
 def $is_val(instr) : bool
 def $is_val(CONST  numtype  i) = true
 def $is_val(VCONST vectype  c) = true
@@ -65,7 +97,7 @@ def $Step_read_throw_ref_handler(config) : instr*
 def $Step_read_throw_ref_handler           hint(builtin)
 
 
-;;;;;;;;;;;;;;;;;;; LABEL_
+;; ==================== LABEL_ ====================
 def $step_ctxt(z; (LABEL_ n `{instr*} val*)) = z; val*
 ;; br
 def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val^n instr'*
@@ -87,7 +119,7 @@ def $step_ctxt(z; (LABEL_ n `{instr'*} TRAP)) = z; TRAP
 ;; ctxt-label
 def $step_ctxt(z; (LABEL_ n `{instr_0*} instr*)) = z'; (LABEL_ n `{instr_0*} instr'*)
   -- Step: z; instr* ~> z'; instr'*
-;;;;;;;;;;;;;;;;;;; FRAME_
+;; ==================== FRAME_ ====================
 def $step_ctxt(z; (FRAME_ n `{f} val^n)) = z; val^n
 ;; return_call_ref
 def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; TRAP
@@ -107,7 +139,7 @@ def $step_ctxt(z; (FRAME_ n `{f} TRAP)) = z; TRAP
 ;; ctxt-frame
 def $step_ctxt(s; f; (FRAME_ n `{f'} instr*)) = s'; f; (FRAME_ n `{f''} instr'*)
   -- Step: s; f'; instr* ~> s'; f''; instr'*
-;;;;;;;;;;;;;;;;;;; HANDLER_
+;; ==================== HANDLER_ ====================
 def $step_ctxt(z; (HANDLER_ n `{catch*} val*)) = z; val*
 ;; br
 def $step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* (BR l)

@@ -1,5 +1,9 @@
-let typ_infers = []
-let typ_checks = []
+let typ_relids = ["Num_ok"; "Vec_ok"; "Val_ok"]
+let typ_infer_relids = ["Num_ok"; "Vec_ok"; "Val_ok"; "Ref_ok"]
+let typ_check_relids = ["Externaddr_ok"]
+
+let sub_relids = []
+let sub_check_relids = sub_relids @ ["Heaptype_sub"; "Reftype_sub"; "Valtype_sub"]
 
 let step_relids = ["Step"; "Step_pure"; "Step_read"]
 

@@ -53,13 +53,13 @@ let il2dl_rule_clause rel_id rule : rule_clause =
     let lhs' = mk_tup [z1; lhs] in
     let rhs' = mk_tup [z2; rhs] in
     (id, binds, lhs', rhs', prems) $ rule.at
-  | TupE [ ctx; obj; typ ] when List.mem rel_id.it Common.typ_infers ->
+  | TupE [ ctx; obj; typ ] when List.mem rel_id.it Common.typ_relids ->
     let lhs' = TupE [ ctx; obj ] $$ exp.at
                % (TupT [ (varE ~note:ctx.note "_", ctx.note)
                        ; (varE ~note:obj.note "_", obj.note)
                        ] $ exp.at) in
     (id, binds, lhs', typ, prems) $ rule.at
-  | _ when List.mem rel_id.it Common.typ_checks ->
+  | TupE [ ctx; typ1; typ2 ] when List.mem rel_id.it Common.sub_relids ->
     (id, binds, exp, boolE true, prems) $ rule.at
   | _ -> error exp.at ("Wrong exp form of reduction rule: [" ^ rel_id.it ^ "]" ^ Il.Print.string_of_exp exp)
 
@@ -73,10 +73,10 @@ let il2dl_rule_def rule_name rel_id typ rules at : rule_def =
       let at1 = over_region [(fst et11).at; (snd et12).at] in
       let at2 = over_region [(fst et21).at; (snd et22).at] in
       t_tup [t_var "state"; t_var "expr"], t_tup [t_var "state"; t_star "val"]
-    | TupT [ ctx; obj; (_, typ) ] when List.mem rel_id.it Common.typ_infers ->
+    | TupT [ ctx; obj; (_, typ) ] when List.mem rel_id.it Common.typ_relids ->
       TupT [ ctx; obj ] $ typ.at, typ
-    | _ when List.mem rel_id.it Common.typ_checks ->
-      typ, BoolT $ no
+    | TupT [ ctx; typ1; typ2 ] when List.mem rel_id.it Common.sub_relids ->
+      TupT [ ctx; typ1; typ2 ] $ at, BoolT $ at
     | _ -> error at ("Invalid rule type: " ^ string_of_typ typ)
     )
   in

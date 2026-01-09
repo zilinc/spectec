@@ -9,7 +9,7 @@ let rec is_anim_target def =
   match def.it with
   | DecD (id, ps, t, _) when id.it = "utf8" -> Some (DecD (id, ps, t, []) $ def.at)
   | RelD (id, mixop, t, rules)
-    when List.mem id.it (["Eval_expr"] @ Common.typ_checks @ Common.typ_infers @ Common.step_relids) ->
+    when List.mem id.it (["Eval_expr"] @ Common.typ_relids @ Common.sub_relids @ Common.step_relids) ->
     Some (RelD (id, mixop, t, rules) $ def.at)
   | RelD _ -> None
   | RecD defs -> Some (RecD (List.filter_map is_anim_target defs) $ def.at)

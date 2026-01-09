@@ -736,13 +736,13 @@ and eval_func name func_def args : value OptMonad.m =
 and call_func name args =
   match name with
   (* Hardcoded functions defined in meta.spectec *)
-  | "Steps"  -> call_func "steps"    args
-  | "Step"   -> call_func "step"     args
+  | "Steps"  -> call_func "steps"     args
+  | "Step"   -> call_func "step"      args
+  | "Ref_ok" -> call_func "ref_infer" args
   (* Hardcoded functions defined in the compiler. *)
   | "Module_ok"     -> module_ok     args |> return
   | "Externaddr_ok" -> externaddr_ok args |> return
-  | "Ref_ok"        -> ref_ok        args |> return
-  | "Val_ok"        -> val_ok        args |> return
+  (* | "Val_ok"        -> val_ok        args |> return *)
   (* Others *)
   | _ ->
     let builtin_name, is_builtin =
@@ -1046,17 +1046,6 @@ and externaddr_ok = function
     | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
     )
   | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
-
-(* $Val_ok : store -> val -> valtype -> bool *)
-and val_ok = function
-  | [ ValA s; ValA val_; ValA valtype ] ->
-    let value   = vl_to_value   val_    in
-    let valtype = vl_to_valtype valtype in
-    BoolV (RI.Match.match_valtype [] (RI.Value.type_of_value value) valtype)
-  | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
-
-(* $Ref_ok : store -> ref -> reftype *)
-and ref_ok args = todo "ref_ok"
 
 
 (*
