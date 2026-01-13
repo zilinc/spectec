@@ -299,17 +299,7 @@ and reduce_exp env e: exp =
     TupE es' $> e |> cnf_if es'
   | CallE (id, args) -> !reduce_fncall_hook env e.at e.note id args
   | IterE (e1, iterexp) ->
-    (* FIXME(zilinc): If we reduce e1 (is it needed?) and it fails to match the
-    arguments because the actual arguments have not been fully normalised
-    (because the inflow substitutions have not been worked out), then the
-    reduce_exp_call will return None, which is treated as an error in the
-    interpreter-supplied function call hook. If we don't treat it as an error
-    in the hook, then something is causing the evaluation to not terminate
-    (which indicates some other bug possibly). Nevertheless, we sort of have to
-    report fail-to-fully-normalise error somewhere in the interpreter, and at
-    function call granularity feels right.
-    *)
-    let e1' = (* reduce_exp env *) e1 in
+    let e1' = reduce_exp env e1 in
     let (iter', xes') as iterexp' = reduce_iterexp env iterexp in
     (* Exclude {i <- i*} if the iterator is ^(i < n) *)
     let xes'' = List.filter (fun (x, _) ->
@@ -518,7 +508,7 @@ and reduce_exp_call env id args at = function
     assert (List.for_all (fun a -> Eq.eq_arg a (reduce_arg env a)) args);
     match match_list match_arg env Subst.empty args args' with
     | exception Irred ->
-      (* FIXME(zilinc): If Irred, which means we don't yet have enough information to uniform them,
+      (* FIXME(zilinc): If Irred, which means we don't yet have enough information to unify them,
          shall we just propagate Irred up? Why do we take it as the match has failed?
        *)
       if not !assume_coherent_matches then None else
