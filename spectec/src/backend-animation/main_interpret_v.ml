@@ -170,6 +170,9 @@ let test_assertion assertion =
   | AssertTrap (action, re) -> (
     try
       let result = run_action action in
+      (* The message text check is useless; it will always fail.
+         We simply repurpose it to print out some informative error messages. / zilinc
+      *)
       Run.assert_message assertion.at "runtime" (string_of_value result) re;
       fail
     with I.Exception.Trap -> success

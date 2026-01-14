@@ -1,9 +1,13 @@
+(* Definitions *)
 let typ_relids = ["Num_ok"; "Vec_ok"; "Val_ok"]
+(* Call sites *)
 let typ_infer_relids = ["Num_ok"; "Vec_ok"; "Val_ok"; "Ref_ok"]
 let typ_check_relids = ["Externaddr_ok"]
 
+(* Definitions *)
 let sub_relids = []
-let sub_check_relids = sub_relids @ ["Heaptype_sub"; "Reftype_sub"; "Valtype_sub"]
+(* Call sites *)
+let sub_check_relids = ["Heaptype_sub"; "Reftype_sub"; "Valtype_sub"]
 
 let step_relids = ["Step"; "Step_pure"; "Step_read"]
 

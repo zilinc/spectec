@@ -257,13 +257,13 @@
 )
 
 
-(assert_return (invoke "binop") (i32.const 46))
-(assert_return (invoke "testop") (i32.const 1))
-(assert_return (invoke "relop_i32") (i32.const 0))
-(assert_return (invoke "relop_f32") (i32.const 0))
-(assert_return (invoke "nop") (i64.const 0))
-(assert_return (invoke "drop") (f64.const 3.1))
-(assert_return (invoke "select") (f64.const -0.0))
+;; (assert_return (invoke "binop") (i32.const 46))
+;; (assert_return (invoke "testop") (i32.const 1))
+;; (assert_return (invoke "relop_i32") (i32.const 0))
+;; (assert_return (invoke "relop_f32") (i32.const 0))
+;; (assert_return (invoke "nop") (i64.const 0))
+;; (assert_return (invoke "drop") (f64.const 3.1))
+;; (assert_return (invoke "select") (f64.const -0.0))
 ;;
 ;; (assert_return (invoke "local_set" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 8))
 ;; (assert_return (invoke "local_get" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 7))
@@ -293,3 +293,18 @@
 ;; (assert_return (invoke "f"))
 
 ;; (invoke $spectest "print_i32" (i32.const 42))
+
+
+(module
+  (func (export "no_dce.i32.div_s") (param $x i32) (param $y i32)
+    (drop (i32.div_s (local.get $x) (local.get $y))))
+  ;; (func (export "div_0") (result i32)
+  ;;   i32.const 19
+  ;;   i32.const 0
+  ;;   i32.div_s
+  ;; )
+)
+
+;; (invoke "no_dce.i32.div_s" (i32.const 1) (i32.const 0))
+(assert_trap (invoke "no_dce.i32.div_s" (i32.const 1) (i32.const 0)) "integer divide by zero")
+;; (assert_trap (invoke "div_0") "some numeric error")

@@ -713,7 +713,12 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
     let old_env = !il_env in
     (* Add bindings to [il_env]. *)
     let _ = Animate.env_of_binds binds il_env in
-    assert (List.length pargs = List.length args);
+    if not (List.length pargs = List.length args) then
+      (print_endline ("In function " ^ fname);
+      print_endline ("  params = " ^ string_of_args pargs);
+      print_endline ("  args   = " ^ Value.string_of_args args |> Lib.String.shorten);
+      assert false)
+    ;
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
