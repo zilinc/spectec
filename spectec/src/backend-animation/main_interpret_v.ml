@@ -167,16 +167,17 @@ let test_assertion assertion =
     let result = run_action action |> as_list_value' |> List.map C.vl_to_value in
     Run.assert_results no_region result expected;
     success
-  | AssertTrap (action, re) -> (
-    try
-      let result = run_action action in
+  | AssertTrap (action, re) ->
+    let result = run_action action |> as_list_value' in
+    (match result with
+    | [ CaseV ([["TRAP"]], []) ] -> success
+    | _ ->
       (* The message text check is useless; it will always fail.
          We simply repurpose it to print out some informative error messages. / zilinc
       *)
-      Run.assert_message assertion.at "runtime" (string_of_value result) re;
+      Run.assert_message assertion.at "runtime" (string_of_values ", " result) re;
       fail
-    with I.Exception.Trap -> success
-  )
+    )
   | AssertUninstantiable (var_opt, re) -> (
     try
       Modules.find (Modules.get_module_name var_opt) |> instantiate |> ignore;

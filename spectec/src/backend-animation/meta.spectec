@@ -54,7 +54,7 @@ def $find_first_instr'(val*, instr instr'*) = (val_1*, instr_1?, instr'_1*)
 
 def $find_first_instr(instr*) : (instr*, instr?, instr*)
 def $find_first_instr(instr*) = $find_first_instr'(eps, instr*)
-
+    -- if instr* =/= eps
 
 def $use_step(instr)      : bool
 def $use_step_pure(instr) : bool
@@ -76,20 +76,22 @@ def $dispatch_step                hint(builtin)
 def $dispatch_step_pure           hint(builtin)
 def $dispatch_step_read           hint(builtin)
 
-def $dispatch_reduce(instr, config) : config?
-def $dispatch_reduce(instr_0, z; instr*) = z; instr_1*
+
+;; The input `config` consists of the whole value stack, plus the first instruction.
+def $dispatch_reduce(state, val*, instr) : config?
+def $dispatch_reduce(z, val*, instr_0) = z; instr_1*
     -- if $use_step_pure(instr_0) = true
-    -- if $dispatch_step_pure(instr_0, instr*) = instr_1*
-def $dispatch_reduce(instr_0, z; instr*) = z; instr_1*
+    -- if $dispatch_step_pure(instr_0, val* instr_0) = instr_1*
+def $dispatch_reduce(z, val*, instr_0) = z; instr_1*
     -- if $use_step_read(instr_0) = true
-    -- if $dispatch_step_read(instr_0, z; instr*) = instr_1*
-def $dispatch_reduce(instr_0, config) = config_1
+    -- if $dispatch_step_read(instr_0, z; val* instr_0) = instr_1*
+def $dispatch_reduce(z, val*, instr_0) = config_1
     -- if $use_step(instr_0) = true
-    -- if $dispatch_step(instr_0, config) = config_1
-def $dispatch_reduce(instr_0, config) = config_1
+    -- if $dispatch_step(instr_0, z; val* instr_0) = config_1
+def $dispatch_reduce(z, val*, instr_0) = z'; val* instr_1*
     -- if $use_step_ctxt(instr_0) = true
-    -- if $step_ctxt(config) = config_1
-def $dispatch_reduce(instr_0, config) = eps
+    -- if $step_ctxt(z; instr_0) = z'; instr_1*
+def $dispatch_reduce(z, val*, instr_0) = eps
     -- otherwise
 
 
@@ -98,62 +100,66 @@ def $Step_read_throw_ref_handler           hint(builtin)
 
 
 ;; ==================== LABEL_ ====================
-def $step_ctxt(z; (LABEL_ n `{instr*} val*)) = z; val*
-;; br
+;; ctxt-label
+def $step_ctxt(z; (LABEL_ n `{instr_0*} instr*)) = z'; (LABEL_ n `{instr_0*} instr'*)
+    -- Step: z; instr* ~> z'; instr'*
+;; br-label-zero
 def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val^n instr'*
     -- if $find_first_instr(instr''*) = (val'* val^n, BR l, instr*)
     -- if l = 0
+;; br-label-succ
 def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* (BR $(l - 1))
     -- if $find_first_instr(instr''*) = (val*, BR l, instr*)
     -- if l > 0
-;; return_call_ref
+;; return_call_ref-label
 def $step_ctxt(z; (LABEL_ k `{instr'*} instr''*)) = z; val* (RETURN_CALL_REF yy)
     -- if $find_first_instr(instr''*) = (val*, RETURN_CALL_REF yy, instr*)
-;; return
+;; return-label
 def $step_ctxt(z; (LABEL_ n `{instr'*} instr''*)) = z; val* RETURN
     -- if $find_first_instr(instr''*) = (val*, RETURN, instr*)
-;; throw_ref
+;; throw_ref-label
 def $step_ctxt(z; (LABEL_ n `{instr'*} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
-;; trap
+;; trap-label
 def $step_ctxt(z; (LABEL_ n `{instr'*} TRAP)) = z; TRAP
-;; ctxt-label
-def $step_ctxt(z; (LABEL_ n `{instr_0*} instr*)) = z'; (LABEL_ n `{instr_0*} instr'*)
-  -- Step: z; instr* ~> z'; instr'*
+;; label-vals
+def $step_ctxt(z; (LABEL_ n `{instr*} val*)) = z; val*
 ;; ==================== FRAME_ ====================
-def $step_ctxt(z; (FRAME_ n `{f} val^n)) = z; val^n
-;; return_call_ref
+;; ctxt-frame
+def $step_ctxt(s; f; (FRAME_ n `{f'} instr*)) = s'; f; (FRAME_ n `{f''} instr'*)
+    -- Step: s; f'; instr* ~> s'; f''; instr'*
+;; return_call_ref-frame-null
 def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; TRAP
     -- if $find_first_instr(instr''*) = (val* (REF.NULL ht), RETURN_CALL_REF yy, instr*)
+;; return_call_ref-frame-addr
 def $step_ctxt(z; (FRAME_ k `{f} instr''*)) = z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)
     -- if $find_first_instr(instr''*) = (val''* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, instr*)
     -- if val''* = val'* val^n
     ----
     -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
-;; return
+;; return-frame
 def $step_ctxt(z; (FRAME_ n `{f} instr''*)) = z; val^n
     -- if $find_first_instr(instr''*) = (val'* val^n, RETURN, instr*)
-;; throw_ref
+;; throw_ref-frame
 def $step_ctxt(z; (FRAME_ n `{f} (REF.EXN_ADDR a) THROW_REF)) = z; (REF.EXN_ADDR a) THROW_REF
-;; trap
+;; trap-frame
 def $step_ctxt(z; (FRAME_ n `{f} TRAP)) = z; TRAP
-;; ctxt-frame
-def $step_ctxt(s; f; (FRAME_ n `{f'} instr*)) = s'; f; (FRAME_ n `{f''} instr'*)
-  -- Step: s; f'; instr* ~> s'; f''; instr'*
+;; frame-vals
+def $step_ctxt(z; (FRAME_ n `{f} val^n)) = z; val^n
 ;; ==================== HANDLER_ ====================
-def $step_ctxt(z; (HANDLER_ n `{catch*} val*)) = z; val*
-;; br
+;; br-handler
 def $step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* (BR l)
     -- if $find_first_instr(instr''*) = (val*, BR l, instr*)
-;; return_call_ref
+;; return_call_ref-handler
 def $step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* (RETURN_CALL_REF yy)
     -- if $find_first_instr(instr''*) = (val*, RETURN_CALL_REF yy, instr*)
-;; return
+;; return-handler
 def $step_ctxt(z; (HANDLER_ n `{catch*} instr''*)) = z; val* RETURN
     -- if $find_first_instr(instr''*) = (val*, RETURN, instr*)
-;; throw_ref
+;; throw_ref-handler
 def $step_ctxt(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = z; instr_1*
     -- if $Step_read_throw_ref_handler(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = instr_1*
-
+;; handler_vals
+def $step_ctxt(z; (HANDLER_ n `{catch*} val*)) = z; val*
 
 
 def $reduce(config) : config?
@@ -165,14 +171,10 @@ def $reduce(s; f; instr*) = s; f; (REF.EXN_ADDR a) THROW_REF
     -- if val* =/= eps \/ instr_1'* =/= eps
 def $reduce(s; f; instr*) = s'; f'; instr_2* instr_1'*
     -- if $find_first_instr(instr*) = (val*, instr_1, instr_1'*)
-    -- if $dispatch_reduce(instr_1, s; f; val* instr_1) = s'; f'; instr_2*
+    -- if $dispatch_reduce(s; f, val*, instr_1) = s'; f'; instr_2*
 def $reduce(s; f; instr*) = eps
     -- otherwise
-;; def $reduce(s; f; instr*) = eps
-;;     -- if $find_first_instr(instr*) = (val*, eps, eps)
-;; def $reduce(s; f; instr*) = eps
-;;     -- if $find_first_instr(instr*) = (val*, instr_1, instr_1'*)
-;;     -- if $dispatch_reduce(instr_1, s; f; val* instr_1) = eps
+
 
 def $step(config) : config
 def $step(config) = config'  -- if $reduce(config) = config'

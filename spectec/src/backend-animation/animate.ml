@@ -1479,7 +1479,7 @@ let animate_rule_def envr (rdef: rule_def) : func_def =
 
 let animate_func_def' envr (id, ps, typ, clauses, opartial) =
   match id.it with
-  | "step_ctxt" -> (id, ps, typ, List.map (transform_step_ctxt_clause id envr) clauses, opartial)
+  (* | "step_ctxt" -> (id, ps, typ, List.map (transform_step_ctxt_clause id envr) clauses, opartial) *)
   | _           -> (id, ps, typ, List.map (animate_clause             id envr) clauses, opartial)
 let animate_func_def envr (hdef: func_def) : func_def = animate_func_def' envr hdef.it $ hdef.at
 
