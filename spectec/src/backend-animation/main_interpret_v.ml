@@ -81,7 +81,8 @@ let print_runner_result name result =
 let get_export name moduleinst_name =
   Register.find moduleinst_name
   |> as_str_field "EXPORTS"
-  |> find_list_elem (fun export -> as_text_value (as_str_field "NAME" export) = name)
+  |> find_list_elem
+       (fun export -> as_str_field "NAME" export |> as_singleton_case |> as_text_value = name)
 
 let get_externaddr import =
   let R.Ast.Import (module_name, item_name, _) = import.it in
@@ -114,34 +115,34 @@ let get_global_value module_name globalname : value (* val *) =
 
 (** Main functions **)
 
-and instantiate module_ : value =
-  let t1 = Sys.time () in
+and instantiate module_ : value * value =
+  (* let t1 = Sys.time () in *)
   log "[Instantiating module...]\n";
-  match C.vl_of_module module_, List.map get_externaddr module_.it.imports with
-  | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
-  | il_module, externaddrs ->
-    let store = Store.get () in
-    let CaseV (_, [state; _]) = Interpreter_v.instantiate [ valA store ; valA il_module; listV_of_list externaddrs |> valA ] in
-    let CaseV (_, [store'; frame']) = state in
-    let StrV [_; (fname, moduleinst)] = frame' in
-    assert ("MODULE" = fname);
-    Store.put store';
-    let t2 = Sys.time () in
-    print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
-    !moduleinst
+  let il_module = C.vl_of_module module_ in
+  let externaddrs = List.map get_externaddr module_.it.imports in
+  let store = Store.get () in
+  let CaseV (_, [state'; instrs']) = Interpreter_v.instantiate [ valA store ; valA il_module; listV_of_list externaddrs |> valA ] in
+  let CaseV (_, [store'; frame']) = state' in
+  let StrV [_; (fname, moduleinst)] = frame' in
+  assert ("MODULE" = fname);
+  (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
+  Store.put store';
+  (* let t2 = Sys.time () in
+  print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s"); *)
+  !moduleinst, instrs'
 
 
 and invoke moduleinst_name funcname args : value =
-  let t1 = Sys.time () in
-  log "[Invoking %s %s in module instance %s...]\n"
-    funcname (R.Value.string_of_values args |> Lib.String.shorten) (print_name moduleinst_name);
+  (* let t1 = Sys.time () in *)
+  log "[Invoking %s in module instance %s...]\n" funcname (print_name moduleinst_name);
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
   let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; vl_of_list C.vl_of_value args |> valA ] in
   let CaseV (_, [store'; _]) = state' in
+  (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
-  let t2 = Sys.time () in
-  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s");
+  (* let t2 = Sys.time () in
+  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s"); *)
   instrs'
 
 
@@ -160,6 +161,11 @@ let run_action action : value =
   | Get (var_opt, globalname) ->
     [ get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname) ] |> listV_of_list
 
+let print_fail at failtype expected actual =
+  print_endline (R.Source.string_of_region at ^ ": Expected " ^ failtype ^ " failure: " ^ expected);
+  print_endline ("Got " ^ actual ^ ".");
+  fail
+
 let test_assertion assertion =
   let open R in
   match assertion.it with
@@ -171,38 +177,27 @@ let test_assertion assertion =
     let result = run_action action |> as_list_value' in
     (match result with
     | [ CaseV ([["TRAP"]], []) ] -> success
-    | _ ->
-      (* The message text check is useless; it will always fail.
-         We simply repurpose it to print out some informative error messages. / zilinc
-      *)
-      Run.assert_message assertion.at "runtime" (string_of_values ", " result) re;
-      fail
+    | _ -> print_fail assertion.at "runtime" re (string_of_values ", " result)
     )
-  | AssertUninstantiable (var_opt, re) -> (
-    try
-      Modules.find (Modules.get_module_name var_opt) |> instantiate |> ignore;
-      Run.assert_message assertion.at "instantiation" "module instance" re;
-      fail
-    with I.Exception.Trap -> success
-  )
   | AssertException action ->
-    (match run_action action with
-    | exception I.Exception.Throw -> success
-    | _ -> Assert.error assertion.at "expected exception"
+    let result = run_action action |> as_list_value' in
+    (match result with
+    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | _ -> print_fail assertion.at "expected exception" "" (string_of_values ", " result)
     )
-  | AssertInvalid (def, re) when !I.Construct.version = 3 ->
+  | AssertUninstantiable (var_opt, re) ->
+    let (moduleinst, instrs) = Modules.find (Modules.get_module_name var_opt) |> instantiate in
+    let result = instrs |> as_list_value' in
+    (match result with
+    | [ CaseV ([["TRAP"]], []) ]
+    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | _ -> print_fail assertion.at "instantiation" re (string_of_values ", " result)
+    )
+  | AssertInvalid (def, re)
+  | AssertInvalidCustom (def, re) ->
     (match def |> module_of_def |> instantiate |> ignore with
     | exception I.Exception.Invalid _ -> success
-    | _ ->
-      Run.assert_message assertion.at "validation" "module instance" re;
-      fail
-    )
-  | AssertInvalidCustom (def, re) when !I.Construct.version = 3 ->
-    (match def |> module_of_def |> instantiate |> ignore with
-    | exception I.Exception.Invalid _ -> success
-    | _ ->
-      Run.assert_message assertion.at "validation" "module instance" re;
-      fail
+    | _ -> print_fail assertion.at "validation" re "module instance"
     )
   (* ignore other kinds of assertions *)
   | _ -> pass
@@ -219,7 +214,7 @@ let run_command' command =
   | Instance (var1_opt, var2_opt) ->
     log "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
     Modules.find (Modules.get_module_name var2_opt)
-    |> instantiate
+    |> instantiate |> fst
     |> Register.add_with_var var1_opt;
     success
   | Register (modulename, var_opt) ->
@@ -238,23 +233,10 @@ let run_command' command =
 let run_command command =
   let start_time = Sys.time () in
   let result =
-    let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) (Lib.String.shorten msg) in
+    let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) msg in
     try
       run_command' command
     with
-    | I.Exception.Error (at, msg, step) ->
-      let msg' = msg ^ " (interpreting " ^ step ^ " at " ^ Source.string_of_region at ^ ")" in
-      command.at |> string_of_region |> print_endline;
-      (* error_interpret at msg' *)
-      print_fail command.at msg';
-      fail
-    | I.Exception.Invalid (e, backtrace) ->
-      print_fail command.at (Printexc.to_string e);
-      Printexc.print_raw_backtrace stdout backtrace;
-      fail
-    | Register.ModuleNotFound x ->
-      print_fail command.at ("Target module(" ^ x ^ ") does not exist or is not instantiated successfully");
-      fail
     | e ->
       print_fail command.at (Printexc.to_string e);
       Printexc.print_backtrace stdout;
@@ -288,7 +270,7 @@ let run_wasm' args module_ =
 
   (* Instantiate *)
   module_
-  |> instantiate
+  |> instantiate |> fst
   |> Register.add_with_var None;
 
   (* TODO: Only Int32 arguments/results are acceptable *)

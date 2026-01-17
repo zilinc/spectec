@@ -262,9 +262,9 @@ and eval_exp ctx exp : value OptMonad.m =
       else
         error_eval "Indexing expression" exp
           (Some ("Index out-of-range:\n" ^
-                 "seq   = " ^ string_of_value v1 ^ "\n" ^
-                 "|seq| = " ^ string_of_int (Array.length !vs) ^ "\n" ^
-                 "idx   = " ^ string_of_int (Z.to_int i)
+                 string_of_exp e1 ^ " = " ^ string_of_value v1 ^ "\n" ^
+                 "... whose length is " ^ string_of_int (Array.length !vs) ^ "\n" ^
+                 "... idx is " ^ string_of_int (Z.to_int i)
                 )
           )
     | _ -> error_eval "Indexing expression" exp
@@ -400,7 +400,7 @@ and eval_exp ctx exp : value OptMonad.m =
         error_eval "Constructor unwrapping expression" exp
                    (Some ("mixop = " ^ string_of_mixop mixop ^ "; mixop' = " ^ Value.string_of_mixop mixop'))
     | _ -> error_eval "Constructor unwrapping expression" exp
-                      (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; mixop = " ^ string_of_mixop mixop))
+                      (Some (string_of_exp e1 ^ " ⤳ " ^ string_of_value v1 ^ "; mixop = " ^ string_of_mixop mixop))
     )
   | OptE oe1 -> let* ov1 = opt_mapM (eval_exp ctx) oe1 in OptV ov1 |> return
   | TheE e1 ->
@@ -738,10 +738,19 @@ and call_func name args =
   (* Hardcoded functions defined in meta.spectec *)
   | "Steps"  -> call_func "steps"     args
   | "Step"   -> call_func "step"      args
+  (*
+    print_endline ("* Calling step:");
+    let* r = call_func "step"      args in
+    let CaseV(_, [_; instrs]) = r in
+    let instrs' = instrs |> as_list_value' in
+    print_endline ("* Result is " ^ string_of_values ", " instrs');
+    return r
+    *)
   | "Ref_ok" -> call_func "ref_infer" args
   (* Hardcoded functions defined in the compiler. *)
-  | "Module_ok"     -> module_ok     args |> return
-  | "Externaddr_ok" -> externaddr_ok args |> return
+  | "Module_ok"     -> module_ok     args
+  | "Externaddr_ok" -> externaddr_ok args
+  | "Reftype_sub"   -> reftype_sub   args
   (* | "Val_ok"        -> val_ok        args |> return *)
   (* Others *)
   | _ ->
@@ -1015,14 +1024,17 @@ and builtins_mem fname =
 
 
 (* $Module_ok : module -> moduletype *)
-and module_ok args : value =
+and module_ok args : value OptMonad.m =
   match args with
   | [ ValA module_ ] ->
     let module_' = vl_to_module module_ in
-    let ModuleT (its, ets) = RI.Valid.check_module module_' in
-    let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
-    let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
-    caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ]
+    (match RI.Valid.check_module module_' with
+    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+    | ModuleT (its, ets) ->
+      let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
+      let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
+      caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ] |> return
+    )
   | _ -> error no ("Wrong number/type of arguments to $Module_ok.")
 
 (* $Externaddr_ok : store -> externaddr -> externtype -> bool *)
@@ -1042,11 +1054,27 @@ and externaddr_ok = function
         |> vl_to_externtype
       in
       let externtype = vl_to_externtype etype in
-      boolV (RI.Match.match_externtype [] externaddr_type externtype)
+      (match RI.Match.match_externtype [] externaddr_type externtype with
+      | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+      | b -> boolV b |> return
+      )
     | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
     )
   | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
 
+(* Reftype_sub : context -> reftype -> reftype -> bool *)
+and reftype_sub = function
+  | [ ValA ctx; ValA typ1; ValA typ2 ] ->
+    (* TODO(zilinc): the context is not converted, but we know that all calls to
+       this rule in the spec uses the empty context.
+     *)
+    let reftyp1 = vl_to_reftype typ1 in
+    let reftyp2 = vl_to_reftype typ2 in
+    (match RI.Match.match_reftype [] reftyp1 reftyp2 with
+    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+    | b -> boolV b |> return
+    )
+  | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
 
 (*
 (* Rule `Expand` has been compiled to `$expanddt` in animation.ml *)
@@ -1065,7 +1093,9 @@ let expand = function
 (* Wasm interpreter entry *)
 
 let instantiate (args: Value.arg list) : value =
-  match call_func "instantiate" args |> run_opt with
+  match (let* r = call_func "instantiate" args in
+         call_func "steps" [ValA r]) |> run_opt
+  with
   | Some v -> v
   | None -> raise (Failure "`instantiate` failed to run.")
 
@@ -1073,5 +1103,5 @@ let invoke (args: Value.arg list) : value =
   match (let* r = call_func "invoke" args in
          call_func "steps" [ValA r]) |> run_opt
   with
-  | Some r' -> r'
+  | Some v -> v
   | None -> raise (Failure "`invoke` failed to run.")

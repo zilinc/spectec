@@ -35,7 +35,7 @@ let ibytes : numerics =
             Z.(bits land of_int 0xff) :: decompose Z.(n - of_int 8) Z.(shift_right bits 8)
           in
         assert Z.(n >= Z.zero && rem n (of_int 8) = zero);
-        decompose n i' |> List.map natV |> listV_of_list
+        decompose n i' |> List.map vl_of_iN |> listV_of_list
       | vs -> error_values "ibytes" vs
       );
   }
@@ -52,8 +52,8 @@ let inv_ibytes : numerics =
             (* packtype *)
             (n = Z.of_int 32 && Array.length !bs <= 2)
           );
-          natV (Array.fold_right (fun b acc ->
-            match b with
+          vl_of_uN (Array.fold_right (fun b acc ->
+            match as_singleton_case b with
             | NumV (`Nat b) when Z.zero <= b && b < Z.of_int 256 -> Z.add b (Z.shift_left acc 8)
             | _ -> error_value "inv_ibytes (byte)" b
           ) !bs Z.zero)
@@ -69,8 +69,8 @@ let nbytes : numerics =
       (function
       | [ CaseV ([["I32"]], []); n ] -> ibytes.f [ NumV thirtytwo; n ]
       | [ CaseV ([["I64"]], []); n ] -> ibytes.f [ NumV sixtyfour; n ]
-      | [ CaseV ([["F32"]], []); f ] -> ibytes.f [ NumV thirtytwo; vl_to_float32 f |> RI.F32.to_bits |> vl_of_nat32 ]
-      | [ CaseV ([["F64"]], []); f ] -> ibytes.f [ NumV sixtyfour; vl_to_float64 f |> RI.F64.to_bits |> vl_of_nat64 ]
+      | [ CaseV ([["F32"]], []); f ] -> ibytes.f [ NumV thirtytwo; vl_to_float32 f |> RI.F32.to_bits |> vl_of_uN_32 ]
+      | [ CaseV ([["F64"]], []); f ] -> ibytes.f [ NumV sixtyfour; vl_to_float64 f |> RI.F64.to_bits |> vl_of_uN_64 ]
       | vs -> error_values "nbytes" vs
       );
   }
@@ -81,8 +81,8 @@ let inv_nbytes : numerics =
       (function
       | [ CaseV ([["I32"]], []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ]
       | [ CaseV ([["I64"]], []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ]
-      | [ CaseV ([["F32"]], []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ] |> vl_to_nat32 |> RI.F32.of_bits |> vl_of_float32
-      | [ CaseV ([["F64"]], []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ] |> vl_to_nat64 |> RI.F64.of_bits |> vl_of_float64
+      | [ CaseV ([["F32"]], []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ] |> vl_to_uN_32 |> RI.F32.of_bits |> vl_of_float32
+      | [ CaseV ([["F64"]], []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ] |> vl_to_uN_64 |> RI.F64.of_bits |> vl_of_float64
       | vs -> error_values "inv_nbytes" vs
       );
   }
@@ -94,7 +94,7 @@ let vbytes : numerics =
       (function
       | [ CaseV ([["V128"]], []); v ] ->
         let s = v |> vl_to_vec128 |> RI.V128.to_bits in
-        Array.init 16 (fun i -> s.[i] |> Char.code |> vl_of_nat) |> listV
+        Array.init 16 (fun i -> s.[i] |> Char.code |> vl_of_nat |> caseV1) |> listV
       | vs -> error_values "vbytes" vs
       );
   }
@@ -106,7 +106,7 @@ let inv_vbytes : numerics =
       | [ CaseV ([["V128"]], []); ListV l ] ->
         let v1 = inv_ibytes.f [ NumV sixtyfour; Array.sub !l 0 8 |> listV ] in
         let v2 = inv_ibytes.f [ NumV sixtyfour; Array.sub !l 8 8 |> listV ] in
-        (match v1, v2 with
+        (match as_singleton_case v1, as_singleton_case v2 with
         | NumV (`Nat n1), NumV (`Nat n2) -> vl_of_vec128 (RI.V128.I64x2.of_lanes [ z_to_int64 n1; z_to_int64 n2 ])
         | _ -> error_values "inv_vbytes" [ v1; v2 ]
         )
@@ -141,11 +141,10 @@ let wrap : numerics =
     name = "wrap";
     f =
       (function
-        | [ NumV _m; NumV (`Nat n); NumV (`Nat i) ] -> natV (Z.logand i (maskN n))
+        | [ NumV _m; NumV (`Nat n); CaseV ([[];[]], [NumV (`Nat i)]) ] -> vl_of_iN (Z.logand i (maskN n))
         | vs -> error_values "wrap" vs
       );
   }
-
 
 let inv_ibits : numerics =
   {
@@ -155,10 +154,10 @@ let inv_ibits : numerics =
       | [ NumV (`Nat n); ListV vs ] as vs' ->
         if Z.of_int (Array.length !vs) <> n then error_values "inv_ibits" vs';
         let na = Array.map (function
-                           | NumV (`Nat e) when e = Z.zero || e = Z.one -> e
+                           | CaseV ([[];[]], [NumV (`Nat e)]) when e = Z.zero || e = Z.one -> e
                            | v -> error_value "bit in inv_ibits" v
                            ) !vs in
-        natV (Array.fold_left (fun acc e -> Z.logor e (Z.shift_left acc 1)) Z.zero na)
+        vl_of_iN (Array.fold_left (fun acc e -> Z.logor e (Z.shift_left acc 1)) Z.zero na)
       | vs -> error_values "inv_ibits" vs
       );
   }
@@ -227,9 +226,9 @@ let narrow : numerics =
     name = "narrow";
     f =
       (function
-      | [ NumV _ as m; NumV _ as n; CaseV ([["S"]], []) as sx; NumV _ as i ] ->
+      | [ NumV _ as m; NumV _ as n; CaseV ([["S"]], []) as sx; CaseV ([[];[]], [(NumV _) as i]) ] ->
           sat_s.f [ n; signed.f [ m; i ]]
-      | [ NumV _ as m; NumV _ as n; CaseV ([["U"]], []) as sx; NumV _ as i ] ->
+      | [ NumV _ as m; NumV _ as n; CaseV ([["U"]], []) as sx; CaseV ([[];[]], [(NumV _) as i]) ] ->
           sat_u.f [ n; signed.f [ m; i ]]
       | vs -> error_values "narrow" vs);
   }
@@ -274,6 +273,39 @@ let inv_lanes : numerics =
         | vs -> error_values "inv_lanes" vs
       );
   }
+
+let extend : numerics =
+  {
+    name = "extend";
+    f =
+      (function
+      | [ NumV (`Nat z); _; CaseV ([["U"]], []); v ] when z = Z.of_int 128 ->
+        let NumV (`Nat v') = as_singleton_case v in
+        RI.V128.I64x2.of_lanes [ z_to_int64 v'; 0L ] |> vl_of_vec128 (* HARDCODE *)
+      | [ _; _; CaseV ([["U"]], []); v ] -> v
+      | [ NumV _ as m; NumV _ as n; CaseV ([["S"]], []); CaseV ([[];[]], [(NumV _) as i]) ] ->
+        inv_signed.f [ n; signed.f [ m; i ] ] |> caseV1
+      | vs -> error_values "extend" vs
+      );
+  }
+
+let reinterpret : numerics =
+  {
+    name = "reinterpret";
+    f =
+      (function
+      | [ CaseV ([["I32"]], []); CaseV ([["F32"]], []); CaseV ([[];[]], [(NumV _)]) as i ] ->
+        i |> vl_to_uN_32 |> RI.Convert.F32_.reinterpret_i32 |> vl_of_float32
+      | [ CaseV ([["I64"]], []); CaseV ([["F64"]], []); CaseV ([[];[]], [(NumV _)]) as i ] ->
+        i |> vl_to_uN_64 |> RI.Convert.F64_.reinterpret_i64 |> vl_of_float64
+      | [ CaseV ([["F32"]], []); CaseV ([["I32"]], []); CaseV _ as i ] ->
+        i |> vl_to_float32 |> RI.Convert.I32_.reinterpret_f32 |> vl_of_uN_32
+      | [ CaseV ([["F64"]], []); CaseV ([["I64"]], []); CaseV _ as i ] ->
+        i |> vl_to_float64 |> RI.Convert.I64_.reinterpret_f64 |> vl_of_uN_64
+      | vs -> error_values "reinterpret" vs
+      );
+  }
+
 
 (* FIXME(zilinc): How does it handle poly-functions and their type arguments?
 let rec inv_concat_helper = function
@@ -546,15 +578,15 @@ let ilt : numerics =
     name = "ilt";
     f =
       (function
-      | [ NumV (`Nat _) as z; sx; m; n] ->
-        let NumV (`Nat m') = as_singleton_case m in
-        let NumV (`Nat n') = as_singleton_case n in
+      | [ NumV (`Nat _) as z; sx; CaseV ([[];[]], [m]); CaseV ([[];[]], [n]) ] ->
+        let NumV (`Nat m') = m in
+        let NumV (`Nat n') = n in
         (match match_caseV "sx" sx with
-        | [["U"]], [] -> m' < n' |> int_of_bool |> Z.of_int |> vl_of_iN
+        | [["U"]], [] -> m' < n' |> int_of_bool |> Z.of_int |> vl_of_uN
         | [["S"]], [] ->
           let m'' = signed.f [ z; m ] |> as_nat_value in
           let n'' = signed.f [ z; n ] |> as_nat_value in
-          m'' < n'' |> int_of_bool |> Z.of_int |> vl_of_iN
+          m'' < n'' |> int_of_bool |> Z.of_int |> vl_of_uN
         | _ -> error_value "sx" sx
         )
       | vs -> error_values "ilt" vs
@@ -566,15 +598,15 @@ let igt : numerics =
     name = "igt";
     f =
       (function
-      | [ NumV (`Nat _) as z; sx; m; n] ->
-        let NumV (`Nat m') = as_singleton_case m in
-        let NumV (`Nat n') = as_singleton_case n in
+      | [ NumV (`Nat _) as z; sx; CaseV ([[];[]], [m]); CaseV ([[];[]], [n]) ] ->
+        let NumV (`Nat m') = m in
+        let NumV (`Nat n') = n in
         (match match_caseV "sx" sx with
-        | [["U"]], [] -> m' > n' |> int_of_bool |> Z.of_int |> vl_of_iN
+        | [["U"]], [] -> m' > n' |> int_of_bool |> Z.of_int |> vl_of_uN
         | [["S"]], [] ->
           let m'' = signed.f [ z; m ] |> as_nat_value in
           let n'' = signed.f [ z; n ] |> as_nat_value in
-          m'' > n'' |> int_of_bool |> Z.of_int |> vl_of_iN
+          m'' > n'' |> int_of_bool |> Z.of_int |> vl_of_uN
         | _ -> error_value "sx" sx
         )
       | vs -> error_values "igt" vs
@@ -1034,6 +1066,8 @@ let numerics_list : numerics list = [
   truncz;
   sat_u;
   sat_s;
+  extend;
+  reinterpret;
   inot;
   irev;
   iand;
@@ -1081,14 +1115,12 @@ let numerics_list : numerics list = [
   frelaxed_madd;
   frelaxed_nmadd;
   (*
-  extend;
   trunc;
   trunc_sat;
   relaxed_trunc;
   promote;
   demote;
   convert;
-  reinterpret;
   *)
 ]
 

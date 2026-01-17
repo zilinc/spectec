@@ -186,6 +186,7 @@ let boolV b = BoolV b
 let textV s = TextV s
 let optV ov = OptV ov
 let caseV mixop vs = CaseV (mixop, vs)
+let caseV1 v = caseV [[];[]] [v]
 let tupV vs = TupV vs
 let strV fvs = StrV fvs
 

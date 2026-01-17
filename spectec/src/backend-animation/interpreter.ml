@@ -1252,9 +1252,7 @@ and il_call_func env name args : exp =
       let args' = List.map (Il.Eval.reduce_arg env) args in
       assert (id.it = name);
       (match Il.Eval.reduce_exp_call env id args' fdef.at clauses with
-      | None -> (* NOTE: Either one should be fine. / zilinc *)
-                CallE (id, args') $$ no % t
-                (* error no (name ^ " failed to reduce: args' = " ^ string_of_args args') *)
+      | None -> CallE (id, args') $$ no % t
       | Some e -> e
       )
     (* Builtins and numerics *)

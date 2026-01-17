@@ -28,8 +28,8 @@ let version = ref 3
 let vl_of_z_nat z : value = natV z
 let vl_of_z_int z : value = intV z
 
-let vl_of_uN z : value = caseV [[];[]] [natV z]
-let vl_of_iN z : value = caseV [[];[]] [natV z]
+let vl_of_uN z : value = caseV1 (natV z)
+let vl_of_iN z : value = caseV1 (natV z)
 
 
 let vl_of_fmagN layout i : value =
@@ -56,22 +56,22 @@ let vl_of_nat16 i16 = Z.of_int (RI.I16.to_int_u i16) |> vl_of_z_nat
 let vl_of_nat32 i32 = Z.of_int32_unsigned i32 |> vl_of_z_nat
 let vl_of_nat64 i64 = Z.of_int64_unsigned i64 |> vl_of_z_nat
 
-let vl_of_name name = textV (Utf8.encode name)
-let vl_of_byte byte = Char.code byte |> vl_of_nat
+let vl_of_name name = textV (Utf8.encode name) |> caseV1
+let vl_of_byte byte = Char.code byte |> vl_of_nat |> caseV1
 let vl_of_bytes bytes = String.to_seq bytes |> vl_of_seq vl_of_byte
 let vl_of_float32 f32 = RI.F32.to_bits f32 |> Z.of_int32_unsigned |> vl_of_floatN BI.Construct.layout32
 let vl_of_float64 f64 = RI.F64.to_bits f64 |> Z.of_int64_unsigned |> vl_of_floatN BI.Construct.layout64
-let vl_of_vec128 vec = BI.Construct.vec128_to_z vec |> vl_of_z_nat
+let vl_of_vec128 vec = BI.Construct.vec128_to_z vec |> vl_of_z_nat |> caseV1
 
 
-let vl_of_uN_32 (n: RI.I32.t) = caseV [[];[]] [vl_of_nat32 n]
-let vl_of_uN_64 (n: RI.I64.t) = caseV [[];[]] [vl_of_nat64 n]
+let vl_of_uN_32 (n: RI.I32.t) = vl_of_nat32 n |> caseV1
+let vl_of_uN_64 (n: RI.I64.t) = vl_of_nat64 n |> caseV1
 let vl_of_idx (idx: RI.Ast.idx) = vl_of_uN_32 idx.it
 let vl_of_memidx idx = vl_of_idx idx
 
 
 (* syntax list(syntax X) = X*  -- if ... *)
-let vl_of_list' ls = caseV [[];[]] [listV_of_list ls]
+let vl_of_list' ls = listV_of_list ls |> caseV1
 
 
 let rec vl_of_null = function
@@ -170,9 +170,7 @@ let vl_of_memorytype = function
 
 (* Construct value *)
 
-let vl_of_num value =
-  let const_info = {def = "instr"; case = "CONST"} in
-  match value with
+let vl_of_num value = match value with
   | RI.Value.I32 i32 -> caseV [["CONST"];[];[]] [nullary "I32"; vl_of_uN_32 i32]
   | RI.Value.I64 i64 -> caseV [["CONST"];[];[]] [nullary "I64"; vl_of_uN_64 i64]
   | RI.Value.F32 f32 -> caseV [["CONST"];[];[]] [nullary "F32"; vl_of_float32 f32]
@@ -647,10 +645,10 @@ let al_of_vreplaceop : vreplaceop -> value list = function
 
 
 let vl_of_packsize = function
-  | RI.Pack.Pack8  -> vl_of_nat 8
-  | RI.Pack.Pack16 -> vl_of_nat 16
-  | RI.Pack.Pack32 -> vl_of_nat 32
-  | RI.Pack.Pack64 -> vl_of_nat 64
+  | RI.Pack.Pack8  -> vl_of_nat 8  |> caseV1
+  | RI.Pack.Pack16 -> vl_of_nat 16 |> caseV1
+  | RI.Pack.Pack32 -> vl_of_nat 32 |> caseV1
+  | RI.Pack.Pack64 -> vl_of_nat 64 |> caseV1
 
 let vl_of_packshape = function
   | RI.Pack.Pack8x8  -> [vl_of_nat 8 ; vl_of_nat 8]
@@ -667,7 +665,7 @@ let vl_of_packsize_sx (ps, sx) = caseV [[];["_"];[]] [vl_of_packsize ps; vl_of_s
 
 let vl_of_loadop = vl_of_opt vl_of_packsize_sx |> vl_of_memop
 
-let vl_of_storeop = vl_of_opt vl_of_packsize |> vl_of_memop
+let vl_of_storeop = vl_of_opt (fun sz -> vl_of_packsize sz |> caseV1) |> vl_of_memop
 
 (*
 let al_of_vloadop idx vloadop =
@@ -1032,12 +1030,12 @@ let vl_to_uN_32 exp : RI.I32.t = vl_to_nat32 (as_singleton_case exp)
 let vl_to_uN_64 exp : RI.I64.t = vl_to_nat64 (as_singleton_case exp)
 
 let vl_to_idx v : RI.Ast.idx = vl_to_phrase vl_to_uN_32 v
-let vl_to_byte v : Char.t = as_nat_value v |> Z.to_int |> Char.chr
+let vl_to_byte v : Char.t = as_nat_value (as_singleton_case v) |> Z.to_int |> Char.chr
 let vl_to_bytes v : string = vl_to_seq vl_to_byte v |> String.of_seq
 let vl_to_string = function
   | TextV str -> str
   | v -> error_value "text" v
-let vl_to_name name = name |> vl_to_string |> Utf8.decode
+let vl_to_name name = name |> as_singleton_case |> vl_to_string |> Utf8.decode
 let vl_to_bool = function
   | BoolV b -> b
   | v -> error_value "bool" v
@@ -1616,7 +1614,7 @@ let al_to_vreplaceop : value list -> vreplaceop = function
   | vs -> error_values "vreplaceop" vs
 *)
 
-let vl_to_packsize : value -> RI.Pack.packsize = function
+let vl_to_packsize : value -> RI.Pack.packsize = fun v -> as_singleton_case v |> function
   | NumV z when z = eight     -> RI.Pack.Pack8
   | NumV z when z = sixteen   -> RI.Pack.Pack16
   | NumV z when z = thirtytwo -> RI.Pack.Pack32
@@ -1641,9 +1639,11 @@ let vl_to_packsize_sx v : RI.Pack.packsize * RI.Pack.sx =
   | [[];["_"];[]], [sz; sx] -> vl_to_packsize sz, vl_to_sx sx
   | _ -> error_value "packsize sx" v
 
-let vl_to_loadop  : value list -> RI.Ast.idx * RI.Ast.loadop  = vl_to_opt vl_to_packsize_sx |> vl_to_memop
+let vl_to_loadop  : value list -> RI.Ast.idx * RI.Ast.loadop  =
+  vl_to_opt vl_to_packsize_sx |> vl_to_memop
 
-let vl_to_storeop : value list -> RI.Ast.idx * RI.Ast.storeop = vl_to_opt vl_to_packsize    |> vl_to_memop
+let vl_to_storeop : value list -> RI.Ast.idx * RI.Ast.storeop =
+  vl_to_opt (fun p -> as_singleton_case p |> vl_to_packsize) |> vl_to_memop
 
 
 (*
