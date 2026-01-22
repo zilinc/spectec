@@ -1112,8 +1112,11 @@ and animate_prem envr prem : prem list E.m =
     let prem' = IterPr (prems, (ListN(len, Some i), xes')) $ prem.at in
     animate_prem envr prem'
   | IterPr (prems, (((Opt|ListN(_, Some _)) as iter, xes) as iterexp)) ->
+    (* [envr] is the environment outside of the iteration, and [lenvr] is the one
+       inside the iteration.
+    *)
     let lenvr = ref !envr in
-    (* Propagating knowns into the iteration. *)
+    (* For iterator `^{i < n}`, we add [i] to the local typing environemnt. *)
     let oindex = match iter with
     | ListN(len, Some i) ->
       lenvr := bind_var !lenvr i (natT ~at:len.at ());
@@ -1125,54 +1128,78 @@ and animate_prem envr prem : prem list E.m =
         assert false
     | _ -> None
     in
-    (* The new bindings that are introduced by the iteration. *)
+    (* For the binding list {x <- e}, we bring all the x's into the local environement. *)
+    List.iter (fun (x, e) ->
+      let t = reduce_typ !envr e.note in
+      match t.it with
+      | IterT (t, _) -> lenvr := bind_var !lenvr x t
+      | _ -> assert false
+    ) xes;
+    (* Get the set of known `x`s from the `xes` list. *)
     let knowns_iter = List.filter_map (fun (x, e) ->
       let fv_e = (free_exp false e).varid in
       let unknowns_e = Set.diff fv_e knowns in
       if Set.is_empty unknowns_e then Some x.it else None
     ) xes |> Set.of_list in
     let knowns_inner = Set.union knowns knowns_iter in
-    let knowns_inner_idx = match oindex with
+    (* Add the iterator index `i` to the known set, if it exists. *)
+    let knowns_inner = match oindex with
     | None   -> knowns_inner
-    | Some i -> Set.add i.it knowns_inner in
-    let s_body = { (init ()) with prems; knowns = knowns_inner_idx } in
+    | Some i -> Set.add i.it knowns_inner
+    in
+    let s_body = { (init ()) with prems; knowns = knowns_inner } in
+    let old_lenv = !lenvr in
     let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem.at) in
-    let new_knowns = Set.diff (get_knowns s_body') (get_knowns s_body) in
-    (* Add the static variables that need to flow out but are not in the binding list.
-       Intermediate variables are excluded.
-       NOTE the side effect of updating [envr].
+    let* () = update (put_knowns (get_knowns s_body')) in
+    (* We can't use the set of new bindings in the typing context to generate the new
+    [xes'] binding list. This is because some of the new knowns are already in the
+    typing context before animation. We have to use the list of new known variables.
     *)
-    let xes' = List.concat_map (fun x ->
-      if String.starts_with ~prefix:"__v" x || List.exists (fun (x', _) -> x'.it = x) xes
+    let new_knowns = Set.diff (get_knowns s_body') (get_knowns s_body) in
+    (* Add new outflowing variable bindings [xes'], and also to the typing context
+       outside of the iteration. All static variables in the iteration should become
+       vectors where all the elements are the same.
+    *)
+    let (xes_static, xes') = List.map (fun x ->
+      if List.exists (fun (x', _) -> x'.it = x) xes
       then
-        (info "binds" prem.at (lazy ("Variable `" ^ x ^ "` is intermediate or is in binding list")); [])
+        (info "binds" prem.at (lazy ("Variable `" ^ x ^ "` is in the binding list")); ([], []))
       else
-        (* Not in the binding list and not intermediate variables *)
+        (* The newly known variables that are not already in [xes] can happen in the
+           following situations:
+           1. It is an intermediate variable that was introduced by the animation of
+              the iteration body. They should be added to the binding list [xes']
+              and they are all outflowing, and their higher-dimensional counterparts
+              should be added to the outer typing context.
+           2. It is a static variable whose value wasn't previously known. Then it needs
+              some special handling: In the first iteration, it is a proper binding;
+              in subsequent iterations, it's already known and the same equality expression
+              should become checks.
+           * The question is that how can we tell apart these two types of variables.
+             The latter type should have already existed in the outer typing context, but
+             the former are not. We keep the static ones in the [xes_s] variable.
+         *)
         let x_star = Frontend.Dim.annot_varid (x $ no) [iter] in
         let t = find_var !lenvr (x $ no) in
         let iter' = match iter with Opt -> Opt | _ -> List in
         let t_star = IterT (t, iter') $ x_star.at in
+        (* Propagate the new binders (type-binding) from the inner premises to the outside. *)
         envr := bind_var !envr x_star t_star;
         info "binds" prem.at (lazy ("Add " ^ x_star.it ^ " to type binding"));
-        [(x $ x_star.at, VarE x_star $$ x_star.at % t_star)]
-    ) (Set.to_list new_knowns) in
-    (* Propagate the new binders (type-binding) from the inner premises to the outside. *)
-    List.iter (fun (v, t) ->
-      if List.exists (fun (x', _) -> x'.it = v) xes |> not then
-        (* For those who don't bind to a higher dim variable, add them to the
-           top-level type binds. A variable is either bound at the top level,
-           or via the iterator binding list [xes].
-        *)
-        let t = find_var !lenvr (v $ no) in
-        envr := bind_var !envr  (v $ no) t
-    ) ((Il.Env.env_diff !lenvr !envr).vars |> Il.Env.Map.to_list);
-    (* Propagate knowns to the outside of the iterator. We traverse [xes] and [xes'],
+        let x_e = (x $ x_star.at, VarE x_star $$ x_star.at % t_star) in
+        (match find_opt_var !envr (x $ no) with
+        | Some _ -> envr := remove_var !envr (x $ no); ([x_e], [])
+        | None   -> ([], [x_e])
+        )
+    ) (Set.to_list new_knowns) |> List.split |> Lib.Fun.(<***>) List.concat List.concat in
+    (* Propagate knowns to the outside of the iterator. We traverse [xes @ xes'] and [xes_static],
        because they together include all the variables that need to flow out.
-       But the entries in [xes] and in [xes'] generate different premises.
+       But the entries in them generate different premises.
+       We also collect the knowns [x] that will become unknowns outside of the iteration.
     *)
     let blob1 = List.map (fun (x, e) ->
       begin match e.it with
-      | VarE v -> ([v.it], [])
+      | VarE v -> ([v.it], [x.it], [])
       | _ ->
         (* If [e] is not a single variable and it's out-flowing in {x <- e},
            then we create a fresh [v], such that {x <- v}, and -- if v = e
@@ -1183,48 +1210,68 @@ and animate_prem envr prem : prem list E.m =
         envr := bind_var !envr x_star e.note;
         let x_star_e = VarE x_star $$ e.at % e.note in
         let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, x_star_e) $$ e.at % (BoolT $ e.at)) $ e.at in
-        ([x_star.it], [prem_e])
+        ([x_star.it], [x.it], [prem_e])
       end
-    ) xes
+    ) (xes @ xes')
     in
     let blob2 = List.map (fun (x, e) ->
-      (* If there's no x <- e, then propagate x out. This can happen if there's a
-         -- where x = ... inside the iterator. That `x` needs to be transfered to the
-         outer scope. But we also need to avoid doing so for any intermediate variables
-         that are genuinely only visible inside.
-         If we have ( -- where a = rhs )^iter { ... } and a is not in the binding list,
+      (* E.g., If we have ( -- if a = rhs )^iter { ... } and `a` is unknown and static, then when we
+         animated the inner premises above, it became a binding premise which assigns value to `a`:
+           -- where __v = rhs_1
+           ...
+           -- where a = rhs_2
+         But as we have noted above, it's only in the first iteration that `a` should be a binding, and
+         in later iterations, since it's already known, it should become checks. So we append the following
+         premises to encode this logc. ()
          then we generate the following DL:
-           ( -- where __v = ...
-             -- where a = ...
-           )^iter { ... , a <- a* }
+           ( -- where __v = rhs_1
+             ...
+             -- where a = rhs_2
+           )^iter { ... , __v <- __v*, a <- a* }
+           ;; vvvvvv The appended new stuff... vvvvvv
            -- if |a*| > 0
-           -- where a = a*[0]
-           (-- if a = a*[i])^(i < |a*|)
+           -- where a' = a*[0]
+           (-- if a' = a*[i])^(i < |a*|){ ..., i <- i*, a <- a*}
       *)
       let VarE x_star = e.it in
       let len = LenE e $$ e.at % (natT ~at:e.at ()) in
       let prem_len = IfPr (CmpE (`GeOp, `NatT, len, mk_nat 0) $$ len.at % (BoolT $ len.at)) $ len.at in
       let t = find_var !lenvr x in
       let x0 = IdxE (e, mk_nat 0) $$ e.at % t in
-      let xe = VarE x $$ x.at % t in
-      envr := bind_var !envr x t;
-      let prem_x0 = LetPr (xe, x0, [x.it]) $ e.at in
+      let x' = fresh_id (Some x.it) x.at in
+      (* -- let x' = x0 {x'} will be out of the iteration, so adding binding to [envr]. *)
+      envr := bind_var !envr x' t;
+      let xe' = VarE x' $$ x'.at % t in
+      let prem_x0 = LetPr (xe', x0, [x'.it]) $ xe'.at in
       let i = fresh_id (Some "i") len.at in
+      let i_star = Frontend.Dim.annot_varid i [iter] in
+      let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
+      let i_star_e = VarE i_star $$ i_star.at % t_star in
       let iter = ListN (len, Some i) in
       let e_i = IdxE (e, VarE i $$ i.at % (natT ~at:i.at ())) $$ e.at % x0.note in
-      let prem_eq = IfPr (CmpE (`EqOp, `NatT, xe, e_i) $$ xe.at % (BoolT $ xe.at)) $ xe.at in
-      let prem_eq_iter = IterPr ([prem_eq], (iter, [])) $ xe.at in
-      ([x.it; x_star.it], [prem_len; prem_x0; prem_eq_iter])
-    ) xes'
+      let prem_eq = IfPr (CmpE (`EqOp, `NatT, xe', e_i) $$ xe'.at % (BoolT $ xe'.at)) $ xe'.at in
+      let prem_eq_iter = IterPr ([prem_eq], (iter, [(i, i_star_e); (x, e)])) $ xe'.at in
+      envr := bind_var !envr i_star t_star;
+      ([x'.it; x_star.it; i_star.it], [x.it], [prem_len; prem_x0; prem_eq_iter])
+    ) xes_static
     in
-    let knowns_outer1, e_prems1 = Lib.List.unzip blob1 |> Lib.Fun.(<***>) List.concat List.concat in
-    let knowns_outer2, e_prems2 = Lib.List.unzip blob2 |> Lib.Fun.(<***>) List.concat List.concat in
-    let* () = update (add_knowns (Set.of_list (knowns_outer1 @ knowns_outer2))) in
+    let knowns_outer1, unknowns_outer1, e_prems1 = Lib.List.unzip3 blob1 in
+    let knowns_outer2, unknowns_outer2, e_prems2 = Lib.List.unzip3 blob2 in
+    let knowns_outer1   = List.concat knowns_outer1   in
+    let knowns_outer2   = List.concat knowns_outer2   in
+    let unknowns_outer1 = List.concat unknowns_outer1 in
+    let unknowns_outer2 = List.concat unknowns_outer2 in
+    let e_prems1        = List.concat e_prems1        in
+    let e_prems2        = List.concat e_prems2        in
     let* s_outer = get () in
-    let s_end = { (init ()) with prems = e_prems1; knowns = get_knowns s_outer } in
+    let knowns_outer = get_knowns s_outer in
+    let knowns_outer = Set.union knowns_outer (Set.of_list (knowns_outer1 @ knowns_outer2)) in
+    let knowns_outer = Set.diff knowns_outer (Set.of_list (unknowns_outer1 @ unknowns_outer2)) in
+    let* () = update (add_knowns (Set.of_list (knowns_outer1 @ knowns_outer2))) in
+    let s_end = { (init ()) with prems = e_prems1; knowns = knowns_outer} in
     let* (e_prems1', s_end') = run_inner s_end (animate_prems' envr prem.at) in
     let* () = update (put_knowns (get_knowns s_end')) in
-    E.return ((IterPr (prems_body', (iter, xes @ xes')) $ prem.at) :: e_prems1' @ e_prems2)
+    E.return ((IterPr (prems_body', (iter, xes @ xes' @ xes_static)) $ prem.at) :: e_prems1' @ e_prems2)
   | _ -> error prem.at ("Unable to animate premise: " ^ string_of_prem prem)
 
 
