@@ -31,7 +31,7 @@ let verbose : string list ref =
       (* "steps";       *)
       (* "call"; *)
       (* "iter"; *)          (* Low-level debugging. *)
-      "log";
+      (* "log"; *)
       ]
 
 
@@ -135,6 +135,13 @@ module VContext = struct
   let add_varid ctx (s: id) (v: value) = Map.add s.it v ctx
   let find_varid ctx (s : id) : value = Map.find s.it ctx
   let dom_varid ctx : Set.t = ctx |> Map.bindings |> List.map fst |> Set.of_list
+  let merge ctx1 ctx2 = Map.merge (fun k ov1 ov2 ->
+    match ov1, ov2 with
+    | None   , None    -> None
+    | Some v1, None    -> Some v1
+    | None   , Some v2 -> Some v2
+    | Some v1, Some v2 -> assert false
+  ) ctx1 ctx2
 end
 
 
@@ -460,7 +467,7 @@ and eval_iterexp ctx (iter, xes) : (Value.iter * (id * value) list) OptMonad.m =
   in
   (* Remove the outflowing binding. *)
   let xes' = List.filter (fun (x, e) -> List.mem x.it excl_ids |> not) xes in
-  let* xes'' = mapM (fun (id, e) -> let* v = eval_exp ctx e in return (id, v)) xes' in
+  let* xes'' = mapM (fun (x, e) -> let* v = eval_exp ctx e in return (x, v)) xes' in
   return (iter', xes'')
 
 and compose at v1 v2 : value OptMonad.m =
@@ -574,43 +581,52 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           il_env := Il.Env.(bind_var !il_env x t);
         | _ -> assert false
       ) (in_binds @ out_binds);
-      (* Initialise the out-vars, so that even when n' = 0 they are still assigned to `eps`. *)
-      let ctx' = List.fold_left (fun ctx (x, e) ->
-        match e.it with
-        | VarE x_star ->
-          let vx_star = ListV (ref [||]) in
-          VContext.add_varid ctx x_star vx_star
-        | _ -> assert false
-      ) ctx out_binds in
-      (* Run the loop *)
-      let* ctx'' = foldlM (fun ctx idx ->
-        let lctxr = ref ctx in
-        lctxr := VContext.add_varid !lctxr i (vl_of_nat idx);
-        (* In-flow *)
-        let* () = iterM (fun (x, e) ->
-          let t = Il.Env.find_var !il_env x in
-          let* e' = eval_exp !lctxr (IdxE (e, mk_nat idx) $$ e.at % t) in
-          lctxr := VContext.add_varid !lctxr x e';
-          return ()
-        ) in_binds
-        in
-        let* lctx = eval_prems !lctxr prems in
-        lctxr := lctx;
-        (* Out-flow *)
-        List.iter (fun (x, e) ->
+      let* ctx' = if Z.to_int n' = 0 then (
+        (* When n' = 0 the outflowing variables are assigned to `eps`. *)
+        List.fold_left (fun ctx (x, e) ->
           match e.it with
           | VarE x_star ->
-            let vx = VContext.find_varid !lctxr x in
-            let vx_star = VContext.Map.find_opt x_star.it !lctxr |> Option.get in
-            let vs = as_list_value vx_star in
-            let vx_star' = listV (Array.append !vs ([|vx|])) in
-            lctxr := VContext.add_varid !lctxr x_star vx_star'
+            let vx_star = ListV (ref [||]) in
+            VContext.add_varid ctx x_star vx_star
           | _ -> assert false
-        ) out_binds;
-        return !lctxr
-      ) ctx' (0 -- Z.to_int n') in
+        ) ctx out_binds |> return
+      ) else (
+        (* Run the loop *)
+        let* ctx_out = foldlM (fun ctx_out idx ->
+          let lctxr = ref ctx in
+          lctxr := VContext.add_varid !lctxr i (vl_of_nat idx);
+          (* In-flow *)
+          let* () = iterM (fun (x, e) ->
+            let t = Il.Env.find_var !il_env x in
+            let* e' = eval_exp !lctxr (IdxE (e, mk_nat idx) $$ e.at % t) in
+            lctxr := VContext.add_varid !lctxr x e';
+            return ()
+          ) in_binds
+          in
+          let* lctx = eval_prems !lctxr prems in
+          lctxr := lctx;
+          (* Out-flow: Only collect them in [ctx_out], but don't add them to the local
+             value context, otherwise it will interfere with later iterations, where
+             it will see partially assigned outer variables and wrongly treat them as knowns.
+          *)
+          List.fold_left (fun ctx_out (x, e) ->
+            match e.it with
+            | VarE x_star ->
+              let vx = VContext.find_varid !lctxr x in
+              let vx_star' = (match VContext.Map.find_opt x_star.it ctx_out with
+              | Some vx_star -> let vs = as_list_value vx_star in
+                                listV (Array.append !vs ([|vx|]))
+              | None -> listV [|vx|]
+              ) in
+              VContext.add_varid ctx_out x_star vx_star'
+            | _ -> assert false
+          ) ctx_out out_binds |> return
+        ) VContext.empty (0 -- Z.to_int n') in
+        (* Add the outflowing variables to the value context. *)
+        VContext.merge ctx ctx_out |> return
+      ) in
       il_env := il_env0;  (* Resume old environment *)
-      return ctx''
+      return ctx'
     | ListN (_, None) | List | List1 -> assert false  (* Should have been compiled away by animation. *)
     | Opt ->
       let il_env0 = !il_env in
@@ -734,18 +750,16 @@ and eval_func name func_def args : value OptMonad.m =
   match_clause no_region name 1 fcs args
 
 and call_func name args =
+  info "log" no ("Calling " ^ name);
   match name with
   (* Hardcoded functions defined in meta.spectec *)
   | "Steps"  -> call_func "steps"     args
-  | "Step"   -> call_func "step"      args
-  (*
-    print_endline ("* Calling step:");
+  | "Step"   -> (* call_func "step"      args *)
     let* r = call_func "step"      args in
     let CaseV(_, [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
-    print_endline ("* Result is " ^ string_of_values ", " instrs');
+    info "log" no ("* $step result is " ^ string_of_values ", " instrs');
     return r
-    *)
   | "Ref_ok" -> call_func "ref_infer" args
   (* Hardcoded functions defined in the compiler. *)
   | "Module_ok"     -> module_ok     args
