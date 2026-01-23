@@ -723,7 +723,7 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
   match clauses with
-  | [] -> fail ()
+  | [] -> info "log" at ("Function " ^ fname ^ " refuted at clause " ^ string_of_int (nth-1)); fail ()
   | cl :: cls ->
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
@@ -734,7 +734,11 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
         begin match eval_prems ctx prems |> run_opt with
-        | Some ctx' -> eval_exp ctx' exp
+        | Some ctx' -> (* If [exp] is partial, it means this clause is refuted. *)
+                       (match eval_exp ctx' exp |> run_opt with
+                       | Some v -> return v
+                       | None   -> match_clause at fname (nth+1) cls args
+                       )
         | None      -> match_clause at fname (nth+1) cls args
         end
       | None -> match_clause at fname (nth+1) cls args
@@ -749,7 +753,7 @@ and eval_func name func_def args : value OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
   match_clause no_region name 1 fcs args
 
-and call_func name args =
+and call_func name args : value OptMonad.m =
   info "log" no ("Calling " ^ name);
   match name with
   (* Hardcoded functions defined in meta.spectec *)

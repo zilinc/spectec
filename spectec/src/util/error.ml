@@ -19,3 +19,7 @@ let print_error at msg = prerr_endline (string_of_error at msg)
 let print_warn at msg = prerr_endline (string_of_error at ("warning: " ^ msg))
 
 let todo msg = raise (Failure (msg ^ ": not yet implemented."))
+
+let print_exn = function
+  | Error(at, s) -> "Error(at " ^ string_of_region at ^ "): " ^ s
+  | e -> Printexc.to_string e

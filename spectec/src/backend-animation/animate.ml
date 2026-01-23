@@ -667,13 +667,15 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       let fv_len = (free_exp false len).varid in
       let unknowns_len = Set.diff fv_len knowns in
       if Set.is_empty unknowns_len then
-        (* Base case for iterators *)
+        (* Base case for iterators: [len] is known. *)
         let t = reduce_typ !envr lhs'.note in
         let rhs' = IdxE (rhs, VarE i $$ i.at % (natT ~at:i.at ())) $$ rhs.at % lhs'.note in
-        let prem_body = IfPr (CmpE (`EqOp, `BoolT, lhs', rhs') $$ at % (BoolT $ at)) $ at in
-        bracket (add_knowns (Set.singleton i.it))
-                (remove_knowns (Set.singleton i.it))
-                (animate_prem envr (IterPr ([prem_body], iterexp) $ at))
+        let prem_len = IfPr (eqE len (LenE rhs $$ rhs.at % (natT ~at:at ()))) $ at in
+        let prem_body = IfPr (eqE ~at:at lhs' rhs') $ at in
+        let* prems_body' = bracket (add_knowns (Set.singleton i.it))
+                                   (remove_knowns (Set.singleton i.it))
+                                   (animate_prem envr (IterPr ([prem_body], iterexp) $ at)) in
+        E.return (prem_len :: prems_body')
       else
         (* Inductive case where [len] is unknown. *)
         let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in

@@ -116,7 +116,7 @@ let get_global_value module_name globalname : value (* val *) =
 (** Main functions **)
 
 and instantiate module_ : value * value =
-  (* let t1 = Sys.time () in *)
+  let t1 = Sys.time () in
   log "[Instantiating module...]\n";
   let il_module = C.vl_of_module module_ in
   let externaddrs = List.map get_externaddr module_.it.imports in
@@ -127,13 +127,13 @@ and instantiate module_ : value * value =
   assert ("MODULE" = fname);
   (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
-  (* let t2 = Sys.time () in
-  print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s"); *)
+  let t2 = Sys.time () in
+  print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
   !moduleinst, instrs'
 
 
 and invoke moduleinst_name funcname args : value =
-  (* let t1 = Sys.time () in *)
+  let t1 = Sys.time () in
   log "[Invoking %s in module instance %s...]\n" funcname (print_name moduleinst_name);
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
@@ -141,8 +141,8 @@ and invoke moduleinst_name funcname args : value =
   let CaseV (_, [store'; _]) = state' in
   (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
-  (* let t2 = Sys.time () in
-  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s"); *)
+  let t2 = Sys.time () in
+  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s");
   instrs'
 
 
@@ -233,12 +233,12 @@ let run_command' command =
 let run_command command =
   let start_time = Sys.time () in
   let result =
-    let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) msg in
+    let print_fail at msg = Printf.printf "- Test failed at %s: %s\n" (string_of_region at) msg in
     try
       run_command' command
     with
     | e ->
-      print_fail command.at (Printexc.to_string e);
+      print_fail command.at (Util.Error.print_exn e);
       Printexc.print_backtrace stdout;
       fail
   in

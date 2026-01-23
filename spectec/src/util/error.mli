@@ -6,3 +6,5 @@ val print_error : Source.region -> string -> unit
 val print_warn : Source.region -> string -> unit
 
 val todo : string -> 'a
+
+val print_exn : exn -> string
