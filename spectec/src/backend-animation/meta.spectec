@@ -102,19 +102,25 @@ def $dispatch_reduce(z, val*, instr_0) = eps
 def $Step_read_throw_ref_handler(config) : instr*
 def $Step_read_throw_ref_handler           hint(builtin)
 
+def $reduce(config) : config?
+def $step(config) : config
+;; A non-reflexive version of the transitive closure of single step reduction.
+def $steps_pg(config) : config?
+def $steps(config) : config
 
-def $step_ctxt(z; LABEL_ n `{instr_1*} instr*) = z'; (LABEL_ n `{instr_1*} instr'*)
-    -- Step: z; instr* ~> z'; instr'*
+
 def $step_ctxt(z; LABEL_ n `{instr_1*} instr*) = config
     -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
     -- if bl = (instr'* = eps)
     -- if $dispatch_step_label(n, val*, instr_0?, z, instr_1*, bl) = config
-def $step_ctxt(s; f; FRAME_ n `{f'} instr*) = s'; f; FRAME_ n `{f''} instr'*
-    -- Step: s; f'; instr* ~> s'; f''; instr'*
+def $step_ctxt(z; LABEL_ n `{instr_1*} instr*) = z'; (LABEL_ n `{instr_1*} instr'*)
+    -- if $steps_pg(z; instr*) = z'; instr'*
 def $step_ctxt(z; FRAME_ n `{f'} instr*) = config
     -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
     -- if bl = (instr'* = eps)
     -- if $dispatch_step_frame(n, val*, instr_0?, z, bl) = config
+def $step_ctxt(s; f; FRAME_ n `{f'} instr*) = s'; f; FRAME_ n `{f''} instr'*
+    -- if $steps_pg(s; f'; instr*) = s'; f''; instr'*
 def $step_ctxt(z; HANDLER_ n `{catch*} instr*) = config
     -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
     -- if bl = (instr'* = eps)
@@ -151,7 +157,6 @@ def $dispatch_step_handler(n, val*, eps, z, catch*, true) = z; val*
 
 
 
-def $reduce(config) : config?
 def $reduce(s; f; instr+) = s; f; TRAP
     -- if $find_first_instr(instr+) = (val*, TRAP, instr_1'*)
     -- if val* =/= eps \/ instr_1'* =/= eps
@@ -165,13 +170,17 @@ def $reduce(s; f; instr*) = eps
     -- otherwise
 
 
-def $step(config) : config
 def $step(config) = config'  -- if $reduce(config) = config'
 
-def $steps(config) : config
+
+def $steps_pg(config) = config_2
+    -- if $step(config) = config_1
+    -- if $steps(config_1) = config_2
+def $steps_pg(config) = eps
+    -- otherwise
+
 def $steps(config) = config_2
-    -- if $reduce(config) = config_1
+    -- if $step(config) = config_1
     -- if $steps(config_1) = config_2
 def $steps(config) = config
-    -- if $reduce(config) = eps
-    ;; -- otherwise
+    -- otherwise
