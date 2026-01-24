@@ -511,18 +511,25 @@ and eval_path at ctx v p (f: value -> path -> value OptMonad.m) : value OptMonad
     let* vn = eval_exp ctx e2 in
     let f' v p1' =
       match v, vi, vn with
-      | ListV vs, NumV (`Nat i), NumV (`Nat n) when Z.(i + n) < Z.of_int (Array.length !vs) ->
-        let vs1 = Array.sub !vs 0 (Z.to_int i) in
-        let v2  = listV (Array.sub !vs (Z.to_int i) (Z.to_int n)) in
-        let vs3 = Array.sub !vs Z.(to_int (i + n)) (Array.length !vs - Z.to_int Z.(i + n)) in
-        let* v2' = f v2 p1' in
-        (match v2' with
-        | ListV vs2 -> listV (Array.append (Array.append vs1 !vs2) vs3) |> return
-        | _ -> assert false
-        )
+      | ListV vs, NumV (`Nat i), NumV (`Nat n) ->
+        if Z.(i + n) <= Z.of_int (Array.length !vs) then
+          let vs1 = Array.sub !vs 0 (Z.to_int i) in
+          let v2  = listV (Array.sub !vs (Z.to_int i) (Z.to_int n)) in
+          let vs3 = Array.sub !vs Z.(to_int (i + n)) (Array.length !vs - Z.to_int Z.(i + n)) in
+          let* v2' = f v2 p1' in
+          (match v2' with
+          | ListV vs2 -> listV (Array.append (Array.append vs1 !vs2) vs3) |> return
+          | _ -> assert false
+          )
+        else
+          error at ("Slicing range out of bounds:\n" ^
+                    "  ▹ |vs|: " ^ string_of_int (Array.length !vs) ^ "\n" ^
+                    "  ▹ i: " ^ string_of_value vi ^ "\n" ^
+                    "  ▹ n: " ^ string_of_value vn)
       | _ -> error at ("Slice path failed to evaluate:\n" ^
-                       "  ▹ v: " ^ string_of_value v ^ "\n" ^
-                       "  ▹ p: " ^ string_of_path p)
+                       "  ▹ v: " ^ (string_of_value v |> Lib.String.shorten) ^ "\n" ^
+                       "  ▹ i: " ^ string_of_value vi ^ "\n" ^
+                       "  ▹ n: " ^ string_of_value vn)
     in
     eval_path at ctx v p1 f'
   | DotP (p1, atom) ->
@@ -769,6 +776,7 @@ and call_func name args : value OptMonad.m =
   | "Module_ok"     -> module_ok     args
   | "Externaddr_ok" -> externaddr_ok args
   | "Reftype_sub"   -> reftype_sub   args
+  | "Heaptype_sub"  -> heaptype_sub  args
   (* | "Val_ok"        -> val_ok        args |> return *)
   (* Others *)
   | _ ->
@@ -1093,6 +1101,21 @@ and reftype_sub = function
     | b -> boolV b |> return
     )
   | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
+
+(* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
+and heaptype_sub = function
+    | [ ValA ctx; ValA typ1; ValA typ2 ] ->
+    (* TODO(zilinc): the context is not converted, but we know that all calls to
+       this rule in the spec uses the empty context.
+     *)
+    let heaptyp1 = vl_to_heaptype typ1 in
+    let heaptyp2 = vl_to_heaptype typ2 in
+    (match RI.Match.match_heaptype [] heaptyp1 heaptyp2 with
+    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+    | b -> boolV b |> return
+    )
+  | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
+
 
 (*
 (* Rule `Expand` has been compiled to `$expanddt` in animation.ml *)

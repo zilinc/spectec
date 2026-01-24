@@ -142,7 +142,7 @@ and invoke moduleinst_name funcname args : value =
   (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
-  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s");
+  print_endline ("invoke `" ^ funcname ^ "` took " ^ string_of_float (t2 -. t1) ^ " s");
   instrs'
 
 
