@@ -19,6 +19,16 @@ let mask64 = Z.of_int64_unsigned (-1L)
 
 let z_to_int64 z = Z.(to_int64_unsigned (logand mask64 z))
 
+let list_f f x = f x |> singleton
+let unlist_f f x = f x |> listv_singleton
+let bop_f32 f f1 f2 = f (vl_to_float32 f1) (vl_to_float32 f2) |> vl_of_float32
+let bop_f64 f f1 f2 = f (vl_to_float64 f1) (vl_to_float64 f2) |> vl_of_float64
+let bop_f32_b f f1 f2 = f (vl_to_float32 f1) (vl_to_float32 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
+let bop_f64_b f f1 f2 = f (vl_to_float64 f1) (vl_to_float64 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
+let uop_f32 f f1 = f (vl_to_float32 f1) |> vl_of_float32
+let uop_f64 f f1 = f (vl_to_float64 f1) |> vl_of_float64
+
+
 
 let ibytes : numerics =
   {
@@ -303,6 +313,55 @@ let reinterpret : numerics =
       | [ CaseV ([["F64"]], []); CaseV ([["I64"]], []); CaseV _ as i ] ->
         i |> vl_to_float64 |> RI.Convert.I64_.reinterpret_f64 |> vl_of_uN_64
       | vs -> error_values "reinterpret" vs
+      );
+  }
+
+
+let convert : numerics =
+  {
+    name = "convert";
+    f =
+      (function
+      | [ NumV (`Nat m); NumV (`Nat n); CaseV ([["U"]], []); CaseV ([[];[]], [NumV _ as i]) ] as vs ->
+        (match () with
+        | () when m = Z.of_int 32 && n = Z.of_int 32 -> i |> vl_to_nat32 |> RI.Convert.F32_.convert_i32_u |> vl_of_float32
+        | () when m = Z.of_int 64 && n = Z.of_int 32 -> i |> vl_to_nat64 |> RI.Convert.F32_.convert_i64_u |> vl_of_float32
+        | () when m = Z.of_int 32 && n = Z.of_int 64 -> i |> vl_to_nat32 |> RI.Convert.F64_.convert_i32_u |> vl_of_float64
+        | () when m = Z.of_int 64 && n = Z.of_int 64 -> i |> vl_to_nat64 |> RI.Convert.F64_.convert_i64_u |> vl_of_float64
+        | _ -> error_values "convert" vs
+        )
+      | [ NumV (`Nat m); NumV (`Nat n); CaseV ([["S"]], []); CaseV ([[];[]], [NumV _ as i]) ] as vs ->
+        (match () with
+        | () when m = Z.of_int 32 && n = Z.of_int 32 -> i |> vl_to_nat32 |> RI.Convert.F32_.convert_i32_s |> vl_of_float32
+        | () when m = Z.of_int 64 && n = Z.of_int 32 -> i |> vl_to_nat64 |> RI.Convert.F32_.convert_i64_s |> vl_of_float32
+        | () when m = Z.of_int 32 && n = Z.of_int 64 -> i |> vl_to_nat32 |> RI.Convert.F64_.convert_i32_s |> vl_of_float64
+        | () when m = Z.of_int 64 && n = Z.of_int 64 -> i |> vl_to_nat64 |> RI.Convert.F64_.convert_i64_s |> vl_of_float64
+        | _ -> error_values "convert" vs
+        )
+      | vs -> error_values "convert" vs
+      );
+  }
+
+
+let promote : numerics =
+  {
+    name = "promote";
+    f = list_f
+      (function
+      | [ NumV (`Nat m); NumV (`Nat n); CaseV _ as i ] when m = Z.of_int 32 && n = Z.of_int 64 ->
+        i |> vl_to_float32 |> RI.Convert.F64_.promote_f32 |> vl_of_float64
+      | vs -> error_values "promote" vs
+      );
+  }
+
+let demote : numerics =
+  {
+    name = "demote";
+    f = list_f
+      (function
+      | [ NumV (`Nat m); NumV (`Nat n); CaseV _ as i ] when m = Z.of_int 64 && n = Z.of_int 32 ->
+        i |> vl_to_float64 |> RI.Convert.F32_.demote_f64 |> vl_of_float32
+      | vs -> error_values "demote" vs
       );
   }
 
@@ -718,15 +777,6 @@ let irelaxed_q15mulr : numerics =
       );
   }
 
-let list_f f x = f x |> singleton
-let unlist_f f x = f x |> listv_singleton
-let bop_f32 f f1 f2 = f (vl_to_float32 f1) (vl_to_float32 f2) |> vl_of_float32
-let bop_f64 f f1 f2 = f (vl_to_float64 f1) (vl_to_float64 f2) |> vl_of_float64
-let bop_f32_b f f1 f2 = f (vl_to_float32 f1) (vl_to_float32 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
-let bop_f64_b f f1 f2 = f (vl_to_float64 f1) (vl_to_float64 f2) |> int_of_bool |> Z.of_int |> vl_of_iN
-let uop_f32 f f1 = f (vl_to_float32 f1) |> vl_of_float32
-let uop_f64 f f1 = f (vl_to_float64 f1) |> vl_of_float64
-
 
 let fadd : numerics =
   {
@@ -1068,6 +1118,9 @@ let numerics_list : numerics list = [
   sat_s;
   extend;
   reinterpret;
+  convert;
+  promote;
+  demote;
   inot;
   irev;
   iand;
@@ -1118,9 +1171,6 @@ let numerics_list : numerics list = [
   trunc;
   trunc_sat;
   relaxed_trunc;
-  promote;
-  demote;
-  convert;
   *)
 ]
 

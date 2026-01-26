@@ -881,24 +881,27 @@ let vl_of_tag (tag: RI.Ast.tag) =
   let Tag tt = tag.it in
   caseV [["TAG"];[]] [vl_of_tagtype tt]
 
-let vl_of_segmentmode (segmentmode: RI.Ast.segmentmode) =
+let vl_of_segmentmode (segmentmode: RI.Ast.segmentmode) (mode: [`Datamode | `Elemmode]) =
   match segmentmode.it with
   | Passive -> nullary "PASSIVE"
   | Active (index, offset) ->
     caseV [["ACTIVE"];[];[]] [vl_of_idx index; vl_of_const offset]
-  | Declarative -> error no "datamode: no Declarative constructor"
+  | Declarative -> (match mode with
+                    | `Datamode -> error no "datamode: invalid Declarative constructor"
+                    | `Elemmode -> nullary "DECLARE"
+                    )
 
 let vl_of_elem (elem: RI.Ast.elem) =
   let Elem (rt, consts, mode) = elem.it in
   caseV [["ELEM"];[];[];[]] [
     vl_of_reftype rt;
     vl_of_list vl_of_const consts;
-    vl_of_segmentmode mode;
+    vl_of_segmentmode mode `Elemmode;
   ]
 
 let vl_of_data (data: RI.Ast.data) =
   let Data (bytes, mode) = data.it in
-  caseV [["DATA"];[];[]] [ vl_of_bytes bytes; vl_of_segmentmode mode ]
+  caseV [["DATA"];[];[]] [ vl_of_bytes bytes; vl_of_segmentmode mode `Datamode ]
 
 let vl_of_externtype = function
   | RT.ExternFuncT   (typeuse   ) -> caseV [["FUNC"  ];[]] [vl_of_typeuse    typeuse   ]

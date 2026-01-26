@@ -54,7 +54,7 @@ let il_of_spectest () : value =
   let create_tableinst t =
     let addrtype = nullary t in
     let limits   = caseV [["["];[".."];["]"]] [
-      vl_of_nat 10; vl_of_nat 20
+      vl_of_nat 10 |> caseV1; vl_of_nat 20 |> caseV1 |> some
     ] in
     let reftype  = caseV [["REF"];[];[]] [
       some (nullary "NULL");
@@ -71,7 +71,7 @@ let il_of_spectest () : value =
   let create_meminst t =
     let addrtype = nullary t in
     let limits   = caseV [["["];[".."];["]"]] [
-      vl_of_nat 1; vl_of_nat 2
+      vl_of_nat 1 |> caseV1; vl_of_nat 2 |> caseV1 |> some
     ] in
     let memtype = caseV [[];[];["PAGE"]] [
       addrtype; limits
