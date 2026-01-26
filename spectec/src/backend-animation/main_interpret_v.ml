@@ -26,7 +26,7 @@ let _error_interpret at msg = Error.error at "interpreter" msg
 
 let logging = ref false
 
-let log fmt = Printf.(if !logging then fprintf stderr fmt else ifprintf stderr fmt)
+let log fmt = Printf.(if !logging then fprintf stdout fmt else ifprintf stdout fmt)
 
 let print_name n = if n = "" then "[_]" else n
 
@@ -193,7 +193,8 @@ let test_assertion assertion =
     )
   | AssertInvalid (def, re)
   | AssertInvalidCustom (def, re) ->
-    (match def |> module_of_def |> instantiate |> ignore with
+    (match def |> module_of_def |> fun m -> Fun.const m (RI.Valid.check_module m) |> instantiate |> ignore with
+    | exception RI.Valid.Invalid _ -> success
     | exception I.Exception.Invalid _ -> success
     | _ -> print_fail assertion.at "validation" re "module instance"
     )
@@ -205,10 +206,11 @@ let run_command' command =
   let res = match command.it with
   | Module (var_opt, def) ->
     log "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
-    def
-    |> module_of_def
-    |> Modules.add_with_var var_opt;
-    success
+    let module_ = module_of_def def in
+    (match RI.Valid.check_module module_ with
+    | exception RI.Valid.Invalid(at, msg) -> fail
+    | _ -> Modules.add_with_var var_opt module_; success
+    )
   | Instance (var1_opt, var2_opt) ->
     log "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
     Modules.find (Modules.get_module_name var2_opt)
@@ -243,8 +245,11 @@ let run_command command =
   result, Sys.time () -. start_time
 
 let run_wast name script =
+  let script = (* Exclude long test *)
+    if is_long_test name then [] else script
+  in
   Store.init ();
-  log ("[run_wast...]\n");
+  log ("[run_wast... %s]\n") (if is_long_test name then "skipped" else "");
   (* Intialise spectest *)
   let spectest = il_of_spectest () in
   Register.add "spectest" spectest;  (* spectest is a `moduleinst`. *)
@@ -317,9 +322,9 @@ let parse_file name parser_ file =
 
 (** Runner **)
 
-let rec run_file path args =
+let rec run_file ?(is_top=false) path args =
   if Sys.is_directory path then
-    run_dir path
+    run_dir ~is_top:is_top path
   else try
     (* Check file extension *)
     match Filename.extension path with
@@ -348,14 +353,16 @@ let rec run_file path args =
     | _ -> pass, 0.0
   with R.Decode.Code _ | R.Parse.Syntax _ -> pass, 0.0
 
-and run_dir path =
-  path
-  |> Sys.readdir
-  |> Array.to_list
-  |> List.sort compare
-  |> List.map (fun filename -> run_file (Filename.concat path filename) [])
-  |> sum_results_with_time
-
+and run_dir ?(is_top=false) path =
+  if is_top then
+    path
+    |> Sys.readdir
+    |> Array.to_list
+    |> List.sort compare
+    |> List.map (fun filename -> run_file (Filename.concat path filename) [])
+    |> sum_results_with_time
+  else
+    pass, 0.0
 
 (** Entry **)
 let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
@@ -365,7 +372,7 @@ let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
   match args with
   | path :: args' when Sys.file_exists path ->
     (* Run file *)
-    let result = run_file path args' in
+    let result = run_file ~is_top:true path args' in
 
     (* Print result *)
     if Sys.is_directory path then (
