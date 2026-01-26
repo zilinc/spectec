@@ -165,6 +165,8 @@ struct
   let both f (a1, a2) = (f a1, f a2)
   let (>>>) f g = fun x -> x |> f |> g
   let (<***>) f g (a, b) = (f a, g b)
+  let (<.>) g f = fun x -> g (f x)
+  let (>.>) f g = fun x -> f x |> g
 end
 
 module Option =

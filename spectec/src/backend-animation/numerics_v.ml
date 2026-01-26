@@ -28,6 +28,10 @@ let bop_f64_b f f1 f2 = f (vl_to_float64 f1) (vl_to_float64 f2) |> int_of_bool |
 let uop_f32 f f1 = f (vl_to_float32 f1) |> vl_of_float32
 let uop_f64 f f1 = f (vl_to_float64 f1) |> vl_of_float64
 
+let catch_ixx_exception f = try f() |> some with
+  | RI.Ixx.DivideByZero
+  | RI.Ixx.Overflow
+  | RI.Convert.InvalidConversion -> none
 
 
 let ibytes : numerics =
@@ -77,10 +81,10 @@ let nbytes : numerics =
     name = "nbytes";
     f =
       (function
-      | [ CaseV ([["I32"]], []); n ] -> ibytes.f [ NumV thirtytwo; n ]
-      | [ CaseV ([["I64"]], []); n ] -> ibytes.f [ NumV sixtyfour; n ]
-      | [ CaseV ([["F32"]], []); f ] -> ibytes.f [ NumV thirtytwo; vl_to_float32 f |> RI.F32.to_bits |> vl_of_uN_32 ]
-      | [ CaseV ([["F64"]], []); f ] -> ibytes.f [ NumV sixtyfour; vl_to_float64 f |> RI.F64.to_bits |> vl_of_uN_64 ]
+      | [ CaseV ([["I32"]], []); n ] -> ibytes.f [ vl_of_nat 32; n ]
+      | [ CaseV ([["I64"]], []); n ] -> ibytes.f [ vl_of_nat 64; n ]
+      | [ CaseV ([["F32"]], []); f ] -> ibytes.f [ vl_of_nat 32; vl_to_float32 f |> RI.F32.to_bits |> vl_of_uN_32 ]
+      | [ CaseV ([["F64"]], []); f ] -> ibytes.f [ vl_of_nat 64; vl_to_float64 f |> RI.F64.to_bits |> vl_of_uN_64 ]
       | vs -> error_values "nbytes" vs
       );
   }
@@ -89,10 +93,10 @@ let inv_nbytes : numerics =
     name = "inv_nbytes";
     f =
       (function
-      | [ CaseV ([["I32"]], []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ]
-      | [ CaseV ([["I64"]], []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ]
-      | [ CaseV ([["F32"]], []); l ] -> inv_ibytes.f [ NumV thirtytwo; l ] |> vl_to_uN_32 |> RI.F32.of_bits |> vl_of_float32
-      | [ CaseV ([["F64"]], []); l ] -> inv_ibytes.f [ NumV sixtyfour; l ] |> vl_to_uN_64 |> RI.F64.of_bits |> vl_of_float64
+      | [ CaseV ([["I32"]], []); l ] -> inv_ibytes.f [ vl_of_nat 32; l ]
+      | [ CaseV ([["I64"]], []); l ] -> inv_ibytes.f [ vl_of_nat 64; l ]
+      | [ CaseV ([["F32"]], []); l ] -> inv_ibytes.f [ vl_of_nat 32; l ] |> vl_to_uN_32 |> RI.F32.of_bits |> vl_of_float32
+      | [ CaseV ([["F64"]], []); l ] -> inv_ibytes.f [ vl_of_nat 64; l ] |> vl_to_uN_64 |> RI.F64.of_bits |> vl_of_float64
       | vs -> error_values "inv_nbytes" vs
       );
   }
@@ -114,8 +118,8 @@ let inv_vbytes : numerics =
     f =
       (function
       | [ CaseV ([["V128"]], []); ListV l ] ->
-        let v1 = inv_ibytes.f [ NumV sixtyfour; Array.sub !l 0 8 |> listV ] in
-        let v2 = inv_ibytes.f [ NumV sixtyfour; Array.sub !l 8 8 |> listV ] in
+        let v1 = inv_ibytes.f [ vl_of_nat 64; Array.sub !l 0 8 |> listV ] in
+        let v2 = inv_ibytes.f [ vl_of_nat 64; Array.sub !l 8 8 |> listV ] in
         (match as_singleton_case v1, as_singleton_case v2 with
         | NumV (`Nat n1), NumV (`Nat n2) -> vl_of_vec128 (RI.V128.I64x2.of_lanes [ z_to_int64 n1; z_to_int64 n2 ])
         | _ -> error_values "inv_vbytes" [ v1; v2 ]
@@ -129,8 +133,8 @@ let inv_zbytes : numerics =
     name = "inv_zbytes";
     f =
       (function
-      | [ CaseV ([["I8" ]], []); l ] -> inv_ibytes.f [ NumV eight  ; l ]
-      | [ CaseV ([["I16"]], []); l ] -> inv_ibytes.f [ NumV sixteen; l ]
+      | [ CaseV ([["I8" ]], []); l ] -> inv_ibytes.f [ vl_of_nat 8 ; l ]
+      | [ CaseV ([["I16"]], []); l ] -> inv_ibytes.f [ vl_of_nat 16; l ]
       | args -> inv_nbytes.f args
       );
   }
@@ -362,6 +366,69 @@ let demote : numerics =
       | [ NumV (`Nat m); NumV (`Nat n); CaseV _ as i ] when m = Z.of_int 64 && n = Z.of_int 32 ->
         i |> vl_to_float64 |> RI.Convert.F32_.demote_f64 |> vl_of_float32
       | vs -> error_values "demote" vs
+      );
+  }
+
+let trunc : numerics =
+  {
+    name = "trunc";
+    f =
+      let open RI.Convert in
+      (function
+      | [ NumV (`Nat m); NumV (`Nat n); CaseV ([["U"]], []); CaseV _ as i ] as vs ->
+        (match () with
+        | () when m = Z.of_int 32 && n = Z.of_int 32 -> (fun _ -> i |> vl_to_float32 |> I32_.trunc_f32_u |> vl_of_uN_32) |> catch_ixx_exception
+        | () when m = Z.of_int 64 && n = Z.of_int 32 -> (fun _ -> i |> vl_to_float64 |> I32_.trunc_f64_u |> vl_of_uN_32) |> catch_ixx_exception
+        | () when m = Z.of_int 32 && n = Z.of_int 64 -> (fun _ -> i |> vl_to_float32 |> I64_.trunc_f32_u |> vl_of_uN_64) |> catch_ixx_exception
+        | () when m = Z.of_int 64 && n = Z.of_int 64 -> (fun _ -> i |> vl_to_float64 |> I64_.trunc_f64_u |> vl_of_uN_64) |> catch_ixx_exception
+        | _ -> error_values "trunc" vs
+        )
+      | [ NumV (`Nat m); NumV (`Nat n); CaseV ([["S"]], []); CaseV _ as i ] as vs ->
+        (match () with
+        | () when m = Z.of_int 32 && n = Z.of_int 32 -> (fun _ -> i |> vl_to_float32 |> I32_.trunc_f32_s |> vl_of_uN_32) |> catch_ixx_exception
+        | () when m = Z.of_int 64 && n = Z.of_int 32 -> (fun _ -> i |> vl_to_float64 |> I32_.trunc_f64_s |> vl_of_uN_32) |> catch_ixx_exception
+        | () when m = Z.of_int 32 && n = Z.of_int 64 -> (fun _ -> i |> vl_to_float32 |> I64_.trunc_f32_s |> vl_of_uN_64) |> catch_ixx_exception
+        | () when m = Z.of_int 64 && n = Z.of_int 64 -> (fun _ -> i |> vl_to_float64 |> I64_.trunc_f64_s |> vl_of_uN_64) |> catch_ixx_exception
+        | _ -> error_values "trunc" vs
+        )
+      | vs -> error_values "trunc" vs
+      );
+  }
+
+let trunc_sat : numerics =
+  {
+    name = "trunc_sat";
+    f =
+      let open RI.Convert in
+      (function
+      | [ NumV (`Nat m); NumV (`Nat n); CaseV ([["U"]], []); CaseV _ as i ] as vs ->
+        (match () with
+        | () when m = Z.of_int 32 && n = Z.of_int 32 -> (fun _ -> i |> vl_to_float32 |> I32_.trunc_sat_f32_u |> vl_of_uN_32) |> catch_ixx_exception
+        | () when m = Z.of_int 64 && n = Z.of_int 32 -> (fun _ -> i |> vl_to_float64 |> I32_.trunc_sat_f64_u |> vl_of_uN_32) |> catch_ixx_exception
+        | () when m = Z.of_int 32 && n = Z.of_int 64 -> (fun _ -> i |> vl_to_float32 |> I64_.trunc_sat_f32_u |> vl_of_uN_64) |> catch_ixx_exception
+        | () when m = Z.of_int 64 && n = Z.of_int 64 -> (fun _ -> i |> vl_to_float64 |> I64_.trunc_sat_f64_u |> vl_of_uN_64) |> catch_ixx_exception
+        | _ -> error_values "trunc_sat" vs
+        )
+      | [ NumV (`Nat m); NumV (`Nat n); CaseV ([["S"]], []); CaseV _ as i ] as vs ->
+        (match () with
+        | () when m = Z.of_int 32 && n = Z.of_int 32 -> (fun _ -> i |> vl_to_float32 |> I32_.trunc_sat_f32_s |> vl_of_uN_32) |> catch_ixx_exception
+        | () when m = Z.of_int 64 && n = Z.of_int 32 -> (fun _ -> i |> vl_to_float64 |> I32_.trunc_sat_f64_s |> vl_of_uN_32) |> catch_ixx_exception
+        | () when m = Z.of_int 32 && n = Z.of_int 64 -> (fun _ -> i |> vl_to_float32 |> I64_.trunc_sat_f32_s |> vl_of_uN_64) |> catch_ixx_exception
+        | () when m = Z.of_int 64 && n = Z.of_int 64 -> (fun _ -> i |> vl_to_float64 |> I64_.trunc_sat_f64_s |> vl_of_uN_64) |> catch_ixx_exception
+        | _ -> error_values "trunc_sat" vs
+        )
+      | vs -> error_values "trunc_sat" vs
+      );
+  }
+
+let relaxed_trunc : numerics =
+  {
+    name = "relaxed_trunc";
+    f =
+      (function
+      | [ NumV _ as m; NumV _ as n; sx; CaseV _ as i ] ->
+        trunc_sat.f [m; n; sx; i]  (* use deterministic behaviour *)
+      | vs -> error_values "relaxed_trunc" vs
       );
   }
 
@@ -1121,6 +1188,9 @@ let numerics_list : numerics list = [
   convert;
   promote;
   demote;
+  trunc;
+  trunc_sat;
+  relaxed_trunc;
   inot;
   irev;
   iand;
@@ -1167,11 +1237,6 @@ let numerics_list : numerics list = [
   frelaxed_max;
   frelaxed_madd;
   frelaxed_nmadd;
-  (*
-  trunc;
-  trunc_sat;
-  relaxed_trunc;
-  *)
 ]
 
 let rec strip_suffix name =

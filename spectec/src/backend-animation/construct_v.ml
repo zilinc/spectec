@@ -225,10 +225,10 @@ let vl_of_unop =
     | IntOp.Clz    -> nullary "CLZ"
     | IntOp.Ctz    -> nullary "CTZ"
     | IntOp.Popcnt -> nullary "POPCNT"
-    | IntOp.ExtendS Pack.Pack8  -> caseV [["EXTEND"];[]] [nullary "`8" ]
-    | IntOp.ExtendS Pack.Pack16 -> caseV [["EXTEND"];[]] [nullary "`16"]
-    | IntOp.ExtendS Pack.Pack32 -> caseV [["EXTEND"];[]] [nullary "`32"]
-    | IntOp.ExtendS Pack.Pack64 -> caseV [["EXTEND"];[]] [nullary "`64"]
+    | IntOp.ExtendS Pack.Pack8  -> caseV [["EXTEND"];[]] [vl_of_nat 8  |> caseV1]
+    | IntOp.ExtendS Pack.Pack16 -> caseV [["EXTEND"];[]] [vl_of_nat 16 |> caseV1]
+    | IntOp.ExtendS Pack.Pack32 -> caseV [["EXTEND"];[]] [vl_of_nat 32 |> caseV1]
+    | IntOp.ExtendS Pack.Pack64 -> caseV [["EXTEND"];[]] [vl_of_nat 64 |> caseV1]
   in
   let vl_of_float_unop op =
     match op with
@@ -335,14 +335,6 @@ let vl_of_cvtop cop =
 
 
 (* Vector operator *)
-
-let num i = `Nat (Z.of_int i)
-let two = num 2
-let four = num 4
-let eight = num 8
-let sixteen = num 16
-let thirtytwo = num 32
-let sixtyfour = num 64
 
 let vl_of_half = function
   | RI.Ast.V128Op.Low  -> nullary "LOW"
@@ -1199,10 +1191,10 @@ let vl_to_tagtype v : RI.Types.tagtype = TagT (vl_to_typeuse v)
 (* Destruct operator *)
 
 let num i = `Nat (Z.of_int i)
-let two = num 2
-let four = num 4
-let eight = num 8
-let sixteen = num 16
+let two       = num 2
+let four      = num 4
+let eight     = num 8
+let sixteen   = num 16
 let thirtytwo = num 32
 let sixtyfour = num 64
 
@@ -1231,10 +1223,10 @@ let vl_to_int_unop v : RI.Ast.IntOp.unop =
   | [["CLZ"]], []    -> IntOp.Clz
   | [["CTZ"]], []    -> IntOp.Ctz
   | [["POPCNT"]], [] -> IntOp.Popcnt
-  | [["EXTEND"];[]], [z] when as_num_value z = eight     -> IntOp.ExtendS Pack.Pack8
-  | [["EXTEND"];[]], [z] when as_num_value z = sixteen   -> IntOp.ExtendS Pack.Pack16
-  | [["EXTEND"];[]], [z] when as_num_value z = thirtytwo -> IntOp.ExtendS Pack.Pack32
-  | [["EXTEND"];[]], [z] when as_num_value z = sixtyfour -> IntOp.ExtendS Pack.Pack64
+  | [["EXTEND"];[]], [z] when as_num_value (as_singleton_case z) = eight     -> IntOp.ExtendS Pack.Pack8
+  | [["EXTEND"];[]], [z] when as_num_value (as_singleton_case z) = sixteen   -> IntOp.ExtendS Pack.Pack16
+  | [["EXTEND"];[]], [z] when as_num_value (as_singleton_case z) = thirtytwo -> IntOp.ExtendS Pack.Pack32
+  | [["EXTEND"];[]], [z] when as_num_value (as_singleton_case z) = sixtyfour -> IntOp.ExtendS Pack.Pack64
   | _ -> error_value "integer unop" v
 let vl_to_float_unop v : RI.Ast.FloatOp.unop =
   let open RI in
