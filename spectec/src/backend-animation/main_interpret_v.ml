@@ -1,5 +1,5 @@
 open Def
-open Script_v
+open Spectest_v
 open State_v
 open Il.Ast
 open Il.Print
@@ -117,7 +117,6 @@ let get_global_value module_name globalname : value (* val *) =
 
 and instantiate module_ : value * value =
   let t1 = Sys.time () in
-  log "[Instantiating module...]\n";
   let il_module = C.vl_of_module module_ in
   let externaddrs = List.map get_externaddr module_.it.imports in
   let store = Store.get () in
@@ -128,13 +127,12 @@ and instantiate module_ : value * value =
   (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
-  print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
+  log "[Instantiating module... %dms]\n" ((t2 -. t1) *. 1000. |> int_of_float);
   !moduleinst, instrs'
 
 
 and invoke moduleinst_name funcname args : value =
   let t1 = Sys.time () in
-  log "[Invoking %s in module instance %s...]\n" funcname (print_name moduleinst_name);
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
   let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; vl_of_list C.vl_of_value args |> valA ] in
@@ -142,7 +140,7 @@ and invoke moduleinst_name funcname args : value =
   (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
-  print_endline ("invoke `" ^ funcname ^ "` took " ^ string_of_float (t2 -. t1) ^ " s");
+  log "[Invoking %s... %dms]\n" funcname ((t2 -. t1) *. 1000. |> int_of_float);
   instrs'
 
 

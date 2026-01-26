@@ -16,7 +16,7 @@
     interpreter
     numerics
     occur
-    script
+    spectest
     state
     valid
     value
@@ -29,7 +29,7 @@
     interpreter_v
     numerics_v
     state_v
-    script_v
+    spectest_v
     main_interpret_v
   )
 )
