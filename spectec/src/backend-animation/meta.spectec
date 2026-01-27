@@ -22,8 +22,15 @@ def $ref_infer(s, REF.EXN_ADDR a) = REF EXN
   -- if s.EXNS[a] = exn
 def $ref_infer(s, REF.HOST_ADDR a) = REF ANY
 def $ref_infer(s, REF.EXTERN addrref) = REF EXTERN
-  -- if $ref_infer(s, addrref) = REF ANY
+  -- if $ref_infer(s, addrref) = REF any
 
+def $val_infer(store, val) : valtype
+def $val_infer(s, num) = nt
+    -- Num_ok: s |- num : nt
+def $val_infer(s, vec) = vt
+    -- Vec_ok: s |- vec : vt
+def $val_infer(s, ref) = rt
+    -- if $ref_infer(s, ref) = rt
 
 
 ;; ********************************************************

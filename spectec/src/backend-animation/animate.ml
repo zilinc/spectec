@@ -437,45 +437,6 @@ let invert_bin_exp at op e1 e2 (t: numtyp) rhs : (exp * exp) E.m =
   E.return (lhs', rhs'')
 
 
-(**
-  Many of the rules appearing here are not targets of animation, and we need to have
-  some special handling for each of them.
-  Here is a list of them from function definitions:
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:70.37-70.43)
-    Eval_expr(../specification/wasm-3.0/4.4-execution.modules.spectec:170.6-170.15)
-    Module_ok(../specification/wasm-3.0/4.4-execution.modules.spectec:178.6-178.15)
-    Externaddr_ok(../specification/wasm-3.0/4.4-execution.modules.spectec:179.7-179.20)
-    Eval_expr(../specification/wasm-3.0/4.4-execution.modules.spectec:195.7-195.16)
-    Eval_expr(../specification/wasm-3.0/4.4-execution.modules.spectec:196.7-196.16)
-    Expand(../specification/wasm-3.0/4.4-execution.modules.spectec:208.6-208.12)
-    Val_ok(../specification/wasm-3.0/4.4-execution.modules.spectec:209.7-209.13)
-  Here is a list from reduction rules:
-    Ref_ok(../specification/wasm-3.0/4.3-execution.instructions.spectec:148.6-148.12)
-    Reftype_sub(../specification/wasm-3.0/4.3-execution.instructions.spectec:149.6-149.17)
-    Ref_ok(../specification/wasm-3.0/4.3-execution.instructions.spectec:159.6-159.12)
-    Reftype_sub(../specification/wasm-3.0/4.3-execution.instructions.spectec:160.6-160.17)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:180.6-180.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:202.6-202.12)
-    Ref_ok(../specification/wasm-3.0/4.3-execution.instructions.spectec:376.6-376.12)
-    Reftype_sub(../specification/wasm-3.0/4.3-execution.instructions.spectec:377.6-377.17)
-    Ref_ok(../specification/wasm-3.0/4.3-execution.instructions.spectec:387.6-387.12)
-    Reftype_sub(../specification/wasm-3.0/4.3-execution.instructions.spectec:388.6-388.17)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:414.6-414.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:423.6-423.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:441.6-441.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:465.6-465.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:472.6-472.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:486.6-486.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:557.6-557.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:569.6-569.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:612.6-612.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:628.6-628.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:229.6-229.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:408.6-408.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:431.6-431.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:447.6-447.12)
-    Expand(../specification/wasm-3.0/4.3-execution.instructions.spectec:499.6-499.12)
-*)
 let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in

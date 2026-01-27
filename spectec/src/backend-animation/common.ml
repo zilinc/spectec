@@ -1,8 +1,8 @@
 (* Definitions *)
-let typ_relids = ["Num_ok"; "Vec_ok"; "Val_ok"]
+let typ_relids = ["Num_ok"; "Vec_ok"]  (* No subtyping. Deterministic typing. *)
 (* Call sites *)
-let typ_infer_relids = ["Num_ok"; "Vec_ok"; "Val_ok"; "Ref_ok"]
-let typ_check_relids = ["Externaddr_ok"]
+let typ_infer_relids = ["Num_ok"; "Vec_ok"]
+let typ_check_relids = ["Externaddr_ok"; "Ref_ok"; "Val_ok"]
 
 (* Definitions *)
 let sub_relids = []

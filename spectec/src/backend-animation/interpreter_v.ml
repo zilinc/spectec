@@ -730,7 +730,7 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
   match clauses with
-  | [] -> info "log" at ("Function " ^ fname ^ " refuted at clause " ^ string_of_int (nth-1)); fail ()
+  | [] -> info "log" at ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses"); fail ()
   | cl :: cls ->
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
@@ -740,15 +740,20 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
-        begin match eval_prems ctx prems |> run_opt with
-        | Some ctx' -> (* If [exp] is partial, it means this clause is refuted. *)
-                       (match eval_exp ctx' exp |> run_opt with
-                       | Some v -> return v
-                       | None   -> match_clause at fname (nth+1) cls args
-                       )
-        | None      -> match_clause at fname (nth+1) cls args
-        end
-      | None -> match_clause at fname (nth+1) cls args
+        (match eval_prems ctx prems |> run_opt with
+        | Some ctx' ->
+          (* If [exp] is partial, it means this clause is refuted. *)
+          (match eval_exp ctx' exp |> run_opt with
+          | Some v -> info "log" at ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth);
+                      return v
+          | None   -> info "log" at ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth);
+                      match_clause at fname (nth+1) cls args
+          )
+        | None -> info "log" at ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth);
+                  match_clause at fname (nth+1) cls args
+        )
+      | None -> info "log" at ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth);
+                match_clause at fname (nth+1) cls args
       )
     in
     (* Resume global environment. *)
@@ -765,19 +770,22 @@ and call_func name args : value OptMonad.m =
   match name with
   (* Hardcoded functions defined in meta.spectec *)
   | "Steps"  -> call_func "steps"     args
-  | "Step"   -> (* call_func "step"      args *)
+  | "Step"   -> call_func "step"      args
+  (*
     let* r = call_func "step"      args in
     let CaseV(_, [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
     info "log" no ("* $step result is " ^ string_of_values ", " instrs');
     return r
-  | "Ref_ok" -> call_func "ref_infer" args
+  *)
+  (* | "Ref_ok" -> call_func "ref_infer" args *)
   (* Hardcoded functions defined in the compiler. *)
   | "Module_ok"     -> module_ok     args
   | "Externaddr_ok" -> externaddr_ok args
+  | "Ref_ok"        -> ref_ok        args
+  | "Val_ok"        -> val_ok        args
   | "Reftype_sub"   -> reftype_sub   args
   | "Heaptype_sub"  -> heaptype_sub  args
-  (* | "Val_ok"        -> val_ok        args |> return *)
   (* Others *)
   | _ ->
     let builtin_name, is_builtin =
@@ -817,7 +825,7 @@ and is_host = function
 and call_hostfunc name s vs =
   (* ty ∈ {"I32", "I64", "F32", "F64"} *)
   let as_const ty = function
-  | CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n])
+  | CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]) when ty = ty' -> n
   | OptV (Some (CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]))) when ty = ty' -> n
   | v -> error no ("Host function call: Not " ^ ty ^ ".CONST: " ^ string_of_value v)
   in
@@ -1088,6 +1096,37 @@ and externaddr_ok = function
     )
   | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
 
+(* Ref_ok : store -> ref -> reftype -> bool *)
+and ref_ok = function
+  | [ ValA _ as store; ValA _ as ref; ValA typ2 ] ->
+    (match call_func "ref_infer" [store; ref] |> run_opt with
+    | None -> error no ("Function `ref_infer` failed to evaluate to a value.")
+    | Some typ1 ->
+      let reftyp1 = vl_to_reftype typ1 in
+      let reftyp2 = vl_to_reftype typ2 in
+      (match RI.Match.match_reftype [] reftyp1 reftyp2 with
+      | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+      | b -> boolV b |> return
+      )
+    )
+  | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
+
+(* Val_ok : store -> val -> valtype -> bool *)
+and val_ok = function
+  | [ ValA _ as store; ValA _ as val_; ValA typ2 ] ->
+  (match call_func "val_infer" [store; val_] |> run_opt with
+  | None -> error no ("Function `val_infer` failed to evaluate to a value.")
+  | Some typ1 ->
+    let valtyp1 = vl_to_valtype typ1 in
+    let valtyp2 = vl_to_valtype typ2 in
+    (match RI.Match.match_valtype [] valtyp1 valtyp2 with
+    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+    | b -> boolV b |> return
+    )
+  )
+  | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
+
+
 (* Reftype_sub : context -> reftype -> reftype -> bool *)
 and reftype_sub = function
   | [ ValA ctx; ValA typ1; ValA typ2 ] ->
@@ -1141,8 +1180,10 @@ let instantiate (args: Value.arg list) : value =
   | None -> raise (Failure "`instantiate` failed to run.")
 
 let invoke (args: Value.arg list) : value =
-  match (let* r = call_func "invoke" args in
-         call_func "steps" [ValA r]) |> run_opt
-  with
-  | Some v -> v
+  match call_func "invoke" args |> run_opt with
   | None -> raise (Failure "`invoke` failed to run.")
+  | Some r -> let CaseV (_, [_; instrs]) = r in
+              (match call_func "steps" [ValA r] |> run_opt with
+              | Some r' -> r'
+              | None -> raise (Failure ("`invoke` failed to reduce its result: " ^ string_of_value instrs))
+              )

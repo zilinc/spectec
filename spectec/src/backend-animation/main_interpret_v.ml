@@ -49,7 +49,8 @@ let is_long_test path =
       "call_indirect.wast";
       "return_call.wast";
       "return_call_indirect.wast";
-      "return_call_ref.wast"
+      "return_call_ref.wast";
+      "table_grow.wast"
     ]
 
 
