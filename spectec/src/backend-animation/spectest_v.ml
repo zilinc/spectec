@@ -20,10 +20,9 @@ let il_of_spectest () : value =
 
 
   let create_funcinst name ptypes =
-    let param_types = List.map nullary ptypes  (* list(valtype) *) in
     let comptype = caseV [["FUNC"];["->"];[]] [
-      vl_of_list' param_types;
-      vl_of_list' []
+      vl_of_list' nullary ptypes;
+      vl_of_list' Fun.id []
     ] in
     let subtype = caseV [["SUB"];[];[];[]] [
       optV (Some (nullary "FINAL"));
@@ -31,7 +30,7 @@ let il_of_spectest () : value =
       comptype
     ] in
     let rectype = caseV [["REC"];[]] [
-      vl_of_list' [subtype]
+      vl_of_list' Fun.id [subtype]
     ] in
     let deftype = caseV [["_DEF"];[];[]] [
       rectype; vl_of_nat 0

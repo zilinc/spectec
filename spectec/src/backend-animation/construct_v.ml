@@ -71,7 +71,7 @@ let vl_of_memidx idx = vl_of_idx idx
 
 
 (* syntax list(syntax X) = X*  -- if ... *)
-let vl_of_list' ls = listV_of_list ls |> caseV1
+let vl_of_list' f l = vl_of_list f l |> caseV1
 
 
 let rec vl_of_null = function
@@ -97,10 +97,10 @@ and vl_of_storagetype = function
 and vl_of_fieldtype = function
   | RT.FieldT (mut, st) -> caseV [[];[];[]] [vl_of_mut mut; vl_of_storagetype st]
 
-and vl_of_resulttype rt = vl_of_list' (List.map vl_of_valtype rt)
+and vl_of_resulttype rt = vl_of_list' vl_of_valtype rt
 
 and vl_of_comptype = function
-  | RT.StructT ftl      -> caseV [["STRUCT"];[]]      [vl_of_list vl_of_fieldtype ftl]
+  | RT.StructT ftl      -> caseV [["STRUCT"];[]]      [vl_of_list' vl_of_fieldtype ftl]
   | RT.ArrayT  ft       -> caseV [["ARRAY"];[]]       [vl_of_fieldtype ft]
   | RT.FuncT (rt1, rt2) -> caseV [["FUNC"];["->"];[]] [vl_of_resulttype rt1; vl_of_resulttype rt2]
 
@@ -109,7 +109,7 @@ and vl_of_subtype = function
     caseV [["SUB"];[];[];[]] [vl_of_final fin; vl_of_list vl_of_typeuse tul; vl_of_comptype st]
 
 and vl_of_rectype = function
-  | RT.RecT stl -> caseV [["REC"];[]] [vl_of_list' (List.map vl_of_subtype stl)]
+  | RT.RecT stl -> caseV [["REC"];[]] [vl_of_list' vl_of_subtype stl]
 
 and vl_of_deftype = function
   | RT.DefT (rt, i) -> caseV [["_DEF"];[];[]] [vl_of_rectype rt; vl_of_nat32 i]
@@ -789,7 +789,7 @@ let rec vl_of_instr (instr: RI.Ast.instr) =
   | TryTable (bt, catches, instrs) ->
     mk_instr "TRY_TABLE" 3 [
       vl_of_blocktype bt;
-      vl_of_list vl_of_catch catches;
+      vl_of_list' vl_of_catch catches;
       vl_of_list vl_of_instr instrs
     ]
   | Load    (idx, loadop )         -> mk_instr "LOAD"        4 (vl_of_loadop   idx loadop)
@@ -1062,7 +1062,7 @@ let rec vl_to_storagetype v : RI.Types.storagetype =
 
 and vl_to_fieldtype v : RI.Types.fieldtype =
   match match_caseV "fieldtype" v with
-  | [[];[]], [mut; st] -> FieldT (vl_to_mut mut, vl_to_storagetype st)
+  | [[];[];[]], [mut; st] -> FieldT (vl_to_mut mut, vl_to_storagetype st)
   | _ -> error_value "fieldtype" v
 
 and vl_to_resulttype v : RI.Types.resulttype =

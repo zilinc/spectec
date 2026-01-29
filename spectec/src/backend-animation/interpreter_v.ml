@@ -12,6 +12,7 @@ open Il.Print
 open Source
 open Printf
 open Il2al.Free
+open Lazy
 module HS = State_v.HostState
 module A  = Al.Ast
 module I  = Backend_interpreter
@@ -43,7 +44,7 @@ let string_of_error at msg = string_of_region at ^ " (Meta)Interpreter error:\n"
 let warn at msg = print_endline (string_of_region at ^ " (Meta)Interpreter warning:\n" ^ msg)
 
 let info v at msg = if List.mem v !verbose || v = "" then
-                      print_endline (string_of_region at ^ " (Meta)Interpreter info[" ^ v ^ "]:\n" ^ msg)
+                      print_endline (string_of_region at ^ " (Meta)Interpreter info[" ^ v ^ "]:\n" ^ force msg)
                     else
                       ()
 
@@ -113,9 +114,9 @@ let error_eval etyp exp onotes =
   error exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes)
 
 let fail_assign at lhs rhs msg =
-  info "assign" at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
-                   "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
-                   "  ▹ value: " ^ string_of_value rhs);
+  info "assign" at (lazy ("Pattern-matching failed (" ^ msg ^ "):\n" ^
+                          "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
+                          "  ▹ value: " ^ string_of_value rhs));
   fail ()
 
 let string_of_exp exp = Il.Print.string_of_exp exp |> Lib.String.shorten
@@ -730,7 +731,7 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
   match clauses with
-  | [] -> info "log" at ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses"); fail ()
+  | [] -> info "log" at (lazy ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses")); fail ()
   | cl :: cls ->
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
@@ -744,15 +745,15 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
         | Some ctx' ->
           (* If [exp] is partial, it means this clause is refuted. *)
           (match eval_exp ctx' exp |> run_opt with
-          | Some v -> info "log" at ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth);
+          | Some v -> info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
                       return v
-          | None   -> info "log" at ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth);
+          | None   -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
                       match_clause at fname (nth+1) cls args
           )
-        | None -> info "log" at ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth);
+        | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
                   match_clause at fname (nth+1) cls args
         )
-      | None -> info "log" at ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth);
+      | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
                 match_clause at fname (nth+1) cls args
       )
     in
@@ -763,21 +764,21 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
 
 and eval_func name func_def args : value OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
-  match_clause no_region name 1 fcs args
+  if name = "step" then
+    let* r = match_clause no_region name 1 fcs args in
+    let CaseV(_, [_; instrs]) = r in
+    let instrs' = instrs |> as_list_value' in
+    info "log" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
+    return r
+  else
+    match_clause no_region name 1 fcs args
 
 and call_func name args : value OptMonad.m =
-  info "log" no ("Calling " ^ name);
+  info "log" no (lazy ("Calling " ^ name));
   match name with
   (* Hardcoded functions defined in meta.spectec *)
   | "Steps"  -> call_func "steps"     args
   | "Step"   -> call_func "step"      args
-  (*
-    let* r = call_func "step"      args in
-    let CaseV(_, [_; instrs]) = r in
-    let instrs' = instrs |> as_list_value' in
-    info "log" no ("* $step result is " ^ string_of_values ", " instrs');
-    return r
-  *)
   (* | "Ref_ok" -> call_func "ref_infer" args *)
   (* Hardcoded functions defined in the compiler. *)
   | "Module_ok"     -> module_ok     args
@@ -867,7 +868,7 @@ and call_hostfunc name s vs =
     |> fun e -> [e]
   | "print_i32_f32" when argc = 2 ->
     let [v1; v2] = vs in
-    let i32 = v1 |> as_const "I32" |> vl_to_nat32   |> RI.I32.to_string_s in
+    let i32 = v1 |> as_const "I32" |> vl_to_uN_32   |> RI.I32.to_string_s in
     let f32 = v2 |> as_const "F32" |> vl_to_float32 |> RI.F32.to_string   in
     Printf.sprintf "- print_i32_f32: %s %s\n" i32 f32 |> print_eff |> fun e -> [e]
   | "print_f64_f64" when argc = 2 ->
@@ -908,7 +909,7 @@ and hostcall : Value.arg list -> value OptMonad.m = function
       (* Host function has been called already. Look up the effect registry. *)
       (match HS.lookup_effect name' (HS.get_timestamp lcl_hs) with
       | Some (res, _effs) -> return res
-      | None -> error no ("No such entry in effect resgistry.")
+      | None -> error no ("No such entry in effect resgistry: " ^ name')
       )
     | Good ->
       let res, effs = call_hostfunc name' s vals in

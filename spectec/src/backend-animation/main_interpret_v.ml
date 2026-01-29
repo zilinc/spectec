@@ -26,7 +26,7 @@ let _error_interpret at msg = Error.error at "interpreter" msg
 
 let logging = ref false
 
-let log fmt = Printf.(if !logging then fprintf stdout fmt else ifprintf stdout fmt)
+let log fmt = Printf.(if !logging then fprintf stdout (fmt ^^ "%!") else ifprintf stdout fmt)
 
 let print_name n = if n = "" then "[_]" else n
 
@@ -246,9 +246,6 @@ let run_command command =
   result, Sys.time () -. start_time
 
 let run_wast name script =
-  let script = (* Exclude long test *)
-    if is_long_test name then [] else script
-  in
   Store.init ();
   log ("[run_wast... %s]\n") (if is_long_test name then "skipped" else "");
   (* Intialise spectest *)
@@ -326,6 +323,8 @@ let parse_file name parser_ file =
 let rec run_file ?(is_top=false) path args =
   if Sys.is_directory path then
     run_dir ~is_top:is_top path
+  else if is_long_test path && not is_top then pass, 0.0
+    (* Exclude long test, unless it's passed in explicitly. *)
   else try
     (* Check file extension *)
     match Filename.extension path with
