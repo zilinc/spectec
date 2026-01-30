@@ -138,9 +138,13 @@ let as_singleton_case = function
   | CaseV ([[];[]], [v]) -> v
   | v -> error no ("as_singleton_case: " ^ string_of_value v)
 
-let as_case = function
+let as_case_value = function
   | CaseV (_, vs) -> vs
-  | v ->  error no ("as_case: " ^ string_of_value v)
+  | v ->  error no ("as_case_value: " ^ string_of_value v)
+
+let as_str_value = function
+  | StrV str -> str
+  | v -> error no ("as_str_value: " ^ string_of_value v)
 
 let has_str_field atom str : bool =
   match str with
@@ -182,9 +186,17 @@ let boolV b = BoolV b
 let textV s = TextV s
 let optV ov = OptV ov
 let caseV mixop vs = CaseV (mixop, vs)
+let caseV1 v = caseV [[];[]] [v]
 let tupV vs = TupV vs
 let strV fvs = StrV fvs
 
+let num i = `Nat (Z.of_int i)
+let two       = num 2
+let four      = num 4
+let eight     = num 8
+let sixteen   = num 16
+let thirtytwo = num 32
+let sixtyfour = num 64
 
 let int_of_bool b = Stdlib.Bool.to_int b
 
@@ -203,3 +215,6 @@ let none = optV None
 let some v = optV (Some v)
 let nullary con = caseV [[String.uppercase_ascii con]] []
 let singleton v = listV [|v|]
+let listv_singleton = function
+  | ListV arr_ref when Array.length !arr_ref = 1 -> Array.get !arr_ref 0
+  | v -> error_value "listv_singleton" v

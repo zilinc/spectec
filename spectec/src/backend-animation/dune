@@ -26,6 +26,7 @@
   interpreter
   numerics
   occur
+  spectest
   script
   state
   valid
@@ -41,8 +42,10 @@
   interpreter_v
   numerics_v
   state_v
+  spectest_v
   script_v
-  main_interpret_v))
+  main_interpret_v
+  main_runner_v))
 
 (env
  (dev

@@ -1,5 +1,13 @@
-let typ_infers = []
-let typ_checks = []
+(* Definitions *)
+let typ_relids = ["Num_ok"; "Vec_ok"]  (* No subtyping. Deterministic typing. *)
+(* Call sites *)
+let typ_infer_relids = ["Num_ok"; "Vec_ok"]
+let typ_check_relids = ["Externaddr_ok"; "Ref_ok"; "Val_ok"]
+
+(* Definitions *)
+let sub_relids = []
+(* Call sites *)
+let sub_check_relids = ["Heaptype_sub"; "Reftype_sub"; "Valtype_sub"]
 
 let step_relids = ["Step"; "Step_pure"; "Step_read"]
 
@@ -22,7 +30,6 @@ let step_table : (string * string * int) Map.t ref =
     ("CALL_INDIRECT"       , 0);
     ("RETURN"              , 0);  (* ??? *)
     ("RETURN_CALL_INDIRECT", 0);
-    ("TRAP"                , -1);
     ("UNOP"                , 0);
     ("BINOP"               , 0);
     ("TESTOP"              , 0);

@@ -90,6 +90,10 @@ let rebind _space map id rhs =
   assert (Map.mem id.it map);
   Map.add id.it rhs map
 
+let remove _space map id =
+  assert (Map.mem id.it map);
+  Map.remove id.it map
+
 let mem_var env id = mem env.vars id
 let mem_typ env id = mem env.typs id
 let mem_def env id = mem env.defs id
@@ -119,6 +123,13 @@ let rebind_typ env id rhs = {env with typs = rebind "type" env.typs id rhs}
 let rebind_def env id rhs = {env with defs = rebind "definition" env.defs id rhs}
 let rebind_rel env id rhs = {env with rels = rebind "relation" env.rels id rhs}
 let rebind_gram env id rhs = {env with grams = rebind "grammar" env.grams id rhs}
+
+let remove_var env id = {env with vars = remove "variable" env.vars id}
+let remove_typ env id = {env with typs = remove "type" env.typs id}
+let remove_def env id = {env with defs = remove "definition" env.defs id}
+let remove_rel env id = {env with rels = remove "relation" env.rels id}
+let remove_gram env id = {env with grams = remove "grammar" env.grams id}
+
 
 (* Hints *)
 let add_hint env hintdef = {env with hints = hintdef :: env.hints}

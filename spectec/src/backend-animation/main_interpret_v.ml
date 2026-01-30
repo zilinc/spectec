@@ -1,5 +1,5 @@
 open Def
-open Script_v
+open Spectest_v
 open State_v
 open Il.Ast
 open Il.Print
@@ -26,7 +26,7 @@ let _error_interpret at msg = Error.error at "interpreter" msg
 
 let logging = ref false
 
-let log fmt = Printf.(if !logging then fprintf stderr fmt else ifprintf stderr fmt)
+let log fmt = Printf.(if !logging then fprintf stdout (fmt ^^ "%!") else ifprintf stdout fmt)
 
 let print_name n = if n = "" then "[_]" else n
 
@@ -49,7 +49,8 @@ let is_long_test path =
       "call_indirect.wast";
       "return_call.wast";
       "return_call_indirect.wast";
-      "return_call_ref.wast"
+      "return_call_ref.wast";
+      "table_grow.wast"
     ]
 
 
@@ -81,7 +82,8 @@ let print_runner_result name result =
 let get_export name moduleinst_name =
   Register.find moduleinst_name
   |> as_str_field "EXPORTS"
-  |> find_list_elem (fun export -> as_text_value (as_str_field "NAME" export) = name)
+  |> find_list_elem
+       (fun export -> as_str_field "NAME" export |> as_singleton_case |> as_text_value = name)
 
 let get_externaddr import =
   let R.Ast.Import (module_name, item_name, _) = import.it in
@@ -100,7 +102,7 @@ let get_export_addr name moduleinst_name : value =
     moduleinst_name
     |> get_export name
     |> as_str_field "ADDR"
-    |> as_case
+    |> as_case_value
   in
   try List.hd vl with Failure _ ->
     failwith ("Function export doesn't contain function address")
@@ -114,34 +116,32 @@ let get_global_value module_name globalname : value (* val *) =
 
 (** Main functions **)
 
-and instantiate module_ : value =
+and instantiate module_ : value * value =
   let t1 = Sys.time () in
-  log "[Instantiating module...]\n";
-  match C.vl_of_module module_, List.map get_externaddr module_.it.imports with
-  | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
-  | il_module, externaddrs ->
-    let store = Store.get () in
-    let CaseV (_, [state; _]) = Interpreter_v.instantiate [ valA store ; valA il_module; listV_of_list externaddrs |> valA ] in
-    let CaseV (_, [store'; frame']) = state in
-    let StrV [_; (fname, moduleinst)] = frame' in
-    assert ("MODULE" = fname);
-    Store.put store';
-    let t2 = Sys.time () in
-    print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
-    !moduleinst
+  let il_module = C.vl_of_module module_ in
+  let externaddrs = List.map get_externaddr module_.it.imports in
+  let store = Store.get () in
+  let CaseV (_, [state'; instrs']) = Interpreter_v.instantiate [ valA store ; valA il_module; listV_of_list externaddrs |> valA ] in
+  let CaseV (_, [store'; frame']) = state' in
+  let StrV [_; (fname, moduleinst)] = frame' in
+  assert ("MODULE" = fname);
+  (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
+  Store.put store';
+  let t2 = Sys.time () in
+  log "[Instantiating module... %dms]\n" ((t2 -. t1) *. 1000. |> int_of_float);
+  !moduleinst, instrs'
 
 
 and invoke moduleinst_name funcname args : value =
   let t1 = Sys.time () in
-  log "[Invoking %s %s in module instance %s...]\n"
-    funcname (R.Value.string_of_values args |> Lib.String.shorten) (print_name moduleinst_name);
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
   let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; vl_of_list C.vl_of_value args |> valA ] in
   let CaseV (_, [store'; _]) = state' in
+  (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
-  print_endline ("invoke " ^ funcname ^ " took " ^ string_of_float (t2 -. t1) ^ " s");
+  log "[Invoking %s... %dms]\n" funcname ((t2 -. t1) *. 1000. |> int_of_float);
   instrs'
 
 
@@ -160,6 +160,11 @@ let run_action action : value =
   | Get (var_opt, globalname) ->
     [ get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname) ] |> listV_of_list
 
+let print_fail at failtype expected actual =
+  print_endline (R.Source.string_of_region at ^ ": Expected " ^ failtype ^ " failure: " ^ expected);
+  print_endline ("Got " ^ actual ^ ".");
+  fail
+
 let test_assertion assertion =
   let open R in
   match assertion.it with
@@ -167,38 +172,32 @@ let test_assertion assertion =
     let result = run_action action |> as_list_value' |> List.map C.vl_to_value in
     Run.assert_results no_region result expected;
     success
-  | AssertTrap (action, re) -> (
-    try
-      let result = run_action action in
-      Run.assert_message assertion.at "runtime" (string_of_value result) re;
-      fail
-    with I.Exception.Trap -> success
-  )
-  | AssertUninstantiable (var_opt, re) -> (
-    try
-      Modules.find (Modules.get_module_name var_opt) |> instantiate |> ignore;
-      Run.assert_message assertion.at "instantiation" "module instance" re;
-      fail
-    with I.Exception.Trap -> success
-  )
+  | AssertTrap (action, re) ->
+    let result = run_action action |> as_list_value' in
+    (match result with
+    | [ CaseV ([["TRAP"]], []) ] -> success
+    | _ -> print_fail assertion.at "runtime" re (string_of_values ", " result)
+    )
   | AssertException action ->
-    (match run_action action with
-    | exception I.Exception.Throw -> success
-    | _ -> Assert.error assertion.at "expected exception"
+    let result = run_action action |> as_list_value' in
+    (match result with
+    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | _ -> print_fail assertion.at "expected exception" "" (string_of_values ", " result)
     )
-  | AssertInvalid (def, re) when !I.Construct.version = 3 ->
-    (match def |> module_of_def |> instantiate |> ignore with
-    | exception I.Exception.Invalid _ -> success
-    | _ ->
-      Run.assert_message assertion.at "validation" "module instance" re;
-      fail
+  | AssertUninstantiable (var_opt, re) ->
+    let (moduleinst, instrs) = Modules.find (Modules.get_module_name var_opt) |> instantiate in
+    let result = instrs |> as_list_value' in
+    (match result with
+    | [ CaseV ([["TRAP"]], []) ]
+    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | _ -> print_fail assertion.at "instantiation" re (string_of_values ", " result)
     )
-  | AssertInvalidCustom (def, re) when !I.Construct.version = 3 ->
-    (match def |> module_of_def |> instantiate |> ignore with
+  | AssertInvalid (def, re)
+  | AssertInvalidCustom (def, re) ->
+    (match def |> module_of_def |> fun m -> Fun.const m (RI.Valid.check_module m) |> instantiate |> ignore with
+    | exception RI.Valid.Invalid _ -> success
     | exception I.Exception.Invalid _ -> success
-    | _ ->
-      Run.assert_message assertion.at "validation" "module instance" re;
-      fail
+    | _ -> print_fail assertion.at "validation" re "module instance"
     )
   (* ignore other kinds of assertions *)
   | _ -> pass
@@ -208,14 +207,15 @@ let run_command' command =
   let res = match command.it with
   | Module (var_opt, def) ->
     log "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
-    def
-    |> module_of_def
-    |> Modules.add_with_var var_opt;
-    success
+    let module_ = module_of_def def in
+    (match RI.Valid.check_module module_ with
+    | exception RI.Valid.Invalid(at, msg) -> fail
+    | _ -> Modules.add_with_var var_opt module_; success
+    )
   | Instance (var1_opt, var2_opt) ->
     log "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
     Modules.find (Modules.get_module_name var2_opt)
-    |> instantiate
+    |> instantiate |> fst
     |> Register.add_with_var var1_opt;
     success
   | Register (modulename, var_opt) ->
@@ -234,25 +234,12 @@ let run_command' command =
 let run_command command =
   let start_time = Sys.time () in
   let result =
-    let print_fail at msg = Printf.printf "- Test failed at %s (%s)\n" (string_of_region at) (Lib.String.shorten msg) in
+    let print_fail at msg = Printf.printf "- Test failed at %s: %s\n" (string_of_region at) msg in
     try
       run_command' command
     with
-    | I.Exception.Error (at, msg, step) ->
-      let msg' = msg ^ " (interpreting " ^ step ^ " at " ^ Source.string_of_region at ^ ")" in
-      command.at |> string_of_region |> print_endline;
-      (* error_interpret at msg' *)
-      print_fail command.at msg';
-      fail
-    | I.Exception.Invalid (e, backtrace) ->
-      print_fail command.at (Printexc.to_string e);
-      Printexc.print_raw_backtrace stdout backtrace;
-      fail
-    | Register.ModuleNotFound x ->
-      print_fail command.at ("Target module(" ^ x ^ ") does not exist or is not instantiated successfully");
-      fail
     | e ->
-      print_fail command.at (Printexc.to_string e);
+      print_fail command.at (Util.Error.print_exn e);
       Printexc.print_backtrace stdout;
       fail
   in
@@ -260,7 +247,7 @@ let run_command command =
 
 let run_wast name script =
   Store.init ();
-  log ("[run_wast...]\n");
+  log ("[run_wast... %s]\n") (if is_long_test name then "skipped" else "");
   (* Intialise spectest *)
   let spectest = il_of_spectest () in
   Register.add "spectest" spectest;  (* spectest is a `moduleinst`. *)
@@ -284,7 +271,7 @@ let run_wasm' args module_ =
 
   (* Instantiate *)
   module_
-  |> instantiate
+  |> instantiate |> fst
   |> Register.add_with_var None;
 
   (* TODO: Only Int32 arguments/results are acceptable *)
@@ -333,9 +320,11 @@ let parse_file name parser_ file =
 
 (** Runner **)
 
-let rec run_file path args =
+let rec run_file ?(is_top=false) path args =
   if Sys.is_directory path then
-    run_dir path
+    run_dir ~is_top:is_top path
+  else if is_long_test path && not is_top then pass, 0.0
+    (* Exclude long test, unless it's passed in explicitly. *)
   else try
     (* Check file extension *)
     match Filename.extension path with
@@ -364,14 +353,16 @@ let rec run_file path args =
     | _ -> pass, 0.0
   with R.Decode.Code _ | R.Parse.Syntax _ -> pass, 0.0
 
-and run_dir path =
-  path
-  |> Sys.readdir
-  |> Array.to_list
-  |> List.sort compare
-  |> List.map (fun filename -> run_file (Filename.concat path filename) [])
-  |> sum_results_with_time
-
+and run_dir ?(is_top=false) path =
+  if is_top then
+    path
+    |> Sys.readdir
+    |> Array.to_list
+    |> List.sort compare
+    |> List.map (fun filename -> run_file (Filename.concat path filename) [])
+    |> sum_results_with_time
+  else
+    pass, 0.0
 
 (** Entry **)
 let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
@@ -381,7 +372,7 @@ let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
   match args with
   | path :: args' when Sys.file_exists path ->
     (* Run file *)
-    let result = run_file path args' in
+    let result = run_file ~is_top:true path args' in
 
     (* Print result *)
     if Sys.is_directory path then (

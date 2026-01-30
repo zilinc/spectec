@@ -13,17 +13,16 @@ let error at msg = Error.error at "animation/script_v" msg
 let il_of_spectest () : value =
 
   (* Helper functions *)
-  let i32_to_const i = caseV [["CONST"];[]] [ nullary "I32"; vl_of_uN_32   i ] in
-  let i64_to_const i = caseV [["CONST"];[]] [ nullary "I64"; vl_of_uN_64   i ] in
-  let f32_to_const f = caseV [["CONST"];[]] [ nullary "F32"; vl_of_float32 f ] in
-  let f64_to_const f = caseV [["CONST"];[]] [ nullary "F64"; vl_of_float64 f ] in
+  let i32_to_const i = caseV [["CONST"];[];[]] [ nullary "I32"; vl_of_uN_32   i ] in
+  let i64_to_const i = caseV [["CONST"];[];[]] [ nullary "I64"; vl_of_uN_64   i ] in
+  let f32_to_const f = caseV [["CONST"];[];[]] [ nullary "F32"; vl_of_float32 f ] in
+  let f64_to_const f = caseV [["CONST"];[];[]] [ nullary "F64"; vl_of_float64 f ] in
 
 
   let create_funcinst name ptypes =
-    let param_types = List.map nullary ptypes  (* list(valtype) *) in
     let comptype = caseV [["FUNC"];["->"];[]] [
-      vl_of_list' param_types;
-      vl_of_list' []
+      vl_of_list' nullary ptypes;
+      vl_of_list' Fun.id []
     ] in
     let subtype = caseV [["SUB"];[];[];[]] [
       optV (Some (nullary "FINAL"));
@@ -31,7 +30,7 @@ let il_of_spectest () : value =
       comptype
     ] in
     let rectype = caseV [["REC"];[]] [
-      vl_of_list' [subtype]
+      vl_of_list' Fun.id [subtype]
     ] in
     let deftype = caseV [["_DEF"];[];[]] [
       rectype; vl_of_nat 0
@@ -47,14 +46,14 @@ let il_of_spectest () : value =
 
   let create_globalinst t v =
     let valtype = nullary t in
-    let globaltype = caseV [[];[]] [ none; valtype ] in
+    let globaltype = caseV [[];[];[]] [ none; valtype ] in
     strV [ ("TYPE", ref globaltype); ("VALUE" , ref v ) ]
   in
 
   let create_tableinst t =
     let addrtype = nullary t in
     let limits   = caseV [["["];[".."];["]"]] [
-      vl_of_nat 10; vl_of_nat 20
+      vl_of_nat 10 |> caseV1; vl_of_nat 20 |> caseV1 |> some
     ] in
     let reftype  = caseV [["REF"];[];[]] [
       some (nullary "NULL");
@@ -71,12 +70,12 @@ let il_of_spectest () : value =
   let create_meminst t =
     let addrtype = nullary t in
     let limits   = caseV [["["];[".."];["]"]] [
-      vl_of_nat 1; vl_of_nat 2
+      vl_of_nat 1 |> caseV1; vl_of_nat 2 |> caseV1 |> some
     ] in
     let memtype = caseV [[];[];["PAGE"]] [
       addrtype; limits
     ] in
-    let zeros = listV (Array.make 0x10000 (vl_of_nat 0)) in
+    let zeros = listV (Array.make 0x10000 (vl_of_uN Z.zero)) in
     strV [ ("TYPE", ref memtype); ("BYTES", ref zeros) ] in
 
   (* Builtin functions *)
@@ -124,7 +123,7 @@ let il_of_spectest () : value =
       | _ -> assert false
     in
     let new_inst =
-      strV [ ("NAME", textV name |> ref); ("ADDR", caseV [[kind];[]] [ vl_of_nat addr ] |> ref) ]
+      strV [ ("NAME", textV name |> caseV1 |> ref); ("ADDR", caseV [[kind];[]] [ vl_of_nat addr ] |> ref) ]
     in
 
     (* Update Store *)

@@ -5,12 +5,16 @@ type subst = Subst.t
 
 val is_normal_exp : exp -> bool
 val is_head_normal_exp : exp -> bool
+val is_cnf : exp -> bool
 
+val cnf_if_prim : exp -> exp
+
+val reduce_fncall_hook : (env -> Util.Source.region -> typ -> id -> arg list -> exp) ref
 val reduce_exp : env -> exp -> exp
 val reduce_typ : env -> typ -> typ
 val reduce_typdef : env -> typ -> deftyp
 val reduce_arg : env -> arg -> arg
-val reduce_prems : env -> Subst.subst -> prem list -> bool option
+val reduce_prems : env -> Subst.subst -> prem list -> [`True of Subst.t | `False | `None]
 val reduce_exp_call : env -> id -> arg list -> Util.Source.region -> clause list -> exp option
 
 val equiv_functyp : env -> param list * typ -> param list * typ -> bool

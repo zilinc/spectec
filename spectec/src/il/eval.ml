@@ -32,7 +32,7 @@ type subst = Subst.t
 
 (* Helpers *)
 
-(* This exception indicates that a an application cannot be reduced because a pattern
+(* This exception indicates that an application cannot be reduced because a pattern
  * match cannot be decided.
  * When assume_coherent_matches is set, that case is treated as a non-match.
  *)
@@ -76,6 +76,19 @@ let fst3 (x, _, _) = x
 let snd3 (_, x, _) = x
 
 let unordered s1 s2 = not Set.(subset s1 s2 || subset s2 s1)
+
+
+let is_cnf x = x.mark
+
+let cnf x = {x with mark = true}
+
+let cnf_if xs x = if List.for_all is_cnf xs then cnf x else x
+
+let cnf_if_prim e =
+  if e.mark then e else
+  match e.it with
+  | BoolE _ | NumE _ | TextE _ -> cnf e
+  | _ -> e
 
 
 let of_bool_exp = function
@@ -127,12 +140,13 @@ let rec reduce_typ env t : typ =
     (fun _ -> fmt "%s" (il_typ t))
     (fun r -> fmt "%s" (il_typ r))
   ) @@ fun _ ->
+  if is_cnf t then t else
   match t.it with
   | VarT (id, args) ->
     let args' = List.map (reduce_arg env) args in
     (match reduce_typ_app' env id args' t.at (Env.find_opt_typ env id) with
     | Some {it = AliasT t'; _} -> reduce_typ env t'
-    | _ -> VarT (id, args') $ t.at
+    | _ -> VarT (id, args') $ t.at |> cnf_if args'
     )
   | _ -> t
 
@@ -183,6 +197,7 @@ and as_iter_typ env t : typ =
 (* Expression Reduction *)
 
 and is_head_normal_exp e =
+  is_cnf e ||
   match e.it with
   | BoolE _ | NumE _ | TextE _
   | OptE _ | ListE _ | TupE _ | CaseE _ | StrE _ -> true
@@ -190,6 +205,7 @@ and is_head_normal_exp e =
   | _ -> false
 
 and is_normal_exp e =
+  is_cnf e ||
   match e.it with
   | BoolE _ | NumE _ | TextE _ -> true
   | ListE es | TupE es -> List.for_all is_normal_exp es
@@ -198,22 +214,35 @@ and is_normal_exp e =
   | StrE efs -> List.for_all (fun (_, e) -> is_normal_exp e) efs
   | _ -> false
 
-and reduce_exp env e : exp =
+and reduce_fncall_hook : (env -> region -> typ -> id -> arg list -> exp) ref = ref (fun env at note id args ->
+  let args' = List.map (reduce_arg env) args in
+  let _ps, _t, clauses = Env.find_def env id in
+  (* Allow for uninterpreted functions *)
+  if not !assume_coherent_matches && clauses = [] then CallE (id, args') $$ at % note else
+  (match reduce_exp_call env id args' at clauses with
+  | None -> CallE (id, args') $$ at % note
+  | Some e -> e
+  )
+)
+
+and reduce_exp env e: exp =
   Debug.(log "il.reduce_exp"
     (fun _ -> fmt "%s" (il_exp e))
     (fun e' -> fmt "%s" (il_exp e'))
   ) @@ fun _ ->
+  if is_cnf e then e else
   match e.it with
-  | VarE _ | BoolE _ | NumE _ | TextE _ -> e
+  | VarE _ -> e
+  | BoolE _ | NumE _ | TextE _ -> cnf e
   | UnE (op, ot, e1) ->
     let e1' = reduce_exp env e1 in
     (match op, e1'.it with
-    | #Bool.unop as op', BoolE b1 -> BoolE (Bool.un op' b1) $> e
+    | #Bool.unop as op', BoolE b1 -> BoolE (Bool.un op' b1) $> e |> cnf
     | #Num.unop as op', NumE n1 ->
       (match Num.un op' n1 with
-      | Some n -> NumE n
-      | None -> UnE (op, ot, e1')
-      ) $> e
+      | Some n -> NumE n $> e |> cnf
+      | None -> UnE (op, ot, e1') $> e
+      )
     | `NotOp, UnE (`NotOp, _, e11') -> e11'
     | `MinusOp, UnE (`MinusOp, _, e11') -> e11'
     | _ -> UnE (op, ot, e1') $> e
@@ -224,30 +253,30 @@ and reduce_exp env e : exp =
     (match op with
     | #Bool.binop as op' ->
       (match Bool.bin_partial op' e1'.it e2'.it of_bool_exp to_bool_exp with
-      | None -> BinE (op, ot, e1', e2')
-      | Some e' -> e'
+      | None -> BinE (op, ot, e1', e2') $> e
+      | Some e' -> e' $> e |> cnf_if_prim
       )
     | #Num.binop as op' ->
       (match Num.bin_partial op' e1'.it e2'.it of_num_exp to_num_exp with
-      | None -> BinE (op, ot, e1', e2')
-      | Some e' -> e'
+      | None -> BinE (op, ot, e1', e2') $> e
+      | Some e' -> e' $> e |> cnf_if_prim
       )
-    ) $> e
+    )
   | CmpE (op, ot, e1, e2) ->
     let e1' = reduce_exp env e1 in
     let e2' = reduce_exp env e2 in
     (match op, e1'.it, e2'.it with
-    | `EqOp, _, _ when Eq.eq_exp e1' e2' -> BoolE true
-    | `NeOp, _, _ when Eq.eq_exp e1' e2' -> BoolE false
-    | `EqOp, _, _ when is_normal_exp e1' && is_normal_exp e2' -> BoolE false
-    | `NeOp, _, _ when is_normal_exp e1' && is_normal_exp e2' -> BoolE true
+    | `EqOp, _, _ when Eq.eq_exp e1' e2' -> BoolE true $> e |> cnf
+    | `NeOp, _, _ when Eq.eq_exp e1' e2' -> BoolE false $> e |> cnf
+    | `EqOp, _, _ when is_normal_exp e1' && is_normal_exp e2' -> BoolE false $> e |> cnf
+    | `NeOp, _, _ when is_normal_exp e1' && is_normal_exp e2' -> BoolE true $> e |> cnf
     | #Num.cmpop as op', NumE n1, NumE n2 ->
       (match Num.cmp op' n1 n2 with
-      | Some b -> BoolE b
-      | None -> CmpE (op, ot, e1', e2')
+      | Some b -> BoolE b $> e |> cnf
+      | None -> CmpE (op, ot, e1', e2') $> e
       )
-    | _ -> CmpE (op, ot, e1', e2')
-    ) $> e
+    | _ -> CmpE (op, ot, e1', e2') $> e
+    )
   | IdxE (e1, e2) ->
     let e1' = reduce_exp env e1 in
     let e2' = reduce_exp env e2 in
@@ -260,10 +289,10 @@ and reduce_exp env e : exp =
     let e2' = reduce_exp env e2 in
     let e3' = reduce_exp env e3 in
     (match e1'.it, e2'.it, e3'.it with
-    | ListE es, NumE (`Nat i), NumE (`Nat n) when Z.(i + n) < Z.of_int (List.length es) ->
-      ListE (Lib.List.take (Z.to_int n) (Lib.List.drop (Z.to_int i) es))
-    | _ -> SliceE (e1', e2', e3')
-    ) $> e
+    | ListE es, NumE (`Nat i), NumE (`Nat n) when Z.(i + n) <= Z.of_int (List.length es) ->
+      ListE (Lib.List.take (Z.to_int n) (Lib.List.drop (Z.to_int i) es)) $> e |> cnf_if [e1']
+    | _ -> SliceE (e1', e2', e3') $> e
+    )
   | UpdE (e1, p, e2) ->
     let e1' = reduce_exp env e1 in
     let e2' = reduce_exp env e2 in
@@ -275,10 +304,12 @@ and reduce_exp env e : exp =
     reduce_path env e1' p
       (fun e' p' ->
         if p'.it = RootP
-        then reduce_exp env (CatE (e', e2') $> e')
+        then reduce_exp env (CatE (e', e2') $> e' |> cnf_if [e'; e2'])
         else ExtE (e', p', e2') $> e'
       )
-  | StrE efs -> StrE (List.map (reduce_expfield env) efs) $> e
+  | StrE efs ->
+    let efs' = List.map (reduce_expfield env) efs in
+    StrE efs' $> e |> cnf_if (List.map snd efs')
   | DotE (e1, atom) ->
     let e1' = reduce_exp env e1 in
     (match e1'.it with
@@ -290,16 +321,16 @@ and reduce_exp env e : exp =
     let e1' = reduce_exp env e1 in
     let e2' = reduce_exp env e2 in
     (match e1'.it, e2'.it with
-    | ListE es1, ListE es2 -> ListE (es1 @ es2)
-    | OptE None, OptE _ -> e2'.it
-    | OptE _, OptE None -> e1'.it
+    | ListE es1, ListE es2 -> ListE (es1 @ es2) $> e |> cnf_if [e1'; e2']
+    | OptE None, OptE _ -> e2'
+    | OptE _, OptE None -> e1'
     | StrE efs1, StrE efs2 ->
       let merge (atom1, e1) (atom2, e2) =
         assert (Atom.eq atom1 atom2);
         (atom1, reduce_exp env (CompE (e1, e2) $> e1))
-      in StrE (List.map2 merge efs1 efs2)
-    | _ -> CompE (e1', e2')
-    ) $> e
+      in StrE (List.map2 merge efs1 efs2) $> e |> cnf_if [e1'; e2']
+    | _ -> CompE (e1', e2') $> e
+    )
   | MemE (e1, e2) ->
     let e1' = reduce_exp env e1 in
     let e2' = reduce_exp env e2 in
@@ -311,27 +342,27 @@ and reduce_exp env e : exp =
     | ListE es2' when List.exists (Eq.eq_exp e1') es2' -> BoolE true
     | ListE es2' when is_normal_exp e1' && List.for_all is_normal_exp es2' -> BoolE false
     | _ -> MemE (e1', e2')
-    ) $> e
+    ) $> e |> cnf_if_prim
   | LenE e1 ->
     let e1' = reduce_exp env e1 in
     (match e1'.it with
-    | ListE es -> NumE (`Nat (Z.of_int (List.length es)))
-    | _ -> LenE e1'
-    ) $> e
-  | TupE es -> TupE (List.map (reduce_exp env) es) $> e
-  | CallE (id, args) ->
-    let args' = List.map (reduce_arg env) args in
-    let _ps, _t, clauses = Env.find_def env id in
-    (* Allow for uninterpreted functions *)
-    if not !assume_coherent_matches && clauses = [] then CallE (id, args') $> e else
-    (match reduce_exp_call env id args' e.at clauses with
-    | None -> CallE (id, args') $> e
-    | Some e -> e
+    | ListE es -> NumE (`Nat (Z.of_int (List.length es))) $> e |> cnf
+    | _ -> LenE e1' $> e
     )
+  | TupE es ->
+    let es' = List.map (reduce_exp env) es in
+    TupE es' $> e |> cnf_if es'
+  | CallE (id, args) -> !reduce_fncall_hook env e.at e.note id args
   | IterE (e1, iterexp) ->
     let e1' = reduce_exp env e1 in
     let (iter', xes') as iterexp' = reduce_iterexp env iterexp in
-    let ids, es' = List.split xes' in
+    (* Exclude {i <- i*} if the iterator is ^(i < n) *)
+    let xes'' = List.filter (fun (x, _) ->
+      match iter' with
+      | ListN(_, Some i) -> Eq.eq_id x i |> not
+      | _ -> true
+    ) xes' in
+    let ids, es' = List.split xes'' in
     if not (List.for_all is_head_normal_exp es') || iter' <= List1 && es' = [] then
       IterE (e1', iterexp') $> e
     else
@@ -339,11 +370,11 @@ and reduce_exp env e : exp =
       | Opt ->
         let eos' = List.map as_opt_exp es' in
         if List.for_all Option.is_none eos' then
-          OptE None $> e
+          OptE None $> e |> cnf
         else if List.for_all Option.is_some eos' then
           let es1' = List.map Option.get eos' in
           let s = List.fold_left2 Subst.add_varid Subst.empty ids es1' in
-          reduce_exp env (Subst.subst_exp s e1')
+          reduce_exp env (OptE (Some (Subst.subst_exp s e1')) $> e)
         else
           IterE (e1', iterexp') $> e
       | List | List1 ->
@@ -382,40 +413,46 @@ and reduce_exp env e : exp =
   | UncaseE (e1, mixop) ->
     let e1' = reduce_exp env e1 in
     (match e1'.it with
-    | CaseE (_, e11') -> e11'
+    | CaseE (mixop', e11') when Eq.eq_mixop mixop mixop' -> e11'
     | _ -> UncaseE (e1', mixop) $> e
     )
-  | OptE eo -> OptE (Option.map (reduce_exp env) eo) $> e
+  | OptE eo ->
+    let eo' = Option.map (reduce_exp env) eo in
+    OptE eo' $> e |> cnf_if (Option.to_list eo')
   | TheE e1 ->
     let e1' = reduce_exp env e1 in
     (match e1'.it with
     | OptE (Some e11) -> e11
     | _ -> TheE e1' $> e
     )
-  | ListE es -> ListE (List.map (reduce_exp env) es) $> e
+  | ListE es ->
+    let es' = List.map (reduce_exp env) es in
+    ListE es' $> e |> cnf_if es'
   | LiftE e1 ->
     let e1' = reduce_exp env e1 in
     (match e1'.it with
-    | OptE None -> ListE []
-    | OptE (Some e11') -> ListE [e11']
-    | _ -> LiftE e1'
-    ) $> e
+    | OptE None -> ListE [] $> e |> cnf
+    | OptE (Some e11') -> ListE [e11'] $> e |> cnf_if [e11']
+    | _ -> LiftE e1' $> e
+    )
   | CatE (e1, e2) ->
     let e1' = reduce_exp env e1 in
     let e2' = reduce_exp env e2 in
     (match e1'.it, e2'.it with
-    | ListE es1, ListE es2 -> ListE (es1 @ es2)
-    | OptE None, OptE _ -> e2'.it
-    | OptE _, OptE None -> e1'.it
-    | _ -> CatE (e1', e2')
-    ) $> e
-  | CaseE (op, e1) -> CaseE (op, reduce_exp env e1) $> e
+    | ListE es1, ListE es2 -> ListE (es1 @ es2) $> e |> cnf_if [e1'; e2']
+    | OptE None, OptE _ -> e2'
+    | OptE _, OptE None -> e1'
+    | _ -> CatE (e1', e2') $> e
+    )
+  | CaseE (op, e1) ->
+    let e1' = reduce_exp env e1 in
+    CaseE (op, e1') $> e |> cnf_if [e1']
   | CvtE (e1, _nt1, nt2) ->
     let e1' = reduce_exp env e1 in
     (match e1'.it with
     | NumE n ->
       (match Num.cvt nt2 n with
-      | Some n' -> NumE n' $> e
+      | Some n' -> NumE n' $> e |> cnf
       | None -> e1'
       )
     | _ -> e1'
@@ -444,7 +481,7 @@ and reduce_exp env e : exp =
             Some (s1', s2', eI'::res')
           ) (Some (Subst.empty, Subst.empty, [])) es' (List.combine ets1 ets2)
         with
-        | Some (_, _, res') -> TupE (List.rev res') $> e
+        | Some (_, _, res') -> TupE (List.rev res') $> e |> cnf_if res'
         | None -> SubE (e1', t1', t2') $> e
         )
       | _ -> SubE (e1', t1', t2') $> e
@@ -506,8 +543,9 @@ and reduce_arg env a : arg =
     (fun _ -> fmt "%s" (il_arg a))
     (fun a' -> fmt "%s" (il_arg a'))
   ) @@ fun _ ->
+  if is_cnf a then a else
   match a.it with
-  | ExpA e -> ExpA (reduce_exp env e) $ a.at
+  | ExpA e -> let e' = reduce_exp env e in ExpA e' $ a.at |> cnf_if [e']
   | TypA _t -> a  (* types are reduced on demand *)
   | DefA _id -> a
   | GramA _g -> a
@@ -525,22 +563,25 @@ and reduce_exp_call env id args at = function
     assert (List.for_all (fun a -> Eq.eq_arg a (reduce_arg env a)) args);
     match match_list match_arg env Subst.empty args args' with
     | exception Irred ->
+      (* FIXME(zilinc): If Irred, which means we don't yet have enough information to unify them,
+         shall we just propagate Irred up? Why do we take it as the match has failed?
+       *)
       if not !assume_coherent_matches then None else
-      reduce_exp_call env id args at clauses'
+        reduce_exp_call env id args at clauses'
     | None -> reduce_exp_call env id args at clauses'
     | Some s ->
       match reduce_prems env s prems with
-      | None -> None
-      | Some false -> reduce_exp_call env id args at clauses'
-      | Some true -> Some (reduce_exp env (Subst.subst_exp s e))
+      | `None -> None
+      | `False -> reduce_exp_call env id args at clauses'
+      | `True s' -> Some (reduce_exp env (Subst.subst_exp s' e))
 
-and reduce_prems env s = function
-  | [] -> Some true
+and reduce_prems env s prems : [`True of Subst.t | `False | `None] =
+  match prems with
+  | [] -> `True s
   | prem::prems ->
     match reduce_prem env (Subst.subst_prem s prem) with
     | `True s' -> reduce_prems env (Subst.union s s') prems
-    | `False -> Some false
-    | `None -> None
+    | (`False | `None) as r -> r
 
 and reduce_prem env prem : [`True of Subst.t | `False | `None] =
   match prem.it with
@@ -554,23 +595,36 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
   | LetPr (e1, e2, _ids) ->
     (match match_exp env Subst.empty e2 e1 with
     | Some s -> `True s
-    | None -> `None
+    | None -> `False  (* If no match, then the let-pattern is refuted. *)
     | exception Irred -> `None
     )
-  | IterPr ([prem1], iterexp) ->
+  | IterPr (prems, iterexp) ->
     let iter', xes' = reduce_iterexp env iterexp in
     (* Distinguish between let-defined variables, which flow outwards,
-     * and others, which are assumed to flow inwards. *)
-    let rec is_let_bound prem (x, _) =
+     * and others, which are assumed to flow inwards.
+     * We also assume that the index bound by iterator ^(i < n) flows outwards.
+     *)
+    let rec bv prem =
       match prem.it with
-      | LetPr (_, _, xs) -> List.mem x.it xs
-      | IterPr ([premI], iterexpI) ->
-        let _iter1', xes1' = reduce_iterexp env iterexpI in
-        let xes1_out, _ = List.partition (is_let_bound premI) xes1' in
-        List.exists (fun (_, e1) -> Free.(Set.mem x.it (free_exp e1).varid)) xes1_out
-      | _ -> false
+      | LetPr (_, _, xs) -> Set.of_list xs
+      | IterPr (premIs, iterexpI) ->
+        let iter1', xes1' = reduce_iterexp env iterexpI in
+        let bv1 = (match iter1' with
+                  | ListN(_, Some i) -> Set.singleton i.it
+                  | _ -> Set.empty
+                  )
+        in
+        let bv2 = List.fold_left (fun acc p -> Set.union (bv p) acc) bv1 premIs in
+        (* Propagate outwards: if x is bound, then `x*` is also bound if x <- `x*`. *)
+        List.fold_left (fun bv (x, e) ->
+          if Set.mem x.it bv then
+            Set.union bv Free.(free_exp e).varid
+          else
+            bv
+        ) bv2 xes1'
+      | _ -> Set.empty
     in
-    let xes_out, xes_in = List.partition (is_let_bound prem) xes' in
+    let xes_out, xes_in = List.partition (fun (x, _) -> Set.mem x.it (bv prem)) xes' in
     let xs_out, es_out = List.split xes_out in
     let xs_in, es_in = List.split xes_in in
     if not (List.for_all is_head_normal_exp es_in) || iter' <= List1 && es_in = [] then
@@ -582,15 +636,22 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
         (* Iterationen values es_in are in hnf, so got to be options. *)
         let eos_in = List.map as_opt_exp es_in in
         if List.for_all Option.is_none eos_in then
-          (* Iterating over empty options: nothing to do. *)
-          `True Subst.empty
+          (* Iterating over empty options *)
+          match
+            List.fold_left (fun s_opt (_xI, eI) ->
+              let* s = s_opt in
+              match_exp' env s (OptE None $> eI) eI
+            ) (Some Subst.empty) xes_out
+          with
+          | Some s -> `True s
+          | None -> `None
         else if List.for_all Option.is_some eos_in then
           (* All iteration variables are non-empty: reduce body. *)
           let es1_in = List.map Option.get eos_in in
           (* s substitutes in-bound iteration variables with corresponding
            * values. *)
           let s = List.fold_left2 Subst.add_varid Subst.empty xs_in es1_in in
-          match reduce_prem env (Subst.subst_prem s prem1) with
+          match reduce_prems env s prems with
           | (`None | `False) as r -> r
           | `True s' ->
             (* Body is true: now reverse-match out-bound iteration values
@@ -614,7 +675,7 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
         let n = List.length (as_list_exp (List.hd es_in)) in
         if iter' = List || n >= 1 then
           let en = NumE (`Nat (Z.of_int n)) $$ prem.at % (NumT `NatT $ prem.at) in
-          reduce_prem env (IterPr ([prem1], (ListN (en, None), xes')) $> prem)
+          reduce_prem env (IterPr (prems, (ListN (en, None), xes')) $> prem)
         else
           (* List is empty although it is List1: inconsistency.
            * (This is a stuck computation, i.e., undefined.) *)
@@ -639,7 +700,7 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
                   Subst.add_varid s x en
                 )
               in
-              reduce_prem env (Subst.subst_prem s' prem1)
+              reduce_prems env s' prems
             )
           in
           if List.mem `None rs then `None else
@@ -667,7 +728,6 @@ and reduce_prem env prem : [`True of Subst.t | `False | `None] =
           `None
       | ListN _ -> `None
       )
-  | IterPr (_, _) -> assert false
   | NegPr _ -> assert false
 
 
@@ -727,7 +787,13 @@ and match_typbind env s (e1, t1) (e2, t2) =
 (* Expressions *)
 
 and match_exp env s e1 e2 : subst option =
-  match_exp' env s (reduce_exp env e1) e2
+  (* Need to first substitute for the dependent parameters
+     in functions when this function is called by
+     `match_list match_arg ...`. / zilinc
+   *)
+  let e1' = Subst.subst_exp s e1 in
+  let e2' = Subst.subst_exp s e2 in
+  match_exp' env s (reduce_exp env e1') e2'
 
 and match_exp' env s e1 e2 : subst option =
   Debug.(log "il.match_exp"
@@ -817,6 +883,7 @@ and match_exp' env s e1 e2 : subst option =
     let* s' = match_exp' env s e11 e21 in
     match_iterexp env s' iter1 iter2
 *)
+  | OptE (Some e1'), OptE (Some e2') -> match_exp' env s e1' e2'
   | OptE None, IterE (_e21, (Opt, xes)) ->
     List.fold_left (fun s_opt (_xI, eI) ->
       let* s = s_opt in

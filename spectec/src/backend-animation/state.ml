@@ -68,6 +68,7 @@ module Store = struct
       |> Record.add "STRUCTS" (listE (t_star "structinst" ) [])
       |> Record.add "ARRAYS"  (listE (t_star "arrayinst"  ) [])
       |> Record.add "EXNS"    (listE (t_star "exninst"    ) [])
+      |> Record.add "HOST"    (mk_nullary (t_var "hoststate") "HOSTSTATE")
 
     (* Ds.Store.init () *)  (* NOTE: I don't think there's anything that depends on Ds. / zilinc *)
 
@@ -89,6 +90,7 @@ module Store = struct
     let structs = find_str_field "STRUCTS" s in
     let arrays  = find_str_field "ARRAYS"  s in
     let exns    = find_str_field "EXNS"    s in
+    let host    = find_str_field "HOST"    s in
     update "TAGS"    (Fun.const tags   );
     update "GLOBALS" (Fun.const globals);
     update "MEMS"    (Fun.const mems   );
@@ -99,4 +101,5 @@ module Store = struct
     update "STRUCTS" (Fun.const structs);
     update "ARRAYS"  (Fun.const arrays );
     update "EXNS"    (Fun.const exns   );
+    update "HOST"    (Fun.const host   );
 end

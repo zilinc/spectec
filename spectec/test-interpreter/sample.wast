@@ -319,8 +319,8 @@
 ;; (assert_return (invoke "check_exit" (i32.const 10)) (i32.const 10))
 
 ;;second module
-;; (module (func (export "f")))
-;; (assert_return (invoke "f"))
+(module (func (export "f")))
+(assert_return (invoke "f"))
 
 ;; (invoke $spectest "print_i32" (i32.const 42))
 

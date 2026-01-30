@@ -214,7 +214,7 @@ and string_of_prem' lv prem =
     let spaces = String.make (2*(lv+1)) ' ' in
     let pre = "\n" ^ spaces ^ "-- " in
     "(" ^
-    concat "" (List.map (prefix pre string_of_prem) prems') ^
+    concat "" (List.map (prefix pre (string_of_prem' (lv+1))) prems') ^
     "\n" ^ spaces ^ ")" ^ string_of_iterexp iter
   | NegPr prem' -> "~ " ^ string_of_prem prem'
 

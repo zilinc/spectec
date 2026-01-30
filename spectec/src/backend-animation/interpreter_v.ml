@@ -12,8 +12,10 @@ open Il.Print
 open Source
 open Printf
 open Il2al.Free
-module A = Al.Ast
-module I = Backend_interpreter
+open Lazy
+module HS = State_v.HostState
+module A  = Al.Ast
+module I  = Backend_interpreter
 module RI = Reference_interpreter
 
 
@@ -30,7 +32,7 @@ let verbose : string list ref =
       (* "steps";       *)
       (* "call"; *)
       (* "iter"; *)          (* Low-level debugging. *)
-      "log";
+      (* "log"; *)
       ]
 
 
@@ -42,7 +44,7 @@ let string_of_error at msg = string_of_region at ^ " (Meta)Interpreter error:\n"
 let warn at msg = print_endline (string_of_region at ^ " (Meta)Interpreter warning:\n" ^ msg)
 
 let info v at msg = if List.mem v !verbose || v = "" then
-                      print_endline (string_of_region at ^ " (Meta)Interpreter info[" ^ v ^ "]:\n" ^ msg)
+                      print_endline (string_of_region at ^ " (Meta)Interpreter info[" ^ v ^ "]:\n" ^ force msg)
                     else
                       ()
 
@@ -112,9 +114,9 @@ let error_eval etyp exp onotes =
   error exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes)
 
 let fail_assign at lhs rhs msg =
-  info "assign" at ("Pattern-matching failed (" ^ msg ^ "):\n" ^
-                   "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
-                   "  ▹ value: " ^ string_of_value rhs);
+  info "assign" at (lazy ("Pattern-matching failed (" ^ msg ^ "):\n" ^
+                          "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
+                          "  ▹ value: " ^ string_of_value rhs));
   fail ()
 
 let string_of_exp exp = Il.Print.string_of_exp exp |> Lib.String.shorten
@@ -134,6 +136,13 @@ module VContext = struct
   let add_varid ctx (s: id) (v: value) = Map.add s.it v ctx
   let find_varid ctx (s : id) : value = Map.find s.it ctx
   let dom_varid ctx : Set.t = ctx |> Map.bindings |> List.map fst |> Set.of_list
+  let merge ctx1 ctx2 = Map.merge (fun k ov1 ov2 ->
+    match ov1, ov2 with
+    | None   , None    -> None
+    | Some v1, None    -> Some v1
+    | None   , Some v2 -> Some v2
+    | Some v1, Some v2 -> assert false
+  ) ctx1 ctx2
 end
 
 
@@ -261,9 +270,9 @@ and eval_exp ctx exp : value OptMonad.m =
       else
         error_eval "Indexing expression" exp
           (Some ("Index out-of-range:\n" ^
-                 "seq   = " ^ string_of_value v1 ^ "\n" ^
-                 "|seq| = " ^ string_of_int (Array.length !vs) ^ "\n" ^
-                 "idx   = " ^ string_of_int (Z.to_int i)
+                 string_of_exp e1 ^ " = " ^ string_of_value v1 ^ "\n" ^
+                 "... whose length is " ^ string_of_int (Array.length !vs) ^ "\n" ^
+                 "... idx is " ^ string_of_int (Z.to_int i)
                 )
           )
     | _ -> error_eval "Indexing expression" exp
@@ -399,7 +408,7 @@ and eval_exp ctx exp : value OptMonad.m =
         error_eval "Constructor unwrapping expression" exp
                    (Some ("mixop = " ^ string_of_mixop mixop ^ "; mixop' = " ^ Value.string_of_mixop mixop'))
     | _ -> error_eval "Constructor unwrapping expression" exp
-                      (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; mixop = " ^ string_of_mixop mixop))
+                      (Some (string_of_exp e1 ^ " ⤳ " ^ string_of_value v1 ^ "; mixop = " ^ string_of_mixop mixop))
     )
   | OptE oe1 -> let* ov1 = opt_mapM (eval_exp ctx) oe1 in OptV ov1 |> return
   | TheE e1 ->
@@ -459,7 +468,7 @@ and eval_iterexp ctx (iter, xes) : (Value.iter * (id * value) list) OptMonad.m =
   in
   (* Remove the outflowing binding. *)
   let xes' = List.filter (fun (x, e) -> List.mem x.it excl_ids |> not) xes in
-  let* xes'' = mapM (fun (id, e) -> let* v = eval_exp ctx e in return (id, v)) xes' in
+  let* xes'' = mapM (fun (x, e) -> let* v = eval_exp ctx e in return (x, v)) xes' in
   return (iter', xes'')
 
 and compose at v1 v2 : value OptMonad.m =
@@ -503,18 +512,25 @@ and eval_path at ctx v p (f: value -> path -> value OptMonad.m) : value OptMonad
     let* vn = eval_exp ctx e2 in
     let f' v p1' =
       match v, vi, vn with
-      | ListV vs, NumV (`Nat i), NumV (`Nat n) when Z.(i + n) < Z.of_int (Array.length !vs) ->
-        let vs1 = Array.sub !vs 0 (Z.to_int i) in
-        let v2  = listV (Array.sub !vs (Z.to_int i) (Z.to_int n)) in
-        let vs3 = Array.sub !vs Z.(to_int (i + n)) (Array.length !vs - Z.to_int Z.(i + n)) in
-        let* v2' = f v2 p1' in
-        (match v2' with
-        | ListV vs2 -> listV (Array.append (Array.append vs1 !vs2) vs3) |> return
-        | _ -> assert false
-        )
+      | ListV vs, NumV (`Nat i), NumV (`Nat n) ->
+        if Z.(i + n) <= Z.of_int (Array.length !vs) then
+          let vs1 = Array.sub !vs 0 (Z.to_int i) in
+          let v2  = listV (Array.sub !vs (Z.to_int i) (Z.to_int n)) in
+          let vs3 = Array.sub !vs Z.(to_int (i + n)) (Array.length !vs - Z.to_int Z.(i + n)) in
+          let* v2' = f v2 p1' in
+          (match v2' with
+          | ListV vs2 -> listV (Array.append (Array.append vs1 !vs2) vs3) |> return
+          | _ -> assert false
+          )
+        else
+          error at ("Slicing range out of bounds:\n" ^
+                    "  ▹ |vs|: " ^ string_of_int (Array.length !vs) ^ "\n" ^
+                    "  ▹ i: " ^ string_of_value vi ^ "\n" ^
+                    "  ▹ n: " ^ string_of_value vn)
       | _ -> error at ("Slice path failed to evaluate:\n" ^
-                       "  ▹ v: " ^ string_of_value v ^ "\n" ^
-                       "  ▹ p: " ^ string_of_path p)
+                       "  ▹ v: " ^ (string_of_value v |> Lib.String.shorten) ^ "\n" ^
+                       "  ▹ i: " ^ string_of_value vi ^ "\n" ^
+                       "  ▹ n: " ^ string_of_value vn)
     in
     eval_path at ctx v p1 f'
   | DotP (p1, atom) ->
@@ -573,43 +589,52 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           il_env := Il.Env.(bind_var !il_env x t);
         | _ -> assert false
       ) (in_binds @ out_binds);
-      (* Initialise the out-vars, so that even when n' = 0 they are still assigned to `eps`. *)
-      let ctx' = List.fold_left (fun ctx (x, e) ->
-        match e.it with
-        | VarE x_star ->
-          let vx_star = ListV (ref [||]) in
-          VContext.add_varid ctx x_star vx_star
-        | _ -> assert false
-      ) ctx out_binds in
-      (* Run the loop *)
-      let* ctx'' = foldlM (fun ctx idx ->
-        let lctxr = ref ctx in
-        lctxr := VContext.add_varid !lctxr i (vl_of_nat idx);
-        (* In-flow *)
-        let* () = iterM (fun (x, e) ->
-          let t = Il.Env.find_var !il_env x in
-          let* e' = eval_exp !lctxr (IdxE (e, mk_nat idx) $$ e.at % t) in
-          lctxr := VContext.add_varid !lctxr x e';
-          return ()
-        ) in_binds
-        in
-        let* lctx = eval_prems !lctxr prems in
-        lctxr := lctx;
-        (* Out-flow *)
-        List.iter (fun (x, e) ->
+      let* ctx' = if Z.to_int n' = 0 then (
+        (* When n' = 0 the outflowing variables are assigned to `eps`. *)
+        List.fold_left (fun ctx (x, e) ->
           match e.it with
           | VarE x_star ->
-            let vx = VContext.find_varid !lctxr x in
-            let vx_star = VContext.Map.find_opt x_star.it !lctxr |> Option.get in
-            let vs = as_list_value vx_star in
-            let vx_star' = listV (Array.append !vs ([|vx|])) in
-            lctxr := VContext.add_varid !lctxr x_star vx_star'
+            let vx_star = ListV (ref [||]) in
+            VContext.add_varid ctx x_star vx_star
           | _ -> assert false
-        ) out_binds;
-        return !lctxr
-      ) ctx' (0 -- Z.to_int n') in
+        ) ctx out_binds |> return
+      ) else (
+        (* Run the loop *)
+        let* ctx_out = foldlM (fun ctx_out idx ->
+          let lctxr = ref ctx in
+          lctxr := VContext.add_varid !lctxr i (vl_of_nat idx);
+          (* In-flow *)
+          let* () = iterM (fun (x, e) ->
+            let t = Il.Env.find_var !il_env x in
+            let* e' = eval_exp !lctxr (IdxE (e, mk_nat idx) $$ e.at % t) in
+            lctxr := VContext.add_varid !lctxr x e';
+            return ()
+          ) in_binds
+          in
+          let* lctx = eval_prems !lctxr prems in
+          lctxr := lctx;
+          (* Out-flow: Only collect them in [ctx_out], but don't add them to the local
+             value context, otherwise it will interfere with later iterations, where
+             it will see partially assigned outer variables and wrongly treat them as knowns.
+          *)
+          List.fold_left (fun ctx_out (x, e) ->
+            match e.it with
+            | VarE x_star ->
+              let vx = VContext.find_varid !lctxr x in
+              let vx_star' = (match VContext.Map.find_opt x_star.it ctx_out with
+              | Some vx_star -> let vs = as_list_value vx_star in
+                                listV (Array.append !vs ([|vx|]))
+              | None -> listV [|vx|]
+              ) in
+              VContext.add_varid ctx_out x_star vx_star'
+            | _ -> assert false
+          ) ctx_out out_binds |> return
+        ) VContext.empty (0 -- Z.to_int n') in
+        (* Add the outflowing variables to the value context. *)
+        VContext.merge ctx ctx_out |> return
+      ) in
       il_env := il_env0;  (* Resume old environment *)
-      return ctx''
+      return ctx'
     | ListN (_, None) | List | List1 -> assert false  (* Should have been compiled away by animation. *)
     | Opt ->
       let il_env0 = !il_env in
@@ -706,7 +731,7 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
 
 and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
   match clauses with
-  | [] -> fail ()
+  | [] -> info "log" at (lazy ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses")); fail ()
   | cl :: cls ->
     let DefD (binds, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
@@ -716,11 +741,20 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
-        begin match eval_prems ctx prems |> run_opt with
-        | Some ctx' -> eval_exp ctx' exp
-        | None      -> match_clause at fname (nth+1) cls args
-        end
-      | None -> match_clause at fname (nth+1) cls args
+        (match eval_prems ctx prems |> run_opt with
+        | Some ctx' ->
+          (* If [exp] is partial, it means this clause is refuted. *)
+          (match eval_exp ctx' exp |> run_opt with
+          | Some v -> info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
+                      return v
+          | None   -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
+                      match_clause at fname (nth+1) cls args
+          )
+        | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
+                  match_clause at fname (nth+1) cls args
+        )
+      | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
+                match_clause at fname (nth+1) cls args
       )
     in
     (* Resume global environment. *)
@@ -730,19 +764,29 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
 
 and eval_func name func_def args : value OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
-  match_clause no_region name 1 fcs args
+  if name = "step" then
+    let* r = match_clause no_region name 1 fcs args in
+    let CaseV(_, [_; instrs]) = r in
+    let instrs' = instrs |> as_list_value' in
+    info "log" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
+    return r
+  else
+    match_clause no_region name 1 fcs args
 
-and call_func name args =
+and call_func name args : value OptMonad.m =
+  info "log" no (lazy ("Calling " ^ name));
   match name with
   (* Hardcoded functions defined in meta.spectec *)
-  | "Steps"  -> call_func "steps"    args
-  | "Step"   -> call_func "step"     args
+  | "Steps"  -> call_func "steps"     args
+  | "Step"   -> call_func "step"      args
+  (* | "Ref_ok" -> call_func "ref_infer" args *)
   (* Hardcoded functions defined in the compiler. *)
-  | "Module_ok"     -> module_ok     args |> return
-  | "Externaddr_ok" -> externaddr_ok args |> return
-  | "Ref_ok"        -> ref_ok        args |> return
-  | "Val_ok"        -> val_ok        args |> return
-  (* | "hostcall"      -> hostcall      args |> return *)
+  | "Module_ok"     -> module_ok     args
+  | "Externaddr_ok" -> externaddr_ok args
+  | "Ref_ok"        -> ref_ok        args
+  | "Val_ok"        -> val_ok        args
+  | "Reftype_sub"   -> reftype_sub   args
+  | "Heaptype_sub"  -> heaptype_sub  args
   (* Others *)
   | _ ->
     let builtin_name, is_builtin =
@@ -763,6 +807,8 @@ and call_func name args =
         Numerics_v.call_numerics builtin_name args |> return
       else if builtins_mem builtin_name then
         call_builtins builtin_name args
+      else if builtin_name = "hostcall" then
+        hostcall args
       else
         error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
     | _ when is_builtin ->
@@ -780,52 +826,101 @@ and is_host = function
 and call_hostfunc name s vs =
   (* ty ∈ {"I32", "I64", "F32", "F64"} *)
   let as_const ty = function
-  | CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n])
+  | CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]) when ty = ty' -> n
   | OptV (Some (CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]))) when ty = ty' -> n
   | v -> error no ("Host function call: Not " ^ ty ^ ".CONST: " ^ string_of_value v)
   in
   let argc = List.length vs in
-  (match name with
-  | "print" when argc = 0 -> print_endline "- print: ()"
+  let print_eff s = HS.Print s in
+  let effs = (match name with
+  | "print" when argc = 0 -> [ print_eff "- print: ()\n" ]
   | "print_i32" when argc = 1 ->
     List.hd vs
     |> as_const "I32"
     |> vl_to_uN_32
     |> RI.I32.to_string_s
-    |> Printf.printf "- print_i32: %s\n"
+    |> Printf.sprintf "- print_i32: %s\n"
+    |> print_eff
+    |> fun e -> [e]
   | "print_i64" when argc = 1 ->
     List.hd vs
     |> as_const "I64"
     |> vl_to_uN_64
     |> RI.I64.to_string_s
-    |> Printf.printf "- print_i64: %s\n"
+    |> Printf.sprintf "- print_i64: %s\n"
+    |> print_eff
+    |> fun e -> [e]
   | "print_f32" when argc = 1 ->
     List.hd vs
     |> as_const "F32"
     |> vl_to_float32
     |> RI.F32.to_string
-    |> Printf.printf "- print_f32: %s\n"
+    |> Printf.sprintf "- print_f32: %s\n"
+    |> print_eff
+    |> fun e -> [e]
   | "print_f64" when argc = 1 ->
     List.hd vs
     |> as_const "F64"
     |> vl_to_float64
     |> RI.F64.to_string
-    |> Printf.printf "- print_f64: %s\n"
+    |> Printf.sprintf "- print_f64: %s\n"
+    |> print_eff
+    |> fun e -> [e]
   | "print_i32_f32" when argc = 2 ->
     let [v1; v2] = vs in
-    let i32 = v1 |> as_const "I32" |> vl_to_nat32   |> RI.I32.to_string_s in
+    let i32 = v1 |> as_const "I32" |> vl_to_uN_32   |> RI.I32.to_string_s in
     let f32 = v2 |> as_const "F32" |> vl_to_float32 |> RI.F32.to_string   in
-    Printf.printf "- print_i32_f32: %s %s\n" i32 f32
+    Printf.sprintf "- print_i32_f32: %s %s\n" i32 f32 |> print_eff |> fun e -> [e]
   | "print_f64_f64" when argc = 2 ->
     let [v1; v2] = vs in
     let f64  = v1 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
     let f64' = v2 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
-    Printf.printf "- print_f64_f64: %s %s\n" f64 f64'
+    Printf.sprintf "- print_f64_f64: %s %s\n" f64 f64' |> print_eff |> fun e -> [e]
   | name -> error no ("Invalid host function call: " ^ name)
-  );
-  (s, caseV [["_VALS"];[]] [listV [||]])
+  )
+  in
+  let get_hoststate store : value =
+    let store' = as_str_value store in
+    Record.find "HOST" store'
+  in
+  let set_hoststate hs store : value =
+    let store' = as_str_value store |> List.map (fun (k, v) -> (k, ref !v)) in  (* Record.clone is not adequate. *)
+    Record.replace "HOST" hs store';
+    StrV store'
+  in
+  let hs' = HS.inc_timestamp (get_hoststate s) in
+  let s' = set_hoststate hs' s in
+  let hostcallresult = caseV [["RES"];[];[]] [s'; caseV [["_VALS"];[]] [listV [||]]] in
+  let res = [ hostcallresult ] |> listV_of_list in
+  (res, effs)
+
+and hostcall : Value.arg list -> value OptMonad.m = function
+  | [ ValA name; ValA s; ValA val_ ] ->
+    let name' = (match name with
+    | CaseV ([["_HOSTFUNC"];[]], [hf]) -> as_text_value hf
+    | _ -> error no ("Not a hostfunc")
+    )
+    in
+    let glb_hs = HS.get_glb_state () in
+    let lcl_hs = as_str_field "HOST" s in
+    let vals = as_list_value' val_ in
+    (match HS.chk_state lcl_hs with
+    | Earlier ->
+      (* Host function has been called already. Look up the effect registry. *)
+      (match HS.lookup_effect name' (HS.get_timestamp lcl_hs) with
+      | Some (res, _effs) -> return res
+      | None -> error no ("No such entry in effect resgistry: " ^ name')
+      )
+    | Good ->
+      let res, effs = call_hostfunc name' s vals in
+      HS.add_effects name' res effs;
+      return res
+    | Later -> error no ("Host function `" ^ name' ^ "` is calling into the future.")
+    )
+  | _ -> error no ("Invalid arguments to $hostcall")
 
 
+(*
 and hostcall = {
   name = "hostcall";
   f =
@@ -840,7 +935,7 @@ and hostcall = {
       )
     | vs -> error_values ("Args to $hostcall") vs
 }
-
+*)
 
 (* Built-in functions (meta.spectec) *)
 
@@ -940,7 +1035,7 @@ and step_read_throw_ref_handler = {
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler; hostcall;
+  step_read_throw_ref_handler;
   ]
 
 and call_builtins fname args : value OptMonad.m =
@@ -957,18 +1052,24 @@ and builtins_mem fname =
   List.exists (fun builtin -> builtin.name = fname) builtin_list
 
 
+
+
+
 (* Hard-coded relations *)
 
 
 (* $Module_ok : module -> moduletype *)
-and module_ok args : value =
+and module_ok args : value OptMonad.m =
   match args with
   | [ ValA module_ ] ->
     let module_' = vl_to_module module_ in
-    let ModuleT (its, ets) = RI.Valid.check_module module_' in
-    let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
-    let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
-    caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ]
+    (match RI.Valid.check_module module_' with
+    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+    | ModuleT (its, ets) ->
+      let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
+      let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
+      caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ] |> return
+    )
   | _ -> error no ("Wrong number/type of arguments to $Module_ok.")
 
 (* $Externaddr_ok : store -> externaddr -> externtype -> bool *)
@@ -988,21 +1089,72 @@ and externaddr_ok = function
         |> vl_to_externtype
       in
       let externtype = vl_to_externtype etype in
-      boolV (RI.Match.match_externtype [] externaddr_type externtype)
+      (match RI.Match.match_externtype [] externaddr_type externtype with
+      | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+      | b -> boolV b |> return
+      )
     | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
     )
   | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
 
-(* $Val_ok : store -> val -> valtype -> bool *)
+(* Ref_ok : store -> ref -> reftype -> bool *)
+and ref_ok = function
+  | [ ValA _ as store; ValA _ as ref; ValA typ2 ] ->
+    (match call_func "ref_infer" [store; ref] |> run_opt with
+    | None -> error no ("Function `ref_infer` failed to evaluate to a value.")
+    | Some typ1 ->
+      let reftyp1 = vl_to_reftype typ1 in
+      let reftyp2 = vl_to_reftype typ2 in
+      (match RI.Match.match_reftype [] reftyp1 reftyp2 with
+      | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+      | b -> boolV b |> return
+      )
+    )
+  | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
+
+(* Val_ok : store -> val -> valtype -> bool *)
 and val_ok = function
-  | [ ValA s; ValA val_; ValA valtype ] ->
-    let value   = vl_to_value   val_    in
-    let valtype = vl_to_valtype valtype in
-    BoolV (RI.Match.match_valtype [] (RI.Value.type_of_value value) valtype)
+  | [ ValA _ as store; ValA _ as val_; ValA typ2 ] ->
+  (match call_func "val_infer" [store; val_] |> run_opt with
+  | None -> error no ("Function `val_infer` failed to evaluate to a value.")
+  | Some typ1 ->
+    let valtyp1 = vl_to_valtype typ1 in
+    let valtyp2 = vl_to_valtype typ2 in
+    (match RI.Match.match_valtype [] valtyp1 valtyp2 with
+    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+    | b -> boolV b |> return
+    )
+  )
   | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
 
-(* $Ref_ok : store -> ref -> reftype *)
-and ref_ok args = todo "ref_ok"
+
+(* Reftype_sub : context -> reftype -> reftype -> bool *)
+and reftype_sub = function
+  | [ ValA ctx; ValA typ1; ValA typ2 ] ->
+    (* TODO(zilinc): the context is not converted, but we know that all calls to
+       this rule in the spec uses the empty context.
+     *)
+    let reftyp1 = vl_to_reftype typ1 in
+    let reftyp2 = vl_to_reftype typ2 in
+    (match RI.Match.match_reftype [] reftyp1 reftyp2 with
+    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+    | b -> boolV b |> return
+    )
+  | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
+
+(* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
+and heaptype_sub = function
+    | [ ValA ctx; ValA typ1; ValA typ2 ] ->
+    (* TODO(zilinc): the context is not converted, but we know that all calls to
+       this rule in the spec uses the empty context.
+     *)
+    let heaptyp1 = vl_to_heaptype typ1 in
+    let heaptyp2 = vl_to_heaptype typ2 in
+    (match RI.Match.match_heaptype [] heaptyp1 heaptyp2 with
+    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+    | b -> boolV b |> return
+    )
+  | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
 
 (*
@@ -1022,13 +1174,17 @@ let expand = function
 (* Wasm interpreter entry *)
 
 let instantiate (args: Value.arg list) : value =
-  match call_func "instantiate" args |> run_opt with
+  match (let* r = call_func "instantiate" args in
+         call_func "steps" [ValA r]) |> run_opt
+  with
   | Some v -> v
   | None -> raise (Failure "`instantiate` failed to run.")
 
 let invoke (args: Value.arg list) : value =
-  match (let* r = call_func "invoke" args in
-         call_func "steps" [ValA r]) |> run_opt
-  with
-  | Some r' -> r'
+  match call_func "invoke" args |> run_opt with
   | None -> raise (Failure "`invoke` failed to run.")
+  | Some r -> let CaseV (_, [_; instrs]) = r in
+              (match call_func "steps" [ValA r] |> run_opt with
+              | Some r' -> r'
+              | None -> raise (Failure ("`invoke` failed to reduce its result: " ^ string_of_value instrs))
+              )

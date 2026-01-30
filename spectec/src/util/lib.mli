@@ -63,6 +63,8 @@ sig
   val both : ('a -> 'b) -> ('a * 'a) -> ('b * 'b)
   val (>>>) : ('a -> 'b) -> ('b -> 'c) -> ('a -> 'c)
   val (<***>) : ('a -> 'b) -> ('c -> 'd) -> 'a * 'c -> 'b * 'd
+  val (<.>) : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c  (* Function composition *)
+  val (>.>)  : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c (* Forward function composition *)
 end
 
 module Option:

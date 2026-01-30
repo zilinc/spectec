@@ -34,8 +34,23 @@ and inline_prem occ prem : prem list Inline.m =
     | _ -> return iter
     ) in
     let occ' = Occur.occ_prems (Fun.const true) `Once Occur.empty_occ prems in
-    let prems', _ = run_state (inline_prems occ' prems) Il.Subst.empty in
-    return [ IterPr (prems', (iter', xes)) $> prem ]
+    let* ctx = get () in
+    let prems', ctx_inner = run_state (inline_prems occ' prems) ctx in
+    (* If nested iterations, x <- x* may be removed because x is substituted.
+       But in the outer binding list, x* <- x** should also be removed.
+    *)
+    let ctx', xes' = List.fold_left (fun (s, xes') (x, e) ->
+      if Il.Subst.mem_varid ctx_inner x then
+        (match e.it with
+        | VarE v -> let e' = Il.Subst.find_varid ctx_inner x in
+                    Il.Subst.add_varid s v e', xes'
+        | _ -> assert false
+        )
+      else
+        s, xes' @ [(x, e)]
+    ) (ctx, []) xes in
+    let* () = put ctx' in
+    return [ IterPr (prems', (iter', xes')) $> prem ]
   | _ -> assert false
 
 and inline_prems occ prems : prem list Inline.m =
