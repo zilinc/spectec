@@ -132,6 +132,8 @@ def $step_ctxt(z; HANDLER_ n `{catch*} instr*) = config
     -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
     -- if bl = (instr'* = eps)
     -- if $dispatch_step_handler(n, val*, instr_0?, z, catch*, bl) = config
+def $step_ctxt(z; HANDLER_ n `{catch*} instr*) = z'; (HANDLER_ n `{catch*} instr'*)
+    -- if $steps_pg(z; instr*) = z'; instr'*
 
 
 def $dispatch_step_label(n, val*, BR l, z, instr*, bl) = z; val''^n instr*

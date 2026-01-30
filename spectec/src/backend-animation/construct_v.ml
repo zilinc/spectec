@@ -637,9 +637,9 @@ let vl_of_packsize = function
   | RI.Pack.Pack64 -> vl_of_nat 64 |> caseV1
 
 let vl_of_packshape = function
-  | RI.Pack.Pack8x8  -> [vl_of_nat 8 ; vl_of_nat 8]
-  | RI.Pack.Pack16x4 -> [vl_of_nat 16; vl_of_nat 4]
-  | RI.Pack.Pack32x2 -> [vl_of_nat 32; vl_of_nat 2]
+  | RI.Pack.Pack8x8  -> [vl_of_nat 8  |> caseV1; vl_of_nat 8]
+  | RI.Pack.Pack16x4 -> [vl_of_nat 16 |> caseV1; vl_of_nat 4]
+  | RI.Pack.Pack32x2 -> [vl_of_nat 32 |> caseV1; vl_of_nat 2]
 
 let vl_of_memop f idx (memop: (RI.Types.numtype, 'p) RI.Ast.memop) =
   let str = [("ALIGN" , vl_of_uN (Z.of_int memop.align)  |> ref);

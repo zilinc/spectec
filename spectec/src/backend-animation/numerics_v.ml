@@ -107,7 +107,7 @@ let vbytes : numerics =
     f =
       (function
       | [ CaseV ([["V128"]], []); v ] ->
-        let s = v |> vl_to_vec128 |> RI.V128.to_bits in
+        let s = v |> as_singleton_case |> vl_to_vec128 |> RI.V128.to_bits in
         Array.init 16 (fun i -> s.[i] |> Char.code |> vl_of_nat |> caseV1) |> listV
       | vs -> error_values "vbytes" vs
       );
