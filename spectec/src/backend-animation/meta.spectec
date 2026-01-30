@@ -162,6 +162,7 @@ def $dispatch_step_handler(n, val*, RETURN_CALL_REF yy, z, catch*, bl) = z; val*
 def $dispatch_step_handler(n, val*, RETURN, z, catch*, bl) = z; val* RETURN
 def $dispatch_step_handler(n, REF.EXN_ADDR a, THROW_REF, z, catch*, true) = z; instr'*
     -- if $Step_read_throw_ref_handler(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = instr'*
+def $dispatch_step_handler(n, eps, TRAP, z, catch*, true) = z; TRAP
 def $dispatch_step_handler(n, val*, eps, z, catch*, true) = z; val*
 
 
