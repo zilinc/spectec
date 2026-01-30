@@ -313,6 +313,9 @@ rule Step_pure/trap-label:
 rule Step_pure/trap-frame:
   (FRAME_ n `{f} TRAP)  ~>  TRAP
 
+rule Step_pure/trap-handler:
+  (HANDLER_ n `{catch*} TRAP)  ~>  TRAP
+
 
 ;; Local instructions
 
