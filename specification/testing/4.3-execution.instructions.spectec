@@ -91,7 +91,7 @@ rule Step_pure/if-false:
 ;;   (LABEL_ n `{instr*} val*)  ~>  val*
 ;; 
 ;; 
-;; ;; Branch instructions
+;; Branch instructions
 ;; 
 ;; ;; TODO(4, rossberg): may want a label context instead of bubbling up
 ;; rule Step_pure/br-label-zero:

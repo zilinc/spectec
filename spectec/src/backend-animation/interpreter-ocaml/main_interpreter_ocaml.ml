@@ -7,7 +7,7 @@ let capsfirst s =
 
 (* Generate a dune file for the dl_interpreter library *)
 let generate_dune_file () =
-  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; "construct_ocaml"; "construct_ocaml_new"; "builtin"] in
+  let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; (*"construct_ocaml";*) "construct_ocaml_new"; "builtin"] in
   let libraries = ["backend_animation"; "backend_interpreter"; "reference_interpreter"] in
   (* Dune file content *)
   let lib_def = Printf.sprintf
@@ -46,25 +46,25 @@ let generate_dune_file () =
 (* translate from numE to int/nat - todo: these 3 functions should be in a util file with the other things from util_ocaml *)
 let basic_types_conv = 
   "let ocaml_of_int (e : exp) : int =\n\
-  \ match e.it with\n\
-  \ | NumE (`Int i) -> Z.to_int i \n\
-  \ | _ -> failwith \"Invalid type: should be a NumE int\"\n\n\
+  \  match e.it with\n\
+  \  | NumE (`Int i) -> Z.to_int i \n\
+  \  | _ -> failwith \"Invalid type: should be a NumE int\"\n\n\
   let ocaml_of_nat (e : exp) : DL.nat =\n\
-  \ match e.it with\n\
-  \ | NumE (`Nat n) -> Z.to_int n \n\
-  \ | _ -> failwith \"Invalid type: should be a NumE nat\"\n\n
+  \  match e.it with\n\
+  \  | NumE (`Nat n) -> Z.to_int n \n\
+  \  | _ -> failwith \"Invalid type: should be a NumE nat\"\n\n\
   let ocaml_of_list f (e : exp) =\n\
-  \ match e.it with\n\
-  \ | ListE es -> List.map f es\n\
-  \ | _        -> failwith \"Invalid type: should be a ListE\"\n\n
+  \  match e.it with\n\
+  \  | ListE es -> List.map f es\n\
+  \  | _        -> failwith \"Invalid type: should be a ListE\"\n\n\
   let ocaml_of_opt f (e : exp) =\n\
-  \ match e.it with\n\
-  \ | OptE es -> Option.map f es\n\
-  \ | _       -> failwith \"Invalid type: should be a OptE\"\n\n
+  \  match e.it with\n\
+  \  | OptE es -> Option.map f es\n\
+  \  | _       -> failwith \"Invalid type: should be a OptE\"\n\n\
   let ocaml_of_string (e : exp) : string =\n\
-  \ match e.it with\n\
-  \ | TextE s -> s\n\
-  \ | _       -> failwith \"Invalid type: should be a TextE\"\n\n"
+  \  match e.it with\n\
+  \  | TextE s -> s\n\
+  \  | _       -> failwith \"Invalid type: should be a TextE\"\n\n"
 
 let generate_ocaml dl ocamlfile = 
   Printf.printf "Generating OCaml code...\n";

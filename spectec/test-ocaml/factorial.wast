@@ -16,4 +16,4 @@
     i32.const 5
     call $factorial
   ))
-(assert_return (invoke "call_factorial") (i32.const 130))
+(assert_return (invoke "call_factorial") (i32.const 120))

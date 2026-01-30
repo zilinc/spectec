@@ -191,33 +191,33 @@
     end
   )
 
-;;   (func (export "br_zero") (result i32)
-;;     i32.const 1
-;;     block (param i32) (result i32)
-;;       i32.const 32
-;;       i32.const 42
-;;       br 0
-;;       i32.const 52
-;;     end
-;;     i32.const 1
-;;     i32.add
-;;   )
-;; 
-;;   (func (export "br_succ") (result i32)
-;;     i32.const 1
-;;     block (param i32) (result i32)
-;;       i32.const 32
-;;       block (param i32 i32) (result i32)
-;;         i32.const 42
-;;         br 1
-;;         i32.const 52
-;;       end
-;;       drop
-;;       i32.const 62
-;;     end
-;;     i32.const 1
-;;     i32.add
-;;   )
+  (func (export "br_zero") (result i32)
+    i32.const 1
+    block (param i32) (result i32)
+      i32.const 32
+      i32.const 42
+      br 0
+      i32.const 52
+    end
+    i32.const 1
+    i32.add
+  )
+
+  (func (export "br_succ") (result i32)
+    i32.const 1
+    block (param i32) (result i32)
+      i32.const 32
+      block (param i32 i32) (result i32)
+        i32.const 42
+        br 1
+      i32.const 52
+    end
+    drop
+    i32.const 62
+  end
+    i32.const 1
+    i32.add
+  )
 
   (func (export "if_true") (result i32)
     i32.const 42
@@ -243,42 +243,42 @@
     end
   )
 
-;;   (func (export "loop") (result i32)
-;;     (block (result i32)
-;;       i32.const 0
-;;       (loop (param i32) (result i32)
-;;         (if (result i32)
-;;           (then i32.const 42 (br 2))
-;;           (else i32.const 1 (br 1))
-;;         )
-;;       )
-;;     )
-;;   )
-;; 
-;;   (func $fib (export "fib") (param i32) (result i32)
-;;     local.get 0
-;;     i32.const 1
-;;     i32.le_s
-;;     if (result i32)
-;;       local.get 0
-;;     else
-;;       local.get 0
-;;       i32.const 1
-;;       i32.sub
-;;       call $fib
-;;       local.get 0
-;;       i32.const 2
-;;       i32.sub
-;;       call $fib
-;;       i32.add
-;;     end)
-;; 
-;;   (func $foo (param i32) (br 0))
-;;   (func $check_exit (export "check_exit") (param i32) (result i32)
-;;     (call $foo (i32.const 42))
-;;     ;; (call $print_i32 (local.get 0))
-;;     (local.get 0)
-;;   )
+  (func (export "loop") (result i32)
+    (block (result i32)
+      i32.const 0
+      (loop (param i32) (result i32)
+        (if (result i32)
+          (then i32.const 42 (br 2))
+          (else i32.const 1 (br 1))
+        )
+      )
+    )
+  )
+
+  (func $fib (export "fib") (param i32) (result i32)
+    local.get 0
+    i32.const 1
+    i32.le_s
+    if (result i32)
+      local.get 0
+    else
+      local.get 0
+      i32.const 1
+      i32.sub
+      call $fib
+      local.get 0
+      i32.const 2
+      i32.sub
+      call $fib
+      i32.add
+    end)
+ 
+  (func $foo (param i32) (br 0))
+  (func $check_exit (export "check_exit") (param i32) (result i32)
+    (call $foo (i32.const 42))
+    ;; (call $print_i32 (local.get 0))
+    (local.get 0)
+  )
 )
 
 
@@ -310,12 +310,12 @@
 (assert_return (invoke "call_add_return_frame") (i32.const 3))
 (assert_return (invoke "call_add_return_label") (i32.const 3))
 (assert_return (invoke "block") (i32.const -1))
-;; (assert_return (invoke "br_zero") (i32.const 43))
-;; (assert_return (invoke "br_succ") (i32.const 43))
+(assert_return (invoke "br_zero") (i32.const 43))
+(assert_return (invoke "br_succ") (i32.const 43))
 (assert_return (invoke "if_true") (i32.const 44))
 (assert_return (invoke "if_false") (i32.const 45))
-;; (assert_return (invoke "loop") (i32.const 42))
-;; (assert_return (invoke "fib" (i32.const 10)) (i32.const 55))
+(assert_return (invoke "loop") (i32.const 42))
+(assert_return (invoke "fib" (i32.const 10)) (i32.const 55))
 ;; (assert_return (invoke "check_exit" (i32.const 10)) (i32.const 10))
 
 ;;second module
