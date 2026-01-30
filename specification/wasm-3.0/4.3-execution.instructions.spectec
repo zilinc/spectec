@@ -42,6 +42,10 @@ rule Step/ctxt-frame:
   s; f; (FRAME_ n `{f'} instr*)  ~>  s'; f; (FRAME_ n `{f''} instr'*)
   -- Step: s; f'; instr* ~> s'; f''; instr'*
 
+rule Step/ctxt-handler:
+  z; (HANDLER_ n `{catch*} instr*) ~> z'; (HANDLER_ n `{catch*} instr'*)
+  -- Step: z; instr* ~> z'; instr'*
+
 
 ;; Polymorphic instructions
 
