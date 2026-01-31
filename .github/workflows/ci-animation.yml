@@ -20,8 +20,8 @@ jobs:
         with:
           ocaml-compiler: 5.1.x
       - name: Setup Dune
-        run: opam install --yes dune menhir mdx zarith
-      - name: Build and test
+        run: opam install --yes dune menhir mdx zarith tsort
+      - name: Build
         run: cd spectec && opam exec make
       - name: Test wasm-3.0 base features
         run: ./spectec -l -ll ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/
