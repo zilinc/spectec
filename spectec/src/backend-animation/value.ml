@@ -190,7 +190,8 @@ let caseV1 v = caseV [[];[]] [v]
 let tupV vs = TupV vs
 let strV fvs = StrV fvs
 
-let num i = `Nat (Z.of_int i)
+(* dim *)
+let num i = natV (Z.of_int i) |> caseV1
 let two       = num 2
 let four      = num 4
 let eight     = num 8
