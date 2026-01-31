@@ -145,7 +145,7 @@ and transform_prem t p =
     | IfPr e -> IfPr (transform_exp t e)
     | LetPr (e1, e2, ss) -> LetPr (transform_exp t e1, transform_exp t e2, ss)
     | ElsePr -> ElsePr
-    | IterPr (p, ie) -> IterPr (transform_prem t p, transform_iterexp t ie)
+    | IterPr (ps, ie) -> IterPr (List.map (transform_prem t) ps, transform_iterexp t ie)
     | NegPr p -> NegPr (transform_prem t p)
   in
   f { p with it }
@@ -330,7 +330,7 @@ and collect_prem c p =
     | IfPr e -> collect_exp c e
     | LetPr (e1, e2, _) -> collect_exp c e1 $@ collect_exp c e2
     | ElsePr -> c.default
-    | IterPr (p, ie) -> collect_prem c p $@ collect_iterexp c ie
+    | IterPr (ps, ie) -> compose_list c (collect_prem c) ps $@ collect_iterexp c ie
     | NegPr p -> collect_prem c p
   in
   let (res, continue) = f p in 

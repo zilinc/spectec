@@ -84,7 +84,7 @@ let rec t_exp env e =
   | _ -> ([], true)
 and t_prem env prem =
   let res, continue = (match prem.it with
-  | IterPr (prem', ((iter, _) as iterexp))
+  | IterPr ([prem'], ((iter, _) as iterexp))
   -> 
     let env' = env_under_iter env iterexp in
     let collector1 = create_collector env in
@@ -92,6 +92,7 @@ and t_prem env prem =
     (iter_side_conditions env iterexp @
     collect_iter collector1 iter @
     List.map (fun pr -> iterPr ([pr], iterexp) $ prem'.at) (collect_prem collector2 prem' @ [prem']), false)
+  | IterPr (_prems, _) -> assert false  (* Yet to be implemented. *)
   | NegPr _ -> 
     (* We do not want to infer anything from NegPr *)
     ([], false)
