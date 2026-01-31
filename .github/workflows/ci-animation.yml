@@ -20,7 +20,7 @@ jobs:
         with:
           ocaml-compiler: 5.1.x
       - name: Setup Dune
-        run: opam install --yes dune menhir mdx zarith
+        run: opam install --yes dune menhir mdx zarith && eval $(opam env)
       - name: Build and test
         run: cd spectec && make
       - name: Test wasm-3.0 base features
