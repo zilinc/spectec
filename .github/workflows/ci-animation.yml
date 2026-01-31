@@ -23,10 +23,10 @@ jobs:
         run: opam install --yes dune menhir mdx zarith tsort
       - name: Build
         run: cd spectec && opam exec make
-      - name: Test wasm-3.0 base features
-        run: ./spectec -l -ll ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/
-      - name: Test wasm-3.0 additional features
-        run:
+      - name: Test wasm-3.0
+        run: |
+          cd spectec
+          ./spectec -l -ll ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/
           ./spectec -l -ll ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v \
             ./test-interpreter/spec-test-3/bulk-memory \
             ./test-interpreter/spec-test-3/exceptions \
