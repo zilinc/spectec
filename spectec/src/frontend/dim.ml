@@ -129,7 +129,8 @@ and check_typ env ctx t =
   | IterT (t1, iter) ->
     check_iter env ctx iter;
     check_typ env (strip_index iter::ctx) t1
-  | StrT tfs ->
+  | StrT (_, ts, tfs, _) ->
+    iter_nl_list (check_typ env ctx) ts;
     iter_nl_list (fun (_, (tI, prems), _) ->
       let env' = ref Env.empty in
       check_typ env' ctx tI;
@@ -487,6 +488,11 @@ and annot_exp env e : Il.Ast.exp * occur =
     | SubE (e1, t1, t2) ->
       let e1', occur1 = annot_exp env e1 in
       SubE (e1', t1, t2), occur1
+    | IfE (e1, e2, e3) ->
+      let e1', occur1 = annot_exp env e1 in
+      let e2', occur2 = annot_exp env e2 in
+      let e3', occur3 = annot_exp env e3 in
+      IfE (e1', e2', e3'), union occur1 (union occur2 occur3)
   in {e with it}, occur
 
 and annot_expfield env (atom, e) : Il.Ast.expfield * occur =
