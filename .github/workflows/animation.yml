@@ -1,0 +1,37 @@
+
+name: CI for spectec animation
+
+on:
+  push:
+    branches: [ il-animate ]
+    paths: [ spectec/** ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  spec-tec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.1.x
+      - name: Setup Dune
+        run: opam install --yes dune menhir mdx zarith
+      - name: Build and test
+        run: cd spectec && make
+      - name: Test wasm-1.0
+        run: ./spectec -l -ll ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/
+      - name: Test wasm-3.0
+        run: |
+          ./spectec -l -ll ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v \
+          ./test-interpreter/spec-test-3/bulk-memory \
+          ./test-interpreter/spec-test-3/exceptions \
+          ./test-interpreter/spec-test-3/gc \
+          ./test-interpreter/spec-test-3/memory64 \
+          ./test-interpreter/spec-test-3/multi-memory \
+          ./test-interpreter/spec-test-3/relaxed-simd \
+          ./test-interpreter/spec-test-3/simd
