@@ -343,37 +343,36 @@ let string_of_state (s: AnimState.t) =
 let throw_log e = let () = info "log" no e in E.throw (force e)
 
 (* A list of rules/defs that cannot be easily animated.
-   The map is "reason" ↦ [("rel_id", "rule_name")]
+   The list is [("rel_id", "rule_name")]
 *)
-let cannot_animate : (string * string) list Map.t =
-  Map.of_list
-    [ ("rule_lhs", [
-        (* These are covered in meta.spectec. The redex is either
-           FRAME_, LABEL_ or HANDLER_.
-         *)
-        ("Step_pure", "br-label-zero");
-        ("Step_pure", "br-label-succ");
-        ("Step_pure", "br-handler");
-        ("Step_pure", "return-frame");
-        ("Step_pure", "return-label");
-        ("Step_pure", "return-handler");
+let cannot_animate : (string * string) list =
+  [
+    (* These are covered in meta.spectec. The redex is either
+       FRAME_, LABEL_ or HANDLER_.
+     *)
+    ("Step_pure", "br-label-zero");
+    ("Step_pure", "br-label-succ");
+    ("Step_pure", "br-handler");
+    ("Step_pure", "return-frame");
+    ("Step_pure", "return-label");
+    ("Step_pure", "return-handler");
 
-        ("Step_read", "return_call_ref-label");
-        ("Step_read", "return_call_ref-handler");
-        ("Step_read", "return_call_ref-frame-null");
-        ("Step_read", "return_call_ref-frame-addr");
+    ("Step_read", "return_call_ref-label");
+    ("Step_read", "return_call_ref-handler");
+    ("Step_read", "return_call_ref-frame-null");
+    ("Step_read", "return_call_ref-frame-addr");
 
-        (* These are structural rules that are hard-coded into the $reduce function in meta.spectec. *)
-        ("Step_pure", "trap-instrs");
-        ("Step_read", "throw_ref-instrs");
-        ("Step", "ctxt-instrs");
-      ])
-    ]
+    (* Rules to bubble up the control flow; they are encoded in meta.spectec *)
+    ("Step_pure", "trap-instrs");
+    ("Step_read", "throw_ref-instrs");
+    (* These are structural rules that are hard-coded into the $reduce function in meta.spectec *)
+    ("Step", "ctxt-instrs");
+    ("Step", "ctxt-label");
+    ("Step", "ctxt-frame");
+    ("Step", "ctxt-handler");
+  ]
 
-let is_unanimatable reason rule_name rel_id : bool =
-  match Map.find_opt reason cannot_animate with
-  | None -> false
-  | Some ls -> List.exists (fun l -> l = (rel_id, rule_name)) ls
+let skip_animation rule_name rel_id : bool = List.mem (rel_id, rule_name) cannot_animate
 
 let is_step_rule rel_id : bool = rel_id = "Step"
 let is_step_pure_rule rel_id : bool = rel_id = "Step_pure"
@@ -1455,7 +1454,7 @@ let animate_rule_sub envr (r: rule_clause) : func_clause =
 
 let animate_rule envr at rel_id rule_name (r: rule_clause) : func_clause option =
   let (rule_id, _, _, _, _) = r.it in
-  if is_unanimatable "rule_lhs" rule_id.it rel_id then
+  if skip_animation rule_id.it rel_id then
     None
   else if is_step_rule rel_id then
     Some (transform_step_rule envr r)

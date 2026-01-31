@@ -117,6 +117,7 @@ let get_global_value module_name globalname : value (* val *) =
 (** Main functions **)
 
 and instantiate module_ : value * value =
+  log "[Instantiating module...]\n";
   let t1 = Sys.time () in
   let il_module = C.vl_of_module module_ in
   let externaddrs = List.map get_externaddr module_.it.imports in
@@ -128,11 +129,12 @@ and instantiate module_ : value * value =
   (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
-  log "[Instantiating module... %dms]\n" ((t2 -. t1) *. 1000. |> int_of_float);
+  log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);
   !moduleinst, instrs'
 
 
 and invoke moduleinst_name funcname args : value =
+  log "[Invoking %s...]\n" funcname;
   let t1 = Sys.time () in
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
@@ -141,7 +143,7 @@ and invoke moduleinst_name funcname args : value =
   (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
-  log "[Invoking %s... %dms]\n" funcname ((t2 -. t1) *. 1000. |> int_of_float);
+  log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);
   instrs'
 
 
@@ -198,6 +200,11 @@ let test_assertion assertion =
     | exception RI.Valid.Invalid _ -> success
     | exception I.Exception.Invalid _ -> success
     | _ -> print_fail assertion.at "validation" re "module instance"
+    )
+  | AssertExhaustion (action, re) ->
+    (match run_action action |> as_list_value' with
+    | exception I.Exception.OutOfMemory -> success
+    | vs -> print_fail assertion.at "runtime" re ("Got result " ^ string_of_values ", " vs)
     )
   (* ignore other kinds of assertions *)
   | _ -> pass

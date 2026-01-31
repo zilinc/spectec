@@ -53,7 +53,6 @@ let assert_msg cond msg = if not cond then info "assertion" no msg; assert cond
 
 (* Helper *)
 
-
 let (--) start end_ : int list = List.init (end_ - start) (fun i -> start + i)
 
 module OptMonad : sig
@@ -737,7 +736,8 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
     let old_env = !il_env in
     (* Add bindings to [il_env]. *)
     let _ = Animate.env_of_binds binds il_env in
-    assert (List.length pargs = List.length args);
+    if not (List.length pargs = List.length args) then
+      error at ("Function `" ^ fname ^ "` is called with " ^ string_of_int (List.length args) ^ " arguments");
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
@@ -770,6 +770,13 @@ and eval_func name func_def args : value OptMonad.m =
     let instrs' = instrs |> as_list_value' in
     info "log" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
     return r
+  else if name = "reduce" then
+    (* Capture stack overflow signal. *)
+    let* r = match_clause no_region name 1 fcs args in
+    (match r with
+    | CaseV ([["STACK_OVERFLOW"]], []) -> raise BI.Exception.OutOfMemory
+    | _ -> return r
+    )
   else
     match_clause no_region name 1 fcs args
 
@@ -777,8 +784,11 @@ and call_func name args : value OptMonad.m =
   info "log" no (lazy ("Calling " ^ name));
   match name with
   (* Hardcoded functions defined in meta.spectec *)
-  | "Steps"  -> call_func "steps"     args
-  | "Step"   -> call_func "step"      args
+  | "Steps"  ->
+    let [config] = args in
+    let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
+    call_func "steps" args'
+  | "Step"   -> error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
   (* | "Ref_ok" -> call_func "ref_infer" args *)
   (* Hardcoded functions defined in the compiler. *)
   | "Module_ok"     -> module_ok     args
@@ -1175,7 +1185,7 @@ let expand = function
 
 let instantiate (args: Value.arg list) : value =
   match (let* r = call_func "instantiate" args in
-         call_func "steps" [ValA r]) |> run_opt
+         call_func "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))]) |> run_opt
   with
   | Some v -> v
   | None -> raise (Failure "`instantiate` failed to run.")
@@ -1184,7 +1194,7 @@ let invoke (args: Value.arg list) : value =
   match call_func "invoke" args |> run_opt with
   | None -> raise (Failure "`invoke` failed to run.")
   | Some r -> let CaseV (_, [_; instrs]) = r in
-              (match call_func "steps" [ValA r] |> run_opt with
+              (match call_func "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))] |> run_opt with
               | Some r' -> r'
               | None -> raise (Failure ("`invoke` failed to reduce its result: " ^ string_of_value instrs))
               )

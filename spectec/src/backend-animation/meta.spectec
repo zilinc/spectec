@@ -37,6 +37,9 @@ def $val_infer(s, ref) = rt
 ;;                      Reduction
 ;; ********************************************************
 
+syntax stackcount = nat
+
+
 def $is_val(instr) : bool
 def $is_val(CONST  numtype  i) = true
 def $is_val(VCONST vectype  c) = true
@@ -73,6 +76,10 @@ def $use_step_pure          hint(builtin)
 def $use_step_read          hint(builtin)
 def $use_step_ctxt          hint(builtin)
 
+
+syntax stepresult = STEP config | STUCK | STACK_OVERFLOW
+
+
 ;; According to the `instr`, call the right $Step_.../... function
 def $dispatch_step(instr, config)      : config
 def $dispatch_step_pure(instr, instr*) : instr*
@@ -81,7 +88,7 @@ def $dispatch_step_label(nat, val*, instr?, state, instr*, bool) : config
 def $dispatch_step_frame(nat, val*, instr?, state, bool) : config
 def $dispatch_step_handler(nat, val*, instr?, state, catch*, bool) : config
 
-def $step_ctxt(config) : config
+def $step_ctxt(config, stackcount) : stepresult
 
 def $dispatch_step                hint(builtin)
 def $dispatch_step_pure           hint(builtin)
@@ -89,51 +96,56 @@ def $dispatch_step_read           hint(builtin)
 
 
 ;; The input `config` consists of the whole value stack, plus the first instruction.
-def $dispatch_reduce(state, val*, instr) : config?
-def $dispatch_reduce(z, val*, instr_0) = z; instr_1*
+def $dispatch_reduce(state, val*, instr, stackcount) : stepresult
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
     -- if $use_step_pure(instr_0) = true
     -- if $dispatch_step_pure(instr_0, val* instr_0) = instr_1*
-def $dispatch_reduce(z, val*, instr_0) = z; instr_1*
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
     -- if $use_step_read(instr_0) = true
-    -- if $dispatch_step_read(instr_0, z; val* instr_0) = instr_1*
-def $dispatch_reduce(z, val*, instr_0) = config_1
+    -- if $dispatch_step_read(instr_0, (z; val* instr_0)) = instr_1*
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP config_1
     -- if $use_step(instr_0) = true
-    -- if $dispatch_step(instr_0, z; val* instr_0) = config_1
-def $dispatch_reduce(z, val*, instr_0) = z'; val* instr_1*
+    -- if $dispatch_step(instr_0, (z; val* instr_0)) = config_1
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z'; val* instr_1*)
     -- if $use_step_ctxt(instr_0) = true
-    -- if $step_ctxt(z; instr_0) = z'; instr_1*
-def $dispatch_reduce(z, val*, instr_0) = eps
+    -- if $step_ctxt((z; instr_0), stackcount) = STEP (z'; instr_1*)
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STACK_OVERFLOW
+    -- if $step_ctxt((z; instr_0), stackcount) = STACK_OVERFLOW
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STUCK
     -- otherwise
 
 
 def $Step_read_throw_ref_handler(config) : instr*
 def $Step_read_throw_ref_handler           hint(builtin)
 
-def $reduce(config) : config?
-def $step(config) : config
+def $reduce(config, stackcount) : stepresult
+def $step(config, stackcount) : config
 ;; A non-reflexive version of the transitive closure of single step reduction.
-def $steps_pg(config) : config?
-def $steps(config) : config
+def $steps_pg(config, stackcount) : config?
+def $steps(config, stackcount) : config
 
 
-def $step_ctxt(z; LABEL_ n `{instr_1*} instr*) = config
+def $step_ctxt((z; LABEL_ n `{instr_1*} instr*), stackcount) = STEP config
     -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
     -- if bl = (instr'* = eps)
     -- if $dispatch_step_label(n, val*, instr_0?, z, instr_1*, bl) = config
-def $step_ctxt(z; LABEL_ n `{instr_1*} instr*) = z'; (LABEL_ n `{instr_1*} instr'*)
-    -- if $steps_pg(z; instr*) = z'; instr'*
-def $step_ctxt(z; FRAME_ n `{f'} instr*) = config
+def $step_ctxt((z; LABEL_ n `{instr_1*} instr*), stackcount) = STEP (z'; (LABEL_ n `{instr_1*} instr'*))
+    -- if $steps_pg((z; instr*), stackcount) = z'; instr'*
+def $step_ctxt((z; FRAME_ n `{f'} instr*), stackcount) = STEP config
     -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
     -- if bl = (instr'* = eps)
     -- if $dispatch_step_frame(n, val*, instr_0?, z, bl) = config
-def $step_ctxt(s; f; FRAME_ n `{f'} instr*) = s'; f; FRAME_ n `{f''} instr'*
-    -- if $steps_pg(s; f'; instr*) = s'; f''; instr'*
-def $step_ctxt(z; HANDLER_ n `{catch*} instr*) = config
+def $step_ctxt((s; f; FRAME_ n `{f'} instr*), stackcount) = STEP (s'; f; (FRAME_ n `{f''} instr'*))
+    -- if stackcount > 0
+    -- if $steps_pg((s; f'; instr*), $(stackcount-1)) = s'; f''; instr'*
+def $step_ctxt((s; f; FRAME_ n `{f'} instr*), stackcount) = STACK_OVERFLOW
+    -- if stackcount <= 0
+def $step_ctxt((z; HANDLER_ n `{catch*} instr*), stackcount) = STEP config
     -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
     -- if bl = (instr'* = eps)
     -- if $dispatch_step_handler(n, val*, instr_0?, z, catch*, bl) = config
-def $step_ctxt(z; HANDLER_ n `{catch*} instr*) = z'; (HANDLER_ n `{catch*} instr'*)
-    -- if $steps_pg(z; instr*) = z'; instr'*
+def $step_ctxt((z; HANDLER_ n `{catch*} instr*), stackcount) = STEP (z'; (HANDLER_ n `{catch*} instr'*))
+    -- if $steps_pg((z; instr*), stackcount) = z'; instr'*
 
 
 def $dispatch_step_label(n, val*, BR l, z, instr*, bl) = z; val''^n instr*
@@ -167,30 +179,34 @@ def $dispatch_step_handler(n, val*, eps, z, catch*, true) = z; val*
 
 
 
-def $reduce(s; f; instr+) = s; f; TRAP
+def $reduce((s; f; instr+), stackcount) = STEP (s; f; TRAP)
     -- if $find_first_instr(instr+) = (val*, TRAP, instr_1'*)
     -- if val* =/= eps \/ instr_1'* =/= eps
-def $reduce(s; f; instr+) = s; f; (REF.EXN_ADDR a) THROW_REF
+def $reduce((s; f; instr+), stackcount) = STEP (s; f; (REF.EXN_ADDR a) THROW_REF)
     -- if $find_first_instr(instr+) = (val* (REF.EXN_ADDR a), THROW_REF, instr_1'*)
     -- if val* =/= eps \/ instr_1'* =/= eps
-def $reduce(s; f; instr+) = s'; f'; instr_2* instr_1'*
+def $reduce((z; instr+), stackcount) = STEP (z'; instr_2* instr_1'*)
     -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
-    -- if $dispatch_reduce(s; f, val*, instr_1) = s'; f'; instr_2*
-def $reduce(s; f; instr*) = eps
+    -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STEP (z'; instr_2*)
+def $reduce((z; instr+), stackcount) = STACK_OVERFLOW
+    -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
+    -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STACK_OVERFLOW
+def $reduce((s; f; instr*), stackcount) = STUCK
     -- otherwise
 
 
-def $step(config) = config'  -- if $reduce(config) = config'
+def $step(config, stackcount) = config'
+    -- if $reduce(config, stackcount) = STEP config'
 
 
-def $steps_pg(config) = config_2
-    -- if $step(config) = config_1
-    -- if $steps(config_1) = config_2
-def $steps_pg(config) = eps
+def $steps_pg(config, stackcount) = config_2
+    -- if $step(config, stackcount) = config_1
+    -- if $steps(config_1, stackcount) = config_2
+def $steps_pg(config, stackcount) = eps
     -- otherwise
 
-def $steps(config) = config_2
-    -- if $step(config) = config_1
-    -- if $steps(config_1) = config_2
-def $steps(config) = config
+def $steps(config, stackcount) = config_2
+    -- if $step(config, stackcount) = config_1
+    -- if $steps(config_1, stackcount) = config_2
+def $steps(config, stackcount) = config
     -- otherwise
