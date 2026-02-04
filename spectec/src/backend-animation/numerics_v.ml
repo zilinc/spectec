@@ -107,7 +107,7 @@ let vbytes : numerics =
     f =
       (function
       | [ CaseV ([["V128"]], []); v ] ->
-        let s = v |> as_singleton_case |> vl_to_vec128 |> RI.V128.to_bits in
+        let s = vl_to_vec128 v |> RI.V128.to_bits in
         Array.init 16 (fun i -> s.[i] |> Char.code |> vl_of_nat |> caseV1) |> listV
       | vs -> error_values "vbytes" vs
       );
@@ -241,9 +241,9 @@ let narrow : numerics =
     f =
       (function
       | [ NumV _ as m; NumV _ as n; CaseV ([["S"]], []) as sx; CaseV ([[];[]], [(NumV _) as i]) ] ->
-          sat_s.f [ n; signed.f [ m; i ]]
+          sat_s.f [ n; signed.f [ m; i ]] |> caseV1
       | [ NumV _ as m; NumV _ as n; CaseV ([["U"]], []) as sx; CaseV ([[];[]], [(NumV _) as i]) ] ->
-          sat_u.f [ n; signed.f [ m; i ]]
+          sat_u.f [ n; signed.f [ m; i ]] |> caseV1
       | vs -> error_values "narrow" vs);
   }
 
@@ -252,17 +252,17 @@ let lanes : numerics =
     name = "lanes";
     f =
       (function
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["I8"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 16 ->
-        v |> vl_to_vec128 |> RI.V128.I8x16.to_lanes |> List.map vl_of_nat8 |> listV_of_list
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["I16"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 8 ->
-        v |> vl_to_vec128 |> RI.V128.I16x8.to_lanes |> List.map vl_of_nat16 |> listV_of_list
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["I32"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 4 ->
-        v |> vl_to_vec128 |> RI.V128.I32x4.to_lanes |> List.map vl_of_nat32 |> listV_of_list
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["I64"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 2 ->
-        v |> vl_to_vec128 |> RI.V128.I64x2.to_lanes |> List.map vl_of_nat64 |> listV_of_list
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["F32"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 4 ->
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I8" ]], []); z ]); v ] when z = sixteen ->
+        v |> vl_to_vec128 |> RI.V128.I8x16.to_lanes |> List.map Lib.Fun.(vl_of_nat8  >.> caseV1) |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I16"]], []); z ]); v ] when z = eight   ->
+        v |> vl_to_vec128 |> RI.V128.I16x8.to_lanes |> List.map Lib.Fun.(vl_of_nat16 >.> caseV1) |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I32"]], []); z ]); v ] when z = four    ->
+        v |> vl_to_vec128 |> RI.V128.I32x4.to_lanes |> List.map Lib.Fun.(vl_of_nat32 >.> caseV1) |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I64"]], []); z ]); v ] when z = two     ->
+        v |> vl_to_vec128 |> RI.V128.I64x2.to_lanes |> List.map Lib.Fun.(vl_of_nat64 >.> caseV1) |> listV_of_list
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["F32"]], []); z ]); v ] when z = four    ->
         v |> vl_to_vec128 |> RI.V128.F32x4.to_lanes |> List.map vl_of_float32 |> listV_of_list
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["F64"]], []); NumV (`Nat z) ]); v ] when z = Z.of_int 2 ->
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["F64"]], []); z ]); v ] when z = two     ->
         v |> vl_to_vec128 |> RI.V128.F64x2.to_lanes |> List.map vl_of_float64 |> listV_of_list
       | vs -> error_values "lanes" vs
       );
@@ -272,17 +272,17 @@ let inv_lanes : numerics =
     name = "inv_lanes";
     f =
       (function
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["I8"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 16 && Array.length !lanes = 16 ->
-        List.map vl_to_int8 (!lanes |> Array.to_list) |> RI.V128.I8x16.of_lanes |> vl_of_vec128
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["I16"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 8 && Array.length !lanes = 8 ->
-        List.map vl_to_int16 (!lanes |> Array.to_list) |> RI.V128.I16x8.of_lanes |> vl_of_vec128
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["I32"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 4 && Array.length !lanes = 4 ->
-        List.map vl_to_nat32 (!lanes |> Array.to_list) |> RI.V128.I32x4.of_lanes |> vl_of_vec128
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["I64"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 2 && Array.length !lanes = 2 ->
-        List.map vl_to_nat64 (!lanes |> Array.to_list) |> RI.V128.I64x2.of_lanes |> vl_of_vec128
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["F32"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 4 && Array.length !lanes = 4 ->
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I8" ]], []); z ]); ListV lanes; ] when z = sixteen && Array.length !lanes = 16 ->
+        List.map Lib.Fun.(as_singleton_case >.> vl_to_int8)  (!lanes |> Array.to_list) |> RI.V128.I8x16.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I16"]], []); z ]); ListV lanes; ] when z = eight   && Array.length !lanes = 8 ->
+        List.map Lib.Fun.(as_singleton_case >.> vl_to_int16) (!lanes |> Array.to_list) |> RI.V128.I16x8.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I32"]], []); z ]); ListV lanes; ] when z = four    && Array.length !lanes = 4 ->
+        List.map Lib.Fun.(as_singleton_case >.> vl_to_nat32) (!lanes |> Array.to_list) |> RI.V128.I32x4.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["I64"]], []); z ]); ListV lanes; ] when z = two     && Array.length !lanes = 2 ->
+        List.map Lib.Fun.(as_singleton_case >.> vl_to_nat64) (!lanes |> Array.to_list) |> RI.V128.I64x2.of_lanes |> vl_of_vec128
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["F32"]], []); z ]); ListV lanes; ] when z = four    && Array.length !lanes = 4 ->
         List.map vl_to_float32 (!lanes |> Array.to_list) |> RI.V128.F32x4.of_lanes |> vl_of_vec128
-      | [ CaseV ([[];["X"];[]], [ CaseV ([["F64"]], []); NumV (`Nat z) ]); ListV lanes; ] when z = Z.of_int 2 && Array.length !lanes = 2 ->
+      | [ CaseV ([[];["X"];[]], [ CaseV ([["F64"]], []); z ]); ListV lanes; ] when z = two     && Array.length !lanes = 2 ->
         List.map vl_to_float64 (!lanes |> Array.to_list) |> RI.V128.F64x2.of_lanes |> vl_of_vec128
         | vs -> error_values "inv_lanes" vs
       );
@@ -433,7 +433,7 @@ let relaxed_trunc : numerics =
   }
 
 
-(* FIXME(zilinc): How does it handle poly-functions and their type arguments?
+(* FIXME(zilinc): How does it handle poly-functions and their type arguments? *)
 let rec inv_concat_helper = function
   | a :: b :: l ->
     [listV_of_list [a; b]] @ inv_concat_helper l
@@ -447,7 +447,7 @@ let inv_concat : numerics =
       (function
       | [ ListV _ as lv ] ->
         lv
-        |> unwrap_listv_to_list
+        |> as_list_value'
         |> inv_concat_helper
         |> listV_of_list
       | vs -> error_values "inv_concat" vs
@@ -470,10 +470,7 @@ let inv_concatn : numerics =
       (function
       | [ NumV (`Nat len); ListV _ as lv] ->
         let n = Z.to_int len in
-        let l =
-          lv
-          |> unwrap_listv_to_list
-        in
+        let l = as_list_value' lv in
         assert (List.length l mod n = 0);
         l
         |> inv_concatn_helper n []
@@ -481,7 +478,6 @@ let inv_concatn : numerics =
       | vs -> error_values "inv_concatn" vs
       );
   }
-*)
 
 let truncz : numerics =
   {
@@ -819,14 +815,12 @@ let iq15mulr_sat : numerics =
     name = "iq15mulr_sat";
     f =
       (function
-      | [ NumV (`Nat _) as z; sx; m; n] ->
-        let NumV (`Nat _) = as_singleton_case m in
-        let NumV (`Nat _) = as_singleton_case n in
+      | [ NumV (`Nat _) as z; sx; CaseV ([[];[]], [NumV (`Nat _) as m]); CaseV ([[];[]], [NumV (`Nat _) as n]) ] ->
         let m' = signed.f [ z; m ] |> as_int_value in
         let n' = signed.f [ z; n ] |> as_int_value in
         (match match_caseV "sx" sx with
-        | [["U"]], _ -> sat_u.f [ z; sx; Z.(shift_right (mul m' n' + of_int 0x4000) 15) |> intV ]
-        | [["S"]], _ -> sat_s.f [ z; sx; Z.(shift_right (mul m' n' + of_int 0x4000) 15) |> intV ]
+        | [["U"]], _ -> sat_u.f [ z; Z.(shift_right (mul m' n' + of_int 0x4000) 15) |> intV ] |> caseV1
+        | [["S"]], _ -> sat_s.f [ z; Z.(shift_right (mul m' n' + of_int 0x4000) 15) |> intV ] |> caseV1
         | _ -> error_value "sx" sx
         )
       | vs -> error_values "iq15mulr_sat" vs
@@ -838,7 +832,7 @@ let irelaxed_q15mulr : numerics =
     name = "irelaxed_q15mulr";
     f =
       (function
-      | [ NumV (`Nat _) as z; sx; m; n] ->
+      | [ NumV (`Nat _) as z; sx; m; n ] ->
         iq15mulr_sat.f [z; sx; m; n] |> singleton (* use deterministic behaviour *)
       | vs -> error_values "irelaxed_q15mulr" vs
       );
@@ -1172,10 +1166,8 @@ let numerics_list : numerics list = [
   bytes;
   inv_bytes;
   inv_ibits;
-  (*
   inv_concat;
   inv_concatn;
-  *)
   wrap;
   narrow;
   lanes;
@@ -1250,8 +1242,9 @@ let call_numerics fname args : value =
   let fname' = strip_suffix fname in  (* Yuck! *)
   match List.find_opt (fun numerics -> numerics.name = fname') numerics_list with
   | Some numerics ->
-    let args' = List.map (function
-    | ValA v -> v
+    let args' = List.concat_map (function
+    | ValA v -> [v]
+    | TypA _ -> []
     | a -> raise (Failure ("Wrong argument to numeric function " ^ fname ^ ": " ^ string_of_arg a))
     ) args in
     numerics.f args'

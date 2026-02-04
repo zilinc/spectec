@@ -63,10 +63,10 @@ module HostState = struct
   end
 
   module Map = Map.Make(EffectDomain)
-  type effect = Print of string
+  type effect_ = Print of string
 
   (* Global effects map. *)
-  let effect_map : ((value * effect list) Map.t) ref = ref Map.empty
+  let effect_map : ((value * effect_ list) Map.t) ref = ref Map.empty
 
   let add_effects (hf_name: string) res effs =
     effect_map := Map.add (!timestamp, hf_name) (res, effs) !effect_map;
@@ -77,7 +77,7 @@ module HostState = struct
 
   let lookup_effect hf_name ts = Map.find_opt (ts, hf_name) !effect_map
 
-  let get_effects () : effect list =
+  let get_effects () : effect_ list =
     Map.bindings !effect_map |> List.map (fun x -> snd (snd x)) |> List.concat
 
 

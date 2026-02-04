@@ -26,12 +26,12 @@ let verbose : string list ref =
       (* "table"; *)
       (* "assertion"; *)
       (* "eval"; *)          (* Evaluation of expressions. *)
-      (* "assign"; *)        (* Matching, but for terms only. *)
       (* "match";  *)        (* Matching of other types. *)
       (* "match_info";  *)
       (* "steps";       *)
       (* "call"; *)
       (* "iter"; *)          (* Low-level debugging. *)
+      (* "assign"; *)
       (* "log"; *)
       ]
 
@@ -128,20 +128,31 @@ let string_of_args = function
 
 module VContext = struct
   module Map = Map.Make(String)
-  type t = value Map.t
+  type t = { vars: value Map.t; defs: id Map.t }
 
-  let empty : t = Map.empty
+  let empty : t = { vars = Map.empty; defs = Map.empty }
 
-  let add_varid ctx (s: id) (v: value) = Map.add s.it v ctx
-  let find_varid ctx (s : id) : value = Map.find s.it ctx
-  let dom_varid ctx : Set.t = ctx |> Map.bindings |> List.map fst |> Set.of_list
-  let merge ctx1 ctx2 = Map.merge (fun k ov1 ov2 ->
+  let add_varid ctx (x: id) (v: value) = { ctx with vars = Map.add x.it v ctx.vars }
+  let add_defid ctx (x: id) (v: id)    = { ctx with defs = Map.add x.it v ctx.defs }
+
+  let find_varid ctx (x : id) : value = Map.find x.it ctx.vars
+  let find_defid ctx (x : id) : id    = Map.find x.it ctx.defs
+
+  let find_opt_varid ctx (x : id) : value option = Map.find_opt x.it ctx.vars
+  let find_opt_defid ctx (x : id) : id    option = Map.find_opt x.it ctx.defs
+
+  let dom_varid ctx : Set.t = ctx.vars |> Map.bindings |> List.map fst |> Set.of_list
+
+  let merge_map m1 m2 = Map.merge (fun k ov1 ov2 ->
     match ov1, ov2 with
     | None   , None    -> None
     | Some v1, None    -> Some v1
     | None   , Some v2 -> Some v2
     | Some v1, Some v2 -> assert false
-  ) ctx1 ctx2
+  ) m1 m2
+  let merge ctx1 ctx2 = { vars = merge_map ctx1.vars ctx2.vars
+                        ; defs = merge_map ctx1.defs ctx2.defs
+                        }
 end
 
 
@@ -151,6 +162,7 @@ let il_env : Il.Env.t ref = ref Il.Env.empty
 
 (** [lhs] is the pattern, and [rhs] is the expression. *)
 let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
+  info "assign" no (lazy ("* assign: " ^ Lib.String.shorten (string_of_exp lhs) ^ " ↦ " ^ Lib.String.shorten (string_of_value rhs)));
   match lhs.it, rhs with
   | VarE name, _ ->
     VContext.add_varid ctx name rhs |> return
@@ -212,7 +224,7 @@ and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
 and eval_exp ctx exp : value OptMonad.m =
   let open Xl in
   match exp.it with
-  | VarE v -> (match VContext.Map.find_opt v.it ctx with
+  | VarE v -> (match VContext.find_opt_varid ctx v with
               | Some v' -> return v'
               | None -> error exp.at (sprintf "Variable `%s` is not in the value context.\n  ▹ vctx: %s" v.it
                                        (string_of_varset (VContext.dom_varid ctx)))
@@ -341,8 +353,11 @@ and eval_exp ctx exp : value OptMonad.m =
     )
   | TupE es -> let* vs = mapM (eval_exp ctx) es in TupV vs |> return
   | CallE (fid, args) ->
+    let fid' = (match VContext.find_opt_defid ctx fid with
+               | None -> fid | Some fid' -> fid') in
     let* args' = mapM (eval_arg ctx) args in
-    call_func fid.it args'
+    call_func fid'.it args'
+
   | IterE (e1, ((_, xes) as iterexp)) ->
     let* (iter', xvs) as iterval = eval_iterexp ctx iterexp in
     let ids, vs = List.split xvs in
@@ -620,7 +635,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
             match e.it with
             | VarE x_star ->
               let vx = VContext.find_varid !lctxr x in
-              let vx_star' = (match VContext.Map.find_opt x_star.it ctx_out with
+              let vx_star' = (match VContext.find_opt_varid ctx_out x_star with
               | Some vx_star -> let vs = as_list_value vx_star in
                                 listV (Array.append !vs ([|vx|]))
               | None -> listV [|vx|]
@@ -683,7 +698,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           match e.it with
           | VarE x_question ->
             let vx = VContext.find_varid !lctxr x in
-            let opt_vx_question = VContext.Map.find_opt x_question.it !lctxr in
+            let opt_vx_question = VContext.find_opt_varid !lctxr x_question in
             begin match opt_vx_question with
             | Some vx_question -> assert false
             | None -> let some_vx = some vx in
@@ -715,7 +730,7 @@ and match_arg ctx at (pat: arg) (arg: Value.arg) : VContext.t OptMonad.m =
   match pat.it, arg with
   | TypA ptyp , Value.TypA atyp -> match_typ ctx at ptyp atyp
   | ExpA pexp , Value.ValA aval -> assign ctx pexp aval
-  | DefA pid  , Value.DefA _    -> todo "match_arg DefA"
+  | DefA pid  , Value.DefA aid  -> VContext.add_defid ctx pid aid |> return
   | GramA psym, Value.GramA _   -> todo "match_arg GramA"
   | _ -> fail ()
 
@@ -777,6 +792,10 @@ and eval_func name func_def args : value OptMonad.m =
     | CaseV ([["STACK_OVERFLOW"]], []) -> raise BI.Exception.OutOfMemory
     | _ -> return r
     )
+  else if name = "zeroop" then (
+    info "log" no (lazy ("* zeroop argument is " ^ Value.string_of_args args));
+    match_clause no_region name 1 fcs args
+  )
   else
     match_clause no_region name 1 fcs args
 
