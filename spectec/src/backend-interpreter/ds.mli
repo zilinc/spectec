@@ -33,6 +33,7 @@ module Info : sig
 end
 
 module Register (T : ValueType) : sig
+  val init : unit -> unit
   val add : string -> T.t -> unit
   val add_with_var : Reference_interpreter.Script.var option -> T.t -> unit
   exception ModuleNotFound of string
