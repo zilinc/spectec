@@ -39,21 +39,6 @@ let pass = 0, 0
 
 let num_parse_fail = ref 0
 
-(* Excluded test files *)
-
-let is_long_test path =
-  List.mem (Filename.basename path)
-    [
-      "call_indirect.wast";
-      "memory_copy.wast";
-      "memory_fill.wast";
-      "memory_grow.wast";
-      "memory_trap.wast";
-      "return_call.wast";
-      "return_call_indirect.wast";
-      "return_call_ref.wast";
-      "table_grow.wast"
-    ]
 
 
 (* Helper functions *)
@@ -258,7 +243,7 @@ let run_wast name script =
   Store.init ();
   Register.init ();
   HostState.reset_glb_timestamp ();
-  log ("[run_wast... %s]\n") (if is_long_test name then "skipped" else "");
+  log ("[run_wast...]\n");
   (* Intialise spectest *)
   let spectest = il_of_spectest () in
   Register.add "spectest" spectest;  (* spectest is a `moduleinst`. *)
@@ -336,8 +321,6 @@ let parse_file name parser_ file =
 let rec run_file ?(is_top=false) path args =
   if Sys.is_directory path then
     run_dir ~is_top:is_top path
-  else if is_long_test path && not is_top then pass, 0.0
-    (* Exclude long test, unless it's passed in explicitly. *)
   else try
     (* Check file extension *)
     match Filename.extension path with

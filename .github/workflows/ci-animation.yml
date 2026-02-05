@@ -26,8 +26,8 @@ jobs:
       - name: Test wasm-3.0
         run: |
           cd spectec
-          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/
-          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v \
+          ./spectec -l -ll ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/
+          ./spectec -l -ll ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v \
             ./test-interpreter/spec-test-3/bulk-memory \
             ./test-interpreter/spec-test-3/exceptions \
             ./test-interpreter/spec-test-3/gc \
