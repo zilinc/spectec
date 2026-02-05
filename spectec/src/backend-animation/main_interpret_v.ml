@@ -257,6 +257,7 @@ let run_command command =
 let run_wast name script =
   Store.init ();
   Register.init ();
+  HostState.reset_glb_timestamp ();
   log ("[run_wast... %s]\n") (if is_long_test name then "skipped" else "");
   (* Intialise spectest *)
   let spectest = il_of_spectest () in
@@ -275,6 +276,7 @@ let run_wast name script =
 let run_wasm' args module_ =
   Store.init ();
   Register.init ();
+  HostState.reset_glb_timestamp ();
   log ("[run_wasm'...]\n");
   (* Intialise spectest *)
   let spectest = il_of_spectest () in
