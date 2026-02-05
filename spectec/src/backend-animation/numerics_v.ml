@@ -19,6 +19,7 @@ let mask64 = Z.of_int64_unsigned (-1L)
 
 let z_to_int64 z = Z.(to_int64_unsigned (logand mask64 z))
 
+
 let list_f f x = f x |> singleton
 let unlist_f f x = f x |> listv_singleton
 let bop_f32 f f1 f2 = f (vl_to_float32 f1) (vl_to_float32 f2) |> vl_of_float32
@@ -32,6 +33,40 @@ let catch_ixx_exception f = try f() |> some with
   | RI.Ixx.DivideByZero
   | RI.Ixx.Overflow
   | RI.Convert.InvalidConversion -> none
+
+let profile name b : numerics =
+  {
+    name;
+    f =
+      (function
+      | [] -> boolV b
+      | vs -> error_values name vs
+      )
+  }
+
+let profile_nd = profile "ND" false
+
+
+let relaxed name i : numerics =
+  {
+    name;
+    f =
+      (function
+      | [] -> vl_of_nat i |> caseV1
+      | vs -> error_values name vs
+      )
+  }
+
+let r_fmadd = relaxed "R_fmadd" 0
+let r_fmin = relaxed "R_fmin" 0
+let r_fmax = relaxed "R_fmax" 0
+let r_idot = relaxed "R_idot" 0
+let r_iq15mulr = relaxed "R_iq15mulr" 0
+let r_trunc_u = relaxed "R_trunc_u" 0
+let r_trunc_s = relaxed "R_trunc_s" 0
+let r_swizzle = relaxed "R_swizzle" 0
+let r_laneselect = relaxed "R_laneselect" 0
+
 
 
 let ibytes : numerics =
@@ -1143,7 +1178,6 @@ let frelaxed_nmadd : numerics =
 
 
 let numerics_list : numerics list = [
-  (*
   profile_nd;
   r_fmadd;
   r_fmin;
@@ -1154,7 +1188,6 @@ let numerics_list : numerics list = [
   r_trunc_s;
   r_swizzle;
   r_laneselect;
-  *)
   ibytes;
   inv_ibytes;
   nbytes;
