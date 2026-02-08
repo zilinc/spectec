@@ -81,6 +81,7 @@ let print_al = ref false
 let print_al_o = ref ""
 let print_no_pos = ref false
 let new_interpreter_args = ref None
+let new_prose_ofile = ref None
 let vl = ref false
 let animate_inline = ref false
 
@@ -211,6 +212,7 @@ let argspec = Arg.align (
   "--inline", Arg.Unit (fun () -> animate_inline := true), "Enable inlining after animation";
   "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), "New meta-interpreter";
   "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), "New meta-interpreter VL";
+  "--new-prose-v", Arg.String (fun ofile -> target := Animate; new_prose_ofile := Some ofile; vl := true), "New prose generation";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),
@@ -413,6 +415,12 @@ let () =
           Backend_animation.Main_interpret_v.run env dl args
         else
           Backend_animation.Main_interpret.run env dl args;
+      | None -> ()
+      );
+      (match !new_prose_ofile with
+      | Some ofile ->
+        log ("Generating prose as plain text in " ^ ofile);
+        Backend_animation.Main_prose_v.text_prose dl ofile
       | None -> ()
       )
     );
