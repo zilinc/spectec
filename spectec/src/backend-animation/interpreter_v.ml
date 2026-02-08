@@ -717,9 +717,10 @@ and eval_prems ctx prems : VContext.t OptMonad.m =
   match prems with
   | [] -> return ctx
   | prem :: prems ->
-    let* ctx'  = eval_prem  ctx  prem  in
-    let* ctx'' = eval_prems ctx' prems in
-    return ctx''
+    (match eval_prem  ctx  prem |> run_opt with
+    | Some ctx' -> eval_prems ctx' prems
+    | None      -> fail_info "log" prem.at (lazy ("Premise failed: " ^ string_of_prem prem))
+    )
 
 and match_typ ctx at (pat: typ) (arg: typ) : VContext.t OptMonad.m =
   match pat.it, arg.it with
@@ -781,7 +782,7 @@ and eval_func name func_def args : value OptMonad.m =
   let (_, params, typ, fcs, _) = func_def.it in
   if name = "step" then
     let* r = match_clause no_region name 1 fcs args in
-    let CaseV(_, [_; instrs]) = r in
+    let CaseV (_, [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
     info "log" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
     return r
@@ -792,9 +793,14 @@ and eval_func name func_def args : value OptMonad.m =
     | CaseV ([["STACK_OVERFLOW"]], []) -> raise BI.Exception.OutOfMemory
     | _ -> return r
     )
-  else if name = "zeroop" then (
-    info "log" no (lazy ("* zeroop argument is " ^ Value.string_of_args args));
-    match_clause no_region name 1 fcs args
+  else if name = "Eval_expr" then (
+    let [ ValA arg ] = args in
+    let TupV [_; instr] = arg in
+    info "log" no (lazy ("* $Eval_expr argument is " ^ string_of_value instr));
+    let* r = match_clause no_region name 1 fcs args in
+    let TupV [_; val_] = r in
+    info "log" no (lazy ("* $Eval_expr result is " ^ string_of_value val_));
+    return r
   )
   else
     match_clause no_region name 1 fcs args
