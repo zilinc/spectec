@@ -25,6 +25,15 @@ type dl_def =
   | FuncDef of func_def
   | RecDef  of dl_def list  (* recursive definitions *)
 
+let string_of_funcname id osubid =
+  match osubid with
+  | Some subid -> if String.starts_with ~prefix:"/" subid.it || String.starts_with ~prefix:"-" subid.it then
+                    raise (Failure ("Function subid must not start with `/` or `-`,\
+                                     but got `" ^ subid.it ^ "` in function `" ^ id.it ^ "`."))
+                  else
+                    id.it ^ "/" ^ subid.it
+  | None       -> id.it
+
 
 let rec find_dl_type_def name dl : type_def option =
   List.find_map (function
@@ -37,8 +46,8 @@ let rec find_dl_type_def name dl : type_def option =
 let rec find_dl_func_def name dl : func_def option =
   List.find_map (function
     | FuncDef def -> let (id, osubid, _, _, _, _) = def.it in
-                     let fname = (match osubid with | None -> id.it | Some subid -> id.it ^ subid.it) in
-                     if fname = name then Some def else None
+                     let fid = string_of_funcname id osubid $> id in
+                     if fid.it = name then Some def else None
     | RecDef dl'  -> find_dl_func_def name dl'
     | _           -> None
   ) dl
@@ -78,15 +87,6 @@ let string_of_rule_def rd =
   let instr_name, rel_id, _t1, _t2, rcs = rd.it in
   instr_name ^ "/" ^ rel_id.it ^ "\n" ^
   (concat "\n" (List.map string_of_rule_clause rcs))
-
-let string_of_funcname id osubid =
-  match osubid with
-  | Some subid -> if String.starts_with ~prefix:"/" subid.it || String.starts_with ~prefix:"-" subid.it then
-                    raise (Failure ("Function subid must not start with `/` or `-`,\
-                                     but got `" ^ subid.it ^ "` in function `" ^ id.it ^ "`."))
-                  else
-                    id.it ^ "/" ^ subid.it
-  | None       -> id.it
 
 let region_comment ?(suppress_pos = false) omsg indent at =
   if at = no_region then "" else
