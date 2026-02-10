@@ -333,8 +333,9 @@ let ocaml_of_typ_args t =
 
 (* Each clause is it's own function *)
 let ocaml_of_func_def (fdef : func_def) : string list t =
-  let id, _, _, clauses, _ = fdef.it in
-  let name = sanitize_name id.it in
+  let id, osubid, _, _, clauses, _ = fdef.it in
+  let id' = (match osubid with | None -> id | Some subid -> (id.it ^ subid.it $ id.at)) in
+  let name = sanitize_name id'.it in
   let* clause_funcs =
   mapMi (fun i clause ->
     match clause.it with
@@ -344,7 +345,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       (* maybe if the function is parametric over a type we may need to generate a type def for it *)
       let* argname = ocaml_of_args ~typearg:false params in
       return (Printf.sprintf "clause_%s_%d %s =\n%s\n  Some (%s)\n" name i argname prems_block bodycode)
-  ) clauses
+  ) (List.map snd clauses)
   in
   let clause_names =
   String.concat "\n  <|> " (List.mapi (fun i _ -> Printf.sprintf "clause_%s_%d" name i) clauses)

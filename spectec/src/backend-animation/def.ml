@@ -9,14 +9,14 @@ type type_def = type_def' phrase
    The former is the part of the [rule_id] before the
    first "-".
 *)
-type rule_clause' = id * bind list * exp * exp * (prem list)  (* rule_id *)
+type rule_clause' = id * bind list * exp * exp * prem list  (* rule_id *)
 type rule_clause = rule_clause' phrase
 type rule_def' = string * id * typ * typ * rule_clause list  (* rule_name, rel_id *)
 type rule_def = rule_def' phrase
 
 type partial = Partial | Total
-type func_clause = clause
-type func_def' = id * param list * typ * func_clause list * partial option
+type func_clause = id option * clause
+type func_def' = id * id option * param list * typ * func_clause list * partial option
 type func_def = func_def' phrase
 
 type dl_def =
@@ -36,8 +36,9 @@ let rec find_dl_type_def name dl : type_def option =
 
 let rec find_dl_func_def name dl : func_def option =
   List.find_map (function
-    | FuncDef def -> let (id, _, _, _, _) = def.it in
-                     if id.it = name then Some def else None
+    | FuncDef def -> let (id, osubid, _, _, _, _) = def.it in
+                     let fname = (match osubid with | None -> id.it | Some subid -> id.it ^ subid.it) in
+                     if fname = name then Some def else None
     | RecDef dl'  -> find_dl_func_def name dl'
     | _           -> None
   ) dl
@@ -78,15 +79,38 @@ let string_of_rule_def rd =
   instr_name ^ "/" ^ rel_id.it ^ "\n" ^
   (concat "\n" (List.map string_of_rule_clause rcs))
 
+let string_of_funcname id osubid =
+  match osubid with
+  | Some subid -> if String.starts_with ~prefix:"/" subid.it || String.starts_with ~prefix:"-" subid.it then
+                    raise (Failure ("Function subid must not start with `/` or `-`,\
+                                     but got `" ^ subid.it ^ "` in function `" ^ id.it ^ "`."))
+                  else
+                    id.it ^ "/" ^ subid.it
+  | None       -> id.it
+
+let region_comment ?(suppress_pos = false) omsg indent at =
+  if at = no_region then "" else
+  let s1 = indent ^ ";; " ^ (if suppress_pos then at.left.file else string_of_region at) ^ "\n" in
+  let s2 = match omsg with None -> "" | Some msg -> (indent ^ ";; " ^ msg ^ "\n") in
+  s1 ^ s2
+
+let string_of_func_clause fid (fc: func_clause) =
+  let oid, { it = DefD (bs, as_, e, prems); at; _ } = fc in
+    "\n" ^ region_comment (Option.map (fun id -> "Derived from rule " ^ id.it) oid) "  " at ^
+    "  def $" ^ string_of_id fid ^ string_of_binds bs ^ string_of_args as_ ^ " = " ^
+      string_of_exp e ^
+      concat "" (List.map (prefix "\n    -- " string_of_prem) prems)
+
 let string_of_func_def fd =
-  let id, params, typ, fcs, opartial = fd.it in
+  let id, osubid, params, typ, fcs, opartial = fd.it in
   let partial = match opartial with
   | None         -> "partial?"
   | Some Partial -> "partial"
   | Some Total   -> "total"
   in
-  id.it ^ string_of_params params ^ " : " ^ string_of_typ typ ^ " [" ^ partial ^ "]\n" ^
-  (concat "\n" (List.map (Il.Print.string_of_clause id) fcs)) ^ "\n"
+  let fid = string_of_funcname id osubid $> id in
+  string_of_id fid ^ string_of_params params ^ " : " ^ string_of_typ typ ^ " [" ^ partial ^ "]\n" ^
+  (concat "\n" (List.map (string_of_func_clause fid) fcs)) ^ "\n"
 
 
 let rec string_of_dl_def = function

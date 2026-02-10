@@ -194,7 +194,7 @@ let env_of_binds binds envr : Il.Env.t ref =
   envr
 
 (* Topo-sort the binding list. *)
-let sort_binds id binds : bind list =
+let sort_binds fid binds : bind list =
   let graph = ref [] in
   let ids = List.map (fun b -> match b.it with
     | ExpB  (id, _)    -> Il.Free.free_varid id
@@ -215,7 +215,7 @@ let sort_binds id binds : bind list =
   let open Tsort in
   match sort !graph with
   | Sorted     ls -> List.map (fun idx -> List.nth binds idx) ls
-  | ErrorCycle ls -> error no ("Cyclic dependency in binders: " ^ string_of_id id)
+  | ErrorCycle ls -> error no ("Cyclic dependency in binders: " ^ string_of_id fid)
 
 
 let get () = S.get () |> E.lift
@@ -372,7 +372,7 @@ let cannot_animate : (string * string) list =
     ("Step", "ctxt-handler");
   ]
 
-let skip_animation rule_name rel_id : bool = List.mem (rel_id, rule_name) cannot_animate
+let skip_animation fid subid : bool = List.mem (fid, subid) cannot_animate
 
 let is_step_rule rel_id : bool = rel_id = "Step"
 let is_step_pure_rule rel_id : bool = rel_id = "Step_pure"
@@ -1315,9 +1315,11 @@ let lift_otherwise_prem prems =
   ow_pr @ rest
 
 
-let animate_clause id envr (c: clause) : func_clause =
+(* [id]: the full name of the function. *)
+let animate_clause0 envr fid (fc: func_clause) : func_clause =
   let lenvr = ref !envr in
-  let DefD (binds, args, exp, prems) = c.it in
+  let oid, cl = fc in
+  let DefD (binds, args, exp, prems) = cl.it in
   let lenvr = env_of_binds binds lenvr in
   let n_args = List.length args in
   let (vss, args', prems_args) = List.mapi (fun i arg -> match arg.it with
@@ -1329,16 +1331,10 @@ let animate_clause id envr (c: clause) : func_clause =
   in
   let ins = List.concat vss |> Set.of_list in
   let ous = (free_exp false exp).varid in
-  let prems' = animate_prems lenvr c.at ins ous (List.concat prems_args @ prems) |> lift_otherwise_prem in
+  let prems' = animate_prems lenvr cl.at ins ous (List.concat prems_args @ prems) |> lift_otherwise_prem in
   let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
-  let binds'' = sort_binds id binds' in
-  (DefD (binds'', args', exp, prems')) $ c.at
-
-
-let animate_rule_red envr rule : func_clause =
-  let (id, binds, lhs, rhs, prems) = rule.it in
-  let clause = DefD (binds, [ExpA lhs $ lhs.at], rhs, prems) $ rule.at in
-  animate_clause id envr clause
+  let binds'' = sort_binds fid binds' in
+  oid, DefD (binds'', args', exp, prems') $ cl.at
 
 
 (* Many $Step rules are dependent in their arguments. For example,
@@ -1399,8 +1395,9 @@ let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * 
     ([ExpB (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
   | _ -> [], in_stack, out_stack, prems
 
-let transform_step_rule envr (r: rule_clause) : func_clause =
-  let (rule_id, binds, lhs, rhs, prems) = r.it in
+let transform_step_clause envr fid (fc: func_clause) : func_clause =
+  let oid, cl = fc in
+  let DefD (binds, [ {it = ExpA lhs; _} ], rhs, prems) = cl.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
   let CaseE (out_mixop, out_tup) = rhs.it in
@@ -1410,25 +1407,28 @@ let transform_step_rule envr (r: rule_clause) : func_clause =
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
   let out_tup' = TupE [out_z; out_stack'] $> out_tup in
   let rhs' = CaseE (out_mixop, out_tup') $> rhs in
-  animate_rule_red envr ((rule_id, binds @ binds', lhs', rhs', prems') $> r)
+  animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA lhs' $ lhs'.at ], rhs', prems') $> cl)
 
-let transform_step_pure_rule envr (r: rule_clause) : func_clause =
-  let (rule_id, binds, in_stack, out_stack, prems) = r.it in
+let transform_step_pure_clause envr fid (fc: func_clause) : func_clause =
+  let oid, cl = fc in
+  let DefD (binds, [ {it = ExpA in_stack; _} ], out_stack, prems) = cl.it in
   let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
-  animate_rule_red envr ((rule_id, binds @ binds', in_stack', out_stack', prems') $> r)
+  animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA in_stack' $ in_stack.at ], out_stack', prems') $> cl)
 
-let transform_step_read_rule envr (r: rule_clause) : func_clause =
-  let (rule_id, binds, lhs, out_stack, prems) = r.it in
+let transform_step_read_clause envr fid (fc: func_clause) : func_clause =
+  let oid, cl = fc in
+  let DefD (binds, [ {it = ExpA lhs; _} ], out_stack, prems) = cl.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
   let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
-  animate_rule_red envr ((rule_id, binds @ binds', lhs', out_stack', prems') $> r)
+  animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA lhs' $ lhs'.at ], out_stack', prems') $> cl)
 
 (* $step_ctxt: config -> config *)
-let transform_step_ctxt_clause id envr (c: clause) : func_clause =
-  let DefD (binds, [{it = ExpA lhs; _}], rhs, prems) = c.it in
+let transform_step_ctxt_clause envr fid (fc: func_clause) : func_clause =
+  let oid, cl = fc in
+  let DefD (binds, [{it = ExpA lhs; _}], rhs, prems) = cl.it in
   let CaseE (out_mixop, out_tup) = rhs.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
@@ -1438,65 +1438,33 @@ let transform_step_ctxt_clause id envr (c: clause) : func_clause =
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
   let out_tup' = TupE [out_z; out_stack'] $> out_tup in
   let rhs' = CaseE (out_mixop, out_tup') $> rhs in
-  animate_clause id envr (DefD (binds @ binds', [expA lhs'], rhs', prems) $> c)
-
-let animate_rule_typ envr (r: rule_clause) : func_clause =
-  let (id, binds, lhs, rhs, prems) = r.it in
-  let TupE [ctx; exp] = lhs.it in
-  let clause = DefD (binds, [ExpA ctx $ ctx.at; ExpA exp $ exp.at], rhs, prems) $ r.at in
-  animate_clause id envr clause
-
-let animate_rule_sub envr (r: rule_clause) : func_clause =
-  let (id, binds, lhs, rhs, prems) = r.it in
-  let TupE [ctx; typ1; typ2] = lhs.it in
-  let clause = DefD (binds, [ExpA ctx $ ctx.at; ExpA typ1 $ typ1.at; ExpA typ2 $ typ2.at], rhs, prems) $ r.at in
-  animate_clause id envr clause
+  animate_clause0 envr fid (oid, DefD (binds @ binds', [ExpA lhs' $ lhs'.at], rhs', prems) $> cl)
 
 
-let animate_rule envr at rel_id rule_name (r: rule_clause) : func_clause option =
-  let (rule_id, _, _, _, _) = r.it in
-  if skip_animation rule_id.it rel_id then
+let animate_clause envr id osubid (fc: func_clause) : func_clause option =
+  let orule_id, cl = fc in
+  let fid = string_of_funcname id osubid $> id in
+  let DefD (_, _, _, _) = cl.it in
+  if Option.is_some orule_id && skip_animation id.it ((Option.get orule_id).it) then
     None
-  else if is_step_rule rel_id then
-    Some (transform_step_rule envr r)
-  else if is_step_pure_rule rel_id then
-    Some (transform_step_pure_rule envr r)
-  else if is_step_read_rule rel_id then
-    Some (transform_step_read_rule envr r)
-  else if List.mem rel_id Common.typ_relids then
-    Some (animate_rule_typ envr r)
-  else if List.mem rel_id Common.sub_relids then
-    Some (animate_rule_sub envr r)
+  else if is_step_rule id.it then
+    Some (transform_step_clause envr fid fc)
+  else if is_step_pure_rule id.it then
+    Some (transform_step_pure_clause envr fid fc)
+  else if is_step_read_rule id.it then
+    Some (transform_step_read_clause envr fid fc)
   else
-    Some (animate_rule_red envr r)
+    Some (animate_clause0 envr fid fc)
 
 
-let animate_rules envr at rel_id rule_name rs =
-  List.map (animate_rule envr at rel_id rule_name) rs |> List.filter_map Fun.id
-
-
-
-let animate_rule_def envr (rdef: rule_def) : func_def =
-  let (rule_name, rel_id, t1, t2, rules) = rdef.it in
-  let params = [ExpP ("_" $ t1.at, t1) $ t1.at] in
-  if List.mem rel_id.it Common.step_relids then
-    ((rel_id.it ^ "/" ^ rule_name) $> rel_id, params, t2,
-     animate_rules envr rdef.at rel_id.it rule_name rules, None) $ rdef.at
-  else
-    (rel_id, params, t2,
-     animate_rules envr rdef.at rel_id.it rule_name rules, None) $ rdef.at
-
-
-let animate_func_def' envr (id, ps, typ, clauses, opartial) =
-  match id.it with
-  (* | "step_ctxt" -> (id, ps, typ, List.map (transform_step_ctxt_clause id envr) clauses, opartial) *)
-  | _           -> (id, ps, typ, List.map (animate_clause             id envr) clauses, opartial)
-let animate_func_def envr (hdef: func_def) : func_def = animate_func_def' envr hdef.it $ hdef.at
+let animate_func_def envr (fdef: func_def) : func_def =
+  let (id, osubid, ps, typ, clauses, opartial) = fdef.it in
+  (id, osubid, ps, typ, List.filter_map (animate_clause envr id osubid) clauses, opartial) $ fdef.at
 
 
 let rec animate_def envr (d: dl_def): dl_def = match d with
 | TypeDef tdef -> TypeDef tdef
-| RuleDef rdef -> FuncDef (animate_rule_def envr rdef)
+| RuleDef rdef -> assert false (* FuncDef (animate_rule_def envr rdef) *)
 | FuncDef fdef -> FuncDef (animate_func_def envr fdef)
 | RecDef  defs -> RecDef (List.map (animate_def envr) defs)
 
@@ -1520,18 +1488,17 @@ let rec animate_def envr (d: dl_def): dl_def = match d with
 let rec merge_defs (defs: dl_def list) : dl_def list =
   match defs with
   | [] -> []
-  | (FuncDef {it = (fid0, params, typ, _, opartial); _} as f) :: fs ->
+  | (FuncDef {it = (id0, osubid0, params, typ, _, opartial); _} as f) :: fs ->
     let rel_id = function
-    | FuncDef {it = (fid, _, _, _, _); _} -> Some (String.split_on_char '/' fid.it |> List.hd)
+    | FuncDef {it = (id, _, _, _, _, _); _} -> Some id
     | _ -> None
     in
-    let rel_id0 = String.split_on_char '/' fid0.it |> List.hd in
     let fs_same, fs_diff =
-      List.partition (fun f -> rel_id f = Some rel_id0) fs in
+      List.partition (fun f -> rel_id f = Some id0) fs in
     let fs =
-      if List.mem rel_id0 Common.step_relids then
+      if Option.is_some osubid0 then
         let mk_clause = function
-        | FuncDef {it = (fid, ps, t, _, _); at; _} ->
+        | FuncDef {it = (id, osubid, ps, t, _, _); at; _} ->
           let args, binds = List.map (fun p -> (match p.it with
             | ExpP (v, t') ->
               let v' = if v.it = "_" then fresh_id (Some "a") v.at else v in
@@ -1541,17 +1508,19 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
             | GramP (v, t') -> todo "merge_def: GramP"
             )
           ) ps |> Lib.List.unzip in
+          let fid = string_of_funcname id osubid $> id in
           let e = CallE (fid, args) $$ at % t in
-          DefD (binds, args, e, []) $ at in
+          None, DefD (binds, args, e, []) $ at
+        in
         let clauses = f :: fs_same |> List.map mk_clause in
         let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
-        let f' = FuncDef ((rel_id0 $> fid0, params, typ, clauses, opartial) $ at) in
+        let f' = FuncDef ((id0, None, params, typ, clauses, opartial) $ at) in
         f :: fs_same @ [f']
-      else
-        let func_clauses (FuncDef {it = (_, _, _, cls, _); _}) = cls in
+    else
+        let func_clauses (FuncDef {it = (_, _, _, _, cls, _); _}) = cls in
         let clauses = f :: fs_same |> List.concat_map func_clauses in
         let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
-        let f' = FuncDef ((fid0, params, typ, clauses, opartial) $ at) in
+        let f' = FuncDef ((id0, None, params, typ, clauses, opartial) $ at) in
         [f']
     in
     fs @ merge_defs fs_diff

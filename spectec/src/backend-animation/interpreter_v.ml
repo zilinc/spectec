@@ -779,16 +779,16 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
 
 
 and eval_func name func_def args : value OptMonad.m =
-  let (_, params, typ, fcs, _) = func_def.it in
+  let (_, _, params, typ, fcs, _) = func_def.it in
   if name = "step" then
-    let* r = match_clause no_region name 1 fcs args in
+    let* r = match_clause no_region name 1 (List.map snd fcs) args in
     let CaseV (_, [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
     info "log" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
     return r
   else if name = "reduce" then
     (* Capture stack overflow signal. *)
-    let* r = match_clause no_region name 1 fcs args in
+    let* r = match_clause no_region name 1 (List.map snd fcs) args in
     (match r with
     | CaseV ([["STACK_OVERFLOW"]], []) -> raise BI.Exception.OutOfMemory
     | _ -> return r
@@ -797,13 +797,13 @@ and eval_func name func_def args : value OptMonad.m =
     let [ ValA arg ] = args in
     let TupV [_; instr] = arg in
     info "log" no (lazy ("* $Eval_expr argument is " ^ string_of_value instr));
-    let* r = match_clause no_region name 1 fcs args in
+    let* r = match_clause no_region name 1 (List.map snd fcs) args in
     let TupV [_; val_] = r in
     info "log" no (lazy ("* $Eval_expr result is " ^ string_of_value val_));
     return r
   )
   else
-    match_clause no_region name 1 fcs args
+    match_clause no_region name 1 (List.map snd fcs) args
 
 and call_func name args : value OptMonad.m =
   info "log" no (lazy ("Calling " ^ name));
@@ -837,7 +837,7 @@ and call_func name args : value OptMonad.m =
     (* Regular function definition. *)
     | Some fdef when not is_builtin -> eval_func name fdef args
     (* Builtins and numerics *)
-    | Some { it = (_, _, _, [], _); at; _ } when is_builtin ->
+    | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
       if Numerics_v.mem builtin_name then
         Numerics_v.call_numerics builtin_name args |> return
       else if builtins_mem builtin_name then

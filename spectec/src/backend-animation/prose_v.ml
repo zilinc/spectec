@@ -138,8 +138,8 @@ and text_prose_premises (lv: int) (nth: int option) (prems: prem list) : text =
     text_prose_premise lv nth' prem
   ) prems |> List.concat
 
-let text_prose_clause (params: param list) (clause: func_clause) : text =
-  let DefD (_binds, args, exp, prems) = clause.it in
+let text_prose_clause (params: param list) (fc: func_clause) : text =
+  let DefD (_binds, args, exp, prems) = (snd fc).it in
   let text_args = text_prose_args args in
   let text_prems = text_prose_premises 0 (Some 1) prems in
   let text_rhs = text_prose_exp exp in
@@ -149,8 +149,8 @@ let text_prose_clause (params: param list) (clause: func_clause) : text =
   [ "Finally, return " ^ text_rhs ^ "."; "" ]
 
 let text_prose_func : func_def -> text = fun fdef ->
-  let fid, params, _ty, clauses, _ = fdef.it in
-  if List.exists (fun step_id -> String.starts_with ~prefix:(step_id ^ "/") fid.it) Common.step_relids then
+  let fid, osubid, params, _ty, clauses, _ = fdef.it in
+  if List.exists (fun step_id -> step_id = fid.it) Common.step_relids then
     let heading = "### " ^ fid.it in
     let body = vcat_f (text_prose_clause params) clauses in
     heading :: body @ [""]

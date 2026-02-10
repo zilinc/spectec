@@ -61,7 +61,8 @@ and inline_prems occ prems : prem list Inline.m =
     let* prems' = inline_prems occ prems in
     return (oprem' @ prems')
 
-let inline_clause cl : func_clause =
+let inline_func_clause (fc: func_clause) : func_clause =
+  let oid, cl = fc in
   let occ = occ_clause cl in
   let DefD (bs, args, exp, prems) = cl.it in
   let ((prems', exp'), _) = run_state (
@@ -69,13 +70,13 @@ let inline_clause cl : func_clause =
     let* exp' = inline_exp occ exp in
     (prems', exp') |> return
   ) Il.Subst.empty in
-  DefD (bs, args, exp', prems') $> cl
+  oid, DefD (bs, args, exp', prems') $ cl.at
 
 
 let inline_fdef fdef : func_def =
-  let (id, ps, t, cls, partial) = fdef.it in
-  let cls' = List.map inline_clause cls in
-  (id, ps, t, cls', partial) $> fdef
+  let (id, osubid, ps, t, cls, partial) = fdef.it in
+  let cls' = List.map inline_func_clause cls in
+  (id, osubid, ps, t, cls', partial) $> fdef
 
 let rec inline_dl_def dl : dl_def =
   match dl with

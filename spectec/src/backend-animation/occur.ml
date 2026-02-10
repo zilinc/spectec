@@ -107,7 +107,7 @@ and occ_prems pred m occ prems : occ =
                     let occ'' = occ_prems pred m occ' prems' in
                     occ''
 
-let occ_clause cl : occ =
+let occ_clause (cl: clause) : occ =
   let DefD (bs, args, exp, prems) = cl.it in
   let occ1 = occ_prems (Fun.const true) `Once empty_occ prems in
   let occ2 = occ_exp (Fun.const true) `Once occ1 exp in

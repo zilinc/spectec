@@ -796,8 +796,8 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: arg
 
 
 and eval_func name func_def args : exp OptMonad.m =
-  let (_, params, typ, fcs, _) = func_def.it in
-  match_clause no_region name 1 fcs args
+  let (_, _, params, typ, fcs, _) = func_def.it in
+  match_clause no_region name 1 (List.map snd fcs) args
 
 
 and call_func name args : exp OptMonad.m =
@@ -825,7 +825,7 @@ and call_func name args : exp OptMonad.m =
     (* Regular function definition. *)
     | Some fdef when not is_builtin -> eval_func name fdef args
     (* Builtins and numerics *)
-    | Some { it = (_, _, _, [], _); at; _ } when is_builtin ->
+    | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
       if Numerics.mem builtin_name then
         Numerics.call_numerics builtin_name args |> return
       else if builtins_mem builtin_name then
@@ -1248,15 +1248,15 @@ and il_call_func env name args : exp =
     (match Def.find_dl_func_def name !dl with
     (* Regular function definition. *)
     | Some fdef when not is_builtin ->
-      let (id, _ps, t, clauses, _) = fdef.it in
+      let (fid, _, _ps, t, fcs, _) = fdef.it in
       let args' = List.map (Il.Eval.reduce_arg env) args in
-      assert (id.it = name);
-      (match Il.Eval.reduce_exp_call env id args' fdef.at clauses with
-      | None -> CallE (id, args') $$ no % t
+      let cls = List.map snd fcs in
+      (match Il.Eval.reduce_exp_call env (name $ fid.at) args' fdef.at cls with
+      | None -> CallE (name $ fid.at, args') $$ no % t
       | Some e -> e
       )
     (* Builtins and numerics *)
-    | Some { it = (_, _, _, [], _); at; _ } when is_builtin ->
+    | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
       if Numerics.mem builtin_name then
         Numerics.call_numerics builtin_name args
       else if il_builtins_mem builtin_name then
