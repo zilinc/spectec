@@ -1464,7 +1464,6 @@ let animate_func_def envr (fdef: func_def) : func_def =
 
 let rec animate_def envr (d: dl_def): dl_def = match d with
 | TypeDef tdef -> TypeDef tdef
-| RuleDef rdef -> assert false (* FuncDef (animate_rule_def envr rdef) *)
 | FuncDef fdef -> FuncDef (animate_func_def envr fdef)
 | RecDef  defs -> RecDef (List.map (animate_def envr) defs)
 

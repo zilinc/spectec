@@ -394,7 +394,6 @@ let ocaml_of_typedef (typedef : type_def) : string t =
 
 let ocaml_of_dl_def (def : dl_def) : (string * string) t =
   match def with
-  | RuleDef _  -> raise (CodegenError "RuleDef: should not happen")
   | TypeDef typedef -> let* typestr = ocaml_of_typedef typedef in
     return ("", "type " ^ typestr)
   | FuncDef fdef ->
@@ -417,7 +416,6 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
       ) dl_defs in
       let* typestrs = concat_mapM "\nand " ocaml_of_typedef typedefs in
       return ("", "type " ^ typestrs)
-    | (RuleDef _)::_ -> raise (CodegenError "RecDef: RuleDef should not happen")
 
 let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
   let* def_strs : (string * string) list = mapM ocaml_of_dl_def defs in

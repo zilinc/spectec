@@ -31,10 +31,6 @@ let rec list_all_dl_defs' lv dl : unit =
     | FuncDef fdef ->
       let id, osubid, _, _, _, _ = fdef.it in
       print_endline (indent lv ^ "func | " ^ string_of_funcname id osubid)
-    | RuleDef rdef ->
-      let _, id, _, _, _ = rdef.it in
-      print_endline ("Warning: RuleDef `" ^ id.it ^ "` remains in DL.");
-      (* print_endline (indent lv ^ "rule | " ^ string_of_id id) *)
   ) dl
 let list_all_dl_defs (dl: dl_def list) : unit = list_all_dl_defs' 0 dl
 

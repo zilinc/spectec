@@ -161,6 +161,5 @@ let rec text_prose_def : dl_def -> text = function
   | TypeDef tdef -> []
   | FuncDef fdef -> text_prose_func fdef
   | RecDef defs  -> vcat_f text_prose_def defs
-  | RuleDef _    -> assert false
 
 let text_prose_script (dl: dl_def list) : string = String.concat "\n" (vcat_f text_prose_def dl)

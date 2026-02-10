@@ -5,14 +5,6 @@ open Il.Print
 type type_def' = id * param list * inst list
 type type_def = type_def' phrase
 
-(* NOTE: [rule_name] is not the same as [rule_id].
-   The former is the part of the [rule_id] before the
-   first "-".
-*)
-type rule_clause' = id * bind list * exp * exp * prem list  (* rule_id *)
-type rule_clause = rule_clause' phrase
-type rule_def' = string * id * typ * typ * rule_clause list  (* rule_name, rel_id *)
-type rule_def = rule_def' phrase
 
 type partial = Partial | Total
 type func_clause = id option * clause
@@ -21,7 +13,6 @@ type func_def = func_def' phrase
 
 type dl_def =
   | TypeDef of type_def
-  | RuleDef of rule_def  (* only input to animation *)
   | FuncDef of func_def
   | RecDef  of dl_def list  (* recursive definitions *)
 
@@ -54,7 +45,6 @@ let rec find_dl_func_def name dl : func_def option =
 
 let rec dl_loc def : region = match def with
   | TypeDef tdef -> tdef.at
-  | RuleDef rdef -> rdef.at
   | FuncDef fdef -> fdef.at
   | RecDef  defs -> begin match defs with
     | [] -> no_region
@@ -115,6 +105,5 @@ let string_of_func_def fd =
 
 let rec string_of_dl_def = function
 | TypeDef tdef -> string_of_type_def tdef
-| RuleDef rdef -> string_of_rule_def rdef
 | FuncDef fdef -> string_of_func_def fdef
 | RecDef dl_defs -> "recursive\n" ^ String.concat "\n" (List.map string_of_dl_def dl_defs) ^ "end\n"

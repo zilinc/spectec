@@ -131,7 +131,6 @@ let rec infer_def envr (def: dl_def) : unit =
     let envr' = Valid.local_env envr in
     List.iter (Valid.valid_param envr') ps;
     envr := Env.bind_typ !envr id (ps, [])
-  | RuleDef rdef -> error rdef.at "RuleDef found: shouldn't happen."
   | FuncDef { it = (id, osubid, ps, t, clauses, _); _ } ->
     let envr' = Valid.local_env envr in
     List.iter (Valid.valid_param envr') ps;
@@ -152,8 +151,6 @@ let rec valid_def envr (def: dl_def) : unit =
     List.iter (Valid.valid_param envr') ps;
     List.iter (Valid.valid_inst envr ps) insts;
     envr := Env.bind_typ !envr id (ps, insts)
-  | RuleDef rd ->
-    error rd.at "RuleDef found: shouldn't happen."
   | FuncDef fd ->
     let (id, osubid, ps, t, clauses, _) = fd.it in
     let envr' = Valid.local_env envr in
