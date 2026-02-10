@@ -84,7 +84,7 @@ let rec text_prose_exp (exp: exp) : string =
   | UnE (unop, optyp, exp') -> text_prose_unop unop ^ " " ^ text_prose_exp exp'
   | BinE (binop, optyp, exp1, exp2) -> "(" ^ text_prose_exp exp1 ^ " " ^ text_prose_binop binop ^ " " ^ text_prose_exp exp2 ^ ")"
   | CmpE (cmpop, optyp, exp1, exp2) -> "(" ^ text_prose_exp exp1 ^ " " ^ text_prose_cmpop cmpop ^ " " ^ text_prose_exp exp2 ^ ")"
-  | TupE [] -> ""
+  | TupE [] -> "unit"
   | TupE exps -> "a tuple of " ^ hcat_f ", " text_prose_exp exps
   | ProjE (exp', n) -> "the " ^ text_prose_nth n ^ " projection of " ^ text_prose_exp exp'
   | CaseE (mixop, { it = TupE []; _ }) -> string_of_mixop mixop
@@ -93,10 +93,12 @@ let rec text_prose_exp (exp: exp) : string =
   | OptE None -> "none"
   | OptE (Some exp') -> "some " ^ text_prose_exp exp'
   | TheE exp' -> "the " ^ text_prose_exp exp'
-  | StrE expfields -> "struct of " ^ String.concat ", " (List.map string_of_expfield expfields)
+  | StrE expfields -> "a record consisting of " ^ String.concat ", " (List.map string_of_expfield expfields)
   | DotE (exp', atom) -> "the " ^ string_of_atom atom ^ " field of struct " ^ text_prose_exp exp'
   | CompE (exp1, exp2) -> "composition of " ^ text_prose_exp exp1 ^ " and " ^ text_prose_exp exp2
-  | ListE exps -> "list of " ^ hcat_f ", " text_prose_exp exps
+  | ListE [] -> "an empty sequence"
+  | ListE [exp'] -> "a singleton sequence of " ^ text_prose_exp exp'
+  | ListE exps -> "a sequence consisting of " ^ hcat_f ", " text_prose_exp exps
   | LiftE exp' -> text_prose_exp exp'
   | MemE (elt, set) -> text_prose_exp elt ^ " is an element of set " ^ text_prose_exp set
   | LenE exp' -> "the length of list " ^ text_prose_exp exp'
@@ -119,7 +121,7 @@ let rec text_prose_premise (lv: int) (nth: int option) (prem: prem) : text =
   | RulePr (id, mixop, exp) -> assert false
   | IfPr e -> [number ^ "If " ^ text_prose_exp e ^ ", continue; otherwise fail."]
   | LetPr (lhs, rhs, _bs) -> [number ^ "Let " ^ text_prose_exp lhs ^ " be " ^ text_prose_exp rhs ^ "."]
-  | ElsePr -> [number ^ "If no clause above succeeds:"]
+  | ElsePr -> [number ^ "If no clause above has succeeded:"]
   | IterPr (prems, ((iter, xes) as iterexp)) ->
     let text_iter = (match iter with
     | Opt   -> [number ^ "Run optionally:"]
