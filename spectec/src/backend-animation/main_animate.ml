@@ -18,17 +18,19 @@ let build_animation_hints il : unit =
     | DecH (fid, hints) ->
       List.iter (fun hint ->
         (match hint.hintid.it with
-        | "animate"    -> print_endline ("Warning: hint(animate) on function " ^ fid.it ^ " is not yet implemented."); ()
-        | "no_animate" -> H.add_na_func fid.it
-        | _ -> ()
+        | "animate"         -> print_endline ("Warning: hint(animate) on function " ^ fid.it ^ " is not yet implemented."); ()
+        | "animate_builtin" -> H.add_a_builtin fid.it (H.parse_hintexp hint.hintexp)
+        | "no_animate"      -> H.add_na_func fid.it
+        | _                 -> ()
         )
       ) hints
     | RelH (rid, hints) ->
       List.iter (fun hint ->
         (match hint.hintid.it with
-        | "animate"    -> H.add_a_rel rid.it (H.parse_hintexp hint.hintexp)
-        | "no_animate" -> print_endline ("Warning: hint(no_animate) on relation " ^ rid.it ^ " is not used."); ()
-        | _ -> ()
+        | "animate"         -> H.add_a_rel rid.it (H.parse_hintexp hint.hintexp)
+        | "animate_builtin" -> H.add_a_builtin rid.it (H.parse_hintexp hint.hintexp)
+        | "no_animate"      -> print_endline ("Warning: hint(no_animate) on relation " ^ rid.it ^ " is not used."); ()
+        | _                 -> ()
         )
       ) hints
     | TypH _ | GramH _  -> ()

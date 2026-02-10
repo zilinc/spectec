@@ -793,15 +793,6 @@ and eval_func name func_def args : value OptMonad.m =
     | CaseV ([["STACK_OVERFLOW"]], []) -> raise BI.Exception.OutOfMemory
     | _ -> return r
     )
-  else if name = "Eval_expr" then (
-    let [ ValA arg ] = args in
-    let TupV [_; instr] = arg in
-    info "log" no (lazy ("* $Eval_expr argument is " ^ string_of_value instr));
-    let* r = match_clause no_region name 1 (List.map snd fcs) args in
-    let TupV [_; val_] = r in
-    info "log" no (lazy ("* $Eval_expr result is " ^ string_of_value val_));
-    return r
-  )
   else
     match_clause no_region name 1 (List.map snd fcs) args
 

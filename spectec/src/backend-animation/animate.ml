@@ -14,6 +14,7 @@ open Backend_ast
 open Def
 open Il_util
 open Lazy
+module H = State_v.Hints
 
 
 (* Errors *)
@@ -441,42 +442,42 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   let ( let* ) = E.( >>= ) in
   let* s = get () in
   let knowns = get_knowns s in
-  let (res, fncall) = match id.it, exp.it with
-  | _, TupE [lhs; rhs] when List.mem id.it Common.step_relids ->
-    let fncall = CallE (id, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
-    (rhs, fncall)
-  | "Expand", TupE [lhs; rhs] ->
-    let fid = "expanddt" $ id.at in
-    let fncall = CallE (fid, [ExpA lhs $ lhs.at]) $$ at % rhs.note in
-    (rhs, fncall)
-  | "Eval_expr", TupE [z; lhs; z'; rhs] ->
-    let arg = mk_tup [z ; lhs] in
-    let res = mk_tup [z'; rhs] in
-    let fncall = CallE (id, [expA arg]) $$ at % res.note in
-    (res, fncall)
-  (* Type inference rules. *)
-  | _, TupE [ctx; obj; typ] when List.mem id.it Common.typ_infer_relids ->
-    let fncall = CallE (id, [expA ctx; expA obj]) $$ at % typ.note in
-    (typ, fncall)
-  (* Type checking rules. *)
-  | _, TupE [ctx; obj; typ] when List.mem id.it Common.typ_check_relids ->
-    let fncall = CallE (id, [expA ctx; expA obj; expA typ]) $$ at % (BoolT $ at) in
-    (boolE true, fncall)
-  (* Subtyping judgements. *)
-  | _, TupE [ctx; typ1; typ2] when List.mem id.it Common.sub_check_relids ->
-    let fncall = CallE (id, [expA ctx; expA typ1; expA typ2]) $$ at % (BoolT $ at) in
-    (boolE true, fncall)
-  (* Other rules, mostly from validation:
-     * Module_ok : module -> moduletype
-     We don't allow inverting rules, so the LHS (i.e. all args except the last one)
-     of a rule must be known.
-  *)
-  | _, TupE es when List.length es >= 2 ->
-    let lhss, rhs = Lib.List.split_last es in
-    let fncall = CallE (id, List.map expA lhss) $$ at % rhs.note in
-    (rhs, fncall)
-  | _ -> error at ("Unknown rule form: " ^ id.it ^ "(" ^ string_of_region id.at ^")")
-  in
+  let lhs, rhs =
+    let is_a_rel     = H.is_a_rel     id.it in
+    let is_a_builtin = H.is_a_builtin id.it in
+    if is_a_rel || is_a_builtin then
+      let mode_map = (match is_a_rel, is_a_builtin with
+                     | true, false -> H.find_a_rel id.it
+                     | false, true -> H.find_a_builtin id.it
+                     | _ -> assert false
+                     ) in
+      let es = (match exp.it with
+               | TupE es -> es
+               | _ -> assert false
+               )
+      in
+      Lib.List.fold_lefti (fun i (les, res) e ->
+        let mode = H.IM.find (i+1) mode_map in
+        match mode with
+        | In  -> les @ [e], res
+        | Out -> les, res @ [e]
+      ) ([], []) es
+    else
+      (match exp.it with
+      | TupE es -> let es_init, es_last = Lib.List.split_last es in
+                   es_init, [es_last]
+      | _ -> assert false
+      )
+    in
+    let res, rt =
+      (match rhs with
+      | [ ] -> boolE true, BoolT $ no
+      | [e] -> e, e.note
+      | _   -> let t = TupT (List.map (fun e -> (e, e.note)) rhs) $ at in
+               TupE rhs $$ at % t, t
+      )
+    in
+    let fncall = CallE (id, List.map (fun e -> ExpA e $ e.at) lhs) $$ at % rt in
   (* Let res = $call(args) *)
   let unknowns_res    = Set.diff (free_exp false res   ).varid knowns in
   let unknowns_fncall = Set.diff (free_exp false fncall).varid knowns in
@@ -518,17 +519,6 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     E.return [ LetPr (lhs, rhs, [v.it]) $ at ]
   (* Treated as atomic. *)
   (* | DotE (lhs', mixop) -> _ *)
-  (*
-  (* Type checking functions. Turn them info inference. *)
-  | CallE (fid, args) when can_invert s && List.mem fid.it Common.typ_relids ->
-    (* FIXME(zilinc): Hard-coded name mangling. *)
-    let args_hd, arg_lt = Lib.List.split_last args in
-    let inv_fid = String.sub fid.it 0 (String.length fid.it - 3) in  (* strip _ok suffix *)
-    let inv_fid = (String.uncapitalize_ascii inv_fid ^ "_infer") $ fid.at in
-    let ExpA typ = arg_lt.it in
-    let fncall = CallE (inv_fid, args_hd) $$ at % typ.note in
-    animate_exp_eq envr at typ fncall
-  *)
   (* function call; invert it. *)
   | CallE (fid, args) when can_invert s ->
     let varid = fun s -> s.varid in

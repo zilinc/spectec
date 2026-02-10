@@ -169,33 +169,37 @@ module Hints = struct
   type t = { mutable no_animate_funcs: string list
            ; mutable animate_funcs   : (mode list * mode) M.t  (* arguments * result *)
            ; mutable animate_rels    : mode IM.t M.t           (* in the order of expressions in the CaseE *)
+           ; mutable animate_builtin : mode IM.t M.t
            ; mutable no_animate_rules: (string * string) list  (* relid * ruleid *)
            }
 
   let animation_hints : t = { no_animate_funcs = []; animate_funcs = M.empty
-                            ; animate_rels = M.empty; no_animate_rules = []
+                            ; animate_rels = M.empty; animate_builtin = M.empty; no_animate_rules = []
                             }
 
   let add_na_func fid          = animation_hints.no_animate_funcs <- animation_hints.no_animate_funcs @ [fid]
-  let add_a_func  fid args res = animation_hints.animate_funcs <- M.add fid (args, res) animation_hints.animate_funcs
-  let add_a_rel   rid mm       = animation_hints.animate_rels <- M.add rid mm animation_hints.animate_rels
+  let add_a_func  fid args res = animation_hints.animate_funcs    <- M.add fid (args, res) animation_hints.animate_funcs
+  let add_a_rel   rid mm       = animation_hints.animate_rels     <- M.add rid mm animation_hints.animate_rels
+  let add_a_builtin rid mm     = animation_hints.animate_builtin  <- M.add rid mm animation_hints.animate_builtin
 
-  let is_na_func fid = List.mem fid animation_hints.no_animate_funcs
-  let is_a_func  fid = M.mem fid animation_hints.animate_funcs
-  let is_a_rel   rid = M.mem rid animation_hints.animate_rels
+  let is_na_func   fid = List.mem fid animation_hints.no_animate_funcs
+  let is_a_func    fid = M.mem fid animation_hints.animate_funcs
+  let is_a_rel     rid = M.mem rid animation_hints.animate_rels
+  let is_a_builtin rid = M.mem rid animation_hints.animate_builtin
 
-  let find_a_func fid = M.find fid animation_hints.animate_funcs
-  let find_a_rel  rid = M.find rid animation_hints.animate_rels
-
+  let find_a_func    fid = M.find fid animation_hints.animate_funcs
+  let find_a_rel     rid = M.find rid animation_hints.animate_rels
+  let find_a_builtin rid = M.find rid animation_hints.animate_builtin
 
   type side = L | R
 
   let parse_hintexp : El.Ast.exp -> mode IM.t =
     let rec go side (exp: El.Ast.exp) mm = match exp.it with
     | HoleE (`Num i) -> if side = L then IM.add i In mm else IM.add i Out mm
+    | VarE (b, []) when b.it = "bool" -> mm
     | ParenE e -> go side e mm
     | TupE es | SeqE es -> List.fold_left (fun acc e -> go side e acc) mm es
-    | _ -> IM.empty
+    | _ -> mm
     in
     fun exp -> match exp.it with
     | InfixE (lhs, atom, rhs) when atom.it = Xl.Atom.Arrow ->

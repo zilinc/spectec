@@ -46,8 +46,7 @@ let error at msg = Util.Error.error at "IL -> DL" msg
 
 let il2dl_rule_clause rel_id rule : func_clause =
   let RuleD (id, binds, _, exp, prems) = rule.it in
-  let has_animate_hint = H.is_a_rel rel_id.it in
-  assert has_animate_hint;
+  assert (H.is_a_rel rel_id.it);
   let mode_map = H.find_a_rel rel_id.it in
   let TupE es = exp.it in
   let lhs', rhs', _t1, t2 = Lib.List.fold_lefti (fun i (les, res, lts, rts) e ->
@@ -71,8 +70,7 @@ let il2dl_rule_clause rel_id rule : func_clause =
 let il2dl_rule_def rule_name rel_id typ rules at : func_def =
   let osubid = if String.equal rule_name "" then None else Some (rule_name $ rel_id.at) in
   let func_clauses = List.map (il2dl_rule_clause rel_id) rules in
-  let has_animate_hint = H.is_a_rel rel_id.it in
-  assert has_animate_hint;
+  assert (H.is_a_rel rel_id.it);
   let mode_map = H.find_a_rel rel_id.it in
   let TupT ts = typ.it in
   let lts, rts = Lib.List.fold_lefti (fun i (lts, rts) t ->
