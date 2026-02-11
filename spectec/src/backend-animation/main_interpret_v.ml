@@ -63,8 +63,7 @@ let print_runner_result name result =
   if name = "Total" then
     Printf.printf "Total [%d/%d] (%.2f%%)\n\n" num_success total percentage
   else
-    Printf.printf "- %d/%d (%.2f%%)\n\n" num_success total percentage;
-  log "%s took %.5f s.\n" name execution_time
+    Printf.printf "- %d/%d (%.2f%%) ... %.5fs.\n\n" num_success total percentage execution_time
 
 let get_export name moduleinst_name =
   Register.find moduleinst_name
