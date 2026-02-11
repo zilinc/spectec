@@ -217,19 +217,23 @@ def $steps(config, stackcount) = config
 ;; Animation hints
 ;; ********************************************************
 
-relation Expand    hint(animate %1 -> %2)
+relation Expand        hint(animate %1 -> %2)
 
-relation Num_ok    hint(animate %1 %2 -> %3)
-relation Vec_ok    hint(animate %1 %2 -> %3)
+relation Num_ok        hint(animate %1 %2 -> %3)
+relation Vec_ok        hint(animate %1 %2 -> %3)
 
-relation Externaddr_ok hint(animate_builtin %1 %2 %3 -> bool)
 relation Ref_ok        hint(animate_builtin %1 %2 %3 -> bool)
 relation Val_ok        hint(animate_builtin %1 %2 %3 -> bool)
+relation Externaddr_ok hint(animate_builtin %1 %2 %3 -> bool)
+relation Module_ok     hint(animate_builtin %1 -> %2)
+
+relation Reftype_sub   hint(animate_builtin %1 %2 %3 -> bool)
+relation Heaptype_sub  hint(animate_builtin %1 %2 %3 -> bool)
 
 
-relation Step      hint(animate %1 -> %2)
-relation Step_pure hint(animate %1 -> %2)
-relation Step_read hint(animate %1 -> %2)
+relation Step          hint(animate %1 -> %2)
+relation Step_pure     hint(animate %1 -> %2)
+relation Step_read     hint(animate %1 -> %2)
 
 (;
 ;; Syntax not supported in SpecTec.
