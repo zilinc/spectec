@@ -536,22 +536,22 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       end in
     let _ = info "inv_func" at (lazy ("Function " ^ fid.it ^ " is being inverted")) in
     (* Only the last argument is invertible. *)
-    let args_hd, arg_lt = Lib.List.split_last args in
+    let args_init, arg_last = Lib.List.split_last args in
     let o_unknown_arg = List.find_opt (fun arg ->
       let fv_arg = (free_arg false arg).varid in
       Set.is_empty (Set.diff fv_arg knowns) |> not
-    ) args_hd in
+    ) args_init in
     begin match o_unknown_arg with
     | None ->
       (* It is implied that the last argument contains unknowns, because [lhs] contains unknowns. *)
-      let args' = args_hd @ [ExpA rhs $ rhs.at] in
-      begin match arg_lt.it with
+      let args' = args_init @ [ExpA rhs $ rhs.at] in
+      begin match arg_last.it with
       | ExpA lhs' ->
         let fncall = CallE (inv_fid, args') $$ at % lhs'.note in
         animate_exp_eq envr at lhs' fncall
       | _ ->
         E.throw (string_of_error at ("The last argument of function `" ^ fid.it ^ "` is not invertible:\n" ^
-                                     "  ▹ Argument: " ^ string_of_arg arg_lt))
+                                     "  ▹ Argument: " ^ string_of_arg arg_last))
       end
     | Some unknown_arg ->
       let unknowns_arg = Set.diff ((free_arg false unknown_arg).varid) knowns in
@@ -1037,23 +1037,27 @@ and animate_prem envr prem : prem list E.m =
   | IterPr ([], _) -> E.return []
   | IterPr (prems, ((List|List1) as iter, xes)) ->
     (* Reduce them to ListN(_, None). *)
-    let list_e = List.find_map (fun (x, e) ->
+    let olist_e = List.find_map (fun (x, e) ->
       let fv_e = (free_exp false e).varid in
       if Set.subset fv_e knowns then Some e else None
-    ) xes |> Option.get in
-    let len_v = fresh_id (Some "len") list_e.at in
-    envr := bind_var !envr len_v (natT ());
-    let len_e = VarE len_v $$ len_v.at % (natT ()) in
-    let prem_len = LetPr (len_e, LenE list_e $> len_e, [len_v.it]) $ prem.at in
-    let* () = update (add_knowns (Set.singleton len_v.it)) in
-    let prem_list1 = match iter with 
-    | List  -> []
-    | List1 -> [IfPr (CmpE(`GeOp, `NatT, len_e, mk_nat 1) $$ len_e.at % (BoolT $ len_e.at)) $ prem.at]
-    | _ -> assert false
-    in
-    let prem' = IterPr (prems, (ListN(len_e, None), xes)) $ prem.at in
-    let* prems' = animate_prem envr prem' in
-    E.return (prem_len :: prem_list1 @ prems')
+    ) xes in
+    (match olist_e with
+    | None -> E.throw (string_of_error prem.at "No in-flow variable to determine the number of iterations.")
+    | Some list_e ->
+      let len_v = fresh_id (Some "len") list_e.at in
+      envr := bind_var !envr len_v (natT ());
+      let len_e = VarE len_v $$ len_v.at % (natT ()) in
+      let prem_len = LetPr (len_e, LenE list_e $> len_e, [len_v.it]) $ prem.at in
+      let* () = update (add_knowns (Set.singleton len_v.it)) in
+      let prem_list1 = match iter with 
+      | List  -> []
+      | List1 -> [IfPr (CmpE(`GeOp, `NatT, len_e, mk_nat 1) $$ len_e.at % (BoolT $ len_e.at)) $ prem.at]
+      | _ -> assert false
+      in
+      let prem' = IterPr (prems, (ListN(len_e, None), xes)) $ prem.at in
+      let* prems' = animate_prem envr prem' in
+      E.return (prem_len :: prem_list1 @ prems')
+    )
   | IterPr (prems, (ListN(len, None) as iter, xes)) ->
     (* Reduce them to ListN(_, Some _). *)
     let i = fresh_id (Some "i") len.at in
@@ -1070,16 +1074,15 @@ and animate_prem envr prem : prem list E.m =
     *)
     let lenvr = ref !envr in
     (* For iterator `^{i < n}`, we add [i] to the local typing environemnt. *)
-    let oindex = match iter with
+    let* oindex = match iter with
     | ListN(len, Some i) ->
       lenvr := bind_var !lenvr i (natT ~at:len.at ());
       let fv_len = (free_exp false len).varid in
       if Set.is_empty (Set.diff fv_len knowns) then
-        Some i
+        Some i |> E.return
       else
-        (* It should have been caught by the IL validator. *)
-        assert false
-    | _ -> None
+        E.throw (string_of_error prem.at ("Number of iterations is unknown: " ^ string_of_exp len))
+    | _ -> E.return None
     in
     (* For the binding list {x <- e}, we bring all the x's into the local environement. *)
     List.iter (fun (x, e) ->
@@ -1151,20 +1154,8 @@ and animate_prem envr prem : prem list E.m =
        We also collect the knowns [x] that will become unknowns outside of the iteration.
     *)
     let blob1 = List.map (fun (x, e) ->
-      begin match e.it with
-      | VarE v -> ([v.it], [x.it], [])
-      | _ ->
-        (* If [e] is not a single variable and it's out-flowing in {x <- e},
-           then we create a fresh [v], such that {x <- v}, and -- if v = e
-           after we finish the interation.
-        *)
-        let x' = Frontend.Dim.annot_varid x [iter] in
-        let x_star = fresh_id (Some x'.it) e.at in
-        envr := bind_var !envr x_star e.note;
-        let x_star_e = VarE x_star $$ e.at % e.note in
-        let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, x_star_e) $$ e.at % (BoolT $ e.at)) $ e.at in
-        ([x_star.it], [x.it], [prem_e])
-      end
+      let fv_e = (free_exp false e).varid |> Set.to_list in
+      (fv_e, [x.it])
     ) (xes @ xes')
     in
     let blob2 = List.map (fun (x, e) ->
@@ -1208,23 +1199,19 @@ and animate_prem envr prem : prem list E.m =
       ([x'.it; x_star.it; i_star.it], [x.it], [prem_len; prem_x0; prem_eq_iter])
     ) xes_static
     in
-    let knowns_outer1, unknowns_outer1, e_prems1 = Lib.List.unzip3 blob1 in
+    let knowns_outer1, unknowns_outer1 = Lib.List.unzip blob1 in
     let knowns_outer2, unknowns_outer2, e_prems2 = Lib.List.unzip3 blob2 in
     let knowns_outer1   = List.concat knowns_outer1   in
     let knowns_outer2   = List.concat knowns_outer2   in
     let unknowns_outer1 = List.concat unknowns_outer1 in
     let unknowns_outer2 = List.concat unknowns_outer2 in
-    let e_prems1        = List.concat e_prems1        in
     let e_prems2        = List.concat e_prems2        in
     let* s_outer = get () in
     let knowns_outer = get_knowns s_outer in
     let knowns_outer = Set.union knowns_outer (Set.of_list (knowns_outer1 @ knowns_outer2)) in
     let knowns_outer = Set.diff knowns_outer (Set.of_list (unknowns_outer1 @ unknowns_outer2)) in
-    let* () = update (add_knowns (Set.of_list (knowns_outer1 @ knowns_outer2))) in
-    let s_end = { (init ()) with prems = e_prems1; knowns = knowns_outer} in
-    let* (e_prems1', s_end') = run_inner s_end (animate_prems' envr prem.at) in
-    let* () = update (put_knowns (get_knowns s_end')) in
-    E.return ((IterPr (prems_body', (iter, xes @ xes' @ xes_static)) $ prem.at) :: e_prems1' @ e_prems2)
+    let* () = update (put_knowns knowns_outer) in
+    E.return ((IterPr (prems_body', (iter, xes @ xes' @ xes_static)) $ prem.at) :: e_prems2)
   | _ -> error prem.at ("Unable to animate premise: " ^ string_of_prem prem)
 
 

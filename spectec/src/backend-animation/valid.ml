@@ -76,15 +76,14 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
   | IterPr (plist, (iter, pairs)) ->
     (* In-flow *)
     let in_flow_knowns acc (x, e) =
-      match e.it with
-      | VarE id -> if (Set.mem id.it known) then
-        (if (Set.mem x.it known) then
-          error_pr e.at ("Iteration binding {x <- e} ill-formed." ^
-            "both x and e cannot be known (" ^ string_of_id x ^ ", " ^ string_of_exp e ^ ")") prem
+      let fv_e = free_vars_exp e in
+      if Set.subset fv_e known then
+        (if Set.mem x.it known then
+          error_pr e.at ("Iteration binding {x <- e} ill-formed: " ^
+            "x and e cannot be both known (" ^ string_of_id x ^ ", " ^ string_of_exp e ^ ")") prem
         else Set.add x.it acc)
-        else acc
-      | _ -> error_pr e.at ("Iteration binding {x <- e} ill-formed." ^
-            "e should be VarE but got " ^ string_of_exp e) prem in
+      else acc
+    in
     let new_knowns = List.fold_left in_flow_knowns known pairs in
     (* add optional index to knowns and check if length is known *)
     let new_knowns' =
