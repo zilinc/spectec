@@ -1091,13 +1091,14 @@ and animate_prem envr prem : prem list E.m =
       | IterT (t, _) -> lenvr := bind_var !lenvr x t
       | _ -> assert false
     ) xes;
-    (* Get the set of known `x`s from the `xes` list. *)
-    let knowns_iter = List.filter_map (fun (x, e) ->
+    (* Split xes into inflow and outflow binding lists. *)
+    let in_xes, out_xes = List.fold_left (fun (is, os) (x, e) ->
       let fv_e = (free_exp false e).varid in
       let unknowns_e = Set.diff fv_e knowns in
-      if Set.is_empty unknowns_e then Some x.it else None
-    ) xes |> Set.of_list in
-    let knowns_inner = Set.union knowns knowns_iter in
+      if Set.is_empty unknowns_e then is@[(x,e)], os else is, os@[(x,e)]
+    ) ([], []) xes in
+    (* Initial known set inside the iterator *)
+    let knowns_inner = Set.union knowns (List.map (fun (x, _) -> x.it) in_xes |> Set.of_list) in
     (* Add the iterator index `i` to the known set, if it exists. *)
     let knowns_inner = match oindex with
     | None   -> knowns_inner
@@ -1106,7 +1107,6 @@ and animate_prem envr prem : prem list E.m =
     let s_body = { (init ()) with prems; knowns = knowns_inner } in
     let old_lenv = !lenvr in
     let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem.at) in
-    let* () = update (put_knowns (get_knowns s_body')) in
     (* We can't use the set of new bindings in the typing context to generate the new
     [xes'] binding list. This is because some of the new knowns are already in the
     typing context before animation. We have to use the list of new known variables.
@@ -1154,9 +1154,23 @@ and animate_prem envr prem : prem list E.m =
        We also collect the knowns [x] that will become unknowns outside of the iteration.
     *)
     let blob1 = List.map (fun (x, e) ->
-      let fv_e = (free_exp false e).varid |> Set.to_list in
-      (fv_e, [x.it])
-    ) (xes @ xes')
+      begin match e.it with
+      | VarE v -> ([v.it], [x.it], [], (x, e))
+      | _ ->
+        (* If [e] is not a single variable and it's out-flowing in {x <- e},
+           then we create a fresh [v], such that {x <- v}, and -- if v = e
+           after we finish the interation. This is almost necessary, otherwise
+           it will be quite difficult in the interpreter to assign values to
+           the outflowing x <- e binding.
+        *)
+        let x' = Frontend.Dim.annot_varid x [iter] in
+        let x_star = fresh_id (Some x'.it) e.at in
+        envr := bind_var !envr x_star e.note;
+        let x_star_e = VarE x_star $$ e.at % e.note in
+        let prem_e = IfPr (CmpE (`EqOp, `BoolT, e, x_star_e) $$ e.at % (BoolT $ e.at)) $ e.at in
+        ([x_star.it], [x.it], [prem_e], (x, x_star_e))
+      end
+    ) (out_xes @ xes')
     in
     let blob2 = List.map (fun (x, e) ->
       (* E.g., If we have ( -- if a = rhs )^iter { ... } and `a` is unknown and static, then when we
@@ -1199,19 +1213,22 @@ and animate_prem envr prem : prem list E.m =
       ([x'.it; x_star.it; i_star.it], [x.it], [prem_len; prem_x0; prem_eq_iter])
     ) xes_static
     in
-    let knowns_outer1, unknowns_outer1 = Lib.List.unzip blob1 in
+    let knowns_outer1, unknowns_outer1, e_prems1, xes'' = Lib.List.unzip4 blob1 in
     let knowns_outer2, unknowns_outer2, e_prems2 = Lib.List.unzip3 blob2 in
     let knowns_outer1   = List.concat knowns_outer1   in
     let knowns_outer2   = List.concat knowns_outer2   in
     let unknowns_outer1 = List.concat unknowns_outer1 in
     let unknowns_outer2 = List.concat unknowns_outer2 in
+    let e_prems1        = List.concat e_prems1        in
     let e_prems2        = List.concat e_prems2        in
     let* s_outer = get () in
-    let knowns_outer = get_knowns s_outer in
+    let knowns_outer = get_knowns s_outer in  (* This should be the initial known set before iteration. *)
     let knowns_outer = Set.union knowns_outer (Set.of_list (knowns_outer1 @ knowns_outer2)) in
     let knowns_outer = Set.diff knowns_outer (Set.of_list (unknowns_outer1 @ unknowns_outer2)) in
-    let* () = update (put_knowns knowns_outer) in
-    E.return ((IterPr (prems_body', (iter, xes @ xes' @ xes_static)) $ prem.at) :: e_prems2)
+    let s_end = { (init ()) with prems = e_prems1; knowns = knowns_outer} in
+    let* (e_prems1', s_end') = run_inner s_end (animate_prems' envr prem.at) in
+    let* () = update (put_knowns (get_knowns s_end')) in
+    E.return ((IterPr (prems_body', (iter, in_xes @ xes'' @ xes_static)) $ prem.at) :: e_prems1' @ e_prems2)
   | _ -> error prem.at ("Unable to animate premise: " ^ string_of_prem prem)
 
 

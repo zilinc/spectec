@@ -596,37 +596,28 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       let il_env0 = !il_env in
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
-        match e.it with
-        | VarE x_star ->
-          let t_star = Il.Env.find_var !il_env x_star in
-          let t = Il_util.as_iter_typ !il_env t_star in
-          il_env := Il.Env.(bind_var !il_env x t);
-        | _ -> assert false
+        let t_star = e.note in
+        let t = Il_util.as_iter_typ !il_env t_star in
+        il_env := Il.Env.(bind_var !il_env x t);
       ) (in_binds @ out_binds);
       let* ctx' = if Z.to_int n' = 0 then (
         (* When n' = 0 the outflowing variables are assigned to `eps`. *)
-        List.fold_left (fun ctx (x, e) ->
-          match e.it with
-          | VarE x_star ->
-            let vx_star = ListV (ref [||]) in
-            VContext.add_varid ctx x_star vx_star
-          | _ -> assert false
-        ) ctx out_binds |> return
+        foldlM (fun ctx (x, e) ->
+          let vx_star = ListV (ref [||]) in
+          assign ctx e vx_star
+        ) ctx out_binds
       ) else (
         (* Run the loop *)
         let* ctx_out = foldlM (fun ctx_out idx ->
-          let lctxr = ref ctx in
-          lctxr := VContext.add_varid !lctxr i (vl_of_nat idx);
+          let ctx = VContext.add_varid ctx i (vl_of_nat idx) in
           (* In-flow *)
-          let* () = iterM (fun (x, e) ->
+          let* ctx = foldlM (fun ctx (x, e) ->
             let t = Il.Env.find_var !il_env x in
-            let* e' = eval_exp !lctxr (IdxE (e, mk_nat idx) $$ e.at % t) in
-            lctxr := VContext.add_varid !lctxr x e';
-            return ()
-          ) in_binds
+            let* e' = eval_exp ctx (IdxE (e, mk_nat idx) $$ e.at % t) in
+            VContext.add_varid ctx x e' |> return
+          ) ctx in_binds
           in
-          let* lctx = eval_prems !lctxr prems in
-          lctxr := lctx;
+          let* ctx = eval_prems ctx prems in
           (* Out-flow: Only collect them in [ctx_out], but don't add them to the local
              value context, otherwise it will interfere with later iterations, where
              it will see partially assigned outer variables and wrongly treat them as knowns.
@@ -634,7 +625,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           List.fold_left (fun ctx_out (x, e) ->
             match e.it with
             | VarE x_star ->
-              let vx = VContext.find_varid !lctxr x in
+              let vx = VContext.find_varid ctx x in
               let vx_star' = (match VContext.find_opt_varid ctx_out x_star with
               | Some vx_star -> let vs = as_list_value vx_star in
                                 listV (Array.append !vs ([|vx|]))
@@ -654,12 +645,9 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       let il_env0 = !il_env in
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
-        match e.it with
-        | VarE x_question ->
-          let t_question = Il.Env.find_var !il_env x_question in
-          let t = Il_util.as_opt_typ !il_env t_question in
-          il_env := Il.Env.(bind_var !il_env x t);
-        | _ -> assert false
+        let t_question = e.note in
+        let t = Il_util.as_opt_typ !il_env t_question in
+        il_env := Il.Env.(bind_var !il_env x t);
       ) (in_binds @ out_binds);
       (* Need to figure out whether it runs or not. *)
       let* in_vals = mapM (fun (x, e) -> let* v = eval_exp ctx e in return (x, v)) in_binds in
@@ -678,35 +666,20 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       ) in_vals;
       let* ctx' = begin if not run_opt then
       (* When the optional is None, all outflow variables should be None. *)
-        List.fold_left (fun ctx (x, e) ->
-          match e.it with
-          | VarE x_question -> VContext.add_varid ctx x_question none
-          | _ -> assert false
-        ) ctx out_binds |> return
+        foldlM (fun ctx (x, e) -> assign ctx e none) ctx out_binds
       else
       (* When the optional is Some *)
-        let lctxr = ref ctx in
         (* In-flow *)
-        List.iter (fun (x, opt_val) ->
+        let* ctx = foldlM (fun ctx (x, opt_val) ->
           let OptV (Some val_) = opt_val in
-          lctxr := VContext.add_varid !lctxr x val_
-        ) in_vals;
-        let* lctx = eval_prems !lctxr prems in
-        lctxr := lctx;
+          VContext.add_varid ctx x val_ |> return
+        ) ctx in_vals in
+        let* ctx = eval_prems ctx prems in
         (* Out-flow *)
-        List.iter (fun (x, e) ->
-          match e.it with
-          | VarE x_question ->
-            let vx = VContext.find_varid !lctxr x in
-            let opt_vx_question = VContext.find_opt_varid !lctxr x_question in
-            begin match opt_vx_question with
-            | Some vx_question -> assert false
-            | None -> let some_vx = some vx in
-                      lctxr := VContext.add_varid !lctxr x_question some_vx
-            end
-          | _ -> assert false
-        ) out_binds;
-        return !lctxr
+        foldlM (fun ctx (x, e) ->
+          let vx = VContext.find_varid ctx x in
+          assign ctx e (some vx)
+        ) ctx out_binds
       end in
       il_env := il_env0;  (* Resume old environment *)
       return ctx'
