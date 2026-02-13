@@ -1076,9 +1076,7 @@ and externaddr_ok = function
         |> vl_to_externtype
       in
       let externtype = vl_to_externtype etype in
-      (match RI.Match.match_externtype [] externaddr_type externtype with
-      | b -> boolV b |> return
-      )
+      RI.Match.match_externtype [] externaddr_type externtype |> boolV |> return
     | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
     )
   | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
@@ -1091,9 +1089,7 @@ and ref_ok = function
     | Some typ1 ->
       let reftyp1 = vl_to_reftype typ1 in
       let reftyp2 = vl_to_reftype typ2 in
-      (match RI.Match.match_reftype [] reftyp1 reftyp2 with
-      | b -> boolV b |> return
-      )
+      RI.Match.match_reftype [] reftyp1 reftyp2 |> boolV |> return
     )
   | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
 
@@ -1105,37 +1101,27 @@ and val_ok = function
   | Some typ1 ->
     let valtyp1 = vl_to_valtype typ1 in
     let valtyp2 = vl_to_valtype typ2 in
-    (match RI.Match.match_valtype [] valtyp1 valtyp2 with
-    | b -> boolV b |> return
-    )
+    RI.Match.match_valtype [] valtyp1 valtyp2 |> boolV |> return
   )
   | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
 
 
 (* Reftype_sub : context -> reftype -> reftype -> bool *)
 and reftype_sub = function
-  | [ ValA ctx; ValA typ1; ValA typ2 ] ->
-    (* TODO(zilinc): the context is not converted, but we know that all calls to
-       this rule in the spec uses the empty context.
-     *)
-    let reftyp1 = vl_to_reftype typ1 in
-    let reftyp2 = vl_to_reftype typ2 in
-    (match RI.Match.match_reftype [] reftyp1 reftyp2 with
-    | b -> boolV b |> return
-    )
+  | [ ValA ctx; ValA rt1; ValA rt2 ] ->
+    let ctx' = as_str_field "TYPES" ctx |> as_list_value' |> List.map vl_to_deftype in
+    let rt1' = vl_to_reftype rt1 in
+    let rt2' = vl_to_reftype rt2 in
+    RI.Match.match_reftype ctx' rt1' rt2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
 
 (* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
 and heaptype_sub = function
-    | [ ValA ctx; ValA typ1; ValA typ2 ] ->
-    (* TODO(zilinc): the context is not converted, but we know that all calls to
-       this rule in the spec uses the empty context.
-     *)
-    let heaptyp1 = vl_to_heaptype typ1 in
-    let heaptyp2 = vl_to_heaptype typ2 in
-    (match RI.Match.match_heaptype [] heaptyp1 heaptyp2 with
-    | b -> boolV b |> return
-    )
+    | [ ValA ctx; ValA ht1; ValA ht2 ] ->
+    let ctx' = as_str_field "TYPES" ctx |> as_list_value' |> List.map vl_to_deftype in
+    let ht1' = vl_to_heaptype ht1 in
+    let ht2' = vl_to_heaptype ht2 in
+    RI.Match.match_heaptype ctx' ht1' ht2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
 

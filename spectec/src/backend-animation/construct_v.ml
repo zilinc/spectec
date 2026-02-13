@@ -1074,7 +1074,7 @@ and vl_to_rectype v : RI.Types.rectype =
 
 and vl_to_deftype v : RI.Types.deftype =
   match match_caseV "deftype" v with
-  | [["_DEF"];[];[]], [rt; i32] -> DefT (vl_to_rectype rt, vl_to_nat32 i32)
+  | [["_DEF"];[];[]], [rt; n] -> DefT (vl_to_rectype rt, vl_to_nat32 n)
   | _ -> error_value "deftype" v
 
 and vl_to_typeuse exp : RI.Types.typeuse =
