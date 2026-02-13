@@ -806,10 +806,10 @@ let rec vl_of_instr (instr: RI.Ast.instr) =
       vl_of_idx idx1;
       vl_of_nat32 idx2;
     ]
-  | StructSet (idx1, idx2)     -> mk_instr "STRUCT.SET"        2 [vl_of_idx idx1; vl_of_nat32 idx2]
+  | StructSet (idx1, idx2)     -> mk_instr "STRUCT.SET"        2 [vl_of_idx idx1; vl_of_uN_32 idx2]
   | ArrayNew (idx, Explicit)   -> mk_instr "ARRAY.NEW"         1 [vl_of_idx idx]
   | ArrayNew (idx, Implicit)   -> mk_instr "ARRAY.NEW_DEFAULT" 1 [vl_of_idx idx]
-  | ArrayNewFixed (idx, i32)   -> mk_instr "ARRAY.NEW_FIXED"   2 [vl_of_idx idx ; vl_of_nat32 i32]
+  | ArrayNewFixed (idx, i32)   -> mk_instr "ARRAY.NEW_FIXED"   2 [vl_of_idx idx ; vl_of_uN_32 i32]
   | ArrayNewElem (idx1, idx2)  -> mk_instr "ARRAY.NEW_ELEM"    2 [vl_of_idx idx1; vl_of_idx idx2]
   | ArrayNewData (idx1, idx2)  -> mk_instr "ARRAY.NEW_DATA"    2 [vl_of_idx idx1; vl_of_idx idx2]
   | ArrayGet (idx, sx_opt)     -> mk_instr "ARRAY.GET"         2 [vl_of_opt vl_of_sx sx_opt; vl_of_idx idx]
@@ -1993,7 +1993,7 @@ let vl_to_module : value -> RI.Ast.module_ = vl_to_phrase vl_to_module'
 
 let rec vl_to_field v : RI.Aggr.field =
   match match_caseV "field" v with
-  | [["PACK"];[];[]], [pt; c] -> RI.Aggr.PackField (vl_to_packtype pt, ref (as_nat_value c |> Z.to_int))
+  | [["PACK"];[];[]], [pt; c] -> RI.Aggr.PackField (vl_to_packtype pt, ref (as_singleton_case c |> as_nat_value |> Z.to_int))
   | _ -> RI.Aggr.ValField (ref (vl_to_value v))
 
 and vl_to_array v : RI.Aggr.array =
