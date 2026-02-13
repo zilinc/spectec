@@ -148,9 +148,9 @@ rule Step_pure/br_on_non_null-addr:
 
 rule Step_read/br_on_cast-succeed:
   s; f; ref (BR_ON_CAST l rt_1 rt_2)  ~>  ref (BR l)
-  -- Ref_ok: s |- ref : $inst_reftype(f.MODULE, rt_2)
-  ;; -- Ref_ok: s |- ref : rt
-  ;; -- Reftype_sub: {} |- rt <: $inst_reftype(f.MODULE, rt_2)
+  ;; TODO(3, rossberg): -- Ref_ok: s |- ref : $inst_reftype(f.MODULE, rt_2)
+  -- Ref_ok: s |- ref : rt
+  -- Reftype_sub: {} |- rt <: $inst_reftype(f.MODULE, rt_2)
 
 rule Step_read/br_on_cast-fail:
   s; f; ref (BR_ON_CAST l rt_1 rt_2)  ~>  ref
@@ -159,9 +159,9 @@ rule Step_read/br_on_cast-fail:
 
 rule Step_read/br_on_cast_fail-succeed:
   s; f; ref (BR_ON_CAST_FAIL l rt_1 rt_2)  ~>  ref
-  -- Ref_ok: s |- ref : $inst_reftype(f.MODULE, rt_2)
-  ;; -- Ref_ok: s |- ref : rt
-  ;; -- Reftype_sub: {} |- rt <: $inst_reftype(f.MODULE, rt_2)
+  ;; TODO(3, rossberg): -- Ref_ok: s |- ref : $inst_reftype(f.MODULE, rt_2)
+  -- Ref_ok: s |- ref : rt
+  -- Reftype_sub: {} |- rt <: $inst_reftype(f.MODULE, rt_2)
 
 rule Step_read/br_on_cast_fail-fail:
   s; f; ref (BR_ON_CAST_FAIL l rt_1 rt_2)  ~>  ref (BR l)
@@ -174,33 +174,16 @@ rule Step_read/call:
   z; (CALL x)  ~>  (REF.FUNC_ADDR a) (CALL_REF $funcinst(z)[a].TYPE)
   -- if $moduleinst(z).FUNCS[x] = a
 
-rule Step/call_ref-null:
-  z; (REF.NULL ht) (CALL_REF yy)  ~> z; TRAP
+rule Step_read/call_ref-null:
+  z; (REF.NULL ht) (CALL_REF yy)  ~>  TRAP
 
-rule Step/call_ref-func:
-  z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)  ~> z; (FRAME_ m `{f} (LABEL_ m `{eps} instr*))
+rule Step_read/call_ref-func:
+  z; val^n (REF.FUNC_ADDR a) (CALL_REF yy)  ~>  (FRAME_ m `{f} (LABEL_ m `{eps} instr*))
   ----
   -- if $funcinst(z)[a] = fi
   -- Expand: fi.TYPE ~~ FUNC t_1^n -> t_2^m
   -- if fi.CODE = FUNC x (LOCAL t)* (instr*)
   -- if f = {LOCALS val^n ($default_(t))*, MODULE fi.MODULE}
-
-
-rule Step/call_ref-hostfunc-res:
-  s; f; val^n (REF.FUNC_ADDR a) (CALL_REF yy)  ~>  s'; f; $lift_result(result)
-  ----
-  -- if $funcinst((s; f))[a] = fi
-  -- Expand: fi.TYPE ~~ FUNC t_1^n -> t_2^m
-  -- if fi.CODE = _HOSTFUNC hf
-  -- if RES s' result <- $hostcall(_HOSTFUNC hf, s, val^n)
-
-rule Step/call_ref-hostfunc-div:
-  s; f; val^n (REF.FUNC_ADDR a) (CALL_REF yy)  ~>  s; f; (REF.FUNC_ADDR a) (CALL_REF yy)
-  ----
-  -- if $funcinst((s; f))[a] = fi
-  -- Expand: fi.TYPE ~~ FUNC t_1^n -> t_2^m
-  -- if fi.CODE = _HOSTFUNC hf
-  -- if BOT <- $hostcall(_HOSTFUNC hf, s, val^n)
 
 
 rule Step_read/return_call:
@@ -683,9 +666,9 @@ rule Step_pure/ref.eq-false:
 
 rule Step_read/ref.test-true:
   s; f; ref (REF.TEST rt)  ~>  (CONST I32 1)
-  -- Ref_ok: s |- ref : $inst_reftype(f.MODULE, rt)
-  ;; -- Ref_ok: s |- ref : rt'
-  ;; -- Reftype_sub: {} |- rt' <: $inst_reftype(f.MODULE, rt)
+  ;; TODO(3, rossberg): -- Ref_ok: s |- ref : $inst_reftype(f.MODULE, rt)
+  -- Ref_ok: s |- ref : rt'
+  -- Reftype_sub: {} |- rt' <: $inst_reftype(f.MODULE, rt)
 
 rule Step_read/ref.test-false:
   s; f; ref (REF.TEST rt)  ~>  (CONST I32 0)
@@ -694,9 +677,9 @@ rule Step_read/ref.test-false:
 
 rule Step_read/ref.cast-succeed:
   s; f; ref (REF.CAST rt)  ~>  ref
-  -- Ref_ok: s |- ref : $inst_reftype(f.MODULE, rt)
-  ;; -- Ref_ok: s |- ref : rt'
-  ;; -- Reftype_sub: {} |- rt' <: $inst_reftype(f.MODULE, rt)
+  ;; TODO(3, rossberg): -- Ref_ok: s |- ref : $inst_reftype(f.MODULE, rt)
+  -- Ref_ok: s |- ref : rt'
+  -- Reftype_sub: {} |- rt' <: $inst_reftype(f.MODULE, rt)
 
 rule Step_read/ref.cast-fail:
   s; f; ref (REF.CAST rt)  ~>  TRAP
@@ -783,7 +766,7 @@ rule Step_read/array.new_data-num:
   z; (CONST I32 i) (CONST I32 n) (ARRAY.NEW_DATA x y)  ~>  ($const($cunpack(zt), $cunpacknum_(zt, c)))^n (ARRAY.NEW_FIXED x n)
   ----
   -- Expand: $type(z, x) ~~ ARRAY (mut? zt)
-  -- if $concatn_(byte, $($zsize(zt)/8), $zbytes_(zt, c)^n) = $data(z, y).BYTES[i : n * $zsize(zt)/8]
+  -- if $concatn_(byte, $zbytes_(zt, c)^n, $($zsize(zt)/8)) = $data(z, y).BYTES[i : n * $zsize(zt)/8]
 
 
 rule Step_read/array.get-null:
