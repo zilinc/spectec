@@ -311,7 +311,7 @@ def $exportsd(eps) = eps
 def $exportsd(export decl'*) = export $exportsd(decl'*)
 def $exportsd(decl decl'*) = $exportsd(decl'*)  -- otherwise
 
-def $ordered(decl*) : bool
+def $ordered(decl*) : bool  hint(no_animate)
 def $ordered(decl*) = true  -- if $importsd(decl*) = eps
 def $ordered(decl_1* import decl_2*) =
   $importsd(decl_1*) = eps /\ $tagsd(decl_1*) = eps /\

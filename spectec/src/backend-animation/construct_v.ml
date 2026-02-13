@@ -804,7 +804,7 @@ let rec vl_of_instr (instr: RI.Ast.instr) =
     mk_instr "STRUCT.GET" 3 [
       vl_of_opt vl_of_sx sx_opt;
       vl_of_idx idx1;
-      vl_of_nat32 idx2;
+      vl_of_uN_32 idx2;
     ]
   | StructSet (idx1, idx2)     -> mk_instr "STRUCT.SET"        2 [vl_of_idx idx1; vl_of_uN_32 idx2]
   | ArrayNew (idx, Explicit)   -> mk_instr "ARRAY.NEW"         1 [vl_of_idx idx]
@@ -2046,7 +2046,7 @@ and vl_to_ref v : RI.Value.ref_ =
   let open Value in
   match match_caseV "ref" v with
   | [["REF.NULL"];[]], [ht] -> NullRef (vl_to_heaptype ht)
-  | [["REF.I31_NUM"];[]], [i] -> RI.I31.I31Ref (as_nat_value i |> Z.to_int)
+  | [["REF.I31_NUM"];[]], [i] -> RI.I31.I31Ref (as_singleton_case i |> as_nat_value |> Z.to_int)
   | [["REF.STRUCT_ADDR"];[]], [addr] ->
     let struct_insts = State_v.Store.access "STRUCTS" in
     let struct_ = addr |> as_nat_value |> nth_of_list struct_insts |> vl_to_struct in

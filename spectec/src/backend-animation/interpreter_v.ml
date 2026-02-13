@@ -771,23 +771,27 @@ and eval_func name func_def args : value OptMonad.m =
 
 and call_func name args : value OptMonad.m =
   info "log" no (lazy ("Calling " ^ name));
-  match name with
-  (* Hardcoded functions defined in meta.spectec *)
-  | "Steps"  ->
+  if State_v.Hints.is_a_builtin name then
+    (match name with
+    (* Hardcoded functions defined in the compiler. *)
+    | "Module_ok"     -> module_ok     args
+    | "Externaddr_ok" -> externaddr_ok args
+    | "Ref_ok"        -> ref_ok        args
+    | "Val_ok"        -> val_ok        args
+    | "Reftype_sub"   -> reftype_sub   args
+    | "Heaptype_sub"  -> heaptype_sub  args
+    | _               -> error no ("Builtin animation not implemented: " ^ name ^ ".")
+    )
+  else
+    (* Hardcoded functions defined in meta.spectec *)
+  if name = "Steps" then
     let [config] = args in
     let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
     call_func "steps" args'
-  | "Step"   -> error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
-  (* | "Ref_ok" -> call_func "ref_infer" args *)
-  (* Hardcoded functions defined in the compiler. *)
-  | "Module_ok"     -> module_ok     args
-  | "Externaddr_ok" -> externaddr_ok args
-  | "Ref_ok"        -> ref_ok        args
-  | "Val_ok"        -> val_ok        args
-  | "Reftype_sub"   -> reftype_sub   args
-  | "Heaptype_sub"  -> heaptype_sub  args
-  (* Others *)
-  | _ ->
+  else if name = "Step" then
+    error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
+  else
+    (* Built-in functions *)
     let builtin_name, is_builtin =
       match Il.Env.find_func_hint !il_env name "builtin" with
       | None -> (name, false)
@@ -919,22 +923,6 @@ and hostcall : Value.arg list -> value OptMonad.m = function
   | _ -> error no ("Invalid arguments to $hostcall")
 
 
-(*
-and hostcall = {
-  name = "hostcall";
-  f =
-    function
-    | [hostfunc; s; args] ->
-      (match match_caseV "hostfunc" hostfunc with
-      | [["_HOSTFUNC"]; []], [TextV fname] ->
-        let vs = as_list_value' args in
-        let s', result = call_hostfunc fname s vs in
-        listV [| caseV [["RES"];[];[]] [s'; result] |] |> return
-      | _ -> error_value ("Not a hostfunc") hostfunc
-      )
-    | vs -> error_values ("Args to $hostcall") vs
-}
-*)
 
 (* Built-in functions (meta.spectec) *)
 
@@ -1089,7 +1077,6 @@ and externaddr_ok = function
       in
       let externtype = vl_to_externtype etype in
       (match RI.Match.match_externtype [] externaddr_type externtype with
-      | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
       | b -> boolV b |> return
       )
     | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
@@ -1105,7 +1092,6 @@ and ref_ok = function
       let reftyp1 = vl_to_reftype typ1 in
       let reftyp2 = vl_to_reftype typ2 in
       (match RI.Match.match_reftype [] reftyp1 reftyp2 with
-      | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
       | b -> boolV b |> return
       )
     )
@@ -1120,7 +1106,6 @@ and val_ok = function
     let valtyp1 = vl_to_valtype typ1 in
     let valtyp2 = vl_to_valtype typ2 in
     (match RI.Match.match_valtype [] valtyp1 valtyp2 with
-    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
     | b -> boolV b |> return
     )
   )
@@ -1136,7 +1121,6 @@ and reftype_sub = function
     let reftyp1 = vl_to_reftype typ1 in
     let reftyp2 = vl_to_reftype typ2 in
     (match RI.Match.match_reftype [] reftyp1 reftyp2 with
-    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
     | b -> boolV b |> return
     )
   | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
@@ -1150,24 +1134,10 @@ and heaptype_sub = function
     let heaptyp1 = vl_to_heaptype typ1 in
     let heaptyp2 = vl_to_heaptype typ2 in
     (match RI.Match.match_heaptype [] heaptyp1 heaptyp2 with
-    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
     | b -> boolV b |> return
     )
   | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
-
-(*
-(* Rule `Expand` has been compiled to `$expanddt` in animation.ml *)
-let expand = function
-  | [ v ] ->
-    (try
-      v
-      |> Construct.al_to_deftype
-      |> Types.expand_deftype
-      |> Construct.al_of_comptype
-    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ())))
-  | vs -> Numerics.error_values "$Expand" vs
-*)
 
 
 (* Wasm interpreter entry *)
