@@ -468,28 +468,33 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
                    es_init, [es_last]
       | _ -> assert false
       )
-    in
-    let res, rt =
-      (match rhs with
-      | [ ] -> boolE true, BoolT $ no
-      | [e] -> e, e.note
-      | _   -> let t = TupT (List.map (fun e -> (e, e.note)) rhs) $ at in
-               TupE rhs $$ at % t, t
-      )
-    in
-    let fncall = CallE (id, List.map (fun e -> ExpA e $ e.at) lhs) $$ at % rt in
+  in
+  let res, rt =
+    (match rhs with
+    | [ ] -> boolE true, BoolT $ no
+    | [e] -> e, e.note
+    | _   -> let t = TupT (List.map (fun e -> (e, e.note)) rhs) $ at in
+             TupE rhs $$ at % t, t
+    )
+  in
+  let fncall = CallE (id, List.map (fun e -> ExpA e $ e.at) lhs) $$ at % rt in
   (* Let res = $call(args) *)
   let unknowns_res    = Set.diff (free_exp false res   ).varid knowns in
   let unknowns_fncall = Set.diff (free_exp false fncall).varid knowns in
-  if not (Set.is_empty unknowns_res) && Set.is_empty unknowns_fncall then
-    (* When satisfying the precondition of `animate_exp_eq`. *)
-    animate_exp_eq envr at res fncall
-  else if Set.is_empty unknowns_res && Set.is_empty unknowns_fncall then
+  (match Set.is_empty unknowns_fncall, Set.is_empty unknowns_res with
+  | true, true ->
     (* The rule is fully known, then check. *)
     E.return [ IfPr (eqE ~at:at res fncall) $ at ]
-  else
-    E.throw (string_of_error at ("LHS of rule " ^ id.it ^ " has unknowns: " ^
-                                 string_of_varset unknowns_fncall))
+  | false, true ->
+    (* When satisfying the precondition of `animate_exp_eq`. *)
+    animate_exp_eq envr at fncall res
+  | true, false ->
+    animate_exp_eq envr at res fncall
+  | _ ->
+    E.throw (string_of_error at ("Both sides of rule " ^ id.it ^ " has unknowns: " ^
+                                 "  ▹ LHS: " ^ string_of_varset unknowns_fncall ^ "\n" ^
+                                 "  ▹ RHS: " ^ string_of_varset unknowns_res))
+  )
 
 (** ASSUMES: [lhs] contains unknown vars, whereas [rhs] is fully known.
     Essentially, the LHS is pattern to match against, and RHS is the scrutinee.
@@ -527,9 +532,18 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let oinv_fid = find_func_hint !envr fid.it "inverse" in
     let* inv_fid = match oinv_fid with
     | None ->
-        info "inv_func" at (lazy ("No inverse: " ^ string_of_exp lhs ^ " = " ^ string_of_exp rhs));
-        info "inv_func" at (lazy ("Knowns: " ^ string_of_varset knowns));
-        E.throw (string_of_error at ("No inverse function declared for `" ^ fid.it ^ "`, so can't invert it."))
+      (match H.is_a_inv fid.it with
+      | true ->
+        if List.mem fid !H.invert_funcs then
+          E.return ("inv_" ^ fid.it $> fid)
+        else (
+          warn at ("No inverse function declared for `" ^ fid.it ^ "`, so we'll create one: `inv_" ^ fid.it ^ "`.");
+          H.add_invert_func fid;
+          E.return ("inv_" ^ fid.it $> fid)
+        )
+      | false ->
+        E.throw (string_of_error at ("No inverse function declared for `" ^ fid.it ^ "`; consider adding a hint(animate_inverse)."))
+      )
     | Some hint -> begin match hint.hintexp.it with
       | CallE (fid, []) -> E.return fid
       | _ -> E.throw (string_of_error at ("Ill-formed inverse hint for function `" ^ fid.it ^ "`, so can't invert it."))
@@ -686,6 +700,9 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* () = update (add_knowns (Set.of_list vs)) in
     let* prems_v' = E.(mapM (animate_prem envr) prems_v <&> List.concat) in
     E.return (prem_opt :: prems_v')
+  | TheE lhs' ->
+    let rhs' = OptE (Some rhs) $$ rhs.at % (IterT (rhs.note, Opt) $ rhs.at) in
+    animate_exp_eq envr at lhs' rhs'
   | ListE [] ->
     assert false  (* Because lhs must contain unknowns. *)
   | ListE exps ->
@@ -1521,11 +1538,46 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
     RecDef (merge_defs defs') :: merge_defs fs
   | f :: fs -> f :: merge_defs fs
 
+
+let invert_clause (cl: clause) : func_clause =
+  let DefD (binds, args, rhs, prems) = cl.it in
+  let args_init, args_last = Lib.List.split_last args in
+  let args' = args_init @ [ ExpA rhs $ rhs.at ] in
+  let ExpA rhs' = args_last.it in
+  let cl' = DefD (binds, args', rhs', prems) $> cl in
+  (None, cl')
+
+let animate_inv_func envr fid inv_funcs : dl_def list =
+  let inv_fid = "inv_" ^ fid.it $> fid in
+  let params, rt, cls = Il.Env.find_def !envr fid in
+  let ps_init, { it = ExpP (_, rt'); _ } = Lib.List.split_last params in
+  let params' = ps_init @ [ExpP ("_" $ rt.at, rt) $ rt.at] in
+  let cls' = List.map invert_clause cls in
+  let inv_func = (inv_fid, None, params', rt', cls', None) $ fid.at in
+  let inv_func' = animate_func_def envr inv_func in
+  (* Remove from the "todo" list, and add an entry of inverse hint to the IL environement. *)
+  H.rm_invert_func fid;
+  let inverse_hint = { hintid = "animate_inv" $ fid.at; hintexp = El.Ast.CallE(inv_fid, []) $ fid.at } in
+  envr := Il.Env.add_hint !envr (DecH (fid, [inverse_hint]) $ fid.at);
+  FuncDef inv_func' :: inv_funcs
+
+let animate_inv_funcs envr (dl: dl_def list) : dl_def list =
+  let inv_ids = !H.invert_funcs in
+  let rec go env do_ acc =
+  match !H.invert_funcs with
+  | [] -> acc
+  | x :: xs -> let acc' = do_ env x acc in go env do_ acc'
+  in
+  let inv_funcs' = go envr animate_inv_func [] in
+  dl @ inv_funcs'
+
+
 (* Entry function *)
 let animate (dl, il) =
   let envr = ref (Il.Env.env_of_script il) in
   let dl' = dl |> List.map (animate_def envr)
                |> merge_defs
+               |> animate_inv_funcs envr
   in
   (* Il2dl.list_all_dl_defs dl'; *)
   (!envr, dl')

@@ -264,3 +264,4 @@ rule Step /ctxt-instrs
 relation Eval_expr hint(animate (%1, %2) -> (%3, %4))
 
 def $utf8 hint(no_animate)
+

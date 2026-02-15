@@ -20,6 +20,7 @@ let build_animation_hints il : unit =
         (match hint.hintid.it with
         | "animate"         -> print_endline ("Warning: hint(animate) on function " ^ fid.it ^ " is not yet implemented."); ()
         | "animate_builtin" -> H.add_a_builtin fid.it (H.parse_hintexp hint.hintexp)
+        | "animate_inverse" -> H.add_a_inv fid.it
         | "no_animate"      -> H.add_na_func fid.it
         | _                 -> ()
         )
@@ -95,7 +96,9 @@ let rec remove_or def =
 
 (* Entry *)
 let run il print_dl inline =
+  H.init_animation_hints ();
   build_animation_hints il;
+  (* H.add_a_inv "proj_num__0"; *)
   let (env, dl) = il
                   |> List.filter_map is_anim_target
                   |> List.map remove_or
