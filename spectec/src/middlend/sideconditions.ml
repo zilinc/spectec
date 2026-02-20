@@ -31,7 +31,8 @@ let lenE e = match e.it with
 let iterPr (prs, (iter, vars)) =
   let frees = free_list free_prem prs in
   let vars' = List.filter (fun (id, _) ->
-    Set.mem id.it frees.varid
+    Set.mem id.it frees.varid ||
+    (match iter with | ListN(_, Some i) -> Il.Eq.eq_id id i | _ -> false)
   ) vars in
   (* Must keep at least one variable to keep the iteration well-formed *)
   let vars'' = if vars' <> [] then vars' else [List.hd vars] in

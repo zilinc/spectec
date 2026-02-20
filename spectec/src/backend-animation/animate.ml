@@ -462,12 +462,14 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
         | In  -> les @ [e], res
         | Out -> les, res @ [e]
       ) ([], []) es
-    else
+    else (
+      warn at ("Animating a rule that is not marked for animation: " ^ id.it);
       (match exp.it with
       | TupE es -> let es_init, es_last = Lib.List.split_last es in
                    es_init, [es_last]
       | _ -> assert false
       )
+    )
   in
   let res, rt =
     (match rhs with
