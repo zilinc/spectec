@@ -2,6 +2,20 @@ open Xl
 open Il.Ast
 open Def 
 
+(* ===== TEMPORARY ONLY while i've switched to 5.1 ====== *)
+let rec take n xs =
+  match n, xs with
+  | n, _ when n <= 0 -> []
+  | _, [] -> []
+  | n, x :: xs -> x :: take (n - 1) xs
+
+let rec drop n xs =
+  match n, xs with
+  | n, xs when n <= 0 -> xs
+  | _, [] -> []
+  | n, _ :: xs -> drop (n - 1) xs
+(* ====================================================== *)
+
 let is_letter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
 let is_capital c = 'A' <= c && c <= 'Z'
 
@@ -83,14 +97,18 @@ let update_slice l i len l' =
   let n = List.length l in
   if i < 0 || len < 0 || i + len > n || List.length l' <> len then
     failwith "update_slice: invalid indices";
-  let prefix = List.take i l in
-  let suffix = List.drop (i + len) l in
+  (* temp only for 5.1 *)
+  (*let prefix = List.take i l in
+  let suffix = List.drop (i + len) l in*)
+  let prefix = take i l in
+  let suffix = drop (i + len) l in
   prefix @ l' @ suffix
 
 let slice l start len =
   if start < 0 || len < 0 || start + len > List.length l then
     failwith "slice: bad indices";
-  List.take len (List.drop start l)
+  (*List.take len (List.drop start l) -- temp only for 5.1 *) 
+  take len (drop start l)
 
 let lift e = 
   match e with 
@@ -111,7 +129,18 @@ let unzip3 (lst : ('a * 'b * 'c) list) : ('a list * 'b list * 'c list) =
   in
   aux [] [] [] lst
 
+let unzip4 (lst : ('a * 'b * 'c * 'd) list) : ('a list * 'b list * 'c list * 'd list) =
+  let rec aux acc1 acc2 acc3 acc4 = function
+    | [] -> (List.rev acc1, List.rev acc2, List.rev acc3, List.rev acc4)
+    | (w, x, y, z) :: rest -> aux (w :: acc1) (x :: acc2) (y :: acc3) (z :: acc4) rest
+  in
+  aux [] [] [] [] lst
+
 let unzip_opt1 opt_a = opt_a
+
+let unzip_opt3 opt = match opt with 
+  | Some (opt_a, opt_b, opt_c) -> (Some opt_a, Some opt_b, Some opt_c)
+  | None -> None, None, None
 
 let map1 = List.map
 
@@ -248,6 +277,15 @@ module TypeM = struct
   let is_typ_fam (name : string) : bool t =
     fun st -> (Map.mem name st.typ_fams, st, "", "")
 
+  let get_typ_fam (name : string) : Def.type_def option t =
+    fun st -> Map.find_opt name st.typ_fams, st, "", ""
+      (*(Printf.printf "finding type: %s\n" name; 
+      (match Map.find_opt name st.typ_fams with 
+      | Some td -> Printf.printf "found type family: %s\n" name
+      | None -> Printf.printf "type family not found: %s\n" name);
+      Map.find_opt name st.typ_fams, st, "", "")*)
+
+
   let concat_nonempty sep xs =
   xs |> List.filter (fun s -> s <> "") |> String.concat sep
 
@@ -289,10 +327,20 @@ module TypeM = struct
     let (lefts, rights) = List.split parts in 
     return (concat_nonempty sep lefts, concat_nonempty sep rights)
 
+  (* major refactor needed *)
   let concat_mapM2' seps f xs =
     let* parts = mapM f xs in
-    let (lefts, rights) = List.split parts in 
-    return (concat_nonempty (List.nth seps 0) lefts, concat_nonempty (List.nth seps 1) rights)
+    let (lefts, rights) = List.split parts in
+    let (lefts, rights) = List.flatten lefts, List.flatten rights in
+    let rec rmv_duplicates seen acc lst = 
+      match lst with 
+      | [] -> List.rev acc
+      | l :: ls -> 
+      if Set.mem l seen then rmv_duplicates seen acc ls else
+      rmv_duplicates (Set.add l seen) (l :: acc) ls
+    in
+    let lefts', rights' = rmv_duplicates Set.empty [] lefts, rmv_duplicates Set.empty [] rights in
+    return (concat_nonempty (List.nth seps 0) lefts', concat_nonempty (List.nth seps 1) rights')
 
   let fold_mapM3 seps seen f xs =
     foldM (fun x (left_acc, middle_acc, right_acc, seen) -> 
@@ -541,6 +589,7 @@ let rec find_fdef (flist : dl_def list) (name : string) : func_def =
     end
   | _ :: rest -> find_fdef rest name
 
+let ( let* ) = TypeM.bind
 
 (* temp -- for debugging only *)
 (*open Il.Ast
@@ -611,172 +660,4 @@ let rec print_all_occurrences dl_defs vars =
     print_all_occurrences defs vars;
     print_all_occurrences rest vars
   | _ :: rest ->
-    print_all_occurrences rest vars
-
-(* a very bad first attempt at replacing all types with their instantiated counterparts, as trying a minimal thing before trying Diego's passes *)
-let rec is_eq_typ (t1 : typ) (t2 : typ) =
-  match (t1.it, t2.it) with
-  | VarT (id1, a1), VarT (id2, a2) ->
-      id1.it = id2.it
-      && List.length a1 = List.length a2 (* TODO: need to check each arg *)
-  | BoolT, BoolT -> true
-  | NumT _, NumT _ -> true (* TODO: implement *)
-  | TextT, TextT -> true
-  | TupT ets1, TupT ets2 ->
-      List.length ets1 = List.length ets2
-      && List.for_all2
-           (fun (_, t1) (_, t2) ->
-             (*check_eq_exp e1 e2 &&*) is_eq_typ t1 t2)
-           ets1 ets2
-  | IterT (t11, iter1), IterT (t21, iter2) ->
-      (*let b1 = check_eq_typs t11 t21 in
-    let b2 = iter1 = iter2 in 
-    Printf.printf "b1: %b and b2: %b\n" b1 b2;*)
-      is_eq_typ t11 t21 && iter1 = iter2
-  | _ -> false
-
-let is_eq_arg (a1 : arg) (a2 : arg) = 
-  match a1.it, a2.it with
-  | TypA t1, TypA t2 -> is_eq_typ t1 t2
-  | _ -> false (* for now idk how it works if a type is instantiated with an expression *)
-
-let rec get_typedef name dl_defs =
-  match dl_defs with
-  | [] -> None
-  | (TypeDef td)::rest -> let (tid, _, _) = td.it in
-    if sanitize_name tid.it = name then Some td else get_typedef name rest
-  | (RecDef defs)::rest ->
-    match get_typedef name defs with
-    | Some td -> Some td
-    | None ->  get_typedef name rest
-
-let rec replace_family_es vars dl_defs (e : exp) =
-  let rewrite = replace_family_es vars dl_defs in
-  let e' = match e.it with
-  | VarE _ | BoolE _ | NumE _ | TextE _ -> e
-  | UnE (op, t, e1) ->
-    { e with it = UnE (op, t, rewrite e1) }
-  | BinE (op, t, e1, e2) ->
-    { e with it = BinE (op, t, rewrite e1, rewrite e2) }
-  | CmpE (op, t, e1, e2) ->
-    { e with it = CmpE (op, t, rewrite e1, rewrite e2) }
-  | TupE es ->
-    { e with it = TupE (List.map rewrite es) }
-  | ProjE (e1, i) ->
-    { e with it = ProjE (rewrite e1, i) }
-  | CaseE (op, e1) ->
-    { e with it = CaseE (op, rewrite e1) }
-  | UncaseE (e1, op) ->
-    { e with it = UncaseE (rewrite e1, op) }
-  | OptE eo ->
-    { e with it = OptE (Option.map rewrite eo) }
-  | TheE e1 ->
-    { e with it = TheE (rewrite e1) }
-  | StrE fields ->
-    let rewrite_field (a, e1) = (a, rewrite e1) in
-    { e with it = StrE (List.map rewrite_field fields) }
-  | DotE (e1, a) ->
-    { e with it = DotE (rewrite e1, a) }
-  | CompE (e1, e2) ->
-    { e with it = CompE (rewrite e1, rewrite e2) }
-  | ListE es ->
-    { e with it = ListE (List.map rewrite es) }
-  | LiftE e1 ->
-    { e with it = LiftE (rewrite e1) }
-  | MemE (e1, e2) ->
-    { e with it = MemE (rewrite e1, rewrite e2) }
-  | LenE e1 ->
-    { e with it = LenE (rewrite e1) }
-  | CatE (e1, e2) ->
-    { e with it = CatE (rewrite e1, rewrite e2) }
-  | IdxE (e1, e2) ->
-    { e with it = IdxE (rewrite e1, rewrite e2) }
-  | SliceE (e1, e2, e3) ->
-    { e with it = SliceE (rewrite e1, rewrite e2, rewrite e3) }
-  | UpdE (e1, p, e2) ->
-    { e with it = UpdE (rewrite e1, p, rewrite e2) }
-  | ExtE (e1, p, e2) ->
-    { e with it = ExtE (rewrite e1, p, rewrite e2) }
-  | CallE (id, args) ->
-    let rewrite_arg (a : arg) = match a.it with 
-      | ExpA arg_e -> { a with it = ExpA (rewrite arg_e) }
-      | _ -> a
-    in
-    { e with it = CallE (id, List.map rewrite_arg args) }
-  | IterE (e1, it) ->
-    { e with it = IterE (rewrite e1, it) }
-  | CvtE (e1, t1, t2) ->
-    { e with it = CvtE (rewrite e1, t1, t2) }
-  | SubE (e1, t1, t2) ->
-    { e with it = SubE (rewrite e1, t1, t2) }
-  in
-  match e'.note.it with
-  | VarT (id, args)
-    when Set.mem (sanitize_name id.it) vars ->
-      (* this type has multiple instances like: typename(<typeargs>) = AliasT (<othertype>). 
-         we will go through its instances to check what type <args> gives us, and explicitly cast typename into <othertype> *)
-      begin
-        match get_typedef (sanitize_name id.it) dl_defs with
-        | None -> e' (* error here *)
-        | Some def ->
-            let (_, _, insts) = def.it in
-            try
-              let { it = InstD (_, _, dt); _} = List.find (fun { it = InstD _, args', _; _} -> is_eq_args args args') insts in
-              match dt.it with 
-              | AliasT t ->
-                { e' with it = SubE (e', e'.note, t) }
-              | _ -> e' (* I don't think this should happen *)
-            with Not_found -> e' (* the arg is not a concrete type (it could be a variable, for example - in which case we do not cast at all )*)
-      end
-  | _ -> e'
-
-let replace_param (vars : Set.t) (dl_defs : dl_def list) (p : param) =
-  match p.it with
-  | ExpP (id, typP) -> 
-    let { it = VarT(tid, args); _ } = typP in 
-    if Set.mem (sanitize_name tid.it) vars then begin
-      match get_typedef (sanitize_name tid.it) dl_defs with
-      | None -> p (* error here *)
-      | Some def ->
-        let (_, _, insts) = def.it in
-        try
-          let { it = InstD (_, _, dt); _} = List.find (fun { it = InstD _, args', _; _} -> is_eq_args args args') insts in
-          match dt.it with 
-          | AliasT t ->
-            { p with it = ExpP (id, t) }
-          | _ -> p (* I don't think this should happen *)
-        with Not_found -> p (* the arg is not a concrete type (it could be a variable, for example - in which case we do not cast at all )*)
-    end else p
-  | _ -> p
-
-let replace_arg (vars : Set.t) (dl_defs : dl_def list) (a : arg) =
-  match a.it with
-  | ExpA e -> { a with it = ExpA (replace_family_es vars dl_defs e) }
-  | _ -> a
-
-let rec replace_prem (vars : Set.t) (dl_defs : dl_def list) (p : prem) =
-  match p.it with
-  | IfPr e -> { p with it = IfPr (replace_family_es vars dl_defs e) }
-  | LetPr (e1, e2, b) -> { p with it = LetPr ((replace_family_es vars dl_defs) e1, (replace_family_es vars dl_defs e2), b) }
-  | IterPr (prems, iter) -> { p with it = IterPr (List.map (replace_prem vars dl_defs) prems, iter) }
-  | _ -> p
-
-let replace_cls (vars : Set.t) (dl_defs : dl_def list) (cl : func_clause) =
-  let { it = DefD (bs_, args, retexp, prems); _ } = cl in
-  { cl with it = DefD (
-    bs_,
-    List.map (replace_arg vars dl_defs) args,
-    replace_family_es vars dl_defs retexp,
-    List.map (replace_prem vars dl_defs) prems) }
-
-let rec rmv_families vars (dl_defs : dl_def list) = 
-  let rec aux acc dl_defs' =
-    match dl_defs' with
-    | [] -> List.rev acc
-    | (FuncDef fd)::rest ->
-    let { it = fid, params, t, fcl_list, partial; _ } : func_def = fd in
-    aux ((FuncDef { fd with it = fid, List.map (replace_param vars dl_defs) params, t, List.map (repalce_cls vars dl_defs) fcl_list, partial}) :: acc) rest
-    | (RecDef defs)::rest -> aux ((RecDef (List.map (rmv_families vars) defs))::acc) rest
-    | def::rest -> aux (def::acc) rest
-  in 
-  aux [] dl_defs*)
+    print_all_occurrences rest vars*)

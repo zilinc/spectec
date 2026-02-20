@@ -92,9 +92,12 @@ let hardcode_step (funcdefs : dl_def list) : dl_def list =
   Printf.printf "taking first %d elems of list\n" (insert - List.length recdefs);
   Printf.printf "taking last %d elems of list\n" (List.length funcdefs - insert);
   Printf.printf "inserted recdef at index: %d\n" insert;*)
-  List.take (insert - List.length recdefs) rest
+  (*List.take (insert - List.length recdefs) rest
   @ [ RecDef recdefs ]
-  @ List.drop (insert - List.length recdefs) rest
+  @ List.drop (insert - List.length recdefs) rest - comment out temporarily for 5.1 *)
+  take (insert - List.length recdefs) rest
+  @ [ RecDef recdefs ]
+  @ drop (insert - List.length recdefs) rest 
 
 (* a typefamily is a type of form `type x = Alias y | Alias z | ... `
    I assume that all instances of a type have the same `deftyp` i.e. they are all aliases, variants or records. For now:
@@ -181,6 +184,243 @@ let rmv_duplicate_cons (typedef : type_def) =
       }
   (* if this is not a VariantType, we don't need to do anything *)
   | _ -> typedef
+
+(* a very bad first attempt at replacing all types with their instantiated counterparts, as trying a minimal thing before trying Diego's passes *)
+let rec is_eq_typ (t1 : typ) (t2 : typ) =
+  match (t1.it, t2.it) with
+  | VarT (id1, a1), VarT (id2, a2) ->
+      id1.it = id2.it
+      && List.length a1 = List.length a2 (* TODO: need to check each arg *)
+  | BoolT, BoolT -> true
+  | NumT _, NumT _ -> true (* TODO: implement *)
+  | TextT, TextT -> true
+  | TupT ets1, TupT ets2 ->
+      List.length ets1 = List.length ets2
+      && List.for_all2
+           (fun (_, t1) (_, t2) ->
+             (*check_eq_exp e1 e2 &&*) is_eq_typ t1 t2)
+           ets1 ets2
+  | IterT (t11, iter1), IterT (t21, iter2) ->
+      (*let b1 = check_eq_typs t11 t21 in
+    let b2 = iter1 = iter2 in 
+    Printf.printf "b1: %b and b2: %b\n" b1 b2;*)
+      is_eq_typ t11 t21 && iter1 = iter2
+  | _ -> false
+
+let is_eq_arg (a1 : arg) (a2 : arg) = 
+  match a1.it, a2.it with
+  | TypA t1, TypA t2 
+  | ExpA {it = SubE (_, t1, _); _}, ExpA {it = SubE (_, t2, _); _} -> is_eq_typ t1 t2
+  | _ -> false (* for now idk how it works if a type is instantiated with an expression *)
+
+let is_eq_args (args1 : arg list) (args2 : arg list) =
+  List.length args1 = List.length args2
+  && List.for_all2 is_eq_arg args1 args2
+
+let rec replace_e (e : exp) =
+  let* e' = match e.it with
+  | VarE _ | BoolE _ | NumE _ | TextE _ -> return e
+  | UnE (op, t, e1) ->
+    let* e1' = replace_e e1 in
+    return { e with it = UnE (op, t, e1') }
+  | BinE (op, t, e1, e2) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { e with it = BinE (op, t, e1', e2') }
+  | CmpE (op, t, e1, e2) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { e with it = CmpE (op, t, e1', e2') }
+  | TupE es ->
+    let* es' = mapM replace_e es in
+    return { e with it = TupE es' }
+  | ProjE (e1, i) ->
+    let* e1' = replace_e e1 in
+    return { e with it = ProjE (e1', i) }
+  | CaseE (op, e1) ->
+    let* e1' = replace_e e1 in
+    return { e with it = CaseE (op, e1') }
+  | UncaseE (e1, op) ->
+    let* e1' = replace_e e1 in
+    return { e with it = UncaseE (e1', op) }
+  | OptE eo ->
+    let* eo' = match eo with
+    | Some e -> let* e' = replace_e e in return (Some e')
+    | None -> return None
+    in
+    return { e with it = OptE eo' }
+  | TheE e1 ->
+    let* e1' = replace_e e1 in
+    return { e with it = TheE e1' }
+  | StrE fields ->
+    let* fields' = mapM (fun (a, e) -> let* e' = replace_e e in return (a, e')) fields in
+    return { e with it = StrE fields' }
+  | DotE (e1, a) ->
+    let* e1' = replace_e e1 in
+    return { e with it = DotE (e1', a) }
+  | CompE (e1, e2) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { e with it = CompE (e1', e2') }
+  | ListE es ->
+    let* es' = mapM replace_e es in
+    return { e with it = ListE es' }
+  | LiftE e1 ->
+    let* e1' = replace_e e1 in
+    return { e with it = LiftE e1' }
+  | MemE (e1, e2) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { e with it = MemE (e1', e2') }
+  | LenE e1 ->
+    let* e1' = replace_e e1 in
+    return { e with it = LenE e1' }
+  | CatE (e1, e2) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { e with it = CatE (e1', e2') }
+  | IdxE (e1, e2) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { e with it = IdxE (e1', e2') }
+  | SliceE (e1, e2, e3) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    let* e3' = replace_e e3 in
+    return { e with it = SliceE (e1', e2', e3') }
+  | UpdE (e1, p, e2) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { e with it = UpdE (e1', p, e2') }
+  | ExtE (e1, p, e2) ->
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { e with it = ExtE (e1', p, e2') }
+  | CallE (id, args) ->
+    let* args' = mapM replace_arg args in
+    return { e with it = CallE (id, args') }
+  | IterE (e1, it) ->
+    let* e1' = replace_e e1 in
+    return { e with it = IterE (e1', it) }
+  | CvtE (e1, t1, t2) ->
+    let* e1' = replace_e e1 in
+    return { e with it = CvtE (e1', t1, t2) }
+  | SubE (e1, t1, t2) ->
+    let* e1' = replace_e e1 in
+    return { e with it = SubE (e1', t1, t2) }
+  in
+  match e'.note.it with
+  | VarT (id, args) ->
+    let* td = get_typ_fam (sanitize_name id.it) in begin
+    match td with
+    | Some td ->
+      (* this type has multiple instances like: typename(<typeargs>) = AliasT (<othertype>). 
+         we will go through its instances to check what type <args> gives us, and explicitly cast typename into <othertype> *)
+      let (tid, _, insts) = td.it in
+      Printf.printf "type fam found: %s\n" tid.it; 
+      (try
+        let { it = InstD (_, _, dt); _} = List.find (fun { it = InstD (_, args', _); _} -> (List.iter (fun a -> Printf.printf "arg: %s\n" (Il.Print.string_of_arg a)) args; List.iter (fun a -> Printf.printf "arg': %s\n" (Il.Print.string_of_arg a)) args'); is_eq_args args args') insts in
+        match dt.it with 
+          | AliasT t -> (
+            let new_e = { e' with it = SubE (e', t, e'.note) } in
+            Printf.printf "exp replaced. old: %s, new: %s\n" (Il.Print.string_of_exp e') (Il.Print.string_of_exp new_e);
+            return { e' with it = SubE ({e' with note = t}, t, e'.note) })
+          | _ -> return e' (* I don't think this should happen *)
+      with 
+        | Not_found -> return e') (* the arg is not a concrete type (it could be a variable, for example - in which case we do not cast at all )*)
+    | None -> return e'
+    end
+  | _ -> return e'
+
+and replace_arg (a : arg) =
+  match a.it with
+  | ExpA e -> 
+    let* e' = replace_e e in
+    return { a with it = ExpA e' }
+  | _ -> return a
+
+let rec replace_typ (t : typ) =
+  match t.it with
+  | VarT (id, args) -> 
+    (*Printf.printf "in varT %s\n" (sanitize_name id.it);*)
+    let* typ_def = get_typ_fam (sanitize_name id.it) in
+    (*Printf.printf "after getting type fam\n";*)
+    begin match typ_def with 
+    | Some td ->
+      Printf.printf "Found type family: %s\n%!" (sanitize_name id.it);
+      let _, _, insts = td.it in
+      (try
+        let { it = InstD (_, _, dt); _} = List.find (fun { it = InstD (_, args', _); _} -> (List.iter (fun a -> Printf.printf "arg: %s\n" (Il.Print.string_of_arg a)) args; List.iter (fun a -> Printf.printf "arg': %s\n" (Il.Print.string_of_arg a)) args'); is_eq_args args args') insts in begin
+        match dt.it with 
+        | AliasT t' -> Printf.printf "type replaced"; return t'
+        | _ -> return t end (* I don't think this should happen *)
+      with Not_found -> return t) (* the arg is not a concrete type (it could be a variable, for example, in which case we do not cast at all) *)
+    | _ -> (*Printf.printf "not a type family: %s\n" (sanitize_name id.it);*) return t
+    end
+  | TupT ts -> 
+    let* ts' = mapM (fun (e, t) -> 
+      let* t' = replace_typ t in
+      return (e, t')) ts 
+    in
+    return { t with it = TupT ts' }
+  | IterT (itert, iter) -> 
+    let* itert' = replace_typ itert in
+    return { t with it = IterT (itert', iter) }
+  | _ -> (*(Printf.printf "nothing to replace for type: %s \n" (Il.Print.string_of_typ t)); *)return t
+
+
+let replace_param (p : param) =
+  match p.it with
+  | ExpP (id, typP) -> 
+    let* typP' = replace_typ typP in
+    return { p with it = ExpP (id, typP') }
+  | _ -> return p (* in a func_def, we ignore all other params *)
+
+let rec replace_prem (p : prem) =
+  match p.it with
+  | IfPr e -> 
+    let* e' = replace_e e in
+    return { p with it = IfPr e' }
+  | LetPr (e1, e2, b) -> 
+    let* e1' = replace_e e1 in
+    let* e2' = replace_e e2 in
+    return { p with it = LetPr (e1', e2', b) }
+  | IterPr (prems, iter) -> 
+    let* prems' = mapM replace_prem prems in
+    return { p with it = IterPr (prems', iter) }
+  | _ -> return p
+
+let replace_cls (cl : func_clause) =
+  let { it = DefD (bs_, args, retexp, prems); _ } = cl in
+  (*Printf.printf "replacing func clause args\n";*)
+  let* args' = mapM replace_arg args in
+  Printf.printf "replacing ret exp with type: %s\n" (Il.Print.string_of_typ retexp.note);
+  let* retexp' = replace_e retexp in
+  let* prems' = mapM replace_prem prems in
+  return { cl with it = DefD (
+    bs_,
+    args',
+    retexp',
+    prems') } 
+
+let rec rmv_families (dl_defs : dl_def list) = 
+  let rec aux acc dl_defs' =
+    match dl_defs' with
+    | [] -> return (List.rev acc)
+    | (FuncDef fd)::rest ->
+      let { it = (fid, params, t, fcl_list, partial); _ } = fd in
+      Printf.printf "in func: %s\n" fid.it; 
+      let* t' = replace_typ t in
+      Printf.printf "replacing clauses:\n"; 
+      let* fcl_list' = mapM replace_cls fcl_list in
+      let* params' = mapM replace_param params in
+      aux ((FuncDef { fd with it = (fid, params', t', fcl_list', partial)}) :: acc) rest
+    | (RecDef defs)::rest -> 
+      let* defs' = rmv_families defs in
+      aux ((RecDef defs')::acc) rest
+    | def::rest -> aux (def::acc) rest
+  in 
+  aux [] dl_defs
 
 (* as of now, we do not error if the type is NOT a tuple as the IL elaboration converts a Tup [t] into t. depending on how the parser is defined and used this can cause issues later *)
 let rec get_tupsize (t : typ) : int option t =
@@ -304,11 +544,26 @@ let get_common_consts tcs1 tcs2 =
 
 let ocaml_of_numtyp = Num.string_of_typ
 
+(* in a multiple instance type, all aliases eventually resolve to variant types, and each instance can correspond to _multiple_ variant types *)
+(* whole thing needs a refactor any way, but for now i will change the "name" to the original type and NOT the aliased type. so we dont really need to keep track of name anyway *)
+let rec get_all_tcs name { it = InstD (_, _, dt); _ } =
+  match dt.it with
+  | AliasT { it = VarT (tid, _); _ } -> 
+      let* Some t_def = get_typedef (sanitize_name tid.it) in
+      let {it = id, _, insts; _} = t_def in
+      foldM (fun acc inst ->
+        (*let* new_tcs = get_all_tcs (sanitize_name id.it) inst in*)
+        let* new_tcs = get_all_tcs name inst in
+        return (new_tcs @ acc))
+        [] insts
+  | VariantT tcs -> return [(tcs, name)]
+  | _ -> error dt.at "Multi-instance type must be an AliasT"
+
 (* may have to change to option type *)
-let generate_type_arms t1name t2name td1 td2 =
+(*let generate_type_arms t1name t2name td1 td2 =*)
   (* change this to just use pattern matching *)
   (*Printf.printf "Generating type arms for %s -> %s\n" t1name t2name;*)
-  let get_deftyp td =
+  (*let get_deftyp td =
     match td with
     | _, _, [ { it = InstD (_, _, dt); _ } ] -> Some dt
     | _ -> None
@@ -341,7 +596,43 @@ let generate_type_arms t1name t2name td1 td2 =
       | _ -> "TODO: non-variant type conversion not implemented yet"
     in
     arms
-  else "TODO: multiple insts in type conversion not implemented yet"
+  else "TODO: multiple insts in type conversion not implemented yet"*)
+let generate_type_arms t1name t2name (_, _, insts1) (_, _, insts2) =
+  let* resolved1 = mapM (get_all_tcs t1name) insts1 in
+  let* resolved2 = mapM (get_all_tcs t2name) insts2 in
+
+  let resolved1 = List.flatten resolved1 in
+  let resolved2 = List.flatten resolved2 in
+
+  let arms =
+    List.concat_map
+      (fun (tcs1, name1) ->
+        List.concat_map
+          (fun (tcs2, name2) ->
+            let common_consts = get_common_consts tcs1 tcs2 in
+            List.map
+              (fun (consname, typargs) ->
+                let cons1 =
+                  sanitize_name ~typecons:true ~typename:false consname ^ "_" ^ name1
+                in
+                let cons2 =
+                  sanitize_name ~typecons:true ~typename:false consname ^ "_" ^ name2
+                in
+                let _, argstr, _ = get_cons_args typargs in
+                Printf.sprintf "  | %s -> %s"
+                  (append_sep cons1 argstr " ")
+                  (append_sep cons2 argstr " "))
+              common_consts)
+          resolved2)
+      resolved1
+  in
+
+  return (String.concat "\n" arms)
+
+
+
+
+  
 
 (* generates a function to project element i out of an n-tuple *)
 let generate_proj n i : unit t =
@@ -382,9 +673,11 @@ let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
                 "let %s_of_%s (arg : %s) : %s =\n  match arg with\n" rhs lhs lhs
                 rhs
             in
-            let arms = generate_type_arms lhs rhs _lhs_def.it _rhs_def.it in
-            let failcase = "\n  | _ -> raise SubtypingFailed\n" in
-            tell (func ^ arms ^ failcase)
+            (try 
+              (let* arms = generate_type_arms lhs rhs _lhs_def.it _rhs_def.it in
+              let failcase = "\n  | _ -> raise SubtypingFailed\n" in
+              tell (func ^ arms ^ failcase))
+            with _ -> Printf.printf "Warning: cannot generate conversion between %s and %s" lhs rhs; return ())
         | [ None; _ ] ->
             error t1.at
               (Printf.sprintf
@@ -555,6 +848,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
     | SubE (e1, typ1, typ2) ->
         (* if an argument is of the form e : t1 <: t2, 
        the function expects an arg of type t2 but casts it to a type t1 in the body. so we have to add "let e = t1_of_t2 arg" to make it typecheck *)
+        Printf.printf "SubE in arg: %s\n" (Il.Print.string_of_exp e);
         let* freshvarname = get_freshvar () in
         let* () = generate_type_conv typ2 typ1 in
         let* e1str =
@@ -566,8 +860,8 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
               error e1.at
                 "Invalid supertype/subtype argument: expected a variable."
         in
-        let* typ1str = ocaml_of_typ typ1 in
-        let* typ2str = ocaml_of_typ typ2 in
+        let* typ1str = ocaml_of_typ ~consannot:true typ1 in
+        let* typ2str = ocaml_of_typ ~consannot:true typ2 in
         let* () =
           add_typecast
             ("  let " ^ e1str ^ " = " ^ typ1str ^ "_of_" ^ typ2str ^ " "
@@ -773,8 +1067,8 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         in
         let* e1str = ocaml_of_exp e1 in
         (*(if flipsub then Printf.printf "subtyping direction is flipped for term: %s\n" e1str);*)
-        let* typ1str = ocaml_of_typ typ1 in
-        let* typ2str = ocaml_of_typ typ2 in
+        let* typ1str = ocaml_of_typ ~consannot:true typ1 in
+        let* typ2str = ocaml_of_typ ~consannot:true typ2 in
         if flipsub then
           return ("(" ^ typ1str ^ "_of_" ^ typ2str ^ " " ^ e1str ^ ")")
         else return ("(" ^ typ2str ^ "_of_" ^ typ1str ^ " " ^ e1str ^ ")")
@@ -1181,14 +1475,18 @@ and resolve_variant (typname : typ) : typ option t =
   match typname.it with
   | VarT (tid, _) -> (
       (*Printf.printf "Looking for typedef: %s\n" tid.it;*)
-      let* typedef = lookup (sanitize_name tid.it) in
+      (* temp - multi instance types are annotated with their own type name even if they are aliased *)
+      let tid = (sanitize_name tid.it) in
+      let* istypfam = is_typ_fam tid in
+      if istypfam then return (Some typname) else begin
+      let* typedef = lookup tid in
       match typedef with
       | Some (_, dt) -> (
           match dt.it with
           | AliasT t' -> resolve_variant t'
           | StructT _ -> return None
           | VariantT _ -> return (Some typname))
-      | None -> (*Printf.printf "Type %s not found\n" tid.it;*) return None)
+      | None -> (*Printf.printf "Type %s not found\n" tid.it;*) return None end)
   | TupT et when List.length et = 1 -> return (Some typname)
   | BoolT -> (*Printf.printf "type is: booltype\n";*) return None
   | NumT _ -> (*Printf.printf "type is: numt\n";*) return None
@@ -1682,6 +1980,7 @@ let build_dispatch step =
 let ocaml_of_func_def (fdef : func_def) : string list t =
   let id, params, rettyp, clauses, _ = fdef.it in
   let name = sanitize_name id.it in
+  Printf.printf "translating func: %s\n" id.it; 
   let* () = add_funcdef name in
   let params' = List.filter rmv_nonexp params in
   let num_params = List.length params' in
@@ -1818,35 +2117,23 @@ let ocaml_of_deftyp dt name =
       let* () = generate_uncase tcs name in
       concat_mapM "\n  | " (ocaml_of_typcase name) tcs
 
-(* in a multiple instance type, all aliases eventually resolve to variant types, and each instance can correspond to _multiple_ variant types *)
-let rec get_all_tcs name { it = InstD (_, _, dt); _ } =
-  match dt.it with
-  | AliasT { it = VarT (tid, _); _ } -> 
-      let* Some t_def = get_typedef (sanitize_name tid.it) in
-      let {it = id, _, insts; _} = t_def in
-      foldM (fun acc inst ->
-        let* new_tcs = get_all_tcs (sanitize_name id.it) inst in
-        return (new_tcs @ acc))
-        [] insts
-  | VariantT tcs -> return [(tcs, name)]
-  | _ -> error dt.at "Multi-instance type must be an AliasT"
-
+(* this needs major refactoring *)
 let ocaml_of_inst name inst =
   (* todo: deal with type args of multi-instance types *)
   let { it = InstD (_, as_, dt); _ } = inst in
   let* all_tcs = get_all_tcs name inst in
   let* dt_str = 
-  concat_mapM "\n  | " (fun (tcs, name) -> 
-    concat_mapM "\n  | " (ocaml_of_typcase name) tcs) all_tcs in
+  mapM (fun (tcs, name) -> 
+    mapM (ocaml_of_typcase name) tcs) all_tcs in
   let* match_cases =
-    concat_mapM "\n  " (fun (tcs, name) ->
-       concat_mapM "\n  " (gen_translation_cases name) tcs) all_tcs
+    mapM (fun (tcs, name) ->
+      mapM (gen_translation_cases name) tcs) all_tcs
   in
   (* if we are at the top-level variant type, also generate the uncasing function(s) for its constructors *)
   let* () = match dt.it with
   | VariantT tcs -> generate_uncase tcs name
   | _ -> return () in
-  return (dt_str, match_cases)
+  return (List.flatten dt_str, List.flatten match_cases)
   
   
   (*match dt.it with
@@ -1908,6 +2195,8 @@ let ocaml_of_typedef (typedef : type_def) : (string * string) t =
     | _ -> error td.at "Non-polymorphic type must have exactly one instance"
   else
     (* we ignore type args for now :( *)
+    (* for now, remove duplicated constructors based on string representation
+    later, refactor ocaml_of_inst *)
     let* dt_str, cases =
       concat_mapM2' [ "\n  | "; "\n" ] (ocaml_of_inst name) insts
     in
@@ -2069,8 +2358,10 @@ let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
   let* typ_fams = get_typ_fams () in
   Printf.printf "Type families found: %s\n"
     (String.concat ", " (List.map (fun (tid, _) -> tid) typ_fams));
+  let* processed_defs' = rmv_families processed_defs in
+  (*Printf.printf "length after resolving typ fams: %d...\n"(List.length processed_defs');*)
   let* def_strs : (string * string) list =
-    mapM ocaml_of_dl_def processed_defs
+    mapM ocaml_of_dl_def processed_defs'
   in
   let func_defs, type_defs = List.split def_strs in
   let func_str = concat_nonempty "\n" func_defs in
