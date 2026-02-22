@@ -177,6 +177,7 @@ struct
   | None  , Some b -> Some b
   let mconcat oxs = List.fold_left mplus None oxs
   let mconcat_map f xs = List.map f xs |> mconcat
+  let cat_opts oxs = List.filter_map Stdlib.Fun.id oxs
   let cat_opts_opt oxs =
     let f acc ox = match acc, ox with
     | None, None -> None

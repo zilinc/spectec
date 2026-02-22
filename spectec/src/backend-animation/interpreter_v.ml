@@ -26,12 +26,12 @@ let verbose : string list ref =
       (* "table"; *)
       (* "assertion"; *)
       (* "eval"; *)          (* Evaluation of expressions. *)
-      (* "assign"; *)        (* Matching, but for terms only. *)
       (* "match";  *)        (* Matching of other types. *)
       (* "match_info";  *)
       (* "steps";       *)
       (* "call"; *)
       (* "iter"; *)          (* Low-level debugging. *)
+      (* "assign"; *)
       (* "log"; *)
       ]
 
@@ -128,20 +128,31 @@ let string_of_args = function
 
 module VContext = struct
   module Map = Map.Make(String)
-  type t = value Map.t
+  type t = { vars: value Map.t; defs: id Map.t }
 
-  let empty : t = Map.empty
+  let empty : t = { vars = Map.empty; defs = Map.empty }
 
-  let add_varid ctx (s: id) (v: value) = Map.add s.it v ctx
-  let find_varid ctx (s : id) : value = Map.find s.it ctx
-  let dom_varid ctx : Set.t = ctx |> Map.bindings |> List.map fst |> Set.of_list
-  let merge ctx1 ctx2 = Map.merge (fun k ov1 ov2 ->
+  let add_varid ctx (x: id) (v: value) = { ctx with vars = Map.add x.it v ctx.vars }
+  let add_defid ctx (x: id) (v: id)    = { ctx with defs = Map.add x.it v ctx.defs }
+
+  let find_varid ctx (x : id) : value = Map.find x.it ctx.vars
+  let find_defid ctx (x : id) : id    = Map.find x.it ctx.defs
+
+  let find_opt_varid ctx (x : id) : value option = Map.find_opt x.it ctx.vars
+  let find_opt_defid ctx (x : id) : id    option = Map.find_opt x.it ctx.defs
+
+  let dom_varid ctx : Set.t = ctx.vars |> Map.bindings |> List.map fst |> Set.of_list
+
+  let merge_map m1 m2 = Map.merge (fun k ov1 ov2 ->
     match ov1, ov2 with
     | None   , None    -> None
     | Some v1, None    -> Some v1
     | None   , Some v2 -> Some v2
     | Some v1, Some v2 -> assert false
-  ) ctx1 ctx2
+  ) m1 m2
+  let merge ctx1 ctx2 = { vars = merge_map ctx1.vars ctx2.vars
+                        ; defs = merge_map ctx1.defs ctx2.defs
+                        }
 end
 
 
@@ -151,6 +162,7 @@ let il_env : Il.Env.t ref = ref Il.Env.empty
 
 (** [lhs] is the pattern, and [rhs] is the expression. *)
 let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
+  info "assign" no (lazy ("* assign: " ^ Lib.String.shorten (string_of_exp lhs) ^ " ↦ " ^ Lib.String.shorten (string_of_value rhs)));
   match lhs.it, rhs with
   | VarE name, _ ->
     VContext.add_varid ctx name rhs |> return
@@ -212,7 +224,7 @@ and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
 and eval_exp ctx exp : value OptMonad.m =
   let open Xl in
   match exp.it with
-  | VarE v -> (match VContext.Map.find_opt v.it ctx with
+  | VarE v -> (match VContext.find_opt_varid ctx v with
               | Some v' -> return v'
               | None -> error exp.at (sprintf "Variable `%s` is not in the value context.\n  ▹ vctx: %s" v.it
                                        (string_of_varset (VContext.dom_varid ctx)))
@@ -341,8 +353,11 @@ and eval_exp ctx exp : value OptMonad.m =
     )
   | TupE es -> let* vs = mapM (eval_exp ctx) es in TupV vs |> return
   | CallE (fid, args) ->
+    let fid' = (match VContext.find_opt_defid ctx fid with
+               | None -> fid | Some fid' -> fid') in
     let* args' = mapM (eval_arg ctx) args in
-    call_func fid.it args'
+    call_func fid'.it args'
+
   | IterE (e1, ((_, xes) as iterexp)) ->
     let* (iter', xvs) as iterval = eval_iterexp ctx iterexp in
     let ids, vs = List.split xvs in
@@ -581,37 +596,28 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       let il_env0 = !il_env in
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
-        match e.it with
-        | VarE x_star ->
-          let t_star = Il.Env.find_var !il_env x_star in
-          let t = Il_util.as_iter_typ !il_env t_star in
-          il_env := Il.Env.(bind_var !il_env x t);
-        | _ -> assert false
+        let t_star = e.note in
+        let t = Il_util.as_iter_typ !il_env t_star in
+        il_env := Il.Env.(bind_var !il_env x t);
       ) (in_binds @ out_binds);
       let* ctx' = if Z.to_int n' = 0 then (
         (* When n' = 0 the outflowing variables are assigned to `eps`. *)
-        List.fold_left (fun ctx (x, e) ->
-          match e.it with
-          | VarE x_star ->
-            let vx_star = ListV (ref [||]) in
-            VContext.add_varid ctx x_star vx_star
-          | _ -> assert false
-        ) ctx out_binds |> return
+        foldlM (fun ctx (x, e) ->
+          let vx_star = ListV (ref [||]) in
+          assign ctx e vx_star
+        ) ctx out_binds
       ) else (
         (* Run the loop *)
         let* ctx_out = foldlM (fun ctx_out idx ->
-          let lctxr = ref ctx in
-          lctxr := VContext.add_varid !lctxr i (vl_of_nat idx);
+          let ctx = VContext.add_varid ctx i (vl_of_nat idx) in
           (* In-flow *)
-          let* () = iterM (fun (x, e) ->
+          let* ctx = foldlM (fun ctx (x, e) ->
             let t = Il.Env.find_var !il_env x in
-            let* e' = eval_exp !lctxr (IdxE (e, mk_nat idx) $$ e.at % t) in
-            lctxr := VContext.add_varid !lctxr x e';
-            return ()
-          ) in_binds
+            let* e' = eval_exp ctx (IdxE (e, mk_nat idx) $$ e.at % t) in
+            VContext.add_varid ctx x e' |> return
+          ) ctx in_binds
           in
-          let* lctx = eval_prems !lctxr prems in
-          lctxr := lctx;
+          let* ctx = eval_prems ctx prems in
           (* Out-flow: Only collect them in [ctx_out], but don't add them to the local
              value context, otherwise it will interfere with later iterations, where
              it will see partially assigned outer variables and wrongly treat them as knowns.
@@ -619,8 +625,8 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           List.fold_left (fun ctx_out (x, e) ->
             match e.it with
             | VarE x_star ->
-              let vx = VContext.find_varid !lctxr x in
-              let vx_star' = (match VContext.Map.find_opt x_star.it ctx_out with
+              let vx = VContext.find_varid ctx x in
+              let vx_star' = (match VContext.find_opt_varid ctx_out x_star with
               | Some vx_star -> let vs = as_list_value vx_star in
                                 listV (Array.append !vs ([|vx|]))
               | None -> listV [|vx|]
@@ -639,12 +645,9 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       let il_env0 = !il_env in
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
-        match e.it with
-        | VarE x_question ->
-          let t_question = Il.Env.find_var !il_env x_question in
-          let t = Il_util.as_opt_typ !il_env t_question in
-          il_env := Il.Env.(bind_var !il_env x t);
-        | _ -> assert false
+        let t_question = e.note in
+        let t = Il_util.as_opt_typ !il_env t_question in
+        il_env := Il.Env.(bind_var !il_env x t);
       ) (in_binds @ out_binds);
       (* Need to figure out whether it runs or not. *)
       let* in_vals = mapM (fun (x, e) -> let* v = eval_exp ctx e in return (x, v)) in_binds in
@@ -663,35 +666,20 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       ) in_vals;
       let* ctx' = begin if not run_opt then
       (* When the optional is None, all outflow variables should be None. *)
-        List.fold_left (fun ctx (x, e) ->
-          match e.it with
-          | VarE x_question -> VContext.add_varid ctx x_question none
-          | _ -> assert false
-        ) ctx out_binds |> return
+        foldlM (fun ctx (x, e) -> assign ctx e none) ctx out_binds
       else
       (* When the optional is Some *)
-        let lctxr = ref ctx in
         (* In-flow *)
-        List.iter (fun (x, opt_val) ->
+        let* ctx = foldlM (fun ctx (x, opt_val) ->
           let OptV (Some val_) = opt_val in
-          lctxr := VContext.add_varid !lctxr x val_
-        ) in_vals;
-        let* lctx = eval_prems !lctxr prems in
-        lctxr := lctx;
+          VContext.add_varid ctx x val_ |> return
+        ) ctx in_vals in
+        let* ctx = eval_prems ctx prems in
         (* Out-flow *)
-        List.iter (fun (x, e) ->
-          match e.it with
-          | VarE x_question ->
-            let vx = VContext.find_varid !lctxr x in
-            let opt_vx_question = VContext.Map.find_opt x_question.it !lctxr in
-            begin match opt_vx_question with
-            | Some vx_question -> assert false
-            | None -> let some_vx = some vx in
-                      lctxr := VContext.add_varid !lctxr x_question some_vx
-            end
-          | _ -> assert false
-        ) out_binds;
-        return !lctxr
+        foldlM (fun ctx (x, e) ->
+          let vx = VContext.find_varid ctx x in
+          assign ctx e (some vx)
+        ) ctx out_binds
       end in
       il_env := il_env0;  (* Resume old environment *)
       return ctx'
@@ -702,9 +690,10 @@ and eval_prems ctx prems : VContext.t OptMonad.m =
   match prems with
   | [] -> return ctx
   | prem :: prems ->
-    let* ctx'  = eval_prem  ctx  prem  in
-    let* ctx'' = eval_prems ctx' prems in
-    return ctx''
+    (match eval_prem  ctx  prem |> run_opt with
+    | Some ctx' -> eval_prems ctx' prems
+    | None      -> fail_info "log" prem.at (lazy ("Premise failed: " ^ string_of_prem prem))
+    )
 
 and match_typ ctx at (pat: typ) (arg: typ) : VContext.t OptMonad.m =
   match pat.it, arg.it with
@@ -715,7 +704,7 @@ and match_arg ctx at (pat: arg) (arg: Value.arg) : VContext.t OptMonad.m =
   match pat.it, arg with
   | TypA ptyp , Value.TypA atyp -> match_typ ctx at ptyp atyp
   | ExpA pexp , Value.ValA aval -> assign ctx pexp aval
-  | DefA pid  , Value.DefA _    -> todo "match_arg DefA"
+  | DefA pid  , Value.DefA aid  -> VContext.add_defid ctx pid aid |> return
   | GramA psym, Value.GramA _   -> todo "match_arg GramA"
   | _ -> fail ()
 
@@ -763,42 +752,46 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
 
 
 and eval_func name func_def args : value OptMonad.m =
-  let (_, params, typ, fcs, _) = func_def.it in
+  let (_, _, params, typ, fcs, _) = func_def.it in
   if name = "step" then
-    let* r = match_clause no_region name 1 fcs args in
-    let CaseV(_, [_; instrs]) = r in
+    let* r = match_clause no_region name 1 (List.map snd fcs) args in
+    let CaseV (_, [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
     info "log" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
     return r
   else if name = "reduce" then
     (* Capture stack overflow signal. *)
-    let* r = match_clause no_region name 1 fcs args in
+    let* r = match_clause no_region name 1 (List.map snd fcs) args in
     (match r with
     | CaseV ([["STACK_OVERFLOW"]], []) -> raise BI.Exception.OutOfMemory
     | _ -> return r
     )
   else
-    match_clause no_region name 1 fcs args
+    match_clause no_region name 1 (List.map snd fcs) args
 
 and call_func name args : value OptMonad.m =
   info "log" no (lazy ("Calling " ^ name));
-  match name with
-  (* Hardcoded functions defined in meta.spectec *)
-  | "Steps"  ->
+  if State_v.Hints.is_a_builtin name then
+    (match name with
+    (* Hardcoded functions defined in the compiler. *)
+    | "Module_ok"     -> module_ok     args
+    | "Externaddr_ok" -> externaddr_ok args
+    | "Ref_ok"        -> ref_ok        args
+    | "Val_ok"        -> val_ok        args
+    | "Reftype_sub"   -> reftype_sub   args
+    | "Heaptype_sub"  -> heaptype_sub  args
+    | _               -> error no ("Builtin animation not implemented: " ^ name ^ ".")
+    )
+  else
+    (* Hardcoded functions defined in meta.spectec *)
+  if name = "Steps" then
     let [config] = args in
     let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
     call_func "steps" args'
-  | "Step"   -> error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
-  (* | "Ref_ok" -> call_func "ref_infer" args *)
-  (* Hardcoded functions defined in the compiler. *)
-  | "Module_ok"     -> module_ok     args
-  | "Externaddr_ok" -> externaddr_ok args
-  | "Ref_ok"        -> ref_ok        args
-  | "Val_ok"        -> val_ok        args
-  | "Reftype_sub"   -> reftype_sub   args
-  | "Heaptype_sub"  -> heaptype_sub  args
-  (* Others *)
-  | _ ->
+  else if name = "Step" then
+    error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
+  else
+    (* Built-in functions *)
     let builtin_name, is_builtin =
       match Il.Env.find_func_hint !il_env name "builtin" with
       | None -> (name, false)
@@ -812,7 +805,7 @@ and call_func name args : value OptMonad.m =
     (* Regular function definition. *)
     | Some fdef when not is_builtin -> eval_func name fdef args
     (* Builtins and numerics *)
-    | Some { it = (_, _, _, [], _); at; _ } when is_builtin ->
+    | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
       if Numerics_v.mem builtin_name then
         Numerics_v.call_numerics builtin_name args |> return
       else if builtins_mem builtin_name then
@@ -930,22 +923,6 @@ and hostcall : Value.arg list -> value OptMonad.m = function
   | _ -> error no ("Invalid arguments to $hostcall")
 
 
-(*
-and hostcall = {
-  name = "hostcall";
-  f =
-    function
-    | [hostfunc; s; args] ->
-      (match match_caseV "hostfunc" hostfunc with
-      | [["_HOSTFUNC"]; []], [TextV fname] ->
-        let vs = as_list_value' args in
-        let s', result = call_hostfunc fname s vs in
-        listV [| caseV [["RES"];[];[]] [s'; result] |] |> return
-      | _ -> error_value ("Not a hostfunc") hostfunc
-      )
-    | vs -> error_values ("Args to $hostcall") vs
-}
-*)
 
 (* Built-in functions (meta.spectec) *)
 
@@ -1099,10 +1076,7 @@ and externaddr_ok = function
         |> vl_to_externtype
       in
       let externtype = vl_to_externtype etype in
-      (match RI.Match.match_externtype [] externaddr_type externtype with
-      | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
-      | b -> boolV b |> return
-      )
+      RI.Match.match_externtype [] externaddr_type externtype |> boolV |> return
     | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
     )
   | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
@@ -1115,10 +1089,7 @@ and ref_ok = function
     | Some typ1 ->
       let reftyp1 = vl_to_reftype typ1 in
       let reftyp2 = vl_to_reftype typ2 in
-      (match RI.Match.match_reftype [] reftyp1 reftyp2 with
-      | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
-      | b -> boolV b |> return
-      )
+      RI.Match.match_reftype [] reftyp1 reftyp2 |> boolV |> return
     )
   | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
 
@@ -1130,55 +1101,29 @@ and val_ok = function
   | Some typ1 ->
     let valtyp1 = vl_to_valtype typ1 in
     let valtyp2 = vl_to_valtype typ2 in
-    (match RI.Match.match_valtype [] valtyp1 valtyp2 with
-    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
-    | b -> boolV b |> return
-    )
+    RI.Match.match_valtype [] valtyp1 valtyp2 |> boolV |> return
   )
   | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
 
 
 (* Reftype_sub : context -> reftype -> reftype -> bool *)
 and reftype_sub = function
-  | [ ValA ctx; ValA typ1; ValA typ2 ] ->
-    (* TODO(zilinc): the context is not converted, but we know that all calls to
-       this rule in the spec uses the empty context.
-     *)
-    let reftyp1 = vl_to_reftype typ1 in
-    let reftyp2 = vl_to_reftype typ2 in
-    (match RI.Match.match_reftype [] reftyp1 reftyp2 with
-    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
-    | b -> boolV b |> return
-    )
+  | [ ValA ctx; ValA rt1; ValA rt2 ] ->
+    let ctx' = as_str_field "TYPES" ctx |> as_list_value' |> List.map vl_to_deftype in
+    let rt1' = vl_to_reftype rt1 in
+    let rt2' = vl_to_reftype rt2 in
+    RI.Match.match_reftype ctx' rt1' rt2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
 
 (* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
 and heaptype_sub = function
-    | [ ValA ctx; ValA typ1; ValA typ2 ] ->
-    (* TODO(zilinc): the context is not converted, but we know that all calls to
-       this rule in the spec uses the empty context.
-     *)
-    let heaptyp1 = vl_to_heaptype typ1 in
-    let heaptyp2 = vl_to_heaptype typ2 in
-    (match RI.Match.match_heaptype [] heaptyp1 heaptyp2 with
-    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
-    | b -> boolV b |> return
-    )
+    | [ ValA ctx; ValA ht1; ValA ht2 ] ->
+    let ctx' = as_str_field "TYPES" ctx |> as_list_value' |> List.map vl_to_deftype in
+    let ht1' = vl_to_heaptype ht1 in
+    let ht2' = vl_to_heaptype ht2 in
+    RI.Match.match_heaptype ctx' ht1' ht2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
-
-(*
-(* Rule `Expand` has been compiled to `$expanddt` in animation.ml *)
-let expand = function
-  | [ v ] ->
-    (try
-      v
-      |> Construct.al_to_deftype
-      |> Types.expand_deftype
-      |> Construct.al_of_comptype
-    with exn -> raise (Exception.Invalid (exn, Printexc.get_raw_backtrace ())))
-  | vs -> Numerics.error_values "$Expand" vs
-*)
 
 
 (* Wasm interpreter entry *)

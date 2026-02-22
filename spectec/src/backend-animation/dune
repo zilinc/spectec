@@ -43,7 +43,9 @@
   state_v
   spectest_v
   main_interpret_v
-  main_runner_v))
+  main_runner_v
+  main_prose_v
+  prose_v))
 
 (env
  (dev

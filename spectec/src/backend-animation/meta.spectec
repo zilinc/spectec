@@ -210,3 +210,58 @@ def $steps(config, stackcount) = config_2
     -- if $steps(config_1, stackcount) = config_2
 def $steps(config, stackcount) = config
     -- otherwise
+
+
+
+;; ********************************************************
+;; Animation hints
+;; ********************************************************
+
+relation Expand        hint(animate %1 -> %2)
+
+relation Num_ok        hint(animate %1 %2 -> %3)
+relation Vec_ok        hint(animate %1 %2 -> %3)
+
+relation Ref_ok        hint(animate_builtin %1 %2 %3 -> bool)
+relation Val_ok        hint(animate_builtin %1 %2 %3 -> bool)
+relation Externaddr_ok hint(animate_builtin %1 %2 %3 -> bool)
+relation Module_ok     hint(animate_builtin %1 -> %2)
+
+relation Reftype_sub   hint(animate_builtin %1 %2 %3 -> bool)
+relation Heaptype_sub  hint(animate_builtin %1 %2 %3 -> bool)
+
+
+relation Step          hint(animate %1 -> %2)
+relation Step_pure     hint(animate %1 -> %2)
+relation Step_read     hint(animate %1 -> %2)
+
+(;
+;; Syntax not supported in SpecTec.
+
+rule Step_pure /br-label-zero
+               /br-label-succ
+               /br-handler
+               /return-frame
+               /return-label
+               /return-handler
+     hint(no_animate)
+
+rule Step_read /return_call_ref-label
+               /return_call_ref-handler
+               /return_call_ref-frame-null
+               /return_call_ref-frame-addr
+     hint(no_animate)
+
+rule Step_pure /trap-instrs /throw_ref-instrs hint(no_animate)
+
+rule Step /ctxt-instrs
+          /ctxt-label
+          /ctxt-frame
+          /ctxt-handler
+     hint(no_animate)
+;)
+
+relation Eval_expr hint(animate (%1, %2) -> (%3, %4))
+
+def $utf8 hint(no_animate)
+

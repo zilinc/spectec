@@ -38,13 +38,13 @@ rule Step/ctxt-label:
   z; (LABEL_ n `{instr_0*} instr*)  ~>  z'; (LABEL_ n `{instr_0*} instr'*)
   -- Step: z; instr* ~> z'; instr'*
 
-rule Step/ctxt-frame:
-  s; f; (FRAME_ n `{f'} instr*)  ~>  s'; f; (FRAME_ n `{f''} instr'*)
-  -- Step: s; f'; instr* ~> s'; f''; instr'*
-
 rule Step/ctxt-handler:
   z; (HANDLER_ n `{catch*} instr*) ~> z'; (HANDLER_ n `{catch*} instr'*)
   -- Step: z; instr* ~> z'; instr'*
+
+rule Step/ctxt-frame:
+  s; f; (FRAME_ n `{f'} instr*)  ~>  s'; f; (FRAME_ n `{f''} instr'*)
+  -- Step: s; f'; instr* ~> s'; f''; instr'*
 
 
 ;; Polymorphic instructions
@@ -310,11 +310,11 @@ rule Step_pure/trap-instrs:
 rule Step_pure/trap-label:
   (LABEL_ n `{instr'*} TRAP)  ~>  TRAP
 
-rule Step_pure/trap-frame:
-  (FRAME_ n `{f} TRAP)  ~>  TRAP
-
 rule Step_pure/trap-handler:
   (HANDLER_ n `{catch*} TRAP)  ~>  TRAP
+
+rule Step_pure/trap-frame:
+  (FRAME_ n `{f} TRAP)  ~>  TRAP
 
 
 ;; Local instructions

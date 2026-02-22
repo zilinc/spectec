@@ -40,10 +40,10 @@ let vl_of_mixop : Xl.Mixop.mixop -> mixop = function
 
 
 let rec string_of_mixop =
-  let go = function
+  let rec go = function
            | []  -> ""
            | [a] -> a
-           | _   -> raise (Failure "Ill-formed mixop [1].")
+           | a::as_ -> a ^ ":" ^ go as_
   in
   function
   | []    -> assert false

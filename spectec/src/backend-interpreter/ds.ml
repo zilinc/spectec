@@ -148,6 +148,8 @@ module Register (T : ValueType) = struct
   let _register : t Map.t ref = ref Map.empty
   let _latest = ""
 
+  let init () = _register := Map.empty
+
   let add name moduleinst = _register := Map.add name moduleinst !_register
 
   let add_with_var var moduleinst =

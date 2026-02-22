@@ -1,9 +1,12 @@
 open Il.Ast
 open Il.Print
 open Il2al.Il2al_util
-open Util.Source
+open Util
+open Source
 open Def
 open Il_util
+module H = State_v.Hints
+
 
 (* Debug *)
 
@@ -26,11 +29,8 @@ let rec list_all_dl_defs' lv dl : unit =
       let id, _, _ = tdef.it in
       print_endline (indent lv ^ "type | " ^ string_of_id id)
     | FuncDef fdef ->
-      let id, _, _, _, _ = fdef.it in
-      print_endline (indent lv ^ "func | " ^ string_of_id id)
-    | RuleDef rdef ->
-      let _, id, _, _, _ = rdef.it in
-      print_endline (indent lv ^ "rule | " ^ string_of_id id)
+      let id, osubid, _, _, _, _ = fdef.it in
+      print_endline (indent lv ^ "func | " ^ string_of_funcname id osubid)
   ) dl
 let list_all_dl_defs (dl: dl_def list) : unit = list_all_dl_defs' 0 dl
 
@@ -42,49 +42,56 @@ let error at msg = Util.Error.error at "IL -> DL" msg
 
 (* Relations *)
 
-let il2dl_rule_clause rel_id rule : rule_clause =
+(* TODO(zilinc): We currently do not consider dependent types in the signature of rules. *)
+
+let il2dl_rule_clause rel_id rule : func_clause =
   let RuleD (id, binds, _, exp, prems) = rule.it in
-  match exp.it with
-  | TupE [ lhs; rhs ] when List.mem rel_id.it Common.step_relids ->
-    (id, binds, lhs, rhs, prems) $ rule.at
-  | TupE [ z1; lhs; z2; rhs ] when rel_id.it = "Eval_expr" ->
-    let at1 = over_region [z1.at; lhs.at] in
-    let at2 = over_region [z2.at; rhs.at] in
-    let lhs' = mk_tup [z1; lhs] in
-    let rhs' = mk_tup [z2; rhs] in
-    (id, binds, lhs', rhs', prems) $ rule.at
-  | TupE [ ctx; obj; typ ] when List.mem rel_id.it Common.typ_relids ->
-    let lhs' = TupE [ ctx; obj ] $$ exp.at
-               % (TupT [ (varE ~note:ctx.note "_", ctx.note)
-                       ; (varE ~note:obj.note "_", obj.note)
-                       ] $ exp.at) in
-    (id, binds, lhs', typ, prems) $ rule.at
-  | TupE [ ctx; typ1; typ2 ] when List.mem rel_id.it Common.sub_relids ->
-    (id, binds, exp, boolE true, prems) $ rule.at
-  | _ -> error exp.at ("Wrong exp form of reduction rule: [" ^ rel_id.it ^ "]" ^ Il.Print.string_of_exp exp)
-
-let il2dl_rule_def rule_name rel_id typ rules at : rule_def =
-  let rule_clauses = List.map (il2dl_rule_clause rel_id) rules in
-  let t1, t2 =
-    (match typ.it with
-    | TupT [ (_, t1); (_, t2) ] when List.mem rel_id.it Common.step_relids ->
-      t1, t2
-    | TupT [ et11; et12; et21; et22 ] when rel_id.it = "Eval_expr" ->
-      let at1 = over_region [(fst et11).at; (snd et12).at] in
-      let at2 = over_region [(fst et21).at; (snd et22).at] in
-      t_tup [t_var "state"; t_var "expr"], t_tup [t_var "state"; t_star "val"]
-    | TupT [ ctx; obj; (_, typ) ] when List.mem rel_id.it Common.typ_relids ->
-      TupT [ ctx; obj ] $ typ.at, typ
-    | TupT [ ctx; typ1; typ2 ] when List.mem rel_id.it Common.sub_relids ->
-      TupT [ ctx; typ1; typ2 ] $ at, BoolT $ at
-    | _ -> error at ("Invalid rule type: " ^ string_of_typ typ)
+  assert (H.is_a_rel rel_id.it);
+  let mode_map = H.find_a_rel rel_id.it in
+  let TupE es = exp.it in
+  let lhs', rhs', _t1, t2 = Lib.List.fold_lefti (fun i (les, res, lts, rts) e ->
+    let omode = H.IM.find_opt (i+1) mode_map in
+    (match omode with
+    | None     -> (les, res, lts, rts)
+    | Some In  -> (les@[e], res, lts@[(VarE ("_" $ e.at) $> e, e.note)], rts)
+    | Some Out -> (les, res@[e], lts, rts@[(VarE ("_" $ e.at) $> e, e.note)])
     )
+  ) ([], [], [], []) es in
+  let args = List.map (fun e -> ExpA e $ e.at) lhs' in
+  let exp' = (match rhs' with
+             | []  -> assert false
+             | [e] -> e
+             | _   -> TupE rhs' $$ exp.at % (TupT t2 $ exp.at)
+             )
   in
-  (rule_name, rel_id, t1, t2, rule_clauses) $ at
+  Some id, DefD (binds, args, exp', prems) $ rule.at
 
+
+let il2dl_rule_def rule_name rel_id typ rules at : func_def =
+  let osubid = if String.equal rule_name "" then None else Some (rule_name $ rel_id.at) in
+  let func_clauses = List.map (il2dl_rule_clause rel_id) rules in
+  assert (H.is_a_rel rel_id.it);
+  let mode_map = H.find_a_rel rel_id.it in
+  let TupT ts = typ.it in
+  let lts, rts = Lib.List.fold_lefti (fun i (lts, rts) t ->
+    let omode = H.IM.find_opt (i+1) mode_map in
+    (match omode with
+    | None     -> lts, rts
+    | Some In  -> lts @ [t], rts
+    | Some Out -> lts, rts @ [t]
+    )
+  ) ([], []) ts in
+  let params = List.map (fun (e, t) -> ExpP ("_" $ t.at, t) $ t.at) lts in
+  let rt = (match rts with
+           | [] -> assert false
+           | [(e,t)] -> t
+           | ets -> TupT ets $ (over_region (List.map (fun x -> x.at) (List.map snd ets)))
+           )
+  in
+  (rel_id, osubid, params, rt, func_clauses, None) $ at
 
 (* Group reduction rules that have same rule name. *)
-let rec group_rules : (id * typ * rule) list -> rule_def list = function
+let rec group_rules : (id * typ * rule) list -> func_def list = function
   | [] -> []
   | h::t ->
     let (rel_id, typ, rule) = h in
@@ -97,9 +104,9 @@ let rec group_rules : (id * typ * rule) list -> rule_def list = function
         "this reduction rule uses a different relation compared to the previous rules"
     ) t1 in
     let at = rules |> List.map at |> over_region in
-    let rule_def = il2dl_rule_def rule_name rel_id typ rules at in
+    let func_def = il2dl_rule_def rule_name rel_id typ rules at in
 
-    rule_def :: group_rules t2
+    func_def :: group_rules t2
 
 
 (* Helper Definitions *)
@@ -108,8 +115,13 @@ let get_partial_func def : id option =
   let is_partial_hint hint = hint.hintid.it = "partial" in
   match def.it with
   | HintD { it = DecH (id, hints); _ } when List.exists is_partial_hint hints ->
-    Some (id)
+    Some id
   | _ -> None
+
+
+let il2dl_clause cl : func_clause =
+  let DefD (binds, args, exp, prems) = cl.it in
+  None, DefD (binds, args, exp, prems) $ cl.at
 
 
 (* Entry *)
@@ -122,11 +134,11 @@ let rec il2dl (il: script) : dl_def list =
     | TypD (id, params, insts) -> [TypeDef ((id, params, insts) $ def.at)]
     | DecD (id, params, typ, clauses) ->
       let partial = if List.mem id partial_funcs then Partial else Total in
-      [FuncDef ((id, params, typ, clauses, Some partial) $ def.at)]
+      [FuncDef ((id, None, params, typ, List.map il2dl_clause clauses, Some partial) $ def.at)]
     | RelD (rel_id, _, typ, rules) ->
       let rules = List.map (fun rule -> (rel_id, typ, rule)) rules in
-      let rule_def = group_rules rules in
-      List.map (fun r -> RuleDef r) rule_def
+      let func_def = group_rules rules in
+      List.map (fun r -> FuncDef r) func_def
     | RecD defs ->
       let defs' = il2dl defs in
       if List.is_empty defs' then [] else [RecDef defs']

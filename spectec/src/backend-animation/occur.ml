@@ -1,9 +1,11 @@
 open Il.Ast
+open Il.Env
+open Il2al.Free
 open Util.Error
 open Util.Source
 open Def
 
-module Map = Map.Make(String)
+module Map = Stdlib.Map.Make(String)
 
 module Occ = struct
   type t = NoOcc | LinOcc | OmegaOcc
@@ -59,11 +61,7 @@ let rec occ_exp pred m occ exp : occ =
      occ_exp pred m occ2 e2
   | CallE (_, args) -> List.fold_left (occ_arg pred m) occ args
   | IterE (e, (iter, xes)) ->
-    let occ1 = List.fold_left (fun o (x, e') ->
-      match e'.it with
-      | VarE v -> if pred v then many_occ o v else o
-      | _ -> assert false
-    ) occ xes in
+    let occ1 = List.fold_left (fun o (x, e') -> occ_exp pred m o e') occ xes in
     let occ2 = occ_exp (fun v -> pred v && not (List.mem v (List.map fst xes))) `Many occ1 e in
     occ2
 
@@ -87,11 +85,7 @@ and occ_prem pred m occ prem : occ =
   | LetPr(lhs, rhs, binds) -> occ_exp pred m occ rhs
   | ElsePr -> occ
   | IterPr (prems, (iter, xes)) ->
-    let occ1 = List.fold_left (fun o (x, e') ->
-      match e'.it with
-      | VarE v -> if pred v then many_occ o v else o
-      | _ -> assert false
-    ) occ xes in
+    let occ1 = List.fold_left (fun o (x, e) -> occ_exp pred m o e) occ xes in
     let occ2 = occ_prems (fun v -> pred v && not (List.mem v (List.map fst xes))) `Many occ1 prems in
     let occ3 = (match iter with
     | ListN (n, _) -> occ_exp pred m occ2 n
@@ -107,7 +101,7 @@ and occ_prems pred m occ prems : occ =
                     let occ'' = occ_prems pred m occ' prems' in
                     occ''
 
-let occ_clause cl : occ =
+let occ_clause (cl: clause) : occ =
   let DefD (bs, args, exp, prems) = cl.it in
   let occ1 = occ_prems (Fun.const true) `Once empty_occ prems in
   let occ2 = occ_exp (Fun.const true) `Once occ1 exp in

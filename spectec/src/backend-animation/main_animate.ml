@@ -3,17 +3,47 @@ open Il2al.Il2al_util
 open Def
 open Util
 open Source
+module H = State_v.Hints
 
 
-let rec is_anim_target def =
-  match def.it with
-  | DecD (id, ps, t, _) when id.it = "utf8" -> Some (DecD (id, ps, t, []) $ def.at)
-  | RelD (id, mixop, t, rules)
-    when List.mem id.it (["Eval_expr"] @ Common.typ_relids @ Common.sub_relids @ Common.step_relids) ->
-    Some (RelD (id, mixop, t, rules) $ def.at)
+let build_animation_hints il : unit =
+  let hints = List.filter_map (fun def ->
+    (match def.it with
+    | HintD hdef -> Some hdef
+    | _  -> None
+    )
+  ) il in
+  List.iter (fun hdef ->
+    match hdef.it with
+    | DecH (fid, hints) ->
+      List.iter (fun hint ->
+        (match hint.hintid.it with
+        | "animate"         -> print_endline ("Warning: hint(animate) on function " ^ fid.it ^ " is not yet implemented."); ()
+        | "animate_builtin" -> H.add_a_builtin fid.it (H.parse_hintexp hint.hintexp)
+        | "animate_inverse" -> H.add_a_inv fid.it
+        | "no_animate"      -> H.add_na_func fid.it
+        | _                 -> ()
+        )
+      ) hints
+    | RelH (rid, hints) ->
+      List.iter (fun hint ->
+        (match hint.hintid.it with
+        | "animate"         -> H.add_a_rel rid.it (H.parse_hintexp hint.hintexp)
+        | "animate_builtin" -> H.add_a_builtin rid.it (H.parse_hintexp hint.hintexp)
+        | "no_animate"      -> print_endline ("Warning: hint(no_animate) on relation " ^ rid.it ^ " is not used."); ()
+        | _                 -> ()
+        )
+      ) hints
+    | TypH _ | GramH _  -> ()
+  ) hints
+
+let rec is_anim_target il_def =
+  match il_def.it with
+  | DecD (id, ps, t, _) when H.is_na_func id.it -> Some (DecD (id, ps, t, []) $ il_def.at)
+  | RelD (id, mixop, t, rules) when H.is_a_rel id.it -> Some (RelD (id, mixop, t, rules) $ il_def.at)
   | RelD _ -> None
-  | RecD defs -> Some (RecD (List.filter_map is_anim_target defs) $ def.at)
-  | _ -> Some def
+  | RecD defs -> Some (RecD (List.filter_map is_anim_target defs) $ il_def.at)
+  | _ -> Some il_def
 
 
 (* Remove or (Mostly copied as-is from Il2al.Preprocess). *)
@@ -66,6 +96,9 @@ let rec remove_or def =
 
 (* Entry *)
 let run il print_dl inline =
+  H.init_animation_hints ();
+  build_animation_hints il;
+  (* H.add_a_inv "proj_num__0"; *)
   let (env, dl) = il
                   |> List.filter_map is_anim_target
                   |> List.map remove_or

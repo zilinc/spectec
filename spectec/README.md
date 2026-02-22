@@ -112,9 +112,9 @@ You will need `ocaml` installed with `dune`, `menhir`, `mdx`, and the `zarith` l
   $ opam switch create 5.0.0
   ```
   
-* Install `dune` version 3.11.0, `menhir` version 20230608, `mdx` version 2.3.1, and `zarith` version 1.13, via `opam` (default versions)
+* Install `dune` version 3.11.0, `menhir` version 20230608, `mdx` version 2.3.1, `zarith` version 1.13, and `tsort` via `opam` (default versions)
   ```
-  $ opam install dune menhir mdx zarith
+  $ opam install dune menhir mdx zarith tsort
   ```
 
 ### Building the Project
