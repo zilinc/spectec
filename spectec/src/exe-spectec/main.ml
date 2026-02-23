@@ -85,6 +85,7 @@ let new_prose_ofile = ref None
 let vl = ref false
 let animate_inline = ref false
 
+
 let generate_ocaml = ref None
 
 (* Utility functions *)
@@ -209,11 +210,13 @@ let argspec = Arg.align (
   "--prose", Arg.Unit (fun () -> target := Prose true), " Generate prose";
   "--prose-rst", Arg.Unit (fun () -> target := Prose false), " Generate prose";
   "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args), " Generate interpreter";
-  "--animate", Arg.Unit (fun () -> target := Animate), " Animate";
-  "--inline", Arg.Unit (fun () -> animate_inline := true), "Enable inlining after animation";
-  "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), "New meta-interpreter";
-  "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), "New meta-interpreter VL";
-  "--new-prose-v", Arg.String (fun ofile -> target := Animate; new_prose_ofile := Some ofile; vl := true), "New prose generation";
+  "--animate", Arg.Unit (fun () -> target := Animate), " Run animation";
+  "--allow-partial-animation", Arg.Unit (fun () -> Backend_animation.Animate.allow_partial_animation := true),
+    " Allow animation to success even if some definitions cannot be animated.";
+  "--inline", Arg.Unit (fun () -> animate_inline := true), " Enable inlining after animation";
+  "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), " New meta-interpreter";
+  "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), " New meta-interpreter VL";
+  "--new-prose-v", Arg.String (fun ofile -> target := Animate; new_prose_ofile := Some ofile; vl := true), " New prose generation";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),
