@@ -50,6 +50,11 @@ let info v at msg = if List.mem v !verbose then
                       ()
 
 
+(* Configs *)
+
+let allow_partial_animation = ref false
+
+
 (* Fresh name generation *)
 
 let fresh_oracle = ref 0
@@ -1308,19 +1313,21 @@ and animate_prems' envr at : prem list E.m =
     subset of all the variables that are known at the end of animating
     all the premises.
 *)
-and animate_prems envr at ins ous prems : prem list =
+and animate_prems envr at ins ous prems : (prem list, string) result =
   animate_prems' envr at
   |> E.run_exceptT
   |> Fun.flip S.run_state ({ (AnimState.init ()) with prems; knowns = ins })
   |> function
-     | (Error e, _) -> error at e
+     | (Error e, _) -> Result.Error (string_of_error at e)
      | (Ok ps  , s) ->
-       if Set.subset ous s.knowns then ps
-       else error at ("Premises failed to compute all required output variables:\n" ^
-                      "  ▹ result:\n      " ^ (String.concat "\n      " (List.map string_of_prem ps)) ^ "\n" ^
-                      "  ▹ ins: " ^ string_of_varset ins ^ "\n" ^
-                      "  ▹ knowns: " ^ string_of_varset s.knowns ^ "\n" ^
-                      "  ▹ outs: " ^ string_of_varset ous)
+       if Set.subset ous s.knowns then Ok ps
+       else Result.Error (string_of_error at
+                           ("Premises failed to compute all required output variables:\n" ^
+                            "  ▹ result:\n      " ^ (String.concat "\n      " (List.map string_of_prem ps)) ^ "\n" ^
+                            "  ▹ ins: " ^ string_of_varset ins ^ "\n" ^
+                            "  ▹ knowns: " ^ string_of_varset s.knowns ^ "\n" ^
+                            "  ▹ outs: " ^ string_of_varset ous)
+                         )
 
 let lift_otherwise_prem prems =
   let is_otherwise = function { it = ElsePr; _ } -> true | _ -> false in
@@ -1329,7 +1336,7 @@ let lift_otherwise_prem prems =
 
 
 (* [id]: the full name of the function. *)
-let animate_clause0 envr fid (fc: func_clause) : func_clause =
+let animate_clause0 envr fid (fc: func_clause) : (func_clause, string) result =
   let lenvr = ref !envr in
   let oid, cl = fc in
   let DefD (binds, args, exp, prems) = cl.it in
@@ -1344,10 +1351,14 @@ let animate_clause0 envr fid (fc: func_clause) : func_clause =
   in
   let ins = List.concat vss |> Set.of_list in
   let ous = (free_exp false exp).varid in
-  let prems' = animate_prems lenvr cl.at ins ous (List.concat prems_args @ prems) |> lift_otherwise_prem in
-  let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
-  let binds'' = sort_binds fid binds' in
-  oid, DefD (binds'', args', exp, prems') $ cl.at
+  let prems' = animate_prems lenvr cl.at ins ous (List.concat prems_args @ prems) in
+  match prems' with
+  | Error s      -> Error s
+  | Result.Ok ps ->
+    let prems' = lift_otherwise_prem ps in
+    let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
+    let binds'' = sort_binds fid binds' in
+    Ok (oid, DefD (binds'', args', exp, prems') $ cl.at)
 
 
 (* Many $Step rules are dependent in their arguments. For example,
@@ -1408,7 +1419,7 @@ let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * 
     ([ExpB (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
   | _ -> [], in_stack, out_stack, prems
 
-let transform_step_clause envr fid (fc: func_clause) : func_clause =
+let transform_step_clause envr fid (fc: func_clause) : (func_clause, string) result =
   let oid, cl = fc in
   let DefD (binds, [ {it = ExpA lhs; _} ], rhs, prems) = cl.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
@@ -1422,13 +1433,13 @@ let transform_step_clause envr fid (fc: func_clause) : func_clause =
   let rhs' = CaseE (out_mixop, out_tup') $> rhs in
   animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA lhs' $ lhs'.at ], rhs', prems') $> cl)
 
-let transform_step_pure_clause envr fid (fc: func_clause) : func_clause =
+let transform_step_pure_clause envr fid (fc: func_clause) : (func_clause, string) result =
   let oid, cl = fc in
   let DefD (binds, [ {it = ExpA in_stack; _} ], out_stack, prems) = cl.it in
   let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA in_stack' $ in_stack.at ], out_stack', prems') $> cl)
 
-let transform_step_read_clause envr fid (fc: func_clause) : func_clause =
+let transform_step_read_clause envr fid (fc: func_clause) : (func_clause, string) result =
   let oid, cl = fc in
   let DefD (binds, [ {it = ExpA lhs; _} ], out_stack, prems) = cl.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
@@ -1439,7 +1450,7 @@ let transform_step_read_clause envr fid (fc: func_clause) : func_clause =
   animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA lhs' $ lhs'.at ], out_stack', prems') $> cl)
 
 (* $step_ctxt: config -> config *)
-let transform_step_ctxt_clause envr fid (fc: func_clause) : func_clause =
+let transform_step_ctxt_clause envr fid (fc: func_clause) : (func_clause, string) result =
   let oid, cl = fc in
   let DefD (binds, [{it = ExpA lhs; _}], rhs, prems) = cl.it in
   let CaseE (out_mixop, out_tup) = rhs.it in
@@ -1454,25 +1465,41 @@ let transform_step_ctxt_clause envr fid (fc: func_clause) : func_clause =
   animate_clause0 envr fid (oid, DefD (binds @ binds', [ExpA lhs' $ lhs'.at], rhs', prems) $> cl)
 
 
-let animate_clause envr id osubid (fc: func_clause) : func_clause option =
+let animate_clause envr id osubid (fc: func_clause) : (func_clause option, string) result =
   let orule_id, cl = fc in
   let fid = string_of_funcname id osubid $> id in
   let DefD (_, _, _, _) = cl.it in
   if Option.is_some orule_id && skip_animation id.it ((Option.get orule_id).it) then
-    None
-  else if is_step_rule id.it then
-    Some (transform_step_clause envr fid fc)
-  else if is_step_pure_rule id.it then
-    Some (transform_step_pure_clause envr fid fc)
-  else if is_step_read_rule id.it then
-    Some (transform_step_read_clause envr fid fc)
-  else
-    Some (animate_clause0 envr fid fc)
+    Ok None
+  else (
+    let ocl' =
+      if is_step_rule id.it then
+        transform_step_clause envr fid fc
+      else if is_step_pure_rule id.it then
+        transform_step_pure_clause envr fid fc
+      else if is_step_read_rule id.it then
+        transform_step_read_clause envr fid fc
+      else
+        animate_clause0 envr fid fc
+    in
+    match ocl' with
+    | Ok cl' -> Ok (Some cl')
+    | Error e when !allow_partial_animation ->
+        let cl_name = (match osubid with | None -> "Some clause" | Some subid -> "Clause " ^ subid.it) in
+        warn id.at (cl_name ^ " in definition `" ^ id.it ^ "` failed to animate.");
+        Ok None
+    | Error e -> Error e
+  )
 
 
 let animate_func_def envr (fdef: func_def) : func_def =
   let (id, osubid, ps, typ, clauses, opartial) = fdef.it in
-  (id, osubid, ps, typ, List.filter_map (animate_clause envr id osubid) clauses, opartial) $ fdef.at
+  let clauses' = List.fold_left (fun cls cl ->
+    match animate_clause envr id osubid cl with
+    | Result.Ok (Some cl) -> cls @ [cl]
+    | _ -> cls
+  ) [] clauses in
+  (id, osubid, ps, typ, clauses', opartial) $ fdef.at
 
 
 let rec animate_def envr (d: dl_def): dl_def = match d with
