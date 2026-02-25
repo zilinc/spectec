@@ -211,9 +211,14 @@ let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
     )
   | SubE (p, t1, t2), CaseV (mixop, vs) ->
     let tcs = as_variant_typ !il_env t1 in
-    (match List.find_map (fun (mixop', _, _) -> if vl_of_mixop mixop' = mixop then Some mixop' else None) tcs with
-    | Some mixop' -> assign ctx p rhs
-    | None -> fail ()
+    (match List.find_map (fun (mixop', tcase, _) ->
+      if vl_of_mixop mixop' = mixop then Some (mixop', tcase) else None) tcs
+     with
+     | Some (_, tcase) ->
+       let (binds, typ, prems) = tcase in
+       let* ctx' = return ctx in  (* eval_prems ctx prems in *)
+       assign ctx' p rhs
+     | None -> fail ()
     )
   | _, _ -> fail ()
 
@@ -1083,45 +1088,37 @@ and externaddr_ok = function
 
 (* Ref_ok : store -> ref -> reftype -> bool *)
 and ref_ok = function
-  | [ ValA _ as store; ValA _ as ref; ValA typ2 ] ->
-    (match call_func "ref_infer" [store; ref] |> run_opt with
-    | None -> error no ("Function `ref_infer` failed to evaluate to a value.")
-    | Some typ1 ->
-      let reftyp1 = vl_to_reftype typ1 in
-      let reftyp2 = vl_to_reftype typ2 in
-      RI.Match.match_reftype [] reftyp1 reftyp2 |> boolV |> return
-    )
+  | [ ValA _ as store; ValA _ as ref; ValA rt2 ] ->
+    let* rt1 = call_func "ref_infer" [store; ref] in
+    let rt1' = vl_to_reftype rt1 in
+    let rt2' = vl_to_reftype rt2 in
+    RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
 
 (* Val_ok : store -> val -> valtype -> bool *)
 and val_ok = function
-  | [ ValA _ as store; ValA _ as val_; ValA typ2 ] ->
-  (match call_func "val_infer" [store; val_] |> run_opt with
-  | None -> error no ("Function `val_infer` failed to evaluate to a value.")
-  | Some typ1 ->
-    let valtyp1 = vl_to_valtype typ1 in
-    let valtyp2 = vl_to_valtype typ2 in
-    RI.Match.match_valtype [] valtyp1 valtyp2 |> boolV |> return
-  )
+  | [ ValA _ as store; ValA _ as val_; ValA vt2 ] ->
+    let* vt1 = call_func "val_infer" [store; val_] in
+    let vt1' = vl_to_valtype vt1 in
+    let vt2' = vl_to_valtype vt2 in
+    RI.Match.match_valtype [] vt1' vt2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
 
 
 (* Reftype_sub : context -> reftype -> reftype -> bool *)
 and reftype_sub = function
   | [ ValA ctx; ValA rt1; ValA rt2 ] ->
-    let ctx' = as_str_field "TYPES" ctx |> as_list_value' |> List.map vl_to_deftype in
     let rt1' = vl_to_reftype rt1 in
     let rt2' = vl_to_reftype rt2 in
-    RI.Match.match_reftype ctx' rt1' rt2' |> boolV |> return
+    RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
 
 (* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
 and heaptype_sub = function
     | [ ValA ctx; ValA ht1; ValA ht2 ] ->
-    let ctx' = as_str_field "TYPES" ctx |> as_list_value' |> List.map vl_to_deftype in
     let ht1' = vl_to_heaptype ht1 in
     let ht2' = vl_to_heaptype ht2 in
-    RI.Match.match_heaptype ctx' ht1' ht2' |> boolV |> return
+    RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
 

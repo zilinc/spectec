@@ -22,7 +22,7 @@ def $ref_infer(s, REF.EXN_ADDR a) = REF EXN
   -- if s.EXNS[a] = exn
 def $ref_infer(s, REF.HOST_ADDR a) = REF ANY
 def $ref_infer(s, REF.EXTERN addrref) = REF EXTERN
-  -- if $ref_infer(s, addrref) = REF any
+  -- Ref_ok: s |- addrref : REF ANY
 
 def $val_infer(store, val) : valtype
 def $val_infer(s, num) = nt
@@ -41,17 +41,18 @@ syntax stackcount = nat
 
 
 def $is_val(instr) : bool
-def $is_val(CONST  numtype  i) = true
-def $is_val(VCONST vectype  c) = true
-def $is_val(REF.NULL       ht) = true
-def $is_val(REF.I31_NUM     n) = true
-def $is_val(REF.STRUCT_ADDR a) = true
-def $is_val(REF.ARRAY_ADDR  a) = true
-def $is_val(REF.FUNC_ADDR   a) = true
-def $is_val(REF.EXN_ADDR    a) = true
-def $is_val(REF.HOST_ADDR   a) = true
-def $is_val(REF.EXTERN     ar) = true
-def $is_val(instr) = false
+def $is_val(val) = true
+;; def $is_val(CONST  numtype  i) = true
+;; def $is_val(VCONST vectype  c) = true
+;; def $is_val(REF.NULL       ht) = true  ;; -- if $free_heaptype(ht) = {}
+;; def $is_val(REF.I31_NUM     n) = true
+;; def $is_val(REF.STRUCT_ADDR a) = true
+;; def $is_val(REF.ARRAY_ADDR  a) = true
+;; def $is_val(REF.FUNC_ADDR   a) = true
+;; def $is_val(REF.EXN_ADDR    a) = true
+;; def $is_val(REF.HOST_ADDR   a) = true
+;; def $is_val(REF.EXTERN     ar) = true
+def $is_val(instr) = false  -- otherwise
 
 def $find_first_instr'(instr*, instr*) : (instr*, instr?, instr*)
 def $find_first_instr'(val*, []) = (val*, eps, eps)
