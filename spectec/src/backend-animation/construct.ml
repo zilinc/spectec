@@ -199,7 +199,7 @@ let il_of_vec_shape shape (lanes: int64 list) =
   ))
 
 let rec il_of_ref = function
-  | RI.Value.NullRef ht   -> mk_case' "instr" [["REF.NULL"];[]] [il_of_heaptype ht]
+  | RI.Value.NullRef      -> mk_case' "instr" [["REF.NULL_ADDR"]] []
   | RI.Script.HostRef i32 -> mk_case' "instr" [["REF.HOST_ADDR"];[]] [il_of_nat32 i32]
   | RI.Extern.ExternRef r -> mk_case' "instr" [["REF.EXTERN"];[]] [il_of_ref r]
   | r -> error no ("il_of_ref: " ^ RI.Value.string_of_ref r)
@@ -2096,7 +2096,7 @@ and il_to_ref exp : RI.Value.ref_ =
   let open RI in
   let open Value in
   match match_caseE "ref" exp with
-  | [["REF.NULL"];[]], [ht] -> NullRef (il_to_heaptype ht)
+  | [["REF.NULL_ADDR"]], [] -> NullRef
   | [["REF.I31_NUM"];[]], [i] -> RI.I31.I31Ref (il_to_nat i |> Z.to_int)
   | [["REF.STRUCT_ADDR"];[]], [addr] ->
     let struct_insts = State.Store.access "STRUCTS" in

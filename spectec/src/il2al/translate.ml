@@ -162,7 +162,7 @@ let rec is_wasm_value e =
       "REF.HOST_ADDR";
       "REF.EXTERN";
     ] -> true
-  | Il.CaseE (op, _) when !version <= 2 && case_head op = "REF.NULL" -> true
+  | Il.CaseE ([{it = Atom id; _}]::_, _) when !version <= 2 && id = "REF.NULL" -> true
   | Il.CallE (id, _) when id.it = "const" -> true
   | _ -> Valid.sub_typ e.note valT
 let is_wasm_instr e =

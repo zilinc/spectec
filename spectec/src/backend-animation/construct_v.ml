@@ -191,7 +191,7 @@ let vl_of_vec_shape shape (lanes: int64 list) =
   ))
 
 let rec vl_of_ref = function
-  | RI.Value.NullRef ht   -> caseV [["REF.NULL"];[]] [vl_of_heaptype ht]
+  | RI.Value.NullRef      -> nullary "REF.NULL_ADDR"
   | RI.Script.HostRef i32 -> caseV [["REF.HOST_ADDR"];[]] [vl_of_nat32 i32]
   | RI.Extern.ExternRef r -> caseV [["REF.EXTERN"];[]] [vl_of_ref r]
   | r -> error no ("vl_of_ref: " ^ RI.Value.string_of_ref r)
@@ -2045,7 +2045,7 @@ and vl_to_ref v : RI.Value.ref_ =
   let open RI in
   let open Value in
   match match_caseV "ref" v with
-  | [["REF.NULL"];[]], [ht] -> NullRef (vl_to_heaptype ht)
+  | [["REF.NULL_ADDR"]], [] -> NullRef
   | [["REF.I31_NUM"];[]], [i] -> RI.I31.I31Ref (as_singleton_case i |> as_nat_value |> Z.to_int)
   | [["REF.STRUCT_ADDR"];[]], [addr] ->
     let struct_insts = State_v.Store.access "STRUCTS" in
