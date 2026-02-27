@@ -68,7 +68,7 @@ let il_of_spectest () : exp =
       addrtype; limits; reftype
     ] in
     let func = mk_nullary' "heaptype" "FUNC" in
-    let nulls = listE (t_star "ref") (List.init 10 (Fun.const (mk_case' "ref" [["REF.NULL"];[]] [func]))) in
+    let nulls = listE (t_star "ref") (List.init 10 (Fun.const (mk_case' "ref" [["REF.NULL_ADDR"]] []))) in
     mk_str "tableinst" [ ("TYPE", tabletype); ("REFS", nulls) ]
   in
 

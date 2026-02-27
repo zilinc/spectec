@@ -62,8 +62,7 @@ let il_of_spectest () : value =
     let tabletype = caseV [[];[];[];[]] [
       addrtype; limits; reftype
     ] in
-    let func = nullary "FUNC" in
-    let nulls = listV (Array.make 10 (caseV [["REF.NULL"];[]] [func])) in
+    let nulls = listV (Array.make 10 (nullary "REF.NULL_ADDR")) in
     strV [ ("TYPE", ref tabletype); ("REFS", ref nulls) ]
   in
 

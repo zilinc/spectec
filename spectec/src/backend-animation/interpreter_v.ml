@@ -28,10 +28,10 @@ let verbose : string list ref =
       (* "eval"; *)          (* Evaluation of expressions. *)
       (* "match";  *)        (* Matching of other types. *)
       (* "match_info";  *)
-      (* "steps";       *)
       (* "call"; *)
       (* "iter"; *)          (* Low-level debugging. *)
       (* "assign"; *)
+      (* "step"; *)
       (* "log"; *)
       ]
 
@@ -762,7 +762,7 @@ and eval_func name func_def args : value OptMonad.m =
     let* r = match_clause no_region name 1 (List.map snd fcs) args in
     let CaseV (_, [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
-    info "log" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
+    info "step" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
     return r
   else if name = "reduce" then
     (* Capture stack overflow signal. *)
