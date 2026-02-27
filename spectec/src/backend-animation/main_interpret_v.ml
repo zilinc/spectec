@@ -318,35 +318,39 @@ let parse_file name parser_ file =
 (** Runner **)
 
 let rec run_file ?(is_top=false) path args =
-  if Sys.is_directory path then
-    run_dir ~is_top:is_top path
-  else try
-    (* Check file extension *)
-    match Filename.extension path with
-    | ".wast" ->
-      let (m1, n1), time1 =
-        path
-        |> parse_file path R.Parse.Script.parse_file
-        |> run_wast path
-      in
-      let (m2, n2), time2 =
-        match args with
-        | path' :: args' when Sys.file_exists path -> run_file path' args'
-        | path' :: _ -> failwith ("file " ^ path' ^ " does not exist")
-        | [] -> pass, 0.0
-      in
-      (m1 + m2, n1 + n2), time1 +. time2
-    | ".wat" ->
-      path
-      |> parse_file path R.Parse.Module.parse_file
-      |> textual_to_module
-      |> run_wat args
-    | ".wasm" ->
-      In_channel.with_open_bin path In_channel.input_all
-      |> parse_file path (R.Decode.decode path)
-      |> run_wasm args
-    | _ -> pass, 0.0
-  with R.Decode.Code _ | R.Parse.Syntax _ -> pass, 0.0
+  let (m1, n1), time1 =
+    begin if Sys.is_directory path then
+      run_dir ~is_top:is_top path
+    else
+      try
+        (* Check file extension *)
+        (match Filename.extension path with
+        | ".wast" ->
+          path
+          |> parse_file path R.Parse.Script.parse_file
+          |> run_wast path
+        | ".wat" ->
+          path
+          |> parse_file path R.Parse.Module.parse_file
+          |> textual_to_module
+          |> run_wat args
+        | ".wasm" ->
+          In_channel.with_open_bin path In_channel.input_all
+          |> parse_file path (R.Decode.decode path)
+          |> run_wasm args
+        | _ -> pass, 0.0
+        )
+      with R.Decode.Code _ | R.Parse.Syntax _ -> pass, 0.0
+    end
+  in
+  let (m2, n2), time2 =
+    match args with
+    | path' :: args' when Sys.file_exists path -> run_file ~is_top:is_top path' args'
+    | path' :: _ -> failwith ("file " ^ path' ^ " does not exist")
+    | [] -> pass, 0.0
+  in
+  (m1 + m2, n1 + n2), time1 +. time2
+
 
 and run_dir ?(is_top=false) path =
   if is_top then

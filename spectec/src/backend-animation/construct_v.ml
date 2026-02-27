@@ -2067,6 +2067,6 @@ and vl_to_value v : RI.Value.value =
   match match_caseV "val" v with
   | [["CONST" ];[];[]], _ -> RI.Value.Num (vl_to_num v)
   | [["VCONST"];[];[]], _ -> RI.Value.Vec (vl_to_vec v)
-  | [[ref_con];[]], _ when String.starts_with ~prefix:"REF." ref_con ->
-    RI.Value.Ref (vl_to_ref v)
+  | [["REF.NULL_ADDR"]], _-> RI.Value.Ref (vl_to_ref v)
+  | [[ref_con];[]]    , _ when String.starts_with ~prefix:"REF." ref_con -> RI.Value.Ref (vl_to_ref v)
   | _ -> error_value "val" v

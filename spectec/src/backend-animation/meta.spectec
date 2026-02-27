@@ -38,7 +38,7 @@ def $is_val(instr) : bool
 def $is_val(val) = true
 ;; def $is_val(CONST  numtype  i) = true
 ;; def $is_val(VCONST vectype  c) = true
-;; def $is_val(REF.NULL       ht) = true  ;; -- if $free_heaptype(ht) = {}
+;; def $is_val(REF.NULL_ADDR    ) = true
 ;; def $is_val(REF.I31_NUM     n) = true
 ;; def $is_val(REF.STRUCT_ADDR a) = true
 ;; def $is_val(REF.ARRAY_ADDR  a) = true
