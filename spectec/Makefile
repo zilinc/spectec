@@ -20,9 +20,9 @@ ci: all
 SPEC ?= ../specification/wasm-3.0/*
 
 ifeq ($(PRINT_DL),1)
-SPECTEC_FLAGS = --animate --inline --print-dl --generate-ocaml "dl_codegen"
+SPECTEC_FLAGS = --animate --inline --print-dl --typefamily-removal --generate-ocaml "dl_codegen"
 else
-SPECTEC_FLAGS = --animate --inline --generate-ocaml "dl_codegen"
+SPECTEC_FLAGS = --animate --inline --typefamily-removal --generate-ocaml "dl_codegen"
 endif
 
 TEST ?= test-ocaml/sample.wast

@@ -175,7 +175,8 @@ module TypeM = struct
     mutable freshvaridx : int;
     mutable typevars : Set.t; (* type variables currently in scope *)
     mutable flipsub : bool; (* the subtyping direction is different for function arguments *)
-    mutable typ_fams : Def.type_def Map.t (* multi-instance aliases *)
+    mutable typ_fams : Def.type_def Map.t; (* multi-instance aliases - probably don't need this anymore *)
+    mutable max_args : int (* the maximum number of args that any function takes *)
   }
 
   type 'a t = state -> 'a * state * string * string (* value, new state, util functions, parser functions *)
@@ -215,6 +216,36 @@ module TypeM = struct
 
   let add_funcdef (name : string) : unit t =
     modify (fun st -> { st with functions = Map.add name () st.functions })
+
+  let gen_try_cl i =
+    let args = List.init i (fun j -> Printf.sprintf "arg%d" j) in
+    let args_str = String.concat " " args in
+    let call_str = if i = 0 then "cl ()" else "cl " ^ args_str in
+    let rec_call = if i = 0 then Printf.sprintf "try_clauses_0 rest err_msg"
+                   else Printf.sprintf "try_clauses_%d rest %s err_msg" i args_str in
+    let header = if i = 0 then "try_clauses_0 clauses err_msg"
+                 else Printf.sprintf "try_clauses_%d clauses %s err_msg" i args_str in
+    Printf.sprintf
+      "let rec %s = \n\
+      \  match clauses with \n\
+      \  | [] -> raise (NoMatchingClause err_msg)\n\
+      \  | cl :: rest -> \n\
+      \    try %s with \n\
+      \    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ \n\
+      \    | CondFailed | Invalid_argument _ -> %s\n\
+      \    | e -> raise e\n"
+      header call_str rec_call
+
+  let gen_try_cls a : unit t =
+    let* st = get in
+    if a <= st.max_args then return ()
+    else
+      let new_clauses =
+        String.concat "\n"
+          (List.init (a - st.max_args) (fun i -> gen_try_cl (st.max_args + 1 + i)))
+      in
+      let* () = tell new_clauses in
+      modify (fun st -> { st with max_args = max st.max_args a })
 
   let is_defined (funname : string) : bool t = fun st ->
     (Map.mem funname st.functions, st, "", "")
@@ -394,7 +425,8 @@ module TypeM = struct
     freshvaridx = 0;
     typevars = Set.empty;
     flipsub = false;
-    typ_fams = Map.empty
+    typ_fams = Map.empty;
+    max_args = -1;
     } in 
     let (a, st1, w, p) = m st0 in (a, w, p) 
 
@@ -468,70 +500,6 @@ exception SubtypingFailed
 exception NoMatchingClause of string
 exception CondFailed
 exception UnanimatedArg of string
-
-(* todo: gen try clauses instead of writing them *)
-let rec try_clauses_0 clauses err_msg = 
-  match clauses with 
-  | [] -> raise (NoMatchingClause err_msg)
-  | cl :: rest -> 
-    try cl () with 
-    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
-    | CondFailed | Invalid_argument _ -> try_clauses_0 rest err_msg
-    | e -> raise e
-
-let rec try_clauses_1 clauses arg err_msg = 
-  match clauses with 
-  | [] -> raise (NoMatchingClause err_msg)
-  | cl :: rest -> 
-    try cl arg with 
-    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
-    | CondFailed | Invalid_argument _ -> try_clauses_1 rest arg err_msg
-    | e -> raise e
-
-let rec try_clauses_2 clauses arg1 arg2 err_msg = 
-  match clauses with 
-  | [] -> raise (NoMatchingClause err_msg)
-  | cl :: rest -> 
-    try cl arg1 arg2 with 
-    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
-    | CondFailed | Invalid_argument _ -> try_clauses_2 rest arg1 arg2 err_msg
-    | e -> raise e
-
-let rec try_clauses_3 clauses arg1 arg2 arg3 err_msg = 
-  match clauses with 
-  | [] -> raise (NoMatchingClause err_msg)
-  | cl :: rest -> 
-    try cl arg1 arg2 arg3 with 
-    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
-    | CondFailed | Invalid_argument _ -> try_clauses_3 rest arg1 arg2 arg3 err_msg
-    | e -> raise e
-
-let rec try_clauses_4 clauses arg1 arg2 arg3 arg4 err_msg = 
-  match clauses with 
-  | [] -> raise (NoMatchingClause err_msg)
-  | cl :: rest -> 
-    try cl arg1 arg2 arg3 arg4 with 
-    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
-    | CondFailed | Invalid_argument _ -> try_clauses_4 rest arg1 arg2 arg3 arg4 err_msg
-    | e -> raise e
-
-let rec try_clauses_5 clauses arg1 arg2 arg3 arg4 arg5 err_msg = 
-  match clauses with 
-  | [] -> raise (NoMatchingClause err_msg)
-  | cl :: rest -> 
-    try cl arg1 arg2 arg3 arg4 arg5 with 
-    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
-    | CondFailed | Invalid_argument _ -> try_clauses_5 rest arg1 arg2 arg3 arg4 arg5 err_msg
-    | e -> raise e
-
-let rec try_clauses_6 clauses arg1 arg2 arg3 arg4 arg5 arg6 err_msg = 
-  match clauses with 
-  | [] -> raise (NoMatchingClause err_msg)
-  | cl :: rest -> 
-    try cl arg1 arg2 arg3 arg4 arg5 arg6 with 
-    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ 
-    | CondFailed | Invalid_argument _ -> try_clauses_6 rest arg1 arg2 arg3 arg4 arg5 arg6 err_msg
-    | e -> raise e
   
 (* get a list of all functions (transitively) called by a particular function *)
 let rec exp_calls (e: exp) : Set.t = 
@@ -565,20 +533,21 @@ let rec prem_calls (p : prem) : Set.t =
   | _ -> Set.empty
 
 let f_calls (fdef : func_def) : Set.t =
-  let (_, _, _, clauses, _) = fdef.it in
-  List.fold_left Set.union Set.empty (List.map (fun (clause : clause) ->
+  let (_, _, _, _, clauses, _) = fdef.it in
+  List.fold_left Set.union Set.empty (List.map (fun (fclause : func_clause) ->
+    let _, clause = fclause in
     let DefD (_, _, e, prems) = clause.it in
     let from_e = exp_calls e in
     let from_prems = List.fold_left Set.union Set.empty (List.map prem_calls prems) in
     Set.union from_e from_prems
   ) clauses)
 
-(* using a list for now, I think this is called very rarely - nvm it is called a lot *)
+(* using a list for now *)
 let rec find_fdef (flist : dl_def list) (name : string) : func_def =
   match flist with 
   | [] -> raise Not_found
   | FuncDef fdef :: rest -> 
-    let (id, _, _, _, _) = fdef.it in 
+    let (id, _, _, _, _, _) = fdef.it in 
     if id.it = name then fdef else 
     find_fdef rest name
   | (RecDef defs) :: rest -> 

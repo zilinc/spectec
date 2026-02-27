@@ -19,7 +19,7 @@ let rec get_dl_def_region (dl_def : dl_def) : region =
   | FuncDef fd       -> fd.at
   | TypeDef td       -> td.at
   | RecDef (rd :: _) -> get_dl_def_region rd
-  | RuleDef rd       -> rd.at
+  (* | RuleDef rd       -> rd.at *)
 
 (* type variables need to be prefixed with ' *)
 let typevars_of_params (ps : param list) : Set.t =
@@ -80,7 +80,7 @@ let hardcode_step (funcdefs : dl_def list) : dl_def list =
     | def :: rest' -> (
         (* todo: also need to check every rec def oops *)
         match def with
-        | FuncDef { it = { it = name; _ }, _, _, _, _; _ } ->
+        | FuncDef { it = { it = name; _ }, _, _, _, _, _; _ } ->
             if Set.mem name rec_funcs then
               (*(Printf.printf "updated insert index: %d\n" insert;*)
               mark (idx + 1) acc rest' (recdefs @ [ def ]) idx
@@ -390,31 +390,32 @@ let rec replace_prem (p : prem) =
     return { p with it = IterPr (prems', iter) }
   | _ -> return p
 
-let replace_cls (cl : func_clause) =
+let replace_cls (fcl : func_clause) =
+  let cl_id, cl = fcl in
   let { it = DefD (bs_, args, retexp, prems); _ } = cl in
   (*Printf.printf "replacing func clause args\n";*)
   let* args' = mapM replace_arg args in
   Printf.printf "replacing ret exp with type: %s\n" (Il.Print.string_of_typ retexp.note);
   let* retexp' = replace_e retexp in
   let* prems' = mapM replace_prem prems in
-  return { cl with it = DefD (
+  return (cl_id, { cl with it = DefD (
     bs_,
     args',
     retexp',
-    prems') } 
+    prems') })
 
 let rec rmv_families (dl_defs : dl_def list) = 
   let rec aux acc dl_defs' =
     match dl_defs' with
     | [] -> return (List.rev acc)
     | (FuncDef fd)::rest ->
-      let { it = (fid, params, t, fcl_list, partial); _ } = fd in
+      let { it = (fid, fidopt, params, t, fcl_list, partial); _ } = fd in
       Printf.printf "in func: %s\n" fid.it; 
       let* t' = replace_typ t in
       Printf.printf "replacing clauses:\n"; 
       let* fcl_list' = mapM replace_cls fcl_list in
       let* params' = mapM replace_param params in
-      aux ((FuncDef { fd with it = (fid, params', t', fcl_list', partial)}) :: acc) rest
+      aux ((FuncDef { fd with it = (fid, fidopt, params', t', fcl_list', partial)}) :: acc) rest
     | (RecDef defs)::rest -> 
       let* defs' = rmv_families defs in
       aux ((RecDef defs')::acc) rest
@@ -448,25 +449,22 @@ let rmv_nonexp (p : param) : bool =
 
 let known_exps (es : exp list) : bool t =
   allM
-    (fun e ->
-      match e.it with
-      | VarE id -> is_known (sanitize_name id.it)
-      | _ ->
-          error e.at "Invalid Iterator expression x <- e: e must be a variable.")
+    (fun e -> are_knowns (Set.map sanitize_name (Valid.free_vars_exp e)))
     es
 
 let get_unknown_vars (es : (id * exp) list) : string list t =
   foldM
     (fun acc (id, e) ->
-      match e.it with
-      | VarE id' ->
-          let* known = is_known (sanitize_name id'.it) in
-          if known then return acc
-          else (*(Printf.printf "%s is unknown\n" (sanitize_name id'.it);*)
-            return (id.it :: acc)
-      | _ ->
-          error e.at "Invalid Iterator expression x <- e: e must be a variable.")
-    [] es
+      let* known = are_knowns (Set.map sanitize_name (Valid.free_vars_exp e)) in
+      if known then return acc else return (id.it :: acc)
+    ) [] es
+
+let are_valid outflows =
+  List.iter (fun (_, e) -> 
+    match e.it with
+    | VarE _ -> ()
+    | _ -> error e.at "Invalid Iterator expression x <- e: e must be a variable.")
+  outflows
 
 let get_cons_args typargs =
   match typargs.it with
@@ -826,7 +824,7 @@ let gen_str_translation tfs name : string t =
   in
   return funcdef
 
-(* todo: not sure if pass all flags correctly *)
+(* todo: not sure if all flags are passed correctly *)
 let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
     (e : exp) : string t =
   (* for now, we don't support dependent types. *)
@@ -848,7 +846,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
     | SubE (e1, typ1, typ2) ->
         (* if an argument is of the form e : t1 <: t2, 
        the function expects an arg of type t2 but casts it to a type t1 in the body. so we have to add "let e = t1_of_t2 arg" to make it typecheck *)
-        Printf.printf "SubE in arg: %s\n" (Il.Print.string_of_exp e);
+        (*Printf.printf "SubE in arg: %s\n" (Il.Print.string_of_exp e);*)
         let* freshvarname = get_freshvar () in
         let* () = generate_type_conv typ2 typ1 in
         let* e1str =
@@ -899,7 +897,9 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         let* es_strs = concat_mapM ", " (ocaml_of_exp ~typearg) es in
         return ("(" ^ es_strs ^ ")")
     | CallE (id, args) ->
-        let fname = sanitize_name id.it in
+        let fname = (sanitize_name id.it) ^ "_fn" in
+        (* this is hack for now *)
+        if fname = "uc_nd_fn" then return "true" else
         let* args' = ocaml_of_args ~typearg ~funcdef ~funccall:true args in
         let args'' = if args' = "" then "()" else args' in
         return ("(" ^ fname ^ " " ^ args'' ^ ")")
@@ -927,7 +927,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         let* e2str = ocaml_of_exp e2 in
         (* if this is a float operation *)
         let* e1type = ocaml_of_typ e1.note in
-        let float = e1type = "float" in
+        let float = (e1type = "float") || (e1type = "rat") in
         let binopstr = ocaml_of_binop ~float op in
         (* if both e1 and e2 were ints, but we used the float power operator, we need to convert the result back to an int *)
         if (e1type = "int" || e1type = "nat") && binopstr = "**" then
@@ -975,7 +975,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
           let* unknown_vars = get_unknown_vars bindings in
           match unknown_vars with
           | [ x ] -> (
-              match iter with
+              (match iter with
               | ListN (e, optid) ->
                   let* lenstr = ocaml_of_exp e in
                   let idstr =
@@ -988,7 +988,8 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
                     return
                       ("(List.init (" ^ lenstr ^ ") (fun " ^ sanitize_name idstr
                      ^ " -> " ^ body_str ^ "))")
-              | _ -> return "(* TODO: multiple outflows in IterE *)")
+              | _ -> return "(* TODO: multiple outflows in IterE *)"))
+          | _ -> return "(* TODO: multiple outflows in IterE *)"
         else
           let* prev_knowns = get_knowns in
           let new_knowns =
@@ -1615,7 +1616,7 @@ and ocaml_of_arg ?(typearg = true) ?(funcdef = false) ?(funccall = false) a =
       ocaml_of_exp ~typearg ~funcdef ~funccall e
   | TypA t ->
       if not (funccall || funcdef) then ocaml_of_typ ~typearg t else return ""
-  | DefA id -> return (sanitize_name id.it)
+  | DefA id -> return ((sanitize_name id.it) ^ "_fn")
   | GramA g -> return "TODO: gram in arg not supported"
 
 and ocaml_of_args ?(typearg = true) ?(funcdef = false) ?(funccall = false) =
@@ -1703,7 +1704,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
                   return (Printf.sprintf "  let %s = %s in" lhs_str rhs_str)
               | CaseE (mixop, e) ->
                   (* this can fail and raise a Match Failure exception, which will be caught by the try_clauses function *)
-                  let let_lhs = String.concat ", " vars in
+                  let let_lhs = String.concat ", " (List.map sanitize_name vars) in
                   (*let* rhstypcons = resolve_variant rhs.note in
                   let* rhstyp =
                     ocaml_of_typ ~consannot:true (Option.get rhstypcons)
@@ -1813,6 +1814,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
               match iter with
               | Opt ->
                   let inflows, outflows = partition None in
+                  are_valid outflows;
                   let inflow_vars =
                     String.concat " "
                       (List.map (fun (id, _) -> sanitize_name id.it) inflows)
@@ -1855,6 +1857,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
               | List1 -> return "(* TODO: IterPr List1 *)"
               | ListN (e, id_opt) ->
                   let inflows, outflows = partition id_opt in
+                  are_valid outflows;
                   let* list_len = ocaml_of_exp e in
                   let* idx_list = get_idx_list iterlist id_opt p.at in
                   let* freshvar = get_freshvar () in
@@ -1978,12 +1981,15 @@ let build_dispatch step =
 
 (* Each clause is it's own function *)
 let ocaml_of_func_def (fdef : func_def) : string list t =
-  let id, params, rettyp, clauses, _ = fdef.it in
-  let name = sanitize_name id.it in
-  Printf.printf "translating func: %s\n" id.it; 
+  let id, osubid, params, rettyp, clauses, _ = fdef.it in
+  let id' = (match osubid with | None -> id | Some subid -> (id.it ^ "_slash" ^ subid.it $ id.at)) in
+  let name = sanitize_name id'.it in
+  (*Printf.printf "translating func: %s\n" id.it;*)
   let* () = add_funcdef name in
   let params' = List.filter rmv_nonexp params in
   let num_params = List.length params' in
+  (* generate "try_clauses_n" for the right "n" *)
+  let* () = gen_try_cls num_params in
   let argslist =
     if num_params = 0 then "()"
     else
@@ -1994,7 +2000,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     else
       String.concat " " (List.init num_params (fun i -> Printf.sprintf "a%d" i))
   in
-  (* horrible way to do hardcoded things for now *)
+  (* these functions are hardcoded *)
   if List.length clauses = 0 then
     match id.it with
     | "Step_read_throw_ref_handler" ->
@@ -2002,7 +2008,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     | "dispatch_step_pure" -> build_dispatch "pure"
     | "dispatch_step_read" -> build_dispatch "read"
     | "dispatch_step" -> build_dispatch ""
-    | _ -> return [ name ^ " = Builtin." ^ name ^ "\n" ]
+    | _ -> return [ name ^ "_fn = Builtin." ^ name ^ "\n" ]
   else if id.it = "Step" then return [ "uc_step a0 = step a0\n" ]
     (* this is re-defined to called `step` instead *)
   else
@@ -2013,7 +2019,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     let* rettypstr = ocaml_of_typ rettyp in
     let* clause_funcs =
       mapMi
-        (fun i clause ->
+        (fun i fclause ->
+          let _, clause = fclause in
           match clause.it with
           | DefD (_, params, body, prems) ->
               (* reset knowns each time for different function *)
@@ -2071,8 +2078,9 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     let clause_names = String.concat ";\n  " clause_calls in
     let err_msg = "function: " ^ name in
     (*let debug = Printf.sprintf "  Printf.printf \"Calling function: %s\\n\";" name in*)
+    (* "_fn" is added to the main function name because there is one case in the spec where a function name happens to match a local variable name, which causes a type error *)
     let main_func =
-      Printf.sprintf "%s %s = try_clauses_%d [\n  %s\n] %s \"%s\"" name argslist
+      Printf.sprintf "%s_fn %s = try_clauses_%d [\n  %s\n] %s \"%s\"" name argslist
         num_params clause_names argslist' err_msg
     in
     return (clause_funcs @ [ main_func ])
@@ -2253,7 +2261,6 @@ let ocaml_of_typedef (typedef : type_def) : (string * string) t =
 
 let ocaml_of_dl_def (def : dl_def) : (string * string) t =
   match def with
-  | RuleDef rd -> error rd.at "RuleDef found: should not happen"
   | TypeDef typedef ->
       let* typestr, type_translation = ocaml_of_typedef typedef in
       let { it = id, _, _; _ } = typedef in
@@ -2273,7 +2280,7 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
   | FuncDef fdef ->
       let* funcslist = ocaml_of_func_def fdef in
       let funcstr = "let " ^ String.concat "\nlet " funcslist in
-      let id, _, _, _, _ = fdef.it in
+      let id, _, _, _, _, _ = fdef.it in
       return (funcstr ^ "\n", "")
   | RecDef dl_defs -> (
       match dl_defs with
@@ -2295,7 +2302,7 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
           else
             (* hardcoded - we want "Steps" to redirect to "steps" immediately. defining it in another file will cause a cyclic dependency and we have to define it after "steps" is defined but before it is called *)
             let fdef = List.hd fdefs in
-            let id, _, _, _, _ = fdef.it in
+            let id, _, _, _, _, _ = fdef.it in
             let steps =
               if sanitize_name id.it = "steps" then
                 "let uc_steps a0 = steps a0\n"
@@ -2321,9 +2328,7 @@ let ocaml_of_dl_def (def : dl_def) : (string * string) t =
             return ("", typestrs)
           else
             let* () = add_construct ("let rec " ^ typetranslations) in
-            return ("", "type " ^ typestrs)
-      | RuleDef _ :: _ ->
-          error (get_dl_def_region def) "Recursive RuleDef: should not happen")
+            return ("", "type " ^ typestrs))
 
 (* just for debugging - remove later *)
 let gen_instr_strs () =
@@ -2358,7 +2363,10 @@ let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
   let* typ_fams = get_typ_fams () in
   Printf.printf "Type families found: %s\n"
     (String.concat ", " (List.map (fun (tid, _) -> tid) typ_fams));
-  let* processed_defs' = rmv_families processed_defs in
+  let* processed_defs' = if List.length typ_fams > 0 then
+    rmv_families processed_defs 
+  else return processed_defs 
+  in
   (*Printf.printf "length after resolving typ fams: %d...\n"(List.length processed_defs');*)
   let* def_strs : (string * string) list =
     mapM ocaml_of_dl_def processed_defs'
