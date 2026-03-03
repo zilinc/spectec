@@ -86,12 +86,13 @@ module AnimState = struct
            ; knowns : Set.t
            ; progress : bool
            ; inverse : bool
+           ; nondet : bool
            ; failure : string
            }
 
   let init : unit -> t = fun () ->
     { prems = []; prems' = []; knowns = Set.empty
-    ; progress = false; inverse = false; failure = ""
+    ; progress = false; inverse = false; nondet = false; failure = ""
     }
 
   let get_prems : t -> prem list = fun t -> t.prems
@@ -154,6 +155,10 @@ module AnimState = struct
   let can_invert : t -> bool = fun t -> t.inverse
   let allow_inverse    : t -> t = fun t -> { t with inverse = true  }
   let disallow_inverse : t -> t = fun t -> { t with inverse = false }
+
+  let can_guess : t -> bool = fun t -> t.nondet
+  let allow_nondet : t -> t = fun t -> { t with nondet = true  }
+  let disallow_nondet : t -> t = fun t -> { t with nondet = false }
 
   let get_failure : t -> string = fun t -> t.failure
   let set_failure : string -> t -> t = fun msg t -> { t with failure = msg }
@@ -1029,7 +1034,10 @@ and animate_if_prem envr at exp : prem list E.m =
     | true , false -> E.throw (string_of_error at (
                                 "e2 in e1 ∈ e2 contains unknowns.\n" ^
                                 "  ▹ e2 = " ^ string_of_exp e2))
-    | false, true  -> animate_exp_mem envr exp.at e1 e2
+    | false, true  -> if can_guess s then
+                        animate_exp_mem envr exp.at e1 e2
+                      else
+                        E.throw (string_of_error at ("Yet can't guess."))
     | false, false -> E.throw (string_of_error at (
                                  "e1 ∈ e2 where both sides have unknowns.\n" ^
                                  "  ▹ e1 = " ^ string_of_exp e1 ^ "\n" ^
@@ -1265,9 +1273,9 @@ and animate_prems' envr at : prem list E.m =
   (* done with everything *)
   | ([], []) -> E.return []
   (* finished one iteration *)
-  | ([], ps') -> begin match (has_progress s, can_invert s) with
+  | ([], ps') -> begin match (has_progress s, can_invert s, can_guess s) with
     (* already allowing making inverses but still doesn't make progress *)
-    | false, true ->
+    | false, true, true ->
       let err = get_failure s in
       E.throw (string_of_error at
                  ("Can't animate the remaining premises:\n" ^
@@ -1275,11 +1283,15 @@ and animate_prems' envr at : prem list E.m =
                   "This is caused by: \n" ^
                   err))
     (* failed to make progress, but we can try allowing inverses *)
-    | false, false ->
+    | false, false, false ->
       let* () = update (allow_inverse >>> clr_progress >>> mv_to_prems) in
       animate_prems' envr at
+    (* failed to make progress even inversion is allowed, we can still try allowing guess *)
+    | false, true, false ->
+      let* () = update (allow_nondet >>> clr_progress >>> mv_to_prems) in
+      animate_prems' envr at
     (* has made some progress, enter next iteration *)
-    | true, _ ->
+    | true, _, _ ->
       let* () = update (clr_progress >>> mv_to_prems) in
       animate_prems' envr at
     end
