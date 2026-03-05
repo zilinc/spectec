@@ -775,7 +775,7 @@ and eval_func name func_def args : value OptMonad.m =
     match_clause no_region name 1 (List.map snd fcs) args
 
 and call_func name args : value OptMonad.m =
-  info "log" no (lazy ("Calling " ^ name));
+  info "call" no (lazy ("Calling " ^ name));
   if State_v.Hints.is_a_builtin name then
     (match name with
     (* Hardcoded functions defined in the compiler. *)
@@ -795,6 +795,8 @@ and call_func name args : value OptMonad.m =
     call_func "steps" args'
   else if name = "Step" then
     error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
+  else if name = "growmem" then
+    growmem args
   else
     (* Built-in functions *)
     let builtin_name, is_builtin =
@@ -1115,12 +1117,42 @@ and reftype_sub = function
 
 (* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
 and heaptype_sub = function
-    | [ ValA ctx; ValA ht1; ValA ht2 ] ->
+  | [ ValA ctx; ValA ht1; ValA ht2 ] ->
     let ht1' = vl_to_heaptype ht1 in
     let ht2' = vl_to_heaptype ht2 in
     RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
+and growmem = function
+  | [ ValA meminst; ValA n ] ->
+    let open Xl.Atom in
+    let memtyp = as_str_field "TYPE" meminst in
+    let bs  = as_str_field "BYTES" meminst in
+    let bs_arr = !(as_list_value bs) in
+    let CaseV ([[];[];["PAGE"]], [at; limits]) = memtyp in
+    let CaseV ([["["];[".."];["]"]], [i; oj]) = limits in
+    let ki = 1024 in
+    let NumV (`Nat n_nat) = n in
+    let n_int = Z.to_int n_nat in
+    let i_int' = (Array.length bs_arr) / (64 * ki) + n_int in
+    let i' = natV (Z.of_int i_int') in
+    let ok = match oj with
+    | OptV (Some j) ->
+      let NumV (`Nat j_nat) = as_singleton_case j in
+      i_int' <= Z.to_int j_nat
+    | OptV None -> true
+    in
+    if ok then
+      let limits' = caseV [["["];[".."];["]"]] [i'; oj] in
+      let memtyp' = caseV [[];[];["PAGE"]] [at; limits'] in
+      let zero = caseV1 (natV Z.zero) in
+      let bs_arr' = Array.append bs_arr (Array.make (n_int * 64 * ki) zero) in
+      let bs' = listV bs_arr' in
+      let meminst' = strV ([("TYPE", ref memtyp'); ("BYTES", ref bs')]) in
+      return meminst'
+    else
+      fail ()
+  | _ -> error no ("Wrong number/type of arguments to $growmem.")
 
 
 (* Wasm interpreter entry *)
