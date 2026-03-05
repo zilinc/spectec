@@ -55,7 +55,8 @@ let globalstore = ref {
   uc_elems_store = [];
   uc_structs_store = [];
   uc_arrays_store = [];
-  uc_exns_store = []
+  uc_exns_store = [];
+  uc_host_store = HOSTSTATE_hoststate
 }
 
 let success = Backend_animation.Main_interpret.success
@@ -67,13 +68,13 @@ let string_of_ocamlname = function
       chars |> List.map int_of_ocamlchar |> Util.Utf8.encode
 
 (* --- copied from manual construct_ocaml for now --- *)
-let ocaml_of_value (v : value) : val_ =
+(*let ocaml_of_value (v : value) : val_ =
   match v with
-  | Num (I32 n) -> DL.CONST_val_ (DL.I32_numtype, DL.C_pct__uc_un (Int32.to_int n))
-  | _ -> failwith "TODO: implement non-I32 values"
+  | Num (I32 n) -> DL.CONST_val_ (DL.I32_numtype, DL.C_pct_num_ (Int32.to_int n))
+  | _ -> failwith "TODO: implement non-I32 values"*)
 
-let ocaml_of_literal (lit : literal) : val_ =
-  ocaml_of_value lit.it
+(*let ocaml_of_literal (lit : literal) : val_ =
+  ocaml_of_value lit.it*)
 
 let heaptype_of_ocaml = function
   | DL.ANY_heaptype -> AnyHT
@@ -93,7 +94,7 @@ let heaptype_of_ocaml = function
   | DL.REC_heaptype _ -> failwith "TODO: implement REC_heaptype"
   | DL.C_DEF_heaptype _ -> failwith "TODO: implement C_DEF_heaptype"
 
-let val_of_ocaml (instr: DL.instr) : value =
+(*let val_of_ocaml (instr: DL.instr) : value =
   match instr with
   | DL.CONST_instr (nt, num) -> 
     let C_pct__uc_un n = num in 
@@ -102,7 +103,7 @@ let val_of_ocaml (instr: DL.instr) : value =
     | _              -> failwith "TODO: non-I32 const"
     end
   | DL.REF_dot_NULL_instr ht  -> Ref (NullRef (heaptype_of_ocaml ht))
-  | _ -> failwith (Printf.sprintf "TODO: not const or null ref instr/val: %s" (string_of_dlinstr instr))
+  | _ -> failwith (Printf.sprintf "TODO: not const or null ref instr/val: %s" (string_of_dlinstr instr))*)
 
 (* -------- *)
 
@@ -124,8 +125,8 @@ let externaddr_from_import import =
 
 (* todo change this to not use uncase *)
 let get_moduleinst config =
-  let state, _ = uncase_config_c_pct__semi_pct__config config in
-  let store', frame' = uncase_state_c_pct__semi_pct__state state in 
+  let C_pct__semi_pct__config (state, _) = config in
+  let C_pct__semi_pct__state (store', frame') = state in 
   globalstore := store';
   frame'.uc_module_frame
 
@@ -134,7 +135,7 @@ let instantiate_helper (m : module_) =
   Printf.printf "[Instantiating module...]\n";  
   let MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) = m in
   let externaddrs = List.map externaddr_from_import imports in
-  let config' = instantiate !globalstore m externaddrs in 
+  let config' = instantiate_fn !globalstore m externaddrs in 
   let t2 = Sys.time () in
   Printf.printf "instantiate took %f s :)\n" (t2 -. t1);
   get_moduleinst config'
@@ -143,7 +144,10 @@ let invoke_helper module_ funcname args =
   let t1 = Sys.time () in
   Printf.printf "[Invoking %s...]\n" funcname;
   let funcaddr = get_export_addr funcname module_ in
-  let result = invoke !globalstore funcaddr (List.map ocaml_of_literal args) in
+  let val_args = List.map (fun lit -> lit.it) args in
+  let il_args = List.map Backend_animation.Construct.il_of_value val_args in
+  let args' = List.map ocaml_of_val_ il_args in
+  let result = invoke_fn !globalstore funcaddr args' in
   let t2 = Sys.time () in
   Printf.printf "invoke %s took %f s :D\n" funcname (t2 -. t1);
   result
@@ -152,14 +156,15 @@ let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
     let config' = invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args in 
-    uc_steps config'
+    steps_fn config' 256
   | _ -> failwith "TODO: implement other actions"
 
 let test_assertion assertion =
   match assertion.it with
   | AssertReturn (action, expected) ->
     let C_pct__semi_pct__config (_, vals) = run_action action in 
-    let result = List.map val_of_ocaml vals in 
+    let result_il = List.map il_of_instr vals in
+    let result = List.map  Backend_animation.Construct.il_to_value result_il in 
     assert_results no_region result expected;
     success
   | _ -> failwith "TODO: implement other assertions"

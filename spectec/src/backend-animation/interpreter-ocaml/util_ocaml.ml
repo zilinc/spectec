@@ -176,7 +176,9 @@ module TypeM = struct
     mutable typevars : Set.t; (* type variables currently in scope *)
     mutable flipsub : bool; (* the subtyping direction is different for function arguments *)
     mutable typ_fams : Def.type_def Map.t; (* multi-instance aliases - probably don't need this anymore *)
-    mutable max_args : int (* the maximum number of args that any function takes *)
+    mutable max_args : int; (* the maximum number of args that any function takes *)
+    mutable max_zip : int; (* the max int i for which unzip_i is called *)
+    mutable builtins : string list; (* list of built-in functions - todo: may no longer be used *)
   }
 
   type 'a t = state -> 'a * state * string * string (* value, new state, util functions, parser functions *)
@@ -217,6 +219,13 @@ module TypeM = struct
   let add_funcdef (name : string) : unit t =
     modify (fun st -> { st with functions = Map.add name () st.functions })
 
+  let add_builtin (name : string) : unit t =
+    modify (fun st -> { st with builtins = name::st.builtins })
+
+  let is_builtin (name : string) : bool t =
+    fun st -> (List.mem name st.builtins, st, "", "")
+
+  (* TODO: try_clauses, unzip%d and map%d can all be generated at once in the end instead of generating them each time we see a new number *)
   let gen_try_cl i =
     let args = List.init i (fun j -> Printf.sprintf "arg%d" j) in
     let args_str = String.concat " " args in
@@ -246,6 +255,36 @@ module TypeM = struct
       in
       let* () = tell new_clauses in
       modify (fun st -> { st with max_args = max st.max_args a })
+  let gen_unzip_cl i =
+    if i = 1 then "let unzip1 lst = lst\n" else
+    let vars = List.init i (fun j -> Printf.sprintf "%c" (Char.chr (97 + j))) in
+    let tup_type = String.concat " * " (List.map (fun v -> Printf.sprintf "'%s" v) vars) in
+    let ret_type = String.concat " * " (List.map (fun v -> Printf.sprintf "'%s list" v) vars) in
+    let pat = String.concat ", " vars in
+    let accs = List.init i (fun j -> Printf.sprintf "acc%d" j) in
+    let acc_args = String.concat " " accs in
+    let acc_init = String.concat " " (List.map (fun _ -> "[]") accs) in
+    let acc_updates = String.concat " " (List.mapi (fun j v -> Printf.sprintf "(%s :: acc%d)" v j) vars) in
+    let rev_result = String.concat ", " (List.map (fun a -> Printf.sprintf "List.rev %s" a) accs) in
+    Printf.sprintf
+      "let unzip%d (lst : (%s) list) : (%s) =\n\
+      \  let rec aux %s = function\n\
+      \    | [] -> (%s)\n\
+      \    | (%s) :: rest -> aux %s rest\n\
+      \  in\n\
+      \  aux %s lst\n"
+      i tup_type ret_type acc_args rev_result pat acc_updates acc_init
+
+  let gen_unzip_cls a : unit t =
+    let* st = get in
+    if a <= st.max_zip then return ()
+    else
+    let new_unzips =
+      String.concat "\n"
+        (List.init (a - st.max_zip) (fun i -> gen_unzip_cl (st.max_zip + 1 + i)))
+    in
+    let* () = tell new_unzips in
+    modify (fun st -> { st with max_zip = max st.max_zip a })
 
   let is_defined (funname : string) : bool t = fun st ->
     (Map.mem funname st.functions, st, "", "")
@@ -419,15 +458,17 @@ module TypeM = struct
 
   let eval m = 
     let st0 = { typemap = Map.empty; 
-    functions = Map.empty;
-    knowns = Set.empty;
-    typecasts = "";
-    freshvaridx = 0;
-    typevars = Set.empty;
-    flipsub = false;
-    typ_fams = Map.empty;
-    max_args = -1;
-    } in 
+      functions = Map.empty;
+      knowns = Set.empty;
+      typecasts = "";
+      freshvaridx = 0;
+      typevars = Set.empty;
+      flipsub = false;
+      typ_fams = Map.empty;
+      max_args = -1;
+      max_zip = 0;
+      builtins = [];
+      } in 
     let (a, st1, w, p) = m st0 in (a, w, p) 
 
 end
@@ -630,3 +671,74 @@ let rec print_all_occurrences dl_defs vars =
     print_all_occurrences rest vars
   | _ :: rest ->
     print_all_occurrences rest vars*)
+
+let atom_to_ocaml_str (a : Atom.atom) : string =
+  let it_str = match a.it with
+    | Atom.Atom s      -> Printf.sprintf "Xl.Atom.Atom \"%s\"" s
+    | Atom.Infinity    -> "Xl.Atom.Infinity"
+    | Atom.Bot         -> "Xl.Atom.Bot"
+    | Atom.Top         -> "Xl.Atom.Top"
+    | Atom.Dot         -> "Xl.Atom.Dot"
+    | Atom.Dot2        -> "Xl.Atom.Dot2"
+    | Atom.Dot3        -> "Xl.Atom.Dot3"
+    | Atom.Semicolon   -> "Xl.Atom.Semicolon"
+    | Atom.Backslash   -> "Xl.Atom.Backslash"
+    | Atom.Mem         -> "Xl.Atom.Mem"
+    | Atom.NotMem      -> "Xl.Atom.NotMem"
+    | Atom.Arrow       -> "Xl.Atom.Arrow"
+    | Atom.Arrow2      -> "Xl.Atom.Arrow2"
+    | Atom.ArrowSub    -> "Xl.Atom.ArrowSub"
+    | Atom.Arrow2Sub   -> "Xl.Atom.Arrow2Sub"
+    | Atom.Colon       -> "Xl.Atom.Colon"
+    | Atom.ColonSub    -> "Xl.Atom.ColonSub"
+    | Atom.Sub         -> "Xl.Atom.Sub"
+    | Atom.Sup         -> "Xl.Atom.Sup"
+    | Atom.Assign      -> "Xl.Atom.Assign"
+    | Atom.Equal       -> "Xl.Atom.Equal"
+    | Atom.EqualSub    -> "Xl.Atom.EqualSub"
+    | Atom.NotEqual    -> "Xl.Atom.NotEqual"
+    | Atom.Less        -> "Xl.Atom.Less"
+    | Atom.Greater     -> "Xl.Atom.Greater"
+    | Atom.LessEqual   -> "Xl.Atom.LessEqual"
+    | Atom.GreaterEqual-> "Xl.Atom.GreaterEqual"
+    | Atom.Equiv       -> "Xl.Atom.Equiv"
+    | Atom.EquivSub    -> "Xl.Atom.EquivSub"
+    | Atom.Approx      -> "Xl.Atom.Approx"
+    | Atom.ApproxSub   -> "Xl.Atom.ApproxSub"
+    | Atom.SqArrow     -> "Xl.Atom.SqArrow"
+    | Atom.SqArrowSub  -> "Xl.Atom.SqArrowSub"
+    | Atom.SqArrowStar -> "Xl.Atom.SqArrowStar"
+    | Atom.SqArrowStarSub -> "Xl.Atom.SqArrowStarSub"
+    | Atom.Prec        -> "Xl.Atom.Prec"
+    | Atom.Succ        -> "Xl.Atom.Succ"
+    | Atom.Turnstile   -> "Xl.Atom.Turnstile"
+    | Atom.TurnstileSub-> "Xl.Atom.TurnstileSub"
+    | Atom.Tilesturn   -> "Xl.Atom.Tilesturn"
+    | Atom.TilesturnSub-> "Xl.Atom.TilesturnSub"
+    | Atom.Quest       -> "Xl.Atom.Quest"
+    | Atom.Plus        -> "Xl.Atom.Plus"
+    | Atom.Star        -> "Xl.Atom.Star"
+    | Atom.Comma       -> "Xl.Atom.Comma"
+    | Atom.Cat         -> "Xl.Atom.Cat"
+    | Atom.Bar         -> "Xl.Atom.Bar"
+    | Atom.BigAnd      -> "Xl.Atom.BigAnd"
+    | Atom.BigOr       -> "Xl.Atom.BigOr"
+    | Atom.BigAdd      -> "Xl.Atom.BigAdd"
+    | Atom.BigMul      -> "Xl.Atom.BigMul"
+    | Atom.BigCat      -> "Xl.Atom.BigCat"
+    | Atom.LParen      -> "Xl.Atom.LParen"
+    | Atom.RParen      -> "Xl.Atom.RParen"
+    | Atom.LBrack      -> "Xl.Atom.LBrack"
+    | Atom.RBrack      -> "Xl.Atom.RBrack"
+    | Atom.LBrace      -> "Xl.Atom.LBrace"
+    | Atom.RBrace      -> "Xl.Atom.RBrace"
+  in
+  Printf.sprintf "{it=%s; at=no; note={Xl.Atom.def=\"\"; case=\"\"}; mark=false}" it_str
+
+let mixop_to_ocaml_str (mixop : Mixop.mixop) : string =
+  "[" ^
+  String.concat "; "
+    (List.map (fun atoms ->
+      "[" ^ String.concat "; " (List.map atom_to_ocaml_str atoms) ^ "]"
+    ) mixop) ^
+  "]"

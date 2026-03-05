@@ -325,6 +325,17 @@ let rec string_of_def ?(suppress_pos = false) d =
   | HintD _ ->
     ""
 
+let rec concat_nonempty sep acc l = match l with
+  | [] -> acc
+  | x::xs when x <> "" -> concat_nonempty sep (x ^ sep ^ acc) xs
+  | _::xs -> concat_nonempty sep acc xs
+
+let rec string_of_wf d = 
+  match d.it with
+  | RelD (id, _, _, _) when String.starts_with ~prefix:"wf" id.it -> string_of_def d
+  | RecD rds -> List.iter (fun d -> Printf.printf "wf result: '%s'\n" (string_of_wf d)) rds;
+    concat_nonempty "\n" "" (List.map string_of_wf rds)
+  | _ -> ""
 
 (* Scripts *)
 

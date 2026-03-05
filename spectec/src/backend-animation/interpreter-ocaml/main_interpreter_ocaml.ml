@@ -43,16 +43,35 @@ let generate_dune_file () =
   output_string oc runner_content;
   close_out oc*)
 
-(* translate from numE to int/nat - todo: these 3 functions should be in a util file with the other things from util_ocaml *)
+(* translate from numE to int/nat - todo: all these functions should be in a util file with the other things from util_ocaml *)
 let basic_types_conv = 
-  "let ocaml_of_int (e : exp) : int =\n\
+  "let ($$) = Util.Source.($$)\n\
+  let ($) = Util.Source.($)\n\
+  let (%) = Util.Source.(%)\n\
+  let no = Util.Source.no_region\n\
+  let notyp = VarT (\"\" $ no, []) $ no\n\
+  let dummy_info = {Xl.Atom.def = \"\"; Xl.Atom.case = \"\"}\n\
+  let dummy_atom (a : Xl.Atom.atom') : Xl.Atom.atom = {it = a; at = no; note = dummy_info; mark = false}\n\n\
+  let ocaml_of_int (e : exp) : int =\n\
   \  match e.it with\n\
   \  | NumE (`Int i) -> Z.to_int i \n\
+  \  | _ -> failwith \"Invalid type: should be a NumE int\"\n\n\
+  let ocaml_of_bool (e : exp) : bool =\n\
+  \  match e.it with\n\
+  \  | BoolE b -> b \n\
   \  | _ -> failwith \"Invalid type: should be a NumE int\"\n\n\
   let ocaml_of_nat (e : exp) : DL.nat =\n\
   \  match e.it with\n\
   \  | NumE (`Nat n) -> Z.to_int n \n\
   \  | _ -> failwith \"Invalid type: should be a NumE nat\"\n\n\
+  let ocaml_of_rat (e : exp) : float =\n\
+  \  match e.it with\n\
+  \  | NumE (`Rat r) -> Q.to_float r
+  \  | _ -> failwith \"Invalid type: should be a NumE rat\"\n\n\
+  let ocaml_of_real (e : exp) : float =\n\
+  \  match e.it with\n\
+  \  | NumE (`Real r) -> r\n\
+  \  | _ -> failwith \"Invalid type: should be a NumE real\"\n\n\
   let ocaml_of_list f (e : exp) =\n\
   \  match e.it with\n\
   \  | ListE es -> List.map f es\n\
@@ -64,7 +83,14 @@ let basic_types_conv =
   let ocaml_of_string (e : exp) : string =\n\
   \  match e.it with\n\
   \  | TextE s -> s\n\
-  \  | _       -> failwith \"Invalid type: should be a TextE\"\n\n"
+  \  | _       -> failwith \"Invalid type: should be a TextE\"\n\n\
+  let il_of_list f xs = ListE (List.map f xs) $$ no % notyp\n\
+  let il_of_opt f x = match x with None -> OptE None $$ no % notyp | Some v -> OptE (Some (f v)) $$ no % notyp\n\
+  let il_of_string s = TextE s $$ no % notyp\n\n\
+  let il_of_int (i : int)    : exp = NumE (`Int (Z.of_int i)) $$ no % notyp\n\
+  let il_of_nat (n : DL.nat) : exp = NumE (`Nat (Z.of_int n)) $$ no % notyp\n\
+  let il_of_rat (r : float)  : exp = NumE (`Rat (Q.of_float r)) $$ no % notyp\n\
+  let il_of_real (r : float) : exp = NumE (`Real r) $$ no % notyp\n\n"
 
 let generate_ocaml dl ocamlfile = 
   Printf.printf "Generating OCaml code...\n";
@@ -81,15 +107,16 @@ let generate_ocaml dl ocamlfile =
   in
   let main, types, typeconv, parser = Interpreter_ocaml.generate_ocaml dl in
   let type_import = Printf.sprintf "open %s_types\n" (capsfirst ocaml_filename) in
+  let cons_import = Printf.sprintf "open Construct_ocaml_new\n" in
   let module_types = "module DL = Dl_codegen_types\n" in 
   let util_import = Printf.sprintf "open %s_util\n" (capsfirst ocaml_filename) in
   let util_ocaml = Printf.sprintf "open Backend_animation.Util_ocaml\n" in
   let il_import = "open Il.Ast\n" in
-  (* ignore redundant cases in pattern matching for now - todo: probably not this *)
+  (* ignore redundant cases in pattern matching for now *)
   let sup_redundant = "[@@@ocaml.warning \"-11\"]\n" in
   (* ignore warnings that updates re-write all fields in a record *)
   let sup_uselessrec = "[@@@ocaml.warning \"-23\"]\n\n" in
-  write_file (basepath ^ ocaml_filename ^ ".ml") (sup_redundant ^ sup_uselessrec ^ type_import ^ util_import ^ main);
+  write_file (basepath ^ ocaml_filename ^ ".ml") (sup_redundant ^ sup_uselessrec ^ type_import ^ util_import ^ cons_import ^ main);
   write_file (basepath ^ ocaml_filename ^ "_types.ml") types;
   write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ util_ocaml ^ typeconv);
   write_file (basepath ^ "construct_ocaml_new.ml") (util_ocaml ^ il_import ^ "\n" ^ module_types ^ "\n" ^ basic_types_conv ^ parser)

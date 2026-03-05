@@ -205,3 +205,32 @@ let narrow__ a0 a1 a2 a3 = failwith "TODO: implement Built-in function narrow__"
 let reinterpret__ a0 a1 a2 = failwith "TODO: implement Built-in function reinterpret__"
 let lanes_ a0 a1 = failwith "TODO: implement Built-in function lanes_"
 let inv_lanes_ a0 a1 = failwith "TODO: implement Built-in function inv_lanes_"
+
+let step a0 a1 = failwith "TODO: implement Built-in function inv_lanes_"
+
+let uc_step_pure_slashbr a0 = failwith "TODO: implement Built-in function uc_step_pure_slashbr"
+
+let uc_step_pure_slashreturn a0 = failwith "TODO: implement Built-in function uc_step_pure_slashbr"
+
+let uc_ref_ok_fn a0 a1 a2 = failwith "TODO: implement Built-in function uc_ref_ok_fn"
+let uc_val_ok_fn a0 a1 a2 = failwith "TODO: implement Built-in function uc_val_ok_fn"
+
+let uc_module_ok_fn a0 = failwith "TODO: implement Built-in function uc_module_ok_fn"
+
+let uc_externaddr_ok_fn a0 a1 a2 = failwith "TODO: implement Built-in function uc_externaddr_ok_fn"
+
+let uc_step_read_slashreturn_call_ref a0 = failwith "TODO: implement Built-in function uc_step_read_slashreturn_call_ref"
+
+let uc_step_slashctxt a0 = failwith "TODO: implement Built-in function uc_step_slashctxt"
+
+let uc_heaptype_sub_fn a0 a1 a2 = failwith "TODO: implement Built-in function uc_heaptype_sub_fn"
+let ieee_ a0 a1 = failwith "TODO: implement Built-in function ieee_"
+
+let dots = ()
+let ordered a0 = failwith "TODO: implement Built-in function ordered"
+
+let instrdots () = failwith "TODO: implement Built-in function instrdots"
+let uc_allocx a0 a1 a2 = failwith "TODO: implement Built-in function uc_allocx"
+
+
+
