@@ -60,14 +60,26 @@ let print_runner_result name result =
     else (float_of_int num_success /. float_of_int total) *. 100.
   in
 
+  let time_report = if execution_time < 60.0 then
+    Printf.sprintf ("%.5fs") execution_time
+  else
+    let sec = int_of_float execution_time in
+    let min, sec = Z.(div_rem (of_int sec) (of_int 60)) in
+    if Z.to_int min < 60 then
+      Printf.sprintf "%dm%ds" (Z.to_int min) (Z.to_int sec)
+    else
+      let hr, min = Z.div_rem min (Z.of_int 60) in
+      Printf.sprintf "%dh%dm" (Z.to_int hr) (Z.to_int min)
+  in
+
   if name = "Total" then (
-    Printf.printf "Total [%d/%d] (%.2f%%)\n\n" num_success total percentage;
+    Printf.printf "Total [%d/%d] (%.2f%%) ... %s.\n\n" num_success total percentage time_report;
     let failed = total - num_success in
     if failed > 0 then
       error no (string_of_int failed ^ " tests failed.")
   )
   else
-    Printf.printf "- %d/%d (%.2f%%) ... %.5fs.\n\n" num_success total percentage execution_time
+    Printf.printf "- %d/%d (%.2f%%) ... %s.\n\n" num_success total percentage time_report
 
 let get_export name moduleinst_name =
   Register.find moduleinst_name
