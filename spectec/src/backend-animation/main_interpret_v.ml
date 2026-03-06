@@ -20,7 +20,7 @@ module C = Construct_v
 (* Errors *)
 
 module Assert = Reference_interpreter.Error.Make ()
-let _error_interpret at msg = Error.error at "interpreter" msg
+let error at msg = Error.error at "interpreter" msg
 
 (* Logging *)
 
@@ -60,8 +60,12 @@ let print_runner_result name result =
     else (float_of_int num_success /. float_of_int total) *. 100.
   in
 
-  if name = "Total" then
-    Printf.printf "Total [%d/%d] (%.2f%%)\n\n" num_success total percentage
+  if name = "Total" then (
+    Printf.printf "Total [%d/%d] (%.2f%%)\n\n" num_success total percentage;
+    let failed = total - num_success in
+    if failed > 0 then
+      error no (string_of_int failed ^ " tests failed.")
+  )
   else
     Printf.printf "- %d/%d (%.2f%%) ... %.5fs.\n\n" num_success total percentage execution_time
 
@@ -374,11 +378,9 @@ let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
     let result = run_file ~is_top:true path args' in
 
     (* Print result *)
-    if Sys.is_directory path then (
-      if !num_parse_fail <> 0 then
-        print_endline ((string_of_int !num_parse_fail) ^ " parsing fail");
-      print_runner_result "Total" result;
-    )
+    if !num_parse_fail <> 0 then
+      print_endline ((string_of_int !num_parse_fail) ^ " parsing fail");
+    print_runner_result "Total" result;
   | path :: _ -> failwith ("file " ^ path ^ " does not exist")
   | [] -> failwith "no file to run"
 
