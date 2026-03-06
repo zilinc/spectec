@@ -41,6 +41,18 @@ rule Step/memory.grow_det-fail:
   z; (CONST at n) (MEMORY.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
   -- otherwise
 
+
+rule Step/table.grow_det-succeed:
+  z; ref (CONST at n) (TABLE.GROW x)  ~>  $with_tableinst(z, x, ti); (CONST at $(|$table(z, x).REFS|))
+  ----
+  -- if ~ (at = I32 /\ $(n + |$table(z, x).REFS| > 0xFFFF_FFFF))
+  -- if ti = $growtable($table(z, x), n, ref)
+
+rule Step/table.grow_det-fail:
+  z; ref (CONST at n) (TABLE.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
+  -- otherwise
+
+
 ;; ********************************************************
 ;;                      Reduction
 ;; ********************************************************

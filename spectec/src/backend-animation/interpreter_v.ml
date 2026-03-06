@@ -806,6 +806,8 @@ and call_func name args : value OptMonad.m =
     error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
   else if name = "Step/memory.grow" then (
     call_func "Step/memory.grow_det" args )
+  else if name = "Step/table.grow" then (
+    call_func "Step/table.grow_det" args )
   (*
   else if name = "growmem" then
     growmem args
