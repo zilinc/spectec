@@ -1,10 +1,7 @@
 (module
 ;;   (import "spectest" "print_i32" (func $print_i32 (param i32)))
-;;   (global f32 (f32.const 1.4))
-;;   (global f32 (f32.const 5.2))
-;; changed to i32 for now 
-  (global i32 (i32.const 3))
-  (global i32 (i32.const 7))
+  (global f32 (f32.const 1.4))
+  (global f32 (f32.const 5.2))
   (global (mut i32) (i32.const 42))
 
   (table 3 funcref)
@@ -69,47 +66,29 @@
     i32.gt_s
   )
 
-;;   (func (export "relop_f32") (result i32)
-;;     f32.const 1.4142135
-;;     f32.const 3.1415926
-;;     f32.gt
-;;   )
+  (func (export "relop_f32") (result i32)
+    f32.const 1.4142135
+    f32.const 3.1415926
+    f32.gt
+  )
 
-;; changed to i32 for now
-  (func (export "nop") (result i32)
-    i32.const 0
+  (func (export "nop") (result i64)
+    i64.const 0
     nop
   )
 
-  (func (export "drop") (result i32)
-    i32.const 3
-    i32.const 5
+  (func (export "drop") (result f64)
+    f64.const 3.1
+    f64.const 5.2
     drop
   )
 
-  (func (export "select") (result i32)
-    i32.const 1
-    i32.const -0
+  (func (export "select") (result f64)
+    f64.const 1.7976931348623157E+308
+    f64.const -0.0
     i32.const 0
     select
   )
-;;   (func (export "nop") (result i64)
-;;     i64.const 0
-;;     nop
-;;   )
-
-;;   (func (export "drop") (result f64)
-;;     f64.const 3.1
-;;     f64.const 5.2
-;;     drop
-;;   )
-;; 
-;;   (func (export "select") (result f64)
-;;     f64.const 1.7976931348623157E+308
-;;     f64.const -0.0
-;;     i32.const 0
-;;     select
-;;   )
 
   (func (export "local_set") (param i32 i32 i32) (result i32)
     local.get 2
@@ -138,17 +117,13 @@
     global.get 2
   )
 
-;;   (func (export "global_get1") (result f32)
-;;     global.get 1
-;;   )
-
-  (func (export "global_get1") (result i32)
+  (func (export "global_get1") (result f32)
     global.get 1
   )
 
-;;   (func (export "global_get2") (result i32)
-;;     global.get 2
-;;   )
+  (func (export "global_get2") (result i32)
+    global.get 2
+  )
 
   (func (export "table_get") (result funcref)
     i32.const 1
@@ -279,14 +254,21 @@
     ;; (call $print_i32 (local.get 0))
     (local.get 0)
   )
+
+  (func (export "fdiv") (result f32)
+    f32.const 1.0
+    f32.const 2.0
+    f32.div
+  )
 )
 
 
-(assert_return (invoke "binop") (i32.const 45))
-;; (assert_return (invoke "testop") (i32.const 1))
+(assert_return (invoke "binop") (i32.const 46))
+(assert_return (invoke "testop") (i32.const 1))
+;; (assert_return (invoke "fdiv") (f32.const 0.5))
 ;; (assert_return (invoke "relop_i32") (i32.const 0))
-;; (assert_return (invoke "relop_f32") (i32.const 0))
-;; changed to i32 for now
+(assert_return (invoke "relop_f32") (i32.const 1))
+
 ;; (assert_return (invoke "nop") (i64.const 0))
 ;; (assert_return (invoke "drop") (f64.const 3.1))
 ;; (assert_return (invoke "select") (f64.const -0.0))
@@ -298,9 +280,9 @@
 ;; (assert_return (invoke "local_get" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 7))
 ;; (assert_return (invoke "local_tee" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 6))
 ;; (assert_return (invoke "global_set") (i32.const 43))
-;; changed to i32 for now
+
 ;; (assert_return (invoke "global_get1") (f32.const 5.2))
-;; (assert_return (invoke "global_get1") (i32.const 7))
+;; (assert_return (invoke "global_get2") (i32.const 42))
 ;; (assert_return (invoke "table_get") (ref.null func))
 ;; 
 ;; (assert_return (invoke "call_nop") (i32.const 0))

@@ -2364,7 +2364,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       let* ret_tr = gen_typarg_translation_fn rettyp in
       let* () = set_typevars Set.empty in
       return [ Printf.sprintf "%s_fn %s = %s (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func %S [%s])))\n"
-               name full_argslist ret_tr name il_args ])
+               name full_argslist ret_tr id.it il_args ])
   else if (id.it = "Step" && osubid = None) then return [ "uc_step a0 = step a0\n" ]
   else
     let* () = set_typevars typevars in

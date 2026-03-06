@@ -4,6 +4,7 @@ NAME = spectec
 EXT = $(NAME)
 LOG = _log
 PRINT_DL ?= 0
+UNDEP ?= 0
 
 # Main targets
 
@@ -20,9 +21,17 @@ ci: all
 SPEC ?= ../specification/wasm-3.0/*
 
 ifeq ($(PRINT_DL),1)
-SPECTEC_FLAGS = --animate --inline --print-dl --typefamily-removal --generate-ocaml "dl_codegen"
+  ifeq ($(UNDEP),1)
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --remove-indexed-types --generate-ocaml "dl_codegen"
+  else
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --generate-ocaml "dl_codegen"
+  endif
 else
-SPECTEC_FLAGS = --animate --inline --typefamily-removal --generate-ocaml "dl_codegen"
+  ifeq ($(UNDEP),1)
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --remove-indexed-types --generate-ocaml "dl_codegen"
+  else
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --generate-ocaml "dl_codegen"
+  endif
 endif
 
 TEST ?= test-ocaml/sample.wast

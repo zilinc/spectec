@@ -727,7 +727,7 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
     let _ = Animate.env_of_binds binds il_env in
     if not (List.length pargs = List.length args) then
       error at ("Function `" ^ fname ^ "` is called with " ^ string_of_int (List.length args) ^ " arguments");
-    if fname = "binop_" then Printf.printf "pargs: %s\n args: %s\n" (Il.Print.string_of_args pargs) (Value.string_of_args args);
+    (*if fname = "binop_" then Printf.printf "pargs: %s\n args: %s\n" (Il.Print.string_of_args pargs) (Value.string_of_args args);*)
     let* val_ =
       (match match_args VContext.empty cl.at pargs args |> run_opt with
       | Some ctx ->
