@@ -39,17 +39,19 @@ and inline_prem occ prem : prem list Inline.m =
     (* If nested iterations, x <- x* may be removed because x is substituted.
        But in the outer binding list, x* <- x** should also be removed.
     *)
-    let ctx', xes' = List.fold_left (fun (s, xes') (x, e) ->
+    let* xes' = Inline.foldlM (fun xes' (x, e) ->
       if Il.Subst.mem_varid ctx_inner x then
         (match e.it with
         | VarE v -> let e' = Il.Subst.find_varid ctx_inner x in
-                    Il.Subst.add_varid s v e', xes'
+                    let* () = update (fun s -> Il.Subst.add_varid s v e') in
+                    return xes'
         | _ -> assert false
         )
       else
-        s, xes' @ [(x, e)]
-    ) (ctx, []) xes in
-    let* () = put ctx' in
+        let* s = get() in
+        let* e' = inline_exp occ e in
+        return (xes' @ [(x, e')])
+    ) [] xes in
     return [ IterPr (prems', (iter', xes')) $> prem ]
   | _ -> assert false
 

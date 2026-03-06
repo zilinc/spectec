@@ -376,6 +376,7 @@ let cannot_animate : (string * string) list =
     (* Rules to bubble up the control flow; they are encoded in meta.spectec *)
     ("Step_pure", "trap-instrs");
     ("Step_read", "throw_ref-instrs");
+
     (* These are structural rules that are hard-coded into the $reduce function in meta.spectec *)
     ("Step", "ctxt-instrs");
     ("Step", "ctxt-label");
@@ -600,9 +601,9 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
        ...
        (this premise will be handled by the `animate_prem (IterPr {})` case.)
     *)
-    begin match iter with
+    begin match lhs'.it, iter with
     (* Special case *)
-    | Opt ->
+    | _, Opt ->
       let (envr, vs, ve, prems_lhs) = bind_var_exp envr None lhs' None `Lhs in
       let blob = List.map (fun v ->
         (match List.find_opt (fun (x, e) -> x.it = v) xes with
@@ -638,8 +639,12 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       let xes'' = merge xes' xes in
       let* prems_iter' = animate_prem envr (IterPr (prems_lhs, (iter, xes'')) $ at) in
       E.return (prem_opt :: prems_iter')
+    (* Optimisation for -- let v* = rhs *)
+    | VarE v, List ->
+      let e_star = List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd in
+      animate_exp_eq envr at e_star rhs
     (* Base case *)
-    | ListN(len, Some i) ->
+    | _, ListN(len, Some i) ->
       let fv_len = (free_exp false len).varid in
       let unknowns_len = Set.diff fv_len knowns in
       if Set.is_empty unknowns_len then
@@ -661,7 +666,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
         let* prems' = animate_exp_eq envr at lhs rhs in
         E.return (prem_len @ prems')
     (* Inductive cases *)
-    | ListN(len, None) ->
+    | _, ListN(len, None) ->
       let i = fresh_id (Some "i") at in
       let i_star = Frontend.Dim.annot_varid i [iter] in
       let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
@@ -669,7 +674,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       envr := bind_var !envr i_star t_star;
       let xes' = (i, i_star_e) :: xes in
       animate_exp_eq envr at (IterE (lhs', (ListN(len, Some i), xes')) $> lhs) rhs
-    | List | List1 ->
+    | _, List | _, List1 ->
       let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
       let len_v = fresh_id (Some "len") len_rhs.at in
       envr := bind_var !envr len_v (natT ~at:len_rhs.at ());
@@ -809,20 +814,23 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     end
   | TupE es ->
     (* simp *)
-    let prems = Fun.flip List.mapi es (fun i e ->
+    let prems = List.mapi (fun i e ->
       let bool_t = BoolT $ e.at in
       let proj_rhs = ProjE (rhs, i) $$ rhs.at % e.note in
       info "case" rhs.at (lazy ("Proj " ^ string_of_exp proj_rhs ^ "'s type is " ^ string_of_typ e.note));
       info "case" rhs.at (lazy ("RHS " ^ string_of_exp rhs ^ "'s type is " ^ string_of_typ rhs.note));
-      IfPr (CmpE (`EqOp, `BoolT, e, proj_rhs) $$ e.at % bool_t) $ at)
+      IfPr (CmpE (`EqOp, `BoolT, e, proj_rhs) $$ e.at % bool_t) $ at
+    ) es
     in
     (* Need to animate the components in a loop. This is needed
        if we have premises like `(... x ..., x) = (e1, e2)`, where the first
        component cannot be animated when `x` is unknown. By solving the second
        first, we turn the first into a check.
     *)
-    let* () = update (push_prems prems) in
-    E.return []
+    let s_new = { (init ()) with prems; knowns = get_knowns s } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return prems'
   | CvtE (lhs', t1, t2) ->
     (* TODO(zilinc): Conversion is not checked. *)
     animate_exp_eq envr at lhs' (CvtE (rhs, t2, t1) $$ rhs.at % lhs'.note)
@@ -1018,11 +1026,11 @@ and animate_if_prem envr at exp : prem list E.m =
      may need to be animated in different iterations.
    *)
   | BinE (`AndOp, _, e1, e2) ->
-    (* This should be the few places where we manipulate the stack, because the conjuncts
-       are totally independent of each other and can be flattened into the main loop.
-     *)
-    let* () = update (push_prems [IfPr e2 $ e2.at; IfPr e1 $ e1.at]) in
-    E.return []
+    let prems = [IfPr e2 $ e2.at; IfPr e1 $ e1.at] in
+    let s_new = { (init ()) with prems; knowns = get_knowns s } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return prems'
   (* Membership or nondeterministic choice: e1 ∈ e2 *)
   | MemE (e1, e2) ->
     let fv1 = (free_exp false e1).varid in

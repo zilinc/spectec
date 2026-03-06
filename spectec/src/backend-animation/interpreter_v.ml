@@ -362,7 +362,16 @@ and eval_exp ctx exp : value OptMonad.m =
                | None -> fid | Some fid' -> fid') in
     let* args' = mapM (eval_arg ctx) args in
     call_func fid'.it args'
-
+  (* Optimisation: v* {v <- v*} *)
+  | IterE ({ it = VarE v; _ }, (List, xes)) ->
+    let x_star = List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd in
+    eval_exp ctx x_star
+  (* Optimisation: const^N *)
+  | IterE (e1, (ListN(n, None), xes)) when Set.subset (Il2al.Free.free_exp false e1).varid (VContext.dom_varid ctx) ->
+    (* If [e1] is a constant, i.e. it doesn't need the bindings from [xes]. *)
+    let* v1 = eval_exp ctx e1 in
+    let* vn = eval_exp ctx n <&> vl_to_int in
+    listV (Array.make vn v1) |> return
   | IterE (e1, ((_, xes) as iterexp)) ->
     let* (iter', xvs) as iterval = eval_iterexp ctx iterexp in
     let ids, vs = List.split xvs in
@@ -795,8 +804,12 @@ and call_func name args : value OptMonad.m =
     call_func "steps" args'
   else if name = "Step" then
     error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
+  else if name = "Step/memory.grow" then (
+    call_func "Step/memory.grow_det" args )
+  (*
   else if name = "growmem" then
     growmem args
+  *)
   else
     (* Built-in functions *)
     let builtin_name, is_builtin =
@@ -1123,6 +1136,7 @@ and heaptype_sub = function
     RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
+(*
 and growmem = function
   | [ ValA meminst; ValA n ] ->
     let open Xl.Atom in
@@ -1153,7 +1167,7 @@ and growmem = function
     else
       fail ()
   | _ -> error no ("Wrong number/type of arguments to $growmem.")
-
+*)
 
 (* Wasm interpreter entry *)
 
