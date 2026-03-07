@@ -267,15 +267,15 @@ and eval_exp ctx exp : value OptMonad.m =
     let* v1 = eval_exp ctx e1 in
     let* v2 = eval_exp ctx e2 in
     (match op, v1, v2 with
-    | `EqOp, _, _ -> boolV (eq_value v1 v2)
-    | `NeOp, _, _ -> boolV (eq_value v1 v2 |> not)
+    | `EqOp, _, _ -> boolV (eq_value v1 v2) |> return
+    | `NeOp, _, _ -> boolV (eq_value v1 v2 |> not) |> return
     | #Num.cmpop as op', NumV n1, NumV n2 ->
       (match Num.cmp op' n1 n2 with
-      | Some b -> boolV b
+      | Some b -> boolV b |> return
       | None -> error_eval "Numeric comparison expresion" exp None
       )
     | _ -> error_eval "Comparison expression" exp None
-    ) |> return
+    )
   | IdxE (e1, e2) ->
     let* v1 = eval_exp ctx e1 in
     let* v2 = eval_exp ctx e2 in
@@ -804,10 +804,10 @@ and call_func name args : value OptMonad.m =
     call_func "steps" args'
   else if name = "Step" then
     error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
-  else if name = "Step/memory.grow" then (
-    call_func "Step/memory.grow_det" args )
-  else if name = "Step/table.grow" then (
-    call_func "Step/table.grow_det" args )
+  else if name = "Step/memory.grow" then
+    call_func "Step/memory.grow_det" args
+  else if name = "Step/table.grow" then
+    call_func "Step/table.grow_det" args
   (*
   else if name = "growmem" then
     growmem args
@@ -1138,7 +1138,7 @@ and heaptype_sub = function
     RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
-(*
+
 and growmem = function
   | [ ValA meminst; ValA n ] ->
     let open Xl.Atom in
@@ -1169,7 +1169,7 @@ and growmem = function
     else
       fail ()
   | _ -> error no ("Wrong number/type of arguments to $growmem.")
-*)
+
 
 (* Wasm interpreter entry *)
 

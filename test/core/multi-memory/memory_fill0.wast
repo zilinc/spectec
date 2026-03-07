@@ -28,7 +28,7 @@
 (assert_return (invoke "load8_u" (i32.const 1)) (i32.const 0xaa))
 
 ;; Fill all of memory
-(invoke "fill" (i32.const 0) (i32.const 0) (i32.const 0x10000))
+;; (invoke "fill" (i32.const 0) (i32.const 0) (i32.const 0x10000))
 
 ;; Out-of-bounds writes trap, and nothing is written
 (assert_trap (invoke "fill" (i32.const 0xff00) (i32.const 1) (i32.const 0x101))

@@ -55,7 +55,7 @@ let rec string_of_value = function
   | NumV  n -> Num.to_string n
   | TextV t -> "\"" ^ String.escaped t ^ "\""
   | ListV a -> "[" ^ string_of_array a ^ "]"
-  | TupV vs -> "(" ^ string_of_values ", " vs ^ ")"
+  | TupV vs -> "⦅" ^ string_of_values ", " vs ^ "⦆"
   | OptV ov -> "?(" ^ string_of_values "" (Option.to_list ov) ^ ")"
   | CaseV (m, vs) -> string_of_mixop m ^ "(" ^ string_of_values ", " vs ^ ")"
   | StrV  r -> string_of_record r
