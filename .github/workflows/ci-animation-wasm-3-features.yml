@@ -23,14 +23,31 @@ jobs:
         run: opam install --yes dune menhir mdx zarith tsort
       - name: Build
         run: cd spectec && opam exec make
-      - name: Test wasm-3.0
+      - name: Test wasm-3.0 bulk-memory
         run: |
           cd spectec
-          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v \
-            ./test-interpreter/spec-test-3/bulk-memory \
-            ./test-interpreter/spec-test-3/exceptions \
-            ./test-interpreter/spec-test-3/gc \
-            ./test-interpreter/spec-test-3/memory64 \
-            ./test-interpreter/spec-test-3/multi-memory \
-            ./test-interpreter/spec-test-3/relaxed-simd \
-            ./test-interpreter/spec-test-3/simd
+          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/bulk-memory
+      - name: Test wasm-3.0 exceptions
+        run: |
+          cd spectec
+          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/exceptions
+      - name: Test wasm-3.0 gc
+        run: |
+          cd spectec
+          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/gc
+      - name: Test wasm-3.0 relaxed-simd
+        run: |
+          cd spectec
+          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/relaxed-simd
+      - name: Test wasm-3.0 simd
+        run: |
+          cd spectec
+          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/simd
+      - name: Test wasm-3.0 memory64
+        run: |
+          cd spectec
+          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/memory64
+      - name: Test wasm-3.0 multi-memory
+        run: |
+          cd spectec
+          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/multi-memory
