@@ -640,7 +640,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       let* prems_iter' = animate_prem envr (IterPr (prems_lhs, (iter, xes'')) $ at) in
       E.return (prem_opt :: prems_iter')
     (* Optimisation for -- let v* = rhs *)
-    | VarE v, List ->
+    | VarE v, List when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
       let e_star = List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd in
       animate_exp_eq envr at e_star rhs
     (* Base case *)

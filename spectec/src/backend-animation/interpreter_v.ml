@@ -28,9 +28,9 @@ let verbose : string list ref =
       (* "eval"; *)          (* Evaluation of expressions. *)
       (* "match";  *)        (* Matching of other types. *)
       (* "match_info";  *)
-      (* "call"; *)
       (* "iter"; *)          (* Low-level debugging. *)
       (* "assign"; *)
+      (* "call"; *)
       (* "step"; *)
       (* "log"; *)
       ]
@@ -363,7 +363,7 @@ and eval_exp ctx exp : value OptMonad.m =
     let* args' = mapM (eval_arg ctx) args in
     call_func fid'.it args'
   (* Optimisation: v* {v <- v*} *)
-  | IterE ({ it = VarE v; _ }, (List, xes)) ->
+  | IterE ({ it = VarE v; _ }, (List, xes)) when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
     let x_star = List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd in
     eval_exp ctx x_star
   (* Optimisation: const^N *)

@@ -182,7 +182,7 @@ def $dispatch_step_label(n, eps, TRAP, z, instr*, true) = z; TRAP
 def $dispatch_step_label(n, val*, eps, z, instr*, true) = z; val*
 
 def $dispatch_step_frame(n, val* REF.NULL_ADDR, RETURN_CALL_REF yy, z, bl) = z; TRAP
-def $dispatch_step_frame(n, val* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, z, bl) = z; val''^n (REF.FUNC_ADDR a) (CALL_REF yy)
+def $dispatch_step_frame(k, val* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, z, bl) = z; val''^n (REF.FUNC_ADDR a) (CALL_REF yy)
     -- if val'* val''^n = val*
     -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
 def $dispatch_step_frame(n, val*, RETURN, z, bl) = z; val''^n
