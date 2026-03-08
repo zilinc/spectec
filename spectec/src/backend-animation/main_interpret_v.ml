@@ -24,7 +24,7 @@ let _error_interpret at msg = Error.error at "interpreter" msg
 
 (* Logging *)
 
-let logging = ref false
+let logging = ref true
 
 let log fmt = Printf.(if !logging then fprintf stdout (fmt ^^ "%!") else ifprintf stdout fmt)
 

@@ -150,15 +150,18 @@ let invoke_helper module_ funcname args =
   let vl_args = List.map Backend_animation.Construct_v.vl_of_value val_args in
   let args' = List.map ocaml_of_val_ vl_args in
   let result = invoke_fn !globalstore funcaddr args' in
+  let result' = steps_fn result 256 in
+  let C_pct__semi_pct__config (state', _) = result' in
+  let C_pct__semi_pct__state (store', _) = state' in
+  globalstore := store';
   let t2 = Sys.time () in
   Printf.printf "invoke %s took %f s :D\n" funcname (t2 -. t1);
-  result
+  result'
 
 let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
-    let config' = invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args in 
-    steps_fn config' 256
+    invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args
   | _ -> failwith "TODO: implement other actions"
 
 let test_assertion assertion =
@@ -227,10 +230,7 @@ let () =
   (*let il_spectest = Backend_animation.Script.il_of_spectest () in
   let ocaml_spectest = ocaml_of_moduleinst il_spectest in
   Register.add "spectest" ocaml_spectest;*)
-  let el = List.concat_map (fun f ->
-  Printf.printf "parsing: %s\n%!" f;
-  Frontend.Parse.parse_file f
-) !srcs in
+  let el = List.concat_map Frontend.Parse.parse_file !srcs in
   let il, _ = Frontend.Elab.elab el in
   Il.Valid.valid il;
   let il = Middlend.Sideconditions.transform il in

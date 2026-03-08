@@ -1357,7 +1357,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
   in
   let full_argslist  = append_sep typevar_args argslist  " " in
   let full_argslist' = append_sep typevar_args argslist' " " in
-  (* Built-in functions like module_ok, reftype_sub etc are hardcoded to call their meta-interpeter implementations. Other builtins like dispatch, use_step_*, Step_read_throw are either generated or hardcoded in OCaml. All other builtins are numerics, so we call Numerics_v.call_numeric. *)
+  (* Built-in functions like module_ok, reftype_sub etc are hardcoded to call their meta-interpeter implementations. Other builtins like dispatch, use_step_*, Step_read_throw are either generated or hardcoded in OCaml. *)
   if List.length clauses = 0 then
     match id.it with
     | "Step_read_throw_ref_handler" ->
@@ -1393,7 +1393,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       | IL ->
       return [ Printf.sprintf "%s_fn %s = %s (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func %S [%s])))\n"
                name full_argslist ret_tr id.it args_str ]
-      | VL -> return [ Printf.sprintf "%s_fn %s = %s (Backend_animation.Numerics_v.call_numerics %S [%s])\n"
+      | VL -> return [ Printf.sprintf "%s_fn %s = %s (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.call_func %S [%s])))\n"
                name full_argslist ret_tr id.it args_str ])
   else if (id.it = "Step" && osubid = None) then return [ "uc_step a0 = step a0\n" ]
   else
