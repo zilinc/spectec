@@ -45,7 +45,7 @@ build_ocamlprog: exe
 	@echo "#### spectec finished, compiling generated code"
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "
-	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST)
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
 
 run_ocaml: 
 	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
@@ -54,7 +54,7 @@ run_ocaml:
 	@echo "#### compiling generated code"
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "
-	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST)
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
 
 # Executable
 

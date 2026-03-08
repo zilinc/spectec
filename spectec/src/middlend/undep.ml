@@ -65,7 +65,7 @@ let wf_pred_prefix = "wf_"
 let rule_prefix = "case_"
 
 (* flag that deactivates adding wellformedness predicates to relations *)
-let deactivate_wfness = true
+let deactivate_wfness = false
 
 let error at msg = error at "Undep error" msg
 

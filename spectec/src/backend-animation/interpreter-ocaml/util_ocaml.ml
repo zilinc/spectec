@@ -88,6 +88,19 @@ let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
       )
     in s
 
+let val_mixop_to_str ?(recordfield = false) (mixop : string list list) =
+  (*Printf.printf "mixop to atom: %s\n" (Mixop.to_string mixop);
+  Printf.printf "is polymorphic?: %b\n" is_poly;*)
+  let frmt name = sanitize_name ~typename:false ~recordfield name in
+  match mixop with
+  | [s]::tail when List.for_all ((=) []) tail -> frmt s
+  | mixop ->
+    let s =
+      String.concat "_pct_" (List.map (
+        fun atoms -> String.concat "" (List.map (fun x -> frmt x) atoms)) mixop
+      )
+    in s
+
 let rec update_at i v = function
   | _ :: xs when i = 0 -> v :: xs
   | x :: xs            -> x :: update_at (i - 1) v xs
@@ -175,7 +188,6 @@ module TypeM = struct
     mutable freshvaridx : int;
     mutable typevars : Set.t; (* type variables currently in scope *)
     mutable flipsub : bool; (* the subtyping direction is different for function arguments *)
-    mutable typ_fams : Def.type_def Map.t; (* multi-instance aliases - probably don't need this anymore *)
     mutable max_args : int; (* the maximum number of args that any function takes *)
     mutable max_zip : int; (* the max int i for which unzip_i is called *)
     mutable builtins : string list; (* list of built-in functions - todo: may no longer be used *)
@@ -335,27 +347,6 @@ module TypeM = struct
   let is_typevar (x : string) : bool t =
     fun st -> (Set.mem x st.typevars, st, "", "")
 
-  let get_typ_fams () : (text * type_def) list t =
-    fun st -> (Map.bindings st.typ_fams, st, "", "")
-
-  let add_typ_fam (name : string) (typedef : Def.type_def) : unit t =
-    modify (fun st -> { st with typ_fams = Map.add name typedef st.typ_fams })
-
-  let set_typ_fams (s : Def.type_def Map.t) : unit t =
-    modify (fun st -> { st with typ_fams = s })
-
-  let is_typ_fam (name : string) : bool t =
-    fun st -> (Map.mem name st.typ_fams, st, "", "")
-
-  let get_typ_fam (name : string) : Def.type_def option t =
-    fun st -> Map.find_opt name st.typ_fams, st, "", ""
-      (*(Printf.printf "finding type: %s\n" name; 
-      (match Map.find_opt name st.typ_fams with 
-      | Some td -> Printf.printf "found type family: %s\n" name
-      | None -> Printf.printf "type family not found: %s\n" name);
-      Map.find_opt name st.typ_fams, st, "", "")*)
-
-
   let concat_nonempty sep xs =
   xs |> List.filter (fun s -> s <> "") |> String.concat sep
 
@@ -464,7 +455,6 @@ module TypeM = struct
       freshvaridx = 0;
       typevars = Set.empty;
       flipsub = false;
-      typ_fams = Map.empty;
       max_args = -1;
       max_zip = 0;
       builtins = [];

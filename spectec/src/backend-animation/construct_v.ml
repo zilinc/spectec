@@ -1057,6 +1057,7 @@ let vl_to_string = function
   | TextV str -> str
   | v -> error_value "text" v
 let vl_to_name name = name |> as_singleton_case |> vl_to_string |> Utf8.decode
+
 let vl_to_bool = function
   | BoolV b -> b
   | v -> error_value "bool" v

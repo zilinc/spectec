@@ -145,8 +145,10 @@ let invoke_helper module_ funcname args =
   Printf.printf "[Invoking %s...]\n" funcname;
   let funcaddr = get_export_addr funcname module_ in
   let val_args = List.map (fun lit -> lit.it) args in
-  let il_args = List.map Backend_animation.Construct.il_of_value val_args in
-  let args' = List.map ocaml_of_val_ il_args in
+  (*let il_args = List.map Backend_animation.Construct.il_of_value val_args in
+  let args' = List.map ocaml_of_val_ il_args in*)
+  let vl_args = List.map Backend_animation.Construct_v.vl_of_value val_args in
+  let args' = List.map ocaml_of_val_ vl_args in
   let result = invoke_fn !globalstore funcaddr args' in
   let t2 = Sys.time () in
   Printf.printf "invoke %s took %f s :D\n" funcname (t2 -. t1);
@@ -163,8 +165,10 @@ let test_assertion assertion =
   match assertion.it with
   | AssertReturn (action, expected) ->
     let C_pct__semi_pct__config (_, vals) = run_action action in 
-    let result_il = List.map il_of_instr vals in
-    let result = List.map  Backend_animation.Construct.il_to_value result_il in 
+    (*let result_il = List.map il_of_instr vals in
+    let result = List.map  Backend_animation.Construct.il_to_value result_il in*)
+    let result_vl = List.map vl_of_instr vals in
+    let result = List.map  Backend_animation.Construct_v.vl_to_value result_vl in
     assert_results no_region result expected;
     success
   | _ -> failwith "TODO: implement other assertions"
@@ -181,7 +185,8 @@ let run_command cmd =
   | Instance (var1_opt, var2_opt) ->
     Printf.printf "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
     Modules.find (Modules.get_module_name var2_opt)
-    |> Backend_animation.Construct.il_of_module
+    (* |> Backend_animation.Construct.il_of_module *)
+    |> Backend_animation.Construct_v.vl_of_module
     |> ocaml_of_module_
     |> instantiate_helper
     |> Register.add_with_var var1_opt;
@@ -193,17 +198,51 @@ let run_command cmd =
   end in 
   res, Sys.time () -. start_time
 
+
+let tests = ref []
+let srcs = ref []
+
 let () =
-  if Array.length Sys.argv <> 2 then (
+  if Array.length Sys.argv < 2 then (
     prerr_endline "Usage: program <.wast file>";
     exit 1
   );
-  let filename = Sys.argv.(1) in
+  let args = Array.to_list (Array.sub Sys.argv 1 (Array.length Sys.argv - 1)) in
+  let files = List.concat_map (fun s ->
+    if Sys.is_directory s then
+      Array.to_list (Sys.readdir s)
+      |> List.map (Filename.concat s)
+    else [s]
+  ) args in
+  List.iter (fun f ->
+    if Filename.check_suffix f ".wast" then tests := f :: !tests
+    else if Filename.check_suffix f ".spectec" then srcs := f :: !srcs
+  ) files;
+  srcs := List.rev !srcs;
+  (* for now im just running the first test file *)
+  let filename = List.hd !tests in
   let cmds = Backend_animation.Runner.run filename in
+  Printf.printf "src has %d files\n" (List.length !srcs);
   (* instantiate spectest *)
   (*let il_spectest = Backend_animation.Script.il_of_spectest () in
   let ocaml_spectest = ocaml_of_moduleinst il_spectest in
   Register.add "spectest" ocaml_spectest;*)
+  let el = List.concat_map (fun f ->
+  Printf.printf "parsing: %s\n%!" f;
+  Frontend.Parse.parse_file f
+) !srcs in
+  let il, _ = Frontend.Elab.elab el in
+  Il.Valid.valid il;
+  let il = Middlend.Sideconditions.transform il in
+  let il = Middlend.Typefamilyremoval.transform il in
+  Printf.printf "IL has %d defs\n" (List.length il);
+  let (env, dl) = Backend_animation.Main_animate.run il false false in
+  Printf.printf "dl has %d defs\n" (List.length dl);
+  Backend_animation.Valid.valid dl;
+  Backend_animation.Interpreter_v.il_env := env;
+  Backend_animation.Interpreter_v.dl := dl;
+
+  Printf.printf "Running commands. Interpreter_v env has: %d funcs\n" (List.length !Backend_animation.Interpreter_v.dl);
   List.map run_command cmds 
   |> Backend_animation.Main_interpret.sum_results_with_time
   |> Backend_animation.Main_interpret.print_runner_result filename

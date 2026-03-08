@@ -10,44 +10,44 @@ let use_step_pure = function
   | BR_IF_instr _
   | BR_TABLE_instr _
   | BR_ON_NULL_instr _
-  (*| BR_ON_NON_NULL _
-  | CALL_INDIRECT
-  | RETURN_CALL_INDIRECT*)
+  | BR_ON_NON_NULL_instr _
+  | CALL_INDIRECT_instr _
+  | RETURN_CALL_INDIRECT_instr _
   | RETURN_instr
-  (* | UNOP *)
+  | UNOP_instr _
   | RETURN_CALL_REF_instr _
   | BINOP_instr _ 
   | TESTOP_instr _
   | RELOP_instr _
-  (*| CVTOP_instr 
+  | CVTOP_instr _
   | REF_dot_IS_NULL_instr
   | REF_dot_AS_NON_NULL_instr
   | REF_dot_EQ_instr
-  | I31_dot_GET_instr
-  | ARRAY_dot_NEW_instr
+  | I31_dot_GET_instr _
+  | ARRAY_dot_NEW_instr _
   | EXTERN_dot_CONVERT_ANY_instr
   | ANY_dot_CONVERT_EXTERN_instr
-  | VVUNOP_instr
-  | VVBINOP_instr
-  | VVTERNOP_instr
-  | VVTESTOP_instr
-  | VUNOP_instr 
-  | VBINOP_instr
-  | VTERNOP_instr
-  | VTESTOP_instr
-  | VRELOP_instr
-  | VSHIFTOP_instr
-  | VBITMASK_instr
-  | VSWIZZLOP_instr
-  | VSHUFFLE_instr
-  | VSPLAT_instr
-  | VEXTRACT_LANE_instr
-  | VREPLACE_LANE_instr
-  | VEXTUNOP_instr
-  | VEXTBINOP_instr
-  | VEXTTERNOP_instr
-  | VNARROW_instr
-  | VCVTOP_instr *)
+  | VVUNOP_instr _
+  | VVBINOP_instr _
+  | VVTERNOP_instr _
+  | VVTESTOP_instr _
+  | VUNOP_instr _ 
+  | VBINOP_instr _
+  | VTERNOP_instr _
+  | VTESTOP_instr _
+  | VRELOP_instr _
+  | VSHIFTOP_instr _
+  | VBITMASK_instr _
+  | VSWIZZLOP_instr _
+  | VSHUFFLE_instr _
+  | VSPLAT_instr _
+  | VEXTRACT_LANE_instr _
+  | VREPLACE_LANE_instr _
+  | VEXTUNOP_instr _
+  | VEXTBINOP_instr _
+  | VEXTTERNOP_instr _
+  | VNARROW_instr _
+  | VCVTOP_instr _
   | LOCAL_dot_TEE_instr _
   | REF_dot_I31_NUM_instr _ 
   | TRAP_instr               -> true 
@@ -56,41 +56,41 @@ let use_step_pure = function
 let use_step_read = function
   | BLOCK_instr _
   | LOOP_instr _
-  (* | BR_ON_CAST_instr
-  | BR_ON_CAST_FAIL_instr *)
+  | BR_ON_CAST_instr _
+  | BR_ON_CAST_FAIL_instr _
   | CALL_instr _
-  (* | RETURN_CALL_instr *)
+  | RETURN_CALL_instr _
   | RETURN_CALL_REF_instr _
   | THROW_REF_instr
-  (* | TRY_TABLE_instr *)
+  | TRY_TABLE_instr _
   | REF_dot_NULL_instr _
-  | REF_dot_FUNC_ADDR_instr _ (* not sure if this is the same *)
-  (* | REF_dot_TEST_instr
-  | REF_dot_CAST_instr
-  | STRUCT_dot_NEW_DEFAULT_instr
-  | STRUCT_dot_GET_instr
-  | ARRAY_dot_NEW_DEFAULT_instr
-  | ARRAY_dot_NEW_ELEM_instr
-  | ARRAY_dot_NEW_DATA_instr
-  | ARRAY_dot_GET_instr
+  | REF_dot_FUNC_ADDR_instr _ 
+  | REF_dot_TEST_instr _
+  | REF_dot_CAST_instr _
+  | STRUCT_dot_NEW_DEFAULT_instr _
+  | STRUCT_dot_GET_instr _
+  | ARRAY_dot_NEW_DEFAULT_instr _
+  | ARRAY_dot_NEW_ELEM_instr _
+  | ARRAY_dot_NEW_DATA_instr _
+  | ARRAY_dot_GET_instr _
   | ARRAY_dot_LEN_instr
-  | ARRAY_dot_FILL_instr
-  | ARRAY_dot_COPY_instr
-  | ARRAY_dot_INIT_DATA_instr
-  | ARRAY_dot_INIT_ELEM_instr *)
+  | ARRAY_dot_FILL_instr _
+  | ARRAY_dot_COPY_instr _
+  | ARRAY_dot_INIT_DATA_instr _
+  | ARRAY_dot_INIT_ELEM_instr _
   | LOCAL_dot_GET_instr _
   | GLOBAL_dot_GET_instr _
   | TABLE_dot_GET_instr _
   | TABLE_dot_SIZE_instr _
-  (*| TABLE_dot_FILL_instr
-  | TABLE_dot_COPY_instr *)
+  | TABLE_dot_FILL_instr _
+  | TABLE_dot_COPY_instr _
   | TABLE_dot_INIT_instr _
   | LOAD_instr _
-  (* | VLOAD_instr
-  | VLOAD_LANE_instr
-  | MEMORY_dot_SIZE_instr
-  | MEMORY_dot_FILL_instr
-  | MEMORY_dot_COPY_instr *)
+  | VLOAD_instr _
+  | VLOAD_LANE_instr _
+  | MEMORY_dot_SIZE_instr _
+  | MEMORY_dot_FILL_instr _
+  | MEMORY_dot_COPY_instr _
   | MEMORY_dot_INIT_instr _ -> true 
   | _ -> false 
 

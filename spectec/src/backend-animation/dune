@@ -32,6 +32,7 @@
   value
   ; interpreter-ocaml
   main_interpreter_ocaml
+  parser_ocaml
   interpreter_ocaml
   util_ocaml
   temp_print
