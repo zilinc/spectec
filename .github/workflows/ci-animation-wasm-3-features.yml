@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  spec-tec:
+  spectec-animation:
     runs-on: ubuntu-latest
     strategy:
       matrix:
