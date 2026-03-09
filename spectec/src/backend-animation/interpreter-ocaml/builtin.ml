@@ -15,7 +15,6 @@ let use_step_pure = function
   | RETURN_CALL_INDIRECT_instr _
   | RETURN_instr
   | UNOP_instr _
-  | RETURN_CALL_REF_instr _
   | BINOP_instr _ 
   | TESTOP_instr _
   | RELOP_instr _
@@ -49,8 +48,7 @@ let use_step_pure = function
   | VNARROW_instr _
   | VCVTOP_instr _
   | LOCAL_dot_TEE_instr _
-  | REF_dot_I31_NUM_instr _ 
-  | TRAP_instr               -> true 
+  | REF_dot_I31_NUM_instr _  (* not sure *) -> true 
   | _                        -> false
 
 let use_step_read = function
@@ -64,7 +62,7 @@ let use_step_read = function
   | THROW_REF_instr
   | TRY_TABLE_instr _
   | REF_dot_NULL_instr _
-  | REF_dot_FUNC_ADDR_instr _ 
+  | REF_dot_FUNC_ADDR_instr _  (* not sure *)
   | REF_dot_TEST_instr _
   | REF_dot_CAST_instr _
   | STRUCT_dot_NEW_DEFAULT_instr _
@@ -96,10 +94,21 @@ let use_step_read = function
 
 let use_step = function
   | CALL_REF_instr _
-  | ELEM_dot_DROP_instr _
+  | THROW_instr _
+  | STRUCT_dot_NEW_instr _
+  | STRUCT_dot_SET_instr _
+  | ARRAY_dot_NEW_FIXED_instr _
+  | ARRAY_dot_SET_instr _
   | LOCAL_dot_SET_instr _
   | GLOBAL_dot_SET_instr _
-  | DATA_dot_DROP_instr _ -> true 
+  | TABLE_dot_SET_instr _
+  | TABLE_dot_GROW_instr _
+  | ELEM_dot_DROP_instr _
+  | STORE_instr _
+  | VSTORE_instr _
+  | VSTORE_LANE_instr _
+  | MEMORY_dot_GROW_instr _
+  | DATA_dot_DROP_instr _  -> true 
   | _ -> false
 
 let use_step_ctxt = function 

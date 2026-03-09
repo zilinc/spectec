@@ -94,9 +94,9 @@ let basic_types_conv =
   let il_of_rat (r : float)  : exp = NumE (`Rat (Q.of_float r)) $$ no % notyp\n\
   let il_of_real (r : float) : exp = NumE (`Real r) $$ no % notyp\n\n"
   | Parser_ocaml.VL ->
-  "let ocaml_of_int (v : value) : int =\n\
+  "let ocaml_of_int (v : value) : DL.int =\n\
   \  match v with\n\
-  \  | NumV (`Int i) -> Z.to_int i \n\
+  \  | NumV (`Int i) -> i \n\
   \  | _ -> failwith \"Invalid type: should be a NumV int\"\n\n\
   let ocaml_of_bool (v : value) : bool =\n\
   \  match v with\n\
@@ -104,7 +104,7 @@ let basic_types_conv =
   \  | _ -> failwith \"Invalid type: should be a BoolV b\"\n\n\
   let ocaml_of_nat (v : value) : DL.nat =\n\
   \  match v with\n\
-  \  | NumV (`Nat n) -> Z.to_int n \n\
+  \  | NumV (`Nat n) -> n \n\
   \  | _ -> failwith \"Invalid type: should be a NumV nat\"\n\n\
   let ocaml_of_rat (v : value) : float =\n\
   \  match v with\n\
@@ -129,11 +129,16 @@ let basic_types_conv =
   let vl_of_list f xs = ListV (ref (Array.of_list (List.map f xs)))\n\
   let vl_of_opt f x = match x with None -> OptV None | Some v -> OptV (Some (f v))\n\
   let vl_of_string s = TextV s\n\n\
-  let vl_of_int (i : int)    : value = NumV (`Int (Z.of_int i))\n\
-  let vl_of_nat (n : DL.nat) : value = NumV (`Nat (Z.of_int n))\n\
+  let vl_of_int (i : DL.int)    : value = NumV (`Int i)\n\
+  let vl_of_nat (n : DL.nat) : value = NumV (`Nat n)\n\
   let vl_of_rat (r : float)  : value = NumV (`Rat (Q.of_float r))\n\
   let vl_of_real (r : float) : value = NumV (`Real r)\n\n"
 
+let num_conv () =
+  Printf.sprintf 
+  "let nat_of_rat (r: rat) : nat = Z.of_float r\n\
+  let rat_of_nat (n : nat) : rat = Z.to_float n\n\
+  let rat_of_int (i : Z.t) : rat = Z.to_float i\n"
 
 let generate_ocaml dl ocamlfile = 
   Printf.printf "Generating OCaml code...\n";
@@ -161,7 +166,7 @@ let generate_ocaml dl ocamlfile =
   let sup_uselessrec = "[@@@ocaml.warning \"-23\"]\n\n" in
   write_file (basepath ^ ocaml_filename ^ ".ml") (sup_redundant ^ sup_uselessrec ^ type_import ^ util_import ^ cons_import ^ main);
   write_file (basepath ^ ocaml_filename ^ "_types.ml") types;
-  write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ util_ocaml ^ typeconv);
+  write_file (basepath ^ ocaml_filename ^ "_util.ml") (sup_redundant ^ type_import ^ util_ocaml ^ (num_conv ()) ^ typeconv);
   write_file (basepath ^ "construct_ocaml_new.ml") (util_ocaml ^ ast_import ^ "\n" ^ module_types ^ "\n" ^ basic_types_conv ^ parser)
 
 (*let generate_runner inputfile = s

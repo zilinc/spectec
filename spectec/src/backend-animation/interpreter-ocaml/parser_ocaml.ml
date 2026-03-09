@@ -56,12 +56,12 @@ let vl_to_name exp =
 let gen_ocaml_of_name () = Printf.sprintf "ocaml_of_name (e : value) : DL.name =\n\
 \  match e with\n\
 \ | CaseV ([[];[]], [TextV s]) ->\n\
-\   DL.C_pct__name (List.map (fun c -> DL.C_pct__char c) (Reference_interpreter.Utf8.decode s))\n\
+\   DL.C_pct__name (List.map (fun c -> DL.C_pct__char (Z.of_int c)) (Reference_interpreter.Utf8.decode s))\n\
 \ | _ -> failwith \"ocaml_of_name: expected caseV1 TextV\""
 
 let gen_ocaml_to_name () = Printf.sprintf "vl_of_name (v : DL.name) : Backend_animation.Value.value =\n\
 \  match v with\n\
-\  | DL.C_pct__name chars -> textV (Reference_interpreter.Utf8.encode (List.map (fun (DL.C_pct__char n) -> n) chars)) |> caseV1"
+\  | DL.C_pct__name chars -> textV (Reference_interpreter.Utf8.encode (List.map (fun (DL.C_pct__char n) -> (Z.to_int n)) chars)) |> caseV1"
 
 let mixop_to_vl_str (mixop : Xl.Mixop.mixop) : string =
   "[" ^

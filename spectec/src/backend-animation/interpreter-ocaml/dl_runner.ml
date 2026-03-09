@@ -13,7 +13,15 @@ module Register = Backend_interpreter.Ds.Register(struct type t = moduleinst end
 (*module Modules = Backend_interpreter.Ds.Register(struct type t = module_ end)*)
 module Modules = Backend_interpreter.Ds.Modules
 
-(* TEMPORARY only for debugging *)
+module RI = Reference_interpreter
+module I = Backend_interpreter
+
+(* TEMP DEBUGGING *)
+(*let string_of_uc_un = function
+  | C_pct__uc_un n -> "C_pct__uc_un (" ^ (string_of_int n) ^ ")"
+let string_of_num_ = function
+  | Mk_num__0_num_ (_, n) -> "Mk_num__0_num_ (" ^ (string_of_uc_un n) ^ ")"
+  | Mk_num__1_num_ _ -> "float num_"
 let string_of_dlinstr = function
   | DL.NOP_instr -> "NOP_instr"
   | DL.UNREACHABLE_instr -> "UNREACHABLE_instr"
@@ -24,7 +32,7 @@ let string_of_dlinstr = function
   | DL.RETURN_instr -> "RETURN_instr"
   | DL.RETURN_CALL_REF_instr _ -> "RETURN_CALL_REF_instr"
   | DL.THROW_REF_instr -> "THROW_REF_instr"
-  | DL.CONST_instr _ -> "CONST_instr"
+  | DL.CONST_instr (nt, n) -> "CONST_instr " ^ (match nt with DL.I32_numtype -> "I32" | _ -> "other") ^ " " ^ (string_of_num_ n)
   | DL.BINOP_instr _ -> "BINOP_instr"
   | DL.REF_dot_NULL_instr _ -> "REF_dot_NULL_instr"
   | DL.LOCAL_dot_GET_instr _ -> "LOCAL_dot_GET_instr"
@@ -43,6 +51,13 @@ let string_of_dlinstr = function
   | DL.BR_instr _ -> "BR_instr"
   | DL.LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "LABEL"
   | DL.FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "FRAME"
+  | DL.MEMORY_dot_COPY_instr _ -> "MEMORY_dot_COPY_instr"
+  | DL.MEMORY_dot_FILL_instr _ -> "MEMORY_dot_FILL_instr"
+  | DL.MEMORY_dot_GROW_instr _ -> "MEMORY_dot_GROW_instr"
+  | DL.MEMORY_dot_SIZE_instr _ -> "MEMORY_dot_SIZE_instr"
+  | DL.TABLE_dot_COPY_instr _ -> "TABLE_dot_COPY_instr"
+  | DL.TABLE_dot_GROW_instr _ -> "TABLE_dot_GROW_instr"
+  | DL.TABLE_dot_SIZE_instr _ -> "TABLE_dot_SIZE_instr"*)
 (* ============ *)
 
 let globalstore = ref {
@@ -60,9 +75,11 @@ let globalstore = ref {
 }
 
 let success = Backend_animation.Main_interpret.success
+let print_fail = Backend_animation.Main_interpret_v.print_fail
+let string_of_values = Backend_animation.Value.string_of_values
 
-let int_of_ocamlchar (char : DL.char) : int = match char with
-  | DL.C_pct__char n -> n
+let int_of_ocamlchar (char : DL.char) = match char with
+  | DL.C_pct__char n -> Z.to_int n
 let string_of_ocamlname = function
   | DL.C_pct__name chars ->
       chars |> List.map int_of_ocamlchar |> Util.Utf8.encode
@@ -126,7 +143,7 @@ let externaddr_from_import import =
 (* todo change this to not use uncase *)
 let get_moduleinst config =
   let C_pct__semi_pct__config (state, _) = config in
-  let C_pct__semi_pct__state (store', frame') = state in 
+  let C_pct__semi_pct__state (store', frame') = state in
   globalstore := store';
   frame'.uc_module_frame
 
@@ -135,12 +152,14 @@ let instantiate_helper (m : module_) =
   Printf.printf "[Instantiating module...]\n";  
   let MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) = m in
   let externaddrs = List.map externaddr_from_import imports in
-  let config' = instantiate_fn !globalstore m externaddrs in 
+  let config' = instantiate_fn !globalstore m externaddrs in
+  let C_pct__semi_pct__config (_, instrs) = config' in
+  let config'' = steps_fn config' (Z.of_int 256) in
   let t2 = Sys.time () in
   Printf.printf "instantiate took %f s :)\n" (t2 -. t1);
-  get_moduleinst config'
+  get_moduleinst config''
 
-let invoke_helper module_ funcname args = 
+let invoke_helper module_ funcname args =
   let t1 = Sys.time () in
   Printf.printf "[Invoking %s...]\n" funcname;
   let funcaddr = get_export_addr funcname module_ in
@@ -150,7 +169,7 @@ let invoke_helper module_ funcname args =
   let vl_args = List.map Backend_animation.Construct_v.vl_of_value val_args in
   let args' = List.map ocaml_of_val_ vl_args in
   let result = invoke_fn !globalstore funcaddr args' in
-  let result' = steps_fn result 256 in
+  let result' = steps_fn result (Z.of_int 256) in
   let C_pct__semi_pct__config (state', _) = result' in
   let C_pct__semi_pct__state (store', _) = state' in
   globalstore := store';
@@ -174,6 +193,23 @@ let test_assertion assertion =
     let result = List.map  Backend_animation.Construct_v.vl_to_value result_vl in
     assert_results no_region result expected;
     success
+  | AssertTrap (action, re) ->
+    let C_pct__semi_pct__config (_, vals) = run_action action in
+    let result_vl = List.map vl_of_instr vals in
+    (match result_vl with
+    | [ CaseV ([["TRAP"]], []) ] -> success
+    | _ -> print_fail assertion.at "runtime" re (string_of_values ", " result_vl)
+    )
+  | AssertInvalid (def, re)
+  | AssertInvalidCustom (def, re) ->
+    (match def |> Backend_animation.Runner.module_of_def |> fun ri_m ->
+    Fun.const ri_m (Reference_interpreter.Valid.check_module ri_m) 
+    |> Backend_animation.Construct_v.vl_of_module
+    |> ocaml_of_module_
+    |> instantiate_helper |> ignore with
+    | exception RI.Valid.Invalid _ -> success
+    | exception I.Exception.Invalid _ -> success
+    | _ -> print_fail assertion.at "validation" re "module instance")
   | _ -> failwith "TODO: implement other assertions"
 
 let run_command cmd = 

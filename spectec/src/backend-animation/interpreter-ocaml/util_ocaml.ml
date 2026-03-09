@@ -101,12 +101,14 @@ let val_mixop_to_str ?(recordfield = false) (mixop : string list list) =
       )
     in s
 
-let rec update_at i v = function
+let rec update_at_in i v = function
   | _ :: xs when i = 0 -> v :: xs
-  | x :: xs            -> x :: update_at (i - 1) v xs
+  | x :: xs            -> x :: update_at_in (i - 1) v xs
   | [] -> failwith "update_at: index out of bounds" 
 
-let update_slice l i len l' =
+let update_at i v = update_at_in (Z.to_int i) v
+
+let update_slice_in l i len l' =
   let n = List.length l in
   if i < 0 || len < 0 || i + len > n || List.length l' <> len then
     failwith "update_slice: invalid indices";
@@ -116,6 +118,8 @@ let update_slice l i len l' =
   let prefix = take i l in
   let suffix = drop (i + len) l in
   prefix @ l' @ suffix
+
+let update_slice l i len l' = update_slice_in l (Z.to_int i) (Z.to_int len) l'
 
 let slice l start len =
   if start < 0 || len < 0 || start + len > List.length l then
@@ -464,7 +468,7 @@ module TypeM = struct
 end
 
 (* dont think this is used anymore *)
-module NumConversions = struct
+(*module NumConversions = struct
   type nat = int 
   type real = float 
   type rat = float
@@ -474,7 +478,7 @@ module NumConversions = struct
   let rat_of_int (i : int) : rat = float_of_int i
   let rat_of_nat (n : nat) : rat = float_of_int n
   let nat_of_rat (n : rat) : nat = int_of_float n
-end
+end*)
 
 (* outdated now probably *)
 let val_or_fail name val_ = match val_ with

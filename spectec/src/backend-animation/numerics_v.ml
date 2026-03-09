@@ -123,7 +123,7 @@ let nbytes : numerics =
       | vs -> error_values "nbytes" vs
       );
   }
-let inv_nbytes : numerics =
+(*let inv_nbytes : numerics =
   {
     name = "inv_nbytes";
     f =
@@ -132,6 +132,27 @@ let inv_nbytes : numerics =
       | [ CaseV ([["I64"]], []); l ] -> inv_ibytes.f [ vl_of_nat 64; l ]
       | [ CaseV ([["F32"]], []); l ] -> inv_ibytes.f [ vl_of_nat 32; l ] |> vl_to_uN_32 |> RI.F32.of_bits |> vl_of_float32
       | [ CaseV ([["F64"]], []); l ] -> inv_ibytes.f [ vl_of_nat 64; l ] |> vl_to_uN_64 |> RI.F64.of_bits |> vl_of_float64
+      | vs -> error_values "inv_nbytes" vs
+      );
+  }*)
+
+let inv_nbytes : numerics =
+  {
+    name = "inv_nbytes";
+    f =
+      (function
+      | [ CaseV ([["I32"]], []); l ] -> 
+        let inn = nullary "I32" in
+        caseV [["mk_num__0"];[];[]] [inn; inv_ibytes.f [ vl_of_nat 32; l ]]
+      | [ CaseV ([["I64"]], []); l ] -> 
+        let inn = nullary "I64" in
+        caseV [["mk_num__0"];[];[]] [inn; inv_ibytes.f [ vl_of_nat 64; l ]]
+      | [ CaseV ([["F32"]], []); l ] -> 
+        let fnn = nullary "F32" in
+        caseV [["mk_num__1"];[];[]] [fnn; inv_ibytes.f [ vl_of_nat 32; l ] |> vl_to_uN_32 |> RI.F32.of_bits |> vl_of_float32]
+      | [ CaseV ([["F64"]], []); l ] -> 
+        let fnn = nullary "F64" in
+        caseV [["mk_num__1"];[];[]] [fnn; inv_ibytes.f [ vl_of_nat 64; l ] |> vl_to_uN_64 |> RI.F64.of_bits |> vl_of_float64]
       | vs -> error_values "inv_nbytes" vs
       );
   }

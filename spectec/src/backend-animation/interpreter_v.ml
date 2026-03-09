@@ -103,7 +103,7 @@ open OptMonad
 
 type builtin = { name : string; f : value list -> value OptMonad.m }
 
-let fail_info cat at msg = info cat at msg; fail ()
+let fail_info cat at msg = (*info cat at msg;*) fail ()
 
 let error_eval etyp exp onotes =
   let notes = match onotes with

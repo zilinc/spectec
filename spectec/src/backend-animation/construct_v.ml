@@ -685,17 +685,35 @@ let vl_of_packshape = function
   | RI.Pack.Pack16x4 -> [vl_of_nat 16 |> caseV1; vl_of_nat 4]
   | RI.Pack.Pack32x2 -> [vl_of_nat 32 |> caseV1; vl_of_nat 2]
 
+(*let vl_of_memop f idx (memop: (RI.Types.numtype, 'p) RI.Ast.memop) =
+  let str = [("ALIGN" , vl_of_uN (Z.of_int memop.align)  |> ref);
+             ("OFFSET", vl_of_uN_64 memop.offset         |> ref)]
+  in
+  [vl_of_numtype memop.ty; f memop.pack; vl_of_memidx idx; strV str]*)
+
 let vl_of_memop f idx (memop: (RI.Types.numtype, 'p) RI.Ast.memop) =
   let str = [("ALIGN" , vl_of_uN (Z.of_int memop.align)  |> ref);
              ("OFFSET", vl_of_uN_64 memop.offset         |> ref)]
   in
-  [vl_of_numtype memop.ty; f memop.pack; vl_of_memidx idx; strV str]
+  let inn = vl_of_numtype memop.ty in
+  [inn; f inn memop.pack; vl_of_memidx idx; strV str]
+
 
 let vl_of_packsize_sx (ps, sx) = caseV [[];["_"];[]] [vl_of_packsize ps; vl_of_sx sx]
 
-let vl_of_loadop = vl_of_opt vl_of_packsize_sx |> vl_of_memop
+let vl_of_loadop_arg nt = vl_of_opt (fun ps_sx -> 
+    caseV [["mk_loadop__0"];[];[]] [nt; vl_of_packsize_sx ps_sx]
+  )
 
-let vl_of_storeop = vl_of_opt (fun sz -> vl_of_packsize sz |> caseV1) |> vl_of_memop
+(*let vl_of_loadop = vl_of_opt vl_of_packsize_sx |> vl_of_memop*)
+let vl_of_loadop = vl_of_loadop_arg |> vl_of_memop
+
+let vl_of_storeop_arg nt = vl_of_opt (fun sz ->
+  caseV [["mk_storeop__0"];[];[]] [nt; vl_of_packsize sz |> caseV1]
+)
+let vl_of_storeop = vl_of_storeop_arg |> vl_of_memop
+
+(*let vl_of_storeop = vl_of_opt (fun sz -> vl_of_packsize sz |> caseV1) |> vl_of_memop*)
 
 let vl_of_vloadop idx (vloadop: RI.Ast.vloadop) =
   let str =
@@ -1724,11 +1742,29 @@ let vl_to_packsize_sx v : RI.Pack.packsize * RI.Pack.sx =
   | [[];["_"];[]], [sz; sx] -> vl_to_packsize sz, vl_to_sx sx
   | _ -> error_value "packsize sx" v
 
-let vl_to_loadop  : value list -> RI.Ast.idx * RI.Ast.loadop  =
+(*let vl_to_loadop  : value list -> RI.Ast.idx * RI.Ast.loadop  =
   vl_to_opt vl_to_packsize_sx |> vl_to_memop
 
 let vl_to_storeop : value list -> RI.Ast.idx * RI.Ast.storeop =
-  vl_to_opt (fun p -> as_singleton_case p |> vl_to_packsize) |> vl_to_memop
+  vl_to_opt (fun p -> as_singleton_case p |> vl_to_packsize) |> vl_to_memop*)
+
+let vl_to_loadop : value list -> RI.Ast.idx * RI.Ast.loadop =
+  vl_to_memop (fun p ->
+    vl_to_opt (fun inner ->
+      match match_caseV "loadop_" inner with
+      | [["mk_loadop__0"];[];[]], [_inn; pack] -> vl_to_packsize_sx pack
+      | _ -> error_value "loadop_" inner
+    ) p
+  )
+
+let vl_to_storeop : value list -> RI.Ast.idx * RI.Ast.storeop =
+  vl_to_memop (fun p ->
+    vl_to_opt (fun inner ->
+      match match_caseV "storeop_" inner with
+      | [["mk_storeop__0"];[];[]], [_inn; pack] -> as_singleton_case pack |> vl_to_packsize
+      | _ -> error_value "storeop_" inner
+    ) p
+  )
 
 let vl_to_vmemop' (f: value -> 'p) : value list -> (RI.Types.vectype, 'p) RI.Ast.memop = function
   | [ StrV str ] ->

@@ -5,11 +5,7 @@ open R.Source
 
 let parser = R.Parse.Script.parse_file
 
-let module_of_def def =
-  match def.it with
-  | Textual (m, _) -> m
-  | Encoded (name, bs) -> failwith "TODO: Encoded module"
-  | Quoted (_, s) -> failwith "TODO: Quoted module"
+let module_of_def = Main_interpret_v.module_of_def
 
 let get_commands file = 
   let commands = parser file in

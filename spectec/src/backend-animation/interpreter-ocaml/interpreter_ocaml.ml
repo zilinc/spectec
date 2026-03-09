@@ -407,18 +407,18 @@ let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
                  "Type %s: appears in sub/super type but is not defined" rhs))
   | _ -> tell "TODO: type conversion between non-VarTs not implemented yet\n"
 
-let generate_numtype_conv (t1 : numtyp) (t2 : numtyp) : string t =
+(*let generate_numtype_conv (t1 : numtyp) (t2 : numtyp) : unit t =
   let funcname = ocaml_of_numtyp t1 ^ "_of_" ^ ocaml_of_numtyp t2 in
   let* is_defined = is_defined funcname in
-  if is_defined then return ""
+  if is_defined then return ()
   else
     let funcdef =
       "let " ^ funcname ^ " (arg : " ^ ocaml_of_numtyp t2 ^ ") : "
       ^ ocaml_of_numtyp t1 ^ " =\n"
     in
-    let funcbody = "Num.cvt " ^ ocaml_of_numtyp t1 ^ " arg\n" in
+    let funcbody = "Xl.Num.cvt " ^ ocaml_of_numtyp t1 ^ " arg\n" in
     let* () = add_funcdef funcname in
-    return (funcdef ^ funcbody)
+    tell (funcdef ^ funcbody)*)
 
 (* generates a function to project element i out of an n-tuple *)
 let generate_proj n i : unit t =
@@ -500,7 +500,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
     | _ -> raise CannotAnimate
   else
     match e.it with
-    | NumE n -> return (Num.to_string n)
+    | NumE n -> return ("(Z.of_int " ^ Num.to_string n ^ ")")
     | TextE s -> return (Printf.sprintf "%S" s)
     | BoolE b -> return (string_of_bool b)
     | VarE id -> return (sanitize_name ~typearg id.it)
@@ -526,7 +526,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         ) typ_args in
         let* args' = ocaml_of_args ~typearg ~funcdef ~funccall:true exp_args in
         let fname', args'' =
-          if fname = "uc_steps_fn" then "steps_fn", (args' ^ " 256")
+          if fname = "uc_steps_fn" then "steps_fn", (args' ^ "(Z.of_int 256)")
           else fname, (if args' = "" && typevar_str = "" then "()" else args') in
         let full_args = append_sep typevar_str args'' " " in
         let full_args' = if full_args = "" then "()" else full_args in
@@ -542,15 +542,17 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         (* if this is a float operation *)
         let* e1type = ocaml_of_typ e1.note in
         let float = (e1type = "float") || (e1type = "rat") in
-        let binopstr = ocaml_of_binop ~float op in
-        (* if both e1 and e2 were ints, but we used the float power operator, we need to convert the result back to an int *)
-        if (e1type = "int" || e1type = "nat") && binopstr = "**" then
-          return
-            ("(int_of_float ((float_of_int (" ^ e1str ^ ")) " ^ binopstr ^ " (float_of_int (" ^ e2str ^ "))))")
-        else return ("(" ^ e1str ^ " " ^ binopstr ^ " " ^ e2str ^ ")")
+        let binopstr, infix = ocaml_of_binop ~float op in
+        let e2str' = if (not float) && op = `PowOp then "(Z.to_int " ^ e2str ^ ")" else e2str in
+        if float || infix then return ("(" ^ e1str ^ " " ^ binopstr ^ " " ^ e2str' ^ ")")
+        else return ("(" ^ binopstr ^ " " ^ e1str ^ " " ^ e2str' ^ ")")
     | UnE (op, _, e1) ->
         let* e1str = ocaml_of_exp e1 in
-        return ("(" ^ ocaml_of_unop op ^ "(" ^ e1str ^ "))")
+        let* e1type = ocaml_of_typ e1.note in
+        let is_float = e1type = "float" || e1type = "rat" in
+        let opstr, infix = ocaml_of_unop ~float:is_float op in
+        if infix then return ("(" ^ opstr ^ "(" ^ e1str ^ "))")
+        else return ("(" ^ opstr ^ " " ^ e1str ^ ")")
     | UncaseE (e1, mixop) ->
         let* consdef = resolve_variant e1.note in
         let* exptyp = ocaml_of_typ ~consannot:true (Option.get consdef) in
@@ -579,7 +581,19 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
     | CmpE (op, _, e1, e2) ->
         let* e1str = ocaml_of_exp e1 in
         let* e2str = ocaml_of_exp e2 in
-        return ("(" ^ e1str ^ " " ^ ocaml_of_cmpop op ^ " " ^ e2str ^ ")")
+        let* e1type = ocaml_of_typ e1.note in
+        let is_nat = e1type = "nat" || e1type = "int" in
+        if is_nat then
+        let cmpstr = match op with
+          | `EqOp  -> "Z.equal"
+          | `NeOp -> "(fun a b -> not (Z.equal a b))"
+          | `LtOp  -> "Z.lt"
+          | `GtOp  -> "Z.gt"
+          | `LeOp  -> "Z.leq"
+          | `GeOp  -> "Z.geq"
+        in
+        return ("(" ^ cmpstr ^ " " ^ e1str ^ " " ^ e2str ^ ")")
+        else return ("(" ^ e1str ^ " " ^ ocaml_of_cmpop op ^ " " ^ e2str ^ ")")
     | IterE (e1, (iter, bindings)) -> (
         let es = List.map snd bindings in
         let* all_inflows = known_exps es in
@@ -597,9 +611,12 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
                     return "(* TODO: outflow in IterE *)"
                   else
                     let* body_str = ocaml_of_exp e1 in
+                    let lenstr' = "(Z.to_int " ^ lenstr ^ ")" in
+                    let idstr_int = if idstr = "_" then "_" else idstr ^ "_int" in
+                    let binding = if idstr = "_" then "" else "let " ^ sanitize_name idstr ^ " = Z.of_int " ^ idstr_int ^ " in\n" in
                     return
-                      ("(List.init (" ^ lenstr ^ ") (fun " ^ sanitize_name idstr
-                     ^ " -> " ^ body_str ^ "))")
+                      ("(List.init (" ^ lenstr' ^ ") (fun " ^ idstr_int
+                     ^ " -> " ^ binding ^ body_str ^ "))")
               | _ -> return "(* TODO: multiple outflows in IterE *)"))
           | _ -> return "(* TODO: multiple outflows in IterE *)"
         else
@@ -620,8 +637,11 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
                     | None -> "_"
                   in
                   let* () = set_knowns prev_knowns in
+                  let idstr_int = if idstr = "_" then "_" else idstr ^ "_int" in
+                  let binding = if idstr = "_" then "" else "let " ^ idstr ^ " = Z.of_int " ^ idstr_int ^ " in\n" in
+                  let lenstr' = "(Z.to_int " ^ lenstr ^ ")" in
                   return
-                    ("(List.init (" ^ lenstr ^ ") (fun " ^ idstr ^ " -> "
+                    ("(List.init (" ^ lenstr' ^ ") (fun " ^ idstr_int ^ " -> " ^ binding
                    ^ body_str ^ "))")
               | _ ->
                   let* () = set_knowns prev_knowns in
@@ -678,9 +698,12 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         else return ("(" ^ typ2str ^ "_of_" ^ typ1str ^ " " ^ e1str ^ ")")
     | CvtE (e1, typ1, typ2) ->
         let* e1str = ocaml_of_exp e1 in
-        return
-          ("(" ^ ocaml_of_numtyp typ2 ^ "_of_" ^ ocaml_of_numtyp typ1 ^ " "
-         ^ e1str ^ ")")
+        (match (typ1, typ2) with
+        | `NatT, `IntT | `IntT, `NatT -> return e1str
+        | _ ->
+          return
+            ("(" ^ ocaml_of_numtyp typ2 ^ "_of_" ^ ocaml_of_numtyp typ1 ^ " "
+          ^ e1str ^ ")"))
     | OptE eo ->
         if Option.is_none eo then return "None"
         else
@@ -689,15 +712,16 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
     | IdxE (e1, e2) ->
         let* e1str = ocaml_of_exp e1 in
         let* e2str = ocaml_of_exp e2 in
-        return ("(List.nth " ^ e1str ^ " " ^ e2str ^ ")")
+        (* ints and nats are represented using Z.t's, so list indices must be converted back to ints *)
+        return ("(List.nth " ^ e1str ^ " (Z.to_int " ^ e2str ^ "))")
     | LenE e1 ->
         let* e1str = ocaml_of_exp e1 in
-        return ("(List.length " ^ e1str ^ ")")
+        return ("(Z.of_int (List.length " ^ e1str ^ "))")
     | SliceE (e1, start, end_) ->
         let* e1str = ocaml_of_exp e1 in
         let* start_str = ocaml_of_exp start in
         let* end_str = ocaml_of_exp end_ in
-        return ("(slice " ^ e1str ^ " " ^ start_str ^ " " ^ end_str ^ ")")
+        return ("(slice " ^ e1str ^ " (Z.to_int " ^ start_str ^ ") (Z.to_int " ^ end_str ^ "))")
     | CatE (e1, e2) ->
         let* e1str = ocaml_of_exp e1 in
         let* e2str = ocaml_of_exp e2 in
@@ -737,12 +761,13 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
                 ("{ " ^ path_acc ^ " with " ^ mixopstr ^ "_" ^ typannot ^ " = "
                ^ inner_update ^ " }")
           | IdxSP idexp :: rest ->
-              let* idxtsr = ocaml_of_exp idexp in
+              let* idxstr = ocaml_of_exp idexp in
+              let idxstr' = "(Z.to_int " ^ idxstr ^ ")" in
               let* inner_update =
-                build_update rest ("(List.nth " ^ path_acc ^ " " ^ idxtsr ^ ")")
+                build_update rest ("(List.nth " ^ path_acc ^ " " ^ idxstr' ^ ")")
               in
               return
-                ("(update_at " ^ idxtsr ^ " " ^ inner_update ^ " " ^ path_acc
+                ("(update_at " ^ idxstr ^ " " ^ inner_update ^ " " ^ path_acc
                ^ ")")
           | SliceSP (i, j) :: rest ->
               let* startstr = ocaml_of_exp i in
@@ -1023,26 +1048,32 @@ and ocaml_of_bool_binop = function
   | `EquivOp -> "TODO: EquivOp"
 
 and ocaml_of_num_binop ?(float = false) op =
-  let opstr =
-    match op with
-    | `AddOp -> "+"
-    | `SubOp -> "-"
-    | `MulOp -> "*"
-    | `DivOp -> "/"
-    | `ModOp -> "mod"
-    | `PowOp -> "**"
-  in
-  if float && opstr <> "mod" && opstr <> "**" then opstr ^ "." else opstr
+  match op with
+  | `AddOp -> if float then "+." else "Z.add"
+  | `SubOp -> if float then "-." else "Z.sub"
+  | `MulOp -> if float then "*." else "Z.mul"
+  | `DivOp -> if float then "/." else "Z.div"
+  | `ModOp -> if float then "mod" else "Z.rem"
+  | `PowOp -> if float then "**" else "Z.pow"
 
 and ocaml_of_binop ?(float = false) = function
-  | #Bool.binop as op -> ocaml_of_bool_binop op
-  | #Num.binop as op -> ocaml_of_num_binop ~float op
+  | #Bool.binop as op -> ocaml_of_bool_binop op, true
+  | #Num.binop as op -> ocaml_of_num_binop ~float op, false
 
 and ocaml_of_bool_unop = function `NotOp -> "not"
 
-and ocaml_of_unop = function
-  | #Bool.unop as op -> ocaml_of_bool_unop op
-  | #Num.unop as op -> Num.string_of_unop op
+and ocaml_of_unop ?(float = true) op =
+  let result = match op with
+  | #Bool.unop as op -> ocaml_of_bool_unop op, true
+  | #Num.unop as op -> 
+    begin match op with
+    | `PlusOp when not float -> "", false
+    | `MinusOp when not float -> "Z.neg", false
+    | _ -> Num.string_of_unop op ^ ".", true
+    end
+  in
+  Printf.eprintf "ocaml_of_unop: float=%b, result=%s\n" float (fst result);
+  result
 
 let get_idx_list (iterlist : (id * exp) list) id_opt region =
   let idx_str =
@@ -1223,7 +1254,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
                     if idx_list = "" then freshvar ^ "_list" else idx_list
                   in
                   let def_idx_list =
-                    Printf.sprintf "  let %s = List.init %s (fun i -> i) in\n"
+                    Printf.sprintf "  let %s = List.init (Z.to_int (%s)) (fun i -> Z.of_int i) in\n"
                       idx_listname list_len
                   in
                   let idx_var, idx_listvar =
@@ -1423,6 +1454,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
                   let* () = set_typecasts "" in
                   let bodycode = typecasts ^ prems_block in
                   let full_argnames = append_sep typevar_args argnames " " in
+                  (*let bodycode = Printf.sprintf "Printf.printf \"calling clause %d of %s\n\";\n" i name ^ bodycode in*)
                   if bodycode = "" then
                     return
                       (Printf.sprintf "clause_%s_%d %s : %s = %s\n" name i
@@ -1590,7 +1622,7 @@ let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
 let generate_ocaml (dl_defs : dl_def list) : string * string * string * string =
   let main =
     "open Backend_animation.Util_ocaml\n"
-    ^ "open Backend_animation.Util_ocaml.NumConversions\n"
+    (*^ "open Backend_animation.Util_ocaml.NumConversions\n"*)
     ^ "open Builtin\n\n"
     ^ "let (<|>) = Backend_animation.Util_ocaml.mplus\n"
     ^ "let (let*) = Option.bind\n"
@@ -1611,7 +1643,7 @@ let generate_ocaml (dl_defs : dl_def list) : string * string * string * string =
     let uc_module_ok_fn a0 = ocaml_of_moduletype (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.module_ok [Backend_animation.Value.ValA (vl_of_module_ a0)])))\n\n\
     let uc_externaddr_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.externaddr_ok [Backend_animation.Value.ValA (vl_of_store a0); Backend_animation.Value.ValA (vl_of_externaddr a1); Backend_animation.Value.ValA (vl_of_externtype a2)])))"
   in
-  let typeimports = "type nat = int\ntype rat = float\ntype real = float\n\n" in
+  let typeimports = "type nat = Z.t\ntype int = Z.t\ntype rat = float\ntype real = float\n\n" in
   let (funcdefs, typedefs), typeconvfuncs, parser =
     eval (ocaml_of_dl_defs dl_defs)
   in
