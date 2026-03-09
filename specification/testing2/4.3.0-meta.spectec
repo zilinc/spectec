@@ -1,0 +1,275 @@
+;; ********************************************************
+;;             Algorithmic value validation
+;; ********************************************************
+
+def $ref_infer(store, ref) : reftype
+def $ref_infer(s, REF.NULL ht) = REF NULL NONE
+    -- Heaptype_sub: {} |- NONE <: ht
+def $ref_infer(s, REF.NULL ht) = REF NULL NOFUNC
+    -- Heaptype_sub: {} |- NOFUNC <: ht
+def $ref_infer(s, REF.NULL ht) = REF NULL NOEXN
+    -- Heaptype_sub: {} |- NOEXN <: ht
+def $ref_infer(s, REF.NULL ht) = REF NULL NOEXTERN
+    -- Heaptype_sub: {} |- NOEXTERN <: ht
+def $ref_infer(s, REF.I31_NUM i) = REF I31
+def $ref_infer(s, REF.STRUCT_ADDR a) = REF dt
+  -- if s.STRUCTS[a].TYPE = dt
+def $ref_infer(s, REF.ARRAY_ADDR a) = REF dt
+  -- if s.ARRAYS[a].TYPE = dt
+def $ref_infer(s, REF.FUNC_ADDR a) = REF dt
+  -- if s.FUNCS[a].TYPE = dt
+def $ref_infer(s, REF.EXN_ADDR a) = REF EXN
+  -- if s.EXNS[a] = exn
+def $ref_infer(s, REF.HOST_ADDR a) = REF ANY
+def $ref_infer(s, REF.EXTERN addrref) = REF EXTERN
+  -- if $ref_infer(s, addrref) = REF any
+
+def $val_infer(store, val) : valtype
+def $val_infer(s, num) = nt
+    -- Num_ok: s |- num : nt
+def $val_infer(s, vec) = vt
+    -- Vec_ok: s |- vec : vt
+def $val_infer(s, ref) = rt
+    -- if $ref_infer(s, ref) = rt
+
+
+;; ********************************************************
+;;                      Reduction
+;; ********************************************************
+
+syntax stackcount = nat
+
+
+def $is_val(instr) : bool
+def $is_val(CONST  numtype  i) = true
+def $is_val(VCONST vectype  c) = true
+def $is_val(REF.NULL       ht) = true
+def $is_val(REF.I31_NUM     n) = true
+def $is_val(REF.STRUCT_ADDR a) = true
+def $is_val(REF.ARRAY_ADDR  a) = true
+def $is_val(REF.FUNC_ADDR   a) = true
+def $is_val(REF.EXN_ADDR    a) = true
+def $is_val(REF.HOST_ADDR   a) = true
+def $is_val(REF.EXTERN     ar) = true
+def $is_val(instr) = false
+
+def $find_first_instr'(instr*, instr*) : (instr*, instr?, instr*)
+def $find_first_instr'(val*, []) = (val*, eps, eps)
+def $find_first_instr'(val*, instr instr'*) = (val*, instr, instr'*)
+    -- if $is_val(instr) = false
+def $find_first_instr'(val*, instr instr'*) = (val_1*, instr_1?, instr'_1*)
+    -- if $is_val(instr) = true
+    ;; -- otherwise
+    -- if $find_first_instr'(val* instr, instr'*) = (val_1*, instr_1?, instr'_1*)
+
+def $find_first_instr(instr*) : (instr*, instr?, instr*)
+def $find_first_instr(instr*) = $find_first_instr'(eps, instr*)
+    ;; -- if instr* =/= eps
+
+def $use_step(instr)      : bool
+def $use_step_pure(instr) : bool
+def $use_step_read(instr) : bool
+def $use_step_ctxt(instr) : bool
+
+def $use_step               hint(builtin)
+def $use_step_pure          hint(builtin)
+def $use_step_read          hint(builtin)
+def $use_step_ctxt          hint(builtin)
+
+
+syntax stepresult = STEP config | STUCK | STACK_OVERFLOW
+
+
+;; According to the `instr`, call the right $Step_.../... function
+def $dispatch_step(instr, config)      : config
+def $dispatch_step_pure(instr, instr*) : instr*
+def $dispatch_step_read(instr, config) : instr*
+def $dispatch_step_label(nat, val*, instr?, state, instr*, bool) : config
+def $dispatch_step_frame(nat, val*, instr?, state, bool) : config
+def $dispatch_step_handler(nat, val*, instr?, state, catch*, bool) : config
+
+def $step_ctxt(config, stackcount) : stepresult
+
+def $dispatch_step                hint(builtin)
+def $dispatch_step_pure           hint(builtin)
+def $dispatch_step_read           hint(builtin)
+
+
+;; The input `config` consists of the whole value stack, plus the first instruction.
+def $dispatch_reduce(state, val*, instr, stackcount) : stepresult
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
+    -- if $use_step_pure(instr_0) = true
+    -- if $dispatch_step_pure(instr_0, val* instr_0) = instr_1*
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
+    -- if $use_step_read(instr_0) = true
+    -- if $dispatch_step_read(instr_0, (z; val* instr_0)) = instr_1*
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP config_1
+    -- if $use_step(instr_0) = true
+    -- if $dispatch_step(instr_0, (z; val* instr_0)) = config_1
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z'; val* instr_1*)
+    -- if $use_step_ctxt(instr_0) = true
+    -- if $step_ctxt((z; instr_0), stackcount) = STEP (z'; instr_1*)
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STACK_OVERFLOW
+    -- if $step_ctxt((z; instr_0), stackcount) = STACK_OVERFLOW
+def $dispatch_reduce(z, val*, instr_0, stackcount) = STUCK
+    -- otherwise
+
+
+def $Step_read_throw_ref_handler(config) : instr*
+def $Step_read_throw_ref_handler           hint(builtin)
+
+def $reduce(config, stackcount) : stepresult
+def $step(config, stackcount) : config
+;; A non-reflexive version of the transitive closure of single step reduction.
+def $steps_pg(config, stackcount) : config?
+def $steps(config, stackcount) : config
+
+
+def $step_ctxt((z; LABEL_ n `{instr_1*} instr*), stackcount) = STEP config
+    -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
+    -- if bl = (instr'* = eps)
+    -- if $dispatch_step_label(n, val*, instr_0?, z, instr_1*, bl) = config
+def $step_ctxt((z; LABEL_ n `{instr_1*} instr*), stackcount) = STEP (z'; (LABEL_ n `{instr_1*} instr'*))
+    -- if $steps_pg((z; instr*), stackcount) = z'; instr'*
+def $step_ctxt((z; FRAME_ n `{f'} instr*), stackcount) = STEP config
+    -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
+    -- if bl = (instr'* = eps)
+    -- if $dispatch_step_frame(n, val*, instr_0?, z, bl) = config
+def $step_ctxt((s; f; FRAME_ n `{f'} instr*), stackcount) = STEP (s'; f; (FRAME_ n `{f''} instr'*))
+    -- if stackcount > 0
+    -- if $steps_pg((s; f'; instr*), $(stackcount-1)) = s'; f''; instr'*
+def $step_ctxt((s; f; FRAME_ n `{f'} instr*), stackcount) = STACK_OVERFLOW
+    -- if stackcount <= 0
+def $step_ctxt((z; HANDLER_ n `{catch*} instr*), stackcount) = STEP config
+    -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
+    -- if bl = (instr'* = eps)
+    -- if $dispatch_step_handler(n, val*, instr_0?, z, catch*, bl) = config
+def $step_ctxt((z; HANDLER_ n `{catch*} instr*), stackcount) = STEP (z'; (HANDLER_ n `{catch*} instr'*))
+    -- if $steps_pg((z; instr*), stackcount) = z'; instr'*
+
+
+def $dispatch_step_label(n, val*, BR l, z, instr*, bl) = z; val''^n instr*
+    -- if val'* val''^n = val*
+    -- if l = 0
+def $dispatch_step_label(n, val*, BR l, z, instr*, bl) = z; val* (BR $(l - 1))
+    -- if l > 0
+def $dispatch_step_label(n, val*, RETURN_CALL_REF yy, z, instr*, bl) = z; val* (RETURN_CALL_REF yy)
+def $dispatch_step_label(n, val*, RETURN, z, instr*, bl) = z; val* RETURN
+def $dispatch_step_label(n, REF.EXN_ADDR a, THROW_REF, z, instr*, true) = z; (REF.EXN_ADDR a) THROW_REF
+def $dispatch_step_label(n, eps, TRAP, z, instr*, true) = z; TRAP
+def $dispatch_step_label(n, val*, eps, z, instr*, true) = z; val*
+
+def $dispatch_step_frame(n, val* (REF.NULL ht), RETURN_CALL_REF yy, z, bl) = z; TRAP
+def $dispatch_step_frame(n, val* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, z, bl) = z; val''^n (REF.FUNC_ADDR a) (CALL_REF yy)
+    -- if val'* val''^n = val*
+    -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
+def $dispatch_step_frame(n, val*, RETURN, z, bl) = z; val''^n
+    -- if val'* val''^n = val*
+def $dispatch_step_frame(n, REF.EXN_ADDR a, THROW_REF, z, true) = z; (REF.EXN_ADDR a) THROW_REF
+def $dispatch_step_frame(n, eps, TRAP, z, true) = z; TRAP
+def $dispatch_step_frame(n, val^n, eps, z, true) = z; val^n
+
+def $dispatch_step_handler(n, val*, BR l, z, catch*, bl) = z; val* (BR l)
+def $dispatch_step_handler(n, val*, RETURN_CALL_REF yy, z, catch*, bl) = z; val* (RETURN_CALL_REF yy)
+def $dispatch_step_handler(n, val*, RETURN, z, catch*, bl) = z; val* RETURN
+def $dispatch_step_handler(n, REF.EXN_ADDR a, THROW_REF, z, catch*, true) = z; instr'*
+    -- if $Step_read_throw_ref_handler(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = instr'*
+def $dispatch_step_handler(n, eps, TRAP, z, catch*, true) = z; TRAP
+def $dispatch_step_handler(n, val*, eps, z, catch*, true) = z; val*
+
+
+
+def $reduce((s; f; instr+), stackcount) = STEP (s; f; TRAP)
+    -- if $find_first_instr(instr+) = (val*, TRAP, instr_1'*)
+    -- if val* =/= eps \/ instr_1'* =/= eps
+def $reduce((s; f; instr+), stackcount) = STEP (s; f; (REF.EXN_ADDR a) THROW_REF)
+    -- if $find_first_instr(instr+) = (val* (REF.EXN_ADDR a), THROW_REF, instr_1'*)
+    -- if val* =/= eps \/ instr_1'* =/= eps
+def $reduce((z; instr+), stackcount) = STEP (z'; instr_2* instr_1'*)
+    -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
+    -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STEP (z'; instr_2*)
+def $reduce((z; instr+), stackcount) = STACK_OVERFLOW
+    -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
+    -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STACK_OVERFLOW
+def $reduce((s; f; instr*), stackcount) = STUCK
+    -- otherwise
+
+
+def $step(config, stackcount) = config'
+    -- if $reduce(config, stackcount) = STEP config'
+
+
+def $steps_pg(config, stackcount) = config_2
+    -- if $step(config, stackcount) = config_1
+    -- if $steps(config_1, stackcount) = config_2
+def $steps_pg(config, stackcount) = eps
+    -- otherwise
+
+def $steps(config, stackcount) = config_2
+    -- if $step(config, stackcount) = config_1
+    -- if $steps(config_1, stackcount) = config_2
+def $steps(config, stackcount) = config
+    -- otherwise
+
+
+
+;; ********************************************************
+;; Animation hints
+;; ********************************************************
+
+relation Expand        hint(animate %1 -> %2)
+
+relation Num_ok        hint(animate %1 %2 -> %3)
+relation Vec_ok        hint(animate %1 %2 -> %3)
+
+relation Ref_ok        hint(animate_builtin %1 %2 %3 -> bool)
+relation Val_ok        hint(animate_builtin %1 %2 %3 -> bool)
+relation Externaddr_ok hint(animate_builtin %1 %2 %3 -> bool)
+relation Module_ok     hint(animate_builtin %1 -> %2)
+
+relation Reftype_sub   hint(animate_builtin %1 %2 %3 -> bool)
+relation Heaptype_sub  hint(animate_builtin %1 %2 %3 -> bool)
+
+
+relation Step          hint(animate %1 -> %2)
+relation Step_pure     hint(animate %1 -> %2)
+relation Step_read     hint(animate %1 -> %2)
+
+(;
+;; Syntax not supported in SpecTec.
+
+rule Step_pure /br-label-zero
+               /br-label-succ
+               /br-handler
+               /return-frame
+               /return-label
+               /return-handler
+     hint(no_animate)
+
+rule Step_read /return_call_ref-label
+               /return_call_ref-handler
+               /return_call_ref-frame-null
+               /return_call_ref-frame-addr
+     hint(no_animate)
+
+rule Step_pure /trap-instrs /throw_ref-instrs hint(no_animate)
+
+rule Step /ctxt-instrs
+          /ctxt-label
+          /ctxt-frame
+          /ctxt-handler
+     hint(no_animate)
+;)
+
+relation Eval_expr hint(animate (%1, %2) -> (%3, %4))
+
+def $utf8 hint(no_animate)
+
+;; Moved from 4.3 for now
+;; Expressions
+
+relation Eval_expr: state; expr ~>* state; val*  hint(name "E-expr") hint(macro "steptostar") hint(tabular)
+
+rule Eval_expr:
+  z; instr*  ~>*  z'; val*
+  -- Steps: z; instr*  ~>*  z'; val*
