@@ -12,7 +12,8 @@
   str
   tsort
   reference_interpreter
-  backend_interpreter)
+  backend_interpreter
+  middlend)
  (modules
   main_animate
   main_interpret

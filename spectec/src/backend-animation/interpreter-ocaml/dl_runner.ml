@@ -267,43 +267,15 @@ let tests = ref []
 let srcs = ref []
 
 let () =
-  if Array.length Sys.argv < 2 then (
-    prerr_endline "Usage: program <.wast file>";
-    exit 1
-  );
-  let args = Array.to_list (Array.sub Sys.argv 1 (Array.length Sys.argv - 1)) in
-  let files = List.concat_map (fun s ->
-    if Sys.is_directory s then
-      Array.to_list (Sys.readdir s)
-      |> List.map (Filename.concat s)
-    else [s]
-  ) args in
-  List.iter (fun f ->
-    if Filename.check_suffix f ".wast" then tests := f :: !tests
-    else if Filename.check_suffix f ".spectec" then srcs := f :: !srcs
-  ) files;
-  srcs := List.rev !srcs;
-  (* for now im just running the first test file *)
-  let filename = List.hd !tests in
-  let cmds = Backend_animation.Runner.run filename in
-  Printf.printf "src has %d files\n" (List.length !srcs);
-  (* instantiate spectest *)
-  (*let il_spectest = Backend_animation.Script.il_of_spectest () in
-  let ocaml_spectest = ocaml_of_moduleinst il_spectest in
-  Register.add "spectest" ocaml_spectest;*)
-  let el = List.concat_map Frontend.Parse.parse_file !srcs in
-  let il, _ = Frontend.Elab.elab el in
-  Il.Valid.valid il;
-  let il = Middlend.Sideconditions.transform il in
-  let il = Middlend.Typefamilyremoval.transform il in
-  Printf.printf "IL has %d defs\n" (List.length il);
-  let (env, dl) = Backend_animation.Main_animate.run il false false in
-  Printf.printf "dl has %d defs\n" (List.length dl);
-  Backend_animation.Valid.valid dl;
-  Backend_animation.Interpreter_v.il_env := env;
-  Backend_animation.Interpreter_v.dl := dl;
-
-  Printf.printf "Running commands. Interpreter_v env has: %d funcs\n" (List.length !Backend_animation.Interpreter_v.dl);
-  List.map run_command cmds 
-  |> Backend_animation.Main_interpret.sum_results_with_time
-  |> Backend_animation.Main_interpret.print_runner_result filename
+  let tests, srcs = Backend_animation.Runner.parse_args () in
+  Backend_animation.Runner.init_pipeline srcs;
+  let results = List.map (fun testfile ->
+    let cmds = Backend_animation.Runner.run testfile in
+    let result = List.map run_command cmds
+      |> Backend_animation.Main_interpret.sum_results_with_time in
+    Backend_animation.Main_interpret.print_runner_result testfile result;
+    result
+  ) tests in
+  let total = Backend_animation.Main_interpret.sum_results_with_time
+    (List.concat_map (fun (r, t) -> [(r, t)]) results) in
+  Backend_animation.Main_interpret.print_runner_result "Total" total
