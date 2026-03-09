@@ -111,7 +111,7 @@ let inv_ibytes : numerics =
   }
 
 
-let nbytes : numerics =
+(*let nbytes : numerics =
   {
     name = "nbytes";
     f =
@@ -122,7 +122,21 @@ let nbytes : numerics =
       | [ CaseV ([["F64"]], []); f ] -> ibytes.f [ vl_of_nat 64; vl_to_float64 f |> RI.F64.to_bits |> vl_of_uN_64 ]
       | vs -> error_values "nbytes" vs
       );
+  }*)
+
+let nbytes : numerics =
+  {
+    name = "nbytes";
+    f =
+      (function
+      | [ CaseV ([["I32"]], []); CaseV ([["mk_num__0"];[];[]], [_inn; n]) ] -> ibytes.f [ vl_of_nat 32; n ]
+      | [ CaseV ([["I64"]], []); CaseV ([["mk_num__0"];[];[]], [_inn; n]) ] -> ibytes.f [ vl_of_nat 64; n ]
+      | [ CaseV ([["F32"]], []); CaseV ([["mk_num__1"];[];[]], [_fnn; f]) ] -> ibytes.f [ vl_of_nat 32; vl_to_float32 f |> RI.F32.to_bits |> vl_of_uN_32 ]
+      | [ CaseV ([["F64"]], []); CaseV ([["mk_num__1"];[];[]], [_fnn; f]) ] -> ibytes.f [ vl_of_nat 64; vl_to_float64 f |> RI.F64.to_bits |> vl_of_uN_64 ]
+      | vs -> error_values "nbytes" vs
+      );
   }
+
 (*let inv_nbytes : numerics =
   {
     name = "inv_nbytes";

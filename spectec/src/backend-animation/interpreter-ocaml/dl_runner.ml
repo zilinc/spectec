@@ -74,7 +74,9 @@ let globalstore = ref {
   uc_host_store = HOSTSTATE_hoststate
 }
 
-let success = Backend_animation.Main_interpret.success
+let success = 1,1
+let pass = 0, 0
+let fail = 0, 1 
 let print_fail = Backend_animation.Main_interpret_v.print_fail
 let string_of_values = Backend_animation.Value.string_of_values
 
@@ -142,10 +144,10 @@ let externaddr_from_import import =
 
 (* todo change this to not use uncase *)
 let get_moduleinst config =
-  let C_pct__semi_pct__config (state, _) = config in
+  let C_pct__semi_pct__config (state, instrs) = config in
   let C_pct__semi_pct__state (store', frame') = state in
   globalstore := store';
-  frame'.uc_module_frame
+  frame'.uc_module_frame, instrs
 
 let instantiate_helper (m : module_) = 
   let t1 = Sys.time () in
@@ -200,6 +202,24 @@ let test_assertion assertion =
     | [ CaseV ([["TRAP"]], []) ] -> success
     | _ -> print_fail assertion.at "runtime" re (string_of_values ", " result_vl)
     )
+  | AssertException action ->
+    let C_pct__semi_pct__config (_, vals) = run_action action in
+    let result_vl = List.map vl_of_instr vals in
+    (match result_vl with
+    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | _ -> print_fail assertion.at "expected exception" "" (string_of_values ", " result_vl)
+    )
+  | AssertUninstantiable (var_opt, re) ->
+    let (moduleinst, instrs) = Modules.find (Modules.get_module_name var_opt) 
+    |> Backend_animation.Construct_v.vl_of_module
+    |> ocaml_of_module_
+    |> instantiate_helper in
+    let result_vl = List.map vl_of_instr instrs in
+    (match result_vl with
+    | [ CaseV ([["TRAP"]], []) ]
+    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | _ -> print_fail assertion.at "instantiation" re (string_of_values ", " result_vl)
+    )
   | AssertInvalid (def, re)
   | AssertInvalidCustom (def, re) ->
     (match def |> Backend_animation.Runner.module_of_def |> fun ri_m ->
@@ -210,7 +230,12 @@ let test_assertion assertion =
     | exception RI.Valid.Invalid _ -> success
     | exception I.Exception.Invalid _ -> success
     | _ -> print_fail assertion.at "validation" re "module instance")
-  | _ -> failwith "TODO: implement other assertions"
+  | AssertExhaustion (action, re) ->
+    (match run_action action with
+    | exception I.Exception.OutOfMemory -> success
+    | vs -> print_fail assertion.at "runtime" re ""
+    )
+  | _ -> pass
 
 let run_command cmd = 
   let start_time = Sys.time () in
@@ -227,7 +252,7 @@ let run_command cmd =
     (* |> Backend_animation.Construct.il_of_module *)
     |> Backend_animation.Construct_v.vl_of_module
     |> ocaml_of_module_
-    |> instantiate_helper
+    |> instantiate_helper |> fst
     |> Register.add_with_var var1_opt;
     success
   (*| Action a ->
