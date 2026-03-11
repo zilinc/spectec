@@ -1062,8 +1062,7 @@ and ocaml_of_binop ?(float = false) = function
 
 and ocaml_of_bool_unop = function `NotOp -> "not"
 
-and ocaml_of_unop ?(float = true) op =
-  let result = match op with
+and ocaml_of_unop ?(float = true) = function
   | #Bool.unop as op -> ocaml_of_bool_unop op, true
   | #Num.unop as op -> 
     begin match op with
@@ -1071,9 +1070,6 @@ and ocaml_of_unop ?(float = true) op =
     | `MinusOp when not float -> "Z.neg", false
     | _ -> Num.string_of_unop op ^ ".", true
     end
-  in
-  Printf.eprintf "ocaml_of_unop: float=%b, result=%s\n" float (fst result);
-  result
 
 let get_idx_list (iterlist : (id * exp) list) id_opt region =
   let idx_str =
@@ -1454,7 +1450,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
                   let* () = set_typecasts "" in
                   let bodycode = typecasts ^ prems_block in
                   let full_argnames = append_sep typevar_args argnames " " in
-                  (*let bodycode = Printf.sprintf "Printf.printf \"calling clause %d of %s\n\";\n" i name ^ bodycode in*)
+                  (*let bodycode = Printf.sprintf "Printf.printf \"Calling %s (Clause %d)\n\";\n" name (i+1) ^ bodycode in*)
                   if bodycode = "" then
                     return
                       (Printf.sprintf "clause_%s_%d %s : %s = %s\n" name i
@@ -1488,7 +1484,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     let clause_names = String.concat ";\n  " clause_calls in
     let err_msg = "function: " ^ name in
     let main_func =
-      Printf.sprintf "%s_fn %s = try_clauses_%d [\n  %s\n] %s %S" name full_argslist
+      (*Printf.sprintf "%s_fn %s = (Printf.printf \"Calling %s\\n\"); try_clauses_%d [\n  %s\n] %s %S 1" name full_argslist name*)
+      Printf.sprintf "%s_fn %s = try_clauses_%d [\n  %s\n] %s %S 1" name full_argslist
     num_params clause_names argslist' err_msg
     in
     return (clause_funcs @ [ main_func ])

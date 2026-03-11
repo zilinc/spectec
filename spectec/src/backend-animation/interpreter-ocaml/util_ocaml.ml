@@ -2,6 +2,9 @@ open Xl
 open Il.Ast
 open Def 
 
+
+let logging = ref false 
+
 (* ===== TEMPORARY ONLY while i've switched to 5.1 ====== *)
 let rec take n xs =
   match n, xs with
@@ -246,20 +249,51 @@ module TypeM = struct
     let args = List.init i (fun j -> Printf.sprintf "arg%d" j) in
     let args_str = String.concat " " args in
     let call_str = if i = 0 then "cl ()" else "cl " ^ args_str in
-    let rec_call = if i = 0 then Printf.sprintf "try_clauses_0 rest err_msg"
-                   else Printf.sprintf "try_clauses_%d rest %s err_msg" i args_str in
-    let header = if i = 0 then "try_clauses_0 clauses err_msg"
-                 else Printf.sprintf "try_clauses_%d clauses %s err_msg" i args_str in
+    let rec_call = if i = 0 then Printf.sprintf "try_clauses_0 rest err_msg (idx+1)"
+                   else Printf.sprintf "try_clauses_%d rest %s err_msg (idx+1)" i args_str in
+    let header = if i = 0 then "try_clauses_0 clauses err_msg idx"
+                 else Printf.sprintf "try_clauses_%d clauses %s err_msg idx" i args_str in
+    if !logging then
     Printf.sprintf
       "let rec %s = \n\
       \  match clauses with \n\
-      \  | [] -> raise (NoMatchingClause err_msg)\n\
+      \  | [] -> \n\
+      \      Printf.printf \"no matching clause in %%s\\n%%!\" err_msg;\n\
+      \      raise (NoMatchingClause err_msg)\n\
       \  | cl :: rest -> \n\
-      \    try %s with \n\
-      \    | Match_failure _ | SubtypingFailed |  NoMatchingClause _ \n\
-      \    | CondFailed | Invalid_argument _ -> %s\n\
-      \    | e -> raise e\n"
-      header call_str rec_call
+      \    Printf.printf \"trying clause %%d\\n%%!\" idx;\n\
+      \    try \n\
+      \      let res = %s in\n\
+      \      Printf.printf \"accepted at clause %%d\\n%%!\" idx;\n\
+      \      res\n\
+      \    with\n\
+      \    | Match_failure _ as e ->\n\
+      \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
+      \        %s\n\
+      \    | SubtypingFailed as e ->\n\
+      \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
+      \        %s\n\
+      \    | NoMatchingClause _ as e ->\n\
+      \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
+      \        %s\n\
+      \    | CondFailed as e ->\n\
+      \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
+      \        %s\n\
+      \    | Invalid_argument _ as e ->\n\
+      \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
+      \        %s\n\
+      \    | e -> \n\
+      \        Printf.printf \"unexpected exception at clause %%d: %%s\\n%%!\" idx (Printexc.to_string e);\n\
+      \        raise e\n"
+      header call_str rec_call rec_call rec_call rec_call rec_call
+      else 
+      Printf.sprintf "let rec %s = match clauses with \n\
+      \ | [] -> raise (NoMatchingClause err_msg)\n\
+      \ | cl :: rest ->\n\
+      \ try %s with \n\
+      \ | Match_failure _ | SubtypingFailed | NoMatchingClause _ \n\
+      \ | CondFailed | Invalid_argument _ -> %s\n\
+      \ | e -> raise e\n" header call_str rec_call
 
   let gen_try_cls a : unit t =
     let* st = get in

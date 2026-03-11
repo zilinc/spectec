@@ -239,7 +239,8 @@ let test_assertion assertion =
 
 let run_command cmd = 
   let start_time = Sys.time () in
-  let res = begin match cmd.it with
+  try 
+  (let res = begin match cmd.it with
   | Module (var_opt, def) ->
     Printf.printf "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     def
@@ -260,7 +261,12 @@ let run_command cmd =
   | Assertion a -> test_assertion a
   | _ -> failwith "TODO: implement other commands"
   end in 
-  res, Sys.time () -. start_time
+  res, Sys.time () -. start_time)
+  with
+  | e -> 
+    let oc = open_out "logs-lol/exception.log" in
+    Printexc.print_backtrace oc;
+    print_fail cmd.at "exception" "" (Printexc.to_string e), Sys.time () -. start_time
 
 
 let tests = ref []
@@ -268,7 +274,13 @@ let srcs = ref []
 
 let () =
   let tests, srcs = Backend_animation.Runner.parse_args () in
-  Backend_animation.Runner.init_pipeline srcs;
+
+  (* initialise spectest, meta-interpreter and test files *)
+  let spectest_vl = Backend_animation.Runner.init_pipeline srcs in
+  let spectest = ocaml_of_moduleinst spectest_vl in
+  Register.add "spectest" spectest;
+  globalstore := ocaml_of_store (Backend_animation.State_v.Store.get ());
+
   let results = List.map (fun testfile ->
     let cmds = Backend_animation.Runner.run testfile in
     let result = List.map run_command cmds

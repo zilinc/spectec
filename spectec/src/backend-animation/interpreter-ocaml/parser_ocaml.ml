@@ -63,6 +63,8 @@ let gen_ocaml_to_name () = Printf.sprintf "vl_of_name (v : DL.name) : Backend_an
 \  match v with\n\
 \  | DL.C_pct__name chars -> textV (Reference_interpreter.Utf8.encode (List.map (fun (DL.C_pct__char n) -> (Z.to_int n)) chars)) |> caseV1"
 
+let gen_ocaml_of_hoststate () = Printf.sprintf "ocaml_of_hoststate _ = DL.HOSTSTATE_hoststate\n\n"
+
 let mixop_to_vl_str (mixop : Xl.Mixop.mixop) : string =
   "[" ^
   String.concat "; "
@@ -412,4 +414,5 @@ let gen_ocaml_of_dt (dt : deftyp) (name : string) (args : string) : string t =
   | StructT tfs -> gen_ocaml_of_str tfs name
   | VariantT tcs -> 
     if name = "name" then return (gen_ocaml_of_name ())
+    else if name = "hoststate" then return (gen_ocaml_of_hoststate ())
     else gen_ocaml_of_var tcs name args

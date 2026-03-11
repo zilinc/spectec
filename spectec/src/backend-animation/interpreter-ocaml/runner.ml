@@ -1,7 +1,10 @@
 module R = Reference_interpreter
+
 open Backend_interpreter.Ds
 open R.Script
 open R.Source
+
+module Register_v = State_v.Register
 
 let parser = R.Parse.Script.parse_file
 
@@ -36,7 +39,13 @@ let init_pipeline srcs =
   let (env, dl) = Main_animate.run il false false in
   Valid.valid dl;
   Interpreter_v.il_env := env;
-  Interpreter_v.dl := dl
+  Interpreter_v.dl := dl;
+
+  (* initialise spectest *)
+  State_v.Store.init ();
+  let spectest = Spectest_v.il_of_spectest () in
+  Register_v.add "spectest" spectest;
+  spectest
 
 let get_commands file = 
   let commands = parser file in

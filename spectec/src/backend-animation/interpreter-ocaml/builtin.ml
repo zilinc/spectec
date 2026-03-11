@@ -48,7 +48,7 @@ let use_step_pure = function
   | VNARROW_instr _
   | VCVTOP_instr _
   | LOCAL_dot_TEE_instr _
-  | REF_dot_I31_NUM_instr _  (* not sure *) -> true 
+  | REF_dot_I31_instr (* not sure *) -> true 
   | _                        -> false
 
 let use_step_read = function
@@ -62,7 +62,7 @@ let use_step_read = function
   | THROW_REF_instr
   | TRY_TABLE_instr _
   | REF_dot_NULL_instr _
-  | REF_dot_FUNC_ADDR_instr _  (* not sure *)
+  | REF_dot_FUNC_instr _ 
   | REF_dot_TEST_instr _
   | REF_dot_CAST_instr _
   | STRUCT_dot_NEW_DEFAULT_instr _
@@ -240,6 +240,3 @@ let ordered a0 = failwith "TODO: implement Built-in function ordered"
 
 let instrdots () = failwith "TODO: implement Built-in function instrdots"
 let uc_allocx a0 a1 a2 = failwith "TODO: implement Built-in function uc_allocx"
-
-
-

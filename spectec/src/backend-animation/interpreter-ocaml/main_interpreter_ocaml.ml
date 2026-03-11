@@ -9,7 +9,7 @@ let capsfirst s =
 let generate_dune_file () =
   let modules = ["dl_codegen"; "dl_codegen_types"; "dl_codegen_util"; (*"construct_ocaml";*) "construct_ocaml_new"; "builtin"] in
   let libraries = ["backend_animation"; "backend_interpreter"; "reference_interpreter"; "middlend"] in
-  (* Dune file content *)
+  (*let prof = "(preprocess (pps landmarks-ppx --auto))\n  (instrumentation (backend landmarks))" in*)
   let lib_def = Printf.sprintf
     "(include_subdirs no)\n(library\n  (name interpreter_ocaml)\n  (modules %s)\n  (libraries %s))"
     (String.concat " " modules) (String.concat " " libraries)

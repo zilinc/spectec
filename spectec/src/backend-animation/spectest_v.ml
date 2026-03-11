@@ -13,11 +13,28 @@ let error at msg = Error.error at "animation/script_v" msg
 let il_of_spectest () : value =
 
   (* Helper functions *)
-  let i32_to_const i = caseV [["CONST"];[];[]] [ nullary "I32"; vl_of_uN_32   i ] in
+  (*let i32_to_const i = caseV [["CONST"];[];[]] [ nullary "I32"; vl_of_uN_32   i ] in
   let i64_to_const i = caseV [["CONST"];[];[]] [ nullary "I64"; vl_of_uN_64   i ] in
   let f32_to_const f = caseV [["CONST"];[];[]] [ nullary "F32"; vl_of_float32 f ] in
-  let f64_to_const f = caseV [["CONST"];[];[]] [ nullary "F64"; vl_of_float64 f ] in
+  let f64_to_const f = caseV [["CONST"];[];[]] [ nullary "F64"; vl_of_float64 f ] in*)
 
+  let i32_to_const i = caseV [["CONST"];[];[]] [ nullary "I32"; caseV [["mk_num__0"];[];[]] [nullary "I32"; vl_of_uN_32 i] ] in
+  let i64_to_const i = caseV [["CONST"];[];[]] [ nullary "I64"; caseV [["mk_num__0"];[];[]] [nullary "I64"; vl_of_uN_64 i] ] in
+  let f32_to_const f = caseV [["CONST"];[];[]] [ nullary "F32"; caseV [["mk_num__1"];[];[]] [nullary "F32"; vl_of_float32 f] ] in
+  let f64_to_const f = caseV [["CONST"];[];[]] [ nullary "F64"; caseV [["mk_num__1"];[];[]] [nullary "F64"; vl_of_float64 f] ] in
+
+  let empty_moduleinst = strV
+    [ ("TYPES"  , ref (listV [||]))
+    ; ("TAGS"   , ref (listV [||]))
+    ; ("GLOBALS", ref (listV [||]))
+    ; ("MEMS"   , ref (listV [||]))
+    ; ("TABLES" , ref (listV [||]))
+    ; ("FUNCS"  , ref (listV [||]))
+    ; ("DATAS"  , ref (listV [||]))
+    ; ("ELEMS"  , ref (listV [||]))
+    ; ("EXPORTS", ref (listV [||]))
+    ]
+  in
 
   let create_funcinst name ptypes =
     let comptype = caseV [["FUNC"];["->"];[]] [
@@ -40,7 +57,7 @@ let il_of_spectest () : value =
     ] in
     name, strV [
       "TYPE"  , ref deftype;
-      "MODULE", ref (strV []); (* dummy module *)
+      "MODULE", ref empty_moduleinst; (* dummy module *)
       "CODE"  , ref funccode
     ] in
 
@@ -159,8 +176,10 @@ let il_of_spectest () : value =
                           ; ("MEMS"   , ref (listV [||]))
                           ; ("TABLES" , ref (listV [||]))
                           ; ("FUNCS"  , ref (listV [||]))
-                          ; ("ELEMS"  , ref (listV [||]))
+                          (* ; ("ELEMS"  , ref (listV [||]))
+                          ; ("DATAS"  , ref (listV [||])) *)
                           ; ("DATAS"  , ref (listV [||]))
+                          ; ("ELEMS"  , ref (listV [||]))
                           ; ("EXPORTS", ref exportinsts)
                           ]
   in
