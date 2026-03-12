@@ -13,6 +13,7 @@ open Source
 open Printf
 open Il2al.Free
 open Lazy
+(* open Lru *)
 module HS = State_v.HostState
 module A  = Al.Ast
 module I  = Backend_interpreter
@@ -158,6 +159,15 @@ end
 
 let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
+
+(*
+(* It makes it a lot slower! *)
+module C =
+  M.Make (struct type t = (string * Value.arg list) let hash = Hashtbl.hash let equal = (=) end)
+         (struct type t = value OptMonad.m let weight = fun _ -> 1 end)
+
+let fncall_cache = C.create 1000
+*)
 
 
 (** [lhs] is the pattern, and [rhs] is the expression. *)
@@ -783,6 +793,16 @@ and eval_func name func_def args : value OptMonad.m =
   else
     match_clause no_region name 1 (List.map snd fcs) args
 
+(*
+and call_func name args : value OptMonad.m =
+  let key = (name, args) in
+  match C.find key fncall_cache with
+  | Some v -> C.promote key fncall_cache; v
+  | None   -> let res = call_func' name args in
+              C.add key res fncall_cache;
+              res
+*)
+
 and call_func name args : value OptMonad.m =
   info "call" no (lazy ("Calling " ^ name));
   if State_v.Hints.is_a_builtin name then
@@ -803,7 +823,11 @@ and call_func name args : value OptMonad.m =
     let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
     call_func "steps" args'
   else if name = "Step" then
-    error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
+    error no "Calling $Step is not allowed."
+  else if name = "Step_pure" then
+    error no "Calling $Step_pure is not allowed."
+  else if name = "Step_read" then
+    error no "Calling $Step_read is not allowed."
   else if name = "Step/memory.grow" then
     call_func "Step/memory.grow_det" args
   else if name = "Step/table.grow" then
