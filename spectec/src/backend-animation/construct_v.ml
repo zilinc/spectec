@@ -536,7 +536,7 @@ let vl_of_float_vrelop : RI.Ast.V128Op.frelop -> value = function
 let vl_of_vrelop = vl_of_vop vl_of_int_vrelop vl_of_float_vrelop
 
 let vl_of_int_vunop : RI.Ast.V128Op.iunop -> value = function
-  | RI.Ast.V128Op.Abs    -> nullary "ABS"
+  | RI.Ast.V128Op.Abs    -> caseV [["mk_vunop__0"];[];[];[]] []
   | RI.Ast.V128Op.Neg    -> nullary "NEG"
   | RI.Ast.V128Op.Popcnt -> nullary "POPCNT"
 
@@ -549,7 +549,36 @@ let vl_of_float_vunop : RI.Ast.V128Op.funop -> value = function
   | RI.Ast.V128Op.Trunc   -> nullary "TRUNC"
   | RI.Ast.V128Op.Nearest -> nullary "NEAREST"
 
-let vl_of_vunop = vl_of_vop vl_of_int_vunop vl_of_float_vunop
+(*let vl_of_vunop = vl_of_vop vl_of_int_vunop vl_of_float_vunop*)
+
+let vl_of_vunop = function
+  | RI.Value.V128 vop -> (
+    match vop with
+    | RI.V128.I8x16 op -> 
+      let jnn = nullary "I8" in
+      let shape = vl_of_shape jnn sixteen in
+      [ shape; caseV [["mk_vunop__0"];[];[];[]] [jnn; shape; vl_of_int_vunop op] ]
+    | RI.V128.I16x8 op ->
+      let jnn = nullary "I16" in
+      let shape = vl_of_shape jnn eight in
+      [ shape; caseV [["mk_vunop__0"];[];[];[]] [jnn; shape; vl_of_int_vunop op] ]
+    | RI.V128.I32x4 op ->
+      let jnn = nullary "I32" in
+      let shape = vl_of_shape jnn four in
+      [ shape; caseV [["mk_vunop__0"];[];[];[]] [jnn; shape; vl_of_int_vunop op] ]
+    | RI.V128.I64x2 op ->
+      let jnn = nullary "I64" in
+      let shape = vl_of_shape jnn two in
+      [ shape; caseV [["mk_vunop__0"];[];[];[]] [jnn; shape; vl_of_int_vunop op] ]
+    | RI.V128.F32x4 op ->
+      let jnn = nullary "F32" in
+      let shape = vl_of_shape jnn four in
+      [ shape; caseV [["mk_vunop__1"];[];[];[]] [jnn; shape; vl_of_float_vunop op] ]
+    | RI.V128.F64x2 op ->
+      let jnn = nullary "F64" in
+      let shape = vl_of_shape jnn two in
+      [ shape; caseV [["mk_vunop__1"];[];[];[]] [jnn; shape; vl_of_float_vunop op] ]
+  )
 
 let vl_of_int_vbinop_opt : RI.Ast.V128Op.ibinop -> value option = function
   | RI.Ast.V128Op.Add             -> Some (nullary "ADD")
