@@ -77,7 +77,10 @@ let globalstore = ref {
 let success = 1,1
 let pass = 0, 0
 let fail = 0, 1 
-let print_fail = Backend_animation.Main_interpret_v.print_fail
+let print_fail at failtype expected actual =
+  print_endline (RI.Source.string_of_region at ^ ": Expected " ^ failtype ^ " failure: " ^ expected ^ ":(");
+  print_endline ("Got " ^ actual ^ ":O");
+  fail
 let string_of_values = Backend_animation.Value.string_of_values
 
 let int_of_ocamlchar (char : DL.char) = match char with
@@ -265,10 +268,10 @@ let run_command oc cmd =
   with
   | Failure msg ->
     Printf.eprintf "Failure: %s\n" msg; 
-    print_fail cmd.at "failure" "" msg, Sys.time () -. start_time
+    fail, Sys.time () -. start_time
   | e -> 
     Printexc.print_backtrace oc; 
-    print_fail cmd.at "exception" "" (Printexc.to_string e), Sys.time () -. start_time
+    print_fail cmd.at "unexpected exception :O" "" (Printexc.to_string e), Sys.time () -. start_time
 
 
 let tests = ref []
