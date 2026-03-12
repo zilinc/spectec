@@ -1,0 +1,31 @@
+name: CI for OCaml Interpreter
+
+on:
+  push:
+    branches: [ il-interpreter ]
+    paths: [ spectec/** ]
+
+  workflow_dispatch:
+
+jobs:
+  spec-tec:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.1.x
+
+      - name: Install dependencies
+        run: |
+          opam install --yes dune menhir mdx zarith
+          eval $(opam env)
+
+      - name: Build OCaml interpreter
+        run: |
+          cd spectec
+          make build_ocamlprog 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/'
