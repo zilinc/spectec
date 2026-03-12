@@ -5,27 +5,22 @@ on:
     branches: [ il-interpreter ]
     paths: [ spectec/** ]
 
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
   spec-tec:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5.1.x
-
-      - name: Install dependencies
-        run: |
-          opam install --yes dune menhir mdx zarith
-          eval $(opam env)
-
-      - name: Build OCaml interpreter
-        run: |
-          cd spectec
-          make build_ocamlprog 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/'
+      - name: Setup Dune
+        run: opam install --yes dune menhir mdx zarith && eval $(opam env)
+      - name: Build and test
+        run: cd spectec && make
+      - name: Test wasm-3.0 core
+        run: make build_ocamlprog 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/'
