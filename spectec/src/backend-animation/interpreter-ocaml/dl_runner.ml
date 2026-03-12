@@ -288,7 +288,7 @@ let () =
 
   let results = List.map (fun testfile ->
     let cmds = Backend_animation.Runner.run testfile in
-    let oc = open_out "logs-lol/exception.log" in
+    let oc = open_out "exception.log" in
     let result = List.map (run_command oc) cmds
       |> Backend_animation.Main_interpret.sum_results_with_time in
     Backend_animation.Main_interpret.print_runner_result testfile result;
