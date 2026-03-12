@@ -1626,13 +1626,22 @@ let vl_to_cvtop vs : RI.Ast.cvtop =
 (* Vector operator *)
 
 let vl_to_vop f1 f2 = function
+  | [ CaseV ([[];["X"];[]], [ CaseV ([["I8" ]], []); z ]); CaseV ([["mk_vunop__0"]], [_; _; vop]) ] when z = sixteen -> RI.Value.V128 (RI.V128.I8x16 (f1 vop))
+  | [ CaseV ([[];["X"];[]], [ CaseV ([["I16"]], []); z ]); CaseV ([["mk_vunop__0"]], [_; _; vop]) ] when z = eight   -> RI.Value.V128 (RI.V128.I16x8 (f1 vop))
+  | [ CaseV ([[];["X"];[]], [ CaseV ([["I32"]], []); z ]); CaseV ([["mk_vunop__0"]], [_; _; vop]) ] when z = four    -> RI.Value.V128 (RI.V128.I32x4 (f1 vop))
+  | [ CaseV ([[];["X"];[]], [ CaseV ([["I64"]], []); z ]); CaseV ([["mk_vunop__0"]], [_; _; vop]) ] when z = two     -> RI.Value.V128 (RI.V128.I64x2 (f1 vop))
+  | [ CaseV ([[];["X"];[]], [ CaseV ([["F32"]], []); z ]); CaseV ([["mk_vunop__1"]], [_; _; vop]) ] when z = four    -> RI.Value.V128 (RI.V128.F32x4 (f2 vop))
+  | [ CaseV ([[];["X"];[]], [ CaseV ([["F64"]], []); z ]); CaseV ([["mk_vunop__1"]], [_; _; vop]) ] when z = two     -> RI.Value.V128 (RI.V128.F64x2 (f2 vop))
+  | l -> error_values "vop" l
+
+(*let vl_to_vop f1 f2 = function
   | [ CaseV ([[];["X"];[]], [ CaseV ([["I8" ]], []); z ]); vop ] when z = sixteen -> RI.Value.V128 (RI.V128.I8x16 (f1 vop))
   | [ CaseV ([[];["X"];[]], [ CaseV ([["I16"]], []); z ]); vop ] when z = eight   -> RI.Value.V128 (RI.V128.I16x8 (f1 vop))
   | [ CaseV ([[];["X"];[]], [ CaseV ([["I32"]], []); z ]); vop ] when z = four    -> RI.Value.V128 (RI.V128.I32x4 (f1 vop))
   | [ CaseV ([[];["X"];[]], [ CaseV ([["I64"]], []); z ]); vop ] when z = two     -> RI.Value.V128 (RI.V128.I64x2 (f1 vop))
   | [ CaseV ([[];["X"];[]], [ CaseV ([["F32"]], []); z ]); vop ] when z = four    -> RI.Value.V128 (RI.V128.F32x4 (f2 vop))
   | [ CaseV ([[];["X"];[]], [ CaseV ([["F64"]], []); z ]); vop ] when z = two     -> RI.Value.V128 (RI.V128.F64x2 (f2 vop))
-  | l -> error_values "vop" l
+  | l -> error_values "vop" l*)
 
 let vl_to_viop f1 f2 = function
   | [ sh; vop ] -> vl_to_vop f1 f2 [ as_singleton_case sh; vop ]
