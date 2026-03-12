@@ -19,9 +19,7 @@ jobs:
           ocaml-compiler: 5.1.x
       - name: Setup Dune
         run: opam install --yes dune menhir mdx zarith && eval $(opam env)
-      - name: Build and test
-        run: cd spectec && opam exec make
-      - name: Test wasm-3.0 core
+      - name: Build and Test wasm-3.0 core
         run: |
           cd spectec
-          make build_ocamlprog 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/'
+          opam exec make build_ocamlprog 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/'
