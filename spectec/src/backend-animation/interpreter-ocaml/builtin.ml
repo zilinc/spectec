@@ -48,7 +48,7 @@ let use_step_pure = function
   | VNARROW_instr _
   | VCVTOP_instr _
   | LOCAL_dot_TEE_instr _
-  | REF_dot_I31_instr (* not sure *) -> true 
+  | REF_dot_I31_instr (* not sure *) -> true
   | _                        -> false
 
 let use_step_read = function
@@ -113,9 +113,9 @@ let use_step = function
 
 let use_step_ctxt = function 
   | LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _
-  | FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> true
+  | FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ 
+  | HANDLER__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> true
   | _ -> false
-
 let inv_concat_ a0 = failwith "TODO: implement Built-in function inv_concat_"
 let inv_concatn_ a0 a1 = failwith "TODO: implement Built-in function inv_concatn_"
 let uc_nd () = failwith "TODO: implement Built-in function inv_concatn_"

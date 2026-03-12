@@ -134,7 +134,7 @@ let gen_ocaml_of_typ_fn (t : typ) =
   | TupT ets ->
       let* args = mapM (fun (_, t) -> gen_ocaml_of_typ t) ets in
       return
-        (Printf.sprintf "(fun (e : %s) -> match e%s with %s es -> (%s) | _ -> failwith \"expected %s\")"
+        (Printf.sprintf "(fun (e : %s) -> match e%s with %s es -> (%s) | _ -> failwith (Printf.sprintf \"expected %s. Got: %%s\" (Backend_animation.Value.string_of_value e)))"
           (exp_type_str ()) it_str tup_str
           (String.concat ", "
             (List.mapi (fun i arg -> Printf.sprintf "(%s (List.nth es %d))" arg i) args)) tup_str)
@@ -218,7 +218,7 @@ let gen_ocaml_of_var tcs name args : string t =
       \ | %s -> begin match (sanitize_name ~typecons:true ~typename:false (%s mixop)) with\n\
       \  %s\n\
       \   end\n\
-      \ | _ -> failwith \"Invalid expression for Variant type %s: should be a %s\"\n"
+      \ | _ -> failwith (Printf.sprintf \"Invalid expression for Variant type %s: should be a %s. Got: %%s\" (Backend_animation.Value.string_of_value e))\n"
       funcname arg
       (append_sep args name' " ")
       it_str match_con mixopstr cases name match_con

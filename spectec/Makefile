@@ -18,7 +18,7 @@ ci: all
 
 .PHONY: build_ocamlprog
 
-SPEC ?= ../specification/wasm-3.0/*
+SPEC ?= ../specification/testing2
 
 ifeq ($(PRINT_DL),1)
   ifeq ($(UNDEP),1)
@@ -45,7 +45,8 @@ build_ocamlprog: exe
 	@echo "#### spectec finished, compiling generated code"
 	dune build --instrument-with landmarks src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "
-	OCAML_LANDMARKS="on,output=stderr" dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
+# OCAML_LANDMARKS="on,output=stderr" dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
 
 run_ocaml: 
 	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/

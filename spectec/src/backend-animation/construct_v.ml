@@ -394,64 +394,65 @@ let vl_of_cvtop cop =
     let inn1 = nullary "I32" in
     (match op with
     | IntOp.ExtendI32 sx     -> [inn1; nullary "I32";
-      caseV [["mk_cvtop___0"];[];[];[]] [inn1; nullary "I32"; caseV [["EXTEND"   ];[]] [vl_of_sx sx]]]
+      caseV [["mk_cvtop___0"];[];[];[]] [nullary "I32"; inn1; caseV [["EXTEND"];[]] [vl_of_sx sx]]]
     | IntOp.WrapI64          -> [inn1; nullary "I64";
-      caseV [["mk_cvtop___0"];[];[];[]] [inn1; nullary "I64"; nullary "WRAP"]]
-    | IntOp.TruncF32 sx      -> [nullary "F32"; inn1;
-      caseV [["mk_cvtop___2"];[];[];[]] [nullary "F32"; inn1; caseV [["TRUNC"    ];[]] [vl_of_sx sx]]]
-    | IntOp.TruncF64 sx      -> [nullary "F64"; inn1;
-      caseV [["mk_cvtop___2"];[];[];[]] [nullary "F64"; inn1; caseV [["TRUNC"    ];[]] [vl_of_sx sx]]]
-    | IntOp.TruncSatF32 sx   -> [nullary "F32"; inn1;
+      caseV [["mk_cvtop___0"];[];[];[]] [nullary "I64"; inn1; nullary "WRAP"]]
+    | IntOp.TruncF32 sx      -> [inn1; nullary "F32";
+      caseV [["mk_cvtop___2"];[];[];[]] [nullary "F32"; inn1; caseV [["TRUNC"];[]] [vl_of_sx sx]]]
+    | IntOp.TruncF64 sx      -> [inn1; nullary "F64";
+      caseV [["mk_cvtop___2"];[];[];[]] [nullary "F64"; inn1; caseV [["TRUNC"];[]] [vl_of_sx sx]]]
+    | IntOp.TruncSatF32 sx   -> [inn1; nullary "F32";
       caseV [["mk_cvtop___2"];[];[];[]] [nullary "F32"; inn1; caseV [["TRUNC_SAT"];[]] [vl_of_sx sx]]]
-    | IntOp.TruncSatF64 sx   -> Printf.printf "returning trunc sat\n"; [nullary "F64"; inn1;
+    | IntOp.TruncSatF64 sx   -> [inn1; nullary "F64";
       caseV [["mk_cvtop___2"];[];[];[]] [nullary "F64"; inn1; caseV [["TRUNC_SAT"];[]] [vl_of_sx sx]]]
-    | IntOp.ReinterpretFloat -> [nullary "F32"; inn1; nullary "REINTERPRET"]
+    | IntOp.ReinterpretFloat -> [inn1; nullary "F32";
+      caseV [["mk_cvtop___2"];[];[];[]] [nullary "F32"; inn1; nullary "REINTERPRET"]]
     )
   | I64 op ->
     let inn1 = nullary "I64" in
     (match op with
     | IntOp.ExtendI32 sx     -> [inn1; nullary "I32";
-      caseV [["mk_cvtop___0"];[];[];[]] [inn1; nullary "I32"; caseV [["EXTEND"   ];[]] [vl_of_sx sx]]]
+      caseV [["mk_cvtop___0"];[];[];[]] [nullary "I32"; inn1; caseV [["EXTEND"   ];[]] [vl_of_sx sx]]]
     | IntOp.WrapI64          -> [inn1; nullary "I64";
-      caseV [["mk_cvtop___0"];[];[];[]] [inn1; nullary "I64"; nullary "WRAP"]]
-    | IntOp.TruncF32 sx      -> [nullary "F32"; inn1;
+      caseV [["mk_cvtop___0"];[];[];[]] [nullary "I64"; inn1; nullary "WRAP"]]
+    | IntOp.TruncF32 sx      -> [inn1; nullary "F32";
       caseV [["mk_cvtop___2"];[];[];[]] [nullary "F32"; inn1; caseV [["TRUNC"    ];[]] [vl_of_sx sx]]]
-    | IntOp.TruncF64 sx      -> [nullary "F64"; inn1;
+    | IntOp.TruncF64 sx      -> [inn1; nullary "F64";
       caseV [["mk_cvtop___2"];[];[];[]] [nullary "F64"; inn1; caseV [["TRUNC"    ];[]] [vl_of_sx sx]]]
-    | IntOp.TruncSatF32 sx   -> [nullary "F32"; inn1;
+    | IntOp.TruncSatF32 sx   -> [inn1; nullary "F32";
       caseV [["mk_cvtop___2"];[];[];[]] [nullary "F32"; inn1; caseV [["TRUNC_SAT"];[]] [vl_of_sx sx]]]
-    | IntOp.TruncSatF64 sx   -> [nullary "F64"; inn1;
+    | IntOp.TruncSatF64 sx   -> [inn1; nullary "F64";
       caseV [["mk_cvtop___2"];[];[];[]] [nullary "F64"; inn1; caseV [["TRUNC_SAT"];[]] [vl_of_sx sx]]]
-    | IntOp.ReinterpretFloat -> [nullary "F64"; inn1;
+    | IntOp.ReinterpretFloat -> [inn1; nullary "F64";
       caseV [["mk_cvtop___2"];[];[];[]] [nullary "F64"; inn1; nullary "REINTERPRET"]]
     )
   | F32 op ->
     let fnn1 = nullary "F32" in
     (match op with
-    | FloatOp.ConvertI32 sx  -> [nullary "I32"; fnn1;
-      caseV [["mk_cvtop___3"];[];[];[]] [nullary "I32"; fnn1; caseV [["CONVERT"];[]] [vl_of_sx sx]]]
-    | FloatOp.ConvertI64 sx  -> [nullary "I64"; fnn1;
-      caseV [["mk_cvtop___3"];[];[];[]] [nullary "I64"; fnn1; caseV [["CONVERT"];[]] [vl_of_sx sx]]]
+    | FloatOp.ConvertI32 sx  -> [fnn1; nullary "I32";
+      caseV [["mk_cvtop___1"];[];[];[]] [nullary "I32"; fnn1; caseV [["CONVERT"];[]] [vl_of_sx sx]]]
+    | FloatOp.ConvertI64 sx  -> [fnn1; nullary "I64";
+      caseV [["mk_cvtop___1"];[];[];[]] [nullary "I64"; fnn1; caseV [["CONVERT"];[]] [vl_of_sx sx]]]
     | FloatOp.PromoteF32     -> [fnn1; nullary "F32";
-      caseV [["mk_cvtop___3"];[];[];[]] [fnn1; nullary "F32"; nullary "PROMOTE"]]
-    | FloatOp.DemoteF64      -> [nullary "F64"; fnn1;
+      caseV [["mk_cvtop___3"];[];[];[]] [nullary "F32"; fnn1; nullary "PROMOTE"]]
+    | FloatOp.DemoteF64      -> [fnn1; nullary "F64";
       caseV [["mk_cvtop___3"];[];[];[]] [nullary "F64"; fnn1; nullary "DEMOTE"]]
-    | FloatOp.ReinterpretInt -> [nullary "I32"; fnn1; 
-      caseV [["mk_cvtop___3"];[];[];[]] [nullary "F64"; fnn1; nullary "DEMOTE"]]
+    | FloatOp.ReinterpretInt -> [fnn1; nullary "I32";
+      caseV [["mk_cvtop___1"];[];[];[]] [nullary "I32"; fnn1; nullary "REINTERPRET"]]
     )
   | F64 op ->
     let fnn1 = nullary "F64" in
     (match op with
-    | FloatOp.ConvertI32 sx  -> [nullary "I32"; fnn1;
-      caseV [["mk_cvtop___3"];[];[];[]] [nullary "I32"; fnn1; caseV [["CONVERT"];[]] [vl_of_sx sx]]]
-    | FloatOp.ConvertI64 sx  -> [nullary "I64"; fnn1;
-      caseV [["mk_cvtop___3"];[];[];[]] [nullary "I64"; fnn1; caseV [["CONVERT"];[]] [vl_of_sx sx]]]
+    | FloatOp.ConvertI32 sx  -> [fnn1; nullary "I32";
+      caseV [["mk_cvtop___1"];[];[];[]] [nullary "I32"; fnn1; caseV [["CONVERT"];[]] [vl_of_sx sx]]]
+    | FloatOp.ConvertI64 sx  -> [fnn1; nullary "I64";
+      caseV [["mk_cvtop___1"];[];[];[]] [nullary "I64"; fnn1; caseV [["CONVERT"];[]] [vl_of_sx sx]]]
     | FloatOp.PromoteF32     -> [fnn1; nullary "F32";
-      caseV [["mk_cvtop___3"];[];[];[]] [fnn1; nullary "F32"; nullary "PROMOTE"]]
-    | FloatOp.DemoteF64      -> [nullary "F64"; fnn1;
+      caseV [["mk_cvtop___3"];[];[];[]] [nullary "F32"; fnn1; nullary "PROMOTE"]]
+    | FloatOp.DemoteF64      -> [fnn1; nullary "F64";
       caseV [["mk_cvtop___3"];[];[];[]] [nullary "F64"; fnn1; nullary "DEMOTE"]]
-    | FloatOp.ReinterpretInt -> [nullary "I32"; fnn1; 
-      caseV [["mk_cvtop___3"];[];[];[]] [nullary "F64"; fnn1; nullary "DEMOTE"]]
+    | FloatOp.ReinterpretInt -> [fnn1; nullary "I64";
+      caseV [["mk_cvtop___1"];[];[];[]] [nullary "I64"; fnn1; nullary "REINTERPRET"]]
     )
 
 (* Vector operator *)
@@ -1531,13 +1532,13 @@ let vl_to_cvtop vs : RI.Ast.cvtop =
 let vl_to_int_cvtop vs : RI.Ast.IntOp.cvtop =
   let open RI.Ast in
   match vs with
-  | [_; _; CaseV ([["mk_cvtop___0"];[];[];[]], [_inn1; inn2; op])] ->
-    (match match_caseV "cvtop__Inn_1_Inn_2" inn2, match_caseV "cvtop__Inn_1_Inn_2 op" op with
+  | [_; inn1; CaseV ([["mk_cvtop___0"];[];[];[]], [_; _; op])] ->
+    (match match_caseV "cvtop__Inn_1_Inn_2" inn1, match_caseV "cvtop__Inn_1_Inn_2 op" op with
     | ([["I32"]], []), ([["EXTEND"];[]], [sx]) -> IntOp.ExtendI32 (vl_to_sx sx)
     | ([["I64"]], []), ([["WRAP"]], []) -> IntOp.WrapI64
-    | _ -> error_values "integer cvtop__Inn_1_Inn_2" [inn2; op]
+    | _ -> error_values "integer cvtop__Inn_1_Inn_2" [inn1; op]
     )
-  | [_; _; CaseV ([["mk_cvtop___2"];[];[];[]], [fnn1; _inn2; op])] ->
+  | [inn2; fnn1; CaseV ([["mk_cvtop___2"];[];[];[]], [_; _; op])] ->
     (match match_caseV "cvtop__Fnn_1_Inn_2" fnn1, match_caseV "cvtop__Fnn_1_Inn_2 op" op with
     | ([["F32"]], []), ([["TRUNC"];[]], [sx]) -> IntOp.TruncF32 (vl_to_sx sx)
     | ([["F64"]], []), ([["TRUNC"];[]], [sx]) -> IntOp.TruncF64 (vl_to_sx sx)
@@ -1552,7 +1553,7 @@ let vl_to_int_cvtop vs : RI.Ast.IntOp.cvtop =
 let vl_to_float_cvtop vs : RI.Ast.FloatOp.cvtop =
   let open RI.Ast in
   match vs with
-  | [_; _; CaseV ([["mk_cvtop___1"];[];[];[]], [inn1; _fnn2; op])] ->
+  | [fnn2; inn1; CaseV ([["mk_cvtop___1"];[];[];[]], [_; _; op])] ->
     (match match_caseV "cvtop__Inn_1_Fnn_2" inn1, match_caseV "cvtop__Inn_1_Fnn_2 op" op with
     | ([["I32"]], []), ([["CONVERT"];[]], [sx]) -> FloatOp.ConvertI32 (vl_to_sx sx)
     | ([["I64"]], []), ([["CONVERT"];[]], [sx]) -> FloatOp.ConvertI64 (vl_to_sx sx)
@@ -1560,8 +1561,8 @@ let vl_to_float_cvtop vs : RI.Ast.FloatOp.cvtop =
     | ([["I64"]], []), ([["REINTERPRET"]], []) -> FloatOp.ReinterpretInt
     | _ -> error_values "float cvtop__Inn_1_Fnn_2" [inn1; op]
     )
-  | [_; _; CaseV ([["mk_cvtop___3"];[];[];[]], [_fnn1; fnn2; op])] ->
-    (match match_caseV "cvtop__Fnn_1_Fnn_2" fnn2, match_caseV "cvtop__Fnn_1_Fnn_2 op" op with
+  | [fnn2; fnn1; CaseV ([["mk_cvtop___3"];[];[];[]], [_; _; op])] ->
+    (match match_caseV "cvtop__Fnn_1_Fnn_2" fnn1, match_caseV "cvtop__Fnn_1_Fnn_2 op" op with
     | ([["F32"]], []), ([["PROMOTE"]], []) -> FloatOp.PromoteF32
     | ([["F64"]], []), ([["DEMOTE"]], []) -> FloatOp.DemoteF64
     | _ -> error_values "float cvtop__Fnn_1_Fnn_2" [fnn2; op]
@@ -1569,25 +1570,24 @@ let vl_to_float_cvtop vs : RI.Ast.FloatOp.cvtop =
   | _ -> error_values "float cvtop" vs
 
 let vl_to_cvtop vs : RI.Ast.cvtop =
-  Printf.printf "vl_to_cvtop: %s" (String.concat "; " (List.map string_of_value vs));
   match vs with
-  | [_; _; CaseV ([["mk_cvtop___0"];[];[];[]], [inn1; _; _])]->
-    (match match_caseV "cvtop inn1" inn1 with
+  | [inn2; inn1; CaseV ([["mk_cvtop___0"];[];[];[]], [_; _; _])]->
+    (match match_caseV "cvtop inn2" inn2 with
     | [["I32"]], [] -> I32 (vl_to_int_cvtop vs)
     | [["I64"]], [] -> I64 (vl_to_int_cvtop vs)
     | _ -> error_value "cvtop mk_cvtop___0 inn1" inn1)
-  | [_; _; CaseV ([["mk_cvtop___1"];[];[];[]], [_; fnn2; _])] ->
-    (match match_caseV "cvtop fnn1" fnn2 with
+  | [fnn2; inn1; CaseV ([["mk_cvtop___1"];[];[];[]], [_; _; _])] ->
+    (match match_caseV "cvtop fnn2" fnn2 with
     | [["F32"]], [] -> F32 (vl_to_float_cvtop vs)
     | [["F64"]], [] -> F64 (vl_to_float_cvtop vs)
     | _ -> error_value "cvtop mk_cvtop___1 fnn2" fnn2)
-  | [_; _; CaseV ([["mk_cvtop___2"];[];[];[]], [_; inn2; _])] ->
+  | [inn2; fnn1; CaseV ([["mk_cvtop___2"];[];[];[]], [_; _; _])] ->
     (match match_caseV "cvtop inn2" inn2 with
     | [["I32"]], [] -> I32 (vl_to_int_cvtop vs)
     | [["I64"]], [] -> I64 (vl_to_int_cvtop vs)
     | _ -> error_value "cvtop mk_cvtop___2 inn2" inn2)
-  | [_; _; CaseV ([["mk_cvtop___3"];[];[];[]], [fnn1; _; _])] ->
-    (match match_caseV "cvtop fnn1" fnn1 with
+  | [fnn2; fnn1; CaseV ([["mk_cvtop___3"];[];[];[]], [_; _; _])] ->
+    (match match_caseV "cvtop fnn2" fnn2 with
     | [["F32"]], [] -> F32 (vl_to_float_cvtop vs)
     | [["F64"]], [] -> F64 (vl_to_float_cvtop vs)
     | _ -> error_value "cvtop mk_cvtop___3 fnn1" fnn1)

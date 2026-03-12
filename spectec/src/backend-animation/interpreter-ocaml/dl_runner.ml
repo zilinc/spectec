@@ -237,7 +237,7 @@ let test_assertion assertion =
     )
   | _ -> pass
 
-let run_command cmd = 
+let run_command oc cmd = 
   let start_time = Sys.time () in
   try 
   (let res = begin match cmd.it with
@@ -263,9 +263,11 @@ let run_command cmd =
   end in 
   res, Sys.time () -. start_time)
   with
+  | Failure msg ->
+    Printf.eprintf "Failure: %s\n" msg; 
+    print_fail cmd.at "failure" "" msg, Sys.time () -. start_time
   | e -> 
-    let oc = open_out "logs-lol/exception.log" in
-    Printexc.print_backtrace oc;
+    Printexc.print_backtrace oc; 
     print_fail cmd.at "exception" "" (Printexc.to_string e), Sys.time () -. start_time
 
 
@@ -283,7 +285,8 @@ let () =
 
   let results = List.map (fun testfile ->
     let cmds = Backend_animation.Runner.run testfile in
-    let result = List.map run_command cmds
+    let oc = open_out "logs-lol/exception.log" in
+    let result = List.map (run_command oc) cmds
       |> Backend_animation.Main_interpret.sum_results_with_time in
     Backend_animation.Main_interpret.print_runner_result testfile result;
     result

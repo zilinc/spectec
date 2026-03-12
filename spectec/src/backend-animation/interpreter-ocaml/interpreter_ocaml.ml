@@ -514,7 +514,6 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
     | CallE (id, args) ->
         let id' = sanitize_name id.it in
         let fname = id' ^ "_fn" in
-        if fname = "uc_nd_fn" then return "true" else
         let typ_args, exp_args = List.partition (fun a -> match a.it with TypA _ -> true | _ -> false) args in
         let* typevar_str = concat_mapM " " (fun a ->
           match a.it with
@@ -1450,7 +1449,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
                   let* () = set_typecasts "" in
                   let bodycode = typecasts ^ prems_block in
                   let full_argnames = append_sep typevar_args argnames " " in
-                  (*let bodycode = Printf.sprintf "Printf.printf \"Calling %s (Clause %d)\n\";\n" name (i+1) ^ bodycode in*)
+                  (*let bodycode = Printf.sprintf "  Printf.printf \"Calling %s (Clause %d)\n%%!\";\n" name (i+1) ^ bodycode in*)
                   if bodycode = "" then
                     return
                       (Printf.sprintf "clause_%s_%d %s : %s = %s\n" name i
