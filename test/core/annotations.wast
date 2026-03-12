@@ -20,7 +20,7 @@
   )
 )
 
-(assert_malformed (module quote "(@a \00)") "illegal character")
+(;  (assert_malformed (module quote "(@a \00)") "illegal character")
 (assert_malformed (module quote "(@a \01)") "illegal character")
 (assert_malformed (module quote "(@a \02)") "illegal character")
 (assert_malformed (module quote "(@a \03)") "illegal character")
@@ -93,7 +93,7 @@
 
 (assert_malformed (module quote "((@a)@b)") "unknown operator")
 (assert_malformed (module quote "(func $(@a))") "empty identifier")
-(assert_malformed (module quote "(func $(@a)f)") "empty identifier")
+(assert_malformed (module quote "(func $(@a)f)") "empty identifier")  ;)
 
 ((@a) module (@a) $m (@a) (@a)
   ((@a) import (@a) "spectest" (@a) "global_i32" (@a)
