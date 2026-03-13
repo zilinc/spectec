@@ -3,14 +3,7 @@
 ;; ********************************************************
 
 def $ref_infer(store, ref) : reftype
-def $ref_infer(s, REF.NULL ht) = REF NULL NONE
-    -- Heaptype_sub: {} |- NONE <: ht
-def $ref_infer(s, REF.NULL ht) = REF NULL NOFUNC
-    -- Heaptype_sub: {} |- NOFUNC <: ht
-def $ref_infer(s, REF.NULL ht) = REF NULL NOEXN
-    -- Heaptype_sub: {} |- NOEXN <: ht
-def $ref_infer(s, REF.NULL ht) = REF NULL NOEXTERN
-    -- Heaptype_sub: {} |- NOEXTERN <: ht
+def $ref_infer(s, REF.NULL_ADDR) = REF NULL BOT
 def $ref_infer(s, REF.I31_NUM i) = REF I31
 def $ref_infer(s, REF.STRUCT_ADDR a) = REF dt
   -- if s.STRUCTS[a].TYPE = dt
@@ -21,8 +14,9 @@ def $ref_infer(s, REF.FUNC_ADDR a) = REF dt
 def $ref_infer(s, REF.EXN_ADDR a) = REF EXN
   -- if s.EXNS[a] = exn
 def $ref_infer(s, REF.HOST_ADDR a) = REF ANY
-def $ref_infer(s, REF.EXTERN addrref) = REF EXTERN
-  -- if $ref_infer(s, addrref) = REF any
+def $ref_infer(s, REF.EXTERN ref) = REF EXTERN
+  -- Ref_ok: s |- ref : REF ANY
+  -- if ref =/= REF.NULL_ADDR
 
 def $val_infer(store, val) : valtype
 def $val_infer(s, num) = nt
@@ -34,24 +28,52 @@ def $val_infer(s, ref) = rt
 
 
 ;; ********************************************************
+;;                 Non-deterministic rules
+;; ********************************************************
+
+rule Step/memory.grow_det-succeed:
+  z; (CONST at n) (MEMORY.GROW x)  ~>  $with_meminst(z, x, mi); (CONST at $(|$mem(z, x).BYTES| / $($(64 * $Ki))))
+  ----
+  -- if ~ (at = I32 /\ $(n + |$mem(z, x).BYTES| / (64 * $Ki) > 0xFFFF))
+  -- if mi = $growmem($mem(z, x), n)
+
+rule Step/memory.grow_det-fail:
+  z; (CONST at n) (MEMORY.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
+  -- otherwise
+
+
+rule Step/table.grow_det-succeed:
+  z; ref (CONST at n) (TABLE.GROW x)  ~>  $with_tableinst(z, x, ti); (CONST at $(|$table(z, x).REFS|))
+  ----
+  -- if ~ (at = I32 /\ $(n + |$table(z, x).REFS| > 0xFFFF_FFFF))
+  -- if ti = $growtable($table(z, x), n, ref)
+
+rule Step/table.grow_det-fail:
+  z; ref (CONST at n) (TABLE.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
+  -- otherwise
+
+
+;; ********************************************************
 ;;                      Reduction
 ;; ********************************************************
+
 
 syntax stackcount = nat
 
 
 def $is_val(instr) : bool
-def $is_val(CONST  numtype  i) = true
-def $is_val(VCONST vectype  c) = true
-def $is_val(REF.NULL       ht) = true
-def $is_val(REF.I31_NUM     n) = true
-def $is_val(REF.STRUCT_ADDR a) = true
-def $is_val(REF.ARRAY_ADDR  a) = true
-def $is_val(REF.FUNC_ADDR   a) = true
-def $is_val(REF.EXN_ADDR    a) = true
-def $is_val(REF.HOST_ADDR   a) = true
-def $is_val(REF.EXTERN     ar) = true
-def $is_val(instr) = false
+def $is_val(val) = true
+;; def $is_val(CONST  numtype  i) = true
+;; def $is_val(VCONST vectype  c) = true
+;; def $is_val(REF.NULL_ADDR    ) = true
+;; def $is_val(REF.I31_NUM     n) = true
+;; def $is_val(REF.STRUCT_ADDR a) = true
+;; def $is_val(REF.ARRAY_ADDR  a) = true
+;; def $is_val(REF.FUNC_ADDR   a) = true
+;; def $is_val(REF.EXN_ADDR    a) = true
+;; def $is_val(REF.HOST_ADDR   a) = true
+;; def $is_val(REF.EXTERN     ar) = true
+def $is_val(instr) = false  -- otherwise
 
 def $find_first_instr'(instr*, instr*) : (instr*, instr?, instr*)
 def $find_first_instr'(val*, []) = (val*, eps, eps)
@@ -159,8 +181,8 @@ def $dispatch_step_label(n, REF.EXN_ADDR a, THROW_REF, z, instr*, true) = z; (RE
 def $dispatch_step_label(n, eps, TRAP, z, instr*, true) = z; TRAP
 def $dispatch_step_label(n, val*, eps, z, instr*, true) = z; val*
 
-def $dispatch_step_frame(n, val* (REF.NULL ht), RETURN_CALL_REF yy, z, bl) = z; TRAP
-def $dispatch_step_frame(n, val* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, z, bl) = z; val''^n (REF.FUNC_ADDR a) (CALL_REF yy)
+def $dispatch_step_frame(n, val* REF.NULL_ADDR, RETURN_CALL_REF yy, z, bl) = z; TRAP
+def $dispatch_step_frame(k, val* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, z, bl) = z; val''^n (REF.FUNC_ADDR a) (CALL_REF yy)
     -- if val'* val''^n = val*
     -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
 def $dispatch_step_frame(n, val*, RETURN, z, bl) = z; val''^n

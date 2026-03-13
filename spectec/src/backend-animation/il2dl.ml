@@ -48,7 +48,10 @@ let il2dl_rule_clause rel_id rule : func_clause =
   let RuleD (id, binds, _, exp, prems) = rule.it in
   assert (H.is_a_rel rel_id.it);
   let mode_map = H.find_a_rel rel_id.it in
-  let TupE es = exp.it in
+  let es = match exp.it with
+           | TupE es -> es
+           | _ -> [exp]
+  in
   let lhs', rhs', _t1, t2 = Lib.List.fold_lefti (fun i (les, res, lts, rts) e ->
     let omode = H.IM.find_opt (i+1) mode_map in
     (match omode with
@@ -59,7 +62,7 @@ let il2dl_rule_clause rel_id rule : func_clause =
   ) ([], [], [], []) es in
   let args = List.map (fun e -> ExpA e $ e.at) lhs' in
   let exp' = (match rhs' with
-             | []  -> assert false
+             | []  -> BoolE true $$ exp.at % (BoolT $ exp.at)
              | [e] -> e
              | _   -> TupE rhs' $$ exp.at % (TupT t2 $ exp.at)
              )
@@ -72,7 +75,10 @@ let il2dl_rule_def rule_name rel_id typ rules at : func_def =
   let func_clauses = List.map (il2dl_rule_clause rel_id) rules in
   assert (H.is_a_rel rel_id.it);
   let mode_map = H.find_a_rel rel_id.it in
-  let TupT ts = typ.it in
+  let ts = match typ.it with
+           | TupT ts -> ts
+           | _ -> [(varE "_" ~note:typ, typ)]
+  in
   let lts, rts = Lib.List.fold_lefti (fun i (lts, rts) t ->
     let omode = H.IM.find_opt (i+1) mode_map in
     (match omode with
@@ -83,7 +89,7 @@ let il2dl_rule_def rule_name rel_id typ rules at : func_def =
   ) ([], []) ts in
   let params = List.map (fun (e, t) -> ExpP ("_" $ t.at, t) $ t.at) lts in
   let rt = (match rts with
-           | [] -> assert false
+           | [] -> BoolT $ at
            | [(e,t)] -> t
            | ets -> TupT ets $ (over_region (List.map (fun x -> x.at) (List.map snd ets)))
            )

@@ -227,7 +227,7 @@ $$
 {{\mathrm{default}}}_{{\mathsf{i}}{N}} & = & ({\mathsf{i}}{N}{.}\mathsf{const}~0) \\
 {{\mathrm{default}}}_{{\mathsf{f}}{N}} & = & ({\mathsf{f}}{N}{.}\mathsf{const}~{+0}) \\
 {{\mathrm{default}}}_{{\mathsf{v}}{N}} & = & ({\mathsf{v}}{N}{.}\mathsf{const}~0) \\
-{{\mathrm{default}}}_{\mathsf{ref}~\mathsf{null}~{\mathit{ht}}} & = & (\mathsf{ref{.}null}~{\mathit{ht}}) \\
+{{\mathrm{default}}}_{\mathsf{ref}~\mathsf{null}~{\mathit{ht}}} & = & \mathsf{ref{.}null} \\
 {{\mathrm{default}}}_{\mathsf{ref}~{\mathit{ht}}} & = & \epsilon \\
 \end{array}
 $$
@@ -290,7 +290,6 @@ warning: syntax `abbreviated` was never spliced
 warning: syntax `absheaptype/syn` was never spliced
 warning: syntax `absheaptype/sem` was never spliced
 warning: syntax `addr` was never spliced
-warning: syntax `addrref` was never spliced
 warning: syntax `addrtype` was never spliced
 warning: syntax `arrayaddr` was never spliced
 warning: syntax `arrayinst` was never spliced
@@ -1366,7 +1365,7 @@ warning: rule `Step_read/memory.copy-gt` was never spliced
 warning: rule `Step_read/memory.init-oob` was never spliced
 warning: rule `Step_read/memory.init-zero` was never spliced
 warning: rule `Step_read/memory.init-succ` was never spliced
-warning: rule `Step_read/ref.null-idx` was never spliced
+warning: rule `Step_read/ref.null` was never spliced
 warning: rule `Step_read/ref.func` was never spliced
 warning: rule `Step_read/ref.test-true` was never spliced
 warning: rule `Step_read/ref.test-false` was never spliced

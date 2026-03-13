@@ -13,6 +13,7 @@ open Source
 open Printf
 open Il2al.Free
 open Lazy
+(* open Lru *)
 module HS = State_v.HostState
 module A  = Al.Ast
 module I  = Backend_interpreter
@@ -28,11 +29,11 @@ let verbose : string list ref =
       (* "eval"; *)          (* Evaluation of expressions. *)
       (* "match";  *)        (* Matching of other types. *)
       (* "match_info";  *)
-      (* "steps";       *)
-      (*"call";*)
       (* "iter"; *)          (* Low-level debugging. *)
       (* "assign"; *)
-      (* "log" *)
+      (* "call"; *)
+      (* "step"; *)
+      (* "log"; *)
       ]
 
 
@@ -159,6 +160,15 @@ end
 let dl : dl_def list ref = ref []
 let il_env : Il.Env.t ref = ref Il.Env.empty
 
+(*
+(* It makes it a lot slower! *)
+module C =
+  M.Make (struct type t = (string * Value.arg list) let hash = Hashtbl.hash let equal = (=) end)
+         (struct type t = value OptMonad.m let weight = fun _ -> 1 end)
+
+let fncall_cache = C.create 1000
+*)
+
 
 (** [lhs] is the pattern, and [rhs] is the expression. *)
 let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
@@ -211,9 +221,14 @@ let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
     )
   | SubE (p, t1, t2), CaseV (mixop, vs) ->
     let tcs = as_variant_typ !il_env t1 in
-    (match List.find_map (fun (mixop', _, _) -> if vl_of_mixop mixop' = mixop then Some mixop' else None) tcs with
-    | Some mixop' -> assign ctx p rhs
-    | None -> fail ()
+    (match List.find_map (fun (mixop', tcase, _) ->
+      if vl_of_mixop mixop' = mixop then Some (mixop', tcase) else None) tcs
+     with
+     | Some (_, tcase) ->
+       let (binds, typ, prems) = tcase in
+       let* ctx' = return ctx in  (* eval_prems ctx prems in *)
+       assign ctx' p rhs
+     | None -> fail ()
     )
   | _, _ -> fail ()
 
@@ -262,15 +277,15 @@ and eval_exp ctx exp : value OptMonad.m =
     let* v1 = eval_exp ctx e1 in
     let* v2 = eval_exp ctx e2 in
     (match op, v1, v2 with
-    | `EqOp, _, _ -> boolV (eq_value v1 v2)
-    | `NeOp, _, _ -> boolV (eq_value v1 v2 |> not)
+    | `EqOp, _, _ -> boolV (eq_value v1 v2) |> return
+    | `NeOp, _, _ -> boolV (eq_value v1 v2 |> not) |> return
     | #Num.cmpop as op', NumV n1, NumV n2 ->
       (match Num.cmp op' n1 n2 with
-      | Some b -> boolV b
+      | Some b -> boolV b |> return
       | None -> error_eval "Numeric comparison expresion" exp None
       )
     | _ -> error_eval "Comparison expression" exp None
-    ) |> return
+    )
   | IdxE (e1, e2) ->
     let* v1 = eval_exp ctx e1 in
     let* v2 = eval_exp ctx e2 in
@@ -357,7 +372,16 @@ and eval_exp ctx exp : value OptMonad.m =
                | None -> fid | Some fid' -> fid') in
     let* args' = mapM (eval_arg ctx) args in
     call_func fid'.it args'
-
+  (* Optimisation: v* {v <- v*} *)
+  | IterE ({ it = VarE v; _ }, (List, xes)) when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
+    let x_star = List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd in
+    eval_exp ctx x_star
+  (* Optimisation: const^N *)
+  | IterE (e1, (ListN(n, None), xes)) when Set.subset (Il2al.Free.free_exp false e1).varid (VContext.dom_varid ctx) ->
+    (* If [e1] is a constant, i.e. it doesn't need the bindings from [xes]. *)
+    let* v1 = eval_exp ctx e1 in
+    let* vn = eval_exp ctx n <&> vl_to_int in
+    listV (Array.make vn v1) |> return
   | IterE (e1, ((_, xes) as iterexp)) ->
     let* (iter', xvs) as iterval = eval_iterexp ctx iterexp in
     let ids, vs = List.split xvs in
@@ -757,7 +781,7 @@ and eval_func name func_def args : value OptMonad.m =
     let* r = match_clause no_region name 1 (List.map snd fcs) args in
     let CaseV (_, [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
-    info "log" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
+    info "step" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
     return r
   else if name = "reduce" then
     (* Capture stack overflow signal. *)
@@ -769,8 +793,18 @@ and eval_func name func_def args : value OptMonad.m =
   else
     match_clause no_region name 1 (List.map snd fcs) args
 
+(*
 and call_func name args : value OptMonad.m =
-  info "log" no (lazy ("Calling " ^ name));
+  let key = (name, args) in
+  match C.find key fncall_cache with
+  | Some v -> C.promote key fncall_cache; v
+  | None   -> let res = call_func' name args in
+              C.add key res fncall_cache;
+              res
+*)
+
+and call_func name args : value OptMonad.m =
+  info "call" no (lazy ("Calling " ^ name));
   if State_v.Hints.is_a_builtin name then
     (match name with
     (* Hardcoded functions defined in the compiler. *)
@@ -789,7 +823,19 @@ and call_func name args : value OptMonad.m =
     let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
     call_func "steps" args'
   else if name = "Step" then
-    error no "Calling $Step is not allowed. $step should be used instead." (* call_func "step" args *)
+    error no "Calling $Step is not allowed."
+  else if name = "Step_pure" then
+    error no "Calling $Step_pure is not allowed."
+  else if name = "Step_read" then
+    error no "Calling $Step_read is not allowed."
+  else if name = "Step/memory.grow" then
+    call_func "Step/memory.grow_det" args
+  else if name = "Step/table.grow" then
+    call_func "Step/table.grow_det" args
+  (*
+  else if name = "growmem" then
+    growmem args
+  *)
   else
     (* Built-in functions *)
     let builtin_name, is_builtin =
@@ -1083,47 +1129,70 @@ and externaddr_ok = function
 
 (* Ref_ok : store -> ref -> reftype -> bool *)
 and ref_ok = function
-  | [ ValA _ as store; ValA _ as ref; ValA typ2 ] ->
-    (match call_func "ref_infer" [store; ref] |> run_opt with
-    | None -> error no ("Function `ref_infer` failed to evaluate to a value.")
-    | Some typ1 ->
-      let reftyp1 = vl_to_reftype typ1 in
-      let reftyp2 = vl_to_reftype typ2 in
-      RI.Match.match_reftype [] reftyp1 reftyp2 |> boolV |> return
-    )
+  | [ ValA _ as store; ValA _ as ref; ValA rt2 ] ->
+    let* rt1 = call_func "ref_infer" [store; ref] in
+    let rt1' = vl_to_reftype rt1 in
+    let rt2' = vl_to_reftype rt2 in
+    RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
 
 (* Val_ok : store -> val -> valtype -> bool *)
 and val_ok = function
-  | [ ValA _ as store; ValA _ as val_; ValA typ2 ] ->
-  (match call_func "val_infer" [store; val_] |> run_opt with
-  | None -> error no ("Function `val_infer` failed to evaluate to a value.")
-  | Some typ1 ->
-    let valtyp1 = vl_to_valtype typ1 in
-    let valtyp2 = vl_to_valtype typ2 in
-    RI.Match.match_valtype [] valtyp1 valtyp2 |> boolV |> return
-  )
+  | [ ValA _ as store; ValA _ as val_; ValA vt2 ] ->
+    let* vt1 = call_func "val_infer" [store; val_] in
+    let vt1' = vl_to_valtype vt1 in
+    let vt2' = vl_to_valtype vt2 in
+    RI.Match.match_valtype [] vt1' vt2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
 
 
 (* Reftype_sub : context -> reftype -> reftype -> bool *)
 and reftype_sub = function
   | [ ValA ctx; ValA rt1; ValA rt2 ] ->
-    let ctx' = as_str_field "TYPES" ctx |> as_list_value' |> List.map vl_to_deftype in
     let rt1' = vl_to_reftype rt1 in
     let rt2' = vl_to_reftype rt2 in
-    RI.Match.match_reftype ctx' rt1' rt2' |> boolV |> return
+    RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
 
 (* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
 and heaptype_sub = function
-    | [ ValA ctx; ValA ht1; ValA ht2 ] ->
-    let ctx' = as_str_field "TYPES" ctx |> as_list_value' |> List.map vl_to_deftype in
+  | [ ValA ctx; ValA ht1; ValA ht2 ] ->
     let ht1' = vl_to_heaptype ht1 in
     let ht2' = vl_to_heaptype ht2 in
-    RI.Match.match_heaptype ctx' ht1' ht2' |> boolV |> return
+    RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
   | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
 
+
+and growmem = function
+  | [ ValA meminst; ValA n ] ->
+    let open Xl.Atom in
+    let memtyp = as_str_field "TYPE" meminst in
+    let bs  = as_str_field "BYTES" meminst in
+    let bs_arr = !(as_list_value bs) in
+    let CaseV ([[];[];["PAGE"]], [at; limits]) = memtyp in
+    let CaseV ([["["];[".."];["]"]], [i; oj]) = limits in
+    let ki = 1024 in
+    let NumV (`Nat n_nat) = n in
+    let n_int = Z.to_int n_nat in
+    let i_int' = (Array.length bs_arr) / (64 * ki) + n_int in
+    let i' = natV (Z.of_int i_int') in
+    let ok = match oj with
+    | OptV (Some j) ->
+      let NumV (`Nat j_nat) = as_singleton_case j in
+      i_int' <= Z.to_int j_nat
+    | OptV None -> true
+    in
+    if ok then
+      let limits' = caseV [["["];[".."];["]"]] [i'; oj] in
+      let memtyp' = caseV [[];[];["PAGE"]] [at; limits'] in
+      let zero = caseV1 (natV Z.zero) in
+      let bs_arr' = Array.append bs_arr (Array.make (n_int * 64 * ki) zero) in
+      let bs' = listV bs_arr' in
+      let meminst' = strV ([("TYPE", ref memtyp'); ("BYTES", ref bs')]) in
+      return meminst'
+    else
+      fail ()
+  | _ -> error no ("Wrong number/type of arguments to $growmem.")
 
 
 (* Wasm interpreter entry *)

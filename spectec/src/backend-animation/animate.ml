@@ -88,12 +88,13 @@ module AnimState = struct
            ; knowns : Set.t
            ; progress : bool
            ; inverse : bool
+           ; nondet : bool
            ; failure : string
            }
 
   let init : unit -> t = fun () ->
     { prems = []; prems' = []; knowns = Set.empty
-    ; progress = false; inverse = false; failure = ""
+    ; progress = false; inverse = false; nondet = false; failure = ""
     }
 
   let get_prems : t -> prem list = fun t -> t.prems
@@ -156,6 +157,10 @@ module AnimState = struct
   let can_invert : t -> bool = fun t -> t.inverse
   let allow_inverse    : t -> t = fun t -> { t with inverse = true  }
   let disallow_inverse : t -> t = fun t -> { t with inverse = false }
+
+  let can_guess : t -> bool = fun t -> t.nondet
+  let allow_nondet : t -> t = fun t -> { t with nondet = true  }
+  let disallow_nondet : t -> t = fun t -> { t with nondet = false }
 
   let get_failure : t -> string = fun t -> t.failure
   let set_failure : string -> t -> t = fun msg t -> { t with failure = msg }
@@ -373,6 +378,7 @@ let cannot_animate : (string * string) list =
     (* Rules to bubble up the control flow; they are encoded in meta.spectec *)
     ("Step_pure", "trap-instrs");
     ("Step_read", "throw_ref-instrs");
+
     (* These are structural rules that are hard-coded into the $reduce function in meta.spectec *)
     ("Step", "ctxt-instrs");
     ("Step", "ctxt-label");
@@ -598,9 +604,9 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
        ...
        (this premise will be handled by the `animate_prem (IterPr {})` case.)
     *)
-    begin match iter with
+    begin match lhs'.it, iter with
     (* Special case *)
-    | Opt ->
+    | _, Opt ->
       let (envr, vs, ve, prems_lhs) = bind_var_exp envr None lhs' None `Lhs in
       let blob = List.map (fun v ->
         (match List.find_opt (fun (x, e) -> x.it = v) xes with
@@ -636,8 +642,12 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       let xes'' = merge xes' xes in
       let* prems_iter' = animate_prem envr (IterPr (prems_lhs, (iter, xes'')) $ at) in
       E.return (prem_opt :: prems_iter')
+    (* Optimisation for -- let v* = rhs *)
+    | VarE v, List when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
+      let e_star = List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd in
+      animate_exp_eq envr at e_star rhs
     (* Base case *)
-    | ListN(len, Some i) ->
+    | _, ListN(len, Some i) ->
       let fv_len = (free_exp false len).varid in
       let unknowns_len = Set.diff fv_len knowns in
       if Set.is_empty unknowns_len then
@@ -659,7 +669,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
         let* prems' = animate_exp_eq envr at lhs rhs in
         E.return (prem_len @ prems')
     (* Inductive cases *)
-    | ListN(len, None) ->
+    | _, ListN(len, None) ->
       let i = fresh_id (Some "i") at in
       let i_star = Frontend.Dim.annot_varid i [iter] in
       let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
@@ -667,7 +677,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       envr := bind_var !envr i_star t_star;
       let xes' = (i, i_star_e) :: xes in
       animate_exp_eq envr at (IterE (lhs', (ListN(len, Some i), xes')) $> lhs) rhs
-    | List | List1 ->
+    | _, List | _, List1 ->
       let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
       let len_v = fresh_id (Some "len") len_rhs.at in
       envr := bind_var !envr len_v (natT ~at:len_rhs.at ());
@@ -807,20 +817,23 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     end
   | TupE es ->
     (* simp *)
-    let prems = Fun.flip List.mapi es (fun i e ->
+    let prems = List.mapi (fun i e ->
       let bool_t = BoolT $ e.at in
       let proj_rhs = ProjE (rhs, i) $$ rhs.at % e.note in
       info "case" rhs.at (lazy ("Proj " ^ string_of_exp proj_rhs ^ "'s type is " ^ string_of_typ e.note));
       info "case" rhs.at (lazy ("RHS " ^ string_of_exp rhs ^ "'s type is " ^ string_of_typ rhs.note));
-      IfPr (CmpE (`EqOp, `BoolT, e, proj_rhs) $$ e.at % bool_t) $ at)
+      IfPr (CmpE (`EqOp, `BoolT, e, proj_rhs) $$ e.at % bool_t) $ at
+    ) es
     in
     (* Need to animate the components in a loop. This is needed
        if we have premises like `(... x ..., x) = (e1, e2)`, where the first
        component cannot be animated when `x` is unknown. By solving the second
        first, we turn the first into a check.
     *)
-    let* () = update (push_prems prems) in
-    E.return []
+    let s_new = { (init ()) with prems; knowns = get_knowns s } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return prems'
   | CvtE (lhs', t1, t2) ->
     (* TODO(zilinc): Conversion is not checked. *)
     animate_exp_eq envr at lhs' (CvtE (rhs, t2, t1) $$ rhs.at % lhs'.note)
@@ -1016,11 +1029,11 @@ and animate_if_prem envr at exp : prem list E.m =
      may need to be animated in different iterations.
    *)
   | BinE (`AndOp, _, e1, e2) ->
-    (* This should be the few places where we manipulate the stack, because the conjuncts
-       are totally independent of each other and can be flattened into the main loop.
-     *)
-    let* () = update (push_prems [IfPr e2 $ e2.at; IfPr e1 $ e1.at]) in
-    E.return []
+    let prems = [IfPr e2 $ e2.at; IfPr e1 $ e1.at] in
+    let s_new = { (init ()) with prems; knowns = get_knowns s } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return prems'
   (* Membership or nondeterministic choice: e1 ∈ e2 *)
   | MemE (e1, e2) ->
     let fv1 = (free_exp false e1).varid in
@@ -1032,7 +1045,10 @@ and animate_if_prem envr at exp : prem list E.m =
     | true , false -> E.throw (string_of_error at (
                                 "e2 in e1 ∈ e2 contains unknowns.\n" ^
                                 "  ▹ e2 = " ^ string_of_exp e2))
-    | false, true  -> animate_exp_mem envr exp.at e1 e2
+    | false, true  -> if can_guess s then
+                        animate_exp_mem envr exp.at e1 e2
+                      else
+                        E.throw (string_of_error at ("Yet can't guess."))
     | false, false -> E.throw (string_of_error at (
                                  "e1 ∈ e2 where both sides have unknowns.\n" ^
                                  "  ▹ e1 = " ^ string_of_exp e1 ^ "\n" ^
@@ -1268,9 +1284,9 @@ and animate_prems' envr at : prem list E.m =
   (* done with everything *)
   | ([], []) -> E.return []
   (* finished one iteration *)
-  | ([], ps') -> begin match (has_progress s, can_invert s) with
+  | ([], ps') -> begin match (has_progress s, can_invert s, can_guess s) with
     (* already allowing making inverses but still doesn't make progress *)
-    | false, true ->
+    | false, true, true ->
       let err = get_failure s in
       E.throw (string_of_error at
                  ("Can't animate the remaining premises:\n" ^
@@ -1278,11 +1294,15 @@ and animate_prems' envr at : prem list E.m =
                   "This is caused by: \n" ^
                   err))
     (* failed to make progress, but we can try allowing inverses *)
-    | false, false ->
+    | false, false, false ->
       let* () = update (allow_inverse >>> clr_progress >>> mv_to_prems) in
       animate_prems' envr at
+    (* failed to make progress even inversion is allowed, we can still try allowing guess *)
+    | false, true, false ->
+      let* () = update (allow_nondet >>> clr_progress >>> mv_to_prems) in
+      animate_prems' envr at
     (* has made some progress, enter next iteration *)
-    | true, _ ->
+    | true, _, _ ->
       let* () = update (clr_progress >>> mv_to_prems) in
       animate_prems' envr at
     end
@@ -1316,20 +1336,19 @@ and animate_prems' envr at : prem list E.m =
     subset of all the variables that are known at the end of animating
     all the premises.
 *)
-and animate_prems envr at ins ous prems : (prem list, string) result =
+and animate_prems envr at ins ous prems : (prem list, region * string) result =
   animate_prems' envr at
   |> E.run_exceptT
   |> Fun.flip S.run_state ({ (AnimState.init ()) with prems; knowns = ins })
   |> function
-     | (Error e, _) -> Result.Error (string_of_error at e)
+     | (Error e, _) -> Result.Error (at, e)
      | (Ok ps  , s) ->
        if Set.subset ous s.knowns then Ok ps
-       else Result.Error (string_of_error at
-                           ("Premises failed to compute all required output variables:\n" ^
-                            "  ▹ result:\n      " ^ (String.concat "\n      " (List.map string_of_prem ps)) ^ "\n" ^
-                            "  ▹ ins: " ^ string_of_varset ins ^ "\n" ^
-                            "  ▹ knowns: " ^ string_of_varset s.knowns ^ "\n" ^
-                            "  ▹ outs: " ^ string_of_varset ous)
+       else Result.Error (at, ("Premises failed to compute all required output variables:\n" ^
+                               "  ▹ result:\n      " ^ (String.concat "\n      " (List.map string_of_prem ps)) ^ "\n" ^
+                               "  ▹ ins: " ^ string_of_varset ins ^ "\n" ^
+                               "  ▹ knowns: " ^ string_of_varset s.knowns ^ "\n" ^
+                               "  ▹ outs: " ^ string_of_varset ous)
                          )
 
 let lift_otherwise_prem prems =
@@ -1339,7 +1358,7 @@ let lift_otherwise_prem prems =
 
 
 (* [id]: the full name of the function. *)
-let animate_clause0 envr fid (fc: func_clause) : (func_clause, string) result =
+let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) result =
   let lenvr = ref !envr in
   let oid, cl = fc in
   let DefD (binds, args, exp, prems) = cl.it in
@@ -1422,7 +1441,7 @@ let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * 
     ([ExpB (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
   | _ -> [], in_stack, out_stack, prems
 
-let transform_step_clause envr fid (fc: func_clause) : (func_clause, string) result =
+let transform_step_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
   let DefD (binds, [ {it = ExpA lhs; _} ], rhs, prems) = cl.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
@@ -1436,13 +1455,13 @@ let transform_step_clause envr fid (fc: func_clause) : (func_clause, string) res
   let rhs' = CaseE (out_mixop, out_tup') $> rhs in
   animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA lhs' $ lhs'.at ], rhs', prems') $> cl)
 
-let transform_step_pure_clause envr fid (fc: func_clause) : (func_clause, string) result =
+let transform_step_pure_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
   let DefD (binds, [ {it = ExpA in_stack; _} ], out_stack, prems) = cl.it in
   let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA in_stack' $ in_stack.at ], out_stack', prems') $> cl)
 
-let transform_step_read_clause envr fid (fc: func_clause) : (func_clause, string) result =
+let transform_step_read_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
   let DefD (binds, [ {it = ExpA lhs; _} ], out_stack, prems) = cl.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
@@ -1453,7 +1472,7 @@ let transform_step_read_clause envr fid (fc: func_clause) : (func_clause, string
   animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA lhs' $ lhs'.at ], out_stack', prems') $> cl)
 
 (* $step_ctxt: config -> config *)
-let transform_step_ctxt_clause envr fid (fc: func_clause) : (func_clause, string) result =
+let transform_step_ctxt_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
   let DefD (binds, [{it = ExpA lhs; _}], rhs, prems) = cl.it in
   let CaseE (out_mixop, out_tup) = rhs.it in
@@ -1468,7 +1487,7 @@ let transform_step_ctxt_clause envr fid (fc: func_clause) : (func_clause, string
   animate_clause0 envr fid (oid, DefD (binds @ binds', [ExpA lhs' $ lhs'.at], rhs', prems) $> cl)
 
 
-let animate_clause envr id osubid (fc: func_clause) : (func_clause option, string) result =
+let animate_clause envr id osubid (fc: func_clause) : (func_clause option, region * string) result =
   let orule_id, cl = fc in
   let fid = string_of_funcname id osubid $> id in
   let DefD (_, _, _, _) = cl.it in
@@ -1500,7 +1519,8 @@ let animate_func_def envr (fdef: func_def) : func_def =
   let clauses' = List.fold_left (fun cls cl ->
     match animate_clause envr id osubid cl with
     | Result.Ok (Some cl) -> cls @ [cl]
-    | _ -> cls
+    | Result.Ok None -> cls
+    | Result.Error (at, e) -> error at e
   ) [] clauses in
   (id, osubid, ps, typ, clauses', opartial) $ fdef.at
 

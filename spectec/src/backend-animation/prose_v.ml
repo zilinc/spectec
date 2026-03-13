@@ -110,7 +110,15 @@ let rec text_prose_exp (exp: exp) : string =
   | UpdE (exp', path, to_) -> text_prose_exp exp' ^ " with its path " ^ string_of_path path ^ " updated to " ^ text_prose_exp to_
   | ExtE (exp', path, with_) -> text_prose_exp exp' ^ " with its path " ^ string_of_path path ^ " extended with " ^ text_prose_exp with_
   | CallE (fid, args) -> "call function " ^ fid.it ^ " with arguments " ^ text_prose_args args
-  | IterE (exp', ((iter, xes) as iterexp)) -> "iterated " ^ text_prose_exp exp'
+  | IterE (exp', ((iter, xes) as iterexp)) ->
+    let text_iter = (match iter with
+    | Opt -> "optionally"
+    | List -> "through the lists"
+    | List1 -> "at least once"
+    | ListN(n, None) -> string_of_exp n ^ " times"
+    | ListN(n, Some i) -> string_of_exp n ^ " times with " ^ i.it ^ " being the step index"
+    ) in
+    "iterate " ^ text_prose_exp exp' ^ " " ^ text_iter
   | CvtE (exp', numtyp1, numtyp2) -> text_prose_exp exp'
   | SubE (exp', typ1, typ2) -> text_prose_exp exp'
   | IfE (c, th, el) -> "if " ^ text_prose_exp c ^ " then " ^ text_prose_exp th ^ " else " ^ text_prose_exp c
@@ -120,7 +128,7 @@ let rec text_prose_premise (lv: int) (nth: int option) (prem: prem) : text =
   match prem.it with
   | RulePr (id, mixop, exp) -> assert false
   | IfPr e -> [number ^ "If " ^ text_prose_exp e ^ ", continue; otherwise fail."]
-  | LetPr (lhs, rhs, _bs) -> [number ^ "Let " ^ text_prose_exp lhs ^ " be " ^ text_prose_exp rhs ^ "."]
+  | LetPr (lhs, rhs, _bs) -> [number ^ "If pattern " ^ text_prose_exp lhs ^ " can be matched by " ^ text_prose_exp rhs ^ ", continue; otherwise, fail."]
   | ElsePr -> [number ^ "If no clause above has succeeded:"]
   | IterPr (prems, ((iter, xes) as iterexp)) ->
     let text_iter = (match iter with
@@ -153,7 +161,8 @@ let text_prose_clause (params: param list) (fc: func_clause) : text =
 let text_prose_func : func_def -> text = fun fdef ->
   let fid, osubid, params, _ty, clauses, _ = fdef.it in
   if List.exists (fun step_id -> step_id = fid.it) Common.step_relids then
-    let heading = "### " ^ fid.it in
+    let subid = (match osubid with None -> "" | Some subid -> "/" ^ subid.it) in
+    let heading = "### " ^ fid.it ^ subid in
     let body = vcat_f (text_prose_clause params) clauses in
     heading :: body @ [""]
   else

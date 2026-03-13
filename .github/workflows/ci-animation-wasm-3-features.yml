@@ -10,8 +10,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  spec-tec:
+  spectec-animation:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        inline:
+          - "--inline"
+          - ""
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -23,14 +29,14 @@ jobs:
         run: opam install --yes dune menhir mdx zarith tsort
       - name: Build
         run: cd spectec && opam exec make
-      - name: Test wasm-3.0
+      - name: Test wasm-3.0 features
         run: |
           cd spectec
-          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v \
+          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate ${{ matrix.inline }} --new-interpreter-v \
             ./test-interpreter/spec-test-3/bulk-memory \
             ./test-interpreter/spec-test-3/exceptions \
             ./test-interpreter/spec-test-3/gc \
-            ./test-interpreter/spec-test-3/memory64 \
-            ./test-interpreter/spec-test-3/multi-memory \
             ./test-interpreter/spec-test-3/relaxed-simd \
-            ./test-interpreter/spec-test-3/simd
+            ./test-interpreter/spec-test-3/simd \
+            ./test-interpreter/spec-test-3/memory64 \
+            ./test-interpreter/spec-test-3/multi-memory

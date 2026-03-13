@@ -132,7 +132,7 @@ and string_of_exp e =
   | CompE (e1, e2) -> string_of_exp e1 ^ " +++ " ^ string_of_exp e2
   | MemE (e1, e2) -> "(" ^ string_of_exp e1 ^ " <- " ^ string_of_exp e2 ^ ")"
   | LenE e1 -> "|" ^ string_of_exp e1 ^ "|"
-  | TupE es -> "(" ^ string_of_exps ", " es ^ ")"
+  | TupE es -> "⦅" ^ string_of_exps ", " es ^ "⦆"
   | CallE (id, as1) -> "$" ^ string_of_id id ^ string_of_args as1
   | IterE (e1, iter) -> string_of_exp e1 ^ string_of_iterexp iter
   | ProjE (e1, i) -> string_of_exp e1 ^ "." ^ string_of_int i

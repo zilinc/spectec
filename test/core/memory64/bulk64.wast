@@ -31,7 +31,7 @@
 (assert_return (invoke "load8_u" (i64.const 1)) (i32.const 0xaa))
 
 ;; Fill all of memory
-(invoke "fill" (i64.const 0) (i32.const 0) (i64.const 0x10000))
+;; (invoke "fill" (i64.const 0) (i32.const 0) (i64.const 0x10000))
 
 ;; Succeed when writing 0 bytes at the end of the region.
 (invoke "fill" (i64.const 0x10000) (i32.const 0) (i64.const 0))

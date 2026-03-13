@@ -149,6 +149,15 @@ spec-clean:
 	(cd ../document/core && make clean)
 
 
+# Specification checks
+
+check%:
+	(cd ../specification && make $@)
+
+sync%:
+	(cd ../specification && make $@)
+
+
 # Cleanup
 
 .PHONY: clean distclean

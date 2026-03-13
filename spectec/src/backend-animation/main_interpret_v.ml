@@ -20,7 +20,7 @@ module C = Construct_v_new
 (* Errors *)
 
 module Assert = Reference_interpreter.Error.Make ()
-let _error_interpret at msg = Error.error at "interpreter" msg
+let error at msg = Error.error at "interpreter" msg
 
 (* Logging *)
 
@@ -60,10 +60,26 @@ let print_runner_result name result =
     else (float_of_int num_success /. float_of_int total) *. 100.
   in
 
-  if name = "Total" then
-    Printf.printf "Total [%d/%d] (%.2f%%)\n\n" num_success total percentage
+  let time_report = if execution_time < 60.0 then
+    Printf.sprintf ("%.5fs") execution_time
   else
-    Printf.printf "- %d/%d (%.2f%%) ... %.5fs.\n\n" num_success total percentage execution_time
+    let sec = int_of_float execution_time in
+    let min, sec = Z.(div_rem (of_int sec) (of_int 60)) in
+    if Z.to_int min < 60 then
+      Printf.sprintf "%dm%ds" (Z.to_int min) (Z.to_int sec)
+    else
+      let hr, min = Z.div_rem min (Z.of_int 60) in
+      Printf.sprintf "%dh%dm" (Z.to_int hr) (Z.to_int min)
+  in
+
+  if name = "Total" then (
+    Printf.printf "Total [%d/%d] (%.2f%%) ... %s.\n\n" num_success total percentage time_report;
+    let failed = total - num_success in
+    if failed > 0 then
+      error no (string_of_int failed ^ " tests failed.")
+  )
+  else
+    Printf.printf "- %d/%d (%.2f%%) ... %s.\n\n" num_success total percentage time_report
 
 let get_export name moduleinst_name =
   Register.find moduleinst_name
@@ -318,35 +334,39 @@ let parse_file name parser_ file =
 (** Runner **)
 
 let rec run_file ?(is_top=false) path args =
-  if Sys.is_directory path then
-    run_dir ~is_top:is_top path
-  else try
-    (* Check file extension *)
-    match Filename.extension path with
-    | ".wast" ->
-      let (m1, n1), time1 =
-        path
-        |> parse_file path R.Parse.Script.parse_file
-        |> run_wast path
-      in
-      let (m2, n2), time2 =
-        match args with
-        | path' :: args' when Sys.file_exists path -> run_file path' args'
-        | path' :: _ -> failwith ("file " ^ path' ^ " does not exist")
-        | [] -> pass, 0.0
-      in
-      (m1 + m2, n1 + n2), time1 +. time2
-    | ".wat" ->
-      path
-      |> parse_file path R.Parse.Module.parse_file
-      |> textual_to_module
-      |> run_wat args
-    | ".wasm" ->
-      In_channel.with_open_bin path In_channel.input_all
-      |> parse_file path (R.Decode.decode path)
-      |> run_wasm args
-    | _ -> pass, 0.0
-  with R.Decode.Code _ | R.Parse.Syntax _ -> pass, 0.0
+  let (m1, n1), time1 =
+    begin if Sys.is_directory path then
+      run_dir ~is_top:is_top path
+    else
+      try
+        (* Check file extension *)
+        (match Filename.extension path with
+        | ".wast" ->
+          path
+          |> parse_file path R.Parse.Script.parse_file
+          |> run_wast path
+        | ".wat" ->
+          path
+          |> parse_file path R.Parse.Module.parse_file
+          |> textual_to_module
+          |> run_wat args
+        | ".wasm" ->
+          In_channel.with_open_bin path In_channel.input_all
+          |> parse_file path (R.Decode.decode path)
+          |> run_wasm args
+        | _ -> pass, 0.0
+        )
+      with R.Decode.Code _ | R.Parse.Syntax _ -> pass, 0.0
+    end
+  in
+  let (m2, n2), time2 =
+    match args with
+    | path' :: args' when Sys.file_exists path -> run_file ~is_top:is_top path' args'
+    | path' :: _ -> failwith ("file " ^ path' ^ " does not exist")
+    | [] -> pass, 0.0
+  in
+  (m1 + m2, n1 + n2), time1 +. time2
+
 
 and run_dir ?(is_top=false) path =
   if is_top then
@@ -372,10 +392,9 @@ let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
     let result = run_file ~is_top:true path args' in
 
     (* Print result *)
-    if Sys.is_directory path then (
-      if !num_parse_fail <> 0 then
-        print_endline ((string_of_int !num_parse_fail) ^ " parsing fail");
-      print_runner_result "Total" result;
-    )
+    if !num_parse_fail <> 0 then
+      print_endline ((string_of_int !num_parse_fail) ^ " parsing fail");
+    print_runner_result "Total" result;
   | path :: _ -> failwith ("file " ^ path ^ " does not exist")
   | [] -> failwith "no file to run"
+
