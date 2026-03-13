@@ -62,6 +62,29 @@ let string_of_dlinstr = function
   | DL.TABLE_dot_SIZE_instr _ -> "TABLE_dot_SIZE_instr"*)
 (* ============ *)
 
+let print_runner_result name result =
+  let (num_success, total), execution_time = result in
+  let percentage =
+    if total = 0 then 100.
+    else (float_of_int num_success /. float_of_int total) *. 100.
+  in
+
+  let emoji =
+    if percentage = 100. then ":D :D"
+    else if percentage >= 90. then ":)"
+    else ":("
+  in
+
+  if name = "Total" then
+    Printf.printf "Total [%d/%d] (%.2f%%) %s\n\n"
+      num_success total percentage emoji
+  else
+    Printf.printf "- %d/%d (%.2f%%) %s\n\n"
+      num_success total percentage emoji;
+
+  Printf.printf "%s took %.5f s.\n%!" name execution_time;
+  flush stdout
+
 let globalstore = ref {
   uc_tags_store = [];
   uc_globals_store = [];
@@ -267,10 +290,15 @@ let run_command oc cmd =
     |> instantiate_helper |> fst
     |> Register.add_with_var var1_opt;
     success
-  (*| Action a ->
-    ignore (run_action a); success*)
+  | Register (modulename, var_opt) ->
+    let moduleinst = Register.find (Register.get_module_name var_opt) in
+    Register.add (Util.Utf8.encode modulename) moduleinst;
+    pass
+  | Action a ->
+    ignore (run_action a); success
   | Assertion a -> test_assertion a
-  | _ -> failwith "TODO: implement other commands"
+  | Meta _ -> pass
+  | _ -> failwith "Command not implemented :("
   end in 
   res, Sys.time () -. start_time)
   with
@@ -299,9 +327,9 @@ let () =
     let oc = open_out "exception.log" in
     let result = List.map (run_command oc) cmds
       |> Backend_animation.Main_interpret.sum_results_with_time in
-    Backend_animation.Main_interpret.print_runner_result testfile result;
+    print_runner_result testfile result;
     result
   ) tests in
   let total = Backend_animation.Main_interpret.sum_results_with_time
     (List.concat_map (fun (r, t) -> [(r, t)]) results) in
-  Backend_animation.Main_interpret.print_runner_result "Total" total
+  print_runner_result "Total" total

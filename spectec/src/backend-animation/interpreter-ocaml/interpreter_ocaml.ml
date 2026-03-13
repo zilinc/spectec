@@ -445,7 +445,7 @@ let ocaml_of_cmpop op =
   match Il.Print.string_of_cmpop op with "=/=" -> "<>" | s -> s
 
 
-let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
+let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false) ?(retval = false)
     (e : exp) : string t =
   (* for now, we don't support dependent types. *)
   if typearg then return "(* TODO:typearg *)"
@@ -505,6 +505,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
     | BoolE b -> return (string_of_bool b)
     | VarE id -> return (sanitize_name ~typearg id.it)
     | ListE es ->
+        (* I am not sure if there is a better way to do this *)
         let* es_strs = concat_mapM "; " (ocaml_of_exp ~typearg) es in
         return ("[" ^ es_strs ^ "]")
     | TupE [] -> return ""
@@ -532,6 +533,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         return ("(" ^ fname' ^ " " ^ full_args' ^ ")")
     | CaseE (mixop, e1) ->
         let* mixopstr = ocaml_of_mixop mixop e.note in
+        if mixopstr = "STACK_OVERFLOW_stepresult"  && retval then return "raise Backend_interpreter.Exception.OutOfMemory" else
         let* e1str = ocaml_of_exp e1 in
         let argsstr = if e1str = "" then "" else "(" ^ e1str ^ ")" in
         return (Printf.sprintf "(%s)" (append_sep mixopstr argsstr " "))
@@ -1444,7 +1446,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
                   in
                   let* () = set_flipsub false in
                   let* prems_block = ocaml_of_prems prems in
-                  let* retvalue = ocaml_of_exp body in
+                  let* retvalue = ocaml_of_exp ~retval:true body in
                   let* typecasts = get_typecasts () in
                   let* () = set_typecasts "" in
                   let bodycode = typecasts ^ prems_block in
