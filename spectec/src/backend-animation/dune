@@ -40,8 +40,10 @@
   runner
   ; VL
   construct_v
+  construct_v_new
   interpreter_v
   numerics_v
+  numerics_v_new
   state_v
   spectest_v
   main_interpret_v

@@ -16,7 +16,7 @@ module Modules = Backend_interpreter.Ds.Modules
 module RI = Reference_interpreter
 module I = Backend_interpreter
 
-let verbose = ref false
+let verbose = ref true
 
 (* TEMP DEBUGGING *)
 (*let string_of_uc_un = function

@@ -1,5 +1,5 @@
 open Il_util
-open Construct_v
+open Construct_v_new
 open Def
 open State_v
 open Value
@@ -806,8 +806,8 @@ and call_func name args : value OptMonad.m =
     | Some fdef when not is_builtin -> eval_func name fdef args
     (* Builtins and numerics *)
     | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
-      if Numerics_v.mem builtin_name then
-        Numerics_v.call_numerics builtin_name args |> return
+      if  Numerics_v_new.mem builtin_name then
+         Numerics_v_new.call_numerics builtin_name args |> return
       else if builtins_mem builtin_name then
         call_builtins builtin_name args
       else if builtin_name = "hostcall" then
