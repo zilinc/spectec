@@ -16,6 +16,8 @@ module Modules = Backend_interpreter.Ds.Modules
 module RI = Reference_interpreter
 module I = Backend_interpreter
 
+let verbose = ref false
+
 (* TEMP DEBUGGING *)
 (*let string_of_uc_un = function
   | C_pct__uc_un n -> "C_pct__uc_un (" ^ (string_of_int n) ^ ")"
@@ -154,19 +156,22 @@ let get_moduleinst config =
 
 let instantiate_helper (m : module_) = 
   let t1 = Sys.time () in
-  Printf.printf "[Instantiating module...]\n";  
+  (if !verbose then
+  Printf.printf "[Instantiating module...]\n");  
   let MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) = m in
   let externaddrs = List.map externaddr_from_import imports in
   let config' = instantiate_fn !globalstore m externaddrs in
   let C_pct__semi_pct__config (_, instrs) = config' in
   let config'' = steps_fn config' (Z.of_int 256) in
   let t2 = Sys.time () in
-  Printf.printf "instantiate took %f s :)\n" (t2 -. t1);
+  (if !verbose then
+  Printf.printf "instantiate took %f s :)\n" (t2 -. t1));
   get_moduleinst config''
 
 let invoke_helper module_ funcname args =
   let t1 = Sys.time () in
-  Printf.printf "[Invoking %s...]\n" funcname;
+  (if !verbose then
+  Printf.printf "[Invoking %s...]\n" funcname);
   let funcaddr = get_export_addr funcname module_ in
   let val_args = List.map (fun lit -> lit.it) args in
   (*let il_args = List.map Backend_animation.Construct.il_of_value val_args in
@@ -179,7 +184,8 @@ let invoke_helper module_ funcname args =
   let C_pct__semi_pct__state (store', _) = state' in
   globalstore := store';
   let t2 = Sys.time () in
-  Printf.printf "invoke %s took %f s :D\n" funcname (t2 -. t1);
+  (if !verbose then
+  Printf.printf "invoke %s took %f s :D\n" funcname (t2 -. t1));
   result'
 
 let run_action action =
@@ -245,13 +251,15 @@ let run_command oc cmd =
   try 
   (let res = begin match cmd.it with
   | Module (var_opt, def) ->
-    Printf.printf "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
+    (if !verbose then
+    Printf.printf "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt));
     def
     |> Backend_animation.Runner.module_of_def
     |> Modules.add_with_var var_opt;
     success
   | Instance (var1_opt, var2_opt) ->
-    Printf.printf "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
+    (if !verbose then
+    Printf.printf "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt));
     Modules.find (Modules.get_module_name var2_opt)
     (* |> Backend_animation.Construct.il_of_module *)
     |> Backend_animation.Construct_v.vl_of_module
@@ -267,11 +275,11 @@ let run_command oc cmd =
   res, Sys.time () -. start_time)
   with
   | Failure msg ->
-    Printf.eprintf "Failure: %s\n" msg; 
+    Printf.printf "unexpected Failure :O\n %s\n" msg; 
     fail, Sys.time () -. start_time
   | e -> 
     Printexc.print_backtrace oc; 
-    print_fail cmd.at "unexpected exception :O" "" (Printexc.to_string e), Sys.time () -. start_time
+    Printf.printf "unexpected Exception :(\n %s\n" (Printexc.to_string e); fail, Sys.time () -. start_time
 
 
 let tests = ref []
