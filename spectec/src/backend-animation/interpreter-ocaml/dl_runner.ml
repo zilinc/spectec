@@ -16,7 +16,7 @@ module Modules = Backend_interpreter.Ds.Modules
 module RI = Reference_interpreter
 module I = Backend_interpreter
 
-let verbose = ref true
+let verbose = ref false
 
 (* TEMP DEBUGGING *)
 (*let string_of_uc_un = function
@@ -25,41 +25,41 @@ let string_of_num_ = function
   | Mk_num__0_num_ (_, n) -> "Mk_num__0_num_ (" ^ (string_of_uc_un n) ^ ")"
   | Mk_num__1_num_ _ -> "float num_"
 let string_of_dlinstr = function
-  | DL.NOP_instr -> "NOP_instr"
-  | DL.UNREACHABLE_instr -> "UNREACHABLE_instr"
-  | DL.DROP_instr -> "DROP_instr"
-  | DL.SELECT_instr _ -> "SELECT_instr"
-  | DL.CALL_instr _ -> "CALL_instr"
-  | DL.CALL_REF_instr _ -> "CALL_REF_instr"
-  | DL.RETURN_instr -> "RETURN_instr"
-  | DL.RETURN_CALL_REF_instr _ -> "RETURN_CALL_REF_instr"
-  | DL.THROW_REF_instr -> "THROW_REF_instr"
-  | DL.CONST_instr (nt, n) -> "CONST_instr " ^ (match nt with DL.I32_numtype -> "I32" | _ -> "other") ^ " " ^ (string_of_num_ n)
-  | DL.BINOP_instr _ -> "BINOP_instr"
-  | DL.REF_dot_NULL_instr _ -> "REF_dot_NULL_instr"
-  | DL.LOCAL_dot_GET_instr _ -> "LOCAL_dot_GET_instr"
-  | DL.TABLE_dot_INIT_instr _ -> "TABLE_dot_INIT_instr"
-  | DL.ELEM_dot_DROP_instr _ -> "ELEM_dot_DROP_instr"
-  | DL.MEMORY_dot_INIT_instr _ -> "MEMORY_dot_INIT_instr"
-  | DL.DATA_dot_DROP_instr _ -> "DATA_dot_DROP_instr"
-  | DL.REF_dot_I31_NUM_instr _ -> "REF_dot_I31_NUM_instr"
-  | DL.REF_dot_STRUCT_ADDR_instr _ -> "REF_dot_STRUCT_ADDR_instr"
-  | DL.REF_dot_ARRAY_ADDR_instr _ -> "REF_dot_ARRAY_ADDR_instr"
-  | DL.REF_dot_FUNC_ADDR_instr _ -> "REF_dot_FUNC_ADDR_instr"
-  | DL.REF_dot_EXN_ADDR_instr _ -> "REF_dot_EXN_ADDR_instr"
-  | DL.REF_dot_HOST_ADDR_instr _ -> "REF_dot_HOST_ADDR_instr"
-  | DL.REF_dot_EXTERN_instr _ -> "REF_dot_EXTERN_instr"
-  | DL.TRAP_instr -> "TRAP_instr"
-  | DL.BR_instr _ -> "BR_instr"
-  | DL.LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "LABEL"
-  | DL.FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "FRAME"
-  | DL.MEMORY_dot_COPY_instr _ -> "MEMORY_dot_COPY_instr"
-  | DL.MEMORY_dot_FILL_instr _ -> "MEMORY_dot_FILL_instr"
-  | DL.MEMORY_dot_GROW_instr _ -> "MEMORY_dot_GROW_instr"
-  | DL.MEMORY_dot_SIZE_instr _ -> "MEMORY_dot_SIZE_instr"
-  | DL.TABLE_dot_COPY_instr _ -> "TABLE_dot_COPY_instr"
-  | DL.TABLE_dot_GROW_instr _ -> "TABLE_dot_GROW_instr"
-  | DL.TABLE_dot_SIZE_instr _ -> "TABLE_dot_SIZE_instr"*)
+  | NOP_instr -> "NOP_instr"
+  | UNREACHABLE_instr -> "UNREACHABLE_instr"
+  | DROP_instr -> "DROP_instr"
+  | SELECT_instr _ -> "SELECT_instr"
+  | CALL_instr _ -> "CALL_instr"
+  | CALL_REF_instr _ -> "CALL_REF_instr"
+  | RETURN_instr -> "RETURN_instr"
+  | RETURN_CALL_REF_instr _ -> "RETURN_CALL_REF_instr"
+  | THROW_REF_instr -> "THROW_REF_instr"
+  | CONST_instr (nt, n) -> "CONST_instr " ^ (match nt with I32_numtype -> "I32" | _ -> "other") ^ " " ^ (string_of_num_ n)
+  | BINOP_instr _ -> "BINOP_instr"
+  | REF_dot_NULL_instr _ -> "REF_dot_NULL_instr"
+  | LOCAL_dot_GET_instr _ -> "LOCAL_dot_GET_instr"
+  | TABLE_dot_INIT_instr _ -> "TABLE_dot_INIT_instr"
+  | ELEM_dot_DROP_instr _ -> "ELEM_dot_DROP_instr"
+  | MEMORY_dot_INIT_instr _ -> "MEMORY_dot_INIT_instr"
+  | DATA_dot_DROP_instr _ -> "DATA_dot_DROP_instr"
+  | REF_dot_I31_NUM_instr _ -> "REF_dot_I31_NUM_instr"
+  | REF_dot_STRUCT_ADDR_instr _ -> "REF_dot_STRUCT_ADDR_instr"
+  | REF_dot_ARRAY_ADDR_instr _ -> "REF_dot_ARRAY_ADDR_instr"
+  | REF_dot_FUNC_ADDR_instr _ -> "REF_dot_FUNC_ADDR_instr"
+  | REF_dot_EXN_ADDR_instr _ -> "REF_dot_EXN_ADDR_instr"
+  | REF_dot_HOST_ADDR_instr _ -> "REF_dot_HOST_ADDR_instr"
+  | REF_dot_EXTERN_instr _ -> "REF_dot_EXTERN_instr"
+  | TRAP_instr -> "TRAP_instr"
+  | BR_instr _ -> "BR_instr"
+  | LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "LABEL"
+  | FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> "FRAME"
+  | MEMORY_dot_COPY_instr _ -> "MEMORY_dot_COPY_instr"
+  | MEMORY_dot_FILL_instr _ -> "MEMORY_dot_FILL_instr"
+  | MEMORY_dot_GROW_instr _ -> "MEMORY_dot_GROW_instr"
+  | MEMORY_dot_SIZE_instr _ -> "MEMORY_dot_SIZE_instr"
+  | TABLE_dot_COPY_instr _ -> "TABLE_dot_COPY_instr"
+  | TABLE_dot_GROW_instr _ -> "TABLE_dot_GROW_instr"
+  | TABLE_dot_SIZE_instr _ -> "TABLE_dot_SIZE_instr"*)
 (* ============ *)
 
 let print_runner_result name result =
@@ -303,6 +303,7 @@ let run_command oc cmd =
   res, Sys.time () -. start_time)
   with
   | Failure msg ->
+    Printexc.print_backtrace oc; 
     Printf.printf "unexpected Failure :O\n %s\n" msg; 
     fail, Sys.time () -. start_time
   | e -> 
@@ -324,7 +325,7 @@ let () =
 
   let results = List.map (fun testfile ->
     let cmds = Backend_animation.Runner.run testfile in
-    let oc = open_out "exception.log" in
+    let oc = open_out "./logs-lol/exception.log" in
     let result = List.map (run_command oc) cmds
       |> Backend_animation.Main_interpret.sum_results_with_time in
     print_runner_result testfile result;

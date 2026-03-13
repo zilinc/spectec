@@ -7,12 +7,34 @@ open Util_ocaml
 open Util.Error
 open Util_ocaml.TypeM
 
-(* TODOs
-remove all the code that tries to replace type families 
-also remove the code that checks for comments in type definitions, we no longer comment out multi instance types so no longer need this check *)
 
+(* not used anymore as all clauses of unanimatable functions have been removed from the DL *)
 exception CannotAnimate
 exception CannotSplit of string
+
+let unanimatble_funcs = [ "Step_pure/br" ; (* "/br-label-succ" ; "/br-handler" *)
+               "Step_pure/return";
+               (* "Step_pure/return-frame";
+               "Step_pure/return-label";
+               "Step_pure/return-handler"; *)
+
+               "Step_read/return_call_ref";
+               (* "Step_read/return_call_ref-label";
+               "Step_read/return_call_ref-handler";
+               "Step_read/return_call_ref-frame-null";
+               "Step_read/return_call_ref-frame-addr"; *)
+
+               (* "Step_pure/trap-instrs" *) (* i dont think this should be on the list *)
+
+               "Step_pure/throw_ref";
+               (* "Step_pure/trap" *)
+
+               "Step/ctxt";
+               (* "Step/ctxt-instrs";
+               "Step/ctxt-label";
+               "Step/ctxt-frame";
+               "Step/ctxt-handler" *)
+               ]
 
 (* This exception is raised when the OCaml generator sees a pattern that it does not expect (for example, if ruled out by validation) / unreachable code *)
 let error at msg = error at "OCaml CodeGen" msg
@@ -1362,6 +1384,7 @@ let build_dispatch step =
 (* Each clause is it's own function *)
 let ocaml_of_func_def (fdef : func_def) : string list t =
   let id, osubid, params, rettyp, clauses, _ = fdef.it in
+  let osubid_str = match osubid with | Some subid -> "/" ^ subid.it | None -> "" in
   let id' = (match osubid with | None -> id | Some subid -> (id.it ^ "_slash" ^ subid.it $ id.at)) in
   let name = sanitize_name id'.it in
   let* () = add_funcdef name in
@@ -1422,7 +1445,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       return [ Printf.sprintf "%s_fn %s = %s (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func %S [%s])))\n"
                name full_argslist ret_tr id.it args_str ]
       | VL -> return [ Printf.sprintf "%s_fn %s = %s (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.call_func %S [%s])))\n"
-               name full_argslist ret_tr id.it args_str ])
+               name full_argslist ret_tr (id.it ^ osubid_str) args_str ])
   else if (id.it = "Step" && osubid = None) then return [ "uc_step a0 = step a0\n" ]
   else
     let* () = set_typevars typevars in

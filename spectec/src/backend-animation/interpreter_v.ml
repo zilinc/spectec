@@ -760,13 +760,13 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
           (match eval_exp ctx' exp |> run_opt with
           | Some v -> info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
                       return v
-          | None   -> (*info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));*)
+          | None   -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
                       match_clause at fname (nth+1) cls args
           )
-        | None -> (*info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));*)
+        | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
                   match_clause at fname (nth+1) cls args
         )
-      | None -> (*info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));*)
+      | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
                 match_clause at fname (nth+1) cls args
       )
     in
@@ -804,7 +804,10 @@ and call_func name args : value OptMonad.m =
 *)
 
 and call_func name args : value OptMonad.m =
-  info "call" no (lazy ("Calling " ^ name));
+  info "log" no (lazy ("Calling " ^ name));
+  (if name = "dispatch_reduce" then
+  let instr_arg = Value.string_of_arg (List.nth args 2) in
+  info "log" no (lazy ("instr arg is" ^ instr_arg)));
   if State_v.Hints.is_a_builtin name then
     (match name with
     (* Hardcoded functions defined in the compiler. *)
@@ -1037,6 +1040,7 @@ and dispatch_step_pure = {
     function
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
+      Printf.printf "dispatch_step_pure: instr = %s\n" (string_of_value instr);
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_pure rule for instr" ^ string_of_value instr)

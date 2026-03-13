@@ -6,7 +6,7 @@ let use_step_pure = function
   | DROP_instr 
   | SELECT_instr _
   | IF_pct__pct_ELSE_pct__instr _
-  | BR_instr _
+  (* | BR_instr _ *)
   | BR_IF_instr _
   | BR_TABLE_instr _
   | BR_ON_NULL_instr _

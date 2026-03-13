@@ -54,7 +54,7 @@ let info v at msg = if List.mem v !verbose then
 
 (* Configs *)
 
-let allow_partial_animation = ref false
+let allow_partial_animation = ref true
 
 
 (* Fresh name generation *)
