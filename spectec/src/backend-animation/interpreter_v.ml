@@ -805,9 +805,6 @@ and call_func name args : value OptMonad.m =
 
 and call_func name args : value OptMonad.m =
   info "log" no (lazy ("Calling " ^ name));
-  (if name = "dispatch_reduce" then
-  let instr_arg = Value.string_of_arg (List.nth args 2) in
-  info "log" no (lazy ("instr arg is" ^ instr_arg)));
   if State_v.Hints.is_a_builtin name then
     (match name with
     (* Hardcoded functions defined in the compiler. *)
@@ -1040,7 +1037,6 @@ and dispatch_step_pure = {
     function
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
-      Printf.printf "dispatch_step_pure: instr = %s\n" (string_of_value instr);
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_pure rule for instr" ^ string_of_value instr)

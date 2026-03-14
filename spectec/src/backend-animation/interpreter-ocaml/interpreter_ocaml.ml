@@ -1508,7 +1508,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     let clause_names = String.concat ";\n  " clause_calls in
     let err_msg = "function: " ^ name in
     let main_func =
-      (*Printf.sprintf "%s_fn %s = (Printf.printf \"Calling %s\\n\"); try_clauses_%d [\n  %s\n] %s %S 1" name full_argslist name*)
+      (* Printf.sprintf "%s_fn %s = (Printf.printf \"Calling %s\\n\"); try_clauses_%d [\n  %s\n] %s %S 1" name full_argslist name *)
       Printf.sprintf "%s_fn %s = try_clauses_%d [\n  %s\n] %s %S 1" name full_argslist
     num_params clause_names argslist' err_msg
     in

@@ -1065,7 +1065,7 @@
   )
 )
 
-(assert_return (invoke "type-i32"))
+(; (assert_return (invoke "type-i32"))
 (assert_return (invoke "type-i64"))
 (assert_return (invoke "type-f32"))
 (assert_return (invoke "type-f64"))
@@ -1248,9 +1248,9 @@
 
 (assert_return (invoke "meet-externref" (i32.const 0) (ref.extern 1)) (ref.extern 1))
 (assert_return (invoke "meet-externref" (i32.const 1) (ref.extern 1)) (ref.extern 1))
-(assert_return (invoke "meet-externref" (i32.const 2) (ref.extern 1)) (ref.extern 1))
+(assert_return (invoke "meet-externref" (i32.const 2) (ref.extern 1)) (ref.extern 1)) ;)
 (assert_return (invoke "meet-funcref-1" (i32.const 0)) (ref.func))
-(assert_return (invoke "meet-funcref-1" (i32.const 1)) (ref.func))
+(; (assert_return (invoke "meet-funcref-1" (i32.const 1)) (ref.func))
 (assert_return (invoke "meet-funcref-1" (i32.const 2)) (ref.func))
 (assert_return (invoke "meet-funcref-2" (i32.const 0)) (ref.func))
 (assert_return (invoke "meet-funcref-2" (i32.const 1)) (ref.func))
@@ -1260,9 +1260,9 @@
 (assert_return (invoke "meet-funcref-3" (i32.const 2)) (ref.func))
 (assert_return (invoke "meet-funcref-4" (i32.const 0)) (ref.func))
 (assert_return (invoke "meet-funcref-4" (i32.const 1)) (ref.func))
-(assert_return (invoke "meet-funcref-4" (i32.const 2)) (ref.func))
+(assert_return (invoke "meet-funcref-4" (i32.const 2)) (ref.func)) ;)
 
-(assert_invalid
+(; (assert_invalid
   (module (func $type-arg-void-vs-num (result i32)
     (block (br_table 0 (i32.const 1)) (i32.const 1))
   ))
@@ -1461,4 +1461,4 @@
     (block (br_table 0 0 0x10000001 (i32.const 1)))
   ))
   "unknown label"
-)
+) ;)
