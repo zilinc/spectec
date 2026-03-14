@@ -12,29 +12,23 @@ open Util_ocaml.TypeM
 exception CannotAnimate
 exception CannotSplit of string
 
-let unanimatble_funcs = [ "Step_pure/br" ; (* "/br-label-succ" ; "/br-handler" *)
-               "Step_pure/return";
-               (* "Step_pure/return-frame";
-               "Step_pure/return-label";
-               "Step_pure/return-handler"; *)
+let gen_ref_ok () =
+  "uc_ref_ok_fn (s : store) (r : ref) (rt2 : reftype) : bool =\n\
+  \  let rt1 = ref_infer_fn s r in\n\
+  \  let rt1' = rt1 |> Construct_ocaml_new.vl_of_reftype\n\
+  \                 |> Backend_animation.Construct_v_new.vl_to_reftype in \n\
+  \  let rt2' = rt2 |> Construct_ocaml_new.vl_of_reftype\n\
+  \                 |> Backend_animation.Construct_v_new.vl_to_reftype in \n\
+  \  Reference_interpreter.Match.match_reftype [] rt1' rt2'\n"
 
-               "Step_read/return_call_ref";
-               (* "Step_read/return_call_ref-label";
-               "Step_read/return_call_ref-handler";
-               "Step_read/return_call_ref-frame-null";
-               "Step_read/return_call_ref-frame-addr"; *)
-
-               (* "Step_pure/trap-instrs" *) (* i dont think this should be on the list *)
-
-               "Step_pure/throw_ref";
-               (* "Step_pure/trap" *)
-
-               "Step/ctxt";
-               (* "Step/ctxt-instrs";
-               "Step/ctxt-label";
-               "Step/ctxt-frame";
-               "Step/ctxt-handler" *)
-               ]
+let gen_val_ok () =
+  "uc_val_ok_fn (s : store) (v : val_) (vt2 : valtype) : bool =\n\
+   \  let vt1 = val_infer_fn s v in\n\
+   \  let vt1' = vt1 |> Construct_ocaml_new.vl_of_valtype\n\
+   \                 |> Backend_animation.Construct_v_new.vl_to_valtype in \n\
+   \  let vt2' = vt2 |> Construct_ocaml_new.vl_of_valtype\n\
+   \                 |> Backend_animation.Construct_v_new.vl_to_valtype in \n\
+   \  Reference_interpreter.Match.match_valtype [] vt1' vt2'\n"
 
 (* This exception is raised when the OCaml generator sees a pattern that it does not expect (for example, if ruled out by validation) / unreachable code *)
 let error at msg = error at "OCaml CodeGen" msg
@@ -107,23 +101,60 @@ let hardcode_step (funcdefs : dl_def list) : dl_def list =
   @ [ RecDef recdefs ]
   @ drop (insert - List.length recdefs) rest 
 
-(* manually place "inv_proj_<func>" right after "proj_<func>" *)
-let reorder_inv_proj (defs : dl_def list) (inv_name : string) (proj_name : string) : dl_def list =
+(* manually place out of order functions: 
+"inv_proj_<func>" right after "proj_<func>"
+ "ref_ok" after "ref_infer" and before step_read/br_on case
+ todo: this is now done for many functions, including:
+ the step ones above, and the re-ordering of memory.grow-det, table.grow-det and eval_expr in the spec itself
+ it is better to just topologically sort the call graph once instead of manually doing it for every function, but this a hack for now *)
+let move_after (before : string) (after : string) (defs : dl_def list)  : dl_def list =
   match List.partition (fun def ->
     match def with
-    | FuncDef fd -> let id, _, _, _, _, _ = fd.it in id.it = inv_name
+    | FuncDef fd ->
+      let id, osubid, _, _, _, _ = fd.it in
+      let cl = match osubid with Some subid -> id.it ^ "/" ^ subid.it | None -> id.it in
+      cl = after
     | _ -> false
   ) defs with
-  | [], _ -> defs  (* inv not found, do nothing *)
-  | [inv_def], rest ->
+  | [], _ -> defs  (* inv not found *)
+  | [aftr_def], rest ->
     List.concat_map (fun def ->
       match def with
       | FuncDef fd ->
-        let id, _, _, _, _, _ = fd.it in
-        if id.it = proj_name then [def; inv_def] else [def]
+        let id, osubid, _, _, _, _ = fd.it in
+        let cl = match osubid with Some subid -> id.it ^ "/" ^ subid.it | None -> id.it in
+        if cl = before then [def; aftr_def] else [def]
       | _ -> [def]
     ) rest
-  | _ -> defs  (* shouldn't happen *)
+  | _ -> defs
+
+let move_before (before : string) (after : string) (defs : dl_def list)  : dl_def list =
+  match List.partition (fun def ->
+    match def with
+    | FuncDef fd ->
+      let id, osubid, _, _, _, _ = fd.it in
+      let cl = match osubid with Some subid -> id.it ^ "/" ^ subid.it | None -> id.it in
+      cl = before
+    | _ -> false
+  ) defs with
+  | [], _ -> defs  (* inv not found *)
+  | [bfr_def], rest ->
+    List.concat_map (fun def ->
+      match def with
+      | FuncDef fd ->
+        let id, osubid, _, _, _, _ = fd.it in
+        let cl = match osubid with Some subid -> id.it ^ "/" ^ subid.it | None -> id.it in
+        if cl = after then [bfr_def; def] else [def]
+      | _ -> [def]
+    ) rest
+  | _ -> defs
+
+let rec insert_validation (acc : dl_def list) (defs : dl_def list) : dl_def list =
+  match defs with
+  | [] -> List.rev acc
+  | FuncDef {it = (fid, _, _, _, _, _); _} as fdef :: rest when fid.it = "ref_infer" ->
+    insert_validation (RecDef [fdef] :: acc) rest
+  | def :: rest -> insert_validation (def :: acc) rest
 
 (*let gen_il_typfield name i (atom, (_bs, t, _prems), _hints) =
   let* typ_str = gen_typarg_il t in
@@ -1387,7 +1418,13 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
   let osubid_str = match osubid with | Some subid -> "/" ^ subid.it | None -> "" in
   let id' = (match osubid with | None -> id | Some subid -> (id.it ^ "_slash" ^ subid.it $ id.at)) in
   let name = sanitize_name id'.it in
-  let* () = add_funcdef name in
+  (* ref_ok and val_ok are hardcoded. they cannot rely on the meta-interpreter, as they access the store. doing an ocaml -> VL translation for the store each time is very very slow. *)
+  let ref_ok_def = if name = "ref_infer" then gen_ref_ok () else "" in
+  let val_ok_def = if name = "val_infer" then gen_val_ok () else "" in
+  let* () = add_funcdef name in 
+  if id'.it = "Step_slashmemory.grow" then return [ name ^ "_fn config = uc_step_slashmemory_dot_grow_det_fn config\n" ]
+  else if id'.it = "Step_slashtable.grow" then return [ name ^ "_fn config = uc_step_slashtable_dot_grow_det_fn config\n" ]
+  else
   let params' = List.filter rmv_nonexp params in
   let num_params = List.length params' in
   let* () = gen_try_cls num_params in
@@ -1512,7 +1549,9 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       Printf.sprintf "%s_fn %s = try_clauses_%d [\n  %s\n] %s %S 1" name full_argslist
     num_params clause_names argslist' err_msg
     in
-    return (clause_funcs @ [ main_func ])
+    if ref_ok_def <> "" then return (clause_funcs @ [ main_func ] @ [ ref_ok_def ])
+    else if val_ok_def <> "" then return (clause_funcs @ [ main_func ] @ [ val_ok_def ])
+    else return (clause_funcs @ [ main_func ])
 
 (* ignoring the dependent type annotations for now *)
 let ocaml_of_typcase typename (op, (_, t, _), _hints) =
@@ -1630,7 +1669,7 @@ let ocaml_of_dl_defs (defs : dl_def list) : (string * string) t =
   (*Printf.printf "Calling hardcode step...\n";*)
   let processed_defs = hardcode_step defs in
   (* todo: refactor this after removing type family stuff *)
-  let processed_defs' = reorder_inv_proj processed_defs "inv_proj_num__0" "proj_num__0" in
+  let processed_defs' = processed_defs |> move_after "proj_num__0" "inv_proj_num__0" |> move_before "ref_infer" "Step_read/br_on_cast" |> insert_validation [] in
   (*Printf.printf "length after resolving typ fams: %d...\n"(List.length processed_defs');*)
   let* def_strs : (string * string) list =
     mapM ocaml_of_dl_def processed_defs'
@@ -1656,13 +1695,25 @@ let generate_ocaml (dl_defs : dl_def list) : string * string * string * string =
     let uc_heaptype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Heaptype_sub\" [(Il.Ast.ExpA (il_of_context a0) $ no); (Il.Ast.ExpA (il_of_heaptype a1) $ no); (Il.Ast.ExpA (il_of_heaptype a2) $ no)])))\n\n\
     let uc_module_ok_fn a0 = ocaml_of_moduletype (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Module_ok\" [(Il.Ast.ExpA (il_of_module_ a0) $ no)])))\n\n\
     let uc_externaddr_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Externaddr_ok\" [(Il.Ast.ExpA (il_of_store a0) $ no); (Il.Ast.ExpA (il_of_externaddr a1) $ no); (Il.Ast.ExpA (il_of_externtype a2) $ no)])))"
-  | VL -> Printf.sprintf "
+  | VL -> (* Printf.sprintf "\
     let uc_ref_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.ref_ok [Backend_animation.Value.ValA (vl_of_store a0); Backend_animation.Value.ValA (vl_of_ref a1); Backend_animation.Value.ValA (vl_of_reftype a2)])))\n\n\
     let uc_val_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.val_ok [Backend_animation.Value.ValA (vl_of_store a0); Backend_animation.Value.ValA (vl_of_val_ a1); Backend_animation.Value.ValA (vl_of_valtype a2)])))\n\n\
     let uc_reftype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.reftype_sub [Backend_animation.Value.ValA (vl_of_context a0); Backend_animation.Value.ValA (vl_of_reftype a1); Backend_animation.Value.ValA (vl_of_reftype a2)])))\n\n\
     let uc_heaptype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.heaptype_sub [Backend_animation.Value.ValA (vl_of_context a0); Backend_animation.Value.ValA (vl_of_heaptype a1); Backend_animation.Value.ValA (vl_of_heaptype a2)])))\n\n\
     let uc_module_ok_fn a0 = ocaml_of_moduletype (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.module_ok [Backend_animation.Value.ValA (vl_of_module_ a0)])))\n\n\
-    let uc_externaddr_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.externaddr_ok [Backend_animation.Value.ValA (vl_of_store a0); Backend_animation.Value.ValA (vl_of_externaddr a1); Backend_animation.Value.ValA (vl_of_externtype a2)])))"
+    let uc_externaddr_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.externaddr_ok [Backend_animation.Value.ValA (vl_of_store a0); Backend_animation.Value.ValA (vl_of_externaddr a1); Backend_animation.Value.ValA (vl_of_externtype a2)])))" *)
+    (* Printf.sprintf "\
+    let uc_ref_ok_fn a0 a1 a2 = true\n\
+    let uc_val_ok_fn a0 a1 a2 = true\n\
+    let uc_reftype_sub_fn a0 a1 a2 = true\n\
+    let uc_heaptype_sub_fn a0 a1 a2 = true\n\
+    let uc_module_ok_fn a0 = C_pct__dash_right_pct__moduletype ([], [])\n\
+    let uc_externaddr_ok_fn a0 a1 a2 = true\n\n" *)
+    Printf.sprintf "\
+    let uc_reftype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.reftype_sub [Backend_animation.Value.ValA (vl_of_context a0); Backend_animation.Value.ValA (vl_of_reftype a1); Backend_animation.Value.ValA (vl_of_reftype a2)])))\n\
+    let uc_heaptype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.heaptype_sub [Backend_animation.Value.ValA (vl_of_context a0); Backend_animation.Value.ValA (vl_of_heaptype a1); Backend_animation.Value.ValA (vl_of_heaptype a2)])))\n\
+    let uc_module_ok_fn a0 = C_pct__dash_right_pct__moduletype ([], [])\n\
+    let uc_externaddr_ok_fn a0 a1 a2 = true\n\n"
   in
   let typeimports = "type nat = Z.t\ntype int = Z.t\ntype rat = float\ntype real = float\n\n" in
   let (funcdefs, typedefs), typeconvfuncs, parser =

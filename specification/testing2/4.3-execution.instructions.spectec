@@ -575,6 +575,31 @@ rule Step/memory.grow-succeed:
 rule Step/memory.grow-fail:
   z; (CONST at n) (MEMORY.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
 
+;; ===========  moved from meta.spectec  =============
+
+rule Step/memory.grow_det-succeed:
+  z; (CONST at n) (MEMORY.GROW x)  ~>  $with_meminst(z, x, mi); (CONST at $(|$mem(z, x).BYTES| / $($(64 * $Ki))))
+  ----
+  -- if ~ (at = I32 /\ $(n + |$mem(z, x).BYTES| / (64 * $Ki) > 0xFFFF))
+  -- if mi = $growmem($mem(z, x), n)
+
+rule Step/memory.grow_det-fail:
+  z; (CONST at n) (MEMORY.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
+  -- otherwise
+
+
+rule Step/table.grow_det-succeed:
+  z; ref (CONST at n) (TABLE.GROW x)  ~>  $with_tableinst(z, x, ti); (CONST at $(|$table(z, x).REFS|))
+  ----
+  -- if ~ (at = I32 /\ $(n + |$table(z, x).REFS| > 0xFFFF_FFFF))
+  -- if ti = $growtable($table(z, x), n, ref)
+
+rule Step/table.grow_det-fail:
+  z; ref (CONST at n) (TABLE.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
+  -- otherwise
+
+;; ===========  moved from meta.spectec  =============
+
 
 rule Step_read/memory.fill-oob:
   z; (CONST at i) val (CONST at n) (MEMORY.FILL x)  ~>  TRAP

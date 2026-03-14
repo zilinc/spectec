@@ -6,7 +6,7 @@ let use_step_pure = function
   | DROP_instr 
   | SELECT_instr _
   | IF_pct__pct_ELSE_pct__instr _
-  (* | BR_instr _ *)
+  | BR_instr _ 
   | BR_IF_instr _
   | BR_TABLE_instr _
   | BR_ON_NULL_instr _
@@ -220,9 +220,6 @@ let step a0 a1 = failwith "TODO: implement Built-in function inv_lanes_"
 let uc_step_pure_slashbr a0 = failwith "TODO: implement Built-in function uc_step_pure_slashbr"
 
 let uc_step_pure_slashreturn a0 = failwith "TODO: implement Built-in function uc_step_pure_slashbr"
-
-let uc_ref_ok_fn a0 a1 a2 = failwith "TODO: implement Built-in function uc_ref_ok_fn"
-let uc_val_ok_fn a0 a1 a2 = failwith "TODO: implement Built-in function uc_val_ok_fn"
 
 let uc_module_ok_fn a0 = failwith "TODO: implement Built-in function uc_module_ok_fn"
 
