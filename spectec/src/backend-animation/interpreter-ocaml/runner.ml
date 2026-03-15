@@ -9,6 +9,10 @@ module Register_v = State_v.Register
 let parser = R.Parse.Script.parse_file
 
 let module_of_def = Main_interpret_v.module_of_def
+let spectest_v = 
+  State_v.Store.init ();
+  State_v.Register.init ();
+  Spectest_v.il_of_spectest ()
 
 let parse_args () =
   if Array.length Sys.argv < 2 then (
@@ -39,13 +43,7 @@ let init_pipeline srcs =
   let (env, dl) = Main_animate.run il false true in
   Valid.valid dl;
   Interpreter_v.il_env := env;
-  Interpreter_v.dl := dl;
-
-  (* initialise spectest *)
-  State_v.Store.init ();
-  let spectest = Spectest_v.il_of_spectest () in
-  Register_v.add "spectest" spectest;
-  spectest
+  Interpreter_v.dl := dl
 
 let get_commands file = 
   let commands = parser file in

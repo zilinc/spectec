@@ -19,6 +19,11 @@ module I = Backend_interpreter
 let verbose = ref false
 let invalids = ref 0
 
+(* the initial ocaml store and spectest before any runner file. 
+Calling once because `ocaml_of_moduleinst` is slow. *)
+let ocaml_store = ocaml_of_store (Backend_animation.State_v.Store.get ())
+let ocaml_spectest = ocaml_of_moduleinst (Backend_animation.Runner.spectest_v)
+
 (* TEMP DEBUGGING *)
 (*let string_of_uc_un = function
   | C_pct__uc_un n -> "C_pct__uc_un (" ^ (string_of_int n) ^ ")"
@@ -351,8 +356,19 @@ let run_command oc cmd =
     Printexc.print_backtrace oc; 
     Printf.printf "unexpected Exception :(\n %s\n" (Printexc.to_string e); fail, Sys.time () -. start_time
 
-let run_wast oc cmds = ""
-  (* initialise spectest *)
+let run_wast oc cmds = 
+  (* initialise spectest and meta-interpreter Store / Registry *)
+  Backend_animation.State_v.Store.init ();
+  Backend_animation.Runner.Register_v.init ();
+  Backend_animation.State_v.HostState.reset_glb_timestamp ();
+  Backend_animation.Runner.Register_v.add "spectest" Backend_animation.Runner.spectest_v;
+
+  (* initialise ocaml store and registry *)
+  globalstore := ocaml_store;
+  Register.init();
+  Register.add "spectest" ocaml_spectest;
+
+  List.map (run_command oc) cmds
 
 
 let tests = ref []
@@ -363,15 +379,12 @@ let () =
 
   (* initialise meta-interpreter and test files *)
   (* todo: meta-interpeter initialisation may no longer needed. test without. *)
-  let spectest_vl = Backend_animation.Runner.init_pipeline srcs in
-  let spectest = ocaml_of_moduleinst spectest_vl in
-  Register.add "spectest" spectest;
-  globalstore := ocaml_of_store (Backend_animation.State_v.Store.get ());
+  Backend_animation.Runner.init_pipeline srcs;
 
   let results = List.map (fun testfile ->
-    let cmds = Backend_animation.Runner.run testfile in
+    let cmds = Backend_animation.Runner.run testfile in (* parsing *)
     let oc = open_out "exception.log" in
-    let result = List.map (run_command oc) cmds
+    let result = run_wast oc cmds 
       |> Backend_animation.Main_interpret.sum_results_with_time in
     print_runner_result testfile result;
     result
