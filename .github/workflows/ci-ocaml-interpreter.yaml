@@ -21,15 +21,11 @@ jobs:
           ocaml-compiler: 5.1.x
       - name: Setup Dune
         run: opam install --yes dune menhir mdx zarith && eval $(opam env)
-      - name: Build and Test wasm-3.0 core up till test 'return.wast'
+      - name: Build and Test wasm-3.0 core up except 'return_<>.wast' files
         run: |
           cd spectec
           opam exec make build_ocamlprog 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/'
-      - name: Test wasm-3.0 core after test 'return.wast'
+      - name: Test slow return_<>.wast files
         run: |
           cd spectec
-          opam exec make run_ocaml 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/second-half/'
-      - name: Test wasm-3.0 core - slow f_32 / f_64 / i_32 / i_64 numeric tests
-        run: |
-          cd spectec
-          opam exec make run_ocaml 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/slow-kash/'
+          opam exec make run_ocaml 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/slow-return/'
