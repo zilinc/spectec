@@ -1,4 +1,4 @@
-name: CI for OCaml Interpreter
+name: CI for Meta-Interpreter with Type Family Removal
 
 on:
   push:
