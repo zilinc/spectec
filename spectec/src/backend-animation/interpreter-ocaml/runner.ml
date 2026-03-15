@@ -52,4 +52,4 @@ let get_commands file =
   close_out oc;
   commands
   
-let run testfile = Printf.printf "Parsing test file \"%s\"\n" testfile; get_commands testfile
+let run testfile = Printf.printf "Parsing test file \"%s\"\n%!" testfile; get_commands testfile

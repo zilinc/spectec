@@ -1,7 +1,7 @@
 ;; Test the element section
 
 ;; Syntax
-(; (module
+(module
   (table $t 10 funcref)
   (func $f)
   (func $g)
@@ -918,7 +918,7 @@
     (call_indirect (type $out-i32) (i32.const 9))
   )
 )
-(assert_return (invoke "call-overwritten-element") (i32.const 66)) ;)
+(assert_return (invoke "call-overwritten-element") (i32.const 66))
 
 
 ;; Element sections across multiple modules change the same table
@@ -956,7 +956,7 @@
   (func $const-i32-d (type $out-i32) (i32.const 68))
 )
 
-(; (assert_return (invoke $module1 "call-7") (i32.const 67))
+(assert_return (invoke $module1 "call-7") (i32.const 67))
 (assert_return (invoke $module1 "call-8") (i32.const 68))
 (assert_return (invoke $module1 "call-9") (i32.const 66))
 
@@ -1107,4 +1107,4 @@
 )
 
 (assert_return (invoke "call_in_table" (i32.const 6)) (i32.const 42))
-(assert_trap (invoke "call_in_table" (i32.const 0)) "uninitialized element") ;)
+(assert_trap (invoke "call_in_table" (i32.const 0)) "uninitialized element")

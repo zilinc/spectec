@@ -758,12 +758,13 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
         | Some ctx' ->
           (* If [exp] is partial, it means this clause is refuted. *)
           (match eval_exp ctx' exp |> run_opt with
-          | Some v -> info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
+          | Some v -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
+                      then info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth)));
                       return v
-          | None   -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
+          | None   -> (*info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));*)
                       match_clause at fname (nth+1) cls args
           )
-        | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
+        | None -> (*info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));*)
                   match_clause at fname (nth+1) cls args
         )
       | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
@@ -804,7 +805,8 @@ and call_func name args : value OptMonad.m =
 *)
 
 and call_func name args : value OptMonad.m =
-  info "log" no (lazy ("Calling " ^ name));
+  (if String.starts_with ~prefix:"step" name || String.starts_with ~prefix:"dispatch" name
+  then info "log" no (lazy ("Calling " ^ name)));
   if State_v.Hints.is_a_builtin name then
     (match name with
     (* Hardcoded functions defined in the compiler. *)

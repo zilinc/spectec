@@ -68,6 +68,8 @@ let string_of_dlinstr = function
   | TABLE_dot_SIZE_instr _ -> "TABLE_dot_SIZE_instr"*)
 (* ============ *)
 
+type action_result = Config of config | Values of val_ list
+
 let print_runner_result name result =
   let (num_success, total), execution_time = result in
   let percentage =
@@ -82,13 +84,13 @@ let print_runner_result name result =
   in
 
   if name = "Total" then
-    Printf.printf "Total [%d/%d] (%.2f%%) %s\n\n"
+    Printf.printf "Total [%d/%d] (%.2f%%) %s\n"
       num_success total percentage emoji
   else
-    Printf.printf "- %d/%d (%.2f%%) %s\n\n"
+    Printf.printf "- %d/%d (%.2f%%) %s\n"
       num_success total percentage emoji;
 
-  Printf.printf "%s took %.5f s.\n%!" name execution_time;
+  Printf.printf "%s took %.5f s.\n\n%!" name execution_time;
   flush stdout
 
 let globalstore = ref {
@@ -205,8 +207,9 @@ let get_export_addr name moduleinst_name =
   let export_addr = get_export name moduleinst_name in
   (*Printf.printf "Getting funcaddr %s from moduleinst %s...\n" name moduleinst_name;*)
   match export_addr.uc_addr_exportinst with
-  | DL.FUNC_externaddr funcaddr -> funcaddr
-  | _ -> failwith ("Export " ^ name ^ " is not a function.")
+    | DL.TAG_externaddr    addr 
+    | DL.GLOBAL_externaddr addr | DL.MEM_externaddr addr
+    | DL.TABLE_externaddr  addr | DL.FUNC_externaddr addr -> addr
 
 let externaddr_from_import import = 
   let IMPORT_import (moduleinst_name, item_name, _) = import in 
@@ -220,10 +223,14 @@ let get_moduleinst config =
   globalstore := store';
   frame'.uc_module_frame, instrs
 
+let get_global_value module_name globalname =
+  let export_addr = get_export_addr globalname module_name in
+  [(List.nth !globalstore.uc_globals_store (Z.to_int export_addr)).uc_value_globalinst]
+
 let instantiate_helper (m : module_) = 
   let t1 = Sys.time () in
   (if !verbose then
-  Printf.printf "[Instantiating module...]\n");  
+  Printf.printf "[Instantiating module...]\n%!");  
   let MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) = m in
   let externaddrs = List.map externaddr_from_import imports in
   let config' = instantiate_fn !globalstore m externaddrs in
@@ -231,13 +238,13 @@ let instantiate_helper (m : module_) =
   let config'' = steps_fn config' (Z.of_int 256) in
   let t2 = Sys.time () in
   (if !verbose then
-  Printf.printf "instantiate took %f s :)\n" (t2 -. t1));
+  Printf.printf "instantiate took %f s :)\n%!" (t2 -. t1));
   get_moduleinst config''
 
 let invoke_helper module_ funcname args =
   let t1 = Sys.time () in
   (if !verbose then
-  Printf.printf "[Invoking %s...]\n" funcname);
+  Printf.printf "[Invoking %s...]\n%!" funcname);
   let funcaddr = get_export_addr funcname module_ in
   let val_args = List.map (fun lit -> lit.it) args in
   (*let il_args = List.map Backend_animation.Construct.il_of_value val_args in
@@ -251,35 +258,37 @@ let invoke_helper module_ funcname args =
   globalstore := store';
   let t2 = Sys.time () in
   (if !verbose then
-  Printf.printf "invoke %s took %f s :D\n" funcname (t2 -. t1));
+  Printf.printf "invoke %s took %f s :D\n%!" funcname (t2 -. t1));
   result'
 
 let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
-    invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args
-  | _ -> failwith "TODO: implement other actions"
+    Config (invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args)
+  | Get (var_opt, globalname) -> 
+    Values (get_global_value (Register.get_module_name var_opt) (Util.Utf8.encode globalname))
 
 let test_assertion assertion =
   match assertion.it with
   | AssertReturn (action, expected) ->
-    let C_pct__semi_pct__config (_, vals) = run_action action in 
-    (*let result_il = List.map il_of_instr vals in
-    let result = List.map  Backend_animation.Construct.il_to_value result_il in*)
-    (*let result_vl = List.map vl_of_val_new vals in
-    let result = List.map Backend_animation.Construct_v_new.vl_to_value result_vl in*)
-    let result = List.map ri_of_ocaml vals in
-    assert_results no_region result expected;
-    success
+    (match run_action action with
+    | Config (C_pct__semi_pct__config (_, vals)) ->
+      let result = List.map ri_of_ocaml vals in
+      assert_results no_region result expected;
+      success
+    | Values val_list -> 
+      let result = List.map (fun v -> v |> instr_of_val_ |> ri_of_ocaml) val_list in
+      assert_results no_region result expected;
+      success)
   | AssertTrap (action, re) ->
-    let C_pct__semi_pct__config (_, vals) = run_action action in
+    let Config (C_pct__semi_pct__config (_, vals)) = run_action action in
     let result_vl = List.map vl_of_instr vals in
     (match result_vl with
     | [ CaseV ([["TRAP"]], []) ] -> success
     | _ -> print_fail assertion.at "runtime" re (string_of_values ", " result_vl)
     )
   | AssertException action ->
-    let C_pct__semi_pct__config (_, vals) = run_action action in
+    let Config (C_pct__semi_pct__config (_, vals)) = run_action action in
     let result_vl = List.map vl_of_instr vals in
     (match result_vl with
     | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
@@ -370,9 +379,6 @@ let run_wast oc cmds =
 
   List.map (run_command oc) cmds
 
-
-let tests = ref []
-let srcs = ref []
 
 let () =
   let tests, srcs = Backend_animation.Runner.parse_args () in

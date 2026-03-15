@@ -369,7 +369,7 @@
   )
 )
 
-(; (assert_return (invoke "type-i32"))
+(assert_return (invoke "type-i32"))
 (assert_return (invoke "type-i64"))
 (assert_return (invoke "type-f32"))
 (assert_return (invoke "type-f64"))
@@ -382,10 +382,10 @@
 (assert_return (invoke "type-i64-value") (i64.const 2))
 (assert_return (invoke "type-f32-value") (f32.const 3))
 (assert_return (invoke "type-f64-value") (f64.const 4))
-(assert_return (invoke "type-f64-f64-value") (f64.const 4) (f64.const 5)) ;)
+(assert_return (invoke "type-f64-f64-value") (f64.const 4) (f64.const 5))
 
 (assert_return (invoke "as-block-first"))
-(; (assert_return (invoke "as-block-mid"))
+(assert_return (invoke "as-block-mid"))
 (assert_return (invoke "as-block-last"))
 (assert_return (invoke "as-block-value") (i32.const 2))
 
@@ -654,4 +654,4 @@
 (assert_invalid
   (module (func $large-label (br 0x10000001)))
   "unknown label"
-) ;)
+)

@@ -16,7 +16,7 @@
 (assert_return (invoke "eq" (f32.const 0x0p+0) (f32.const 0x0p+0)) (i32.const 1))
 (assert_return (invoke "eq" (f32.const -0x0p+0) (f32.const -0x1p-149)) (i32.const 0))
 (assert_return (invoke "eq" (f32.const -0x0p+0) (f32.const 0x1p-149)) (i32.const 0))
-(; (assert_return (invoke "eq" (f32.const 0x0p+0) (f32.const -0x1p-149)) (i32.const 0))
+(assert_return (invoke "eq" (f32.const 0x0p+0) (f32.const -0x1p-149)) (i32.const 0))
 (assert_return (invoke "eq" (f32.const 0x0p+0) (f32.const 0x1p-149)) (i32.const 0))
 (assert_return (invoke "eq" (f32.const -0x0p+0) (f32.const -0x1p-126)) (i32.const 0))
 (assert_return (invoke "eq" (f32.const -0x0p+0) (f32.const 0x1p-126)) (i32.const 0))
@@ -2409,7 +2409,7 @@
 (assert_return (invoke "ge" (f32.const nan) (f32.const nan)) (i32.const 0))
 (assert_return (invoke "ge" (f32.const nan:0x200000) (f32.const nan)) (i32.const 0))
 (assert_return (invoke "ge" (f32.const nan) (f32.const nan:0x200000)) (i32.const 0))
-(assert_return (invoke "ge" (f32.const nan:0x200000) (f32.const nan:0x200000)) (i32.const 0)) ;)
+(assert_return (invoke "ge" (f32.const nan:0x200000) (f32.const nan:0x200000)) (i32.const 0))
 
 
 ;; Type check

@@ -8,7 +8,7 @@
 )
 
 (assert_return (invoke "copysign" (f64.const -0x0p+0) (f64.const -0x0p+0)) (f64.const -0x0p+0))
-(; (assert_return (invoke "copysign" (f64.const -0x0p+0) (f64.const 0x0p+0)) (f64.const 0x0p+0))
+(assert_return (invoke "copysign" (f64.const -0x0p+0) (f64.const 0x0p+0)) (f64.const 0x0p+0))
 (assert_return (invoke "copysign" (f64.const 0x0p+0) (f64.const -0x0p+0)) (f64.const -0x0p+0))
 (assert_return (invoke "copysign" (f64.const 0x0p+0) (f64.const 0x0p+0)) (f64.const 0x0p+0))
 (assert_return (invoke "copysign" (f64.const -0x0p+0) (f64.const -0x0.0000000000001p-1022)) (f64.const -0x0p+0))
@@ -330,9 +330,9 @@
 (assert_return (invoke "copysign" (f64.const -nan) (f64.const -nan)) (f64.const -nan))
 (assert_return (invoke "copysign" (f64.const -nan) (f64.const nan)) (f64.const nan))
 (assert_return (invoke "copysign" (f64.const nan) (f64.const -nan)) (f64.const -nan))
-(assert_return (invoke "copysign" (f64.const nan) (f64.const nan)) (f64.const nan)) ;)
+(assert_return (invoke "copysign" (f64.const nan) (f64.const nan)) (f64.const nan))
 (assert_return (invoke "abs" (f64.const -0x0p+0)) (f64.const 0x0p+0))
-(; (assert_return (invoke "abs" (f64.const 0x0p+0)) (f64.const 0x0p+0))
+(assert_return (invoke "abs" (f64.const 0x0p+0)) (f64.const 0x0p+0))
 (assert_return (invoke "abs" (f64.const -0x0.0000000000001p-1022)) (f64.const 0x0.0000000000001p-1022))
 (assert_return (invoke "abs" (f64.const 0x0.0000000000001p-1022)) (f64.const 0x0.0000000000001p-1022))
 (assert_return (invoke "abs" (f64.const -0x1p-1022)) (f64.const 0x1p-1022))
@@ -348,9 +348,9 @@
 (assert_return (invoke "abs" (f64.const -inf)) (f64.const inf))
 (assert_return (invoke "abs" (f64.const inf)) (f64.const inf))
 (assert_return (invoke "abs" (f64.const -nan)) (f64.const nan))
-(assert_return (invoke "abs" (f64.const nan)) (f64.const nan)) ;)
+(assert_return (invoke "abs" (f64.const nan)) (f64.const nan))
 (assert_return (invoke "neg" (f64.const -0x0p+0)) (f64.const 0x0p+0))
-(; (assert_return (invoke "neg" (f64.const 0x0p+0)) (f64.const -0x0p+0))
+(assert_return (invoke "neg" (f64.const 0x0p+0)) (f64.const -0x0p+0))
 (assert_return (invoke "neg" (f64.const -0x0.0000000000001p-1022)) (f64.const 0x0.0000000000001p-1022))
 (assert_return (invoke "neg" (f64.const 0x0.0000000000001p-1022)) (f64.const -0x0.0000000000001p-1022))
 (assert_return (invoke "neg" (f64.const -0x1p-1022)) (f64.const 0x1p-1022))
@@ -366,7 +366,7 @@
 (assert_return (invoke "neg" (f64.const -inf)) (f64.const inf))
 (assert_return (invoke "neg" (f64.const inf)) (f64.const -inf))
 (assert_return (invoke "neg" (f64.const -nan)) (f64.const nan))
-(assert_return (invoke "neg" (f64.const nan)) (f64.const -nan)) ;)
+(assert_return (invoke "neg" (f64.const nan)) (f64.const -nan))
 
 
 ;; Type check
