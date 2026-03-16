@@ -131,14 +131,14 @@ let basic_types_conv =
   let vl_of_string s = TextV s\n\n\
   let vl_of_int (i : DL.int)    : value = NumV (`Int i)\n\
   let vl_of_nat (n : DL.nat) : value = NumV (`Nat n)\n\
-  let vl_of_rat (r : float)  : value = NumV (`Rat (Q.of_float r))\n\
+  let vl_of_rat (r : DL.rat)  : value = NumV (`Rat r)\n\
   let vl_of_real (r : float) : value = NumV (`Real r)\n\n"
 
 let num_conv () =
   Printf.sprintf 
-  "let nat_of_rat (r: rat) : nat = Z.of_float r\n\
-  let rat_of_nat (n : nat) : rat = Z.to_float n\n\
-  let rat_of_int (i : Z.t) : rat = Z.to_float i\n"
+  "let nat_of_rat (r: rat) : nat = if Q.den r = Z.one then Q.num r else raise SubtypingFailed\n\
+  let rat_of_nat (n : nat) : rat = Q.of_bigint n\n\
+  let rat_of_int (i : Z.t) : rat = Q.of_bigint i\n"
 
 let generate_ocaml dl ocamlfile = 
   Printf.printf "Generating OCaml code...\n";

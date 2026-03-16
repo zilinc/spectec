@@ -5,6 +5,9 @@ open Il.Ast
 type backend = IL | VL
 let backend = ref VL
 
+(* Generate an encoding between OCaml <-> IL and OCaml <-> VL for parsing.
+It does not support polymorphic record types, as there were none in the spec. *)
+
 let f_prefix () = match !backend with IL -> "il_of_" | VL -> "vl_of_"
 let g_prefix () = match !backend with IL -> "g_" | VL -> "g_"
 

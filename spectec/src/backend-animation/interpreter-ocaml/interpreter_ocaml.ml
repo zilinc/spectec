@@ -595,8 +595,8 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false) ?
         let* e2str = ocaml_of_exp e2 in
         (* if this is a float operation *)
         let* e1type = ocaml_of_typ e1.note in
-        let float = (e1type = "float") || (e1type = "rat") in
-        let binopstr, infix = ocaml_of_binop ~float op in
+        let float, rat = (e1type = "float"), (e1type = "rat")  in
+        let binopstr, infix = ocaml_of_binop ~float ~rat op in
         let e2str' = if (not float) && op = `PowOp then "(Z.to_int " ^ e2str ^ ")" else e2str in
         if float || infix then return ("(" ^ e1str ^ " " ^ binopstr ^ " " ^ e2str' ^ ")")
         else return ("(" ^ binopstr ^ " " ^ e1str ^ " " ^ e2str' ^ ")")
@@ -1101,18 +1101,18 @@ and ocaml_of_bool_binop = function
   | `ImplOp -> "TODO: ImplOp"
   | `EquivOp -> "TODO: EquivOp"
 
-and ocaml_of_num_binop ?(float = false) op =
+and ocaml_of_num_binop ?(float = false) ?(rat = false) op =
   match op with
-  | `AddOp -> if float then "+." else "Z.add"
-  | `SubOp -> if float then "-." else "Z.sub"
-  | `MulOp -> if float then "*." else "Z.mul"
-  | `DivOp -> if float then "/." else "Z.div"
-  | `ModOp -> if float then "mod" else "Z.rem"
-  | `PowOp -> if float then "**" else "Z.pow"
+  | `AddOp -> if float then "+." else if rat then "Q.add" else "Z.add"
+  | `SubOp -> if float then "-." else if rat then "Q.sub" else "Z.sub"
+  | `MulOp -> if float then "*." else if rat then "Q.mul" else "Z.mul"
+  | `DivOp -> if float then "/." else if rat then "Q.div" else "Z.div"
+  | `ModOp -> if float then "mod" else if rat then "Q.rem" else "Z.rem"
+  | `PowOp -> if float then "**" else if rat then "Q.pow" else "Z.pow"
 
-and ocaml_of_binop ?(float = false) = function
+and ocaml_of_binop ?(float = false) ?(rat = false) = function
   | #Bool.binop as op -> ocaml_of_bool_binop op, true
-  | #Num.binop as op -> ocaml_of_num_binop ~float op, false
+  | #Num.binop as op -> ocaml_of_num_binop ~float ~rat op, false
 
 and ocaml_of_bool_unop = function `NotOp -> "not"
 
@@ -1717,7 +1717,7 @@ let generate_ocaml (dl_defs : dl_def list) : string * string * string * string =
     let uc_module_ok_fn a0 = C_pct__dash_right_pct__moduletype ([], [])\n\
     let uc_externaddr_ok_fn a0 a1 a2 = true\n\n"
   in
-  let typeimports = "type nat = Z.t\ntype int = Z.t\ntype rat = float\ntype real = float\n\n" in
+  let typeimports = "type nat = Z.t\ntype int = Z.t\ntype rat = Q.t\ntype real = float\n\n" in
   let (funcdefs, typedefs), typeconvfuncs, parser =
     eval (ocaml_of_dl_defs dl_defs)
   in

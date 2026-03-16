@@ -34,7 +34,23 @@ else
   endif
 endif
 
+
 TEST ?= test-ocaml/sample.wast
+
+ifeq ($(TEST),CORE)
+TEST_PATHS := test-interpreter/spec-test-3/
+else ifeq ($(TEST),ALL)
+TEST_PATHS := test-interpreter/spec-test-3/ \
+              test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory \
+              test-interpreter/spec-test-3/relaxed-simd \
+              test-interpreter/spec-test-3/simd
+else
+TEST_PATHS := $(TEST)
+endif
 
 build_ocamlprog: exe
 	mkdir -p src/backend-animation/interpreter-ocaml/build
@@ -46,7 +62,7 @@ build_ocamlprog: exe
 #	dune build --instrument-with landmarks src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "
-	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
 # OCAML_LANDMARKS="on,output=stderr" dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
 
 run_ocaml: 
@@ -56,7 +72,7 @@ run_ocaml:
 	@echo "#### compiling generated code"
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	@echo "#### dl-interpreter code compiled successfully, running tests ... "
-	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
 
 # Executable
 

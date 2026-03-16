@@ -501,20 +501,7 @@ module TypeM = struct
 
 end
 
-(* dont think this is used anymore *)
-(*module NumConversions = struct
-  type nat = int 
-  type real = float 
-  type rat = float
-  let int_of_nat (n : nat) : int = n
-  let nat_of_int (i : int) : nat = i
-
-  let rat_of_int (i : int) : rat = float_of_int i
-  let rat_of_nat (n : nat) : rat = float_of_int n
-  let nat_of_rat (n : rat) : nat = int_of_float n
-end*)
-
-(* outdated now probably *)
+(* ====== outdated now probably ====== *)
 let val_or_fail name val_ = match val_ with
   | Some v -> v
   | None -> failwith (name ^ ": No matching clause")
@@ -557,6 +544,7 @@ module Register (T : sig type t end) = struct
     | Some name -> name.it
     | None -> _latest
 end
+(* ====== ====== ====== *)
 
 (* a clause may fail when
    * an expression does not match a pattern, i.e. in `let pattern = exp` (Match_failure)
