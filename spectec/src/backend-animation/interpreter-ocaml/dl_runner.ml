@@ -16,7 +16,9 @@ module Modules = Backend_interpreter.Ds.Modules
 module RI = Reference_interpreter
 module I = Backend_interpreter
 
-let verbose = ref false
+exception TEMP of string
+
+let verbose = ref true
 let invalids = ref 0
 
 (* the initial ocaml store and spectest before any runner file. 
@@ -357,6 +359,8 @@ let run_command oc cmd =
   end in 
   res, Sys.time () -. start_time)
   with
+  | TEMP msg ->
+    Printexc.print_backtrace oc; exit 1
   | Failure msg ->
     Printexc.print_backtrace oc; 
     Printf.printf "unexpected Failure :O\n %s\n" msg; 

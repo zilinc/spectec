@@ -110,7 +110,6 @@ let inv_ibytes : numerics =
       );
   }
 
-
 (*let nbytes : numerics =
   {
     name = "nbytes";
@@ -198,7 +197,7 @@ let inv_vbytes : numerics =
       );
   }
 
-let inv_zbytes : numerics =
+(* let inv_zbytes : numerics =
   {
     name = "inv_zbytes";
     f =
@@ -207,7 +206,55 @@ let inv_zbytes : numerics =
       | [ CaseV ([["I16"]], []); l ] -> inv_ibytes.f [ vl_of_nat 16; l ]
       | args -> inv_nbytes.f args
       );
+  } *)
+
+let inv_zbytes : numerics =
+  {
+    name = "inv_zbytes";
+    f =
+      (function
+      | [ CaseV ([["I8" ]], []); l ] -> 
+          let res = inv_ibytes.f [ vl_of_nat 8 ; l ] in
+          CaseV ([["mk_lit__2"];[];[]], [nullary "I8"; res])
+      | [ CaseV ([["I16"]], []); l ] -> 
+          let res = inv_ibytes.f [ vl_of_nat 16; l ] in
+          CaseV ([["mk_lit__2"];[];[]], [nullary "I16"; res])
+      | args -> inv_nbytes.f args
+      );
   }
+
+(*let inv_ibytes : numerics =
+  {
+    name = "inv_ibytes";
+    f =
+      (function
+      | [ NumV (`Nat n); ListV bs ] ->
+          let byte_count = Array.length !bs in
+          assert (
+            (* numtype *)
+            n = Z.of_int (byte_count * 8) ||
+            (* packtype *)
+            (n = Z.of_int 32 && byte_count <= 2)
+          );
+          let res = vl_of_uN (Array.fold_right (fun b acc ->
+            match as_singleton_case b with
+            | NumV (`Nat b) when Z.zero <= b && b < Z.of_int 256 -> Z.add b (Z.shift_left acc 8)
+            | _ -> error_value "inv_ibytes (byte)" b
+          ) !bs Z.zero) in
+          let lit_type, lit_val = match Z.to_int n with
+            | 32 -> "numtype", nullary "I32"
+            | 64 -> "numtype", nullary "I64"
+            | 8  -> "packtype", nullary "I8"
+            | 16 -> "packtype", nullary "I16"
+          in
+          let i32 = nullary "I32" in
+          if lit_type = "numtype" then
+            CaseV ([["mk_lit__0"];[];[]], [lit_val; CaseV ([["mk_num__0"];[];[]], [i32; res])])
+          else
+            CaseV ([["mk_lit__2"];[];[]], [lit_val; res])
+      | vs -> error_values "inv_ibytes" vs
+      );
+  } *)
 
 let inv_cbytes : numerics =
   {
@@ -1333,6 +1380,7 @@ let rec strip_suffix name =
 
 let call_numerics fname args : value =
   let fname' = strip_suffix fname in  (* Yuck! *)
+  (*Printf.printf "Calling numeric: %s with args %s\n%!" fname (String.concat ", " (List.map string_of_arg args));*)
   match List.find_opt (fun numerics -> numerics.name = fname') numerics_list with
   | Some numerics ->
     let args' = List.concat_map (function

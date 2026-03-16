@@ -33,7 +33,7 @@ let verbose : string list ref =
       (* "assign"; *)
       (* "call"; *)
       (* "step"; *)
-      (* "log"; *)
+      "log";
       ]
 
 
@@ -761,13 +761,16 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
           | Some v -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
                       then info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth)));
                       return v
-          | None   -> (*info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));*)
+          | None   -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
+                      then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth)));
                       match_clause at fname (nth+1) cls args
           )
-        | None -> (*info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));*)
+        | None -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
+                  then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth)));
                   match_clause at fname (nth+1) cls args
         )
-      | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
+      | None -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
+                then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth)));
                 match_clause at fname (nth+1) cls args
       )
     in

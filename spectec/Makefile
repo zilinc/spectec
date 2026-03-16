@@ -39,6 +39,14 @@ TEST ?= test-ocaml/sample.wast
 
 ifeq ($(TEST),CORE)
 TEST_PATHS := test-interpreter/spec-test-3/
+else ifeq ($(TEST),FEATURES)
+TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory \
+              test-interpreter/spec-test-3/relaxed-simd \
+              test-interpreter/spec-test-3/simd
 else ifeq ($(TEST),ALL)
 TEST_PATHS := test-interpreter/spec-test-3/ \
               test-interpreter/spec-test-3/bulk-memory \
