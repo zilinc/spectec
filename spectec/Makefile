@@ -48,6 +48,7 @@ TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
               test-interpreter/spec-test-3/multi-memory
 else ifeq ($(TEST),ALL)
 TEST_PATHS := test-interpreter/spec-test-3/ \
+			  test-interpreter/spec-test-3/slow-return
               test-interpreter/spec-test-3/bulk-memory \
               test-interpreter/spec-test-3/exceptions \
               test-interpreter/spec-test-3/gc \
