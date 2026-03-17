@@ -16,9 +16,7 @@ module Modules = Backend_interpreter.Ds.Modules
 module RI = Reference_interpreter
 module I = Backend_interpreter
 
-exception TEMP of string
-
-let verbose = ref true
+let verbose = ref false
 let invalids = ref 0
 
 (* the initial ocaml store and spectest before any runner file. 
@@ -359,8 +357,6 @@ let run_command oc cmd =
   end in 
   res, Sys.time () -. start_time)
   with
-  | TEMP msg ->
-    Printexc.print_backtrace oc; exit 1
   | Failure msg ->
     Printexc.print_backtrace oc; 
     Printf.printf "unexpected Failure :O\n %s\n" msg; 
@@ -383,6 +379,8 @@ let run_wast oc cmds =
 
   List.map (run_command oc) cmds
 
+let () =
+  Printexc.record_backtrace true
 
 let () =
   let tests, srcs = Backend_animation.Runner.parse_args () in
@@ -391,14 +389,26 @@ let () =
   (* todo: meta-interpeter initialisation may no longer needed. test without. *)
   Backend_animation.Runner.init_pipeline srcs;
 
+  let csv = open_out "results.csv" in
+  Printf.fprintf csv "testname,passed,total,time\n";
+
   let results = List.map (fun testfile ->
     let cmds = Backend_animation.Runner.run testfile in (* parsing *)
     let oc = open_out "exception.log" in
     let result = run_wast oc cmds 
       |> Backend_animation.Main_interpret.sum_results_with_time in
     print_runner_result testfile result;
+
+    let ((num_success, total), _execution_time) = result in
+      Printf.fprintf csv "%s,%d/%d,%.2f\n"
+        testfile
+        num_success
+        total
+        _execution_time;
+
     result
   ) tests in
+  
   let total = Backend_animation.Main_interpret.sum_results_with_time
     (List.concat_map (fun (r, t) -> [(r, t)]) results) in
   Printf.printf "Warning: %d AssertInvalids were skipped.\n" !invalids;

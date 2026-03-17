@@ -7,7 +7,7 @@ module BI = Backend_interpreter
 open Xl.Atom
 
 
-let error at msg = Util.Error.error at "animation/construct_v" msg
+let error at msg = Util.Error.error at "animation/construct_v_new" msg
 let error_value ?(at = no) name val_ = error at ("Invalid " ^ name ^ ": " ^ string_of_value val_)
 let error_values ?(at = no) name vals =
   error at ("Invalid " ^ name ^ ": " ^ string_of_values ", " vals)
@@ -488,7 +488,8 @@ let vl_of_vop_opt f1 f2 = function
     | RI.V128.F64x2 op -> Option.map (fun v -> [ vl_of_shape (nullary "F64") two    ; v ]) (f2 op)
   )
 
-let vl_of_viop f1 :
+
+(* let vl_of_viop f1 :
     ('a, 'a, 'a, 'a, RI.Ast.void, RI.Ast.void) RI.V128.laneop RI.Value.vecop -> value list = function
   | RI.Value.V128 vop -> (
     match vop with
@@ -496,6 +497,29 @@ let vl_of_viop f1 :
     | RI.V128.I16x8 op -> [ vl_of_ishape (nullary "I16") eight  ; f1 op ]
     | RI.V128.I32x4 op -> [ vl_of_ishape (nullary "I32") four   ; f1 op ]
     | RI.V128.I64x2 op -> [ vl_of_ishape (nullary "I64") two    ; f1 op ]
+    | _ -> .
+  ) *)
+
+let vl_of_viop f1 :
+    ('a, 'a, 'a, 'a, RI.Ast.void, RI.Ast.void) RI.V128.laneop RI.Value.vecop -> value list = function
+  | RI.Value.V128 vop -> (
+    match vop with
+    | RI.V128.I8x16 op -> 
+      let jnn = nullary "I8" in
+      let shape = vl_of_ishape jnn sixteen in
+      [ shape; CaseV ([["mk_vshiftop__0"];[];[]], [jnn; (natV (Z.of_int 16)); f1 op]) ]
+    | RI.V128.I16x8 op ->
+      let jnn = nullary "I16" in
+      let shape = vl_of_ishape jnn eight in
+      [ shape; CaseV ([["mk_vshiftop__0"];[];[]], [jnn; (natV (Z.of_int 8)); f1 op]) ]
+    | RI.V128.I32x4 op -> 
+      let jnn = nullary "I32" in
+      let shape = vl_of_ishape jnn four in
+      [ shape; CaseV ([["mk_vshiftop__0"];[];[]],[jnn; (natV (Z.of_int 4)); f1 op]) ]
+    | RI.V128.I64x2 op -> 
+      let jnn = nullary "I64" in
+      let shape = vl_of_ishape jnn two in
+      [ shape; CaseV ([["mk_vshiftop__0"];[];[]],[jnn; (natV (Z.of_int 2)); f1 op]) ]
     | _ -> .
   )
 
@@ -515,7 +539,22 @@ let vl_of_int_vtestop : RI.Ast.V128Op.itestop -> value = function
 let vl_of_float_vtestop : RI.Ast.void -> value = function
   | _ -> .
 
-let vl_of_vtestop = vl_of_vop vl_of_int_vtestop vl_of_float_vtestop
+(*let vl_of_vtestop = vl_of_vop vl_of_int_vtestop vl_of_float_vtestop*)
+
+let vl_of_vtestop = function
+  | RI.Value.V128 vop -> (
+    match vop with
+    | RI.V128.I8x16 op -> [ vl_of_shape (nullary "I8") sixteen; 
+      CaseV ([["Mk_vtestop__0"];[];[]], [nullary "I8"; NumV (`Nat (Z.of_int 16)); vl_of_int_vtestop op]) ]
+    | RI.V128.I16x8 op -> [ vl_of_shape (nullary "I16") eight  ;
+      CaseV ([["Mk_vtestop__0"];[];[]], [nullary "I16"; NumV (`Nat (Z.of_int 8)); vl_of_int_vtestop op]) ]
+    | RI.V128.I32x4 op -> [ vl_of_shape (nullary "I32") four   ;
+      CaseV ([["Mk_vtestop__0"];[];[]], [nullary "I32"; NumV (`Nat (Z.of_int 4)); vl_of_int_vtestop op]) ]
+    | RI.V128.I64x2 op -> [ vl_of_shape (nullary "I64") two    ; 
+      CaseV ([["Mk_vtestop__0"];[];[]], [nullary "I64"; NumV (`Nat (Z.of_int 2)); vl_of_int_vtestop op]) ]
+    | RI.V128.F32x4 op -> [ vl_of_shape (nullary "F32") four   ; vl_of_float_vtestop op ] (* unreachable, i think *)
+    | RI.V128.F64x2 op -> [ vl_of_shape (nullary "F64") two    ; vl_of_float_vtestop op ]
+  )
 
 let vl_of_int_vrelop : RI.Ast.V128Op.irelop -> value = function
   | RI.Ast.V128Op.Eq -> nullary "EQ"
@@ -605,7 +644,25 @@ let vl_of_float_vbinop_opt : RI.Ast.V128Op.fbinop -> value option = function
   | RI.Ast.V128Op.RelaxedMin -> Some (nullary "RELAXED_MIN")
   | RI.Ast.V128Op.RelaxedMax -> Some (nullary "RELAXED_MAX")
 
-let vl_of_vbinop_opt = vl_of_vop_opt vl_of_int_vbinop_opt vl_of_float_vbinop_opt
+(*let vl_of_vbinop_opt = vl_of_vop_opt vl_of_int_vbinop_opt vl_of_float_vbinop_opt*)
+
+let vl_of_vbinop_opt = function
+  | RI.Value.V128 vop -> (
+    match vop with
+    | RI.V128.I8x16 op -> Option.map (fun v -> [ vl_of_shape (nullary "I8" ) sixteen;
+      CaseV ([["mk_vbinop__0"];[];[]], [(nullary "I8"); natV (Z.of_int 16); v]) ]) (vl_of_int_vbinop_opt op)
+    | RI.V128.I16x8 op -> Option.map (fun v -> [ vl_of_shape (nullary "I16") eight  ;
+      CaseV ([["mk_vbinop__0"];[];[]], [(nullary "I16"); natV (Z.of_int 8); v]) ]) (vl_of_int_vbinop_opt op)
+    | RI.V128.I32x4 op -> Option.map (fun v -> [ vl_of_shape (nullary "I32") four   ;
+      CaseV ([["mk_vbinop__0"];[];[]], [(nullary "I32"); natV (Z.of_int 4); v]) ]) (vl_of_int_vbinop_opt op)
+    | RI.V128.I64x2 op -> Option.map (fun v -> [ vl_of_shape (nullary "I64") two    ;
+      CaseV ([["mk_vbinop__0"];[];[]], [(nullary "I64"); natV (Z.of_int 2); v]) ]) (vl_of_int_vbinop_opt op)
+    | RI.V128.F32x4 op -> Option.map (fun v -> [ vl_of_shape (nullary "F32") four   ;
+      CaseV ([["mk_vbinop__1"];[];[]], [(nullary "F32"); natV (Z.of_int 4); v]) ]) (vl_of_float_vbinop_opt op)
+    | RI.V128.F64x2 op -> Option.map (fun v -> [ vl_of_shape (nullary "F64") two    ;
+      CaseV ([["mk_vbinop__1"];[];[]], [(nullary "F64"); natV (Z.of_int 2); v]) ]) (vl_of_float_vbinop_opt op)
+  )
+
 
 let vl_of_int_vternop_opt : RI.Ast.V128Op.iternop -> value option = function
   | RI.Ast.V128Op.RelaxedLaneselect -> Some (nullary "RELAXED_LANESELECT")
@@ -704,6 +761,126 @@ let vl_of_vcvtop_opt =
       ) (vl_of_float64_vcvtop_opt op)
     )
   )
+
+(* caseV [[];["X"];[]] [d1; d2] *)
+
+(* let vl_of_vcvtop_opt =
+  let open RI in
+  let open Value in
+  function
+  | V128 vop -> (
+    match vop with
+    | V128.I8x16 op -> (
+      Option.map (fun (to_, op') ->
+        let (jnn2, m2) = match to_ with
+          | Some _ -> BI.Construct.error_instr "vl_of_vcvtop" (VecConvert (V128 vop))
+          | None -> (nullary "I8", natV 16) in
+        CaseV ([["mk_vcvtop___0"];[];[]], [nullary "I8"; natV 16; jnn2; m2; op'])
+      ) (vl_of_int_vcvtop_opt op)
+    )
+    | V128.I16x8 op -> (
+      Option.map (fun (to_, op') ->
+        let (jnn2, m2) = match to_ with
+          | Some _ -> BI.Construct.error_instr "vl_of_vcvtop" (VecConvert (V128 vop))
+          | None -> (nullary "I8", natV 16) in
+        CaseV ([["mk_vcvtop___0"];[];[]], [nullary "I16"; natV 8; jnn2; m2; op'])
+      ) (vl_of_int_vcvtop_opt op)
+    )
+    | V128.I32x4 op -> (
+      Option.map (fun (to_, op') ->
+        let (jnn2, m2) = match to_ with
+          | Some sh -> sh
+          | None -> (nullary "I16", natV 8) in
+        CaseV ([["mk_vcvtop___0"];[];[]], [nullary "I32"; natV 4; jnn2; m2; op'])
+      ) (vl_of_int_vcvtop_opt op)
+    )
+    | V128.I64x2 op -> (
+      Option.map (fun (to_, op') ->
+        let (jnn2, m2) = match to_ with
+          | Some sh -> sh
+          | None -> (nullary "I32", natV 4) in
+        CaseV ([["mk_vcvtop___0"];[];[]], [nullary "I64"; natV 2; jnn2; m2; op'])
+      ) (vl_of_int_vcvtop_opt op)
+    )
+    | V128.F32x4 op -> (
+      match vl_of_float32_vcvtop_opt op with
+      | Some (to_, op') ->
+        let sh = match to_ with
+          | Some sh -> sh
+          | None -> BI.Construct.error_instr "vl_of_vcvtop" (VecConvert (V128 vop)) in
+        Some (match op with
+        | RI.Ast.V128Op.ConvertI32x4 _ ->
+          CaseV ([["mk_vcvtop___1"];[];[]], [nullary "F32"; natV 4; fst sh; snd sh; op'])
+        | _ ->
+          CaseV ([["mk_vcvtop___3"];[];[]], [nullary "F32"; natV 4; fst sh; snd sh; op']))
+      | None -> None
+    )
+    | V128.F64x2 op -> (
+      match vl_of_float64_vcvtop_opt op with
+      | Some (to_, op') ->
+        let sh = match to_ with
+          | Some sh -> sh
+          | None -> BI.Construct.error_instr "vl_of_vcvtop" (VecConvert (V128 vop)) in
+        Some (match op with
+        | RI.Ast.V128Op.ConvertI32x4 _ ->
+          CaseV ([["mk_vcvtop___1"];[];[]], [nullary "F64"; natV 2; fst sh; snd sh; op'])
+        | _ ->
+          CaseV ([["mk_vcvtop___3"];[];[]], [nullary "F64"; natV 2; fst sh; snd sh; op']))
+      | None -> None
+    )
+  )
+
+let vl_of_vcvtop_opt =
+  let open RI in
+  let open Value in
+  function
+  | V128 vop -> (
+    match vop with
+    | V128.I8x16 op -> (
+      Option.map (fun (to_, op') ->
+        let sh = match to_ with 
+        | Some sh -> sh 
+        | None -> BI.Construct.error_instr "vl_of_vcvtop" (VecConvert (V128 vop)) in
+        (match sh with
+          | CaseV ([[];["X"];[]], [d1; CaseV ([[]], [n])]) -> 
+          [ vl_of_shape (nullary "I8") sixteen; sh; 
+          CaseV ([["mk_vcvtop___0"];[];[];[];[]], [(nullary "I8"); (NumV (`Nat (Z.of_int 16))); d1; n; op']) ])
+      ) (vl_of_int_vcvtop_opt op)
+    )
+    | V128.I16x8 op -> (
+      Option.map (fun (to_, op') ->
+        let sh = match to_ with Some sh -> sh | None -> vl_of_shape (nullary "I8") sixteen in
+        (match sh with
+          | CaseV ([[];["X"];[]], [d1; CaseV ([[]], [n])]) -> 
+          [ vl_of_shape (nullary "I16") eight; sh; 
+          CaseV ([["mk_vcvtop___0"];[];[];[];[]], [(nullary "I8"); (NumV (`Nat (Z.of_int 16))); d1; n; op']) ])
+      ) (vl_of_int_vcvtop_opt op)
+    )
+    | V128.I32x4 op -> (
+      Option.map (fun (to_, op') ->
+        let sh = match to_ with Some sh -> sh | None -> vl_of_shape (nullary "I16") eight in
+        [ vl_of_shape (nullary "I32") four; sh; op' ]
+      ) (vl_of_int_vcvtop_opt op)
+    )
+    | V128.I64x2 op -> (
+      Option.map (fun (to_, op') ->
+        let sh = match to_ with Some sh -> sh | None -> vl_of_shape (nullary "I32") four in
+        [ vl_of_shape (nullary "I64") two; sh; op' ]
+      ) (vl_of_int_vcvtop_opt op)
+    )
+    | V128.F32x4 op -> (
+      Option.map (fun (to_, op') ->
+        let sh = match to_ with Some sh -> sh | None -> BI.Construct.error_instr "vl_of_vcvtop" (VecConvert (V128 vop)) in
+        [ vl_of_shape (nullary "F32") four; sh; op' ]
+      ) (vl_of_float32_vcvtop_opt op)
+    )
+    | V128.F64x2 op -> (
+      Option.map (fun (to_, op') ->
+        let sh = match to_ with Some sh -> sh | None -> BI.Construct.error_instr "vl_of_vcvtop" (VecConvert (V128 vop)) in
+        [ vl_of_shape (nullary "F64") two; sh; op' ]
+      ) (vl_of_float64_vcvtop_opt op)
+    )
+  )*)
 
 
 let vl_of_special_vcvtop =
@@ -2054,7 +2231,8 @@ let vl_to_catch v : RI.Ast.catch = vl_to_phrase vl_to_catch' v
     | [["F64"]], [] -> F64 (vl_to_float64 num_)
     | v -> error_value "numtype" numtype
     )
-  | _ -> error_value "num" v*)
+  | _ -> error_value "num" v. *)
+
 
 let vl_to_num v : RI.Value.num =
   match match_caseV "num" v with

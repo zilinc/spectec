@@ -1471,6 +1471,8 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       let* args =
         mapM (fun (i, t) ->
           let* tr = Parser_ocaml.gen_typarg_il t in
+          (* hostcall does not seem to work *)
+          (* if (tr = "vl_of_store") && (id.it = "hostcall") then return "Backend_animation.State_v.Store.get ()" else*) 
           return (Printf.sprintf "%s a%d" tr i)
         ) (List.mapi (fun i t -> (i, t)) param_types)
       in
