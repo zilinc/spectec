@@ -9,14 +9,13 @@ module Inline = Util.Lib.State (struct type t = Il.Subst.t end)
 
 open Inline
 
-let simp : 'env transformer = {
+let simp : transformer = {
   transform_exp =
     (fun exp -> match exp.it with
     | IterE ({ it = VarE v; _ }, (List, xes)) when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
       List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd
     | _ -> exp
     );
-  transform_bind = id;
   transform_prem = id;
   transform_iterexp = id;
   transform_typ = id;
@@ -27,9 +26,10 @@ let simp : 'env transformer = {
   transform_typ_id = id;
   transform_rel_id = id;
   transform_def_id = id;
-  transform_gram_id = id
-}
+  transform_gram_id = id;
 
+  filter_exp = fun x -> Some x;
+}
 
 
 let rec inline_exp occ exp : exp Inline.m =

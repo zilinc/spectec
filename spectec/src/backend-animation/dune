@@ -5,19 +5,19 @@
   (libraries util frontend il al backend_ast il2al str tsort reference_interpreter backend_interpreter)
   (modules
     main_animate
-    main_interpret
+    ; main_interpret
     animate
     common
-    construct
+    ; construct
     def
     il2dl
     il_util
     inline
-    interpreter
-    numerics
+    ; interpreter
+    ; numerics
     occur
-    spectest
-    state
+    ; spectest
+    ; state
     valid
     value
     ; interpreter-ocaml

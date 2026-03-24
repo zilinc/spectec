@@ -32,8 +32,8 @@ let version = ref 3
 let il_of_z_nat z : exp = natE z
 let il_of_z_int z : exp = intE z
 
-let il_of_uN z : exp = mk_case' "uN" [[];[]] [natE z]
-let il_of_iN z : exp = mk_case' "iN" [[];[]] [natE z]
+let il_of_uN z : exp = mk_case' "uN" (Xl.Mixop.Arg ()) [natE z]
+let il_of_iN z : exp = mk_case' "iN" (Xl.Mixop.Arg ()) [natE z]
 
 
 let il_of_fmagN layout i : exp =

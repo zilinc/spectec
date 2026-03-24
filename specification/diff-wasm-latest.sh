@@ -3,13 +3,13 @@
 # Identify the highest versioned directory
 HIGHEST=$(ls -d wasm-[0-9]* 2>/dev/null | sort -V | tail -n 1)
 
-# Check that highest exists
+# Check that a highest version exists
 if [ -z "$HIGHEST" ]; then
     echo "❌ Error: No wasm-X.Y versioned directories found in specification/"
     exit 1
 fi
 
-LATEST="specification/wasm-latest"
+LATEST="wasm-latest"
 
 # Check that wasm-latest exists
 if [ ! -d "$LATEST" ]; then

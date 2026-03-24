@@ -16,7 +16,7 @@ let rec list_all_il_defs' lv (il: script) : unit =
     | RecD defs -> print_endline "{"; list_all_il_defs' (lv+1) defs; print_endline "}"
     | TypD (id, _, _)    -> print_endline (indent lv ^ "typ | " ^ string_of_id id)
     | DecD (id, _, _, _) -> print_endline (indent lv ^ "dec | " ^ string_of_id id)
-    | RelD (id, _, _, _) -> print_endline (indent lv ^ "rel | " ^ string_of_id id)
+    | RelD (id, _, _, _, _) -> print_endline (indent lv ^ "rel | " ^ string_of_id id)
     | _ -> ()
   ) il
 let list_all_il_defs (il: script) : unit = list_all_il_defs' 0 il
@@ -56,8 +56,8 @@ let il2dl_rule_clause rel_id rule : func_clause =
     let omode = H.IM.find_opt (i+1) mode_map in
     (match omode with
     | None     -> (les, res, lts, rts)
-    | Some In  -> (les@[e], res, lts@[(VarE ("_" $ e.at) $> e, e.note)], rts)
-    | Some Out -> (les, res@[e], lts, rts@[(VarE ("_" $ e.at) $> e, e.note)])
+    | Some In  -> (les@[e], res, lts@[("_" $ e.at, e.note)], rts)
+    | Some Out -> (les, res@[e], lts, rts@[("_" $ e.at, e.note)])
     )
   ) ([], [], [], []) es in
   let args = List.map (fun e -> ExpA e $ e.at) lhs' in
@@ -77,7 +77,7 @@ let il2dl_rule_def rule_name rel_id typ rules at : func_def =
   let mode_map = H.find_a_rel rel_id.it in
   let ts = match typ.it with
            | TupT ts -> ts
-           | _ -> [(varE "_" ~note:typ, typ)]
+           | _ -> [("_" $ typ.at, typ)]
   in
   let lts, rts = Lib.List.fold_lefti (fun i (lts, rts) t ->
     let omode = H.IM.find_opt (i+1) mode_map in
@@ -141,7 +141,7 @@ let rec il2dl (il: script) : dl_def list =
     | DecD (id, params, typ, clauses) ->
       let partial = if List.mem id partial_funcs then Partial else Total in
       [FuncDef ((id, None, params, typ, List.map il2dl_clause clauses, Some partial) $ def.at)]
-    | RelD (rel_id, _, typ, rules) ->
+    | RelD (rel_id, _, _, typ, rules) ->
       let rules = List.map (fun rule -> (rel_id, typ, rule)) rules in
       let func_def = group_rules rules in
       List.map (fun r -> FuncDef r) func_def

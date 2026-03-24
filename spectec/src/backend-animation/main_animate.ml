@@ -40,7 +40,7 @@ let build_animation_hints il : unit =
 let rec is_anim_target il_def =
   match il_def.it with
   | DecD (id, ps, t, _) when H.is_na_func id.it -> Some (DecD (id, ps, t, []) $ il_def.at)
-  | RelD (id, mixop, t, rules) when H.is_a_rel id.it -> Some (RelD (id, mixop, t, rules) $ il_def.at)
+  | RelD (id, quants, mixop, t, rules) when H.is_a_rel id.it -> Some (RelD (id, quants, mixop, t, rules) $ il_def.at)
   | RelD _ -> None
   | RecD defs -> Some (RecD (List.filter_map is_anim_target defs) $ il_def.at)
   | _ -> Some il_def
@@ -86,8 +86,8 @@ let remove_or_clause clause =
 
 let rec remove_or def =
   match def.it with
-  | RelD (id, mixop, typ, rules) ->
-    RelD (id, mixop, typ, List.concat_map remove_or_rule rules) $ def.at
+  | RelD (id, quants, mixop, typ, rules) ->
+    RelD (id, quants, mixop, typ, List.concat_map remove_or_rule rules) $ def.at
   | DecD (id, params, typ, clauses) ->
     DecD (id, params, typ, List.concat_map remove_or_clause clauses) $ def.at
   | RecD defs -> RecD (List.map remove_or defs) $ def.at

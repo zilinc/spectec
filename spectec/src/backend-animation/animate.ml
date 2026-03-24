@@ -179,45 +179,45 @@ module S = AnimateS
 (* FIXME(zilinc): I don't think it handles dependent types correctly. The binds
    should be telescopic.
 *)
-let binds_of_env env : bind list =
+let quants_of_env env : quant list =
   let varbinds = Map.to_list env.vars in
   let typbinds = Map.to_list env.typs in
   let defbinds = Map.to_list env.defs in
   let grambinds = Map.to_list env.grams in
-  List.map (fun (v, t)   -> ExpB (v $ no, t) $ no) varbinds
-  @ List.map (fun (v, _)   -> TypB (v $ no) $ no) typbinds
+  List.map (fun (v, t)   -> ExpP (v $ no, t) $ no) varbinds
+  @ List.map (fun (v, _)   -> TypP (v $ no) $ no) typbinds
   @ List.map (fun (v, def) -> (let (ps, t, _) = def in
-                               DefB (v $ no, ps, t) $ no)) defbinds
+                               DefP (v $ no, ps, t) $ no)) defbinds
   @ List.map (fun (v, def) -> (let (ps, t, _) = def in
-                               GramB (v $ no, ps, t) $ no)) grambinds
+                               GramP (v $ no, ps, t) $ no)) grambinds
 
-let env_of_binds binds envr : Il.Env.t ref =
+let env_of_quants quants envr : Il.Env.t ref =
   List.iter (fun b -> match b.it with
-    | ExpB (id, t) ->
+    | ExpP (id, t) ->
       envr := bind_var !envr id t
-    | TypB id ->
+    | TypP id ->
       envr := bind_typ !envr id ([], [])
-    | DefB (id, ps, t) ->
+    | DefP (id, ps, t) ->
       envr := bind_def !envr id (ps, t, [])
-    | GramB (id, ps, t) ->
+    | GramP (id, ps, t) ->
       envr := bind_gram !envr id (ps, t, [])
-  ) binds;
+  ) quants;
   envr
 
-(* Topo-sort the binding list. *)
-let sort_binds fid binds : bind list =
+(* Topo-sort the quantifier list. *)
+let sort_quants fid quants : quant list =
   let graph = ref [] in
   let ids = List.map (fun b -> match b.it with
-    | ExpB  (id, _)    -> Il.Free.free_varid id
-    | TypB   id        -> Il.Free.free_typid id
-    | DefB  (id, _, _) -> Il.Free.free_defid id
-    | GramB (id, _, _) -> Il.Free.free_gramid id
-  ) binds in
+    | ExpP  (id, _)    -> Il.Free.free_varid id
+    | TypP   id        -> Il.Free.free_typid id
+    | DefP  (id, _, _) -> Il.Free.free_defid id
+    | GramP (id, _, _) -> Il.Free.free_gramid id
+  ) quants in
   let bound_typ_bind b = match b.it with
-  | ExpB (_, t) -> Il.Free.bound_typ t
+  | ExpP (_, t) -> Il.Free.bound_typ t
   | _ -> empty
   in
-  let vss = List.map (fun bind -> union (free_bind bind) (bound_typ_bind bind)) binds in
+  let vss = List.map (fun q -> union (free_quant q) (bound_typ_bind q)) quants in
   List.iteri (fun i vs ->
     let deps = ref [] in
     List.iteri (fun j id -> if Il.Free.subset id vs then deps := j :: !deps) ids;
@@ -225,7 +225,7 @@ let sort_binds fid binds : bind list =
   ) vss;
   let open Tsort in
   match sort !graph with
-  | Sorted     ls -> List.map (fun idx -> List.nth binds idx) ls
+  | Sorted     ls -> List.map (fun idx -> List.nth quants idx) ls
   | ErrorCycle ls -> error no ("Cyclic dependency in binders: " ^ string_of_id fid)
 
 
@@ -486,7 +486,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     (match rhs with
     | [ ] -> boolE true, BoolT $ no
     | [e] -> e, e.note
-    | _   -> let t = TupT (List.map (fun e -> (e, e.note)) rhs) $ at in
+    | _   -> let t = TupT (List.map (fun e -> ("_" $ e.at, e.note)) rhs) $ at in
              TupE rhs $$ at % t, t
     )
   in
@@ -769,7 +769,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     | tcases ->
       begin match lhs'.it with
       | TupE es ->
-        let (_, (_bs, t', _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
+        let (_, (t', _qs, _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
         let ets = as_tup_typ !envr t' in
         let (envr, vs, ves, prem_vs) = List.fold_left (fun acc (e, (_, t)) ->
           let (envr, vs, ves, prem_vs) = acc in
@@ -1067,7 +1067,8 @@ and animate_prem envr prem : prem list E.m =
   let knowns = get_knowns s in
   let fv_prem = (free_prem false prem).varid in
   match prem.it with
-  | RulePr (id, mixop, exp) ->
+  | RulePr (id, args, mixop, exp) ->
+    (* TODO(zilinc): Not yet supports parameterised relation. *)
     animate_rule_prem envr prem.at id mixop exp
   | IfPr exp -> animate_if_prem envr prem.at exp
   | LetPr (e1, e2, ids) ->
@@ -1358,8 +1359,8 @@ let lift_otherwise_prem prems =
 let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) result =
   let lenvr = ref !envr in
   let oid, cl = fc in
-  let DefD (binds, args, exp, prems) = cl.it in
-  let lenvr = env_of_binds binds lenvr in
+  let DefD (quants, args, exp, prems) = cl.it in
+  let lenvr = env_of_quants quants lenvr in
   let n_args = List.length args in
   let (vss, args', prems_args) = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
@@ -1375,9 +1376,9 @@ let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) 
   | Error s      -> Error s
   | Result.Ok ps ->
     let prems' = lift_otherwise_prem ps in
-    let binds' = binds_of_env (Il.Env.env_diff !lenvr !envr) in
-    let binds'' = sort_binds fid binds' in
-    Ok (oid, DefD (binds'', args', exp, prems') $ cl.at)
+    let quants' = quants_of_env (Il.Env.env_diff !lenvr !envr) in
+    let quants'' = sort_quants fid quants' in
+    Ok (oid, DefD (quants'', args', exp, prems') $ cl.at)
 
 
 (* Many $Step rules are dependent in their arguments. For example,
@@ -1401,7 +1402,7 @@ let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) 
   compute `m` in the premises.
  *)
 
-let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * prem list =
+let transform_step_vals envr in_stack out_stack prems : quant list * exp * exp * prem list =
   match in_stack.it with
   | CatE ({ it = IterE (vals, (ListN(n, _), xes)); _ } as in_vals, in_stack2) ->
     let iter' = List in
@@ -1419,8 +1420,8 @@ let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * 
     let in_stack' = CatE (in_vals', in_stack2) $> in_stack in
     let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
     let prems' = (IfPr (eqE ~at:rest_star_e.at in_vals' (CatE (rest_star_e, in_vals) $> in_vals)) $ rest_star_e.at) :: prems in
-    ([ExpB (rest_star, t_star "val") $ rest_star_e.at;
-      ExpB (val_star, t_star "val") $ val_star_e.at],
+    ([ExpP (rest_star, t_star "val") $ rest_star_e.at;
+      ExpP (val_star, t_star "val") $ val_star_e.at],
      in_stack', out_stack', prems')
   (* In this case, the LHS pattern is not circular dependent as the above case, but we still
      generalise it so that we can pass in the entire value stack, instead of manually pick a
@@ -1435,53 +1436,53 @@ let transform_step_vals envr in_stack out_stack prems : bind list * exp * exp * 
     let rest_star_e = IterE (rest_e', (iter', [(rest, VarE rest_star $$ in_stack.at % t_star "val")])) $> in_stack in
     let in_stack' = CatE (rest_star_e, in_stack) $> in_stack in
     let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
-    ([ExpB (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
+    ([ExpP (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
   | _ -> [], in_stack, out_stack, prems
 
 let transform_step_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
-  let DefD (binds, [ {it = ExpA lhs; _} ], rhs, prems) = cl.it in
+  let DefD (quants, [ {it = ExpA lhs; _} ], rhs, prems) = cl.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
   let CaseE (out_mixop, out_tup) = rhs.it in
   let TupE [out_z; out_stack] = out_tup.it in
-  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  let quants', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
   let out_tup' = TupE [out_z; out_stack'] $> out_tup in
   let rhs' = CaseE (out_mixop, out_tup') $> rhs in
-  animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA lhs' $ lhs'.at ], rhs', prems') $> cl)
+  animate_clause0 envr fid (oid, DefD (quants @ quants', [ ExpA lhs' $ lhs'.at ], rhs', prems') $> cl)
 
 let transform_step_pure_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
-  let DefD (binds, [ {it = ExpA in_stack; _} ], out_stack, prems) = cl.it in
-  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
-  animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA in_stack' $ in_stack.at ], out_stack', prems') $> cl)
+  let DefD (quants, [ {it = ExpA in_stack; _} ], out_stack, prems) = cl.it in
+  let quants', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  animate_clause0 envr fid (oid, DefD (quants @ quants', [ ExpA in_stack' $ in_stack.at ], out_stack', prems') $> cl)
 
 let transform_step_read_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
-  let DefD (binds, [ {it = ExpA lhs; _} ], out_stack, prems) = cl.it in
+  let DefD (quants, [ {it = ExpA lhs; _} ], out_stack, prems) = cl.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
-  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  let quants', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
-  animate_clause0 envr fid (oid, DefD (binds @ binds', [ ExpA lhs' $ lhs'.at ], out_stack', prems') $> cl)
+  animate_clause0 envr fid (oid, DefD (quants @ quants', [ ExpA lhs' $ lhs'.at ], out_stack', prems') $> cl)
 
 (* $step_ctxt: config -> config *)
 let transform_step_ctxt_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
-  let DefD (binds, [{it = ExpA lhs; _}], rhs, prems) = cl.it in
+  let DefD (quants, [{it = ExpA lhs; _}], rhs, prems) = cl.it in
   let CaseE (out_mixop, out_tup) = rhs.it in
   let CaseE (in_mixop, in_tup) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
   let TupE [out_z; out_stack] = out_tup.it in
-  let binds', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
+  let quants', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
   let out_tup' = TupE [out_z; out_stack'] $> out_tup in
   let rhs' = CaseE (out_mixop, out_tup') $> rhs in
-  animate_clause0 envr fid (oid, DefD (binds @ binds', [ExpA lhs' $ lhs'.at], rhs', prems) $> cl)
+  animate_clause0 envr fid (oid, DefD (quants @ quants', [ExpA lhs' $ lhs'.at], rhs', prems) $> cl)
 
 
 let animate_clause envr id osubid (fc: func_clause) : (func_clause option, region * string) result =
@@ -1561,10 +1562,10 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
           let args, binds = List.map (fun p -> (match p.it with
             | ExpP (v, t') ->
               let v' = if v.it = "_" then fresh_id (Some "a") v.at else v in
-              ExpA (VarE v' $$ v.at % t') $ p.at, ExpB (v', t') $ p.at
-            | TypP s -> TypA (VarT (s, []) $ s.at) $ p.at, TypB s $ p.at
-            | DefP (f, ps', t') -> DefA f $ p.at, DefB (f, ps', t') $ p.at
-            | GramP (v, t') -> todo "merge_def: GramP"
+              ExpA (VarE v' $$ v.at % t') $ p.at, ExpP (v', t') $ p.at
+            | TypP s -> TypA (VarT (s, []) $ s.at) $ p.at, TypP s $ p.at
+            | DefP (f, ps', t') -> DefA f $ p.at, DefP (f, ps', t') $ p.at
+            | GramP (v, qs, t') -> todo "merge_def: GramP"
             )
           ) ps |> Lib.List.unzip in
           let fid = string_of_funcname id osubid $> id in

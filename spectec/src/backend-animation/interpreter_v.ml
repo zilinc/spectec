@@ -225,7 +225,7 @@ let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
       if vl_of_mixop mixop' = mixop then Some (mixop', tcase) else None) tcs
      with
      | Some (_, tcase) ->
-       let (binds, typ, prems) = tcase in
+       let (_quants, typ, prems) = tcase in
        let* ctx' = return ctx in  (* eval_prems ctx prems in *)
        assign ctx' p rhs
      | None -> fail ()
@@ -745,10 +745,10 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
   match clauses with
   | [] -> info "log" at (lazy ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses")); fail ()
   | cl :: cls ->
-    let DefD (binds, pargs, exp, prems) = cl.it in
+    let DefD (quants, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
     (* Add bindings to [il_env]. *)
-    let _ = Animate.env_of_binds binds il_env in
+    let _ = Animate.env_of_quants quants il_env in
     if not (List.length pargs = List.length args) then
       error at ("Function `" ^ fname ^ "` is called with " ^ string_of_int (List.length args) ^ " arguments");
     let* val_ =

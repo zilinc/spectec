@@ -15,12 +15,14 @@ let projE lst n =
     | Some v -> v
     | None -> failwith "list too short")
   | _ -> failwith "projE: expected ListE"
-let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
+let mixop_to_atom_str ?(recordfield = false) (mixop : 'a Mixop.mixop) =
   let lowercase name =
       if recordfield then String.lowercase_ascii name
       else name
   in
   match mixop with
+  | _ -> assert false  (* TODO(zilinc): merge *)
+  (*
   | [{it = Atom.Atom a; _}]::tail when List.for_all ((=) []) tail -> (*"Atom " ^*) lowercase a
   | mixop ->
     let s =
@@ -29,6 +31,7 @@ let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
       )
     in
     (*"Atom " ^*) s
+  *)
 
 let slice (lst : 'a list) (start : int) (end_ : int) : 'a list option =
   if start < 0 || end_ < start then None else

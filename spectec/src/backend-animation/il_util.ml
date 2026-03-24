@@ -54,9 +54,9 @@ let as_variant_typ env t : typcase list =
   | VariantT tcs -> tcs
   | _ -> error t.at ("Input type is not a variant type: " ^ string_of_typ t)
 
-let as_tup_typ env t : (exp * typ) list =
+let as_tup_typ env t : (id * typ) list =
   match (reduce_typ env t).it with
-  | TupT ets -> ets
+  | TupT xts -> xts
   | _ -> error t.at ("Input type is not a tuple type: " ^ string_of_typ t)
 
 let has_str_field atom str : bool =
@@ -106,7 +106,7 @@ let args_of_case case : exp list =
 
 let unwrap_case case : exp =
   match case.it with
-  | CaseE ([[];[]], { it = TupE [e]; _ }) -> e
+  | CaseE (Arg _, { it = TupE [e]; _ }) -> e
   | _ -> error case.at ("Input expression is not a singleton variant: " ^ string_of_exp case)
 
 let case_mixop case : mixop =
@@ -158,7 +158,7 @@ let t_app ?(at = no) name ts : typ = VarT (name $ at, ts) $ at
 let t_star ?(at = no) name : typ = iterT (t_var name)
 let t_list ?(at = no) name : typ = VarT ("list" $ at, [TypA (t_var name) $ at]) $ at
 let t_opt  ?(at = no) name : typ = optT  (t_var name)
-let rec t_tup  ?(at = no) ts : typ = TupT (List.map (fun t -> (varE ~note:t "_", t)) ts) $ at
+let rec t_tup  ?(at = no) ts : typ = TupT (List.map (fun t -> ("_" $ at, t)) ts) $ at
 
 
 (* Construct argument *)
@@ -309,27 +309,24 @@ and mk_atom ?(at = no) ~info (atom: string) : Xl.Atom.atom =
     | _          -> Atom atom
   ) $$ at % info
 
-and mk_mixop' ?(at = no) ~info (atom: string) arity : mixop =
-  [mk_atom ~info atom] :: List.init arity (Fun.const [])
-
-and mk_mixop ?(at = no) ~info (mixop: string list list) : mixop =
-  List.map (fun as_ -> List.map (fun a -> mk_atom ~info a) as_) mixop
 
 and mk_case' ?(at = no) tname mixop es : exp =
   let t = t_var tname in
   mk_case t mixop es
 
 and mk_case ?(at = no) t mixop es : exp =
-  let info = Xl.Atom.{def = ""; case = ""} in
-  let mixop' = mk_mixop ~info:info mixop in
   let e = mk_tup es in
-  caseE ~note:t (mixop', e)
+  caseE ~note:t (mixop, e)
 
 and mk_nullary' ?(at = no) tname con : exp =
-  mk_case' tname [[String.uppercase_ascii con]] []
+  let t = t_var tname in
+  mk_nullary ~at:at t con
 
 and mk_nullary ?(at = no) t con : exp =
-  mk_case t [[String.uppercase_ascii con]] []
+  let info = Xl.Atom.{def = ""; case = ""} in
+  let atom' = Xl.Atom.Atom (String.uppercase_ascii con) in
+  let atom = atom' $$ (at, info) in
+  mk_case t (Xl.Mixop.Atom atom) []
 
 and mk_tup ?(at = no) es : exp =
   let ts = List.map (fun e -> e.note) es in
@@ -359,9 +356,3 @@ let il_of_list t f l = List.map f l |> listE t
 let il_of_seq t f s = List.of_seq s |> il_of_list f t
 let il_of_opt t f opt = Option.map f opt |> optE t
 let il_of_tup t fel = List.map (fun (f, e) -> f e) fel |> tupE ~note:t
-
-
-
-(* Helper functions *)
-
-let eq_mixop (cons: string list list) mixop = Il.Eq.eq_mixop (mk_mixop ~info:(Xl.Atom.info "") cons) mixop

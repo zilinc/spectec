@@ -80,8 +80,8 @@ let rec check_eq_typs t1 t2 =
   | _ -> false
 
 let get_common_consts tcs1 tcs2 =
-  let consts1 = List.map (fun (op, (_, t, _), _) -> (Util_ocaml.mixop_to_atom_str op, t)) tcs1 in
-  let consts2 = List.map (fun (op, (_, t, _), _) -> (Util_ocaml.mixop_to_atom_str op, t)) tcs2 in
+  let consts1 = List.map (fun (op, (t, _, _), _) -> (Util_ocaml.mixop_to_atom_str op, t)) tcs1 in
+  let consts2 = List.map (fun (op, (t, _, _), _) -> (Util_ocaml.mixop_to_atom_str op, t)) tcs2 in
   (* TODO: do i even need this *)
   List.filter (fun c ->
     List.exists (fun c2 -> fst c = fst c2 && check_eq_typs (snd c) (snd c2)) consts2
@@ -149,12 +149,12 @@ let generate_numtype_conv (types : types) (t1 : numtyp) (t2 : numtyp) : string =
   end
 
 (* this may be repeated but just grouping all terminals from the IL AST into one type for now - this should probably just refer to the generated ocaml types oops *)
-type value =
+type 'a value =
   | NumV of Num.num
   | TextV of string
   | IdV of string
   | AtomV of Atom.atom
-  | MixopV of Mixop.mixop
+  | MixopV of 'a Mixop.mixop
 
 let ocaml_of_literal (e : exp) : string =
   match e.it with
@@ -259,9 +259,9 @@ and ocaml_of_typ (t : typ) : string t =
     return (t1str ^ " " ^ iterstr)
 
 (* this is copied from print.ml I don't understand yet *)
-and ocaml_of_typbind (e, t) =
-  match e.it with
-  | VarE {it = "_"; _} -> ocaml_of_typ t
+and ocaml_of_typbind (v, t) =
+  match v.it with
+  | "_" -> ocaml_of_typ t
   (*| _ -> let* estr = ocaml_of_exp e in
     let* tstr = ocaml_of_typ t in
     return (estr ^ " : " ^ tstr)*)
@@ -355,16 +355,16 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
   return (clause_funcs @ [main_func])
 
 (* ignoring the refinement type annotations for now - animation deals with this? *)
-let ocaml_of_typcase (op, (_, t, _), _hints) =
+let ocaml_of_typcase (op, (t, _, _), _hints) =
   let* args_str = ocaml_of_typ_args t in
   if args_str = "" then
     return (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str op))
   else
     return (sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str op) ^ " of " ^ args_str)
 
-let ocaml_of_typfield (atom, (_bs, t, _prems), _hints) =
+let ocaml_of_typfield (atom, (t, _bs, _prems), _hints) =
   let* typ_str = ocaml_of_typ t in
-  return (Util_ocaml.mixop_to_atom_str ~recordfield:true [[atom]] ^ ": " ^ typ_str)
+  return (Util_ocaml.mixop_to_atom_str ~recordfield:true (Xl.Mixop.Atom atom) ^ ": " ^ typ_str)
 
 let ocaml_of_deftyp dt =
   match dt.it with

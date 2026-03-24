@@ -126,7 +126,7 @@ let rec text_prose_exp (exp: exp) : string =
 let rec text_prose_premise (lv: int) (nth: int option) (prem: prem) : text =
   let number = (match nth with | None -> "" | Some n -> lister lv n ^ " ") in
   match prem.it with
-  | RulePr (id, mixop, exp) -> assert false
+  | RulePr _ -> assert false
   | IfPr e -> [number ^ "If " ^ text_prose_exp e ^ ", continue; otherwise fail."]
   | LetPr (lhs, rhs, _bs) -> [number ^ "If pattern " ^ text_prose_exp lhs ^ " can be matched by " ^ text_prose_exp rhs ^ ", continue; otherwise, fail."]
   | ElsePr -> [number ^ "If no clause above has succeeded:"]

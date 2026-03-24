@@ -57,6 +57,7 @@ $$
 & & | & \mathsf{block}~{\mathit{blocktype}}~{{\mathit{instr}}^\ast} \\
 & & | & \mathsf{loop}~{\mathit{blocktype}}~{{\mathit{instr}}^\ast} \\
 & & | & \mathsf{if}~{\mathit{blocktype}}~{{\mathit{instr}}^\ast}~\mathsf{else}~{{\mathit{instr}}^\ast} \\
+& & | & \dots \\
 \end{array}
 $$
 
@@ -84,7 +85,8 @@ $$
 & & | & \mathsf{memory{.}grow}~{\mathit{memidx}} \\
 & & | & \mathsf{memory{.}fill}~{\mathit{memidx}} \\
 & & | & \mathsf{memory{.}copy}~{\mathit{memidx}}~{\mathit{memidx}} \\
-& & | & \mathsf{memory{.}init}~{\mathit{memidx}}~{\mathit{dataidx}} \\[0.8ex]
+& & | & \mathsf{memory{.}init}~{\mathit{memidx}}~{\mathit{dataidx}} \\
+& & | & \dots \\[0.8ex]
 & {\mathit{expr}} & ::= & {{\mathit{instr}}^\ast} \\
 \end{array}
 $$
@@ -1528,6 +1530,8 @@ warning: definition `dots` was never spliced
 warning: definition `elem` was never spliced
 warning: definition `eleminst` was never spliced
 warning: definition `elemsd` was never spliced
+warning: definition `evalexprs` was never spliced
+warning: definition `evalexprss` was never spliced
 warning: definition `evalglobals` was never spliced
 warning: definition `exninst` was never spliced
 warning: definition `expanddt` was never spliced
@@ -1562,6 +1566,7 @@ warning: definition `free_absheaptype` was never spliced
 warning: definition `free_addrtype` was never spliced
 warning: definition `free_block` was never spliced
 warning: definition `free_blocktype` was never spliced
+warning: definition `free_catch` was never spliced
 warning: definition `free_comptype` was never spliced
 warning: definition `free_consttype` was never spliced
 warning: definition `free_data` was never spliced
@@ -1610,6 +1615,7 @@ warning: definition `free_table` was never spliced
 warning: definition `free_tableidx` was never spliced
 warning: definition `free_tabletype` was never spliced
 warning: definition `free_tag` was never spliced
+warning: definition `free_tagidx` was never spliced
 warning: definition `free_tagtype` was never spliced
 warning: definition `free_type` was never spliced
 warning: definition `free_typeidx` was never spliced
@@ -2401,6 +2407,8 @@ warning: definition prose `disjoint_` was never spliced
 warning: definition prose `elem` was never spliced
 warning: definition prose `eleminst` was never spliced
 warning: definition prose `elemsd` was never spliced
+warning: definition prose `evalexprs` was never spliced
+warning: definition prose `evalexprss` was never spliced
 warning: definition prose `evalglobals` was never spliced
 warning: definition prose `exninst` was never spliced
 warning: definition prose `expanddt` was never spliced
@@ -2413,6 +2421,7 @@ warning: definition prose `free_absheaptype` was never spliced
 warning: definition prose `free_addrtype` was never spliced
 warning: definition prose `free_block` was never spliced
 warning: definition prose `free_blocktype` was never spliced
+warning: definition prose `free_catch` was never spliced
 warning: definition prose `free_comptype` was never spliced
 warning: definition prose `free_consttype` was never spliced
 warning: definition prose `free_data` was never spliced
@@ -2461,6 +2470,7 @@ warning: definition prose `free_table` was never spliced
 warning: definition prose `free_tableidx` was never spliced
 warning: definition prose `free_tabletype` was never spliced
 warning: definition prose `free_tag` was never spliced
+warning: definition prose `free_tagidx` was never spliced
 warning: definition prose `free_tagtype` was never spliced
 warning: definition prose `free_type` was never spliced
 warning: definition prose `free_typeidx` was never spliced

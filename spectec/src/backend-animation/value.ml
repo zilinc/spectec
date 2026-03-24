@@ -35,8 +35,8 @@ type iter =
   | ListN of value * id option
 
 
-let vl_of_mixop : Xl.Mixop.mixop -> mixop = function
-  | mss -> List.map (fun ms -> List.map Atom.to_string ms) mss
+let vl_of_mixop : 'a Xl.Mixop.mixop -> mixop = function
+  | mss -> Xl.Mixop.flatten mss |> List.map (fun ms -> List.map Atom.to_string ms)
 
 
 let rec string_of_mixop =

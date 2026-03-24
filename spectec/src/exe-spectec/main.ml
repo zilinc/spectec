@@ -187,7 +187,7 @@ let argspec = Arg.align (
   "-o", Arg.Unit (fun () -> file_kind := Output), " Output files";
   "-l", Arg.Set logging, " Log execution steps";
   "-ll", Arg.Unit (fun () -> Backend_interpreter.Runner.logging := true;
-                             Backend_animation.Main_interpret.logging := true;
+                             (* Backend_animation.Main_interpret.logging := true; *)
                              Backend_animation.Main_interpret_v.logging := true), " Log interpreter execution";
   "-dl", Arg.String (fun s -> Util.Debug_log.(active := s :: !active)),
     " Debug-log function";
@@ -231,6 +231,7 @@ let argspec = Arg.align (
   "--print-dl", Arg.Set print_dl, " Print dl";
   "--print-al", Arg.Set print_al, " Print al";
   "--print-al-o", Arg.Set_string print_al_o, " Print al with given name";
+  "--print-il-notes", Arg.Set Il.Print.print_notes, " Print IL with type annotations";
   "--print-no-pos", Arg.Set print_no_pos, " Suppress position info in output";
   "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
     " Generate OCaml code for DL types and functions";
@@ -417,7 +418,8 @@ let () =
         if !vl then
           Backend_animation.Main_interpret_v.run env dl args
         else
-          Backend_animation.Main_interpret.run env dl args;
+          print_endline ("Not yet implemented due to merge.")
+          (* Backend_animation.Main_interpret.run env dl args; *)
       | None -> ()
       );
       (match !new_prose_ofile with
