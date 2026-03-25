@@ -124,18 +124,18 @@ let valid_clause clause : unit =
     error clause.at ("Return value uses unknown variables: \n" ^ string_of_varset (Set.diff ret_fvs known_after_premises))
 
 
-let rec infer_def env (def: dl_def) : Env.t =
+let infer_def env (def: dl_def) : Env.t =
   match def with
   | TypeDef { it = (id, ps, _insts); _ } ->
-    let env' = Valid.valid_binders Valid.valid_param env ps in
-    Env.bind_typ env' id (ps, [])
+    let _env' = Valid.valid_params env ps in
+    Env.bind_typ env id (ps, [])
   | FuncDef { it = (id, osubid, ps, t, clauses, _); _ } ->
-    let env' = Valid.valid_binders Valid.valid_param env ps in
-    Valid.valid_typ env' t;
     let fid = string_of_funcname id osubid $> id in
+    let env' = Valid.valid_params env ps in
+    Valid.valid_typ env' t;
     let clauses' = List.map snd clauses in
-    Env.bind_def env' fid (ps, t, clauses')
-  | RecDef defs -> Valid.valid_binders infer_def env defs
+    Env.bind_def env fid (ps, t, clauses')
+  | RecDef _defs -> env
 
 
 let rec valid_def env (def: dl_def) : Env.t =
@@ -144,25 +144,20 @@ let rec valid_def env (def: dl_def) : Env.t =
   match def with
   | TypeDef td ->
     let id, ps, insts = td.it in
-    let env' = Valid.valid_binders Valid.valid_param env ps in
+    let env' = Valid.valid_params env ps in
     List.iter (Valid.valid_inst env' ps) insts;
-    Env.bind_typ env' id (ps, insts)
+    Env.bind_typ env id (ps, insts)
   | FuncDef fd ->
     let (id, osubid, ps, t, clauses, _) = fd.it in
     let fid = string_of_funcname id osubid $> id in
-    (* *)
-    (*
-    List.iter (Valid.valid_param envr') ps;
-    Valid.valid_typ !envr' t;
-    List.iter (Valid.valid_func_clause envr ps t) clauses;  (* IL validation *)
-    *)
-    (* *)
+    let env' = Valid.valid_params env ps in
+    Valid.valid_typ env' t;
     let clauses' = List.map snd clauses in
-    let env' = Env.bind_def env fid (ps, t, clauses') in
+    List.iter (Valid.valid_clause env' fid ps t) clauses';  (* IL validation *)
     List.iter valid_clause clauses';  (* For animation *)
-    env'
+    Env.bind_def env fid (ps, t, clauses')
   | RecDef ds ->
-    let env' = Valid.valid_binders infer_def env ds in
+    let env'  = Valid.valid_binders infer_def env  ds in
     let env'' = Valid.valid_binders valid_def env' ds in
     List.iter (fun d ->
       match List.hd ds, d with

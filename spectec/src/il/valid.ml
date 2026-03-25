@@ -3,6 +3,7 @@ open Source
 open Ast
 open Xl
 open Print
+open Either
 
 
 (* Errors *)
@@ -38,44 +39,42 @@ let expand_typdef (env : Env.t) t = (Eval.reduce_typdef env t).it
 
 type direction = Infer | Check
 
-let as_error at phrase dir t expected =
-  match dir with
-  | Infer ->
-    error at (
-      phrase ^ "'s type `" ^ string_of_typ t ^
-      "` does not match expected type `" ^ expected ^ "`"
-    )
-  | Check ->
-    error at (
-      phrase ^ "'s type does not match expected type `" ^
-      string_of_typ t ^ "`"
-    )
+let as_error at phrase dir t t' expected =
+  let dir' = match dir with Infer -> "inferred" | Check -> "given" in
+  let str_t' = (match t' with
+  | Left  t'' -> string_of_typ t''
+  | Right t'' -> string_of_deftyp t''
+  ) in
+  error at (
+    phrase ^ "'s (" ^ dir' ^ ") type `" ^ string_of_typ t ^ "`(expanded to " ^ str_t' ^ ")" ^
+    " does not match expected type `" ^ expected ^ "`"
+  )
 
 let as_iter_typ iter phrase env dir t at : typ =
   match expand_typ env t with
   | IterT (t1, iter2) when iter = iter2 -> t1
-  | _ -> as_error at phrase dir t ("(_)" ^ string_of_iter iter)
+  | t' -> as_error at phrase dir t (Left (t' $> t)) ("(_)" ^ string_of_iter iter)
 
 let as_list_typ phrase env dir t at : typ =
   match expand_typ env t with
   | IterT (t1, (List | List1 | ListN _)) -> t1
-  | _ -> as_error at phrase dir t "(_)*"
+  | t' -> as_error at phrase dir t (Left (t' $> t)) "(_)*"
 
 let as_tup_typ phrase env dir t at : (id * typ) list =
   match expand_typ env t with
   | TupT xts -> xts
-  | _ -> as_error at phrase dir t "(_,...,_)"
+  | t' -> as_error at phrase dir t (Left (t' $> t)) "(_,...,_)"
 
 
 let as_struct_typ phrase env dir t at : typfield list =
   match expand_typdef env t with
   | StructT tfs -> tfs
-  | _ -> as_error at phrase dir t "{...}"
+  | t' -> as_error at phrase dir t (Right (t' $ t.at)) "{...}"
 
 let as_variant_typ phrase env dir t at : typcase list =
   match expand_typdef env t with
   | VariantT tcs -> tcs
-  | _ -> as_error at phrase dir t "| ..."
+  | t' -> as_error at phrase dir t (Right (t' $ t.at)) "| ..."
 
 let rec as_comp_typ phrase env dir t at =
   match expand_typdef env t with

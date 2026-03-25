@@ -157,3 +157,11 @@ let rec env_of_def env d =
 
 let env_of_script ds =
   List.fold_left env_of_def empty ds
+
+
+(* Pretty-printing *)
+
+let string_of_env_typs env =
+  let m = env.typs |> Map.to_list in
+  let mk_def n tdef = let (ps, ins) = tdef in TypD (n $ no_region, ps, ins) $ no_region in
+  String.concat ", " (List.map (fun (k, v) -> k ^ " ↦ " ^ Print.string_of_def (mk_def k v)) m)
