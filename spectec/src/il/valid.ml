@@ -139,7 +139,8 @@ let infer_cmpop at op ot =
   match op, ot with
   | #Bool.cmpop, #Bool.typ -> None
   | #Num.cmpop, (#Num.typ as nt) -> Some (NumT nt)
-  | _, _ -> error at ("malformed comparison operator annotation")
+  | #Bool.cmpop, _ -> error at ("malformed comparison operator annotation: [B]" ^ string_of_cmpop op ^ "; " ^ string_of_optyp ot)
+  | #Num.cmpop, _ -> error at ("malformed comparison operator annotation: [N]" ^ string_of_cmpop op ^ "; " ^ string_of_optyp ot)
 
 
 (* Atoms and Mixops *)
@@ -313,7 +314,10 @@ and infer_exp (env : Env.t) e : typ =
     | [(op', (t, _, _), _)] when Eq.eq_mixop op op' -> t
     | _ -> error e.at "invalid case projection";
     )
-  | OptE _ -> error e.at "cannot infer type of option"
+  | OptE None -> error e.at "cannot infer type of option"
+  | OptE (Some e1) ->
+    let t1 = infer_exp env e1 in
+    IterT (t1, Opt) $ e1.at
   | TheE e1 -> as_iter_typ Opt "option" env Check (infer_exp env e1) e1.at
   | ListE es ->
     (match List.map (infer_exp env) es with
@@ -606,9 +610,9 @@ and valid_prem env prem =
   | IfPr e ->
     valid_exp env e (BoolT $ e.at)
   | LetPr (e1, e2, xs) ->
-    let t = infer_exp env e2 in
-    valid_exp ~side:`Lhs env e1 t;
-    valid_exp env e2 t;
+    let t = infer_exp env e1 in
+    valid_exp ~side:`Rhs env e2 t;
+    valid_exp env e1 t;
     let target_ids = Free.{empty with varid = Set.of_list xs} in
     let free_ids = Free.(free_exp e1) in
     if not (Free.subset target_ids free_ids) then

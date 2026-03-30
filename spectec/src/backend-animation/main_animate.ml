@@ -34,13 +34,26 @@ let build_animation_hints il : unit =
         | _                 -> ()
         )
       ) hints
+    | RuleH (rel_id, rule_id, hints) ->
+      List.iter (fun hint ->
+        (match hint.hintid.it with
+        | "no_animate" -> H.add_na_rule rel_id.it rule_id.it 
+        | _ -> ()
+        )
+      ) hints
     | TypH _ | GramH _  -> ()
   ) hints
 
 let rec is_anim_target il_def =
   match il_def.it with
   | DecD (id, ps, t, _) when H.is_na_func id.it -> Some (DecD (id, ps, t, []) $ il_def.at)
-  | RelD (id, quants, mixop, t, rules) when H.is_a_rel id.it -> Some (RelD (id, quants, mixop, t, rules) $ il_def.at)
+  | RelD (id, quants, mixop, t, rules) when H.is_a_rel id.it ->
+    let rules' = List.fold_left (fun rs r ->
+      match r.it with
+      | RuleD (rule_id, _, _, _, _) when H.is_na_rule id.it rule_id.it -> rs
+      | _ -> r::rs
+    ) [] rules |> List.rev in
+    Some (RelD (id, quants, mixop, t, rules') $ il_def.at)
   | RelD _ -> None
   | RecD defs -> Some (RecD (List.filter_map is_anim_target defs) $ il_def.at)
   | _ -> Some il_def

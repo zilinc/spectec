@@ -58,6 +58,13 @@ let rec string_of_iter iter =
 
 and string_of_numtyp = Num.string_of_typ
 
+and string_of_optyp = function
+  | `BoolT -> "bool"
+  | `NatT  -> "nat"
+  | `IntT  -> "int"
+  | `RatT  -> "rat"
+  | `RealT -> "real"
+
 and string_of_typ t =
   match t.it with
   | VarT (x, as1) -> string_of_id x ^ string_of_args as1

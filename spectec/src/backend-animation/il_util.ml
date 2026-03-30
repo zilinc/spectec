@@ -191,8 +191,15 @@ and optE' ?(at = no) oe : exp = match oe with
   | Some e -> let t = iterT (e.note) in optE t oe
 and strE ?(at = no) ~note r = StrE r |> mk_expr at note
 and subE ?(at = no) id t1 t2 = SubE (id, t1, t2) |> mk_expr at t2
-and eqE ?(at = no) lhs rhs = CmpE (`EqOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
-and gtE ?(at = no) lhs rhs = CmpE (`GtOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
+and eqE ?(at = no) lhs rhs =
+  CmpE (`EqOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
+and gtE ?(at = no) ?(ot = `NatT) lhs rhs =
+  CmpE (`GtOp, ot, lhs, rhs) $$ at % (BoolT $ at)
+and leE ?(at = no) ?(ot = `NatT) lhs rhs =
+  CmpE (`LeOp, ot, lhs, rhs) $$ at % (BoolT $ at)
+and ltE ?(at = no) ?(ot = `NatT) lhs rhs =
+  CmpE (`LtOp, ot, lhs, rhs) $$ at % (BoolT $ at)
+
 and lenE ?(at = no) e = LenE e $$ at % (natT ~at:at ())
 
 (*

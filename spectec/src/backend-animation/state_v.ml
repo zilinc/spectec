@@ -189,12 +189,14 @@ module Hints = struct
   let add_a_inv fid            = animation_hints.animate_inv      <- animation_hints.animate_inv @ [fid]
   let add_a_rel   rid mm       = animation_hints.animate_rels     <- M.add rid mm animation_hints.animate_rels
   let add_a_builtin rid mm     = animation_hints.animate_builtin  <- M.add rid mm animation_hints.animate_builtin
+  let add_na_rule rel_id rule_id = animation_hints.no_animate_rules <- animation_hints.no_animate_rules @ [(rel_id, rule_id)]
 
   let is_na_func   fid = List.mem fid animation_hints.no_animate_funcs
   let is_a_func    fid = M.mem fid animation_hints.animate_funcs
   let is_a_inv     fid = List.mem fid animation_hints.animate_inv
   let is_a_rel     rid = M.mem rid animation_hints.animate_rels
   let is_a_builtin rid = M.mem rid animation_hints.animate_builtin
+  let is_na_rule rel_id rule_id = List.mem (rel_id, rule_id) animation_hints.no_animate_rules
 
   let find_a_func    fid = M.find fid animation_hints.animate_funcs
   let find_a_rel     rid = M.find rid animation_hints.animate_rels
