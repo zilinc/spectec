@@ -9,13 +9,13 @@ let step_table : (string * string * int) Map.t ref =
     ("DROP"                , 1);
     ("SELECT"              , 3);
     ("IF"                  , 1);
-    ("BR"                  , 0);  (* ??? *)
+    (* ("BR"                  , 0); *)
     ("BR_IF"               , 1);
     ("BR_TABLE"            , 1);
     ("BR_ON_NULL"          , 1);
     ("BR_ON_NON_NULL"      , 1);
     ("CALL_INDIRECT"       , 0);
-    ("RETURN"              , 0);  (* ??? *)
+    (* ("RETURN"              , 0); *)
     ("RETURN_CALL_INDIRECT", 0);
     ("UNOP"                , 0);
     ("BINOP"               , 0);
@@ -61,7 +61,7 @@ let step_table : (string * string * int) Map.t ref =
     ("BR_ON_CAST_FAIL"     , 0);
     ("CALL"                , 0);
     ("RETURN_CALL"         , 0);
-    ("RETURN_CALL_REF"     , 0);
+    (* ("RETURN_CALL_REF"     , 0); *)
     ("THROW_REF"           , 0);
     ("TRY_TABLE"           , 0);
     ("REF.NULL"            , 0);

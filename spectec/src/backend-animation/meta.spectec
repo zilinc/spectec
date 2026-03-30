@@ -260,6 +260,7 @@ relation Step_read     hint(animate %1 -> %2)
 rule Step_pure/br-label-zero               hint(no_animate)
 rule Step_pure/br-label-succ               hint(no_animate)
 rule Step_pure/br-handler                  hint(no_animate)
+
 rule Step_pure/return-frame                hint(no_animate)
 rule Step_pure/return-label                hint(no_animate)
 rule Step_pure/return-handler              hint(no_animate)
@@ -270,6 +271,10 @@ rule Step_read/return_call_ref-frame-null  hint(no_animate)
 rule Step_read/return_call_ref-frame-addr  hint(no_animate)
 
 rule Step_pure/trap-instrs                 hint(no_animate)
+rule Step_pure/trap-label                  hint(no_animate)
+rule Step_pure/trap-handler                hint(no_animate)
+rule Step_pure/trap-frame                  hint(no_animate)
+
 rule Step_read/throw_ref-instrs            hint(no_animate)
 
 rule Step/ctxt-instrs                      hint(no_animate)
