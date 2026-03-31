@@ -4,7 +4,7 @@ open Il.Walk
 
 module StringSet = Set.Make(String)
 
-type rocq_env = {
+type isabelle_env = {
   mutable tf_set : StringSet.t;
   mutable il_env : Il.Env.t;
   mutable proj_set : StringSet.t
@@ -16,11 +16,13 @@ let new_env () = {
   proj_set = StringSet.empty
 }
 
-let iter_prem_rels_list = ["List.Forall"; "List.Forall2"; "List_Forall3"]
-let iter_exp_lst_funcs = ["seq.map"; "list_zipWith"; "list_map3"]
-let sup_iter_prem_rels_list = ["List_Foralli"]
-let iter_exp_opt_funcs = ["option_map"; "option_zipWith"; "option_map3"]
-let error at msg = Util.Error.error at "Rocq translation" msg 
+
+
+let iter_prem_rels_list = ["list_all"; "list_all2"; "list_all3"] (* TODO: define list_all3 in the preambule *)
+let iter_exp_lst_funcs = ["map"; "list_zipWith"; "list_map3"] (* TODO: define list_zipWith and list_map3 in the preambule *)
+let sup_iter_prem_rels_list = ["list_alli"] (* TODO: define list_alli in the preambule *)
+let iter_exp_opt_funcs = ["map_option"; "option_zipWith"; "option_map3"] (* TODO: define option_zipWith and option_map3 in the preambule *)
+let error at msg = Util.Error.error at "Isabelle translation" msg 
 
 let env_ref = ref (new_env ())
 
@@ -66,6 +68,7 @@ let var_prefix = "var_"
 
 (* let render_rule_id rel_id id = rel_id ^ "__" ^ id  *)
 
+(* TODO: change to Isabelle *)
 let reserved_ids = 
   ["N"; "in"; "In"; 
   "S";
@@ -108,6 +111,7 @@ let string_of_list prefix suffix delim str_func ls =
   | [] -> ""
   | _ -> prefix ^ String.concat delim (List.map str_func ls) ^ suffix
 
+(* TODO: change to Isabelle *)
 let square_parens s = "[" ^ s ^ "]"
 let ssreflect_square_parens s = "[::" ^ s ^ "]"
 let parens s = "(" ^ s ^ ")"
@@ -166,6 +170,8 @@ let comment_desc_def d =
   | HintD _ -> "Hint Definition"
   | GramD _ -> "Grammar Production Definition"
 
+
+(* TODO: change to Isabelle *)
 let render_unop unop = 
   match unop with
   | `NotOp   -> "negb "
@@ -209,6 +215,7 @@ let render_atom ?(in_mixop = false) a =
   | Xl.Atom.Atom a -> render_id a
   | _ -> ""
 
+(* TODO: change to Isabelle? *)
 let render_mixop typ_id (m : mixop) = 
   let s = (match m with
     (* | [{it = Atom a; _}] :: tail when List.for_all ((=) []) tail -> render_id a *)
@@ -226,6 +233,7 @@ let get_param_id b =
   match b.it with
   | ExpP (id, _) | TypP id | DefP (id, _, _) | GramP (id, _, _) -> render_id id.it
 
+(* TODO: change to Isabelle *)
 let render_numtyp nt = 
   match nt with
   | `NatT -> "nat"
@@ -253,6 +261,7 @@ let get_type_args t =
   | VarT (_, args) -> args
   | _ -> error t.at ("Following type should be a variable type: " ^ Il.Print.string_of_typ t)
 
+(* TODO: change to Isabelle? *)
 let rec render_param_type exp_type param = 
   match param.it with
   | ExpP (_, typ) -> render_type exp_type typ
@@ -261,6 +270,7 @@ let rec render_param_type exp_type param =
     string_of_list_suffix " -> " " -> " (render_param_type exp_type) params ^ render_type exp_type typ
   | GramP _ -> comment_parens ("Unsupported param: " ^ Il.Print.string_of_param param)
 
+(* TODO: change to Isabelle *)
 and render_type exp_type typ = 
   let rt_func = render_type exp_type in
   match typ.it with
@@ -274,6 +284,7 @@ and render_type exp_type typ =
   | IterT (t, Opt) -> parens ("option " ^ rt_func t)
   | IterT (t, _) -> parens ("seq " ^ rt_func t)
 
+(* TODO: change to Isabelle *)
 and render_exp exp_type exp =
   let r_func = render_exp exp_type in
   match exp.it with 
@@ -356,7 +367,7 @@ and render_exp exp_type exp =
     let lst = if iter = Opt then iter_exp_opt_funcs else iter_exp_lst_funcs in
     let pred_name = match (List.nth_opt lst n) with 
     | Some s -> s
-    | None -> error exp.at "Iteration exceeded the supported amount for rocq translation"
+    | None -> error exp.at "Iteration exceeded the supported amount for isabelle translation"
     in 
     parens (pred_name ^ " " ^ render_lambda quants (r_func e) ^ " " ^ 
     String.concat " " (List.map (render_exp exp_type) iter_exps))
@@ -371,6 +382,7 @@ and render_arg exp_type a =
   | DefA id -> render_id id.it 
   | _ -> comment_parens ("Unsupported arg: " ^ Il.Print.string_of_arg a)
 
+(* TODO: change to Isabelle *)
 and render_quant exp_type b =
   match b.it with
   | ExpP (id, typ) -> parens (render_id id.it  ^ " : " ^ render_type exp_type typ)
@@ -381,6 +393,7 @@ and render_quant exp_type b =
     render_type exp_type typ)
   | GramP _ -> comment_parens ("Unsupported quant: " ^ Il.Print.string_of_quant b)
 
+(* TODO: change to Isabelle *)
 and render_param exp_type param = 
   parens (get_param_id param ^ " : " ^ render_param_type exp_type param)
 
@@ -391,6 +404,7 @@ and transform_list_path (p : path) =
   | IdxP (p', _) | SliceP (p', _, _) | DotP (p', _) when p'.it = RootP -> []
   | IdxP (p', _) | SliceP (p', _, _) | DotP (p', _) -> p' :: transform_list_path p'
 
+(* TODO: change to Isabelle *)
 and render_lambda quants text =
   parens ("fun " ^ String.concat " " quants ^ " => " ^ text)
 
@@ -398,6 +412,7 @@ and render_path_start (p : path) start_exp is_extend end_exp =
   let paths = List.rev (p :: transform_list_path p) in
   (render_path paths (start_exp.note) p.at 0 (Some start_exp) is_extend end_exp)
 
+(* TODO: change to Isabelle *)
 and render_path (paths : path list) typ at n name is_extend end_exp = 
   let render_record_update t1 t2 t3 =
     parens (t1 ^ " <| " ^ t2 ^ " := " ^ t3 ^ " |>")
@@ -502,6 +517,7 @@ let render_params params =
 let render_match_args args =
   string_of_list_prefix " " ", " (render_arg LHS) args
 
+(* TODO: change to Isabelle *)
 let string_of_eqtype_proof recursive (cant_do_equality: bool) id (quants : quant list) =
   let quanters = render_quants quants in 
   let quanter_ids = render_quants_ids quants in
@@ -539,9 +555,12 @@ let string_of_eqtype_proof recursive (cant_do_equality: bool) id (quants : quant
   "HB.instance Definition _" ^ quanters ^ " := hasDecEq.Build " ^ parens (id' ^ quanter_ids) ^ " " ^ parens ("eq" ^ id' ^ "P" ^ quanter_ids) ^ ".\n" ^
   "Hint Resolve " ^ id' ^ "_eq_dec : eq_dec_db" 
 
+(* TODO: change to Isabelle *)
 let string_of_relation_args typ = 
   string_of_list "" " -> " " -> " (render_type REL) (transform_case_typ typ)
-  
+
+
+(* TODO: change to Isabelle *)
 let rec render_prem prem =
   let r_func = render_prem in 
   match prem.it with
@@ -558,7 +577,7 @@ let rec render_prem prem =
     let n = List.length ps - 1 in
     let pred_name = match (List.nth_opt sup_iter_prem_rels_list n) with 
     | Some s -> s
-    | None -> error prem.at "Iteration exceeded the supported amount for rocq translation"
+    | None -> error prem.at "Iteration exceeded the supported amount for isabelle translation"
     in 
     pred_name ^ " " ^ render_lambda (i.it :: quants) (r_func p) ^ " " ^ 
     String.concat " " (List.map (render_exp REL) iter_exps)
@@ -569,16 +588,18 @@ let rec render_prem prem =
     let n = List.length ps - 1 in
     let pred_name = match (List.nth_opt iter_prem_rels_list n) with 
     | Some s -> s
-    | None -> error prem.at "Iteration exceeded the supported amount for rocq translation"
+    | None -> error prem.at "Iteration exceeded the supported amount for isabelle translation"
     in 
     pred_name ^ " " ^ render_lambda quants (r_func p) ^ " " ^ 
     String.concat " " (List.map (render_exp REL) iter_exps |> List.map option_conversion)
   | LetPr _ -> 
     "True " ^ comment_parens ("Unsupported premise: " ^ Il.Print.string_of_prem prem)
- 
+
+(* TODO: change to Isabelle *)
 let render_typealias id quants typ = 
   "Definition " ^ id ^ render_quants quants ^ " : Type := " ^ render_type RHS typ
 
+(* TODO: change to Isabelle *)
 let render_record recursive id quants fields = 
   let constructor_name = "MK" ^ id in
   let inhabitance_quanters = render_quants quants in 
@@ -617,6 +638,7 @@ let rec has_typ id t =
   | TupT pairs -> List.exists (fun (_, t') -> has_typ id t') pairs
   | _ -> false
 
+(* TODO: change to Isabelle *)
 let inhabitance_proof id quants cases = 
   (* Inhabitance proof for default values *)
   let inhabitance_quanters = render_quants quants in 
@@ -634,6 +656,7 @@ let inhabitance_proof id quants cases =
   in
   render_proof cases 
 
+(* TODO: change to Isabelle *)
 let render_coercion (base_typ_id, typ_params) coerc_typ_id proj_func_id = 
   "Global Instance " ^ proj_func_id ^ "_coercion" ^ render_params typ_params ^ " : Coercion " ^ base_typ_id ^ " " ^ coerc_typ_id ^ " := { coerce := " ^ proj_func_id ^ 
   string_of_list_prefix " " " " get_param_id typ_params ^ " }" 
@@ -641,12 +664,14 @@ let render_coercion (base_typ_id, typ_params) coerc_typ_id proj_func_id =
 let cant_do_equality quants cases = 
   (List.exists is_typ_quant quants) ||
   (List.exists (fun (_, (_, quants', _), _) -> List.exists is_typ_quant quants') cases)
-  
+
+(* TODO: change to Isabelle *)
 let render_case_typs t = 
   let typs = transform_case_args t in
   string_of_list_prefix " " " " (fun (i, t) -> 
     parens (render_id i.it ^ " : " ^ render_type RHS t)) typs
 
+(* TODO: change to Isabelle *)
 let render_variant_typ is_recursive prefix id quants cases = 
   prefix ^ id ^ render_quants quants ^ " : Type :=\n\t" ^
   String.concat "\n\t" (List.map (fun (m, (t, _, _), _) ->
@@ -658,6 +683,7 @@ let render_variant_typ is_recursive prefix id quants cases =
   (* Eq proof *)
   ".\n\n" ^ string_of_eqtype_proof is_recursive (cant_do_equality quants cases) id quants
 
+(* TODO: change to Isabelle *)
 let render_extra_clause params = 
   "|" ^ string_of_list_prefix " " ", " (fun _ -> "_") params ^ " => default_val"
 
@@ -676,6 +702,7 @@ let render_single_type id at params =
   | {it = ExpP (_, typ); _} :: ps when List.for_all is_typ_param ps -> (render_type RHS typ, ps)
   | _ -> error at ("Given projection function: " ^ id ^ " has invalid parameters!")
 
+(* TODO: change to Isabelle *)
 let render_function_def prefix id at params r_typ clauses = 
   let has_typ_fam = List.length params > 1 && List.exists is_type_family_param params in
   let is_proj_func = StringSet.mem id !env_ref.proj_set in
@@ -701,6 +728,7 @@ let render_function_def prefix id at params r_typ clauses =
     render_coercion (render_single_type id at params) (render_type RHS r_typ) id 
   else ""
 
+(* TODO: change to Isabelle *)
 let render_relation prefix id typ rules = 
   prefix ^ id ^ " : " ^ string_of_relation_args typ ^ "Prop :=\n\t" ^
   String.concat "\n\t" (List.map (fun rule -> match rule.it with
@@ -710,15 +738,19 @@ let render_relation prefix id typ rules =
       "| " ^ render_id (rule_id.it) ^ " : " ^ forall_quantifiers ^ string_prems ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))
   ) rules)
 
+(* TODO: change to Isabelle *)
 let render_axiom prefix id params r_typ =
   prefix ^ id ^ " : " ^ string_of_list "forall " ", " " " (render_param RHS) params ^ render_type RHS r_typ
 
+(* TODO: change to Isabelle *)
 let render_rel_axiom prefix id typ =
   prefix ^ id ^ " : " ^ string_of_relation_args typ ^ "Prop"
 
+(* TODO: change to Isabelle *)
 let render_global_declaration id typ exp = 
   "Definition " ^ id ^ " : " ^ render_type RHS typ ^ " := " ^ render_exp RHS exp
 
+(* TODO: change to Isabelle *)
 let render_extra_info def = 
   match def.it with
   | TypD (id, _, [{it = InstD (quants, _, {it = VariantT typcases; _}); _}]) -> 
@@ -730,6 +762,7 @@ let has_prems c =
   match c.it with
   | DefD (_, _, _, prems) -> prems <> []
 
+(* TODO: change to Isabelle *)
 let start_prefix def = 
   match def.it with
   | _ when is_inductive def -> "Inductive "
@@ -744,6 +777,7 @@ let is_axiom def =
   | DecD (_, _, _, _clauses) -> true
   | _ -> false
 
+(* TODO: change to Isabelle *)
 (* TODO - revise mutual recursion with other defs such as records and axioms *)
 let rec string_of_def has_endline recursive def = 
   let end_newline = if has_endline then ".\n\n" else "" in 
@@ -774,7 +808,7 @@ let rec string_of_def has_endline recursive def =
   | RelD (id, _, _, typ, rules) -> 
     let prefix = if recursive then "" else "Inductive " in
     start ^ render_relation prefix (render_id id.it) typ rules ^ end_newline
-  (* Mutual recursion - special handling for rocq *)
+  (* Mutual recursion - special handling for isabelle *)
   | RecD defs -> start ^ (match defs with
     | [] -> ""
     | [d] -> 
@@ -796,143 +830,147 @@ let rec string_of_def has_endline recursive def =
     )
   | _ -> error def.at ("Unsupported def: " ^ Il.Print.string_of_def def)
 
-let exported_string = 
+
+let exported_string =
   "(* Imported Code *)\n" ^
-  "From Coq Require Import String List Unicode.Utf8 Reals.\n" ^
-  "From mathcomp Require Import ssreflect ssrfun ssrnat ssrbool seq eqtype rat ssrint.\n" ^
-  "From HB Require Import structures.\n" ^
-  "From RecordUpdate Require Import RecordSet.\n" ^
-  "Declare Scope wasm_scope.\n\n" ^
-  "Class Inhabited (T: Type) := { default_val : T }.\n\n" ^
-  "Definition lookup_total {T: Type} {_: Inhabited T} (l: seq T) (n: nat) : T :=\n" ^
-  "\tseq.nth default_val l n.\n\n" ^
-  "Definition the {T : Type} {_ : Inhabited T} (arg : option T) : T :=\n" ^
-	"\tmatch arg with\n" ^
-	"\t\t| None => default_val\n" ^
-	"\t\t| Some v => v\n" ^
-	"\tend.\n\n" ^
-  "Definition list_zipWith {X Y Z : Type} (f : X -> Y -> Z) (xs : seq X) (ys : seq Y) : seq Z :=\n" ^
-  "\tseq.map (fun '(x, y) => f x y) (seq.zip xs ys).\n\n" ^
-  "Definition option_zipWith {α β γ: Type} (f: α -> β -> γ) (x: option α) (y: option β): option γ := \n" ^
-  "\tmatch x, y with\n" ^
-  "\t\t| Some x, Some y => Some (f x y)\n" ^
-  "\t\t| _, _ => None\n" ^
-  "\tend.\n\n" ^
-  "Fixpoint list_update {α: Type} (l: seq α) (n: nat) (y: α): seq α :=\n" ^
-  "\tmatch l, n with\n" ^
-  "\t\t| nil, _ => nil\n" ^
-  "\t\t| x :: l', O => y :: l'\n" ^
-  "\t\t| x :: l', S n => x :: list_update l' n y\n" ^
-  "\tend.\n\n" ^
-  "Definition option_append {α: Type} (x y: option α) : option α :=\n" ^
-  "\tmatch x with\n" ^
-  "\t\t| Some _ => x\n" ^
-  "\t\t| None => y\n" ^
-  "\tend.\n\n" ^
-  "Definition option_map {α β : Type} (f : α -> β) (x : option α) : option β :=\n" ^
-	"\tmatch x with\n" ^
-	"\t\t| Some x => Some (f x)\n" ^
-	"\t\t| _ => None\n" ^
-	"\tend.\n\n" ^
-  "Fixpoint list_update_func {α: Type} (l: seq α) (n: nat) (y: α -> α): seq α :=\n" ^
-	"\tmatch l, n with\n" ^
-	"\t\t| nil, _ => nil\n" ^
-	"\t\t| x :: l', O => (y x) :: l'\n" ^
-	"\t\t| x :: l', S n => x :: list_update_func l' n y\n" ^
-	"\tend.\n\n" ^
-  "Fixpoint list_slice {α: Type} (l: seq α) (i: nat) (j: nat): seq α :=\n" ^
-	"\tmatch l, i, j with\n" ^
-	"\t\t| nil, _, _ => nil\n" ^
-	"\t\t| x :: l', O, O => nil\n" ^
-	"\t\t| x :: l', S n, O => nil\n" ^
-	"\t\t| x :: l', O, S m => x :: list_slice l' 0 m\n" ^
-	"\t\t| x :: l', S n, m => list_slice l' n m\n" ^
-	"\tend.\n\n" ^
-  "Fixpoint list_slice_update {α: Type} (l: seq α) (i: nat) (j: nat) (update_l: seq α): seq α :=\n" ^
-	"\tmatch l, i, j, update_l with\n" ^
-	"\t\t| nil, _, _, _ => nil\n" ^
-	"\t\t| l', _, _, nil => l'\n" ^
-	"\t\t| x :: l', O, O, _ => nil\n" ^
-	"\t\t| x :: l', S n, O, _ => nil\n" ^
-	"\t\t| x :: l', O, S m, y :: u_l' => y :: list_slice_update l' 0 m u_l'\n" ^
-	"\t\t| x :: l', S n, m, _ => x :: list_slice_update l' n m update_l\n" ^
-	"\tend.\n\n" ^
-  "Definition list_extend {α: Type} (l: seq α) (y: α): seq α :=\n" ^
-  "\ty :: l.\n\n" ^
-  "Definition option_map3 {A B C D: Type} (f: A -> B -> C -> D) (x: option A) (y: option B) (z: option C): option D :=\n" ^ 
-	"\tmatch x, y, z with\n" ^
-	"\t\t| Some x, Some y, Some z => Some (f x y z)\n" ^ 
-	"\t\t| _, _, _ => None\n" ^
-	"\tend.\n\n" ^
-  "Definition list_map3 {A B C D: Type} (f : A -> B -> C -> D) (xs : seq A) (ys : seq B) (zs : seq C) : seq D :=\n" ^
-	"\tseq.map (fun '(x, (y, z)) => f x y z) (seq.zip xs (seq.zip ys zs)).\n\n" ^
-  "Inductive List_Forall3 {A B C: Type} (R : A -> B -> C -> Prop): seq A -> seq B -> seq C -> Prop :=\n" ^
-  "\t| Forall3_nil : List_Forall3 R nil nil nil\n" ^ 
-  "\t| Forall3_cons : forall x y z l l' l'',\n"^
-  "\t\tR x y z -> List_Forall3 R l l' l'' -> List_Forall3 R (x :: l) (y :: l') (z :: l'').\n\n" ^
-  "Inductive Foralli_help {X : Type} (f : nat -> X -> Prop) : nat -> list X -> Prop :=\n" ^
-	"\t| Foralli_nil : forall n, Foralli_help f n nil\n" ^
-	"\t| Foralli_cons : forall x l n,\n" ^
-	"\tf n x -> Foralli_help f (n + 1) l -> Foralli_help f n (x::l).\n\n" ^
-  "Definition List_Foralli {X : Type} (f : nat -> X -> Prop) (xs : list X) : Prop :=\n" ^ 
-	"\tForalli_help f 0 xs.\n\n" ^
-  "Class Append (α: Type) := _append : α -> α -> α.\n\n" ^
-  "Infix \"@@\" := _append (right associativity, at level 60) : wasm_scope.\n\n" ^
-  "Global Instance Append_List_ {α: Type}: Append (seq α) := { _append l1 l2 := seq.cat l1 l2 }.\n\n" ^
-  "Global Instance Append_Option {α: Type}: Append (option α) := { _append o1 o2 := option_append o1 o2 }.\n\n" ^
-  "Global Instance Append_nat : Append (nat) := { _append n1 n2 := n1 + n2}.\n\n" ^
-  "Global Instance Inh_unit : Inhabited unit := { default_val := tt }.\n\n" ^
-  "Global Instance Inh_nat : Inhabited nat := { default_val := O }.\n\n" ^
-  "Global Instance Inh_list {T: Type} : Inhabited (seq T) := { default_val := nil }.\n\n" ^
-  "Global Instance Inh_option {T: Type} : Inhabited (option T) := { default_val := None }.\n\n" ^
-  "Global Instance Inh_Z : Inhabited Z := { default_val := Z0 }.\n\n" ^
-  "Global Instance Inh_prod {T1 T2: Type} {_: Inhabited T1} {_: Inhabited T2} : Inhabited (prod T1 T2) := { default_val := (default_val, default_val) }.\n\n" ^
-  "Global Instance Inh_type : Inhabited Type := { default_val := nat }.\n\n" ^
-  "Definition option_to_list {T: Type} (arg : option T) : seq T :=\n" ^
-	"\tmatch arg with\n" ^
-	"\t\t| None => nil\n" ^
-  "\t\t| Some a => a :: nil\n" ^ 
-	"\tend.\n\n" ^
-  "Coercion option_to_list: option >-> seq.\n\n" ^
-  "Coercion Z.to_nat: Z >-> nat.\n\n" ^
-  "Coercion Z.of_nat: nat >-> Z.\n\n" ^
-  "Coercion ratz: int >-> rat.\n\n" ^
-  "Create HintDb eq_dec_db.\n\n" ^
-  "Ltac decidable_equality_step :=\n" ^
-  "  do [ by eauto with eq_dec_db | decide equality ].\n\n" ^
-  "Lemma eq_dec_Equality_axiom :\n" ^
-  "  forall (T : Type) (eq_dec : forall (x y : T), decidable (x = y)),\n" ^
-  "  let eqb v1 v2 := is_left (eq_dec v1 v2) in Equality.axiom eqb.\n" ^
-  "Proof.\n" ^
-  "  move=> T eq_dec eqb x y. rewrite /eqb.\n" ^
-  "  case: (eq_dec x y); by [apply: ReflectT | apply: ReflectF].\n" ^
-  "Qed.\n\n" ^
-  "Class Coercion (A B : Type) := { coerce : A -> B }.\n\n" ^
-  "Notation \"x ':>' B\" := (coerce (A:=_) (B:=B) x)\n" ^
-  "(at level 70, right associativity).\n\n" ^
-  "Definition option_coerce {A B : Type} `{Coercion A B} (a_opt : option A): option B :=\n" ^
-  "\tmatch a_opt with\n" ^
-  "\t\t| Some a => Some (coerce a)\n" ^
-  "\t\t| None => None\n" ^
-  "\tend.\n\n" ^
-  "Definition list_coerce {A B : Type} `{Coercion A B} (a_list : seq A): seq B :=\n" ^
-  "\t[seq (coerce a) | a <- a_list].\n\n" ^
-  "Definition id_coerce {A : Type} (a : A) : A := a.\n\n" ^
-  "Definition transitive_coerce {A B C : Type} `{Coercion A B} `{Coercion B C} (a : A): C :=\n" ^
-	"\tcoerce (coerce a).\n\n" ^
-  "Definition total_coerce {A B: Type} `{Coercion A (option B)} {_ : Inhabited B} (a : A): B :=\n" ^
-	"\tthe (coerce a).\n\n" ^
-  "Global Instance option_coercion (A B : Type) {_: Coercion A B}: Coercion (option A) (option B) := { coerce := option_coerce }.\n\n" ^
-  "Global Instance list_coercion (A B : Type) {_: Coercion A B}: Coercion (seq A) (seq B) := { coerce := list_coerce }.\n\n" ^
-  "Global Instance id_coercion (A : Type): Coercion A A := { coerce := id_coerce }.\n\n" ^
-  "Global Instance transitive_coercion (A B C : Type) `{Coercion A B} `{Coercion B C}: Coercion A C := { coerce := transitive_coerce }.\n\n" ^
-  "Global Instance total_coercion (A B : Type) `{Coercion A (option B)} {_ : Inhabited B}: Coercion A B := { coerce := total_coerce}.\n\n" ^
-  "Notation \"| x |\" := (seq.size x) (at level 60).\n" ^
-  "Notation \"!( x )\" := (the x) (at level 60).\n" ^
-  "Notation \"x '[|' a '|]'\" := (lookup_total x a) (at level 10).\n" ^
-  "Open Scope wasm_scope.\n" ^
-  "Import ListNotations.\n" ^
-  "Import RecordSetNotations.\n\n"
+  "theory spectecIsabelle\n" ^
+    "\timports Main\n" ^ 
+      "begin\n\n" ^
+  (* TODO *) "From Coq Require Import String List Unicode.Utf8 Reals.\n" ^
+ (* TODO *)  "From mathcomp Require Import ssreflect ssrfun ssrnat ssrbool seq eqtype rat ssrint.\n" ^
+ (* TODO *)  "From HB Require Import structures.\n" ^
+ (* TODO *)  "From RecordUpdate Require Import RecordSet.\n" ^
+ (* TODO *)  "Declare Scope wasm_scope.\n\n" ^
+ (* TODO *)  "Class Inhabited (T: Type) := { default_val : T }.\n\n" ^
+ (* TODO *)  "Definition lookup_total {T: Type} {_: Inhabited T} (l: seq T) (n: nat) : T :=\n" ^
+ (* TODO *)  "\tseq.nth default_val l n.\n\n" ^
+ (* TODO *)  "Definition the {T : Type} {_ : Inhabited T} (arg : option T) : T :=\n" ^
+ (* TODO *)	"\tmatch arg with\n" ^
+ (* TODO *)	"\t\t| None => default_val\n" ^
+ (* TODO *)	"\t\t| Some v => v\n" ^
+ (* TODO *)	"\tend.\n\n" ^
+ (* TODO *)  "Definition list_zipWith {X Y Z : Type} (f : X -> Y -> Z) (xs : seq X) (ys : seq Y) : seq Z :=\n" ^
+ (* TODO *)  "\tseq.map (fun '(x, y) => f x y) (seq.zip xs ys).\n\n" ^
+ (* TODO *)  "Definition option_zipWith {α β γ: Type} (f: α -> β -> γ) (x: option α) (y: option β): option γ := \n" ^
+ (* TODO *)  "\tmatch x, y with\n" ^
+ (* TODO *)  "\t\t| Some x, Some y => Some (f x y)\n" ^
+ (* TODO *)  "\t\t| _, _ => None\n" ^
+ (* TODO *)  "\tend.\n\n" ^
+ (* TODO *)  "Fixpoint list_update {α: Type} (l: seq α) (n: nat) (y: α): seq α :=\n" ^
+ (* TODO *)  "\tmatch l, n with\n" ^
+ (* TODO *)  "\t\t| nil, _ => nil\n" ^
+ (* TODO *)  "\t\t| x :: l', O => y :: l'\n" ^
+ (* TODO *)  "\t\t| x :: l', S n => x :: list_update l' n y\n" ^
+ (* TODO *)  "\tend.\n\n" ^
+ (* TODO *)  "Definition option_append {α: Type} (x y: option α) : option α :=\n" ^
+ (* TODO *)  "\tmatch x with\n" ^
+ (* TODO *)  "\t\t| Some _ => x\n" ^
+ (* TODO *)  "\t\t| None => y\n" ^
+ (* TODO *)  "\tend.\n\n" ^
+ (* TODO *)  "Definition option_map {α β : Type} (f : α -> β) (x : option α) : option β :=\n" ^
+ (* TODO *)	"\tmatch x with\n" ^
+ (* TODO *)	"\t\t| Some x => Some (f x)\n" ^
+ (* TODO *)	"\t\t| _ => None\n" ^
+ (* TODO *)	"\tend.\n\n" ^
+ (* TODO *)  "Fixpoint list_update_func {α: Type} (l: seq α) (n: nat) (y: α -> α): seq α :=\n" ^
+ (* TODO *)	"\tmatch l, n with\n" ^
+ (* TODO *)	"\t\t| nil, _ => nil\n" ^
+ (* TODO *)	"\t\t| x :: l', O => (y x) :: l'\n" ^
+ (* TODO *)	"\t\t| x :: l', S n => x :: list_update_func l' n y\n" ^
+ (* TODO *)	"\tend.\n\n" ^
+ (* TODO *)  "Fixpoint list_slice {α: Type} (l: seq α) (i: nat) (j: nat): seq α :=\n" ^
+ (* TODO *)	"\tmatch l, i, j with\n" ^
+ (* TODO *)	"\t\t| nil, _, _ => nil\n" ^
+ (* TODO *)	"\t\t| x :: l', O, O => nil\n" ^
+ (* TODO *)	"\t\t| x :: l', S n, O => nil\n" ^
+ (* TODO *)	"\t\t| x :: l', O, S m => x :: list_slice l' 0 m\n" ^
+ (* TODO *)	"\t\t| x :: l', S n, m => list_slice l' n m\n" ^
+ (* TODO *)	"\tend.\n\n" ^
+ (* TODO *)  "Fixpoint list_slice_update {α: Type} (l: seq α) (i: nat) (j: nat) (update_l: seq α): seq α :=\n" ^
+ (* TODO *)	"\tmatch l, i, j, update_l with\n" ^
+ (* TODO *)	"\t\t| nil, _, _, _ => nil\n" ^
+ (* TODO *)	"\t\t| l', _, _, nil => l'\n" ^
+ (* TODO *)	"\t\t| x :: l', O, O, _ => nil\n" ^
+ (* TODO *)	"\t\t| x :: l', S n, O, _ => nil\n" ^
+ (* TODO *)	"\t\t| x :: l', O, S m, y :: u_l' => y :: list_slice_update l' 0 m u_l'\n" ^
+ (* TODO *)	"\t\t| x :: l', S n, m, _ => x :: list_slice_update l' n m update_l\n" ^
+ (* TODO *)	"\tend.\n\n" ^
+ (* TODO *)  "Definition list_extend {α: Type} (l: seq α) (y: α): seq α :=\n" ^
+ (* TODO *)  "\ty :: l.\n\n" ^
+ (* TODO *)  "Definition option_map3 {A B C D: Type} (f: A -> B -> C -> D) (x: option A) (y: option B) (z: option C): option D :=\n" ^ 
+ (* TODO *)	"\tmatch x, y, z with\n" ^
+ (* TODO *)	"\t\t| Some x, Some y, Some z => Some (f x y z)\n" ^ 
+ (* TODO *)	"\t\t| _, _, _ => None\n" ^
+ (* TODO *)	"\tend.\n\n" ^
+ (* TODO *)  "Definition list_map3 {A B C D: Type} (f : A -> B -> C -> D) (xs : seq A) (ys : seq B) (zs : seq C) : seq D :=\n" ^
+ (* TODO *)	"\tseq.map (fun '(x, (y, z)) => f x y z) (seq.zip xs (seq.zip ys zs)).\n\n" ^
+ (* TODO *)  "Inductive List_Forall3 {A B C: Type} (R : A -> B -> C -> Prop): seq A -> seq B -> seq C -> Prop :=\n" ^
+ (* TODO *)  "\t| Forall3_nil : List_Forall3 R nil nil nil\n" ^ 
+ (* TODO *)  "\t| Forall3_cons : forall x y z l l' l'',\n"^
+ (* TODO *)  "\t\tR x y z -> List_Forall3 R l l' l'' -> List_Forall3 R (x :: l) (y :: l') (z :: l'').\n\n" ^
+ (* TODO *)  "Inductive Foralli_help {X : Type} (f : nat -> X -> Prop) : nat -> list X -> Prop :=\n" ^
+ (* TODO *)	"\t| Foralli_nil : forall n, Foralli_help f n nil\n" ^
+ (* TODO *)	"\t| Foralli_cons : forall x l n,\n" ^
+ (* TODO *)	"\tf n x -> Foralli_help f (n + 1) l -> Foralli_help f n (x::l).\n\n" ^
+ (* TODO *)  "Definition List_Foralli {X : Type} (f : nat -> X -> Prop) (xs : list X) : Prop :=\n" ^ 
+ (* TODO *)	"\tForalli_help f 0 xs.\n\n" ^
+ (* TODO *)  "Class Append (α: Type) := _append : α -> α -> α.\n\n" ^
+ (* TODO *)  "Infix \"@@\" := _append (right associativity, at level 60) : wasm_scope.\n\n" ^
+ (* TODO *)  "Global Instance Append_List_ {α: Type}: Append (seq α) := { _append l1 l2 := seq.cat l1 l2 }.\n\n" ^
+ (* TODO *)  "Global Instance Append_Option {α: Type}: Append (option α) := { _append o1 o2 := option_append o1 o2 }.\n\n" ^
+ (* TODO *)  "Global Instance Append_nat : Append (nat) := { _append n1 n2 := n1 + n2}.\n\n" ^
+ (* TODO *)  "Global Instance Inh_unit : Inhabited unit := { default_val := tt }.\n\n" ^
+ (* TODO *)  "Global Instance Inh_nat : Inhabited nat := { default_val := O }.\n\n" ^
+ (* TODO *)  "Global Instance Inh_list {T: Type} : Inhabited (seq T) := { default_val := nil }.\n\n" ^
+ (* TODO *)  "Global Instance Inh_option {T: Type} : Inhabited (option T) := { default_val := None }.\n\n" ^
+ (* TODO *)  "Global Instance Inh_Z : Inhabited Z := { default_val := Z0 }.\n\n" ^
+ (* TODO *)  "Global Instance Inh_prod {T1 T2: Type} {_: Inhabited T1} {_: Inhabited T2} : Inhabited (prod T1 T2) := { default_val := (default_val, default_val) }.\n\n" ^
+ (* TODO *)  "Global Instance Inh_type : Inhabited Type := { default_val := nat }.\n\n" ^
+ (* TODO *)  "Definition option_to_list {T: Type} (arg : option T) : seq T :=\n" ^
+ (* TODO *)	"\tmatch arg with\n" ^
+ (* TODO *)	"\t\t| None => nil\n" ^
+ (* TODO *)  "\t\t| Some a => a :: nil\n" ^ 
+ (* TODO *)	"\tend.\n\n" ^
+ (* TODO *)  "Coercion option_to_list: option >-> seq.\n\n" ^
+ (* TODO *)  "Coercion Z.to_nat: Z >-> nat.\n\n" ^
+ (* TODO *)  "Coercion Z.of_nat: nat >-> Z.\n\n" ^
+ (* TODO *)  "Coercion ratz: int >-> rat.\n\n" ^
+ (* TODO *)  "Create HintDb eq_dec_db.\n\n" ^
+ (* TODO *)  "Ltac decidable_equality_step :=\n" ^
+ (* TODO *)  "  do [ by eauto with eq_dec_db | decide equality ].\n\n" ^
+ (* TODO *)  "Lemma eq_dec_Equality_axiom :\n" ^
+ (* TODO *)  "  forall (T : Type) (eq_dec : forall (x y : T), decidable (x = y)),\n" ^
+ (* TODO *)  "  let eqb v1 v2 := is_left (eq_dec v1 v2) in Equality.axiom eqb.\n" ^
+ (* TODO *)  "Proof.\n" ^
+ (* TODO *)  "  move=> T eq_dec eqb x y. rewrite /eqb.\n" ^
+ (* TODO *)  "  case: (eq_dec x y); by [apply: ReflectT | apply: ReflectF].\n" ^
+ (* TODO *)  "Qed.\n\n" ^
+ (* TODO *)  "Class Coercion (A B : Type) := { coerce : A -> B }.\n\n" ^
+ (* TODO *)  "Notation \"x ':>' B\" := (coerce (A:=_) (B:=B) x)\n" ^
+ (* TODO *)  "(at level 70, right associativity).\n\n" ^
+ (* TODO *)  "Definition option_coerce {A B : Type} `{Coercion A B} (a_opt : option A): option B :=\n" ^
+ (* TODO *)  "\tmatch a_opt with\n" ^
+ (* TODO *)  "\t\t| Some a => Some (coerce a)\n" ^
+ (* TODO *)  "\t\t| None => None\n" ^
+ (* TODO *)  "\tend.\n\n" ^
+ (* TODO *)  "Definition list_coerce {A B : Type} `{Coercion A B} (a_list : seq A): seq B :=\n" ^
+ (* TODO *)  "\t[seq (coerce a) | a <- a_list].\n\n" ^
+ (* TODO *)  "Definition id_coerce {A : Type} (a : A) : A := a.\n\n" ^
+ (* TODO *)  "Definition transitive_coerce {A B C : Type} `{Coercion A B} `{Coercion B C} (a : A): C :=\n" ^
+ (* TODO *)	"\tcoerce (coerce a).\n\n" ^
+ (* TODO *)  "Definition total_coerce {A B: Type} `{Coercion A (option B)} {_ : Inhabited B} (a : A): B :=\n" ^
+ (* TODO *)	"\tthe (coerce a).\n\n" ^
+ (* TODO *)  "Global Instance option_coercion (A B : Type) {_: Coercion A B}: Coercion (option A) (option B) := { coerce := option_coerce }.\n\n" ^
+ (* TODO *)  "Global Instance list_coercion (A B : Type) {_: Coercion A B}: Coercion (seq A) (seq B) := { coerce := list_coerce }.\n\n" ^
+ (* TODO *)  "Global Instance id_coercion (A : Type): Coercion A A := { coerce := id_coerce }.\n\n" ^
+ (* TODO *)  "Global Instance transitive_coercion (A B C : Type) `{Coercion A B} `{Coercion B C}: Coercion A C := { coerce := transitive_coerce }.\n\n" ^
+ (* TODO *)  "Global Instance total_coercion (A B : Type) `{Coercion A (option B)} {_ : Inhabited B}: Coercion A B := { coerce := total_coerce}.\n\n" ^
+ (* TODO *)  "Notation \"| x |\" := (seq.size x) (at level 60).\n" ^
+ (* TODO *)  "Notation \"!( x )\" := (the x) (at level 60).\n" ^
+ (* TODO *)  "Notation \"x '[|' a '|]'\" := (lookup_total x a) (at level 10).\n" ^
+ (* TODO *)  "Open Scope wasm_scope.\n" ^
+ (* TODO *)  "Import ListNotations.\n" ^
+ (* TODO *)  "Import RecordSetNotations.\n\n"
 
 let rec filter_def def = 
   match def.it with
@@ -959,4 +997,5 @@ let string_of_script (il : script) =
   let il' = Backend_rocq.Disamb.transform il in 
   exported_string ^
   "(* Generated Code *)\n" ^
-  String.concat "" (List.filter_map filter_def il' |> List.map (string_of_def true false))
+    String.concat "" (List.filter_map filter_def il' |> List.map (string_of_def true false)) ^
+      "end\n"
