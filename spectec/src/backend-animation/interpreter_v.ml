@@ -1057,7 +1057,7 @@ and module_ok = {
           let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
           caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ] |> return
         )
-      | _ -> error no ("Wrong number/type of arguments to $Module_ok.")
+      | _ -> error no ("Wrong number/type of arguments to $module_ok.")
 }
 
 and externaddr_ok = {
@@ -1082,7 +1082,7 @@ and externaddr_ok = {
         RI.Match.match_externtype [] externaddr_type externtype |> boolV |> return
       | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
       )
-    | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
+    | _ -> error no ("Wrong number/type of arguments to $externaddr_ok.")
 }
 
 and ref_ok = {
@@ -1094,7 +1094,7 @@ and ref_ok = {
       let rt1' = vl_to_reftype rt1 in
       let rt2' = vl_to_reftype rt2 in
       RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
+    | _ -> error no ("Wrong number/type of arguments to $ref_ok.")
 }
 
 and val_ok = {
@@ -1106,7 +1106,7 @@ and val_ok = {
       let vt1' = vl_to_valtype vt1 in
       let vt2' = vl_to_valtype vt2 in
       RI.Match.match_valtype [] vt1' vt2' |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
+    | _ -> error no ("Wrong number/type of arguments to $val_ok.")
 }
 
 and reftype_sub = {
@@ -1117,7 +1117,7 @@ and reftype_sub = {
       let rt1' = vl_to_reftype rt1 in
       let rt2' = vl_to_reftype rt2 in
       RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
+    | _ -> error no ("Wrong number/type of arguments to $reftype_sub.")
 }
 
 and heaptype_sub = {
@@ -1139,7 +1139,7 @@ and builtin_list : builtin list = [
   ]
 
 and call_builtins fname args : value OptMonad.m =
-  match List.find_opt (fun numerics -> numerics.name = fname) builtin_list with
+  match List.find_opt (fun builtin -> builtin.name = fname) builtin_list with
   | Some builtin ->
     let args' = List.map (function
     | ValA v -> v

@@ -26,8 +26,15 @@ def $val_infer(s, vec) = vt
 def $val_infer(s, ref) = rt
     -- if $ref_infer(s, ref) = rt
 
-def $rel_ok(store, ref, reftype) : bool
-def $rel_ok            hint(builtin)
+
+def $reftype_sub(context, reftype, reftype) : bool
+def $reftype_sub       hint(builtin)
+
+def $heaptype_sub(context, heaptype, heaptype) : bool
+def $heaptype_sub      hint(builtin)
+
+def $ref_ok(store, ref, reftype) : bool
+def $ref_ok            hint(builtin)
 
 def $val_ok(store, val, valtype) : bool
 def $val_ok            hint(builtin)
@@ -37,13 +44,6 @@ def $externaddr_ok     hint(builtin)
 
 def $module_ok(module) : moduletype
 def $module_ok         hint(builtin)
-
-def $reftype_sub(context, reftype, reftype) : bool
-def $reftype_sub       hint(builtin)
-
-def $heaptype_sub(context, heaptype, heaptype) : bool
-def $heaptype_sub      hint(builtin)
-
 
 
 ;; ********************************************************
@@ -230,15 +230,18 @@ relation Reftype_ok    hint(animate %1 %2 -> bool)
 relation Valtype_ok    hint(animate %1 %2 -> bool)
 relation Typeuse_ok    hint(animate %1 %2 -> bool)
 
-relation Num_ok        hint(animate %1 %2 -> %3)
-relation Vec_ok        hint(animate %1 %2 -> %3)
-
-relation Ref_ok        hint(animate_as "rel_ok" : %1 %2 %3 -> bool)
-relation Val_ok        hint(animate_as "val_ok" : %1 %2 %3 -> bool)
-relation Externaddr_ok hint(animate_as "externaddr_ok" : %1 %2 %3 -> bool)
-relation Module_ok     hint(animate_as "module_ok" : %1 -> %2)
 relation Reftype_sub   hint(animate_as "reftype_sub" : %1 %2 %3 -> bool)
 relation Heaptype_sub  hint(animate_as "reftype_sub" : %1 %2 %3 -> bool)
+
+relation Num_ok        hint(animate %1 %2 -> %3)
+relation Vec_ok        hint(animate %1 %2 -> %3)
+relation Ref_ok        hint(animate_as "ref_ok" : %1 %2 %3 -> bool)
+relation Val_ok        hint(animate_as "val_ok" : %1 %2 %3 -> bool)
+;; relation Ref_ok        hint(animate %1 %2 %3 -> bool)
+;; relation Val_ok        hint(animate %1 %2 %3 -> bool)
+
+relation Externaddr_ok hint(animate_as "externaddr_ok" : %1 %2 %3 -> bool)
+relation Module_ok     hint(animate_as "module_ok" : %1 -> %2)
 
 
 relation Step          hint(animate %1 -> %2)
@@ -273,4 +276,3 @@ rule Step/ctxt-handler                     hint(no_animate)
 relation Eval_expr hint(animate (%1, %2) -> (%3, %4))
 
 def $utf8 hint(no_animate)
-
