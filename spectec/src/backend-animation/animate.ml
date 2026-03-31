@@ -427,21 +427,24 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   let ( let* ) = E.( >>= ) in
   let* s = get () in
   let knowns = get_knowns s in
-  let lhs, rhs =
-    let is_a_rel     = H.is_a_rel     id.it in
-    let is_a_builtin = H.is_a_builtin id.it in
-    if is_a_rel || is_a_builtin then
-      let mode_map = (match is_a_rel, is_a_builtin with
-                     | true, false -> H.find_a_rel id.it
-                     | false, true -> H.find_a_builtin id.it
-                     | _ -> assert false
-                     ) in
+  let id', (lhs, rhs) =
+    let is_anim_rel     = H.is_anim_rel     id.it in
+    let is_anim_builtin = H.is_anim_builtin id.it in
+    let is_anim_as_func = H.is_anim_as_func id.it in
+    if is_anim_rel || is_anim_builtin || is_anim_as_func then
+      let id', mode_map =
+        (match is_anim_rel, is_anim_builtin, is_anim_as_func with
+        | true, false, false -> id.it, H.find_anim_rel id.it
+        | false, true, false -> id.it, H.find_anim_builtin id.it
+        | false, false, true -> H.find_anim_as_func id.it
+        | _ -> assert false
+        ) in
       let es = (match exp.it with
                | TupE es -> es
                | _ -> assert false
                )
       in
-      Lib.List.fold_lefti (fun i (les, res) e ->
+      id', Lib.List.fold_lefti (fun i (les, res) e ->
         let mode = H.IM.find (i+1) mode_map in
         match mode with
         | In  -> les @ [e], res
@@ -451,7 +454,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
       warn at ("Animating a rule that is not marked for animation: " ^ id.it);
       (match exp.it with
       | TupE es -> let es_init, es_last = Lib.List.split_last es in
-                   es_init, [es_last]
+                   id.it, (es_init, [es_last])
       | _ -> assert false
       )
     )
@@ -464,7 +467,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
              TupE rhs $$ at % t, t
     )
   in
-  let fncall = CallE (id, List.map (fun e -> ExpA e $ e.at) lhs) $$ at % rt in
+  let fncall = CallE (id' $> id, List.map (fun e -> ExpA e $ e.at) lhs) $$ at % rt in
   (* Let res = $call(args) *)
   let unknowns_res    = Set.diff (free_exp false res   ).varid knowns in
   let unknowns_fncall = Set.diff (free_exp false fncall).varid knowns in
@@ -478,7 +481,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   | true, false ->
     animate_exp_eq envr at res fncall
   | _ ->
-    E.throw (string_of_error at ("Both sides of rule " ^ id.it ^ " has unknowns: " ^
+    E.throw (string_of_error at ("Both sides of rule " ^ id' ^ " has unknowns: " ^
                                  "  ▹ LHS: " ^ string_of_varset unknowns_fncall ^ "\n" ^
                                  "  ▹ RHS: " ^ string_of_varset unknowns_res))
   )
@@ -519,7 +522,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let oinv_fid = find_func_hint !envr fid.it "inverse" in
     let* inv_fid = match oinv_fid with
     | None ->
-      (match H.is_a_inv fid.it with
+      (match H.is_anim_inv fid.it with
       | true ->
         if List.mem fid !H.invert_funcs then
           E.return ("inv_" ^ fid.it $> fid)

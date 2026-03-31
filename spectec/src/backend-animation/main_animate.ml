@@ -19,17 +19,18 @@ let build_animation_hints il : unit =
       List.iter (fun hint ->
         (match hint.hintid.it with
         | "animate"         -> print_endline ("Warning: hint(animate) on function " ^ fid.it ^ " is not yet implemented."); ()
-        | "animate_builtin" -> H.add_a_builtin fid.it (H.parse_hintexp hint.hintexp)
-        | "animate_inverse" -> H.add_a_inv fid.it
-        | "no_animate"      -> H.add_na_func fid.it
+        | "animate_builtin" -> H.add_anim_builtin fid.it (H.parse_mode hint.hintexp)
+        | "animate_inverse" -> H.add_anim_inv fid.it
+        | "no_animate"      -> H.add_no_anim_func fid.it
         | _                 -> ()
         )
       ) hints
     | RelH (rid, hints) ->
       List.iter (fun hint ->
         (match hint.hintid.it with
-        | "animate"         -> H.add_a_rel rid.it (H.parse_hintexp hint.hintexp)
-        | "animate_builtin" -> H.add_a_builtin rid.it (H.parse_hintexp hint.hintexp)
+        | "animate"         -> H.add_anim_rel rid.it (H.parse_mode hint.hintexp)
+        | "animate_builtin" -> H.add_anim_builtin rid.it (H.parse_mode hint.hintexp)
+        | "animate_as"      -> H.add_anim_as_func rid.it (H.parse_fid_mode hint.hintexp)
         | "no_animate"      -> print_endline ("Warning: hint(no_animate) on relation " ^ rid.it ^ " is not used."); ()
         | _                 -> ()
         )
@@ -37,7 +38,7 @@ let build_animation_hints il : unit =
     | RuleH (rel_id, rule_id, hints) ->
       List.iter (fun hint ->
         (match hint.hintid.it with
-        | "no_animate" -> H.add_na_rule rel_id.it rule_id.it 
+        | "no_animate" -> H.add_no_anim_rule rel_id.it rule_id.it 
         | _ -> ()
         )
       ) hints
@@ -46,11 +47,11 @@ let build_animation_hints il : unit =
 
 let rec is_anim_target il_def =
   match il_def.it with
-  | DecD (id, ps, t, _) when H.is_na_func id.it -> Some (DecD (id, ps, t, []) $ il_def.at)
-  | RelD (id, quants, mixop, t, rules) when H.is_a_rel id.it ->
+  | DecD (id, ps, t, _) when H.is_no_anim_func id.it -> Some (DecD (id, ps, t, []) $ il_def.at)
+  | RelD (id, quants, mixop, t, rules) when H.is_anim_rel id.it ->
     let rules' = List.fold_left (fun rs r ->
       match r.it with
-      | RuleD (rule_id, _, _, _, _) when H.is_na_rule id.it rule_id.it -> rs
+      | RuleD (rule_id, _, _, _, _) when H.is_no_anim_rule id.it rule_id.it -> rs
       | _ -> r::rs
     ) [] rules |> List.rev in
     Some (RelD (id, quants, mixop, t, rules') $ il_def.at)

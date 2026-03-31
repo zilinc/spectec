@@ -26,31 +26,24 @@ def $val_infer(s, vec) = vt
 def $val_infer(s, ref) = rt
     -- if $ref_infer(s, ref) = rt
 
+def $rel_ok(store, ref, reftype) : bool
+def $rel_ok            hint(builtin)
 
-;; ********************************************************
-;;                 Non-deterministic rules
-;; ********************************************************
+def $val_ok(store, val, valtype) : bool
+def $val_ok            hint(builtin)
 
-rule Step/memory.grow_det-succeed:
-  z; (CONST at n) (MEMORY.GROW x)  ~>  $with_meminst(z, x, mi); (CONST at $(|$mem(z, x).BYTES| / $($(64 * $Ki))))
-  ----
-  -- if ~ (at = I32 /\ $(n + |$mem(z, x).BYTES| / (64 * $Ki) > 0xFFFF))
-  -- if mi = $growmem($mem(z, x), n)
+def $externaddr_ok(store, externaddr, externtype) : bool
+def $externaddr_ok     hint(builtin)
 
-rule Step/memory.grow_det-fail:
-  z; (CONST at n) (MEMORY.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
-  -- otherwise
+def $module_ok(module) : moduletype
+def $module_ok         hint(builtin)
 
+def $reftype_sub(context, reftype, reftype) : bool
+def $reftype_sub       hint(builtin)
 
-rule Step/table.grow_det-succeed:
-  z; ref (CONST at n) (TABLE.GROW x)  ~>  $with_tableinst(z, x, ti); (CONST at $(|$table(z, x).REFS|))
-  ----
-  -- if ~ (at = I32 /\ $(n + |$table(z, x).REFS| > 0xFFFF_FFFF))
-  -- if ti = $growtable($table(z, x), n, ref)
+def $heaptype_sub(context, heaptype, heaptype) : bool
+def $heaptype_sub      hint(builtin)
 
-rule Step/table.grow_det-fail:
-  z; ref (CONST at n) (TABLE.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
-  -- otherwise
 
 
 ;; ********************************************************
@@ -63,16 +56,6 @@ syntax stackcount = nat
 
 def $is_val(instr) : bool
 def $is_val(val) = true
-;; def $is_val(CONST  numtype  i) = true
-;; def $is_val(VCONST vectype  c) = true
-;; def $is_val(REF.NULL_ADDR    ) = true
-;; def $is_val(REF.I31_NUM     n) = true
-;; def $is_val(REF.STRUCT_ADDR a) = true
-;; def $is_val(REF.ARRAY_ADDR  a) = true
-;; def $is_val(REF.FUNC_ADDR   a) = true
-;; def $is_val(REF.EXN_ADDR    a) = true
-;; def $is_val(REF.HOST_ADDR   a) = true
-;; def $is_val(REF.EXTERN     ar) = true
 def $is_val(instr) = false  -- otherwise
 
 def $find_first_instr'(instr*, instr*) : (instr*, instr?, instr*)
@@ -234,23 +217,28 @@ def $steps(config, stackcount) = config
     -- otherwise
 
 
-
 ;; ********************************************************
 ;; Animation hints
 ;; ********************************************************
 
 relation Expand        hint(animate %1 -> %2)
 
+relation Numtype_ok    hint(animate %1 %2 -> bool)
+relation Vectype_ok    hint(animate %1 %2 -> bool)
+relation Heaptype_ok   hint(animate %1 %2 -> bool)
+relation Reftype_ok    hint(animate %1 %2 -> bool)
+relation Valtype_ok    hint(animate %1 %2 -> bool)
+relation Typeuse_ok    hint(animate %1 %2 -> bool)
+
 relation Num_ok        hint(animate %1 %2 -> %3)
 relation Vec_ok        hint(animate %1 %2 -> %3)
 
-relation Ref_ok        hint(animate_builtin %1 %2 %3 -> bool)
-relation Val_ok        hint(animate_builtin %1 %2 %3 -> bool)
-relation Externaddr_ok hint(animate_builtin %1 %2 %3 -> bool)
-relation Module_ok     hint(animate_builtin %1 -> %2)
-
-relation Reftype_sub   hint(animate_builtin %1 %2 %3 -> bool)
-relation Heaptype_sub  hint(animate_builtin %1 %2 %3 -> bool)
+relation Ref_ok        hint(animate_as "rel_ok" : %1 %2 %3 -> bool)
+relation Val_ok        hint(animate_as "val_ok" : %1 %2 %3 -> bool)
+relation Externaddr_ok hint(animate_as "externaddr_ok" : %1 %2 %3 -> bool)
+relation Module_ok     hint(animate_as "module_ok" : %1 -> %2)
+relation Reftype_sub   hint(animate_as "reftype_sub" : %1 %2 %3 -> bool)
+relation Heaptype_sub  hint(animate_as "reftype_sub" : %1 %2 %3 -> bool)
 
 
 relation Step          hint(animate %1 -> %2)

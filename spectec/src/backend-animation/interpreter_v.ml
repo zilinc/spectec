@@ -805,19 +805,7 @@ and call_func name args : value OptMonad.m =
 
 and call_func name args : value OptMonad.m =
   info "call" no (lazy ("Calling " ^ name));
-  if State_v.Hints.is_a_builtin name then
-    (match name with
-    (* Hardcoded functions defined in the compiler. *)
-    | "Module_ok"     -> module_ok     args
-    | "Externaddr_ok" -> externaddr_ok args
-    | "Ref_ok"        -> ref_ok        args
-    | "Val_ok"        -> val_ok        args
-    | "Reftype_sub"   -> reftype_sub   args
-    | "Heaptype_sub"  -> heaptype_sub  args
-    | _               -> error no ("Builtin animation not implemented: " ^ name ^ ".")
-    )
-  else
-    (* Hardcoded functions defined in meta.spectec *)
+  (* Hardcoded functions defined in meta.spectec *)
   if name = "Steps" then
     let [config] = args in
     let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
@@ -828,14 +816,6 @@ and call_func name args : value OptMonad.m =
     error no "Calling $Step_pure is not allowed."
   else if name = "Step_read" then
     error no "Calling $Step_read is not allowed."
-  else if name = "Step/memory.grow" then
-    call_func "Step/memory.grow_det" args
-  else if name = "Step/table.grow" then
-    call_func "Step/table.grow_det" args
-  (*
-  else if name = "growmem" then
-    growmem args
-  *)
   else
     (* Built-in functions *)
     let builtin_name, is_builtin =
@@ -1064,11 +1044,98 @@ and step_read_throw_ref_handler = {
     | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
 
+and module_ok = {
+    name = "module_ok";
+    f =
+      function
+      | [ module_ ] ->
+        let module_' = vl_to_module module_ in
+        (match RI.Valid.check_module module_' with
+        | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
+        | ModuleT (its, ets) ->
+          let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
+          let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
+          caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ] |> return
+        )
+      | _ -> error no ("Wrong number/type of arguments to $Module_ok.")
+}
+
+and externaddr_ok = {
+  name = "externaddr_ok";
+  f =
+    function
+    | [ s; eaddr; etype ] ->
+      (match match_caseV "externaddr" eaddr with
+      | [[name];[]], [NumV (`Nat z)] ->
+        let addr = Z.to_int z in
+        let externaddr_type =
+          name^"S"
+          |> Store.access
+          |> as_list_value
+          |> (!)
+          |> Fun.flip Array.get addr
+          |> as_str_field "TYPE"
+          |> fun type_ -> caseV [[name];[]] [type_]
+          |> vl_to_externtype
+        in
+        let externtype = vl_to_externtype etype in
+        RI.Match.match_externtype [] externaddr_type externtype |> boolV |> return
+      | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
+      )
+    | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
+}
+
+and ref_ok = {
+  name = "ref_ok";
+  f =
+    function
+    | [ store; ref; rt2 ] ->
+      let* rt1 = call_func "ref_infer" [valA store; valA ref] in
+      let rt1' = vl_to_reftype rt1 in
+      let rt2' = vl_to_reftype rt2 in
+      RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
+    | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
+}
+
+and val_ok = {
+  name = "val_ok";
+  f =
+    function
+    | [ store; val_; vt2 ] ->
+      let* vt1 = call_func "val_infer" [valA store; valA val_] in
+      let vt1' = vl_to_valtype vt1 in
+      let vt2' = vl_to_valtype vt2 in
+      RI.Match.match_valtype [] vt1' vt2' |> boolV |> return
+    | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
+}
+
+and reftype_sub = {
+  name = "reftype_sub";
+  f =
+    function
+    | [ ctx; rt1; rt2 ] ->
+      let rt1' = vl_to_reftype rt1 in
+      let rt2' = vl_to_reftype rt2 in
+      RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
+    | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
+}
+
+and heaptype_sub = {
+  name = "heaptype_sub";
+  f =
+    function
+    | [ ctx; ht1; ht2 ] ->
+      let ht1' = vl_to_heaptype ht1 in
+      let ht2' = vl_to_heaptype ht2 in
+      RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
+    | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
+}
 
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler;
+  step_read_throw_ref_handler; externaddr_ok; module_ok;
+  ref_ok; val_ok; reftype_sub; heaptype_sub
   ]
 
 and call_builtins fname args : value OptMonad.m =
@@ -1083,116 +1150,6 @@ and call_builtins fname args : value OptMonad.m =
 
 and builtins_mem fname =
   List.exists (fun builtin -> builtin.name = fname) builtin_list
-
-
-
-
-
-(* Hard-coded relations *)
-
-
-(* $Module_ok : module -> moduletype *)
-and module_ok args : value OptMonad.m =
-  match args with
-  | [ ValA module_ ] ->
-    let module_' = vl_to_module module_ in
-    (match RI.Valid.check_module module_' with
-    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
-    | ModuleT (its, ets) ->
-      let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
-      let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
-      caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ] |> return
-    )
-  | _ -> error no ("Wrong number/type of arguments to $Module_ok.")
-
-(* $Externaddr_ok : store -> externaddr -> externtype -> bool *)
-and externaddr_ok = function
-  | [ ValA s; ValA eaddr; ValA etype ] ->
-    (match match_caseV "externaddr" eaddr with
-    | [[name];[]], [NumV (`Nat z)] ->
-      let addr = Z.to_int z in
-      let externaddr_type =
-        name^"S"
-        |> Store.access
-        |> as_list_value
-        |> (!)
-        |> Fun.flip Array.get addr
-        |> as_str_field "TYPE"
-        |> fun type_ -> caseV [[name];[]] [type_]
-        |> vl_to_externtype
-      in
-      let externtype = vl_to_externtype etype in
-      RI.Match.match_externtype [] externaddr_type externtype |> boolV |> return
-    | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
-    )
-  | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
-
-(* Ref_ok : store -> ref -> reftype -> bool *)
-and ref_ok = function
-  | [ ValA _ as store; ValA _ as ref; ValA rt2 ] ->
-    let* rt1 = call_func "ref_infer" [store; ref] in
-    let rt1' = vl_to_reftype rt1 in
-    let rt2' = vl_to_reftype rt2 in
-    RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
-  | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
-
-(* Val_ok : store -> val -> valtype -> bool *)
-and val_ok = function
-  | [ ValA _ as store; ValA _ as val_; ValA vt2 ] ->
-    let* vt1 = call_func "val_infer" [store; val_] in
-    let vt1' = vl_to_valtype vt1 in
-    let vt2' = vl_to_valtype vt2 in
-    RI.Match.match_valtype [] vt1' vt2' |> boolV |> return
-  | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
-
-
-(* Reftype_sub : context -> reftype -> reftype -> bool *)
-and reftype_sub = function
-  | [ ValA ctx; ValA rt1; ValA rt2 ] ->
-    let rt1' = vl_to_reftype rt1 in
-    let rt2' = vl_to_reftype rt2 in
-    RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
-  | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
-
-(* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
-and heaptype_sub = function
-  | [ ValA ctx; ValA ht1; ValA ht2 ] ->
-    let ht1' = vl_to_heaptype ht1 in
-    let ht2' = vl_to_heaptype ht2 in
-    RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
-  | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
-
-
-and growmem = function
-  | [ ValA meminst; ValA n ] ->
-    let open Xl.Atom in
-    let memtyp = as_str_field "TYPE" meminst in
-    let bs  = as_str_field "BYTES" meminst in
-    let bs_arr = !(as_list_value bs) in
-    let CaseV ([[];[];["PAGE"]], [at; limits]) = memtyp in
-    let CaseV ([["["];[".."];["]"]], [i; oj]) = limits in
-    let ki = 1024 in
-    let NumV (`Nat n_nat) = n in
-    let n_int = Z.to_int n_nat in
-    let i_int' = (Array.length bs_arr) / (64 * ki) + n_int in
-    let i' = natV (Z.of_int i_int') in
-    let ok = match oj with
-    | OptV (Some j) ->
-      let NumV (`Nat j_nat) = as_singleton_case j in
-      i_int' <= Z.to_int j_nat
-    | OptV None -> true
-    in
-    if ok then
-      let limits' = caseV [["["];[".."];["]"]] [i'; oj] in
-      let memtyp' = caseV [[];[];["PAGE"]] [at; limits'] in
-      let zero = caseV1 (natV Z.zero) in
-      let bs_arr' = Array.append bs_arr (Array.make (n_int * 64 * ki) zero) in
-      let bs' = listV bs_arr' in
-      let meminst' = strV ([("TYPE", ref memtyp'); ("BYTES", ref bs')]) in
-      return meminst'
-    else
-      fail ()
-  | _ -> error no ("Wrong number/type of arguments to $growmem.")
 
 
 (* Wasm interpreter entry *)
