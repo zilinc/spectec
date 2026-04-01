@@ -4,6 +4,10 @@ open Il.Walk
 
 module StringSet = Set.Make(String)
 
+let ra = "⇒"
+let lra = "⟹"
+
+
 type isabelle_env = {
   mutable tf_set : StringSet.t;
   mutable il_env : Il.Env.t;
@@ -18,10 +22,10 @@ let new_env () = {
 
 
 
-let iter_prem_rels_list = ["list_all"; "list_all2"; "list_all3"] (* TODO: define list_all3 in the preambule *)
-let iter_exp_lst_funcs = ["map"; "list_zipWith"; "list_map3"] (* TODO: define list_zipWith and list_map3 in the preambule *)
-let sup_iter_prem_rels_list = ["list_alli"] (* TODO: define list_alli in the preambule *)
-let iter_exp_opt_funcs = ["map_option"; "option_zipWith"; "option_map3"] (* TODO: define option_zipWith and option_map3 in the preambule *)
+let iter_prem_rels_list = ["list_all"; "list_all2"; "list_all3"] 
+let iter_exp_lst_funcs = ["map"; "list_zipWith"; "list_map3"] 
+let sup_iter_prem_rels_list = ["list_alli"] 
+let iter_exp_opt_funcs = ["map_option"; "option_zipWith"; "option_map3"] 
 let error at msg = Util.Error.error at "Isabelle translation" msg 
 
 let env_ref = ref (new_env ())
@@ -111,13 +115,13 @@ let string_of_list prefix suffix delim str_func ls =
   | [] -> ""
   | _ -> prefix ^ String.concat delim (List.map str_func ls) ^ suffix
 
-(* TODO: change to Isabelle *)
 let square_parens s = "[" ^ s ^ "]"
 let ssreflect_square_parens s = "[::" ^ s ^ "]"
 let parens s = "(" ^ s ^ ")"
 let curly_parens s = "{" ^ s ^ "}"
 let comment_parens s = "(* " ^ s ^ " *)"
 let line_parens spc s = "|" ^ spc ^ s ^ spc ^ "|"
+let quotes s = "\"" ^ s ^ "\""
 
 let family_type_suffix = "entry"
 
@@ -171,18 +175,18 @@ let comment_desc_def d =
   | GramD _ -> "Grammar Production Definition"
 
 
-(* TODO: change to Isabelle *)
+
 let render_unop unop = 
   match unop with
-  | `NotOp   -> "negb "
+  | `NotOp   -> "~ "
   | `PlusOp  -> ""
   | `MinusOp -> "0 - "
 let render_binop binop = 
   match binop with
-  | `AndOp   -> " && " 
-  | `OrOp    -> " || "
-  | `ImplOp  -> " -> "
-  | `EquivOp -> " <-> "
+  | `AndOp   -> " ∧ " 
+  | `OrOp    -> " ∨ "
+  | `ImplOp  -> " ⟶ "
+  | `EquivOp -> " ⟷ "
   | `AddOp   -> " + " 
   | `SubOp   -> " - " 
   | `MulOp   -> " * " 
@@ -192,12 +196,12 @@ let render_binop binop =
 
 let render_cmpop cmpop =
   match cmpop with
-  | `EqOp -> " == "
-  | `NeOp -> " != "
+  | `EqOp -> " = "
+  | `NeOp -> " ≠ "
   | `LtOp -> " < "
   | `GtOp -> " > "
-  | `LeOp -> " <= "
-  | `GeOp -> " >= "
+  | `LeOp -> " ≤ "
+  | `GeOp -> " ≥ "
 
 let is_atomid a =
   match a.it with
@@ -233,7 +237,6 @@ let get_param_id b =
   match b.it with
   | ExpP (id, _) | TypP id | DefP (id, _, _) | GramP (id, _, _) -> render_id id.it
 
-(* TODO: change to Isabelle *)
 let render_numtyp nt = 
   match nt with
   | `NatT -> "nat"
@@ -833,9 +836,33 @@ let rec string_of_def has_endline recursive def =
 
 let exported_string =
   "(* Imported Code *)\n" ^
-  "theory spectecIsabelle\n" ^
-    "\timports Main\n" ^ 
-      "begin\n\n" ^
+  "\timports Main\n" ^ 
+  "begin\n\n" ^
+  "inductive list_all3 :: \"('a " ^ ra ^ " 'b " ^ ra ^ " 'c " ^ ra ^ " bool) " ^ ra ^ " 'a list " ^ ra ^ " 'b list " ^ ra ^ " 'c list " ^ ra ^ " bool\" where\n" ^
+  "\tlist_all3_nil : \"list_all3 R [] [] []\" |\n" ^
+  "\tlist_all3_cons: \"R a b c " ^ lra ^ " list_all3 R as bs cs " ^ lra ^ " list_all3 R (a # as) (b # bs) (c # cs)\"\n\n" ^
+  "definition list_zipWith :: \"('a " ^ ra ^ " 'b " ^ ra ^ " 'c) " ^ ra ^ " 'a list " ^ ra ^ " 'b list " ^ ra ^ " 'c list\" where\n" ^
+  "\t\"list_zipWith f xs ys = map (λ (x, y). f x y) (zip xs ys)\"\n\n" ^
+  "definition list_map3 :: \"('a " ^ ra ^ " 'b " ^ ra ^ " 'c " ^ ra ^ " 'd) " ^ ra ^ " 'a list " ^ ra ^ " 'b list " ^ ra ^ " 'c list " ^ ra ^ " 'd list\" where\n" ^
+  "\t\"list_map3 f xs ys zs = map (λ (x, (y, z)). f x y z) (zip xs (zip ys zs))\"\n\n" ^
+  "inductive foralli_help :: \"(nat " ^ ra ^ " 'a " ^ ra ^ "bool) " ^ ra ^ " nat " ^ ra ^ " 'a list " ^ ra ^ " bool\" where\n" ^
+  "\tforalli_nil : \"foralli_help f n []\" |\n" ^
+  "\tforalli_cons : \"f n x " ^ lra ^ " foralli_help f (n + 1) l " ^ lra ^ " foralli_help f n (x # l)\"\n\n" ^
+  "definition list_foralli :: \"(nat " ^ ra ^ " 'a " ^ ra ^ " bool) " ^ ra ^ " 'a list " ^ ra ^ " bool\" where\n" ^
+  "\t\"list_foralli f xs = foralli_help f 0 xs\"\n\n" ^
+  "fun option_zipWith :: \"('a " ^ ra ^ " 'b " ^ ra ^ " 'c) " ^ ra ^ " 'a option " ^ ra ^ " 'b option " ^ ra ^ " 'c option\" where\n" ^
+  "\t\"option_zipWith f (Some x) (Some y) = Some (f x y)\" |\n" ^
+  "\t\"option_zipWith _ _ _ = None\"\n\n" ^
+  "fun option_map3 :: \"('a " ^ ra ^ " 'b " ^ ra ^ " 'c " ^ ra ^ " 'd) " ^ ra ^ " 'a option " ^ ra ^ " 'b option " ^ ra ^ " 'c option " ^ ra ^ " 'd option\" where\n" ^
+  "\t\"option_map3 f (Some x) (Some y) (Some z) = Some (f x y z)\" |\n" ^
+  "\t\"option_map3 f _ _ _ = None\"\n\n" ^
+    
+  
+
+
+
+    
+        
   (* TODO *) "From Coq Require Import String List Unicode.Utf8 Reals.\n" ^
  (* TODO *)  "From mathcomp Require Import ssreflect ssrfun ssrnat ssrbool seq eqtype rat ssrint.\n" ^
  (* TODO *)  "From HB Require Import structures.\n" ^
@@ -849,13 +876,7 @@ let exported_string =
  (* TODO *)	"\t\t| None => default_val\n" ^
  (* TODO *)	"\t\t| Some v => v\n" ^
  (* TODO *)	"\tend.\n\n" ^
- (* TODO *)  "Definition list_zipWith {X Y Z : Type} (f : X -> Y -> Z) (xs : seq X) (ys : seq Y) : seq Z :=\n" ^
- (* TODO *)  "\tseq.map (fun '(x, y) => f x y) (seq.zip xs ys).\n\n" ^
- (* TODO *)  "Definition option_zipWith {α β γ: Type} (f: α -> β -> γ) (x: option α) (y: option β): option γ := \n" ^
- (* TODO *)  "\tmatch x, y with\n" ^
- (* TODO *)  "\t\t| Some x, Some y => Some (f x y)\n" ^
- (* TODO *)  "\t\t| _, _ => None\n" ^
- (* TODO *)  "\tend.\n\n" ^
+
  (* TODO *)  "Fixpoint list_update {α: Type} (l: seq α) (n: nat) (y: α): seq α :=\n" ^
  (* TODO *)  "\tmatch l, n with\n" ^
  (* TODO *)  "\t\t| nil, _ => nil\n" ^
@@ -897,23 +918,6 @@ let exported_string =
  (* TODO *)	"\tend.\n\n" ^
  (* TODO *)  "Definition list_extend {α: Type} (l: seq α) (y: α): seq α :=\n" ^
  (* TODO *)  "\ty :: l.\n\n" ^
- (* TODO *)  "Definition option_map3 {A B C D: Type} (f: A -> B -> C -> D) (x: option A) (y: option B) (z: option C): option D :=\n" ^ 
- (* TODO *)	"\tmatch x, y, z with\n" ^
- (* TODO *)	"\t\t| Some x, Some y, Some z => Some (f x y z)\n" ^ 
- (* TODO *)	"\t\t| _, _, _ => None\n" ^
- (* TODO *)	"\tend.\n\n" ^
- (* TODO *)  "Definition list_map3 {A B C D: Type} (f : A -> B -> C -> D) (xs : seq A) (ys : seq B) (zs : seq C) : seq D :=\n" ^
- (* TODO *)	"\tseq.map (fun '(x, (y, z)) => f x y z) (seq.zip xs (seq.zip ys zs)).\n\n" ^
- (* TODO *)  "Inductive List_Forall3 {A B C: Type} (R : A -> B -> C -> Prop): seq A -> seq B -> seq C -> Prop :=\n" ^
- (* TODO *)  "\t| Forall3_nil : List_Forall3 R nil nil nil\n" ^ 
- (* TODO *)  "\t| Forall3_cons : forall x y z l l' l'',\n"^
- (* TODO *)  "\t\tR x y z -> List_Forall3 R l l' l'' -> List_Forall3 R (x :: l) (y :: l') (z :: l'').\n\n" ^
- (* TODO *)  "Inductive Foralli_help {X : Type} (f : nat -> X -> Prop) : nat -> list X -> Prop :=\n" ^
- (* TODO *)	"\t| Foralli_nil : forall n, Foralli_help f n nil\n" ^
- (* TODO *)	"\t| Foralli_cons : forall x l n,\n" ^
- (* TODO *)	"\tf n x -> Foralli_help f (n + 1) l -> Foralli_help f n (x::l).\n\n" ^
- (* TODO *)  "Definition List_Foralli {X : Type} (f : nat -> X -> Prop) (xs : list X) : Prop :=\n" ^ 
- (* TODO *)	"\tForalli_help f 0 xs.\n\n" ^
  (* TODO *)  "Class Append (α: Type) := _append : α -> α -> α.\n\n" ^
  (* TODO *)  "Infix \"@@\" := _append (right associativity, at level 60) : wasm_scope.\n\n" ^
  (* TODO *)  "Global Instance Append_List_ {α: Type}: Append (seq α) := { _append l1 l2 := seq.cat l1 l2 }.\n\n" ^
@@ -991,10 +995,11 @@ let rec register_hints env def =
   | RecD defs -> List.iter (register_hints env) defs
   | _ -> ()
      
-let string_of_script (il : script) =
+let string_of_script theoryname (il : script) =
   !env_ref.il_env <- Il.Env.env_of_script il;
   List.iter (register_hints !env_ref) il; 
-  let il' = Backend_rocq.Disamb.transform il in 
+  let il' = Backend_rocq.Disamb.transform il in
+  "theory " ^ theoryname ^ "\n" ^
   exported_string ^
   "(* Generated Code *)\n" ^
     String.concat "" (List.filter_map filter_def il' |> List.map (string_of_def true false)) ^
