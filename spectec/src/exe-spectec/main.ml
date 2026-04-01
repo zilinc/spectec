@@ -436,9 +436,12 @@ let () =
     | Isabelle ->
       log "Isabelle Generation...";
       (match !odsts with
-      | [] -> print_endline (Backend_isabelle.Print.string_of_script il)
-      | [odst] -> 
-        let coq_code = Backend_isabelle.Print.string_of_script il in
+      | [] -> print_endline (Backend_isabelle.Print.string_of_script "spectecIsabelle" il)
+      | [odst] ->
+         if not (Filename.check_suffix odst ".thy")
+         then (prerr_endline "output should be Isabelle file");
+         let coq_code = Backend_isabelle.Print.string_of_script
+                          (Filename.chop_suffix odst ".thy") il in
         let oc = Out_channel.open_text odst in
         Fun.protect (fun () -> Out_channel.output_string oc coq_code)
           ~finally:(fun () -> Out_channel.close oc)
