@@ -223,12 +223,15 @@ def $steps(config, stackcount) = config
 
 relation Expand        hint(animate %1 -> %2)
 
+;; relation Rectype_ok    hint(animate %1 %2 -> %3)
+
 relation Numtype_ok    hint(animate %1 %2 -> bool)
 relation Vectype_ok    hint(animate %1 %2 -> bool)
 relation Heaptype_ok   hint(animate %1 %2 -> bool)
 relation Reftype_ok    hint(animate %1 %2 -> bool)
 relation Valtype_ok    hint(animate %1 %2 -> bool)
 relation Typeuse_ok    hint(animate %1 %2 -> bool)
+relation Deftype_ok    hint(animate %1 %2 -> bool)
 
 relation Reftype_sub   hint(animate_as "reftype_sub" : %1 %2 %3 -> bool)
 relation Heaptype_sub  hint(animate_as "reftype_sub" : %1 %2 %3 -> bool)
