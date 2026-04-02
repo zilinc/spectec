@@ -147,7 +147,7 @@ and invoke moduleinst_name funcname args : value =
   let t1 = Sys.time () in
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
-  let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; vl_of_list C.vl_of_value args |> valA ] in
+  let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; valA args ] in
   let CaseV (_, [store'; _]) = state' in
   (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
@@ -173,10 +173,10 @@ let run_action action : value =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
     invoke (Register.get_module_name var_opt) (Utf8.encode funcname)
-           (List.map (fun l ->  match l.it with
-                     | ValLit v -> v
-                     | NullLit ht -> error (region_to_region l.at) "Argument to invoke is not a literal"
-                     ) args)
+           (vl_of_list (fun lit ->  match lit.it with
+                       | ValLit v   -> C.vl_of_value v
+                       | NullLit ht -> C.vl_of_value (RI.Value.Ref RI.Value.NullRef)
+                       ) args)
   | Get (var_opt, globalname) ->
     [ get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname) ] |> listV_of_list
 
@@ -304,7 +304,7 @@ let run_wasm' args module_ =
     let make_value s = R.Value.Num (I32 (Int32.of_string s)) in
 
     (* Invoke *)
-    invoke (Register.get_module_name None) funcname (List.map make_value args')
+    invoke (Register.get_module_name None) funcname (List.map make_value args'|> vl_of_list C.vl_of_value)
     (* Print invocation result. We don't really have to convert it to reference
        interpreter's value type though.
     *)
