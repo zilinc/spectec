@@ -22,6 +22,13 @@ module C = Construct_v
 module Assert = Reference_interpreter.Error.Make ()
 let error at msg = Error.error at "interpreter" msg
 
+let region_to_region : R.Source.region -> Source.region =
+  let loc_to_pos : R.Source.loc -> Source.pos = function
+  | { file ; line; column } -> { file ; line; column }
+  in
+  function
+  | { left ; right } -> { left = loc_to_pos left; right = loc_to_pos right}
+
 (* Logging *)
 
 let logging = ref false
@@ -157,17 +164,21 @@ let module_of_def def =
   | Encoded (name, bs) -> R.Decode.decode name bs.it
   | Quoted (_, s) -> R.Parse.Module.parse_string s.it |> textual_to_module
 
-let run_action action : value =
-  match action.it with
-  | Invoke (var_opt, funcname, args) ->
-    invoke (Register.get_module_name var_opt) (Utf8.encode funcname) (List.map it args)
-  | Get (var_opt, globalname) ->
-    [ get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname) ] |> listV_of_list
-
 let print_fail at failtype expected actual =
   print_endline (R.Source.string_of_region at ^ ": Expected " ^ failtype ^ " failure: " ^ expected);
   print_endline ("Got " ^ actual ^ ".");
   fail
+
+let run_action action : value =
+  match action.it with
+  | Invoke (var_opt, funcname, args) ->
+    invoke (Register.get_module_name var_opt) (Utf8.encode funcname)
+           (List.map (fun l ->  match l.it with
+                     | ValLit v -> v
+                     | NullLit ht -> error (region_to_region l.at) "Argument to invoke is not a literal"
+                     ) args)
+  | Get (var_opt, globalname) ->
+    [ get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname) ] |> listV_of_list
 
 let test_assertion assertion =
   let open R in
