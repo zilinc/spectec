@@ -1938,8 +1938,8 @@ def $subst_externtype(v_externtype : externtype, var_0 : typevar*, var_1 : typeu
   def $subst_externtype{mt : memtype, tv_lst : typevar*, tu_lst : typeuse*}(MEM_externtype(mt), tv_lst, tu_lst) = MEM_externtype($subst_memtype(mt, tv_lst, tu_lst))
     -- wf_externtype: `%`(MEM_externtype($subst_memtype(mt, tv_lst, tu_lst)))
   ;; ../../../../specification/wasm-3.0/1.2-syntax.types.spectec
-  def $subst_externtype{v_rectype : rectype, v_n : n, tv_lst : typevar*, tu_lst : typeuse*}(FUNC_externtype(_DEF_typeuse(v_rectype, v_n)), tv_lst, tu_lst) = FUNC_externtype($typeuse_deftype($subst_deftype(_DEF_deftype(v_rectype, v_n), tv_lst, tu_lst)))
-    -- wf_externtype: `%`(FUNC_externtype($typeuse_deftype($subst_deftype(_DEF_deftype(v_rectype, v_n), tv_lst, tu_lst))))
+  def $subst_externtype{tu' : typeuse, tv_lst : typevar*, tu_lst : typeuse*}(FUNC_externtype(tu'), tv_lst, tu_lst) = FUNC_externtype($subst_typeuse(tu', tv_lst, tu_lst))
+    -- wf_externtype: `%`(FUNC_externtype($subst_typeuse(tu', tv_lst, tu_lst)))
 
 ;; ../../../../specification/wasm-3.0/1.2-syntax.types.spectec
 def $subst_moduletype(v_moduletype : moduletype, var_0 : typevar*, var_1 : typeuse*) : moduletype
@@ -9540,7 +9540,7 @@ def $ivshufflop_(v_shape : shape, var_0 : laneidx*, v_vec_ : vec_, v_vec__0 : ve
     -- wf_shape: `%`(`%X%`_shape($lanetype_Jnn(I32_Jnn), `%`_dim(v_M)))
     -- if (c_1_lst = $lanes_(`%X%`_shape($lanetype_Jnn(I32_Jnn), `%`_dim(v_M)), v_1))
     -- if (c_2_lst = $lanes_(`%X%`_shape($lanetype_Jnn(I32_Jnn), `%`_dim(v_M)), v_2))
-    -- if (c_lst = c_1_lst ++ c_2_lst[$proj_uN_0(i#116960).0]*{i#116960 <- i_lst})
+    -- if (c_lst = c_1_lst ++ c_2_lst[$proj_uN_0(i#126925).0]*{i#126925 <- i_lst})
   ;; ../../../../specification/wasm-3.0/3.2-numerics.vector.spectec
   def $ivshufflop_{v_M : nat, i_lst : laneidx*, v_1 : uN, v_2 : uN, c_lst : lane_*, c_1_lst : lane_*, c_2_lst : lane_*}(`%X%`_shape(I64_lanetype, `%`_dim(v_M)), i_lst, v_1, v_2) = $inv_lanes_(`%X%`_shape($lanetype_Jnn(I64_Jnn), `%`_dim(v_M)), c_lst)
     -- (wf_lane_: `%%`($fun_lanetype(`%X%`_shape($lanetype_Jnn(I64_Jnn), `%`_dim(v_M))), c#150))*{c#150 <- c_lst}
@@ -9549,7 +9549,7 @@ def $ivshufflop_(v_shape : shape, var_0 : laneidx*, v_vec_ : vec_, v_vec__0 : ve
     -- wf_shape: `%`(`%X%`_shape($lanetype_Jnn(I64_Jnn), `%`_dim(v_M)))
     -- if (c_1_lst = $lanes_(`%X%`_shape($lanetype_Jnn(I64_Jnn), `%`_dim(v_M)), v_1))
     -- if (c_2_lst = $lanes_(`%X%`_shape($lanetype_Jnn(I64_Jnn), `%`_dim(v_M)), v_2))
-    -- if (c_lst = c_1_lst ++ c_2_lst[$proj_uN_0(i#116970).0]*{i#116970 <- i_lst})
+    -- if (c_lst = c_1_lst ++ c_2_lst[$proj_uN_0(i#126935).0]*{i#126935 <- i_lst})
   ;; ../../../../specification/wasm-3.0/3.2-numerics.vector.spectec
   def $ivshufflop_{v_M : nat, i_lst : laneidx*, v_1 : uN, v_2 : uN, c_lst : lane_*, c_1_lst : lane_*, c_2_lst : lane_*}(`%X%`_shape(I8_lanetype, `%`_dim(v_M)), i_lst, v_1, v_2) = $inv_lanes_(`%X%`_shape($lanetype_Jnn(I8_Jnn), `%`_dim(v_M)), c_lst)
     -- (wf_lane_: `%%`($fun_lanetype(`%X%`_shape($lanetype_Jnn(I8_Jnn), `%`_dim(v_M))), c#153))*{c#153 <- c_lst}
@@ -9558,7 +9558,7 @@ def $ivshufflop_(v_shape : shape, var_0 : laneidx*, v_vec_ : vec_, v_vec__0 : ve
     -- wf_shape: `%`(`%X%`_shape($lanetype_Jnn(I8_Jnn), `%`_dim(v_M)))
     -- if (c_1_lst = $lanes_(`%X%`_shape($lanetype_Jnn(I8_Jnn), `%`_dim(v_M)), v_1))
     -- if (c_2_lst = $lanes_(`%X%`_shape($lanetype_Jnn(I8_Jnn), `%`_dim(v_M)), v_2))
-    -- if (c_lst = c_1_lst ++ c_2_lst[$proj_uN_0(i#116980).0]*{i#116980 <- i_lst})
+    -- if (c_lst = c_1_lst ++ c_2_lst[$proj_uN_0(i#126945).0]*{i#126945 <- i_lst})
   ;; ../../../../specification/wasm-3.0/3.2-numerics.vector.spectec
   def $ivshufflop_{v_M : nat, i_lst : laneidx*, v_1 : uN, v_2 : uN, c_lst : lane_*, c_1_lst : lane_*, c_2_lst : lane_*}(`%X%`_shape(I16_lanetype, `%`_dim(v_M)), i_lst, v_1, v_2) = $inv_lanes_(`%X%`_shape($lanetype_Jnn(I16_Jnn), `%`_dim(v_M)), c_lst)
     -- (wf_lane_: `%%`($fun_lanetype(`%X%`_shape($lanetype_Jnn(I16_Jnn), `%`_dim(v_M))), c#156))*{c#156 <- c_lst}
@@ -9567,7 +9567,7 @@ def $ivshufflop_(v_shape : shape, var_0 : laneidx*, v_vec_ : vec_, v_vec__0 : ve
     -- wf_shape: `%`(`%X%`_shape($lanetype_Jnn(I16_Jnn), `%`_dim(v_M)))
     -- if (c_1_lst = $lanes_(`%X%`_shape($lanetype_Jnn(I16_Jnn), `%`_dim(v_M)), v_1))
     -- if (c_2_lst = $lanes_(`%X%`_shape($lanetype_Jnn(I16_Jnn), `%`_dim(v_M)), v_2))
-    -- if (c_lst = c_1_lst ++ c_2_lst[$proj_uN_0(i#116990).0]*{i#116990 <- i_lst})
+    -- if (c_lst = c_1_lst ++ c_2_lst[$proj_uN_0(i#126955).0]*{i#126955 <- i_lst})
 
 ;; ../../../../specification/wasm-3.0/3.2-numerics.vector.spectec
 def $vvunop_(v_vectype : vectype, v_vvunop : vvunop, v_vec_ : vec_) : vec_*
@@ -12330,127 +12330,137 @@ def $fun_exninst(v_state : state) : exninst*
   def $fun_exninst{s : store, f : frame}(`%;%`_state(s, f)) = s.EXNS_store
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
+def $fof(v_state : state) : frame
+  ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
+  def $fof{z : state}(z) = $fun_frame(z)
+
+;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_type(v_state : state, v_typeidx : typeidx) : deftype
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_type{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = f.MODULE_frame.TYPES_moduleinst[$proj_uN_0(x).0]
+  def $fun_type{z : state, x : uN}(z, x) = $fof(z).MODULE_frame.TYPES_moduleinst[$proj_uN_0(x).0]
+
+;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
+def $sof(v_state : state) : store
+  ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
+  def $sof{z : state}(z) = $fun_store(z)
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_tag(v_state : state, v_tagidx : tagidx) : taginst
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_tag{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = s.TAGS_store[f.MODULE_frame.TAGS_moduleinst[$proj_uN_0(x).0]]
+  def $fun_tag{z : state, x : uN}(z, x) = $sof(z).TAGS_store[$fof(z).MODULE_frame.TAGS_moduleinst[$proj_uN_0(x).0]]
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_global(v_state : state, v_globalidx : globalidx) : globalinst
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_global{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = s.GLOBALS_store[f.MODULE_frame.GLOBALS_moduleinst[$proj_uN_0(x).0]]
+  def $fun_global{z : state, x : uN}(z, x) = $sof(z).GLOBALS_store[$fof(z).MODULE_frame.GLOBALS_moduleinst[$proj_uN_0(x).0]]
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_mem(v_state : state, v_memidx : memidx) : meminst
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_mem{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = s.MEMS_store[f.MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]]
+  def $fun_mem{z : state, x : uN}(z, x) = $sof(z).MEMS_store[$fof(z).MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]]
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_table(v_state : state, v_tableidx : tableidx) : tableinst
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_table{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = s.TABLES_store[f.MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]]
+  def $fun_table{z : state, x : uN}(z, x) = $sof(z).TABLES_store[$fof(z).MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]]
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_func(v_state : state, v_funcidx : funcidx) : funcinst
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_func{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = s.FUNCS_store[f.MODULE_frame.FUNCS_moduleinst[$proj_uN_0(x).0]]
+  def $fun_func{z : state, x : uN}(z, x) = $sof(z).FUNCS_store[$fof(z).MODULE_frame.FUNCS_moduleinst[$proj_uN_0(x).0]]
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_data(v_state : state, v_dataidx : dataidx) : datainst
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_data{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = s.DATAS_store[f.MODULE_frame.DATAS_moduleinst[$proj_uN_0(x).0]]
+  def $fun_data{z : state, x : uN}(z, x) = $sof(z).DATAS_store[$fof(z).MODULE_frame.DATAS_moduleinst[$proj_uN_0(x).0]]
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_elem(v_state : state, v_tableidx : tableidx) : eleminst
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_elem{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = s.ELEMS_store[f.MODULE_frame.ELEMS_moduleinst[$proj_uN_0(x).0]]
+  def $fun_elem{z : state, x : uN}(z, x) = $sof(z).ELEMS_store[$fof(z).MODULE_frame.ELEMS_moduleinst[$proj_uN_0(x).0]]
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $fun_local(v_state : state, v_localidx : localidx) : val?
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $fun_local{s : store, f : frame, x : uN}(`%;%`_state(s, f), x) = f.LOCALS_frame[$proj_uN_0(x).0]
+  def $fun_local{z : state, x : uN}(z, x) = $fof(z).LOCALS_frame[$proj_uN_0(x).0]
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_local(v_state : state, v_localidx : localidx, v_val : val) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_local{s : store, f : frame, x : uN, v : val}(`%;%`_state(s, f), x, v) = `%;%`_state(s, f[LOCALS_frame[$proj_uN_0(x).0] = ?(v)])
-    -- wf_state: `%`(`%;%`_state(s, f[LOCALS_frame[$proj_uN_0(x).0] = ?(v)]))
+  def $with_local{z : state, x : uN, v : val}(z, x, v) = `%;%`_state($sof(z), $fof(z)[LOCALS_frame[$proj_uN_0(x).0] = ?(v)])
+    -- wf_state: `%`(`%;%`_state($sof(z), $fof(z)[LOCALS_frame[$proj_uN_0(x).0] = ?(v)]))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_global(v_state : state, v_globalidx : globalidx, v_val : val) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_global{s : store, f : frame, x : uN, v : val}(`%;%`_state(s, f), x, v) = `%;%`_state(s[GLOBALS_store[f.MODULE_frame.GLOBALS_moduleinst[$proj_uN_0(x).0]].VALUE_globalinst = v], f)
-    -- wf_state: `%`(`%;%`_state(s[GLOBALS_store[f.MODULE_frame.GLOBALS_moduleinst[$proj_uN_0(x).0]].VALUE_globalinst = v], f))
+  def $with_global{z : state, x : uN, v : val}(z, x, v) = `%;%`_state($sof(z)[GLOBALS_store[$fof(z).MODULE_frame.GLOBALS_moduleinst[$proj_uN_0(x).0]].VALUE_globalinst = v], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[GLOBALS_store[$fof(z).MODULE_frame.GLOBALS_moduleinst[$proj_uN_0(x).0]].VALUE_globalinst = v], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_table(v_state : state, v_tableidx : tableidx, nat : nat, v_ref : ref) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_table{s : store, f : frame, x : uN, i : nat, r : ref}(`%;%`_state(s, f), x, i, r) = `%;%`_state(s[TABLES_store[f.MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]].REFS_tableinst[i] = r], f)
-    -- wf_state: `%`(`%;%`_state(s[TABLES_store[f.MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]].REFS_tableinst[i] = r], f))
+  def $with_table{z : state, x : uN, i : nat, r : ref}(z, x, i, r) = `%;%`_state($sof(z)[TABLES_store[$fof(z).MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]].REFS_tableinst[i] = r], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[TABLES_store[$fof(z).MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]].REFS_tableinst[i] = r], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_tableinst(v_state : state, v_tableidx : tableidx, v_tableinst : tableinst) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_tableinst{s : store, f : frame, x : uN, ti : tableinst}(`%;%`_state(s, f), x, ti) = `%;%`_state(s[TABLES_store[f.MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]] = ti], f)
-    -- wf_state: `%`(`%;%`_state(s[TABLES_store[f.MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]] = ti], f))
+  def $with_tableinst{z : state, x : uN, ti : tableinst}(z, x, ti) = `%;%`_state($sof(z)[TABLES_store[$fof(z).MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]] = ti], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[TABLES_store[$fof(z).MODULE_frame.TABLES_moduleinst[$proj_uN_0(x).0]] = ti], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_mem(v_state : state, v_memidx : memidx, nat : nat, nat_0 : nat, var_0 : byte*) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_mem{s : store, f : frame, x : uN, i : nat, j : nat, b_lst : byte*}(`%;%`_state(s, f), x, i, j, b_lst) = `%;%`_state(s[MEMS_store[f.MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]].BYTES_meminst[i : j] = b_lst], f)
-    -- wf_state: `%`(`%;%`_state(s[MEMS_store[f.MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]].BYTES_meminst[i : j] = b_lst], f))
+  def $with_mem{z : state, x : uN, i : nat, j : nat, b_lst : byte*}(z, x, i, j, b_lst) = `%;%`_state($sof(z)[MEMS_store[$fof(z).MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]].BYTES_meminst[i : j] = b_lst], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[MEMS_store[$fof(z).MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]].BYTES_meminst[i : j] = b_lst], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_meminst(v_state : state, v_memidx : memidx, v_meminst : meminst) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_meminst{s : store, f : frame, x : uN, mi : meminst}(`%;%`_state(s, f), x, mi) = `%;%`_state(s[MEMS_store[f.MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]] = mi], f)
-    -- wf_state: `%`(`%;%`_state(s[MEMS_store[f.MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]] = mi], f))
+  def $with_meminst{z : state, x : uN, mi : meminst}(z, x, mi) = `%;%`_state($sof(z)[MEMS_store[$fof(z).MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]] = mi], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[MEMS_store[$fof(z).MODULE_frame.MEMS_moduleinst[$proj_uN_0(x).0]] = mi], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_elem(v_state : state, v_elemidx : elemidx, var_0 : ref*) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_elem{s : store, f : frame, x : uN, r_lst : ref*}(`%;%`_state(s, f), x, r_lst) = `%;%`_state(s[ELEMS_store[f.MODULE_frame.ELEMS_moduleinst[$proj_uN_0(x).0]].REFS_eleminst = r_lst], f)
-    -- wf_state: `%`(`%;%`_state(s[ELEMS_store[f.MODULE_frame.ELEMS_moduleinst[$proj_uN_0(x).0]].REFS_eleminst = r_lst], f))
+  def $with_elem{z : state, x : uN, r_lst : ref*}(z, x, r_lst) = `%;%`_state($sof(z)[ELEMS_store[$fof(z).MODULE_frame.ELEMS_moduleinst[$proj_uN_0(x).0]].REFS_eleminst = r_lst], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[ELEMS_store[$fof(z).MODULE_frame.ELEMS_moduleinst[$proj_uN_0(x).0]].REFS_eleminst = r_lst], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_data(v_state : state, v_dataidx : dataidx, var_0 : byte*) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_data{s : store, f : frame, x : uN, b_lst : byte*}(`%;%`_state(s, f), x, b_lst) = `%;%`_state(s[DATAS_store[f.MODULE_frame.DATAS_moduleinst[$proj_uN_0(x).0]].BYTES_datainst = b_lst], f)
-    -- wf_state: `%`(`%;%`_state(s[DATAS_store[f.MODULE_frame.DATAS_moduleinst[$proj_uN_0(x).0]].BYTES_datainst = b_lst], f))
+  def $with_data{z : state, x : uN, b_lst : byte*}(z, x, b_lst) = `%;%`_state($sof(z)[DATAS_store[$fof(z).MODULE_frame.DATAS_moduleinst[$proj_uN_0(x).0]].BYTES_datainst = b_lst], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[DATAS_store[$fof(z).MODULE_frame.DATAS_moduleinst[$proj_uN_0(x).0]].BYTES_datainst = b_lst], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_struct(v_state : state, v_structaddr : structaddr, nat : nat, v_fieldval : fieldval) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_struct{s : store, f : frame, a : nat, i : nat, fv : fieldval}(`%;%`_state(s, f), a, i, fv) = `%;%`_state(s[STRUCTS_store[a].FIELDS_structinst[i] = fv], f)
-    -- wf_state: `%`(`%;%`_state(s[STRUCTS_store[a].FIELDS_structinst[i] = fv], f))
+  def $with_struct{z : state, a : nat, i : nat, fv : fieldval}(z, a, i, fv) = `%;%`_state($sof(z)[STRUCTS_store[a].FIELDS_structinst[i] = fv], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[STRUCTS_store[a].FIELDS_structinst[i] = fv], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $with_array(v_state : state, v_arrayaddr : arrayaddr, nat : nat, v_fieldval : fieldval) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $with_array{s : store, f : frame, a : nat, i : nat, fv : fieldval}(`%;%`_state(s, f), a, i, fv) = `%;%`_state(s[ARRAYS_store[a].FIELDS_arrayinst[i] = fv], f)
-    -- wf_state: `%`(`%;%`_state(s[ARRAYS_store[a].FIELDS_arrayinst[i] = fv], f))
+  def $with_array{z : state, a : nat, i : nat, fv : fieldval}(z, a, i, fv) = `%;%`_state($sof(z)[ARRAYS_store[a].FIELDS_arrayinst[i] = fv], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[ARRAYS_store[a].FIELDS_arrayinst[i] = fv], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $add_structinst(v_state : state, var_0 : structinst*) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $add_structinst{s : store, f : frame, si_lst : structinst*}(`%;%`_state(s, f), si_lst) = `%;%`_state(s[STRUCTS_store =++ si_lst], f)
-    -- wf_state: `%`(`%;%`_state(s[STRUCTS_store =++ si_lst], f))
+  def $add_structinst{z : state, si_lst : structinst*}(z, si_lst) = `%;%`_state($sof(z)[STRUCTS_store =++ si_lst], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[STRUCTS_store =++ si_lst], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $add_arrayinst(v_state : state, var_0 : arrayinst*) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $add_arrayinst{s : store, f : frame, ai_lst : arrayinst*}(`%;%`_state(s, f), ai_lst) = `%;%`_state(s[ARRAYS_store =++ ai_lst], f)
-    -- wf_state: `%`(`%;%`_state(s[ARRAYS_store =++ ai_lst], f))
+  def $add_arrayinst{z : state, ai_lst : arrayinst*}(z, ai_lst) = `%;%`_state($sof(z)[ARRAYS_store =++ ai_lst], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[ARRAYS_store =++ ai_lst], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $add_exninst(v_state : state, var_0 : exninst*) : state
   ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
-  def $add_exninst{s : store, f : frame, exn_lst : exninst*}(`%;%`_state(s, f), exn_lst) = `%;%`_state(s[EXNS_store =++ exn_lst], f)
-    -- wf_state: `%`(`%;%`_state(s[EXNS_store =++ exn_lst], f))
+  def $add_exninst{z : state, exn_lst : exninst*}(z, exn_lst) = `%;%`_state($sof(z)[EXNS_store =++ exn_lst], $fof(z))
+    -- wf_state: `%`(`%;%`_state($sof(z)[EXNS_store =++ exn_lst], $fof(z)))
 
 ;; ../../../../specification/wasm-3.0/4.0-execution.configurations.spectec
 def $growtable(v_tableinst : tableinst, nat : nat, v_ref : ref) : tableinst?
@@ -12463,6 +12473,7 @@ def $growtable(v_tableinst : tableinst, nat : nat, v_ref : ref) : tableinst?
     -- if (tableinst' = {TYPE `%%%`_tabletype(at, `[%..%]`_limits(i', j_opt), rt), REFS r'_lst ++ r^v_n{}})
     -- if ($proj_uN_0(i').0 = (|r'_lst| + v_n))
     -- (if ($proj_uN_0(i').0 <= $proj_uN_0(j).0))?{j <- j_opt}
+    -- if (($proj_uN_0(i').0 : nat <:> int) <= (((2 ^ $size($numtype_addrtype(at))) : nat <:> int) - (1 : nat <:> int)))
   def $growtable{x0 : tableinst, x1 : nat, x2 : ref}(x0, x1, x2) = ?()
     -- otherwise
 
@@ -12477,6 +12488,7 @@ def $growmem(v_meminst : meminst, nat : nat) : meminst?
     -- if (meminst' = {TYPE `%%PAGE`_memtype(at, `[%..%]`_limits(i', j_opt)), BYTES b_lst ++ `%`_byte(0)^(v_n * (64 * $Ki)){}})
     -- if (($proj_uN_0(i').0 : nat <:> rat) = (((|b_lst| : nat <:> rat) / ((64 * $Ki) : nat <:> rat)) + (v_n : nat <:> rat)))
     -- (if ($proj_uN_0(i').0 <= $proj_uN_0(j).0))?{j <- j_opt}
+    -- if ($proj_uN_0(i').0 <= (2 ^ ((($size($numtype_addrtype(at)) : nat <:> int) - (16 : nat <:> int)) : int <:> nat)))
   def $growmem{x0 : meminst, x1 : nat}(x0, x1) = ?()
     -- otherwise
 

@@ -208,10 +208,8 @@ and reduce_exp env e: exp =
     let e1' = reduce_exp env e1 in
     let e2' = reduce_exp env e2 in
     (match op, e1'.it, e2'.it with
-    | `EqOp, _, _ when Eq.eq_exp e1' e2' -> BoolE true $> e |> cnf
-    | `NeOp, _, _ when Eq.eq_exp e1' e2' -> BoolE false $> e |> cnf
-    | `EqOp, _, _ when is_normal_exp e1' && is_normal_exp e2' -> BoolE false $> e |> cnf
-    | `NeOp, _, _ when is_normal_exp e1' && is_normal_exp e2' -> BoolE true $> e |> cnf
+    | `EqOp, _, _ when is_normal_exp e1' && is_normal_exp e2' -> BoolE (Eq.eq_exp e1' e2') $> e |> cnf
+    | `NeOp, _, _ when is_normal_exp e1' && is_normal_exp e2' -> BoolE (not (Eq.eq_exp e1' e2')) $> e |> cnf
     | #Num.cmpop as op', NumE n1, NumE n2 ->
       (match Num.cmp op' n1 n2 with
       | Some b -> BoolE b $> e |> cnf
@@ -770,7 +768,8 @@ and match_exp' env s e1 e2 : subst option =
     (fun r -> fmt "%s" (opt il_subst r))
   ) @@ fun _ ->
   assert (Eq.eq_exp e1 (reduce_exp env e1));
-  if Eq.eq_exp e1 e2 then Some s else  (* HACK around subtype elim pass introducing calls on LHS's *)
+  (* HACK around subtype elim pass introducing calls on LHS's *)
+  if Eq.eq_exp e1 e2 && is_normal_exp e1 && is_normal_exp e2 then Some s else
   match e1.it, (reduce_exp env (Subst.subst_exp s e2)).it with
   | _, VarE id when Subst.mem_varid s id ->
     (* A pattern variable already in the substitution is non-linear *)
