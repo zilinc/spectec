@@ -273,7 +273,7 @@ let rec render_param_type exp_type param =
     string_of_list_suffix " -> " " -> " (render_param_type exp_type) params ^ render_type exp_type typ
   | GramP _ -> comment_parens ("Unsupported param: " ^ Il.Print.string_of_param param)
 
-(* TODO: change to Isabelle *)
+
 and render_type exp_type typ = 
   let rt_func = render_type exp_type in
   match typ.it with
@@ -284,8 +284,8 @@ and render_type exp_type typ =
   | TextT -> "string"
   | TupT [] -> "unit"
   | TupT typs -> String.concat " * " (List.map (fun (_, t) -> rt_func t) typs)
-  | IterT (t, Opt) -> parens ("option " ^ rt_func t)
-  | IterT (t, _) -> parens ("seq " ^ rt_func t)
+  | IterT (t, Opt) -> parens (rt_func t ^ " option")
+  | IterT (t, _) -> parens (rt_func t ^ " list")
 
 (* TODO: change to Isabelle *)
 and render_exp exp_type exp =
@@ -335,28 +335,33 @@ and render_exp exp_type exp =
   | UncaseE _ -> error exp.at "Encountered uncase. Run uncase-removal pass"
   | OptE (Some e) -> parens ("Some " ^ r_func e)
   | OptE None -> "None"
+  (* TODO: figure out Inhabited in Isabelle *)
   | TheE e -> parens ("!" ^ parens (r_func e))
-  | StrE fields -> "{| " ^ (String.concat "; " (List.map (fun (a, e) -> 
+  | StrE fields -> "⦇ " ^ (String.concat ", " (List.map (fun (a, e) -> 
     (* let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref.il_env exp.note) |> render_id in *)
-    render_atom a ^ " := " ^ r_func e) fields)) ^ " |}"
+    render_atom a ^ " = " ^ r_func e) fields)) ^ " ⦈"
   | DotE (e, a) -> 
     (* let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref.il_env e.note) |> render_id in *)
     parens (render_atom a ^ " " ^ r_func e)
-  | CompE (e1, e2) -> parens (r_func e1 ^ " @@ " ^ r_func e2)
-  | ListE [] -> "[:: ]"
-  | ListE exps -> ssreflect_square_parens (String.concat "; " (List.map r_func exps)) 
+  | CompE (e1, e2) -> parens (r_func e1 ^ " @ " ^ r_func e2)
+  | ListE [] -> "[]"
+  | ListE exps -> ssreflect_square_parens (String.concat ", " (List.map r_func exps)) 
   | LiftE e -> parens ("option_to_list " ^ r_func e)
-  | MemE (e1, e2) -> parens (r_func e1 ^ " \\in " ^ r_func e2)
-  | LenE e1 -> parens (line_parens "" (r_func e1))
-  | CatE ({it = ListE [e1]; _}, e2) when exp_type = LHS -> parens (r_func e1 ^ " :: " ^ r_func e2) 
-  | CatE (e1, e2) -> parens (r_func e1 ^ " ++ " ^ r_func e2)
+  | MemE (e1, e2) -> parens (r_func e1 ^ " ∈ set " ^ r_func e2)
+  | LenE e1 -> parens ("length " ^ (r_func e1))
+  | CatE ({it = ListE [e1]; _}, e2) when exp_type = LHS -> parens (r_func e1 ^ " # " ^ r_func e2) 
+  | CatE (e1, e2) -> parens (r_func e1 ^ " @ " ^ r_func e2)
+  (* TODO: figure out Inhabited in Isabelle *)
   | IdxE (e1, e2) -> parens (r_func e1 ^ square_parens (line_parens " " (r_func e2)))
   | SliceE (e1, e2, e3) -> parens ("list_slice " ^ r_func e1 ^ " " ^ r_func e2 ^ " " ^ r_func e3)
+  (* TODO: Isabelle has type extensions, can this be simplified? *)
   | UpdE (e1, p, e2) -> render_path_start p e1 false e2
   | ExtE (e1, p, e2) -> render_path_start p e1 true e2
+  (* TODO: figure out coercion in Isabelle *)
   | CallE (id, [a]) when StringSet.mem id.it !env_ref.proj_set ->
     parens (render_arg exp_type a ^ " :> " ^ (render_type exp_type exp.note))
   | CallE (id, args) -> parens (render_id id.it ^ " " ^ String.concat " " (List.map (render_arg exp_type) args))
+  (* TODO: iter handling *)
   (* Iter handling *)
   | IterE (e, (ListN (n, Some id), [])) -> 
     parens ("seq.mkseq " ^ render_lambda [id.it] (r_func e) ^ " " ^ (r_func n)) 
@@ -374,8 +379,9 @@ and render_exp exp_type exp =
     in 
     parens (pred_name ^ " " ^ render_lambda quants (r_func e) ^ " " ^ 
     String.concat " " (List.map (render_exp exp_type) iter_exps))
-  | CvtE (e1, _nt1, nt2) -> parens (r_func e1 ^ " : " ^ render_numtyp nt2)
+  | CvtE (e1, _nt1, nt2) -> parens (r_func e1 ^ " :: " ^ render_numtyp nt2)
   | SubE _ -> error exp.at "Encountered subtype expression. Please run sub pass"
+  (* TODO: type annotations else Isabelle struggles *)
   | IfE (e1, e2, e3) -> parens ("if " ^ r_func e1 ^ " then " ^ r_func e2 ^ " else " ^ r_func e3)
 
 and render_arg exp_type a = 
@@ -385,20 +391,18 @@ and render_arg exp_type a =
   | DefA id -> render_id id.it 
   | _ -> comment_parens ("Unsupported arg: " ^ Il.Print.string_of_arg a)
 
-(* TODO: change to Isabelle *)
 and render_quant exp_type b =
   match b.it with
-  | ExpP (id, typ) -> parens (render_id id.it  ^ " : " ^ render_type exp_type typ)
-  | TypP id -> parens (render_id id.it  ^ " : Type")
+  | ExpP (id, typ) -> parens (render_id id.it  ^ " :: " ^ render_type exp_type typ)
+  | TypP id -> (* TODO: this should use 'a? *) parens (render_id id.it  ^ " : Type")
   | DefP (id, params, typ) -> 
-    parens (render_id id.it  ^ " : " ^ 
-    string_of_list_suffix " -> " " -> " (render_param_type exp_type) params ^
+    parens (render_id id.it  ^ " :: " ^ 
+    string_of_list_suffix (" " ^ ra ^ " ") (" " ^ ra ^ " ") (render_param_type exp_type) params ^
     render_type exp_type typ)
   | GramP _ -> comment_parens ("Unsupported quant: " ^ Il.Print.string_of_quant b)
 
-(* TODO: change to Isabelle *)
 and render_param exp_type param = 
-  parens (get_param_id param ^ " : " ^ render_param_type exp_type param)
+  parens (get_param_id param ^ " :: " ^ render_param_type exp_type param)
 
 (* PATH Functions *)
 and transform_list_path (p : path) = 
@@ -407,9 +411,8 @@ and transform_list_path (p : path) =
   | IdxP (p', _) | SliceP (p', _, _) | DotP (p', _) when p'.it = RootP -> []
   | IdxP (p', _) | SliceP (p', _, _) | DotP (p', _) -> p' :: transform_list_path p'
 
-(* TODO: change to Isabelle *)
 and render_lambda quants text =
-  parens ("fun " ^ String.concat " " quants ^ " => " ^ text)
+  parens ("λ " ^ String.concat " " quants ^ ". " ^ text)
 
 and render_path_start (p : path) start_exp is_extend end_exp = 
   let paths = List.rev (p :: transform_list_path p) in
@@ -598,27 +601,29 @@ let rec render_prem prem =
   | LetPr _ -> 
     "True " ^ comment_parens ("Unsupported premise: " ^ Il.Print.string_of_prem prem)
 
-(* TODO: change to Isabelle *)
+(* TODO: I don't think type_synonym can take arguments *)
 let render_typealias id quants typ = 
-  "Definition " ^ id ^ render_quants quants ^ " : Type := " ^ render_type RHS typ
+  "type_synonym " ^ id ^ render_quants quants ^ " = " ^ render_type RHS typ
 
-(* TODO: change to Isabelle *)
+
 let render_record recursive id quants fields = 
   let constructor_name = "MK" ^ id in
   let inhabitance_quanters = render_quants quants in 
   let quanters = render_quants_ids quants in 
 
   (* Standard Record definition *)
-  "Record " ^ id ^ inhabitance_quanters ^ " := " ^ constructor_name ^ "\n{\t" ^ 
-  String.concat "\n;\t" (List.map (fun (a, (typ, _, _), _) -> 
-    render_atom a ^ " : " ^ render_type RHS typ) fields) ^ "\n}.\n\n" ^
+  "record " ^ id ^ inhabitance_quanters ^ " =\n\t" ^ 
+  String.concat "\n\t" (List.map (fun (a, (typ, _, _), _) -> 
+    render_atom a ^ " :: " ^ render_type RHS typ) fields) ^ "\n\n" ^
 
+    (* TODO: figure out inhabitance for Isabelle *)
   (* Inhabitance proof for default values *)
   "Global Instance Inhabited_" ^ id ^ inhabitance_quanters ^ " : Inhabited " ^ parens (id ^ quanters) ^ " := \n" ^
   "{default_val := {|\n\t" ^
       String.concat ";\n\t" (List.map (fun (a, _, _) -> 
         render_atom a  ^ " := default_val") fields) ^ "|} }.\n\n" ^
 
+        (* TODO: change to Isabelle *)
   (* Append instance *)
   "Definition _append_" ^ id ^ inhabitance_quanters ^ " (arg1 arg2 : " ^ parens (id ^ quanters) ^ ") :=\n" ^ 
   "{|\n\t" ^ String.concat "\t" ((List.map (fun (a, (t, _, _), _) ->
@@ -629,6 +634,7 @@ let render_record recursive id quants fields =
   )) fields) ^ "|}.\n\n" ^ 
   "Global Instance Append_" ^ id ^ " : Append " ^ id ^ " := { _append arg1 arg2 := _append_" ^ id ^ " arg1 arg2 }.\n\n" ^
 
+    (* TODO: change to Isabelle *)
   (* Setter proof *)
   "#[export] Instance eta__" ^ id ^ " : Settable _ := settable! " ^ constructor_name ^ " <" ^ 
   String.concat ";" (List.map (fun (a, _, _) -> render_atom a) fields) ^ ">"
@@ -668,11 +674,10 @@ let cant_do_equality quants cases =
   (List.exists is_typ_quant quants) ||
   (List.exists (fun (_, (_, quants', _), _) -> List.exists is_typ_quant quants') cases)
 
-(* TODO: change to Isabelle *)
 let render_case_typs t = 
   let typs = transform_case_args t in
   string_of_list_prefix " " " " (fun (i, t) -> 
-    parens (render_id i.it ^ " : " ^ render_type RHS t)) typs
+    parens (render_id i.it ^ " :: " ^ render_type RHS t)) typs
 
 (* TODO: change to Isabelle *)
 let render_variant_typ is_recursive prefix id quants cases = 
@@ -856,6 +861,16 @@ let exported_string =
   "fun option_map3 :: \"('a " ^ ra ^ " 'b " ^ ra ^ " 'c " ^ ra ^ " 'd) " ^ ra ^ " 'a option " ^ ra ^ " 'b option " ^ ra ^ " 'c option " ^ ra ^ " 'd option\" where\n" ^
   "\t\"option_map3 f (Some x) (Some y) (Some z) = Some (f x y z)\" |\n" ^
   "\t\"option_map3 f _ _ _ = None\"\n\n" ^
+  "fun option_to_list :: \"'a option " ^ ra ^ "'a list\" where\n" ^
+  "\t\"option_to_list None = []\" |\n" ^
+  "\t\"option_to_list (Some a) = [a]\"\n\n" ^
+  "fun list_slice :: \"'a list " ^ ra ^ " nat " ^ ra ^ " nat " ^ ra ^ " 'a list\" where\n" ^
+  "\t\"list_slice [] _ _ = []\" |\n" ^
+  "\t\"list_slice (x # l) 0 0 = []\" |\n" ^
+  "\t\"list_slice (x # l) (Suc n) 0 = []\" |\n" ^
+  "\t\"list_slice (x # l) 0 (Suc m) = x # list_slice l 0 m\" |\n" ^
+  "\t\"list_slice (x # l) (Suc n) m = list_slice l n m\"\n\n" ^
+
     
   
 
@@ -867,7 +882,9 @@ let exported_string =
  (* TODO *)  "From mathcomp Require Import ssreflect ssrfun ssrnat ssrbool seq eqtype rat ssrint.\n" ^
  (* TODO *)  "From HB Require Import structures.\n" ^
  (* TODO *)  "From RecordUpdate Require Import RecordSet.\n" ^
- (* TODO *)  "Declare Scope wasm_scope.\n\n" ^
+    (* TODO *)  "Declare Scope wasm_scope.\n\n" ^
+
+    (* TODO: figure out Inhabited in Isabelle *)
  (* TODO *)  "Class Inhabited (T: Type) := { default_val : T }.\n\n" ^
  (* TODO *)  "Definition lookup_total {T: Type} {_: Inhabited T} (l: seq T) (n: nat) : T :=\n" ^
  (* TODO *)  "\tseq.nth default_val l n.\n\n" ^
@@ -899,14 +916,6 @@ let exported_string =
  (* TODO *)	"\t\t| x :: l', O => (y x) :: l'\n" ^
  (* TODO *)	"\t\t| x :: l', S n => x :: list_update_func l' n y\n" ^
  (* TODO *)	"\tend.\n\n" ^
- (* TODO *)  "Fixpoint list_slice {α: Type} (l: seq α) (i: nat) (j: nat): seq α :=\n" ^
- (* TODO *)	"\tmatch l, i, j with\n" ^
- (* TODO *)	"\t\t| nil, _, _ => nil\n" ^
- (* TODO *)	"\t\t| x :: l', O, O => nil\n" ^
- (* TODO *)	"\t\t| x :: l', S n, O => nil\n" ^
- (* TODO *)	"\t\t| x :: l', O, S m => x :: list_slice l' 0 m\n" ^
- (* TODO *)	"\t\t| x :: l', S n, m => list_slice l' n m\n" ^
- (* TODO *)	"\tend.\n\n" ^
  (* TODO *)  "Fixpoint list_slice_update {α: Type} (l: seq α) (i: nat) (j: nat) (update_l: seq α): seq α :=\n" ^
  (* TODO *)	"\tmatch l, i, j, update_l with\n" ^
  (* TODO *)	"\t\t| nil, _, _, _ => nil\n" ^
@@ -930,11 +939,6 @@ let exported_string =
  (* TODO *)  "Global Instance Inh_Z : Inhabited Z := { default_val := Z0 }.\n\n" ^
  (* TODO *)  "Global Instance Inh_prod {T1 T2: Type} {_: Inhabited T1} {_: Inhabited T2} : Inhabited (prod T1 T2) := { default_val := (default_val, default_val) }.\n\n" ^
  (* TODO *)  "Global Instance Inh_type : Inhabited Type := { default_val := nat }.\n\n" ^
- (* TODO *)  "Definition option_to_list {T: Type} (arg : option T) : seq T :=\n" ^
- (* TODO *)	"\tmatch arg with\n" ^
- (* TODO *)	"\t\t| None => nil\n" ^
- (* TODO *)  "\t\t| Some a => a :: nil\n" ^ 
- (* TODO *)	"\tend.\n\n" ^
  (* TODO *)  "Coercion option_to_list: option >-> seq.\n\n" ^
  (* TODO *)  "Coercion Z.to_nat: Z >-> nat.\n\n" ^
  (* TODO *)  "Coercion Z.of_nat: nat >-> Z.\n\n" ^
