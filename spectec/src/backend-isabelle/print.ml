@@ -82,6 +82,7 @@ let reserved_ids =
    "lemma"; "theorem"; "corollary";
    "proof"; "qed";
    "assume"; "show"; "have"; "thus"; "then";
+   "if"; "else";
    "fix"; "let"; "next";
    "by"; "apply"; "done";
    "sorry";
@@ -217,9 +218,9 @@ let is_atomid a =
   | _ -> false 
 
 let render_id id =
-  if id.[String.length id - 1] = '_' then id ^ "closed" else
-    if StringSet.mem id reserved_ids then "res_" ^ id else
-      id
+  let id = if id.[String.length id - 1] = '_' then id ^ "closed" else id in
+  let id = if id.[0] = '_' then "started" ^ id else id in
+  if StringSet.mem id reserved_ids then "res_" ^ id else id
 
 let render_atom ?(in_mixop = false) a =
   match a.it with
@@ -239,7 +240,7 @@ let render_mixop typ_id (m : mixop) =
   match s with
   | "_" -> "mk_" ^ typ_id 
   | s when Il.Env.mem_typ !env_ref.il_env (s $ no_region) -> "mk_" ^ s
-  | s -> s
+  | s -> render_id s
 
 let get_param_id b = 
   match b.it with
@@ -299,7 +300,7 @@ and render_exp exp_type exp =
   let r_func = render_exp exp_type in
   match exp.it with 
   | VarE id -> render_id id.it
-  | BoolE b -> string_of_bool b
+  | BoolE b -> if b then "True" else "False"
   | NumE (`Nat n) -> Z.to_string n (* TODO fix nums *)
   | NumE (`Int n) -> Z.to_string n (* TODO fix nums *)
   | NumE (`Rat n) -> Q.to_string n (* TODO fix nums *)
@@ -611,7 +612,7 @@ let rec render_prem prem =
 
 (* TODO: I don't think type_synonym can take arguments *)
 let render_typealias id quants typ = 
-  "type_synonym " ^ id ^ render_quants quants ^ " = " ^ render_type RHS typ
+  "type_synonym " ^ id ^ render_quants quants ^ " = " ^ quotes (render_type RHS typ)
 
 
 let render_record _recursive id quants fields = 
@@ -622,7 +623,7 @@ let render_record _recursive id quants fields =
   (* Standard Record definition *)
   "record " ^ id ^ inhabitance_quanters ^ " =\n\t" ^ 
   String.concat "\n\t" (List.map (fun (a, (typ, _, _), _) -> 
-                            render_atom a ^ " :: " ^ render_type RHS typ) fields) ^ "\n\n"
+                            render_atom a ^ " :: " ^ quotes (render_type RHS typ)) fields) ^ "\n\n"
 
   (* ^
 
@@ -689,7 +690,7 @@ let cant_do_equality quants cases =
 let render_case_typs t = 
   let typs = transform_case_args t in
   string_of_list_prefix " " " " (fun (_i, t) -> 
-      (* parens *) (render_type RHS t)) typs
+      quotes (render_type RHS t)) typs
 
 let render_variant_typ _is_recursive prefix id quants cases = 
   prefix ^ id ^ render_quants quants ^ " =\n\t" ^
@@ -738,7 +739,7 @@ let render_function_def prefix id _at params r_typ clauses =
   (* TODO: deal with extra params *)
   let extra_params = List.filter_map (render_inh_param inhabited_typ_vars) params in
   let _e_params_render = if extra_params = [] then "" else " " ^ String.concat " " extra_params in
-  prefix ^ id ^ " :: " ^ quotes (string_of_list "" (" " ^ ra ^ " ") (" " ^ ra ^ " ") (render_param_type RHS) params ^ render_type RHS r_typ) ^ " where \n" ^
+  prefix ^ id ^ " :: " ^ quotes (string_of_list "" (" " ^ ra ^ " ") (" " ^ ra ^ " ") (render_param_type RHS) params ^ render_type RHS r_typ) ^ " where \n\t\t" ^
     match clauses with
     | [] -> error r_typ.at "Function definition should have at least one clause"
     | clause :: clauses ->
@@ -763,7 +764,7 @@ let render_function_def prefix id _at params r_typ clauses =
   else "" *)
 
 let render_relation prefix id typ rules = 
-  prefix ^ id ^ " :: " ^ quotes (string_of_relation_args typ ^ "bool") ^ " where \n\t" ^
+  prefix ^ render_id id ^ " :: " ^ quotes (string_of_relation_args typ ^ "bool") ^ " where \n\t" ^
     match rules with
     | [] -> error typ.at "Relation should have at least one rule"
     | rule :: rules ->
@@ -783,7 +784,7 @@ let render_axiom prefix id params r_typ =
   prefix ^ id ^ " : " ^ quotes (string_of_list "∀ " ". " " " (render_param RHS) params ^ render_type RHS r_typ)
 
 let render_rel_axiom prefix id typ =
-  prefix ^ id ^ " :: " ^ quotes (string_of_relation_args typ ^ "Prop")
+  prefix ^ id ^ " :: " ^ quotes (string_of_relation_args typ ^ "bool")
 
 let render_global_declaration id typ exp = 
   "definition " ^ id ^ " :: " ^ quotes (render_type RHS typ) ^ " where\n\t" ^ quotes (id ^ " = " ^ render_exp RHS exp)
@@ -791,9 +792,10 @@ let render_global_declaration id typ exp =
 (* TODO: change to Isabelle *)
 let render_extra_info def = 
   match def.it with
-  | TypD (id, _, [{it = InstD (quants, _, {it = VariantT typcases; _}); _}]) -> 
-    Some (inhabitance_proof id.it quants typcases ^ ".\n\n" ^
-    string_of_eqtype_proof true (cant_do_equality quants typcases) id.it quants)
+  | TypD (_id, _, [{it = InstD (_quants, _, {it = VariantT _typcases; _}); _}]) ->
+     None
+(*    Some (inhabitance_proof id.it quants typcases ^ ".\n\n" ^
+    string_of_eqtype_proof true (cant_do_equality quants typcases) id.it quants) *)
   | _ -> None
 
 let has_prems c = 
