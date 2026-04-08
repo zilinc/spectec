@@ -2,6 +2,17 @@ open Il.Ast
 open Util.Source
 open Il.Walk
 
+
+(* NOTES FOR CONRAD MEETING *)
+(* List of reserved ids in Isabelle? *)
+(* Inhabitance + coercion *)
+(* Struct extension *)
+(* :> operation *)
+(* axiomatization *)
+(* list_all iterators *)
+(* address mutual recursion *)
+
+
 module StringSet = Set.Make(String)
 
 let ra = "⇒"
@@ -92,7 +103,8 @@ let reserved_ids =
    "list"; "option"; "prod"; "sum";
    "Nil"; "Cons"; "None"; "Some";
    "Inl"; "Inr"; "True"; "False";
-   "not"; "and"; "or"; "ALL"; "EX";
+   "not"; "and"; "or"; "ALL"; "EX"; "INF"; "SUP";
+   "CONST"; "TYPE"; 
    "id"; "map"; "fold"; "set"; "fst"; "snd";
    "length"; "hd"; "tl"; "Suc" ]
   |> StringSet.of_list
@@ -164,11 +176,6 @@ let check_trivial_append env typ =
     end
   | _ -> false
 
-let is_inductive d = 
-  match d.it with
-  | RelD _ -> true
-  | TypD(_, _, [inst]) when is_variant_typ inst || is_alias_typ inst -> true
-  | _ -> false
     
 let comment_desc_def d = 
   match d.it with
@@ -273,20 +280,34 @@ let get_type_args t =
   | VarT (_, args) -> args
   | _ -> error t.at ("Following type should be a variable type: " ^ Il.Print.string_of_typ t)
 
-(* TODO: change to Isabelle? *)
-let rec render_param_type exp_type param = 
-  match param.it with
-  | ExpP (_, typ) -> render_type exp_type typ
-  | TypP _ -> "eqType"
-  | DefP (_, params, typ) -> 
-    string_of_list_suffix " -> " " -> " (render_param_type exp_type) params ^ render_type exp_type typ
-  | GramP _ -> comment_parens ("Unsupported param: " ^ Il.Print.string_of_param param)
+
+let rec render_int_pattern n =
+  if n = Z.zero then "0"
+  else if n = Z.one then "(Suc 0)"
+  else "(Suc " ^ render_int_pattern (Z.sub n Z.one) ^ ")"
 
 
-and render_type exp_type typ = 
-  let rt_func = render_type exp_type in
+let rec render_param_types_list exp_type typids params =
+  let typids, resl =
+    List.fold_left (fun (typids, resl) param ->
+        let paramid = get_param_id param in
+        match param.it with
+        | ExpP (_, typ) -> typids, (paramid, render_type exp_type typids typ) :: resl
+        | TypP id -> StringSet.add id.it typids, resl
+        | DefP (_, params, typ) ->
+           let typids', resl' = render_param_types exp_type typids params in
+           typids, (paramid, (resl' ^ render_type exp_type typids' typ)) :: resl
+        | GramP _ -> error param.at ("Unsupported param: " ^ Il.Print.string_of_param param)
+      ) (typids, []) params in
+  typids, List.rev resl
+and render_param_types exp_type typids params =
+  let typids, resl = render_param_types_list exp_type typids params in
+  typids, string_of_list_suffix (" " ^ ra ^ " ") (" " ^ ra ^ " ") snd resl
+
+and render_type exp_type typids typ = 
+  let rt_func = render_type exp_type typids in
   match typ.it with
-  | VarT (id, []) -> render_id id.it
+  | VarT (id, []) -> if StringSet.mem id.it typids then "'" ^ id.it else render_id id.it
   | VarT (id, args) -> parens (render_id id.it ^ " " ^ String.concat " " (List.map (render_arg exp_type) args))
   | BoolT -> "bool"
   | NumT nt -> render_numtyp nt
@@ -367,7 +388,7 @@ and render_exp exp_type exp =
   | ExtE (e1, p, e2) -> render_path_start p e1 true e2
   (* TODO: figure out coercion in Isabelle *)
   | CallE (id, [a]) when StringSet.mem id.it !env_ref.proj_set ->
-    parens (render_arg exp_type a ^ " :> " ^ (render_type exp_type exp.note))
+    parens (render_arg exp_type a ^ " :> " ^ (render_type exp_type StringSet.empty exp.note))
   | CallE (id, args) -> parens (render_id id.it ^ " " ^ String.concat " " (List.map (render_arg exp_type) args))
   (* TODO: iter handling *)
   (* Iter handling *)
@@ -377,7 +398,7 @@ and render_exp exp_type exp =
   | IterE (e, (_, [])) -> r_func e
   | IterE (e, _) when exp_type = LHS -> r_func e
   | IterE (e, (iter, iter_quants)) ->
-    let quants = List.map (fun (id, e) -> parens (render_id id.it  ^ " : " ^ render_type exp_type (remove_iter_from_type e.note))) iter_quants in
+    let quants = List.map (fun (id, e) -> parens (render_id id.it  ^ " : " ^ render_type exp_type StringSet.empty (remove_iter_from_type e.note))) iter_quants in
     let iter_exps = List.map snd iter_quants in 
     let n = List.length iter_quants - 1 in
     let lst = if iter = Opt then iter_exp_opt_funcs else iter_exp_lst_funcs in
@@ -386,31 +407,36 @@ and render_exp exp_type exp =
     | None -> error exp.at "Iteration exceeded the supported amount for isabelle translation"
     in 
     parens (pred_name ^ " " ^ render_lambda quants (r_func e) ^ " " ^ 
-    String.concat " " (List.map (render_exp exp_type) iter_exps))
+    String.concat " " (List.map r_func iter_exps))
   | CvtE (e1, _nt1, nt2) -> parens (r_func e1 ^ " :: " ^ render_numtyp nt2)
   | SubE _ -> error exp.at "Encountered subtype expression. Please run sub pass"
   (* TODO: type annotations else Isabelle struggles *)
   | IfE (e1, e2, e3) -> parens ("if " ^ r_func e1 ^ " then " ^ r_func e2 ^ " else " ^ r_func e3)
 
 and render_arg exp_type a = 
-  match a.it with 
+  match a.it with
+  | ExpA { it = NumE (`Nat n) ; _ }
+    | ExpA { it = NumE (`Int n) ; _ } when n >= Z.zero ->
+     render_int_pattern n
   | ExpA e -> render_exp exp_type e
-  | TypA t -> render_type exp_type t
+  | TypA _t -> "" (* TODO: check that this is correct *)
   | DefA id -> render_id id.it 
   | _ -> comment_parens ("Unsupported arg: " ^ Il.Print.string_of_arg a)
 
 and render_quant exp_type b =
   match b.it with
-  | ExpP (id, typ) -> parens (render_id id.it  ^ " :: " ^ render_type exp_type typ)
-  | TypP id -> (* TODO: this should use 'a? *) parens (render_id id.it  ^ " : Type (TODO use 'a)")
-  | DefP (id, params, typ) -> 
-    parens (render_id id.it  ^ " :: " ^ 
-    string_of_list_suffix (" " ^ ra ^ " ") (" " ^ ra ^ " ") (render_param_type exp_type) params ^
-    render_type exp_type typ)
-  | GramP _ -> comment_parens ("Unsupported quant: " ^ Il.Print.string_of_quant b)
+  | ExpP (id, typ) -> None, parens (render_id id.it  ^ " :: " ^ render_type exp_type StringSet.empty (* TODO: is this correct? *) typ)
+  | TypP id -> Some id.it , ""
+  | DefP (id, params, typ) ->
+     None, let typids, resl = render_param_types exp_type StringSet.empty params in
+     parens (render_id id.it  ^ " :: " ^
+     resl ^
+     render_type exp_type typids typ)
+  | GramP _ -> error b.at ("Unsupported quant: " ^ Il.Print.string_of_quant b)
 
-and render_param exp_type param = 
-  parens (get_param_id param ^ " :: " ^ render_param_type exp_type param)
+and render_params_genl prolog epilog exp_type params =
+  let typids, resl = render_param_types_list exp_type StringSet.empty params in
+  typids, string_of_list prolog epilog " " (fun (id, rend) -> id ^ " :: " ^ rend) resl
 
 (* PATH Functions *)
 and transform_list_path (p : path) = 
@@ -446,7 +472,7 @@ and render_path (paths : path list) typ at n name is_extend end_exp =
   (* End logic for extend *)
   | [{it = IdxP (_, e); _}] when is_extend -> 
     let extend_term = parens (new_name ^ " ++ " ^ r_func_e end_exp) in
-    let quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
+    let _, quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
     parens ("list_update_func " ^ r_func_e (list_name n) ^ " " ^ r_func_e e ^ render_lambda [quant] extend_term)
   | [{it = DotP (_p, a); _}] when is_extend -> 
     (* let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref.il_env p.note) |> render_id in *)
@@ -455,11 +481,11 @@ and render_path (paths : path list) typ at n name is_extend end_exp =
     render_record_update (r_func_e (list_name n)) (render_atom a) extend_term
   | [{it = SliceP (_, e1, e2); _}] when is_extend -> 
     let extend_term = parens (new_name ^ " ++ " ^ r_func_e end_exp) in
-    let quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
+    let _, quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
     parens ("list_slice_update " ^ r_func_e (list_name n) ^ " " ^ r_func_e e1 ^ " " ^ r_func_e e2 ^ " " ^ render_lambda [quant] extend_term)
   (* End logic for update *)
   | [{it = IdxP (_, e); _}] -> 
-    let quant = render_quant RHS (ExpP ("_" $ no_region, new_name_typ) $ no_region) in
+    let _, quant = render_quant RHS (ExpP ("_" $ no_region, new_name_typ) $ no_region) in
     parens ("list_update_func " ^ r_func_e (list_name n) ^ " " ^ r_func_e e ^ " " ^ render_lambda [quant] (r_func_e end_exp))
   | [{it = DotP (_p, a); _}] ->
     (* let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref.il_env p.note) |> render_id in *)
@@ -470,7 +496,7 @@ and render_path (paths : path list) typ at n name is_extend end_exp =
   | {it = IdxP (_, e); note; _} :: ps -> 
     let path_term = render_path ps note at (n + 1) None is_extend end_exp in
     let new_name = var_prefix ^ string_of_int (n + 1) in 
-    let quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
+    let _, quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
     parens ("list_update_func " ^ r_func_e (list_name n) ^ " " ^ r_func_e e ^ " " ^ render_lambda [quant] path_term)
   | ({it = DotP _; note; _} as p) :: ps -> 
     let (dot_paths, ps') = list_split is_dot (p :: ps) in
@@ -516,8 +542,9 @@ and render_path (paths : path list) typ at n name is_extend end_exp =
   (* Catch all error if we encounter empty list or RootP *)
   | _ -> error at "Paths should not be empty"
 
-and render_quants (quants : quant list) = 
-  string_of_list_prefix " " " " (render_quant RHS) quants
+and render_quants (quants : quant list) =
+  let resl = List.map (render_quant RHS) quants in
+  List.filter_map fst resl, string_of_list_prefix " " " " snd resl
 
 let render_quants_ids (quants : quant list) = 
   string_of_list_prefix " " " " get_param_id quants
@@ -525,15 +552,15 @@ let render_quants_ids (quants : quant list) =
 let render_match_quanters params =
   String.concat ", " (List.map get_param_id params)
 
-let render_params params = 
-  string_of_list_prefix " " " " (render_param RHS) params
+let render_params =
+  render_params_genl " " " " RHS
 
 (* TODO: wrong, fix later *)
 let render_match_args args =
   string_of_list_prefix " " " " (render_arg LHS) args
 
 (* TODO: change to Isabelle *)
-let string_of_eqtype_proof recursive (cant_do_equality: bool) id (quants : quant list) =
+(* let string_of_eqtype_proof recursive (cant_do_equality: bool) id (quants : quant list) =
   let quanters = render_quants quants in 
   let quanter_ids = render_quants_ids quants in
   let id' = render_id id in 
@@ -569,10 +596,13 @@ let string_of_eqtype_proof recursive (cant_do_equality: bool) id (quants : quant
   "\teq_dec_Equality_axiom " ^ parens (id' ^ quanter_ids) ^ " " ^ parens (id' ^ "_eq_dec" ^ quanter_ids) ^ ".\n\n" ^
   "HB.instance Definition _" ^ quanters ^ " := hasDecEq.Build " ^ parens (id' ^ quanter_ids) ^ " " ^ parens ("eq" ^ id' ^ "P" ^ quanter_ids) ^ ".\n" ^
   "Hint Resolve " ^ id' ^ "_eq_dec : eq_dec_db" 
+ *)
 
-(* TODO: change to Isabelle *)
-let string_of_relation_args typ = 
-  string_of_list "" (" " ^ ra ^ " ") (" " ^ ra ^ " ") (render_type REL) (transform_case_typ typ)
+
+(* TODO: can relations in spectec not be polymorphic???? *)
+let string_of_relation_args typ =
+string_of_list_suffix (" " ^ ra ^ " ") (" " ^ ra ^ " ") (render_type REL StringSet.empty) (transform_case_typ typ)
+  (* render_param_types REL StringSet.empty (transform_case_typ typ) *)
 
 
 (* TODO: change to Isabelle *)
@@ -587,7 +617,7 @@ let rec render_prem prem =
   | IterPr (p, (_, [])) -> r_func p
 
   | IterPr (p, (ListN (_, Some i), ps)) ->
-    let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " : " ^ render_type REL (remove_iter_from_type e.note))) ps in
+    let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " : " ^ render_type REL StringSet.empty (remove_iter_from_type e.note))) ps in
     let iter_exps = List.map snd ps in 
     let n = List.length ps - 1 in
     let pred_name = match (List.nth_opt sup_iter_prem_rels_list n) with 
@@ -598,7 +628,7 @@ let rec render_prem prem =
     String.concat " " (List.map (render_exp REL) iter_exps)
   | IterPr (p, (iter, ps)) -> 
     let option_conversion s = if iter = Opt then parens ("option_to_list " ^ s) else s in
-    let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " : " ^ render_type REL (remove_iter_from_type e.note))) ps in
+    let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " : " ^ render_type REL StringSet.empty (remove_iter_from_type e.note))) ps in
     let iter_exps = List.map snd ps in 
     let n = List.length ps - 1 in
     let pred_name = match (List.nth_opt iter_prem_rels_list n) with 
@@ -610,20 +640,27 @@ let rec render_prem prem =
   | LetPr _ -> 
     "True " ^ comment_parens ("Unsupported premise: " ^ Il.Print.string_of_prem prem)
 
-(* TODO: I don't think type_synonym can take arguments *)
-let render_typealias id quants typ = 
-  "type_synonym " ^ id ^ render_quants quants ^ " = " ^ quotes (render_type RHS typ)
+
+let string_of_quantl = function
+  | [] -> ""
+  | [id] -> "'" ^ id ^ " "
+  | l -> string_of_list "(" ") " ", " (fun id -> "'" ^ id) l
+
+let render_typealias id quants typ =
+  let quantl, quantr = render_quants quants in 
+  "type_synonym " ^ string_of_quantl quantl ^ id ^ quantr ^ " = " ^ quotes (render_type RHS (StringSet.of_list quantl) typ)
 
 
 let render_record _recursive id quants fields = 
   let _constructor_name = "MK" ^ id in
-  let inhabitance_quanters = render_quants quants in 
-  let _quanters = render_quants_ids quants in 
+  let quantl, inhabitance_quanters = render_quants quants in 
+  let _quanters = render_quants_ids quants in
+  let typids = StringSet.of_list quantl in
 
   (* Standard Record definition *)
-  "record " ^ id ^ inhabitance_quanters ^ " =\n\t" ^ 
+  "record " ^ string_of_quantl quantl ^ id ^ inhabitance_quanters ^ " =\n\t" ^ 
   String.concat "\n\t" (List.map (fun (a, (typ, _, _), _) -> 
-                            render_atom a ^ " :: " ^ quotes (render_type RHS typ)) fields) ^ "\n\n"
+                            render_atom a ^ " :: " ^ quotes (render_type RHS typids typ)) fields) ^ "\n\n"
 
   (* ^
 
@@ -661,7 +698,7 @@ let rec has_typ id t =
   | _ -> false
 
 (* TODO: change to Isabelle *)
-let inhabitance_proof id quants cases = 
+(* let inhabitance_proof id quants cases = 
   (* Inhabitance proof for default values *)
   let inhabitance_quanters = render_quants quants in 
   let quanters = render_quants_ids quants in 
@@ -676,30 +713,32 @@ let inhabitance_proof id quants cases =
         " := { default_val := " ^ render_mixop id m ^ quanters ^ 
         string_of_list_prefix " " " " (fun _ -> "default_val" ) (transform_case_typ t) ^ " }")
   in
-  render_proof cases 
+  render_proof cases  *)
 
 (* TODO: change to Isabelle *)
 let render_coercion (base_typ_id, typ_params) coerc_typ_id proj_func_id = 
-  "Global Instance " ^ proj_func_id ^ "_coercion" ^ render_params typ_params ^ " : Coercion " ^ base_typ_id ^ " " ^ coerc_typ_id ^ " := { coerce := " ^ proj_func_id ^ 
+  "Global Instance " ^ proj_func_id ^ "_coercion" ^ snd (render_params typ_params) ^ " : Coercion " ^ base_typ_id ^ " " ^ coerc_typ_id ^ " := { coerce := " ^ proj_func_id ^ 
   string_of_list_prefix " " " " get_param_id typ_params ^ " }" 
 
 let cant_do_equality quants cases = 
   (List.exists is_typ_quant quants) ||
   (List.exists (fun (_, (_, quants', _), _) -> List.exists is_typ_quant quants') cases)
 
-let render_case_typs t = 
+let render_case_typs typids t = 
   let typs = transform_case_args t in
   string_of_list_prefix " " " " (fun (_i, t) -> 
-      quotes (render_type RHS t)) typs
+      quotes (render_type RHS typids t)) typs
 
-let render_variant_typ _is_recursive prefix id quants cases = 
-  prefix ^ id ^ render_quants quants ^ " =\n\t" ^
+let render_variant_typ _is_recursive prefix id quants cases =
+  let quantl, quantr = render_quants quants in
+  let typids = StringSet.of_list quantl in
+  prefix ^ string_of_quantl quantl ^ id ^ quantr ^ " =\n\t" ^
     match cases with
     | [] -> "Dummy " ^ comment_parens "This variant type should have at least one case"
     | (m, (t, _, _), _) :: cases ->
-       "  " ^ render_mixop id m ^ render_case_typs t ^ "\n\t" ^
+       "  " ^ render_mixop id m ^ render_case_typs typids t ^ "\n\t" ^
          String.concat "\n\t" (List.map (fun (m, (t, _, _), _) ->
-                                   "| " ^ render_mixop id m ^ render_case_typs t 
+                                   "| " ^ render_mixop id m ^ render_case_typs typids t 
                                  )  cases)  (* ^
            (* TODO: figure out inhabitance in Isabelle *)
   if is_recursive then "" else
@@ -724,7 +763,7 @@ let render_single_type id at params =
     | _ -> false 
   in
   match List.rev params with
-  | {it = ExpP (_, typ); _} :: ps when List.for_all is_typ_param ps -> (render_type RHS typ, ps)
+  | {it = ExpP (_, typ); _} :: ps when List.for_all is_typ_param ps -> (render_type RHS StringSet.empty typ, ps)
   | _ -> error at ("Given projection function: " ^ id ^ " has invalid parameters!")
 
 let render_function_def prefix id _at params r_typ clauses = 
@@ -739,7 +778,8 @@ let render_function_def prefix id _at params r_typ clauses =
   (* TODO: deal with extra params *)
   let extra_params = List.filter_map (render_inh_param inhabited_typ_vars) params in
   let _e_params_render = if extra_params = [] then "" else " " ^ String.concat " " extra_params in
-  prefix ^ id ^ " :: " ^ quotes (string_of_list "" (" " ^ ra ^ " ") (" " ^ ra ^ " ") (render_param_type RHS) params ^ render_type RHS r_typ) ^ " where \n\t\t" ^
+  let typids, resl = render_param_types RHS StringSet.empty params in
+  prefix ^ id ^ " :: " ^ quotes (resl ^ render_type RHS typids r_typ) ^ " where \n\t\t" ^
     match clauses with
     | [] -> error r_typ.at "Function definition should have at least one clause"
     | clause :: clauses ->
@@ -763,31 +803,35 @@ let render_function_def prefix id _at params r_typ clauses =
     render_coercion (render_single_type id at params) (render_type RHS r_typ) id 
   else "" *)
 
-let render_relation prefix id typ rules = 
-  prefix ^ render_id id ^ " :: " ^ quotes (string_of_relation_args typ ^ "bool") ^ " where \n\t" ^
+let render_relation prefix id typ rules =
+  let resl = string_of_relation_args typ in
+  prefix ^ render_id id ^ " :: " ^ quotes (resl ^ "bool") ^ " where \n\t" ^
     match rules with
     | [] -> error typ.at "Relation should have at least one rule"
     | rule :: rules ->
        match rule.it with
        | RuleD (rule_id, _, _, exp, prems) ->
-          let string_prems = string_of_list "\n\t\t" (" " ^ lra ^ "\n\t\t") (" " ^ lra ^ "\n\t\t") (render_prem) prems in
-          "  " ^ render_id (rule_id.it) ^ " : " ^ quotes (string_prems ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))) ^ "\n\t" ^
+          let string_prems = string_of_list "\n\t\t\"" (" " ^ lra ^ "\n\t\t ") (" " ^ lra ^ "\n\t\t ") (render_prem) prems in
+          "  " ^ render_id (rule_id.it) ^ " : " ^ (string_prems ^ (if prems = [] then "\"" else "") ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))) ^ "\"\n\t" ^
             String.concat "\n\t"
               (List.map (fun rule ->
                    match rule.it with
                    | RuleD (rule_id, _, _, exp, prems) ->
-                      let string_prems = string_of_list "\n\t\t" (" " ^ lra ^ "\n\t\t") (" " ^ lra ^ "\n\t\t") (render_prem) prems in
-                      "| " ^ render_id (rule_id.it) ^ " : " ^ quotes (string_prems ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp)))
+                      let string_prems = string_of_list "\n\t\t\"" (" " ^ lra ^ "\n\t\t ") (" " ^ lra ^ "\n\t\t ") (render_prem) prems in
+                      "| " ^ render_id (rule_id.it) ^ " : " ^ (string_prems ^ (if prems = [] then "\"" else "") ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))) ^"\""
                  ) rules)
 
 let render_axiom prefix id params r_typ =
-  prefix ^ id ^ " : " ^ quotes (string_of_list "∀ " ". " " " (render_param RHS) params ^ render_type RHS r_typ)
+  let typids, resl = render_params_genl "∀ " ". " RHS params in
+  prefix ^ id ^ " : " ^ quotes (resl ^ render_type RHS typids r_typ)
 
 let render_rel_axiom prefix id typ =
-  prefix ^ id ^ " :: " ^ quotes (string_of_relation_args typ ^ "bool")
+  let resl = string_of_relation_args typ in
+  prefix ^ id ^ " :: " ^ quotes (resl ^ "bool")
 
+(* TODO: can global declarations have polymorphic types? *) 
 let render_global_declaration id typ exp = 
-  "definition " ^ id ^ " :: " ^ quotes (render_type RHS typ) ^ " where\n\t" ^ quotes (id ^ " = " ^ render_exp RHS exp)
+  "definition " ^ id ^ " :: " ^ quotes (render_type RHS StringSet.empty typ) ^ " where\n\t" ^ quotes (id ^ " = " ^ render_exp RHS exp)
 
 (* TODO: change to Isabelle *)
 let render_extra_info def = 
@@ -804,7 +848,8 @@ let has_prems c =
 
 let start_prefix def = 
   match def.it with
-  | _ when is_inductive def -> "inductive "
+  | RelD _ -> "inductive "
+  | TypD(_, _, [inst]) when is_variant_typ inst || is_alias_typ inst -> "datatype "
   | DecD (_, _, _, []) -> "axiomatization "
   | DecD (_, _, _, clauses)  when List.exists has_prems clauses -> "axiomatization "
   | DecD _ -> "fun "
@@ -816,7 +861,6 @@ let is_axiom def =
   | DecD (_, _, _, _clauses) -> true
   | _ -> false
 
-(* TODO: change to Isabelle *)
 (* TODO - revise mutual recursion with other defs such as records and axioms *)
 let rec string_of_def has_endline recursive def = 
   let end_newline = if has_endline then "\n\n" else "" in 
