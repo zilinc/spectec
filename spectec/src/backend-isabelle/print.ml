@@ -393,12 +393,13 @@ and render_exp exp_type exp =
   (* TODO: iter handling *)
   (* Iter handling *)
   | IterE (e, (ListN (n, Some id), [])) -> 
-    parens ("seq.mkseq " ^ render_lambda [id.it] (r_func e) ^ " " ^ (r_func n)) 
-  | IterE (e, (ListN (n, None), [])) -> parens ("List.repeat " ^ (r_func e) ^ " " ^ (r_func n)) 
+    parens ("mkseq " ^ render_lambda [id.it] (r_func e) ^ " " ^ (r_func n)) 
+  | IterE (e, (ListN (n, None), [])) -> parens ("repeat " ^ (r_func e) ^ " " ^ (r_func n)) 
   | IterE (e, (_, [])) -> r_func e
   | IterE (e, _) when exp_type = LHS -> r_func e
   | IterE (e, (iter, iter_quants)) ->
-    let quants = List.map (fun (id, e) -> parens (render_id id.it  ^ " : " ^ render_type exp_type StringSet.empty (remove_iter_from_type e.note))) iter_quants in
+     (* TODO: polymorphism? *)
+    let quants = List.map (fun (id, e) -> parens (render_id id.it  ^ " :: " ^ render_type exp_type StringSet.empty (remove_iter_from_type e.note))) iter_quants in
     let iter_exps = List.map snd iter_quants in 
     let n = List.length iter_quants - 1 in
     let lst = if iter = Opt then iter_exp_opt_funcs else iter_exp_lst_funcs in
@@ -605,7 +606,6 @@ string_of_list_suffix (" " ^ ra ^ " ") (" " ^ ra ^ " ") (render_type REL StringS
   (* render_param_types REL StringSet.empty (transform_case_typ typ) *)
 
 
-(* TODO: change to Isabelle *)
 let rec render_prem prem =
   let r_func = render_prem in 
   match prem.it with
@@ -617,7 +617,8 @@ let rec render_prem prem =
   | IterPr (p, (_, [])) -> r_func p
 
   | IterPr (p, (ListN (_, Some i), ps)) ->
-    let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " : " ^ render_type REL StringSet.empty (remove_iter_from_type e.note))) ps in
+     (* TODO: polymorphism? *)
+    let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " :: " ^ render_type REL StringSet.empty (remove_iter_from_type e.note))) ps in
     let iter_exps = List.map snd ps in 
     let n = List.length ps - 1 in
     let pred_name = match (List.nth_opt sup_iter_prem_rels_list n) with 
@@ -627,8 +628,9 @@ let rec render_prem prem =
     pred_name ^ " " ^ render_lambda (i.it :: quants) (r_func p) ^ " " ^ 
     String.concat " " (List.map (render_exp REL) iter_exps)
   | IterPr (p, (iter, ps)) -> 
-    let option_conversion s = if iter = Opt then parens ("option_to_list " ^ s) else s in
-    let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " : " ^ render_type REL StringSet.empty (remove_iter_from_type e.note))) ps in
+     let option_conversion s = if iter = Opt then parens ("option_to_list " ^ s) else s in
+          (* TODO: polymorphism? *)
+    let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " :: " ^ render_type REL StringSet.empty (remove_iter_from_type e.note))) ps in
     let iter_exps = List.map snd ps in 
     let n = List.length ps - 1 in
     let pred_name = match (List.nth_opt iter_prem_rels_list n) with 
@@ -945,7 +947,13 @@ let exported_string =
   "\t\"list_slice (x # l) 0 0 = []\" |\n" ^
   "\t\"list_slice (x # l) (Suc n) 0 = []\" |\n" ^
   "\t\"list_slice (x # l) 0 (Suc m) = x # list_slice l 0 m\" |\n" ^
-  "\t\"list_slice (x # l) (Suc n) m = list_slice l n m\"\n\n" 
+  "\t\"list_slice (x # l) (Suc n) m = list_slice l n m\"\n\n" ^
+  "fun mkseq :: \"(nat " ^ ra ^ " 'a) " ^ ra ^ " nat " ^ ra ^ "'a list\" where\n" ^
+  "\t\"mkseq _ 0 = []\" |\n" ^
+  "\t\"mkseq f (Suc n) = mkseq f n @ [f n]\"\n\n" ^
+  "fun repeat :: \"nat " ^ ra ^ " 'a " ^ ra ^ " 'a list\" where\n" ^
+  "\t\"repeat 0 _ = []\" |\n" ^
+  "\t\"repeat (Suc n) x = x # repeat n x\"\n\n"
 
     
   
