@@ -6,11 +6,10 @@ open Il.Walk
 (* NOTES FOR CONRAD MEETING *)
 (* List of reserved ids in Isabelle? *)
 (* Inhabitance + coercion *)
-(* Struct extension *)
 (* :> operation *)
+(* Struct extension *)
 (* axiomatization *)
-(* list_all iterators *)
-(* address mutual recursion *)
+
 
 
 module StringSet = Set.Make(String)
@@ -437,7 +436,7 @@ and render_quant exp_type b =
 
 and render_params_genl prolog epilog exp_type params =
   let typids, resl = render_param_types_list exp_type StringSet.empty params in
-  typids, string_of_list prolog epilog " " (fun (id, rend) -> id ^ " :: " ^ rend) resl
+  typids, string_of_list prolog epilog " " (fun (id, rend) -> parens (id ^ " :: " ^ rend)) resl
 
 (* PATH Functions *)
 and transform_list_path (p : path) = 
