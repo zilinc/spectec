@@ -84,7 +84,7 @@ let var_prefix = "var_"
 (* let render_rule_id rel_id id = rel_id ^ "__" ^ id  *)
 
 let reserved_ids = 
-  ["theory"; "imports"; "begin"; "end";
+  ["theory"; "imports"; "begin"; "end"; 
    "definition"; "abbreviation"; "notation";
    "datatype"; "codatatype"; "record"; "typedef";
    "fun"; "function"; "primrec";
@@ -650,17 +650,18 @@ let string_of_quantl = function
 
 let render_typealias id quants typ =
   let quantl, quantr = render_quants quants in 
-  "type_synonym " ^ string_of_quantl quantl ^ id ^ quantr ^ " = " ^ quotes (render_type RHS (StringSet.of_list quantl) typ)
+  (* "type_synonym " ^ *) string_of_quantl quantl ^ id ^ quantr ^ " = " ^ quotes (render_type RHS (StringSet.of_list quantl) typ)
+(*  "type_synonym " ^ string_of_quantl quantl ^ id ^ quantr ^ " = " ^ quotes (render_type RHS (StringSet.of_list quantl) typ) *)
 
 
-let render_record _recursive id quants fields = 
+let render_record id quants fields = 
   let _constructor_name = "MK" ^ id in
   let quantl, inhabitance_quanters = render_quants quants in 
   let _quanters = render_quants_ids quants in
   let typids = StringSet.of_list quantl in
 
   (* Standard Record definition *)
-  "record " ^ string_of_quantl quantl ^ id ^ inhabitance_quanters ^ " =\n\t" ^ 
+  (* "record " ^ *) string_of_quantl quantl ^ id ^ inhabitance_quanters ^ " =\n\t" ^ 
   String.concat "\n\t" (List.map (fun (a, (typ, _, _), _) -> 
                             render_atom a ^ " :: " ^ quotes (render_type RHS typids typ)) fields) ^ "\n\n"
 
@@ -731,10 +732,10 @@ let render_case_typs typids t =
   string_of_list_prefix " " " " (fun (_i, t) -> 
       quotes (render_type RHS typids t)) typs
 
-let render_variant_typ _is_recursive prefix id quants cases =
+let render_variant_typ id quants cases =
   let quantl, quantr = render_quants quants in
   let typids = StringSet.of_list quantl in
-  prefix ^ string_of_quantl quantl ^ id ^ quantr ^ " =\n\t" ^
+  string_of_quantl quantl ^ id ^ quantr ^ " =\n\t" ^
     match cases with
     | [] -> "Dummy " ^ comment_parens "This variant type should have at least one case"
     | (m, (t, _, _), _) :: cases ->
@@ -768,8 +769,8 @@ let render_single_type id at params =
   | {it = ExpP (_, typ); _} :: ps when List.for_all is_typ_param ps -> (render_type RHS StringSet.empty typ, ps)
   | _ -> error at ("Given projection function: " ^ id ^ " has invalid parameters!")
 
-let render_function_def prefix id _at params r_typ clauses = 
-  let has_typ_fam = List.length params > 1 && List.exists is_type_family_param params in
+let render_function_def id _at params r_typ clauses = 
+  let _has_typ_fam = List.length params > 1 && List.exists is_type_family_param params in
   let _is_proj_func = StringSet.mem id !env_ref.proj_set in
   let base_list_collector = base_collector [] (@) in
   let c = { base_list_collector with collect_exp = needs_inh_class; collect_path = needs_inh_class_path } in
@@ -781,21 +782,22 @@ let render_function_def prefix id _at params r_typ clauses =
   let extra_params = List.filter_map (render_inh_param inhabited_typ_vars) params in
   let _e_params_render = if extra_params = [] then "" else " " ^ String.concat " " extra_params in
   let typids, resl = render_param_types RHS StringSet.empty params in
-  prefix ^ id ^ " :: " ^ quotes (resl ^ render_type RHS typids r_typ) ^ " where \n\t\t" ^
-    match clauses with
+  id ^ " :: " ^ quotes (resl ^ render_type RHS typids r_typ),
+(*    match clauses with
     | [] -> error r_typ.at "Function definition should have at least one clause"
     | clause :: clauses ->
        (* TODO fix the render_match_args *)
        match clause.it with
        | DefD (_, args, exp, _) ->
           "  " ^ quotes (id ^ render_match_args args ^ " = " ^ render_exp RHS exp) ^ "\n\t\t" ^
-            String.concat "\n\t\t"
+            String.concat "\n\t\t" *)
               (List.map
                  (fun clause -> match clause.it with
                                 | DefD (_, args, exp, _) ->
-                                   "| " ^ quotes (id ^ render_match_args args ^ " = " ^ render_exp RHS exp)) clauses
-              ) ^
-              (if has_typ_fam then "\n\t\t" ^ render_extra_clause params else "")
+                                   quotes (id ^ render_match_args args ^ " = " ^ render_exp RHS exp)) clauses
+              )
+                (* TODO: extra clause in Isabelle? *)
+(*              (if has_typ_fam then "\n\t\t" ^ render_extra_clause params else "") *)
 (* TODO: need coercion in Isabelle? *)
 (* ^
                 (*                "\n\tend" ^ *)
@@ -805,35 +807,35 @@ let render_function_def prefix id _at params r_typ clauses =
     render_coercion (render_single_type id at params) (render_type RHS r_typ) id 
   else "" *)
 
-let render_relation prefix id typ rules =
+let render_relation id typ rules =
   let resl = string_of_relation_args typ in
-  prefix ^ render_id id ^ " :: " ^ quotes (resl ^ "bool") ^ " where \n\t" ^
-    match rules with
+  render_id id ^ " :: " ^ quotes (resl ^ "bool"),
+(*    match rules with
     | [] -> error typ.at "Relation should have at least one rule"
     | rule :: rules ->
        match rule.it with
        | RuleD (rule_id, _, _, exp, prems) ->
           let string_prems = string_of_list "\n\t\t\"" (" " ^ lra ^ "\n\t\t ") (" " ^ lra ^ "\n\t\t ") (render_prem) prems in
           "  " ^ render_id (rule_id.it) ^ " : " ^ (string_prems ^ (if prems = [] then "\"" else "") ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))) ^ "\"\n\t" ^
-            String.concat "\n\t"
+            String.concat "\n\t" *)
               (List.map (fun rule ->
                    match rule.it with
                    | RuleD (rule_id, _, _, exp, prems) ->
                       let string_prems = string_of_list "\n\t\t\"" (" " ^ lra ^ "\n\t\t ") (" " ^ lra ^ "\n\t\t ") (render_prem) prems in
-                      "| " ^ render_id (rule_id.it) ^ " : " ^ (string_prems ^ (if prems = [] then "\"" else "") ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))) ^"\""
+                      render_id (rule_id.it) ^ " : " ^ (string_prems ^ (if prems = [] then "\"" else "") ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))) ^"\""
                  ) rules)
 
-let render_axiom prefix id params r_typ =
+let render_axiom id params r_typ =
   let typids, resl = render_params_genl "∀ " ". " RHS params in
-  prefix ^ id ^ " : " ^ quotes (resl ^ render_type RHS typids r_typ)
+  id ^ " : " ^ quotes (resl ^ render_type RHS typids r_typ)
 
-let render_rel_axiom prefix id typ =
+let render_rel_axiom id typ =
   let resl = string_of_relation_args typ in
-  prefix ^ id ^ " :: " ^ quotes (resl ^ "bool")
+  id ^ " :: " ^ quotes (resl ^ "bool")
 
-(* TODO: can global declarations have polymorphic types? *) 
+(* TODO: can global declarations have polymorphic types? Can they be mutually recursive? *) 
 let render_global_declaration id typ exp = 
-  "definition " ^ id ^ " :: " ^ quotes (render_type RHS StringSet.empty typ) ^ " where\n\t" ^ quotes (id ^ " = " ^ render_exp RHS exp)
+  id ^ " :: " ^ quotes (render_type RHS StringSet.empty typ) ^ " where\n\t" ^ quotes (id ^ " = " ^ render_exp RHS exp)
 
 (* TODO: change to Isabelle *)
 let render_extra_info def = 
@@ -863,39 +865,52 @@ let is_axiom def =
   | DecD (_, _, _, _clauses) -> true
   | _ -> false
 
+type isabelle_header =
+  Ifun
+| Idef
+| Iax
+| Irec
+| Iind
+| Idat
+| Itsyn
+
+
+
 (* TODO - revise mutual recursion with other defs such as records and axioms *)
-let rec string_of_def has_endline recursive def = 
-  let end_newline = if has_endline then "\n\n" else "" in 
-  let start = if recursive then "" else comment_parens (comment_desc_def def ^ " at: " ^ Util.Source.string_of_region def.at) ^ "\n" in
+let rec components_of_def def =
+  let start = comment_parens (comment_desc_def def ^ " at: " ^ Util.Source.string_of_region def.at) ^ "\n" in
   match def.it with
   | TypD (id, _, [{it = InstD (quants, _, {it = AliasT typ; _}); _}]) -> 
-    if recursive then "" else 
-    start ^ render_typealias (render_id id.it) quants typ ^ end_newline
+     (*    if recursive then "" else  *)
+     start , [Itsyn] , [render_typealias (render_id id.it) quants typ] , [] 
   | TypD (id, _, [{it = InstD (quants, _, {it = StructT typfields; _}); _}])->
      (* TODO: deal with recursive records *)
-    start ^ render_record recursive (render_id id.it) quants typfields ^ end_newline
+    start , [Irec] , [render_record (render_id id.it) quants typfields] , [] 
   | TypD (id, _, [{it = InstD (quants, _, {it = VariantT typcases; _}); _}]) -> 
-    let prefix = if recursive then "" else "datatype " in
-    start ^ render_variant_typ recursive prefix (render_id id.it) quants typcases ^ end_newline
+    start , [Idat] , [render_variant_typ (render_id id.it) quants typcases] , [] 
   | DecD (id, [], typ, [{it = DefD ([], [], exp, _); _}]) -> 
-    start ^ render_global_declaration (render_id id.it) typ exp ^ end_newline
+    start , [Idef] , [render_global_declaration (render_id id.it) typ exp] , [] 
   | DecD (id, params, typ, []) ->
-     let prefix = if recursive then "" else "axiomatization where\n\t" in
-     start ^ render_axiom prefix (render_id id.it) params typ ^ end_newline
+     start , [Iax], [], [render_axiom (render_id id.it) params typ] 
   | DecD (id, params, typ, clauses) when List.exists has_prems clauses ->
-    let prefix = if recursive then "" else "axiomatization where\n\t" in
-    start ^ render_axiom prefix (render_id id.it) params typ ^ end_newline
+    start , [Iax], [], [render_axiom (render_id id.it) params typ]
   | DecD (id, params, typ, clauses) -> 
-    let prefix = if recursive then "" else "fun " in
-    start ^ render_function_def prefix (render_id id.it) id.at params typ (clauses) ^ end_newline
+     let header, clauses = render_function_def (render_id id.it) id.at params typ (clauses) in
+     start, [Ifun], [header], clauses
   | RelD (id, _, _, typ, []) -> 
-    let prefix = if recursive then "" else "axiomatization " in
-    start ^ render_rel_axiom prefix (render_id id.it) typ ^ end_newline
+    start , [Iax], [render_rel_axiom (render_id id.it) typ], []
   | RelD (id, _, _, typ, rules) -> 
-    let prefix = if recursive then "" else "inductive " in
-    start ^ render_relation prefix (render_id id.it) typ rules ^ end_newline
+     let header, clauses = render_relation (render_id id.it) typ rules in
+     start, [Iind], [header], clauses
   (* Mutual recursion - special handling for isabelle *)
-  | RecD defs -> start ^ (match defs with
+  | RecD defs ->
+     let l = List.map components_of_def defs in
+     let kwds, hdrs, clauses =
+       List.fold_right (fun (_, kwds, hdrs, clauses) (acckwds, acchdrs, accclauses) ->
+           kwds @ acckwds, hdrs @ acchdrs, clauses @ accclauses) l ([], [], []) in
+     start, kwds, hdrs, clauses
+
+(*     start ^ (match defs with
     | [] -> ""
     | [d] -> 
       let extra_info = render_extra_info d in
@@ -913,8 +928,36 @@ let rec string_of_def has_endline recursive def =
         List.map (string_of_def false true) defs
       ) ^ ".\n\n" ^ 
       extra_info ^ if extra_info = "" then "" else end_newline
-    )
+    ) *)
   | _ -> error def.at ("Unsupported def: " ^ Il.Print.string_of_def def)
+
+let string_of_def def =
+  let start, kwds, hdrs, clauses = components_of_def def in
+  match kwds, hdrs with
+  | [Itsyn], [hdr] -> start ^ "type_synonym " ^ hdr ^ "\n\n"
+  | Itsyn :: _, _ -> error def.at "Several type aliases defined mutually recursively"
+  | [Irec], [hdr] -> start ^ "record " ^ hdr ^ "\n\n"
+  | Irec :: _, _ -> error def.at "Several records defined mutually recursively"
+  | [Idef], [hdr] -> start ^ "definition " ^ hdr ^ "\n\n"
+  | Idef :: _, _ -> error def.at "Several global variables defined mutually recursively"
+  | Idat :: kwds, _ ->
+     if List.for_all (function Idat -> true | _ -> false) kwds
+     then start ^ "datatype " ^ String.concat "\n\nand\n\n" hdrs ^ "\n\n"
+     else error def.at "datatype defined mutually recursively with something that is not a datatype"
+  | Iax :: kwds, _ ->
+     if List.for_all (function Iax -> true | _ -> false) kwds
+     then start ^ "axiomatization " ^ String.concat "\nand " hdrs ^
+            if clauses = [] then "\n\n" else " where\n\t  " ^ String.concat "\n\t| " clauses ^ "\n\n"
+     else error def.at "axiomatization defined mutually recursively with something that is not an axiomatization"
+  | Ifun :: kwds, _ ->
+     if List.for_all (function Ifun -> true | _ -> false) kwds
+     then start ^ "fun " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\n"
+     else error def.at "function defined mutually recursively with something that is not a function"
+  | Iind :: kwds, _ ->
+     if List.for_all (function Iind -> true | _ -> false) kwds
+     then start ^ "inductive " ^ String.concat "\nand " hdrs ^ " where\n\t  " ^ String.concat "\n\t| " clauses ^ "\n\n"
+     else error def.at "inductive defined mutually recursively with something that is not an inductive"
+  | [], _ -> ""
 
 
 let exported_string =
@@ -1091,5 +1134,5 @@ let string_of_script theoryname (il : script) =
   "theory " ^ theoryname ^ "\n" ^
   exported_string ^
   "(* Generated Code *)\n" ^
-    String.concat "" (List.filter_map filter_def il' |> List.map (string_of_def true false)) ^
+    String.concat "" (List.filter_map filter_def il' |> List.map (string_of_def (* true false *))) ^
       "end\n"
