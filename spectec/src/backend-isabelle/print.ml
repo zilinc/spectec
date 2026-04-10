@@ -21,13 +21,15 @@ let lra = "⟹"
 type isabelle_env = {
   mutable tf_set : StringSet.t;
   mutable il_env : Il.Env.t;
-  mutable proj_set : StringSet.t
+  mutable proj_set : StringSet.t;
+  mutable coercion_defined : StringSet.t
 }
 
 let new_env () = {
   tf_set = StringSet.empty;
   il_env = Il.Env.empty;
-  proj_set = StringSet.empty
+  proj_set = StringSet.empty;
+  coercion_defined = StringSet.empty
 }
 
 
@@ -102,7 +104,7 @@ let reserved_ids =
    "mkseq"; "repeat"; "the";
    "locale"; "context"; "interpretation";
    "class"; "instance";
-   "nat"; "int"; "real"; "bool";
+   "nat"; "int"; "real"; "bool"; "char";
    "list"; "option"; "prod"; "sum";
    "Nil"; "Cons"; "None"; "Some";
    "Inl"; "Inr"; "True"; "False";
@@ -390,7 +392,7 @@ and render_exp exp_type exp =
   | ExtE (e1, p, e2) -> render_path_start p e1 true e2
   (* TODO: figure out coercion in Isabelle *)
   | CallE (id, [a]) when StringSet.mem id.it !env_ref.proj_set ->
-    parens (render_arg exp_type a ^ " :> " ^ (render_type exp_type StringSet.empty exp.note))
+    parens ("coerce_" ^ (render_type exp_type StringSet.empty exp.note) ^ " " ^ render_arg exp_type a)
   | CallE (id, args) -> parens (render_id id.it ^ " " ^ String.concat " " (List.map (render_arg exp_type) args))
   (* Iter handling *)
   | IterE (e, (ListN (n, Some id), [])) -> 
@@ -648,9 +650,31 @@ let string_of_quantl = function
   | [id] -> "'" ^ id ^ " "
   | l -> string_of_list "(" ") " ", " (fun id -> "'" ^ id) l
 
+let sanitise_id s =
+  let rec aux i =
+    if i >= String.length s then ""
+    else if s.[i] = '(' || s.[i] = ')' then aux (i + 1)
+    else if s.[i] = ' ' then "_" ^ aux (i + 1)
+    else String.make 1 s.[i] ^ aux (i + 1)
+  in aux 0
+  
+
+
+let render_coercion (base_typ_id (* , typ_params *) ) coerc_typ_id proj_func_id =
+  let clean_base = sanitise_id base_typ_id in
+  let clean_coerc = sanitise_id coerc_typ_id in
+  (if StringSet.mem coerc_typ_id !env_ref.coercion_defined then "" else
+     (!env_ref.coercion_defined <- StringSet.add coerc_typ_id !env_ref.coercion_defined;
+      "class coercion_" ^ clean_coerc ^ " =\n\tfixes coerce_" ^ clean_coerc ^ " :: \"'a " ^ ra ^ " " ^ coerc_typ_id ^ "\"\n\n")) ^
+    "instantiation " ^ clean_base ^ " :: coercion_" ^ clean_coerc ^ "\n\tbegin definition coerce_" ^ clean_coerc ^ "_" ^ clean_base ^
+      " where\n\t\t\"coerce_" ^ clean_coerc ^ " x = " ^ proj_func_id ^ " x\"\n\tinstance ..\n\tend"
+
 let render_typealias id quants typ =
-  let quantl, quantr = render_quants quants in 
-  (* "type_synonym " ^ *) string_of_quantl quantl ^ id ^ quantr ^ " = " ^ quotes (render_type RHS (StringSet.of_list quantl) typ)
+  let quantl, quantr = render_quants quants in
+  let rtyp = render_type RHS (StringSet.of_list quantl) typ in
+  (* "type_synonym " ^ *) string_of_quantl quantl ^ id ^ quantr ^ " = " ^ quotes rtyp (* ^ "\n" ^
+    render_coercion id rtyp "id" *)
+    
 (*  "type_synonym " ^ string_of_quantl quantl ^ id ^ quantr ^ " = " ^ quotes (render_type RHS (StringSet.of_list quantl) typ) *)
 
 
@@ -718,10 +742,8 @@ let rec has_typ id t =
   in
   render_proof cases  *)
 
-(* TODO: change to Isabelle *)
-let render_coercion (base_typ_id, typ_params) coerc_typ_id proj_func_id = 
-  "Global Instance " ^ proj_func_id ^ "_coercion" ^ snd (render_params typ_params) ^ " : Coercion " ^ base_typ_id ^ " " ^ coerc_typ_id ^ " := { coerce := " ^ proj_func_id ^ 
-  string_of_list_prefix " " " " get_param_id typ_params ^ " }" 
+
+
 
 let cant_do_equality quants cases = 
   (List.exists is_typ_quant quants) ||
@@ -759,19 +781,19 @@ let render_inh_param inhib_type_vars param =
   | TypP id when List.mem id.it inhib_type_vars -> Some ("{_ : Inhabited " ^ render_id id.it ^ "}")
   | _ -> None
 
-let render_single_type id at params = 
+let render_single_type id at typids params = 
   let is_typ_param p = 
     match p.it with
     | TypP _ -> true
     | _ -> false 
   in
   match List.rev params with
-  | {it = ExpP (_, typ); _} :: ps when List.for_all is_typ_param ps -> (render_type RHS StringSet.empty typ, ps)
+  | {it = ExpP (_, typ); _} :: ps when List.for_all is_typ_param ps -> (render_type RHS typids typ (* , ps *) )
   | _ -> error at ("Given projection function: " ^ id ^ " has invalid parameters!")
 
-let render_function_def id _at params r_typ clauses = 
+let render_function_def id at params r_typ clauses = 
   let _has_typ_fam = List.length params > 1 && List.exists is_type_family_param params in
-  let _is_proj_func = StringSet.mem id !env_ref.proj_set in
+  let is_proj_func = StringSet.mem id !env_ref.proj_set in
   let base_list_collector = base_collector [] (@) in
   let c = { base_list_collector with collect_exp = needs_inh_class; collect_path = needs_inh_class_path } in
   let inhabited_typ_vars = List.concat_map (fun clause -> 
@@ -783,29 +805,17 @@ let render_function_def id _at params r_typ clauses =
   let _e_params_render = if extra_params = [] then "" else " " ^ String.concat " " extra_params in
   let typids, resl = render_param_types RHS StringSet.empty params in
   id ^ " :: " ^ quotes (resl ^ render_type RHS typids r_typ),
-(*    match clauses with
-    | [] -> error r_typ.at "Function definition should have at least one clause"
-    | clause :: clauses ->
-       (* TODO fix the render_match_args *)
-       match clause.it with
-       | DefD (_, args, exp, _) ->
-          "  " ^ quotes (id ^ render_match_args args ^ " = " ^ render_exp RHS exp) ^ "\n\t\t" ^
-            String.concat "\n\t\t" *)
-              (List.map
-                 (fun clause -> match clause.it with
-                                | DefD (_, args, exp, _) ->
-                                   quotes (id ^ render_match_args args ^ " = " ^ render_exp RHS exp)) clauses
-              )
+  (List.map
+     (fun clause -> match clause.it with
+                    | DefD (_, args, exp, _) ->
+                       quotes (id ^ render_match_args args ^ " = " ^ render_exp RHS exp)) clauses
+  ),
                 (* TODO: extra clause in Isabelle? *)
 (*              (if has_typ_fam then "\n\t\t" ^ render_extra_clause params else "") *)
-(* TODO: need coercion in Isabelle? *)
-(* ^
-                (*                "\n\tend" ^ *)
   if is_proj_func 
   then 
-    ".\n\n" ^ 
-    render_coercion (render_single_type id at params) (render_type RHS r_typ) id 
-  else "" *)
+    render_coercion (render_single_type id at typids params) (render_type RHS typids r_typ) id 
+  else "" 
 
 let render_relation id typ rules =
   let resl = string_of_relation_args typ in
@@ -882,33 +892,33 @@ let rec components_of_def def =
   match def.it with
   | TypD (id, _, [{it = InstD (quants, _, {it = AliasT typ; _}); _}]) -> 
      (*    if recursive then "" else  *)
-     start , [Itsyn] , [render_typealias (render_id id.it) quants typ] , [] 
+     start , [Itsyn] , [render_typealias (render_id id.it) quants typ] , [], []
   | TypD (id, _, [{it = InstD (quants, _, {it = StructT typfields; _}); _}])->
      (* TODO: deal with recursive records *)
-    start , [Irec] , [render_record (render_id id.it) quants typfields] , [] 
+    start , [Irec] , [render_record (render_id id.it) quants typfields] , [], []
   | TypD (id, _, [{it = InstD (quants, _, {it = VariantT typcases; _}); _}]) -> 
-    start , [Idat] , [render_variant_typ (render_id id.it) quants typcases] , [] 
+    start , [Idat] , [render_variant_typ (render_id id.it) quants typcases] , [], []
   | DecD (id, [], typ, [{it = DefD ([], [], exp, _); _}]) -> 
-    start , [Idef] , [render_global_declaration (render_id id.it) typ exp] , [] 
+    start , [Idef] , [render_global_declaration (render_id id.it) typ exp] , [], []
   | DecD (id, params, typ, []) ->
-     start , [Iax], [render_axiom (render_id id.it) params typ], []
+     start , [Iax], [render_axiom (render_id id.it) params typ], [], []
   | DecD (id, params, typ, clauses) when List.exists has_prems clauses ->
-    start , [Iax], [render_axiom (render_id id.it) params typ], []
+    start , [Iax], [render_axiom (render_id id.it) params typ], [], []
   | DecD (id, params, typ, clauses) -> 
-     let header, clauses = render_function_def (render_id id.it) id.at params typ (clauses) in
-     start, [Ifun], [header], clauses
+     let header, clauses, epilog = render_function_def (render_id id.it) id.at params typ (clauses) in
+     start, [Ifun], [header], clauses, [epilog]
   | RelD (id, _, _, typ, []) -> 
-    start , [Iax], [render_rel_axiom (render_id id.it) typ], []
+    start , [Iax], [render_rel_axiom (render_id id.it) typ], [], []
   | RelD (id, _, _, typ, rules) -> 
      let header, clauses = render_relation (render_id id.it) typ rules in
-     start, [Iind], [header], clauses
+     start, [Iind], [header], clauses, []
   (* Mutual recursion - special handling for isabelle *)
   | RecD defs ->
      let l = List.map components_of_def defs in
-     let kwds, hdrs, clauses =
-       List.fold_right (fun (_, kwds, hdrs, clauses) (acckwds, acchdrs, accclauses) ->
-           kwds @ acckwds, hdrs @ acchdrs, clauses @ accclauses) l ([], [], []) in
-     start, kwds, hdrs, clauses
+     let kwds, hdrs, clauses, epilog =
+       List.fold_right (fun (_, kwds, hdrs, clauses, epilog) (acckwds, acchdrs, accclauses, accepilog) ->
+           kwds @ acckwds, hdrs @ acchdrs, clauses @ accclauses, epilog @ accepilog) l ([], [], [], []) in
+     start, kwds, hdrs, clauses, epilog
 
 (*     start ^ (match defs with
     | [] -> ""
@@ -932,7 +942,7 @@ let rec components_of_def def =
   | _ -> error def.at ("Unsupported def: " ^ Il.Print.string_of_def def)
 
 let string_of_def def =
-  let start, kwds, hdrs, clauses = components_of_def def in
+  let start, kwds, hdrs, clauses, epilog = components_of_def def in
   match kwds, hdrs with
   | [Itsyn], [hdr] -> start ^ "type_synonym " ^ hdr ^ "\n\n"
   | Itsyn :: _, _ -> error def.at "Several type aliases defined mutually recursively"
@@ -951,7 +961,7 @@ let string_of_def def =
      else error def.at "axiomatization defined mutually recursively with something that is not an axiomatization"
   | Ifun :: kwds, _ ->
      if List.for_all (function Ifun -> true | _ -> false) kwds
-     then start ^ "fun " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\n"
+     then start ^ "fun " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\n" ^ string_of_list_suffix "\n\n" "\n\n" (fun x -> x) epilog
      else error def.at "function defined mutually recursively with something that is not a function"
   | Iind :: kwds, _ ->
      if List.for_all (function Iind -> true | _ -> false) kwds
@@ -998,10 +1008,18 @@ let exported_string =
   "\t\"repeat 0 _ = []\" |\n" ^
   "\t\"repeat (Suc n) x = x # repeat n x\"\n\n" ^
   "fun the :: \"'a option " ^ ra ^ "'a\" where\n" ^
-  "\t\"the (Some x) = x\"\n\n"
+    "\t\"the (Some x) = x\"\n\n"
 
-    
-  
+    (* ^
+   "locale coercion =\n" ^
+  "\tfixes coerce :: \"'a " ^ ra ^ " 'b\"\n\n" ^
+  "interpretation option : coercion \"option_to_list :: 'a option " ^ ra ^ " 'a list\"\n\tdone\n\n" ^
+  "interpretation int : coercion \"nat :: int " ^ ra ^ " nat\"\n\tdone\n\n" ^
+  "interpretation nat : coercion \"int :: nat " ^ ra ^ " int\"\n\tdone\n\n"  *)
+        
+    (*
+ (* TODO *)  "Coercion ratz: int >-> rat.\n\n" ^
+     *)
 
 (* ^ 
 
@@ -1068,10 +1086,6 @@ let exported_string =
  (* TODO *)  "Global Instance Inh_Z : Inhabited Z := { default_val := Z0 }.\n\n" ^
  (* TODO *)  "Global Instance Inh_prod {T1 T2: Type} {_: Inhabited T1} {_: Inhabited T2} : Inhabited (prod T1 T2) := { default_val := (default_val, default_val) }.\n\n" ^
  (* TODO *)  "Global Instance Inh_type : Inhabited Type := { default_val := nat }.\n\n" ^
- (* TODO *)  "Coercion option_to_list: option >-> seq.\n\n" ^
- (* TODO *)  "Coercion Z.to_nat: Z >-> nat.\n\n" ^
- (* TODO *)  "Coercion Z.of_nat: nat >-> Z.\n\n" ^
- (* TODO *)  "Coercion ratz: int >-> rat.\n\n" ^
  (* TODO *)  "Create HintDb eq_dec_db.\n\n" ^
  (* TODO *)  "Ltac decidable_equality_step :=\n" ^
  (* TODO *)  "  do [ by eauto with eq_dec_db | decide equality ].\n\n" ^
@@ -1115,6 +1129,7 @@ let rec filter_def def =
   | GramD _ | HintD _ -> None
   | RecD defs -> Some {def with it = RecD (List.filter_map filter_def defs) } 
   | _ -> Some def
+
 
 let is_tf_hint h = h.hintid.it = Middlend.Typefamilyremoval.type_family_hint_id
 
