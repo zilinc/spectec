@@ -5,7 +5,7 @@ open Il.Walk
 
 (* NOTES FOR CONRAD MEETING *)
 (* List of reserved ids in Isabelle? *)
-(* Inhabitance + coercion *)
+(* coercion *)
 (* :> operation *)
 (* Struct extension *)
 (* axiomatization *)
@@ -363,7 +363,7 @@ and render_exp exp_type exp =
   | UncaseE _ -> error exp.at "Encountered uncase. Run uncase-removal pass"
   | OptE (Some e) -> parens ("Some " ^ r_func e)
   | OptE None -> "None"
-  (* TODO: figure out Inhabited in Isabelle *)
+  (* TODO: figure out Inhabited in Isabelle: use undefined *)
   | TheE e -> parens ("!" ^ parens (r_func e))
   | StrE fields -> "⦇ " ^ (String.concat ", " (List.map (fun (a, e) -> 
     (* let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref.il_env exp.note) |> render_id in *)
@@ -389,7 +389,6 @@ and render_exp exp_type exp =
   | CallE (id, [a]) when StringSet.mem id.it !env_ref.proj_set ->
     parens (render_arg exp_type a ^ " :> " ^ (render_type exp_type StringSet.empty exp.note))
   | CallE (id, args) -> parens (render_id id.it ^ " " ^ String.concat " " (List.map (render_arg exp_type) args))
-  (* TODO: iter handling *)
   (* Iter handling *)
   | IterE (e, (ListN (n, Some id), [])) -> 
     parens ("mkseq " ^ render_lambda [id.it] (r_func e) ^ " " ^ (r_func n)) 
@@ -410,7 +409,6 @@ and render_exp exp_type exp =
     String.concat " " (List.map r_func iter_exps))
   | CvtE (e1, _nt1, nt2) -> parens (r_func e1 ^ " :: " ^ render_numtyp nt2)
   | SubE _ -> error exp.at "Encountered subtype expression. Please run sub pass"
-  (* TODO: type annotations else Isabelle struggles *)
   | IfE (e1, e2, e3) -> parens ("if " ^ r_func e1 ^ " then " ^ r_func e2 ^ " else " ^ r_func e3)
 
 and render_arg exp_type a = 
