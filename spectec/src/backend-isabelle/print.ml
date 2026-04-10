@@ -823,8 +823,8 @@ let render_relation id typ rules =
                  ) rules)
 
 let render_axiom id params r_typ =
-  let typids, resl = render_params_genl "∀ " ". " RHS params in
-  id ^ " : " ^ quotes (resl ^ render_type RHS typids r_typ)
+  let typids, resl = render_param_types RHS StringSet.empty params in
+  id ^ " :: " ^ quotes (resl ^ render_type RHS typids r_typ)
 
 let render_rel_axiom id typ =
   let resl = string_of_relation_args typ in
@@ -888,9 +888,9 @@ let rec components_of_def def =
   | DecD (id, [], typ, [{it = DefD ([], [], exp, _); _}]) -> 
     start , [Idef] , [render_global_declaration (render_id id.it) typ exp] , [] 
   | DecD (id, params, typ, []) ->
-     start , [Iax], [], [render_axiom (render_id id.it) params typ] 
+     start , [Iax], [render_axiom (render_id id.it) params typ], []
   | DecD (id, params, typ, clauses) when List.exists has_prems clauses ->
-    start , [Iax], [], [render_axiom (render_id id.it) params typ]
+    start , [Iax], [render_axiom (render_id id.it) params typ], []
   | DecD (id, params, typ, clauses) -> 
      let header, clauses = render_function_def (render_id id.it) id.at params typ (clauses) in
      start, [Ifun], [header], clauses
@@ -943,8 +943,8 @@ let string_of_def def =
      else error def.at "datatype defined mutually recursively with something that is not a datatype"
   | Iax :: kwds, _ ->
      if List.for_all (function Iax -> true | _ -> false) kwds
-     then start ^ "axiomatization " ^ String.concat "\nand " hdrs ^
-            if clauses = [] then "\n\n" else " where\n\t  " ^ String.concat "\n\t| " clauses ^ "\n\n"
+     then start ^ "axiomatization " ^ String.concat "\nand " hdrs ^ "\n\n"
+                                                                      (*            if clauses = [] then "\n\n" else " where\n\t  " ^ String.concat "\n\t| " clauses ^ "\n\n" *)
      else error def.at "axiomatization defined mutually recursively with something that is not an axiomatization"
   | Ifun :: kwds, _ ->
      if List.for_all (function Ifun -> true | _ -> false) kwds
