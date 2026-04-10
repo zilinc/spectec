@@ -96,6 +96,10 @@ let reserved_ids =
    "fix"; "let"; "next";
    "by"; "apply"; "done";
    "sorry";
+   "list_all3"; "list_zipWith"; "list_map3";
+   "foralli_help"; "list_foralli"; "option_zipWith";
+   "option_map3"; "option_to_list"; "list_slice";
+   "mkseq"; "repeat"; "the";
    "locale"; "context"; "interpretation";
    "class"; "instance";
    "nat"; "int"; "real"; "bool";
@@ -363,8 +367,7 @@ and render_exp exp_type exp =
   | UncaseE _ -> error exp.at "Encountered uncase. Run uncase-removal pass"
   | OptE (Some e) -> parens ("Some " ^ r_func e)
   | OptE None -> "None"
-  (* TODO: figure out Inhabited in Isabelle: use undefined *)
-  | TheE e -> parens ("!" ^ parens (r_func e))
+  | TheE e -> parens ("the " ^ parens (r_func e))
   | StrE fields -> "⦇ " ^ (String.concat ", " (List.map (fun (a, e) -> 
     (* let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref.il_env exp.note) |> render_id in *)
     render_atom a ^ " = " ^ r_func e) fields)) ^ " ⦈"
@@ -993,7 +996,9 @@ let exported_string =
   "\t\"mkseq f (Suc n) = mkseq f n @ [f n]\"\n\n" ^
   "fun repeat :: \"nat " ^ ra ^ " 'a " ^ ra ^ " 'a list\" where\n" ^
   "\t\"repeat 0 _ = []\" |\n" ^
-  "\t\"repeat (Suc n) x = x # repeat n x\"\n\n"
+  "\t\"repeat (Suc n) x = x # repeat n x\"\n\n" ^
+  "fun the :: \"'a option " ^ ra ^ "'a\" where\n" ^
+  "\t\"the (Some x) = x\"\n\n"
 
     
   
