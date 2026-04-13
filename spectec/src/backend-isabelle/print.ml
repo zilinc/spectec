@@ -17,6 +17,16 @@ module StringSet = Set.Make(String)
 let ra = "⇒"
 let lra = "⟹"
 
+let sanitise_id s =
+  let rec aux i =
+    if i >= String.length s then ""
+    else if s.[i] = '(' || s.[i] = ')' then aux (i + 1)
+    else if s.[i] = ' ' then "_" ^ aux (i + 1)
+    else String.make 1 s.[i] ^ aux (i + 1)
+  in aux 0
+  
+
+
 
 type isabelle_env = {
   mutable tf_set : StringSet.t;
@@ -109,7 +119,7 @@ let reserved_ids =
    "Nil"; "Cons"; "None"; "Some";
    "Inl"; "Inr"; "True"; "False";
    "not"; "and"; "or"; "ALL"; "EX"; "INF"; "SUP";
-   "CONST"; "TYPE"; 
+   "CONST"; "TYPE"; "MIN"; "MAX";
    "id"; "map"; "fold"; "set"; "fst"; "snd";
    "length"; "hd"; "tl"; "Suc" ]
   |> StringSet.of_list
@@ -171,15 +181,19 @@ let is_alias_typ_def def =
   | TypD(_ , _, [{it = InstD (_, _, {it = AliasT _; _}); _}]) -> true
   | _ -> false
 
+type append_kind =
+  OptionAppend | ListAppend | RecordAppend | NotAppend
+
 let check_trivial_append env typ = 
   match typ.it with
-  | IterT _ -> true
+  | IterT (_, Opt) -> OptionAppend
+  | IterT _ -> ListAppend
   | VarT (id, _) -> 
     begin match (Il.Env.find_opt_typ env id) with
-    | Some (_, [inst]) when is_record_typ inst -> true
-    | _ -> false
+    | Some (_, [inst]) when is_record_typ inst -> RecordAppend
+    | _ -> NotAppend
     end
-  | _ -> false
+  | _ -> NotAppend
 
     
 let comment_desc_def d = 
@@ -211,7 +225,7 @@ let render_binop binop =
   | `AddOp   -> " + " 
   | `SubOp   -> " - " 
   | `MulOp   -> " * " 
-  | `DivOp   -> " / "
+  | `DivOp   -> " div "
   | `ModOp   -> " mod "
   | `PowOp   -> " ^ " 
 
@@ -376,7 +390,7 @@ and render_exp exp_type exp =
   | DotE (e, a) -> 
     (* let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref.il_env e.note) |> render_id in *)
     parens (render_atom a ^ " " ^ r_func e)
-  | CompE (e1, e2) -> parens (r_func e1 ^ " @ " ^ r_func e2)
+  | CompE (e1, e2) -> parens (r_func e1 ^ " @@ " ^ r_func e2)
   | ListE [] -> "[]"
   | ListE exps -> ssreflect_square_parens (String.concat ", " (List.map r_func exps)) 
   | LiftE e -> parens ("option_to_list " ^ r_func e)
@@ -384,24 +398,21 @@ and render_exp exp_type exp =
   | LenE e1 -> parens ("length " ^ (r_func e1))
   | CatE ({it = ListE [e1]; _}, e2) when exp_type = LHS -> parens (r_func e1 ^ " # " ^ r_func e2) 
   | CatE (e1, e2) -> parens (r_func e1 ^ " @ " ^ r_func e2)
-  (* TODO: figure out Inhabited in Isabelle *)
-  | IdxE (e1, e2) -> parens (r_func e1 ^ square_parens (line_parens " " (r_func e2)))
+  | IdxE (e1, e2) -> parens (r_func e1 ^ " ! " ^ r_func e2)
   | SliceE (e1, e2, e3) -> parens ("list_slice " ^ r_func e1 ^ " " ^ r_func e2 ^ " " ^ r_func e3)
-  (* TODO: Isabelle has type extensions, can this be simplified? *)
   | UpdE (e1, p, e2) -> render_path_start p e1 false e2
   | ExtE (e1, p, e2) -> render_path_start p e1 true e2
-  (* TODO: figure out coercion in Isabelle *)
   | CallE (id, [a]) when StringSet.mem id.it !env_ref.proj_set ->
-    parens ("coerce_" ^ (render_type exp_type StringSet.empty exp.note) ^ " " ^ render_arg exp_type a)
+    parens ("coerce_" ^ (sanitise_id (render_type exp_type StringSet.empty exp.note)) ^ " " ^ render_arg exp_type a)
   | CallE (id, args) -> parens (render_id id.it ^ " " ^ String.concat " " (List.map (render_arg exp_type) args))
   (* Iter handling *)
   | IterE (e, (ListN (n, Some id), [])) -> 
     parens ("mkseq " ^ render_lambda [id.it] (r_func e) ^ " " ^ (r_func n)) 
-  | IterE (e, (ListN (n, None), [])) -> parens ("repeat " ^ (r_func e) ^ " " ^ (r_func n)) 
+  | IterE (e, (ListN (n, None), [])) -> parens ("repeat " ^ (r_func n) ^ " " ^ (r_func e)) 
   | IterE (e, (_, [])) -> r_func e
   | IterE (e, _) when exp_type = LHS -> r_func e
   | IterE (e, (iter, iter_quants)) ->
-     (* TODO: polymorphism? *)
+     (* TODO: polymorphism? Yep it's an issue in 3.0 *)
     let quants = List.map (fun (id, e) -> parens (render_id id.it  ^ " :: " ^ render_type exp_type StringSet.empty (remove_iter_from_type e.note))) iter_quants in
     let iter_exps = List.map snd iter_quants in 
     let n = List.length iter_quants - 1 in
@@ -458,7 +469,7 @@ and render_path_start (p : path) start_exp is_extend end_exp =
 (* TODO: change to Isabelle *)
 and render_path (paths : path list) typ at n name is_extend end_exp = 
   let render_record_update t1 t2 t3 =
-    parens (t1 ^ " <| " ^ t2 ^ " := " ^ t3 ^ " |>")
+    parens (t1 ^ " ⦇ " ^ t2 ^ " := " ^ t3 ^ "  ⦈")
   in
   let r_func_e = render_exp RHS in
   let is_dot p = (match p.it with
@@ -474,16 +485,16 @@ and render_path (paths : path list) typ at n name is_extend end_exp =
   match paths with
   (* End logic for extend *)
   | [{it = IdxP (_, e); _}] when is_extend -> 
-    let extend_term = parens (new_name ^ " ++ " ^ r_func_e end_exp) in
+    let extend_term = parens (new_name ^ " @ " ^ r_func_e end_exp) in
     let _, quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
     parens ("list_update_func " ^ r_func_e (list_name n) ^ " " ^ r_func_e e ^ render_lambda [quant] extend_term)
   | [{it = DotP (_p, a); _}] when is_extend -> 
     (* let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref.il_env p.note) |> render_id in *)
     let projection_term = parens (render_atom a ^ " " ^ r_func_e (list_name n)) in
-    let extend_term = parens (projection_term ^ " ++ " ^ r_func_e end_exp) in
+    let extend_term = parens (projection_term ^ " @ " ^ r_func_e end_exp) in
     render_record_update (r_func_e (list_name n)) (render_atom a) extend_term
   | [{it = SliceP (_, e1, e2); _}] when is_extend -> 
-    let extend_term = parens (new_name ^ " ++ " ^ r_func_e end_exp) in
+    let extend_term = parens (new_name ^ " @ " ^ r_func_e end_exp) in
     let _, quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
     parens ("list_slice_update " ^ r_func_e (list_name n) ^ " " ^ r_func_e e1 ^ " " ^ r_func_e e2 ^ " " ^ render_lambda [quant] extend_term)
   (* End logic for update *)
@@ -526,7 +537,7 @@ and render_path (paths : path list) typ at n name is_extend end_exp =
     let new_exp = DotE (projection_term, end_atom) $$ no_region % note in 
     if ps' = [] 
       then (
-        let final_term = if is_extend then parens (new_term ^ " ++ " ^ r_func_e end_exp) else r_func_e end_exp in
+        let final_term = if is_extend then parens (new_term ^ " @ " ^ r_func_e end_exp) else r_func_e end_exp in
         render_record_update (r_func_e (list_name n)) update_fields final_term
       )
       else (
@@ -650,14 +661,6 @@ let string_of_quantl = function
   | [id] -> "'" ^ id ^ " "
   | l -> string_of_list "(" ") " ", " (fun id -> "'" ^ id) l
 
-let sanitise_id s =
-  let rec aux i =
-    if i >= String.length s then ""
-    else if s.[i] = '(' || s.[i] = ')' then aux (i + 1)
-    else if s.[i] = ' ' then "_" ^ aux (i + 1)
-    else String.make 1 s.[i] ^ aux (i + 1)
-  in aux 0
-  
 
 
 let render_coercion (base_typ_id (* , typ_params *) ) coerc_typ_id proj_func_id =
@@ -681,7 +684,7 @@ let render_typealias id quants typ =
 let render_record id quants fields = 
   let _constructor_name = "MK" ^ id in
   let quantl, inhabitance_quanters = render_quants quants in 
-  let _quanters = render_quants_ids quants in
+  let quanters = render_quants_ids quants in
   let typids = StringSet.of_list quantl in
 
   (* Standard Record definition *)
@@ -689,26 +692,19 @@ let render_record id quants fields =
   String.concat "\n\t" (List.map (fun (a, (typ, _, _), _) -> 
                             render_atom a ^ " :: " ^ quotes (render_type RHS typids typ)) fields) ^ "\n\n"
 
-  (* ^
+  ^
+    "definition append_" ^ id ^ inhabitance_quanters ^ " :: \"" ^ id ^ quanters ^ " " ^ ra ^ " " ^ id ^ quanters ^ " " ^ ra ^ " " ^ id ^ quanters ^ "\" (infixl \"@@\" 70) where\n" ^
+    "\t\"append_" ^ id ^ inhabitance_quanters ^ " arg1 arg2 = ⦇\n\t\t" ^
+      String.concat ",\n\t\t" (List.map (fun (a, (t, _, _), _) ->
+                                   let record_id' = render_atom a in
+                                   match check_trivial_append !env_ref.il_env t with
+                                     ListAppend -> record_id' ^ " = " ^ record_id' ^ " arg1 @ " ^ record_id' ^ " arg2"
+                                   | OptionAppend -> record_id' ^ " = " ^ record_id' ^ " arg1 @@@ " ^ record_id' ^ " arg2" 
+                                   | RecordAppend -> record_id' ^ " = (" ^ record_id' ^ " arg1 :: " ^ render_type RHS typids t ^ ") @@ " ^ record_id' ^ " arg2"
+                                   | NotAppend -> record_id' ^ " = " ^ record_id' ^ " arg1" (* ^ comment_parens "FIXME - Non-trivial append"  *)
+                                 ) fields) ^ "\n\t⦈\"\n\n" 
 
-    (* TODO: figure out inhabitance for Isabelle *)
-  (* Inhabitance proof for default values *)
-  "Global Instance Inhabited_" ^ id ^ inhabitance_quanters ^ " : Inhabited " ^ parens (id ^ quanters) ^ " := \n" ^
-  "{default_val := {|\n\t" ^
-      String.concat ";\n\t" (List.map (fun (a, _, _) -> 
-        render_atom a  ^ " := default_val") fields) ^ "|} }.\n\n" ^
-
-        (* TODO: change to Isabelle *)
-  (* Append instance *)
-  "Definition _append_" ^ id ^ inhabitance_quanters ^ " (arg1 arg2 : " ^ parens (id ^ quanters) ^ ") :=\n" ^ 
-  "{|\n\t" ^ String.concat "\t" ((List.map (fun (a, (t, _, _), _) ->
-    let record_id' = render_atom a in
-    if (check_trivial_append !env_ref.il_env t) 
-    then record_id' ^ " := " ^ "arg1.(" ^ record_id' ^ ") @@ arg2.(" ^ record_id' ^ ");\n" 
-    else record_id' ^ " := " ^ "arg1.(" ^ record_id' ^ "); " ^ comment_parens "FIXME - Non-trivial append" ^ "\n" 
-  )) fields) ^ "|}.\n\n" ^ 
-  "Global Instance Append_" ^ id ^ " : Append " ^ id ^ " := { _append arg1 arg2 := _append_" ^ id ^ " arg1 arg2 }.\n\n" ^
-
+(*
     (* TODO: change to Isabelle *)
   (* Setter proof *)
   "#[export] Instance eta__" ^ id ^ " : Settable _ := settable! " ^ constructor_name ^ " <" ^ 
@@ -1008,7 +1004,22 @@ let exported_string =
   "\t\"repeat 0 _ = []\" |\n" ^
   "\t\"repeat (Suc n) x = x # repeat n x\"\n\n" ^
   "fun the :: \"'a option " ^ ra ^ "'a\" where\n" ^
-    "\t\"the (Some x) = x\"\n\n"
+  "\t\"the (Some x) = x\"\n\n" ^
+  "fun list_update_func :: \"'a list " ^ ra ^ " nat " ^ ra ^ " ('a " ^ ra ^ " 'a) " ^ ra ^ " 'a list\" where\n" ^
+  "\t\"list_update_func [] _ _ = []\" |\n" ^
+  "\t\"list_update_func (x # l) 0 y = (y x) # l\" |\n" ^
+  "\t\"list_update_func (x # l) (Suc n) y = x # list_update_func l n y\"\n\n" ^
+  "fun list_slice_update :: \"'a list " ^ ra ^ " nat " ^ ra ^ " nat " ^ ra ^ " 'a list " ^ ra ^ " 'a list\" where\n" ^
+  "\t\"list_slice_update [] _ _ _ = []\" |\n" ^
+  "\t\"list_slice_update l _ _ [] = l\" |\n" ^
+  "\t\"list_slice_update (x # l) _ 0 _ = []\" |\n" ^
+  "\t\"list_slice_update (x # l) 0 (Suc m) (y # ul) = y # list_slice_update l 0 m ul\" |\n" ^
+  "\t\"list_slice_update (x # l) (Suc n) m ul = x # list_slice_update l n m ul\"\n\n" ^
+  "fun option_append :: \"'a option " ^ ra ^ " 'a option " ^ ra ^ " 'a option\" (infixl \"@@@\" 70) where\n" ^
+  "\t\"option_append (Some x) _ = Some x\" |\n" ^
+  "\t\"option_append None y = y\"\n\n"
+
+
 
     (* ^
    "locale coercion =\n" ^
@@ -1047,30 +1058,11 @@ let exported_string =
  (* TODO *)  "\t\t| x :: l', O => y :: l'\n" ^
  (* TODO *)  "\t\t| x :: l', S n => x :: list_update l' n y\n" ^
  (* TODO *)  "\tend.\n\n" ^
- (* TODO *)  "Definition option_append {α: Type} (x y: option α) : option α :=\n" ^
- (* TODO *)  "\tmatch x with\n" ^
- (* TODO *)  "\t\t| Some _ => x\n" ^
- (* TODO *)  "\t\t| None => y\n" ^
- (* TODO *)  "\tend.\n\n" ^
+ 
  (* TODO *)  "Definition option_map {α β : Type} (f : α -> β) (x : option α) : option β :=\n" ^
  (* TODO *)	"\tmatch x with\n" ^
  (* TODO *)	"\t\t| Some x => Some (f x)\n" ^
  (* TODO *)	"\t\t| _ => None\n" ^
- (* TODO *)	"\tend.\n\n" ^
- (* TODO *)  "Fixpoint list_update_func {α: Type} (l: seq α) (n: nat) (y: α -> α): seq α :=\n" ^
- (* TODO *)	"\tmatch l, n with\n" ^
- (* TODO *)	"\t\t| nil, _ => nil\n" ^
- (* TODO *)	"\t\t| x :: l', O => (y x) :: l'\n" ^
- (* TODO *)	"\t\t| x :: l', S n => x :: list_update_func l' n y\n" ^
- (* TODO *)	"\tend.\n\n" ^
- (* TODO *)  "Fixpoint list_slice_update {α: Type} (l: seq α) (i: nat) (j: nat) (update_l: seq α): seq α :=\n" ^
- (* TODO *)	"\tmatch l, i, j, update_l with\n" ^
- (* TODO *)	"\t\t| nil, _, _, _ => nil\n" ^
- (* TODO *)	"\t\t| l', _, _, nil => l'\n" ^
- (* TODO *)	"\t\t| x :: l', O, O, _ => nil\n" ^
- (* TODO *)	"\t\t| x :: l', S n, O, _ => nil\n" ^
- (* TODO *)	"\t\t| x :: l', O, S m, y :: u_l' => y :: list_slice_update l' 0 m u_l'\n" ^
- (* TODO *)	"\t\t| x :: l', S n, m, _ => x :: list_slice_update l' n m update_l\n" ^
  (* TODO *)	"\tend.\n\n" ^
  (* TODO *)  "Definition list_extend {α: Type} (l: seq α) (y: α): seq α :=\n" ^
  (* TODO *)  "\ty :: l.\n\n" ^
