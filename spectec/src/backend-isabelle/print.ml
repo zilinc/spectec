@@ -366,22 +366,12 @@ and render_exp exp_type typids exp =
     | [_] -> r_func e
     | _ -> make_proj_chain i (List.length typs - 1) e 
     end
-  | CaseE (m, e) when exp_type = LHS -> 
+  | CaseE (m, e) -> 
     let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref exp.note) |> render_id in
     let exps = transform_case_tup e in
     begin match exps with
     | [] -> render_mixop name m
     | _ -> parens (render_mixop name m ^ " " ^ String.concat " " (List.map r_func exps))
-    end
-  | CaseE (m, e) -> 
-    let exps = transform_case_tup e in
-    let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref exp.note) |> render_id  in
-    (* Reduce here to remove type aliasing *)
-    let args = get_type_args (Il.Eval.reduce_typ !env_ref exp.note) in
-    let implicit_args = if args = [] then "" else " " ^ String.concat " " (List.init (List.length args) (fun _ -> "_")) in
-    begin match exps with
-    | [] -> render_mixop name m
-    | _ -> parens (render_mixop name m ^ implicit_args ^ " " ^ String.concat " " (List.map r_func exps))
     end
   | UncaseE _ -> error exp.at "Encountered uncase. Run uncase-removal pass"
   | OptE (Some e) -> parens ("Some " ^ r_func e)
@@ -721,8 +711,8 @@ let render_relation id typ rules =
   (List.map (fun rule ->
        match rule.it with
        | RuleD (rule_id, _, _, exp, prems) ->
-          let string_prems = string_of_list "\n\t\t\"" (" " ^ lra ^ "\n\t\t ") (" " ^ lra ^ "\n\t\t ") (render_prem StringSet.empty) prems in
-          render_id (rule_id.it) ^ " : " ^ (string_prems ^ (if prems = [] then "\"" else "") ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL StringSet.empty) (transform_case_tup exp))) ^"\""
+          let string_prems = string_of_list "\n\t\t" (" " ^ lra ^ "\n\t\t ") (" " ^ lra ^ "\n\t\t ") (render_prem StringSet.empty) prems in
+          render_id (rule_id.it) ^ " : \"" ^ (string_prems ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL StringSet.empty) (transform_case_tup exp))) ^"\""
      ) rules)
 
 let render_axiom id params r_typ =
