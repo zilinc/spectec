@@ -330,7 +330,7 @@ and render_type exp_type typids typ =
   | VarT (id, []) -> if StringSet.mem id.it typids then "'" ^ id.it else render_id id.it
   | VarT (id, args) ->
      let argsl, argsr = render_typ_args exp_type typids args in
-     parens (string_of_argsl exp_type typids argsl ^ render_id id.it ^ argsr)
+     parens (string_of_argsl exp_type typids argsl ^ render_id id.it ^ if argsr = " " then "" else argsr)
   | BoolT -> "bool"
   | NumT nt -> render_numtyp nt
   | TextT -> "string"
@@ -711,8 +711,8 @@ let render_relation id typ rules =
   (List.map (fun rule ->
        match rule.it with
        | RuleD (rule_id, _, _, exp, prems) ->
-          let string_prems = string_of_list "\n\t\t" (" " ^ lra ^ "\n\t\t ") (" " ^ lra ^ "\n\t\t ") (render_prem StringSet.empty) prems in
-          render_id (rule_id.it) ^ " : \"" ^ (string_prems ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL StringSet.empty) (transform_case_tup exp))) ^"\""
+          let string_prems = "\n\t\t\"" ^ string_of_list_suffix (" " ^ lra ^ "\n\t\t ") (" " ^ lra ^ "\n\t\t ") (render_prem StringSet.empty) prems in
+          render_id (rule_id.it) ^ " :" ^ (string_prems ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL StringSet.empty) (transform_case_tup exp))) ^"\""
      ) rules)
 
 let render_axiom id params r_typ =
