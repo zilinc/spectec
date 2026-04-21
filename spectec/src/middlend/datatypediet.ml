@@ -208,8 +208,8 @@ let split_constructor id l1 quants l2 typecases ids at1 at2 at3 =
       match typecases with
       | [] -> acc, done_cases, nexti, current_case, current_case_count
       | (casename, typ, hints) :: q ->
-         let fathername = Atom { it = Xl.Atom.Atom (id.it ^ "_subcase_" ^ string_of_int nexti) ; at = no_region ; note = Xl.Atom.info "" } in
-         aux (MixopMap.add casename (fathername, id.it ^ "_subtype_" ^ string_of_int nexti) acc)
+         let fathername = Atom { it = Xl.Atom.Atom (id.it ^ "subcase" ^ string_of_int nexti) ; at = no_region ; note = Xl.Atom.info "" } in
+         aux (MixopMap.add casename (fathername, id.it ^ "subtype" ^ string_of_int nexti) acc)
            done_cases nexti
            ((Seq [fathername ; casename], typ, hints) :: current_case)
            (current_case_count + 1) q in
@@ -222,13 +222,13 @@ let split_constructor id l1 quants l2 typecases ids at1 at2 at3 =
   if nexti * max_constr_per_case + current_case_count = n && nb_cases' = nb_cases then ()
   else failwith "arithmetic error";
   let non_recs = List.map (fun (i, typecases) ->
-                     { it = TypD (id.it ^ "_subtype_" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
+                     { it = TypD (id.it ^ "subtype" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
                                                                       at = at2 ; note = () } ]) ; at = at3 ; note = () }) non_recs in
   let yes_recs = List.map (fun (i, typecases) ->
-                     { it = TypD (id.it ^ "_subtype_" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
+                     { it = TypD (id.it ^ "subtype" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
                                                                       at = at2 ; note = () } ]) ; at = at3 ; note = () }) yes_recs in
-  let main_typecases = List.init nb_cases (fun i -> (Atom { it = Xl.Atom.Atom (id.it ^ "_subcase_" ^ string_of_int i) ;
-                                                            at = no_region; note = Xl.Atom.info "" }, ((VarT (id.it ^ "_subtype_" ^ string_of_int i $ no_region, [])) $ no_region, [], []), [])) in
+  let main_typecases = List.init nb_cases (fun i -> (Atom { it = Xl.Atom.Atom (id.it ^ "subcase" ^ string_of_int i) ;
+                                                            at = no_region; note = Xl.Atom.info "" }, ((VarT (id.it ^ "subtype" ^ string_of_int i $ no_region, [])) $ no_region, [], []), [])) in
   let main_case =
     { it = TypD (id, l1, [
                      { it = InstD (quants, l2,
