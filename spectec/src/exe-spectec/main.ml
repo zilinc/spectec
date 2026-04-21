@@ -32,6 +32,7 @@ type pass =
   | Ite
   | ElseSimp
   | LetIntro
+  | DatatypeDiet
 
 (* This list declares the intended order of passes.
 
@@ -54,7 +55,8 @@ let all_passes = [
   DefToRel;
   Sideconditions;
   AliasDemut;
-  ImproveIds
+  ImproveIds;
+  DatatypeDiet
 ]
 
 type file_kind =
@@ -123,6 +125,7 @@ let pass_flag = function
   | Ite -> "ite"
   | ElseSimp -> "else-simplification"
   | LetIntro -> "let-intro"
+  | DatatypeDiet -> "datatype-diet"
 
 let pass_desc = function
   | Sub -> "Synthesize explicit subtype coercions"
@@ -140,6 +143,7 @@ let pass_desc = function
   | Ite -> "If-then-else introduction"
   | ElseSimp -> "Simplifies generated otherwise relations (after else pass)"
   | LetIntro -> "Let Premise introduction"
+  | DatatypeDiet -> "Remove datatypes with over 50 constructors"
 
 
 let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
@@ -158,6 +162,7 @@ let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
   | Ite -> Middlend.Ite.transform
   | ElseSimp -> Middlend.Elsesimp.transform
   | LetIntro -> Middlend.Letintro.transform
+  | DatatypeDiet -> Middlend.Datatypediet.transform
 
 
 (* Argument parsing *)
@@ -264,7 +269,7 @@ let () =
     (match !target with
     | Prose _ | Splice _ | Interpreter _ ->
       enable_pass Sideconditions;
-    | Rocq | Isabelle -> 
+    | Rocq ->
       enable_pass Sideconditions;
       enable_pass Totalize;
       enable_pass Else;
@@ -278,6 +283,21 @@ let () =
       enable_pass DefToRel;
       enable_pass Ite;
       enable_pass ElseSimp
+    | Isabelle -> 
+      enable_pass Sideconditions;
+      enable_pass Totalize;
+      enable_pass Else;
+      enable_pass TypeFamilyRemoval;
+      enable_pass Undep;
+      enable_pass Uncaseremoval;
+      enable_pass Sub;
+      enable_pass SubExpansion;
+      enable_pass ImproveIds;
+      enable_pass AliasDemut;
+      enable_pass DefToRel;
+      enable_pass Ite;
+      enable_pass ElseSimp;
+      enable_pass DatatypeDiet
     | _ when !print_al || !print_al_o <> "" ->
       enable_pass Sideconditions;
     | _ -> ()

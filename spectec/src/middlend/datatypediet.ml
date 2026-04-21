@@ -67,56 +67,67 @@ open Il.Ast
 open Util.Source
 open Xl.Mixop
 
-module StringMap = Map.Make(String)
+(* module StringMap = Map.Make(String) *)
+module MixopMap = Map.Make(struct type t = unit mixop let compare = compare end)
 
+let get_fathertype id sontype =
+  match sontype.it with
+  | VarT (_, args) -> { sontype with it = VarT (id $ no_region, args) }
+  | _ -> failwith "should be variant type"
 
 
 let rec transform_exp acc exp =
   let f e = { exp with it = e } in
+  let te = transform_exp acc in
   match exp.it with
   | VarE _ (* TODO: can VarE be a type constructor? *)
     | BoolE _ | NumE _ | TextE _ | OptE None -> exp
-  | UnE (u, o, exp) -> f (UnE (u, o, transform_exp acc exp))
-  | BinE (b, o, e1, e2) -> f (BinE (b, o, transform_exp acc e1, transform_exp acc e2))
-  | CmpE (c, o, e1, e2) -> f (CmpE (c, o, transform_exp acc e1, transform_exp acc e2))
-  | TupE es -> f (TupE (List.map (transform_exp acc) es))
-  | ProjE (e, i) -> f (ProjE (transform_exp acc e, i))
-  | CaseE (Atom { it = Xl.Atom.Atom id ; at; note } , e) when StringMap.mem id acc ->
-     let fathername = StringMap.find id acc in
-     f (CaseE (Atom { it = Xl.Atom.Atom fathername ; at; note },
-               f (CaseE (Atom { it = Xl.Atom.Atom (fathername ^ "_" ^ id) ; at; note }, transform_exp acc e))))
-  (* TODO: second usage of f is wrong as gets wrong type − dealing with type arguments is tough though *)
-  | CaseE (Atom { it = Xl.Atom.Atom id ; at; note } , e) ->
-     f (CaseE (Atom { it = Xl.Atom.Atom id ; at ; note } , transform_exp acc e))
-  | CaseE _ -> failwith "bad caseE constructor name"
+  | UnE (u, o, exp) -> f (UnE (u, o, te exp))
+  | BinE (b, o, e1, e2) -> f (BinE (b, o, te e1, te e2))
+  | CmpE (c, o, e1, e2) -> f (CmpE (c, o, te e1, te e2))
+  | TupE es -> f (TupE (List.map (te) es))
+  | ProjE (e, i) -> f (ProjE (te e, i))
+  | CaseE (id, e) when MixopMap.mem id acc ->
+     let fathername, fathertypeid = MixopMap.find id acc in
+     let fathertype = get_fathertype fathertypeid exp.note in
+     f (CaseE (fathername,
+               { it = CaseE (Seq [fathername ; id], te e) ; at = exp.at ; note = fathertype }))
+  | CaseE (a, e) -> f (CaseE (a, te e)) 
+
+(*  | CaseE (Atom { it = Xl.Atom.Atom id ; at; note } , e) ->
+     f (CaseE (Atom { it = Xl.Atom.Atom id ; at ; note } , te e))
+  | CaseE _ -> failwith "bad caseE constructor name" *)
   | UncaseE _ -> failwith "Uncase should have been removed"
-  | OptE (Some e) -> f (OptE (Some (transform_exp acc e)))
-  | TheE e -> f (TheE (Some (transform_exp acc e)))
-  | StrE fields -> f (StrE (List.map (fun (e, field) -> (transform_exp acc e, field)) fields))
-  | DotE of exp * atom                      (* exp.atom *)
-  | CompE of exp * exp                      (* exp @ exp *)
-  | ListE of exp list                       (* [exp ... exp] *)
-  | LiftE of exp                            (* exp : _? <: _* *)
-  | MemE of exp * exp                       (* exp `<-` exp *)
-  | LenE of exp                             (* |exp| *)
-  | CatE of exp * exp                       (* exp :: exp *)
-  | IdxE of exp * exp                       (* exp[exp]` *)
-  | SliceE of exp * exp * exp               (* exp[exp : exp] *)
-  | UpdE of exp * path * exp                (* exp[path = exp] *)
-  | ExtE of exp * path * exp                (* exp[path =.. exp] *)
-  | IfE of exp * exp * exp                  (* `if` exp exp exp *)
-  | CallE of id * arg list                  (* defid( arg* ) *)
-  | IterE of exp * iterexp                  (* exp iter *)
-  | CvtE of exp * numtyp * numtyp           (* exp : typ1 <:> typ2 *)
-  | SubE of exp * typ * typ                 (* exp : typ1 <: typ2 *)
+  | OptE (Some e) -> f (OptE (Some (te e)))
+  | TheE e -> f (TheE (te e))
+  | StrE fields -> f (StrE (List.map (fun (field, e) -> (field, te e)) fields))
+  | DotE (e, field) -> f (DotE (te e, field))
+  | CompE (e1, e2) -> f (CompE (te e1, te e2))
+  | ListE es -> f (ListE (List.map te es))
+  | LiftE e -> f (LiftE (te e))
+  | MemE (e1, e2) -> f (MemE (te e1, te e2))
+  | LenE e -> f (LenE (te e))
+  | CatE (e1, e2) -> f (CatE (te e1, te e2))
+  | IdxE (e1, e2) -> f (IdxE (te e1, te e2))
+  | SliceE (e1, e2, e3) -> f (SliceE (te e1, te e2, te e3))
+  | UpdE (e1, p, e2) -> f (UpdE (te e1, transform_path acc p, te e2))
+  | ExtE (e1, p, e2) -> f (ExtE (te e1, transform_path acc p, te e2))
+  | IfE (e1, e2, e3) -> f (IfE (te e1, te e2, te e3))
+  | CallE (id, args) -> f (CallE (id, List.map (transform_arg acc) args))
+  | IterE (id, itexp) -> f (IterE (id, transform_iterexp acc itexp))
+  | CvtE (e, t1, t2) -> f (CvtE (te e, t1, t2))
+  | SubE (e, t1, t2) -> f (SubE (te e, t1, t2))
 
-let transform_arg acc arg =
-  assert false (* TODO: replace LHS occurences *)
+and transform_arg acc arg =
+  match arg.it with
+  | ExpA e -> { arg with it = ExpA (transform_exp acc e) }
+  | TypA _ | DefA _ -> arg 
+  | GramA sym -> { arg with it = GramA (transform_sym acc sym) }
 
-let transform_iterexp acc (it, exps) =
+and transform_iterexp acc (it, exps) =
   (it, List.map (fun (id, exp) -> (id, transform_exp acc exp)) exps)
 
-let rec transform_sym acc sym =
+and transform_sym acc sym =
   match sym.it with
   | VarG (id, args) -> { sym with it = VarG (id, List.map (transform_arg acc) args) }
   | NumG _ | TextG _ | EpsG -> sym
@@ -125,6 +136,13 @@ let rec transform_sym acc sym =
   | RangeG (sym1, sym2) -> { sym with it = RangeG (transform_sym acc sym1, transform_sym acc sym2) }
   | IterG (sym1, itexp) -> { sym with it = IterG (transform_sym acc sym1, transform_iterexp acc itexp) }
   | AttrG (exp, sym1) -> { sym with it = AttrG (transform_exp acc exp, transform_sym acc sym1) }
+
+and transform_path acc path =
+  match path.it with
+  | RootP -> path
+  | IdxP (p,e) -> { path with it = IdxP (transform_path acc p, transform_exp acc e) }
+  | SliceP (p, e1, e2) -> { path with it = SliceP (transform_path acc p, transform_exp acc e1, transform_exp acc e2) }
+  | DotP (p, a) -> { path with it = DotP (transform_path acc p, a) }
 
 
 
@@ -154,10 +172,10 @@ let sqrt_int n =
 
 let rec is_recursive_type ids t =
   match t.it with
-  | VarT (id, args) -> List.mem id ids || List.exists (is_recursive_arg ids) args 
+  | VarT (id, args) -> List.mem id.it ids || List.exists (is_recursive_arg ids) args 
   | BoolT | NumT _ | TextT -> false
   | TupT ts -> List.exists (fun (_, t) -> is_recursive_type ids t) ts
-  | IterT (t, _) -> is_recursive_type t
+  | IterT (t, _) -> is_recursive_type ids t
 and is_recursive_arg ids arg =
   match arg.it with
   | ExpA _e -> false (* TODO: technically e could contain a type *)
@@ -168,10 +186,10 @@ and is_recursive_arg ids arg =
 
 let is_recursive ids typecase =
   match typecase with
-  | (_, (t, _,_) _) ->
+  | (_, (t, _,_),  _) ->
      is_recursive_type ids t
 
-let split_constructor id quants typecases ids at1 at2 at3 =
+let split_constructor id l1 quants l2 typecases ids at1 at2 at3 =
   let n = List.length typecases in
   let nb_cases, max_constr_per_case, resplit =
     if max_cases * max_cases < n then
@@ -180,50 +198,50 @@ let split_constructor id quants typecases ids at1 at2 at3 =
       else n / max_cases, max_cases, true
     else let m = sqrt_int n in
          if m * m < n then
-           m + 1, m, false
+           m + 1, m + 1, false
          else m, m, false in
-  let non_rec, yes_rec = List.partition (is_recursive ids) typecases in
+  let yes_rec, non_rec = List.partition (is_recursive ids) typecases in
   let rec aux acc done_cases nexti current_case current_case_count typecases =
     if current_case_count = max_constr_per_case then
       aux acc ((nexti, current_case) :: done_cases) (nexti + 1) [] 0 typecases
     else
       match typecases with
       | [] -> acc, done_cases, nexti, current_case, current_case_count
-      | (Atom { it = Xl.Atom.Atom casename ; at = at0 ; note}, typ, hints) :: q ->
-         aux (StringMap.add casename (id.it ^ "_" ^ string_of_int nexti) acc)
+      | (casename, typ, hints) :: q ->
+         let fathername = Atom { it = Xl.Atom.Atom (id.it ^ "_subcase_" ^ string_of_int nexti) ; at = no_region ; note = Xl.Atom.info "" } in
+         aux (MixopMap.add casename (fathername, id.it ^ "_subtype_" ^ string_of_int nexti) acc)
            done_cases nexti
-           ((Atom { it = Xl.Atom.Atom (id.it ^ "_" ^ string_of_int nexti ^ "_" ^ casename) ; at = at0; note }, typ, hints) :: current_case)
-           (current_case_count + 1) q
-      | _ -> failwith "bad case name" in
+           ((Seq [fathername ; casename], typ, hints) :: current_case)
+           (current_case_count + 1) q in
   let acc, non_recs, nexti, current_case, current_case_count =
-    aux StringMap.empty [] 0 [] 0 non_rec in
+    aux MixopMap.empty [] 0 [] 0 non_rec in
   let acc, yes_recs, nexti, current_case, current_case_count =
     aux acc [] nexti current_case current_case_count yes_rec in
   let yes_recs, nb_cases' =
-    if current_case = [] then yes_recs, nexti - 1 else yes_recs @ [nexti, current_case], nexti in
+    if current_case = [] then yes_recs, nexti else yes_recs @ [nexti, current_case], nexti + 1 in
   if nexti * max_constr_per_case + current_case_count = n && nb_cases' = nb_cases then ()
   else failwith "arithmetic error";
   let non_recs = List.map (fun (i, typecases) ->
-                     { it = TypD (id.it ^ "_subtype_" ^ string_of_int i $ no_region, [], [ { it = InstD (quants, [], { it = VariantT typecases ; at = at1 ; note = ()}) ;
+                     { it = TypD (id.it ^ "_subtype_" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
                                                                       at = at2 ; note = () } ]) ; at = at3 ; note = () }) non_recs in
   let yes_recs = List.map (fun (i, typecases) ->
-                     { it = TypD (id.it ^ "_subtype_" ^ string_of_int i $ no_region, [], [ { it = InstD (quants, [], { it = VariantT typecases ; at = at1 ; note = ()}) ;
+                     { it = TypD (id.it ^ "_subtype_" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
                                                                       at = at2 ; note = () } ]) ; at = at3 ; note = () }) yes_recs in
-  let main_typecases = List.init nb_cases (fun i -> (Atom { it = Xl.Atom.Atom (id.it ^ "_" ^ string_of_int i) ;
+  let main_typecases = List.init nb_cases (fun i -> (Atom { it = Xl.Atom.Atom (id.it ^ "_subcase_" ^ string_of_int i) ;
                                                             at = no_region; note = Xl.Atom.info "" }, ((VarT (id.it ^ "_subtype_" ^ string_of_int i $ no_region, [])) $ no_region, [], []), [])) in
   let main_case =
-    { it = TypD (id, [], [
-                     { it = InstD (quants, [],
+    { it = TypD (id, l1, [
+                     { it = InstD (quants, l2,
                                    { it = VariantT main_typecases;
                                      at = at1 ; note = () }) ; at = at2 ; note = () } ]) ; at = at3 ; note = () } in
   let epilog = [] (* TODO: want to define fun def so only need to replace in pattern matching? *) in
                    
-  non_recs, main_case :: yes_recs, epilog, acc, if resplit then [(id, quants, main_typecases, at1, at2, at3)] else []
+  non_recs, main_case :: yes_recs, epilog, acc, if resplit then [(id, l1, quants, l2, main_typecases, at1, at2, at3)] else []
 
 
 let get_constructors def =
   match def.it with
-  | TypD (id, [], [{ it = InstD (quants, [], { it = VariantT typecases ; at = at1 ; _ }) ; at = at2 ; _ }]) -> Some (id, quants, typecases, at1, at2, def.at)
+  | TypD (id, l1, [{ it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; _ }) ; at = at2 ; _ }]) -> Some (id, l1, quants, l2, typecases, at1, at2, def.at)
   | TypD (_, _, { it = InstD (_, _, {it = VariantT _ ; _}) ; _} :: _) -> failwith "ill-formed datatype definition"
   | TypD _ -> None
   | _ -> failwith "should be a type definition"
@@ -236,21 +254,21 @@ let get_some = function
 
 let transform_typ_defs acc def (* original definition, in case no change is needed *) defs =
   let constructors = List.map get_constructors defs in
-  if List.for_all (function None -> true | _ -> false) constructors then acc, defs else
+  if List.for_all (function None -> true | _ -> false) constructors then acc, [def] else
     let constructors = List.map get_some constructors in
-    if List.for_all (fun (_,_,l,_,_,_) -> List.length l <= max_cases) constructors then acc, defs else
-      let ids = List.map (fun (id, _,_,_,_,_) -> id) constructors in
+    if List.for_all (fun (_,_,_,_,l,_,_,_) -> List.length l <= max_cases) constructors then acc, [def] else
+      let ids = List.map (fun (id, _,_,_,_,_,_,_) -> id.it) constructors in
       let rec aux = function
-        | [] -> [], [], [], StringMap.empty
-        | (id, quants, typecases, at1, at2, at3) :: q when List.length typecases <= max_cases ->
+        | [] -> [], [], [], MixopMap.empty
+        | (id, l1, quants, l2, typecases, at1, at2, at3) :: q when List.length typecases <= max_cases ->
            let prelude, mutrec, epilog, acc = aux q in
-           prelude, { it = TypD (id, [], [ { it = InstD (quants, [], { it = VariantT typecases ; at = at1 ; note = ()}) ;
+           prelude, { it = TypD (id, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
                                              at = at2 ; note = () } ]) ; at = at3 ; note = () } :: mutrec, epilog, acc
-        | (id, quants, typecases, at1, at2, at3) :: q ->
-           let prelude', mutrec', epilog', acc', resplit = split_constructor id quants typecases ids at1 at2 at3 in
+        | (id, l1, quants, l2, typecases, at1, at2, at3) :: q ->
+           let prelude', mutrec', epilog', acc', resplit = split_constructor id l1 quants l2 typecases ids at1 at2 at3 in
            let prelude, mutrec, epilog, acc = aux (resplit @ q) in
            prelude' @ prelude, mutrec' @ mutrec, epilog' @ epilog,
-           StringMap.union (fun _ _ _ -> failwith "same constructor in multiple datatype definitions") acc acc' in
+           MixopMap.union (fun _ _ _ -> failwith "same constructor in multiple datatype definitions") acc acc' in
       let prelude, mutrec, epilog, acc = aux constructors in
       let mutrec = match mutrec with
         | [def] -> def
@@ -267,17 +285,19 @@ let rec transform_def acc def =
   | RelD (id, params, op, t, rules) ->  acc, [{def with it = RelD (id, params, op, t, List.map (transform_rule acc) rules)}]
   | DecD (id, params, t, clauses) -> acc, [{def with it = DecD (id, params, t, List.map (transform_clause acc) clauses)}]
   | GramD (id, params, t, prods) -> acc, [{def with it = GramD (id, params, t, List.map (transform_prod acc) prods)}]
-  | RecD ({ it = TypD _ } :: _ as defs) -> transform_typ_defs acc def defs
-  | RecD defs -> let acc, defs = List.fold_left (fun (acc, defs) def ->
-                                     let acc, defs' = transform_def acc def in
-                                     acc, defs' @ defs) (acc, []) defs in
-                 acc, [{def with it = RecD (List.rev defs)}]
+  | RecD defs ->
+     (match defs with
+      | { it = TypD _ ; _ } :: _ -> transform_typ_defs acc def defs
+      | _ -> let acc, defs = List.fold_left (fun (acc, defs) def ->
+                                 let acc, defs' = transform_def acc def in
+                                 acc, defs' @ defs) (acc, []) defs in
+             acc, [{def with it = RecD (List.rev defs)}])
   | HintD _ -> acc, [def]
 
 
 
-let transform_script script =
+let transform script =
   let (_, defs) = List.fold_left (fun (acc, defs) def ->
                       let (acc, def) = transform_def acc def in
-                      acc, def :: defs) (StringMap.empty, []) script in
+                      acc, def :: defs) (MixopMap.empty, []) script in
   List.flatten (List.rev defs)
