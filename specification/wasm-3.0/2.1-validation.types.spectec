@@ -24,6 +24,9 @@ rule Heaptype_ok/typeuse:
   C |- typeuse : OK
   -- Typeuse_ok: C |- typeuse : OK
 
+rule Heaptype_ok/bot:
+  C |- BOT : OK
+
 rule Reftype_ok:
   C |- REF NULL? heaptype : OK
   -- Heaptype_ok: C |- heaptype : OK
@@ -46,8 +49,13 @@ rule Valtype_ok/bot:
 
 ;; Result & instruction types
 
+relation Localtype_ok: context |- localtype : OK  hint(name "K-local") hint(macro "%localtype")
 relation Resulttype_ok: context |- resulttype : OK  hint(name "K-result") hint(macro "%resulttype")
 relation Instrtype_ok: context |- instrtype : OK    hint(name "K-instr")  hint(macro "%instrtype")
+
+rule Localtype_ok:
+  C |- init t : OK
+  -- Valtype_ok: C |- t : OK
 
 rule Resulttype_ok:
   C |- t* : OK
@@ -143,6 +151,7 @@ rule Subtype_ok:
   C |- SUB FINAL? (_IDX x)* comptype : OK(x_0)
   -- if |x*| <= 1
   -- (if x < x_0)*
+  ;; -- if $(x_0 = $max_ints(x*) + 1)
   -- (if $unrolldt(C.TYPES[x]) = SUB (_IDX x')* comptype')*
   ----
   -- Comptype_ok: C |- comptype : OK
@@ -159,9 +168,13 @@ def $unrollht(C, _IDX typeidx) = $unrolldt(C.TYPES[typeidx])
 def $unrollht(C, REC i) = C.RECS[i]
 
 rule Subtype_ok2:
-  C |- SUB FINAL? typeuse* compttype : OK x i
+  C |- SUB FINAL? typeuse* comptype : OK x i
   -- if |typeuse*| <= 1
+  -- (Typeuse_ok: C |- typeuse : OK)*
   -- (if $before(typeuse, x, i))*
+  ;; -- (if $after(typeuse) = (x_1, i_1))*
+  ;; -- if x = $max_ints(x_1*)
+  ;; -- if i = $max_ints(i_1*)
   -- (if $unrollht(C, typeuse) = SUB typeuse'* comptype')*
   ----
   -- Comptype_ok: C |- comptype : OK
@@ -176,9 +189,6 @@ rule Rectype_ok/cons:
   -- Subtype_ok: C |- subtype_1 : OK(x)
   -- Rectype_ok: C |- REC subtype* : OK($(x+1))
 
-rule Rectype_ok/_rec2:
-  C |- REC subtype* : OK(x)
-  -- Rectype_ok2: C, RECS subtype* |- REC subtype* : OK x 0
 
 rule Rectype_ok2/empty:
   C |- REC eps : OK x i
@@ -186,12 +196,12 @@ rule Rectype_ok2/empty:
 rule Rectype_ok2/cons:
   C |- REC (subtype_1 subtype*) : OK x i
   -- Subtype_ok2: C |- subtype_1 : OK x i
-  -- Rectype_ok2: C |- REC subtype* : OK $(x+1) $(i+1)
+  -- Rectype_ok2: C |- REC subtype* : OK x $(i+1)
 
 
 rule Deftype_ok:
   C |- _DEF rectype i : OK
-  -- Rectype_ok: C |- rectype : OK(x)
+  -- Rectype_ok2: C, RECS subtype^n |- rectype : OK x 0
   -- if rectype = REC subtype^n
   -- if i < n
 

@@ -19,7 +19,6 @@ let build_animation_hints il : unit =
       List.iter (fun hint ->
         (match hint.hintid.it with
         | "animate"         -> print_endline ("Warning: hint(animate) on function " ^ fid.it ^ " is not yet implemented."); ()
-        | "animate_builtin" -> H.add_anim_builtin fid.it (H.parse_mode hint.hintexp)
         | "animate_inverse" -> H.add_anim_inv fid.it
         | "no_animate"      -> H.add_no_anim_func fid.it
         | _                 -> ()
@@ -29,8 +28,8 @@ let build_animation_hints il : unit =
       List.iter (fun hint ->
         (match hint.hintid.it with
         | "animate"         -> H.add_anim_rel rid.it (H.parse_mode hint.hintexp)
-        | "animate_builtin" -> H.add_anim_builtin rid.it (H.parse_mode hint.hintexp)
-        | "animate_as"      -> H.add_anim_as_func rid.it (H.parse_fid_mode hint.hintexp)
+        | "animate_manual"  -> H.add_anim_manual rid.it (H.parse_fid_mode hint.hintexp)
+        | "animate_inverse" -> H.add_anim_inv rid.it
         | "no_animate"      -> print_endline ("Warning: hint(no_animate) on relation " ^ rid.it ^ " is not used."); ()
         | _                 -> ()
         )

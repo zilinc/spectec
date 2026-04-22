@@ -81,10 +81,15 @@ module AnimError : Lib.Error with type t = string = struct
 end
 
 
+(*
+type tmInfo = LenTmInfo of exp
+*)
+
 module AnimState = struct
   type t = { prems : prem list
            ; prems' : prem list
            ; knowns : Set.t
+           (* ; known_info : tmInfo Map.t *)
            ; progress : bool
            ; inverse : bool
            ; nondet : bool
@@ -92,7 +97,7 @@ module AnimState = struct
            }
 
   let init : unit -> t = fun () ->
-    { prems = []; prems' = []; knowns = Set.empty
+    { prems = []; prems' = []; knowns = Set.empty (* ; known_info = Map.empty *)
     ; progress = false; inverse = false; nondet = false; failure = ""
     }
 
@@ -143,6 +148,16 @@ module AnimState = struct
   let remove_knowns : Set.t -> t -> t = fun knowns' t ->
     let knowns = get_knowns t in
     put_knowns (Set.diff knowns knowns') t
+
+(*
+  let get_known_info : text -> t -> tmInfo option = fun var t -> Map.find_opt var t.known_info
+  let add_known_info : (text * tmInfo) -> t -> t = fun (var, info) t ->
+    let known_info = t.known_info in
+    { t with known_info = Map.add var info known_info }
+  let remove_known_info : text -> t -> t = fun var t ->
+    let known_info = t.known_info in
+    { t with known_info = Map.remove var known_info }
+*)
 
   let has_progress : t -> bool = fun t -> t.progress
   (* Only set progress when a premise from the primary stack gets animated
@@ -428,15 +443,13 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   let* s = get () in
   let knowns = get_knowns s in
   let id', (lhs, rhs) =
-    let is_anim_rel     = H.is_anim_rel     id.it in
-    let is_anim_builtin = H.is_anim_builtin id.it in
-    let is_anim_as_func = H.is_anim_as_func id.it in
-    if is_anim_rel || is_anim_builtin || is_anim_as_func then
+    let is_anim_rel     = H.is_anim_rel    id.it in
+    let is_anim_as_func = H.is_anim_manual id.it in
+    if is_anim_rel || is_anim_as_func then
       let id', mode_map =
-        (match is_anim_rel, is_anim_builtin, is_anim_as_func with
-        | true, false, false -> id.it, H.find_anim_rel id.it
-        | false, true, false -> id.it, H.find_anim_builtin id.it
-        | false, false, true -> H.find_anim_as_func id.it
+        (match is_anim_rel, is_anim_as_func with
+        | true, false -> id.it, H.find_anim_rel id.it
+        | false, true -> H.find_anim_manual id.it
         | _ -> assert false
         ) in
       let es = (match exp.it with
@@ -512,7 +525,16 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   | VarE v ->
     let* () = update (add_knowns (Set.singleton v.it)) in
     E.return [ LetPr (lhs, rhs, [v.it]) $ at ]
-  (* Treated as atomic. *)
+  (* Treated as atomic. Will add to the known_info field. *)
+  (*
+  | LenE exp1 ->
+    let (envr, vs, ve, prems_lhs) = bind_var_exp envr None exp1 None `Lhs in
+    let* prems_len = animate_exp_eq' envr at (LenE ve $> lhs) rhs in
+    let* prems_lhs = E.(mapM (animate_prem envr) prems_lhs <&> List.concat) in
+    let [v] = vs in
+    let* () = update (add_known_info (v, LenTmInfo rhs)) in
+    E.return (prems_len @ prems_lhs)
+  *)
   (* | DotE (lhs', mixop) -> _ *)
   (* function call; invert it. *)
   | CallE (fid, args) when can_invert s ->
@@ -532,12 +554,15 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
           E.return ("inv_" ^ fid.it $> fid)
         )
       | false ->
-        E.throw (string_of_error at ("No inverse function declared for `" ^ fid.it ^ "`; consider adding a hint(animate_inverse)."))
+        E.throw (string_of_error at ("No inverse function declared for `" ^ fid.it ^
+                                     "`; consider adding a hint(animate_inverse)."))
       )
-    | Some hint -> begin match hint.hintexp.it with
+    | Some hint ->
+      (match hint.hintexp.it with
       | CallE (fid, []) -> E.return fid
       | _ -> E.throw (string_of_error at ("Ill-formed inverse hint for function `" ^ fid.it ^ "`, so can't invert it."))
-      end in
+      )
+    in
     let _ = info "inv_func" at (lazy ("Function " ^ fid.it ^ " is being inverted")) in
     (* Only the last argument is invertible. *)
     let args_init, arg_last = Lib.List.split_last args in
@@ -956,6 +981,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return (prems_v_len_rhs @ prem_len :: prems')
+  (* exp1 ++ exp2 where the length of one of them is known *)
+  (* | CatE (exp1, exp2) -> _ *)
   (* exp1* ++ [X] ++ exp2* *)
   (*
   | CatE ({ it = CatE ({ it = IterE (exp1', (List, xes1)); _ },

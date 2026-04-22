@@ -167,48 +167,42 @@ module Hints = struct
   module M  = Map.Make(String)
   module IM = Map.Make(Int)
   type mode = In | Out
-  type t = { mutable no_animate_funcs: string list
-           ; mutable no_animate_rules: (string * string) list  (* relid * ruleid *)
+  type t = { mutable no_animate_funcs: string list             (* Functions in the source that won't be animated. *)
+           ; mutable no_animate_rules: (string * string) list  (* Rules from a relation that won't be animated. relid * ruleid *)
            ; mutable animate_funcs   : (mode list * mode) M.t  (* arguments * result *)
-           ; mutable animate_inv     : string list
-           ; mutable animate_rels    : mode IM.t M.t           (* in the order of expressions in the CaseE *)
-           ; mutable animate_builtin : mode IM.t M.t
-           ; mutable animate_as_func : (string * mode IM.t) M.t
+           ; mutable animate_inv     : string list             (* Declares the name of the inverse function. *)
+           ; mutable animate_rels    : mode IM.t M.t           (* Mode declaration for relations. In the order of expressions in the CaseE *)
+           ; mutable animate_manual : (string * mode IM.t) M.t  (* Name and mode of a relation or definition whose animated definition is going to be manually supplied. *)
            }
 
   let animation_hints : t = { no_animate_funcs = [];  no_animate_rules = []
                             ; animate_funcs = M.empty; animate_inv = []
-                            ; animate_rels = M.empty; animate_builtin = M.empty
-                            ; animate_as_func = M.empty
+                            ; animate_rels = M.empty; animate_manual = M.empty
                             }
   let init_animation_hints () = animation_hints.no_animate_funcs <- [];
                                 animation_hints.no_animate_rules <- [];
                                 animation_hints.animate_funcs    <- M.empty;
                                 animation_hints.animate_inv      <- [];
                                 animation_hints.animate_rels     <- M.empty;
-                                animation_hints.animate_builtin  <- M.empty;
-                                animation_hints.animate_as_func  <- M.empty
+                                animation_hints.animate_manual   <- M.empty
 
   let add_no_anim_func fid            = animation_hints.no_animate_funcs <- animation_hints.no_animate_funcs @ [fid]
   let add_no_anim_rule rel_id rule_id = animation_hints.no_animate_rules <- animation_hints.no_animate_rules @ [(rel_id, rule_id)]
   let add_anim_func  fid args res     = animation_hints.animate_funcs    <- M.add fid (args, res) animation_hints.animate_funcs
   let add_anim_inv fid                = animation_hints.animate_inv      <- animation_hints.animate_inv @ [fid]
   let add_anim_rel   rid mm           = animation_hints.animate_rels     <- M.add rid mm animation_hints.animate_rels
-  let add_anim_builtin rid mm         = animation_hints.animate_builtin  <- M.add rid mm animation_hints.animate_builtin
-  let add_anim_as_func rid fid_mm     = animation_hints.animate_as_func  <- M.add rid fid_mm animation_hints.animate_as_func
+  let add_anim_manual rid fid_mm     = animation_hints.animate_manual  <- M.add rid fid_mm animation_hints.animate_manual
 
   let is_no_anim_func fid            = List.mem fid animation_hints.no_animate_funcs
   let is_no_anim_rule rel_id rule_id = List.mem (rel_id, rule_id) animation_hints.no_animate_rules
   let is_anim_func    fid            = M.mem fid animation_hints.animate_funcs
   let is_anim_inv     fid            = List.mem fid animation_hints.animate_inv
   let is_anim_rel     rid            = M.mem rid animation_hints.animate_rels
-  let is_anim_builtin rid            = M.mem rid animation_hints.animate_builtin
-  let is_anim_as_func rid            = M.mem rid animation_hints.animate_as_func
+  let is_anim_manual  rid            = M.mem rid animation_hints.animate_manual
 
   let find_anim_func    fid = M.find fid animation_hints.animate_funcs
   let find_anim_rel     rid = M.find rid animation_hints.animate_rels
-  let find_anim_builtin rid = M.find rid animation_hints.animate_builtin
-  let find_anim_as_func rid = M.find rid animation_hints.animate_as_func
+  let find_anim_manual  rid = M.find rid animation_hints.animate_manual
 
   type side = L | R
 

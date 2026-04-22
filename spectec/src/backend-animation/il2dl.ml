@@ -141,7 +141,7 @@ let rec il2dl (il: script) : dl_def list =
     | DecD (id, params, typ, clauses) ->
       let partial = if List.mem id partial_funcs then Partial else Total in
       [FuncDef ((id, None, params, typ, List.map il2dl_clause clauses, Some partial) $ def.at)]
-    | RelD (rel_id, _, _, typ, rules) when H.is_anim_as_func rel_id.it -> []
+    | RelD (rel_id, _, _, typ, rules) when H.is_anim_manual rel_id.it -> []
     | RelD (rel_id, _, _, typ, rules) ->
       let rules = List.map (fun rule -> (rel_id, typ, rule)) rules in
       let func_def = group_rules rules in

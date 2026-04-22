@@ -218,12 +218,28 @@ def $steps(config, stackcount) = config
 
 
 ;; ********************************************************
+;; Helpers
+;; ********************************************************
+
+;; def $max_ints(int*): int
+;; def $max_ints(n) = n
+;; def $max_ints(n_1 n_2 n*) = $max_ints(n_1 n*)
+;;     -- if n_1 >= n_2
+;; def $max_ints(n_1 n_2 n*) = $max_ints(n_2 n*)
+;;     -- otherwise
+;; 
+;; 
+;; def $after(typeuse) : (typeidx, nat)
+;; def $after(deftype) = (0, 0)
+;; def $after(_IDX typeidx) = ($(typeidx + 1), 0)
+;; def $after(REC j) = (0, $(j + 1))
+
+
+;; ********************************************************
 ;; Animation hints
 ;; ********************************************************
 
 relation Expand        hint(animate %1 -> %2)
-
-;; relation Rectype_ok    hint(animate %1 %2 -> %3)
 
 relation Numtype_ok    hint(animate %1 %2 -> bool)
 relation Vectype_ok    hint(animate %1 %2 -> bool)
@@ -231,21 +247,32 @@ relation Heaptype_ok   hint(animate %1 %2 -> bool)
 relation Reftype_ok    hint(animate %1 %2 -> bool)
 relation Valtype_ok    hint(animate %1 %2 -> bool)
 relation Typeuse_ok    hint(animate %1 %2 -> bool)
-relation Deftype_ok    hint(animate %1 %2 -> bool)
 
-relation Reftype_sub   hint(animate_as "reftype_sub" : %1 %2 %3 -> bool)
-relation Heaptype_sub  hint(animate_as "reftype_sub" : %1 %2 %3 -> bool)
+
+relation Comptype_ok   hint(animate %1 %2    -> bool)
+relation Subtype_ok    hint(animate %1 %2 %3 -> bool)
+;; relation Subtype_ok2   hint(animate %1 %2 %3 -> bool)
+relation Rectype_ok    hint(animate %1 %2 %3 -> bool)  hint(animate_inverse "Rectype_infer")
+;; relation Rectype_ok2   hint(animate %1 %2 %3 -> bool)  hint(animate_inverse "Rectype_infer2")
+relation Deftype_ok    hint(animate %1 %2    -> bool)
+
+relation Comptype_sub  hint(animate %1 %2 %3 -> bool)
+relation Reftype_sub   hint(animate %1 %2 %3 -> bool)
+relation Heaptype_sub  hint(animate %1 %2 %3 -> bool)
+;; relation Reftype_sub   hint(animate_manual "reftype_sub"  : %1 %2 -> %3)
+;; relation Heaptype_sub  hint(animate_manual "heaptype_sub" : %1 %2 -> %3)
 
 relation Num_ok        hint(animate %1 %2 -> %3)
 relation Vec_ok        hint(animate %1 %2 -> %3)
-relation Ref_ok        hint(animate_as "ref_ok" : %1 %2 %3 -> bool)
-relation Val_ok        hint(animate_as "val_ok" : %1 %2 %3 -> bool)
-;; relation Ref_ok        hint(animate %1 %2 %3 -> bool)
-;; relation Val_ok        hint(animate %1 %2 %3 -> bool)
+;; relation Ref_ok        hint(animate_manual "ref_ok" : %1 %2 %3 -> bool)
+;; relation Val_ok        hint(animate_manual "val_ok" : %1 %2 %3 -> bool)
+relation Ref_ok        hint(animate %1 %2 %3 -> bool)
+relation Val_ok        hint(animate %1 %2 %3 -> bool)
 
-relation Externaddr_ok hint(animate_as "externaddr_ok" : %1 %2 %3 -> bool)
-relation Module_ok     hint(animate_as "module_ok" : %1 -> %2)
-
+;; relation Externaddr_ok hint(animate_manual "externaddr_ok" : %1 %2 %3 -> bool)
+;; relation Module_ok     hint(animate_manual "module_ok" : %1 -> %2)
+relation Externaddr_ok hint(animate %1 %2 %3 -> bool)
+relation Module_ok     hint(animate %1 -> %2)
 
 relation Step          hint(animate %1 -> %2)
 relation Step_pure     hint(animate %1 -> %2)
