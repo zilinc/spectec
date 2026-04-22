@@ -208,16 +208,11 @@ let split_constructor id l1 quants l2 typecases ids at1 at2 at3 =
       match typecases with
       | [] -> acc, done_cases, nexti, current_case, current_case_count
       | (casename, typ, hints) :: q ->
-(*         (match casename with
-          | Atom _ -> Printf.printf "it's an atom!\n" 
-          | Seq l -> Printf.printf "it's a seq on length %d\n" (List.length l)
-          | _ -> Printf.printf "it's something else!\n"); *)
          let fathername =
-           (* Seq [ *) Atom { it = Xl.Atom.Atom (id.it ^ "subcase" ^ string_of_int nexti) ;
+           Seq [ Atom { it = Xl.Atom.Atom (id.it ^ "subcase" ^ string_of_int nexti) ;
                         at = no_region ;
-                        note = Xl.Atom.info "automatically generated subcase during datatype dieting" } (* ;
-                 Arg () ] *) in
-         (*         Printf.printf "arity of %ssubcase%d is %d\n" id.it nexti (arity fathername);  *)
+                        note = Xl.Atom.info "automatically generated subcase during datatype dieting" } ;
+                 Arg () ] in
          aux (MixopMap.add casename (fathername, id.it ^ "subtype" ^ string_of_int nexti) acc)
            done_cases nexti
            ((casename, typ, hints) :: current_case)
