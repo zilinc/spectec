@@ -93,10 +93,6 @@ let rec transform_exp acc exp =
      f (CaseE (fathername,
                { it = CaseE (id, te e) ; at = exp.at ; note = fathertype }))
   | CaseE (a, e) -> f (CaseE (a, te e)) 
-
-(*  | CaseE (Atom { it = Xl.Atom.Atom id ; at; note } , e) ->
-     f (CaseE (Atom { it = Xl.Atom.Atom id ; at ; note } , te e))
-  | CaseE _ -> failwith "bad caseE constructor name" *)
   | UncaseE _ -> failwith "Uncase should have been removed"
   | OptE (Some e) -> f (OptE (Some (te e)))
   | TheE e -> f (TheE (te e))
