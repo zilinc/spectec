@@ -83,7 +83,7 @@ let reserved_ids =
    "if"; "else";
    "fix"; "let"; "next";
    "by"; "apply"; "done";
-   "sorry"; "passive";
+   "sorry"; "passive"; "declare"; 
    "list_all3"; "list_zipWith"; "list_map3";
    "foralli_help"; "list_foralli"; "option_zipWith";
    "option_map3"; "option_to_list"; "list_slice";
