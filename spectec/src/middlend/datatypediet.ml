@@ -67,13 +67,20 @@ open Il.Ast
 open Util.Source
 open Xl.Mixop
 
-(* module StringMap = Map.Make(String) *)
+module StringMap = Map.Make(String) 
 module MixopMap = Map.Make(struct type t = unit mixop let compare = compare end)
+
 
 let get_fathertype id sontype =
   match sontype.it with
   | VarT (_, args) -> { sontype with it = VarT (id $ no_region, args) }
   | _ -> failwith "should be variant type"
+
+
+let find_new_constructors acc t =
+  match t.it with
+  | VarT (id, _) -> StringMap.find_opt id.it acc
+  | _ -> None
 
 
 let rec transform_exp acc exp =
@@ -85,14 +92,16 @@ let rec transform_exp acc exp =
   | UnE (u, o, exp) -> f (UnE (u, o, te exp))
   | BinE (b, o, e1, e2) -> f (BinE (b, o, te e1, te e2))
   | CmpE (c, o, e1, e2) -> f (CmpE (c, o, te e1, te e2))
-  | TupE es -> f (TupE (List.map (te) es))
+  | TupE es -> f (TupE (List.map te es))
   | ProjE (e, i) -> f (ProjE (te e, i))
-  | CaseE (id, e) when MixopMap.mem id acc ->
-     let fathername, fathertypeid = MixopMap.find id acc in
-     let fathertype = get_fathertype fathertypeid exp.note in
-     f (CaseE (fathername,
-               { it = CaseE (id, te e) ; at = exp.at ; note = fathertype }))
-  | CaseE (a, e) -> f (CaseE (a, te e)) 
+  | CaseE (id, e) ->
+     begin match find_new_constructors acc exp.note with
+     | Some acc ->
+        let fathername, fathertypeid = MixopMap.find id acc in
+        let fathertype = get_fathertype fathertypeid exp.note in
+        f (CaseE (fathername,
+                  { it = CaseE (id, te e) ; at = exp.at ; note = fathertype }))
+     | None -> f (CaseE (id, te e)) end
   | UncaseE _ -> failwith "Uncase should have been removed"
   | OptE (Some e) -> f (OptE (Some (te e)))
   | TheE e -> f (TheE (te e))
@@ -110,7 +119,7 @@ let rec transform_exp acc exp =
   | ExtE (e1, p, e2) -> f (ExtE (te e1, transform_path acc p, te e2))
   | IfE (e1, e2, e3) -> f (IfE (te e1, te e2, te e3))
   | CallE (id, args) -> f (CallE (id, List.map (transform_arg acc) args))
-  | IterE (id, itexp) -> f (IterE (id, transform_iterexp acc itexp))
+  | IterE (e, itexp) -> f (IterE (te e, transform_iterexp acc itexp))
   | CvtE (e, t1, t2) -> f (CvtE (te e, t1, t2))
   | SubE (e, t1, t2) -> f (SubE (te e, t1, t2))
 
@@ -232,7 +241,7 @@ let split_constructor id l1 quants l2 typecases ids at1 at2 at3 =
                                                 at = no_region;
                                                 note = Xl.Atom.info "automatically generated subcase during datatype dieting" };
                                          Arg ()],
-                                    ((VarT (id.it ^ "subtype" ^ string_of_int i $ no_region, [])) $ no_region, [], []), [])) in
+                                    ((VarT (id.it ^ "subtype" ^ string_of_int i $ no_region, [])) $ no_region, [], []), [])) in (* TODO: subtype may expect args *)
   let main_case =
     { it = TypD (id, l1, [
                      { it = InstD (quants, l2,
@@ -262,18 +271,18 @@ let transform_typ_defs acc def (* original definition, in case no change is need
     let constructors = List.map get_some constructors in
     if List.for_all (fun (_,_,_,_,l,_,_,_) -> List.length l <= max_cases) constructors then acc, [def] else
       let ids = List.map (fun (id, _,_,_,_,_,_,_) -> id.it) constructors in
-      let rec aux = function
-        | [] -> [], [], [], MixopMap.empty
+      let rec aux acc = function
+        | [] -> [], [], [], acc
         | (id, l1, quants, l2, typecases, at1, at2, at3) :: q when List.length typecases <= max_cases ->
-           let prelude, mutrec, epilog, acc = aux q in
+           let prelude, mutrec, epilog, acc = aux acc q in
            prelude, { it = TypD (id, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
                                              at = at2 ; note = () } ]) ; at = at3 ; note = () } :: mutrec, epilog, acc
         | (id, l1, quants, l2, typecases, at1, at2, at3) :: q ->
            let prelude', mutrec', epilog', acc', resplit = split_constructor id l1 quants l2 typecases ids at1 at2 at3 in
-           let prelude, mutrec, epilog, acc = aux (resplit @ q) in
+           let prelude, mutrec, epilog, acc = aux acc (resplit @ q) in
            prelude' @ prelude, mutrec' @ mutrec, epilog' @ epilog,
-           MixopMap.union (fun _ _ _ -> failwith "same constructor in multiple datatype definitions") acc acc' in
-      let prelude, mutrec, epilog, acc = aux constructors in
+           StringMap.add id.it acc' acc in
+      let prelude, mutrec, epilog, acc = aux acc constructors in
       let mutrec = match mutrec with
         | [def] -> def
         | _ -> { it = RecD mutrec ; at = def.at ; note = () } in
@@ -303,5 +312,5 @@ let rec transform_def acc def =
 let transform script =
   let (_, defs) = List.fold_left (fun (acc, defs) def ->
                       let (acc, def) = transform_def acc def in
-                      acc, def :: defs) (MixopMap.empty, []) script in
+                      acc, def :: defs) (StringMap.empty, []) script in
   List.flatten (List.rev defs)

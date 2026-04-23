@@ -320,7 +320,7 @@ let () =
           if !print_all_il then print_il il;
           print_il_to !last_pass !pass_count il;
           log ("IL Validation after pass " ^ pass_flag pass ^ "...");
-          Il.Valid.valid il;
+          Il.Valid.valid il; 
           il
         )
       ) il all_passes
