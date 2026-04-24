@@ -6,6 +6,8 @@ This is because some proof assistants, like Isabelle, struggle to process dataty
 
 Instead, when a datatype has more than 50 constructors, we redefine the grammar with several layers, e.g.
 
+(* TODO: fix the names in the explanation to match what is actually output *)
+
 mydatatype =
 | Case0 of args0
 | Case1 of args1
@@ -61,7 +63,7 @@ Recursion: if mydatatype is recursive, we group all non-recursive cases first an
  *)
 
 
-let max_cases = 500
+let max_cases = 50
 
 open Il.Ast
 open Util.Source
@@ -203,7 +205,9 @@ let split_constructor id l1 quants l2 typecases ids at1 at2 at3 =
       else n / max_cases, max_cases, true
     else let m = sqrt_int n in
          if m * m < n then
-           m + 1, m + 1, false
+           if m * (m + 1) < n then
+             m + 1, m + 1, false
+           else m, m + 1, false
          else m, m, false in
   let yes_rec, non_rec = List.partition (is_recursive ids) typecases in
   let rec aux acc done_cases nexti current_case current_case_count typecases =
