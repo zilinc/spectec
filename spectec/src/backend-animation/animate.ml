@@ -93,12 +93,12 @@ module AnimState = struct
            ; progress : bool
            ; inverse : bool
            ; nondet : bool
-           ; failure : string
+           ; failure : string list
            }
 
   let init : unit -> t = fun () ->
     { prems = []; prems' = []; knowns = Set.empty (* ; known_info = Map.empty *)
-    ; progress = false; inverse = false; nondet = false; failure = ""
+    ; progress = false; inverse = false; nondet = false; failure = []
     }
 
   let get_prems : t -> prem list = fun t -> t.prems
@@ -176,9 +176,10 @@ module AnimState = struct
   let allow_nondet : t -> t = fun t -> { t with nondet = true  }
   let disallow_nondet : t -> t = fun t -> { t with nondet = false }
 
-  let get_failure : t -> string = fun t -> t.failure
-  let set_failure : string -> t -> t = fun msg t -> { t with failure = msg }
-  let clr_failure : t -> t = set_failure ""
+  let get_failure : t -> string list = fun t -> t.failure
+  let add_failure : string -> t -> t = fun msg t -> { t with failure = t.failure @ [msg] }
+  let set_failure : string list -> t -> t = fun msgs t -> { t with failure = msgs }
+  let clr_failure : t -> t = set_failure []
 end
 
 module AnimateS = Lib.State(AnimState)
@@ -458,7 +459,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
                )
       in
       id', Lib.List.fold_lefti (fun i (les, res) e ->
-        let mode = H.IM.find (i+1) mode_map in
+        let mode = H.IM.find (i+1) mode_map in  (* FIXME(zilinc): Crashes if some args are missing in the mode declaration? *)
         match mode with
         | In  -> les @ [e], res
         | Out -> les, res @ [e]
@@ -468,7 +469,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
       (match exp.it with
       | TupE es -> let es_init, es_last = Lib.List.split_last es in
                    id.it, (es_init, [es_last])
-      | _ -> assert false
+      | _ -> id.it, ([], [exp])
       )
     )
   in
@@ -494,7 +495,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   | true, false ->
     animate_exp_eq envr at res fncall
   | _ ->
-    E.throw (string_of_error at ("Both sides of rule " ^ id' ^ " has unknowns: " ^
+    E.throw (string_of_error at ("Both sides of rule " ^ id' ^ " has unknowns:\n" ^
                                  "  ▹ LHS: " ^ string_of_varset unknowns_fncall ^ "\n" ^
                                  "  ▹ RHS: " ^ string_of_varset unknowns_res))
   )
@@ -911,6 +912,42 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     | _ -> assert false
     end
   (* More complicated patterns that are partially invertible. *)
+  (* Assuming e1 is unknown and e2 is known.
+     e1 @@ e2 = rhs (on structs) ==>
+     forall i: e1.f_i @ e2.f_i = rhs.f_i
+     e1 = {f_i = e1.f_1}*
+  *)
+  (*
+  | CompE (exp1, exp2) ->
+    let td = reduce_typdef !envr rhs.note in
+    let* tfs = (match td.it with
+    | StructT tfs -> E.return tfs
+    | _ -> E.throw ("Can't animate LHS when it's CompE over non-structs")
+    ) in
+    let fv1 = (free_exp false exp1).varid in
+    let fv2 = (free_exp false exp2).varid in
+    let unknowns1 = Set.diff fv1 knowns in
+    let unknowns2 = Set.diff fv2 knowns in
+    let* prem_str = (match Set.is_empty unknowns1, Set.is_empty unknowns2 with
+    | true , true  -> assert false  (* LHS should be unknown *)
+    | true , false -> let efs1 = List.map (fun (atom, (t, _, _), _) -> (atom, dotE ~at:exp1.at ~note:t exp1 atom)) tfs in
+                      let str1 = strE ~at:exp1.at ~note:rhs.note efs1 in
+                      E.return (IfPr (eqE ~at:exp1.at exp1 str1) $ exp1.at)
+    | false, true  -> let efs2 = List.map (fun (atom, (t, _, _), _) -> (atom, dotE ~at:exp2.at ~note:t exp2 atom)) tfs in
+                      let str2 = strE ~at:exp2.at ~note:rhs.note efs2 in
+                      E.return (IfPr (eqE ~at:exp2.at exp2 str2) $ exp2.at)
+    | false, false -> E.throw ("Can't animate CompE where both operands are unknown.")
+    ) in
+    let prems_fs = List.map (fun (atom, (t, _, _), _) ->
+      let dot1 = dotE ~at:exp1.at ~note:t exp1 atom in
+      let dot2 = dotE ~at:exp2.at ~note:t exp2 atom in
+      let comp = compE ~at:at ~note:t (dot1, dot2) in
+      IfPr (eqE ~at:at comp (dotE ~at:rhs.at ~note:t rhs atom)) $ at
+    ) tfs in
+    let* prems_fs' = E.(mapM (animate_prem envr) prems_fs <&> List.concat) in
+    let* prems_str' = animate_prem envr prem_str in
+    E.return (prems_fs' @ prems_str')
+  *)
   (* [e1; e2; ...; en] ++ exp2 *)
   | CatE (({ it = ListE exps; _ } as exp1), exp2) ->
     let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
@@ -1308,7 +1345,7 @@ and animate_prems' envr at : prem list E.m =
                  ("Can't animate the remaining premises:\n" ^
                   String.concat "\n" (List.map string_of_prem ps') ^ "\n" ^
                   "This is caused by: \n" ^
-                  err))
+                  String.concat "\n▸ " err))
     (* failed to make progress, but we can try allowing inverses *)
     | false, false, false ->
       let* () = update (allow_inverse >>> clr_progress >>> mv_to_prems) in
@@ -1332,7 +1369,7 @@ and animate_prems' envr at : prem list E.m =
            match r with
            | Error e ->
              (* Recover from failure. NOTE: Need to also restore old known set. *)
-             let* () = S.update (push_prem' prem >>> set_failure e >>> put_knowns (get_knowns s')) in
+             let* () = S.update (push_prem' prem >>> add_failure e >>> put_knowns (get_knowns s')) in
              animate_prems' envr at |> E.run_exceptT
            | Ok prems -> E.run_exceptT (
                let ( let* ) = E.( >>= ) in

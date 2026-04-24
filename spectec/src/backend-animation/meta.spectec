@@ -27,6 +27,15 @@ def $val_infer(s, ref) = rt
     -- if $ref_infer(s, ref) = rt
 
 
+rule Comptype_sub/struct_anim:
+    C |- STRUCT ft'_1* <: STRUCT ft_2*
+    -- if len = |ft_2*|
+    -- if ft_1* = ft'_1*[0:len]
+    -- (Fieldtype_sub: C |- ft_1 <: ft_2)*
+
+rule Comptype_sub/struct  hint(no_animate)
+
+
 def $reftype_sub(context, reftype, reftype) : bool
 def $reftype_sub       hint(builtin)
 
@@ -44,6 +53,38 @@ def $externaddr_ok     hint(builtin)
 
 def $module_ok(module) : moduletype
 def $module_ok         hint(builtin)
+
+;; Assumes that we have run a pre-pass to figure out C.
+relation Module_ok_alg: context |- module : moduletype
+rule Module_ok_alg:
+  C |- MODULE type* import* tag* global* mem* table* func* data* elem* start? export* : $clos_moduletype(C, xt_I* -> xt_E*)
+  -- Types_ok: {} |- type* : dt'*
+  -- (Import_ok: {TYPES dt'*} |- import : xt_I)*
+  ----
+  -- (Tag_ok: C' |- tag : jt)*
+  -- Globals_ok: C' |- global* : gt*
+  -- (Mem_ok: C' |- mem : mt)*
+  -- (Table_ok: C' |- table : tt)*
+  -- (Func_ok: C |- func : dt)*
+  ----
+  -- (Data_ok: C |- data : ok)*
+  -- (Elem_ok: C |- elem : rt)*
+  -- (Start_ok: C |- start : OK)?
+  -- (Export_ok: C |- export : nm xt_E)*
+  -- if $disjoint_(name, nm*)
+  ----
+  -- if C = C' ++ {TAGS jt_I* jt*, GLOBALS gt*, MEMS mt_I* mt*, TABLES tt_I* tt*, DATAS ok*, ELEMS rt*}
+  ----
+  -- if C' = {TYPES dt'*, GLOBALS gt_I*, FUNCS dt_I* dt*, REFS x*}
+  -- if x* = $funcidx_nonfuncs(global* mem* table* elem*)
+  ----
+  -- if jt_I* = $tagsxt(xt_I*)
+  -- if gt_I* = $globalsxt(xt_I*)
+  -- if mt_I* = $memsxt(xt_I*)
+  -- if tt_I* = $tablesxt(xt_I*)
+  -- if dt_I* = $funcsxt(xt_I*)
+
+
 
 
 ;; ********************************************************
@@ -258,9 +299,9 @@ relation Deftype_ok    hint(animate %1 %2    -> bool)
 
 relation Comptype_sub  hint(animate %1 %2 %3 -> bool)
 relation Reftype_sub   hint(animate %1 %2 %3 -> bool)
-relation Heaptype_sub  hint(animate %1 %2 %3 -> bool)
+;; relation Heaptype_sub  hint(animate %1 %2 %3 -> bool)
 ;; relation Reftype_sub   hint(animate_manual "reftype_sub"  : %1 %2 -> %3)
-;; relation Heaptype_sub  hint(animate_manual "heaptype_sub" : %1 %2 -> %3)
+relation Heaptype_sub  hint(animate_manual "heaptype_sub" : %1 %2 -> %3)
 
 relation Num_ok        hint(animate %1 %2 -> %3)
 relation Vec_ok        hint(animate %1 %2 -> %3)
@@ -271,8 +312,29 @@ relation Val_ok        hint(animate %1 %2 %3 -> bool)
 
 ;; relation Externaddr_ok hint(animate_manual "externaddr_ok" : %1 %2 %3 -> bool)
 ;; relation Module_ok     hint(animate_manual "module_ok" : %1 -> %2)
+
+relation Type_ok       hint(animate %1 %2 -> %3)
+relation Tag_ok        hint(animate %1 %2 -> %3)
+relation Global_ok     hint(animate %1 %2 -> %3)
+relation Mem_ok        hint(animate %1 %2 -> %3)
+relation Table_ok      hint(animate %1 %2 -> %3)
+relation Func_ok       hint(animate %1 %2 -> %3)
+relation Data_ok       hint(animate %1 %2 -> %3)
+relation Elem_ok       hint(animate %1 %2 -> %3)
+relation Start_ok      hint(animate %1 %2 -> bool)
+relation Local_ok      hint(animate %1 %2 -> %3)
+
+relation Import_ok     hint(animate %1 %2 -> %3)
+relation Export_ok     hint(animate %1 %2 -> %3 %4)
+relation Externidx_ok  hint(animate %1 %2 -> %3)
+
+relation Types_ok      hint(animate %1 %2 -> %3)
+relation Globals_ok    hint(animate %1 %2 -> %3)
+
 relation Externaddr_ok hint(animate %1 %2 %3 -> bool)
-relation Module_ok     hint(animate %1 -> %2)
+;; relation Module_ok     hint(animate %1 -> %2)
+relation Module_ok_alg hint(animate %1 %2 -> %3)
+
 
 relation Step          hint(animate %1 -> %2)
 relation Step_pure     hint(animate %1 -> %2)

@@ -190,6 +190,7 @@ and optE' ?(at = no) oe : exp = match oe with
   | None   -> error at "optE: can't infer type when None"
   | Some e -> let t = iterT (e.note) in optE t oe
 and strE ?(at = no) ~note r = StrE r |> mk_expr at note
+and dotE ?(at = no) ~note e atom = DotE (e, atom) |> mk_expr at note
 and subE ?(at = no) id t1 t2 = SubE (id, t1, t2) |> mk_expr at t2
 and eqE ?(at = no) lhs rhs =
   CmpE (`EqOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
@@ -199,15 +200,14 @@ and leE ?(at = no) ?(ot = `NatT) lhs rhs =
   CmpE (`LeOp, ot, lhs, rhs) $$ at % (BoolT $ at)
 and ltE ?(at = no) ?(ot = `NatT) lhs rhs =
   CmpE (`LtOp, ot, lhs, rhs) $$ at % (BoolT $ at)
-
 and lenE ?(at = no) e = LenE e $$ at % (natT ~at:at ())
+and compE ?(at = no) ~note (e1, e2) = CompE (e1, e2) |> mk_expr at note
 
 (*
 and unE ?(at = no) ~note (unop, t, e) = UnE (unop, t, e) |> mk_expr at note
 and binE ?(at = no) ~note (binop, t, e1, e2) = BinE (binop, t, e1, e2) |> mk_expr at note
 and updE ?(at = no) ~note (e1, pl, e2) = UpdE (e1, pl, e2) |> mk_expr at note
 and extE ?(at = no) ~note (e1, pl, e2, dir) = ExtE (e1, pl, e2, dir) |> mk_expr at note
-and compE ?(at = no) ~note (e1, e2) = CompE (e1, e2) |> mk_expr at note
 and liftE ?(at = no) ~note e = LiftE e |> mk_expr at note
 and catE ?(at = no) ~note (e1, e2) = CatE (e1, e2) |> mk_expr at note
 and memE ?(at = no) ~note (e1, e2) = MemE (e1, e2) |> mk_expr at note
