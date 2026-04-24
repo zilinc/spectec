@@ -760,7 +760,7 @@ let rec valid_def env d : Env.t =
   | TypD (x, ps, insts) ->
     let env' = valid_params env ps in
     List.iter (valid_inst env' ps) insts;
-    Env.bind_typ env x (ps, insts);
+    Env.bind_typ env x (ps, insts)
   | RelD (x, ps, mixop, t, rules) ->
     let env' = valid_params env ps in
     valid_typcase env' (mixop, (t, [], []), []);

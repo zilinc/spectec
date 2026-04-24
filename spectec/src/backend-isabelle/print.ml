@@ -83,7 +83,7 @@ let reserved_ids =
    "if"; "else";
    "fix"; "let"; "next";
    "by"; "apply"; "done";
-   "sorry";
+   "sorry"; "passive"; "declare"; 
    "list_all3"; "list_zipWith"; "list_map3";
    "foralli_help"; "list_foralli"; "option_zipWith";
    "option_map3"; "option_to_list"; "list_slice";
@@ -381,7 +381,12 @@ and render_exp exp_type typids exp =
     render_atom a ^ " = " ^ r_func e) fields)) ^ " ⦈"
   | DotE (e, a) -> 
     parens (render_atom a ^ " " ^ r_func e)
-  | CompE (e1, e2) -> parens (r_func e1 ^ " @@ " ^ r_func e2)
+  | CompE (e1, e2) ->
+     begin match exp.note.it with
+     | VarT (id, _) -> parens ("append_" ^ id.it ^ " " ^ r_func e1 ^ " " ^ r_func e2)
+     | _ -> error exp.at "should be record type"
+     end
+     (* parens (parens (r_func e1 ^ " :: " ^ render_type exp_type typids exp.note) ^ " @@ " ^ r_func e2) *)
   | ListE [] -> "[]"
   | ListE exps -> ssreflect_square_parens (String.concat ", " (List.map r_func exps)) 
   | LiftE e -> parens ("option_to_list " ^ r_func e)
@@ -625,14 +630,17 @@ let render_record id quants fields =
                             render_atom a ^ " :: " ^ quotes (render_type RHS typids typ)) fields) ^ "\n\n"
 
   ^
-    "definition append_" ^ id ^ inhabitance_quanters ^ " :: \"" ^ id ^ quanters ^ " " ^ ra ^ " " ^ id ^ quanters ^ " " ^ ra ^ " " ^ id ^ quanters ^ "\" (infixl \"@@\" 70) where\n" ^
+    "definition append_" ^ id ^ inhabitance_quanters ^ " :: \"" ^ id ^ quanters ^ " " ^ ra ^ " " ^ id ^ quanters ^ " " ^ ra ^ " " ^ id ^ quanters ^ "\" where\n" ^
     "\t\"append_" ^ id ^ inhabitance_quanters ^ " arg1 arg2 = ⦇\n\t\t" ^
       String.concat ",\n\t\t" (List.map (fun (a, (t, _, _), _) ->
                                    let record_id' = render_atom a in
                                    match check_trivial_append !env_ref t with
                                      ListAppend -> record_id' ^ " = " ^ record_id' ^ " arg1 @ " ^ record_id' ^ " arg2"
                                    | OptionAppend -> record_id' ^ " = " ^ record_id' ^ " arg1 @@@ " ^ record_id' ^ " arg2" 
-                                   | RecordAppend -> record_id' ^ " = (" ^ record_id' ^ " arg1 :: " ^ render_type RHS typids t ^ ") @@ " ^ record_id' ^ " arg2"
+                                   | RecordAppend ->
+                                      begin match t.it with
+                                      | VarT (id, _) -> record_id' ^ " = append_" ^ id.it ^ " (" ^ record_id' ^ " arg1) (" ^ record_id' ^ " arg2)"
+                                      | _ -> error t.at "should be record type" end
                                    | NotAppend -> record_id' ^ " = " ^ record_id' ^ " arg1" (* ^ comment_parens "FIXME - Non-trivial append"  *)
                                  ) fields) ^ "\n\t⦈\"\n\n" 
 
