@@ -80,10 +80,10 @@ let reserved_ids =
    "lemma"; "theorem"; "corollary";
    "proof"; "qed";
    "assume"; "show"; "have"; "thus"; "then";
-   "if"; "else";
+   "if"; "else"; "in";
    "fix"; "let"; "next";
    "by"; "apply"; "done";
-   "sorry"; "passive"; "declare"; 
+   "sorry"; "passive"; "declare"; "syntax";
    "list_all3"; "list_zipWith"; "list_map3";
    "foralli_help"; "list_foralli"; "option_zipWith";
    "option_map3"; "option_to_list"; "list_slice";
@@ -296,7 +296,7 @@ let rec render_param_types_list exp_type typids params =
         | TypP id -> StringSet.add id.it typids, resl
         | DefP (_, params, typ) ->
            let typids', resl' = render_param_types exp_type typids params in
-           typids, (paramid, (resl' ^ render_type exp_type typids' typ)) :: resl
+           typids, (paramid, parens (resl' ^ render_type exp_type typids' typ)) :: resl
         | GramP _ -> error param.at ("Unsupported param: " ^ Il.Print.string_of_param param)
       ) (typids, []) params in
   typids, List.rev resl
@@ -515,7 +515,7 @@ and render_path (paths : path list) typids typ at n name is_extend end_exp =
         DotE (acc, a') $$ no_region % p.note
       | _ -> error at "Should be a record access" (* Should not happen *)
     )  dot_paths' (list_name n) in
-    let update_fields = String.concat ";" (List.map (fun p -> 
+    let update_fields = String.concat ", " (List.map (fun p -> (* TODO: this is wrong, fix it. Hint: maybe the comma? See fun_evalglobals in 3.0 *)
       match p.it with
       | DotP (_p', a) -> 
         render_atom a
