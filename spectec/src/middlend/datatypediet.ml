@@ -61,7 +61,7 @@ Recursion: if mydatatype is recursive, we group all non-recursive cases first an
  *)
 
 
-let max_cases = 50
+let max_cases = 500
 
 open Il.Ast
 open Util.Source

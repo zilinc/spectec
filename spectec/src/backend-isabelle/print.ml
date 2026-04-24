@@ -220,7 +220,7 @@ let is_atomid a =
   | Xl.Atom.Atom _ -> true
   | _ -> false 
 
-let render_id id =
+let render_id id = (* TODO: isabelle doesn't allow ' *)
   let id = if id.[String.length id - 1] = '_' then id ^ "closed" else id in
   let id = if id.[0] = '_' then "started" ^ id else id in
   if StringSet.mem id reserved_ids then "res_" ^ id else id
@@ -839,7 +839,7 @@ let exported_string =
   "\t\"list_zipWith f xs ys = map (λ (x, y). f x y) (zip xs ys)\"\n\n" ^
   "definition list_map3 :: \"('a " ^ ra ^ " 'b " ^ ra ^ " 'c " ^ ra ^ " 'd) " ^ ra ^ " 'a list " ^ ra ^ " 'b list " ^ ra ^ " 'c list " ^ ra ^ " 'd list\" where\n" ^
   "\t\"list_map3 f xs ys zs = map (λ (x, (y, z)). f x y z) (zip xs (zip ys zs))\"\n\n" ^
-  "inductive foralli_help :: \"(nat " ^ ra ^ " 'a " ^ ra ^ "bool) " ^ ra ^ " nat " ^ ra ^ " 'a list " ^ ra ^ " bool\" where\n" ^
+  "inductive foralli_help :: \"(nat " ^ ra ^ " 'a " ^ ra ^ " bool) " ^ ra ^ " nat " ^ ra ^ " 'a list " ^ ra ^ " bool\" where\n" ^
   "\tforalli_nil : \"foralli_help f n []\" |\n" ^
   "\tforalli_cons : \"f n x " ^ lra ^ " foralli_help f (n + 1) l " ^ lra ^ " foralli_help f n (x # l)\"\n\n" ^
   "definition list_foralli :: \"(nat " ^ ra ^ " 'a " ^ ra ^ " bool) " ^ ra ^ " 'a list " ^ ra ^ " bool\" where\n" ^
@@ -865,8 +865,8 @@ let exported_string =
   "fun repeat :: \"nat " ^ ra ^ " 'a " ^ ra ^ " 'a list\" where\n" ^
   "\t\"repeat 0 _ = []\" |\n" ^
   "\t\"repeat (Suc n) x = x # repeat n x\"\n\n" ^
-  "fun the :: \"'a option " ^ ra ^ "'a\" where\n" ^
-  "\t\"the (Some x) = x\"\n\n" ^
+   (* "fun the :: \"'a option " ^ ra ^ "'a\" where\n" ^ (* TODO: already exists!!!! *)
+  "\t\"the (Some x) = x\"\n\n" ^ *)
   "fun list_update_func :: \"'a list " ^ ra ^ " nat " ^ ra ^ " ('a " ^ ra ^ " 'a) " ^ ra ^ " 'a list\" where\n" ^
   "\t\"list_update_func [] _ _ = []\" |\n" ^
   "\t\"list_update_func (x # l) 0 y = (y x) # l\" |\n" ^
