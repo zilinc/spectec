@@ -151,10 +151,10 @@ rule Module_ok_alg:
   -- if dt_I* = $funcsxt(xt_I*)
 
 def $module_ok(module) : moduletype
-;; def $module_ok           hint(builtin)
-def $module_ok(module) = moduletype
-    -- if C = $module_prepass(module)
-    -- Module_ok_alg: C |- module : moduletype
+def $module_ok           hint(builtin)
+;; def $module_ok(module) = moduletype
+;;     -- if C = $module_prepass(module)
+;;     -- Module_ok_alg: C |- module : moduletype
 
 
 ;; ********************************************************
@@ -382,9 +382,9 @@ relation Comptype_sub     hint(animate %1 %2 %3 -> bool)
 relation Num_ok        hint(animate %1 %2 -> %3)
 relation Vec_ok        hint(animate %1 %2 -> %3)
 relation Ref_ok        hint(animate_manual "ref_ok" : %1 %2 %3 -> bool)
-;; relation Val_ok        hint(animate_manual "val_ok" : %1 %2 %3 -> bool)
+relation Val_ok        hint(animate_manual "val_ok" : %1 %2 %3 -> bool)
 ;; relation Ref_ok        hint(animate %1 %2 %3 -> bool)
-relation Val_ok        hint(animate %1 %2 %3 -> bool)
+;; relation Val_ok        hint(animate %1 %2 %3 -> bool)
 
 relation Instrtype_ok     hint(animate %1 %2 -> bool)
 relation Instr_const      hint(animate %1 %2 %3 -> bool)

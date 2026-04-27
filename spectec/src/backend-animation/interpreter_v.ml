@@ -1134,8 +1134,8 @@ and heaptype_sub = {
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler (* ; externaddr_ok; module_ok;
-  ref_ok; val_ok; reftype_sub; heaptype_sub *)
+  step_read_throw_ref_handler; externaddr_ok; module_ok;
+  ref_ok; val_ok; reftype_sub; heaptype_sub
   ]
 
 and call_builtins fname args : value OptMonad.m =
