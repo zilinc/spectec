@@ -455,11 +455,13 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
         ) in
       let es = (match exp.it with
                | TupE es -> es
-               | _ -> assert false
+               | _ -> [exp]
                )
       in
       id', Lib.List.fold_lefti (fun i (les, res) e ->
-        let mode = H.IM.find (i+1) mode_map in  (* FIXME(zilinc): Crashes if some args are missing in the mode declaration? *)
+        let mode = try H.IM.find (i+1) mode_map with
+                   | _ -> error e.at ("Wrong mode of argument %" ^ string_of_int (i+1) ^ " in " ^ id.it)
+        in  (* FIXME(zilinc): Crashes if some args are missing in the mode declaration? *)
         match mode with
         | In  -> les @ [e], res
         | Out -> les, res @ [e]
