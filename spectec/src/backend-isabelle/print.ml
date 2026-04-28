@@ -220,7 +220,7 @@ let is_atomid a =
   | Xl.Atom.Atom _ -> true
   | _ -> false 
 
-let render_id id = (* TODO: isabelle doesn't allow ' *)
+let render_id id = 
   let id = if id.[String.length id - 1] = '_' then id ^ "closed" else id in
   let id = if id.[0] = '_' then "started" ^ id else id in
   if StringSet.mem id reserved_ids then "res_" ^ id else id
@@ -460,8 +460,11 @@ and render_path_start (p : path) typids start_exp is_extend end_exp =
   (render_path paths typids (start_exp.note) p.at 0 (Some start_exp) is_extend end_exp)
 
 and render_path (paths : path list) typids typ at n name is_extend end_exp = 
-  let render_record_update t1 t2 t3 =
-    parens (t1 ^ " ⦇ " ^ t2 ^ " := " ^ t3 ^ "  ⦈")
+  let rec render_record_update t1 t2 t3 =
+    match t2 with
+    | [] -> failwith "path should be nonempty" 
+    | [t2] -> parens (t1 ^ " ⦇ " ^ t2 ^ " := " ^ t3 ^ "  ⦈")
+    | t2 :: q -> parens (t1 ^ " ⦇ " ^ t2 ^ " := " ^ render_record_update (t2 ^ " " ^ t1) q t3 ^ "  ⦈")
   in
   let r_func_e = render_exp RHS typids in
   let is_dot p = (match p.it with
@@ -483,7 +486,7 @@ and render_path (paths : path list) typids typ at n name is_extend end_exp =
   | [{it = DotP (_p, a); _}] when is_extend -> 
     let projection_term = parens (render_atom a ^ " " ^ r_func_e (list_name n)) in
     let extend_term = parens (projection_term ^ " @ " ^ r_func_e end_exp) in
-    render_record_update (r_func_e (list_name n)) (render_atom a) extend_term
+    render_record_update (r_func_e (list_name n)) [render_atom a] extend_term
   | [{it = SliceP (_, e1, e2); _}] when is_extend -> 
     let extend_term = parens (new_name ^ " @ " ^ r_func_e end_exp) in
     let _, quant = render_quant RHS (ExpP (new_name $ no_region, new_name_typ) $ no_region) in
@@ -493,7 +496,7 @@ and render_path (paths : path list) typids typ at n name is_extend end_exp =
     let _, quant = render_quant RHS (ExpP ("_" $ no_region, new_name_typ) $ no_region) in
     parens ("list_update_func " ^ r_func_e (list_name n) ^ " " ^ r_func_e e ^ " " ^ render_lambda [quant] (r_func_e end_exp))
   | [{it = DotP (_p, a); _}] ->
-    render_record_update (r_func_e (list_name n)) (render_atom a) (r_func_e end_exp)
+    render_record_update (r_func_e (list_name n)) [render_atom a] (r_func_e end_exp)
   | [{it = SliceP (_, e1, e2); _}] -> 
     parens ("list_slice_update " ^ r_func_e (list_name n) ^ " " ^ r_func_e e1 ^ " " ^ r_func_e e2 ^ " " ^ r_func_e end_exp)
   (* Middle logic *)
@@ -515,10 +518,10 @@ and render_path (paths : path list) typids typ at n name is_extend end_exp =
         DotE (acc, a') $$ no_region % p.note
       | _ -> error at "Should be a record access" (* Should not happen *)
     )  dot_paths' (list_name n) in
-    let update_fields = String.concat ", " (List.map (fun p -> (* TODO: this is wrong, fix it. Hint: maybe the comma? See fun_evalglobals in 3.0 *)
+    let update_fields = (List.map (fun p -> 
       match p.it with
       | DotP (_p', a) -> 
-        render_atom a
+         render_atom a
       | _ -> error at "Should be a record access" 
     ) dot_paths) in
     let new_term = parens (end_name ^ " " ^ r_func_e projection_term) in
@@ -772,6 +775,14 @@ type isabelle_header =
 | Itsyn
 
 
+let is_typ_param x =
+  match x.it with
+  | TypP _ -> true
+  | _ -> false
+let is_typ_arg x =
+  match x.it with
+  | TypA _ -> true
+  | _ -> false
 
 (* TODO - revise mutual recursion with other defs such as records and axioms *)
 let rec components_of_def def =
@@ -784,13 +795,14 @@ let rec components_of_def def =
     start , [Irec] , [render_record (render_id id.it) quants typfields] , []
   | TypD (id, _, [{it = InstD (quants, _, {it = VariantT typcases; _}); _}]) -> 
     start , [Idat] , [render_variant_typ (render_id id.it) quants typcases] , []
-  | DecD (id, [], typ, [{it = DefD ([], [], exp, _); _}]) -> 
+  | DecD (id, params, typ, [{it = DefD (quants, args, exp, _); _}])
+       when List.for_all is_typ_param params && List.for_all is_typ_arg args && List.for_all is_typ_param quants -> 
     start , [Idef] , [render_global_declaration (render_id id.it) typ exp] , []
   | DecD (id, params, typ, []) ->
      start , [Iax], [render_axiom (render_id id.it) params typ], []
   | DecD (id, params, typ, clauses) when List.exists has_prems clauses ->
     start , [Iax], [render_axiom (render_id id.it) params typ], []
-  | DecD (id, params, typ, clauses) -> 
+  | DecD (id, params, typ, clauses) ->
      let header, clauses = render_function_def (render_id id.it) params typ (clauses) in
      start, [Ifun], [header], clauses
   | RelD (id, _, _, typ, []) -> 
