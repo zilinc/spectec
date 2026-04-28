@@ -251,6 +251,63 @@ let put s  = S.put s  |> E.lift
 let update f = S.update f |> E.lift
 
 
+let is_known knowns exp =
+  let fv = (free_exp false exp).varid in
+  if Set.subset fv knowns |> not then
+    false
+  else
+    let rec unknown_iter_exp exp : bool =
+      let go = unknown_iter_exp in
+      let go_path = unknown_iter_path in
+      let go_arg = unknown_iter_arg in
+      let unknown_iter_iter (iter, xes) =
+        (match iter with
+        (* If xes is non-empty, then there must exist x <- e in xes.
+           If e is known, then we known the number of iterations;
+           if e is unknown, then the whole expression should have some
+           free variables.
+         *)
+        | Opt | List | List1 when List.is_empty xes -> true
+        (* Because `n` must be a nat expression, and we already know that `n` contains
+           no free variables, it should be good enough (at least in practice) to give
+           us the number of iterations. So we don't check `unknown_iter_exp n`.
+         *)
+        | ListN (n, _) -> false
+        | _ -> false
+        )
+      in
+      (match exp.it with
+      | VarE _ | BoolE _ | NumE _ | TextE _ | OptE None -> false
+      | CvtE (e1, _, _) | UnE (_, _, e1) | LiftE e1 | LenE e1 | TheE e1 | SubE (e1, _, _)
+      | ProjE (e1, _) | DotE (e1, _) | CaseE (_, e1) | UncaseE (e1, _) | OptE (Some e1) ->
+        go e1
+      | BinE (_, _, e1, e2) | CmpE (_, _, e1, e2) | IdxE (e1, e2) | CompE (e1, e2) | MemE (e1, e2) | CatE (e1, e2) ->
+        go e1 || go e2
+      | SliceE (e1, e2, e3) | IfE (e1, e2, e3) -> List.exists go [e1; e2; e3]
+      | TupE es | ListE es -> List.exists go es
+      | UpdE (e1, p, e2) | ExtE (e1, p, e2) ->
+        go e1 || go e2 || go_path p
+      | StrE efs -> List.map snd efs |> List.exists go
+      | CallE (_, args) -> List.exists go_arg args
+      | IterE (e1, iterexp) -> go e1 || unknown_iter_iter iterexp
+      )
+    and unknown_iter_path p : bool =
+      (match p.it with
+      | RootP -> false
+      | IdxP (p1, e1) -> unknown_iter_path p1 || unknown_iter_exp e1
+      | SliceP (p1, e1, e2) -> unknown_iter_path p1 || List.exists unknown_iter_exp [e1; e2]
+      | DotP (p1, _) -> unknown_iter_path p1
+      )
+    and unknown_iter_arg a : bool =
+      (match a.it with
+      | ExpA e -> unknown_iter_exp e
+      | _ -> false
+      )
+    in
+    unknown_iter_exp exp |> not
+
+let is_unknown knowns exp = is_known knowns exp |> not
+
 type direction = [ `Lhs | `Rhs ]
 
 
@@ -487,7 +544,7 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   (* Let res = $call(args) *)
   let unknowns_res    = Set.diff (free_exp false res   ).varid knowns in
   let unknowns_fncall = Set.diff (free_exp false fncall).varid knowns in
-  (match Set.is_empty unknowns_fncall, Set.is_empty unknowns_res with
+  (match is_known knowns fncall, is_known knowns res with
   | true, true ->
     (* The rule is fully known, then check. *)
     E.return [ IfPr (eqE ~at:at res fncall) $ at ]
@@ -650,9 +707,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       animate_exp_eq envr at e_star rhs
     (* Base case *)
     | _, ListN(len, Some i) ->
-      let fv_len = (free_exp false len).varid in
-      let unknowns_len = Set.diff fv_len knowns in
-      if Set.is_empty unknowns_len then
+      if is_known knowns len then
         (* Base case for iterators: [len] is known. *)
         let t = reduce_typ !envr lhs'.note in
         let rhs' = IdxE (rhs, VarE i $$ i.at % (natT ~at:i.at ())) $$ rhs.at % lhs'.note in
@@ -1054,12 +1109,11 @@ and animate_exp_mem envr at e es : prem list E.m =
 and animate_if_prem envr at exp : prem list E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in
-  let fv_exp = (free_exp false exp).varid in
   let* s = get () in
   let knowns = get_knowns s in
   match exp.it with
   (* Base case: all free vars are inputs *)
-  | _ when Set.subset fv_exp knowns ->
+  | _ when is_known knowns exp ->
     E.return [ IfPr exp $ at ]
   (* lhs = rhs *)
   | CmpE (`EqOp, t, e1, e2) ->
@@ -1067,7 +1121,7 @@ and animate_if_prem envr at exp : prem list E.m =
     let fv2 = (free_exp false e2).varid in
     let unknowns1 = Set.diff fv1 knowns in
     let unknowns2 = Set.diff fv2 knowns in
-    (match Set.is_empty unknowns1, Set.is_empty unknowns2 with
+    (match is_known knowns e1, is_known knowns e2 with
     | true , true  -> assert false
     | true , false -> animate_exp_eq envr exp.at e2 e1
     | false, true  -> animate_exp_eq envr exp.at e1 e2
@@ -1077,7 +1131,7 @@ and animate_if_prem envr at exp : prem list E.m =
                                  "    unknowns: " ^ string_of_varset unknowns1 ^ "\n" ^
                                  "  ▹ e2 = " ^ string_of_exp e2 ^ "\n" ^
                                  "    unknowns: " ^ string_of_varset unknowns2))
-  )
+    )
   (* simp: Break up conjunctions. We have to push the two conjuncts on the stack
      and hand over the control to the outer loops, because these two conjuncts
      may need to be animated in different iterations.
@@ -1110,7 +1164,8 @@ and animate_if_prem envr at exp : prem list E.m =
     )
   | IterE (exp', iterexp) ->
     animate_prem envr (IterPr ([IfPr exp' $ exp'.at], iterexp) $ at)
-  | _ -> let unknowns = Set.diff fv_exp knowns in
+  | _ -> let fv_exp = (free_exp false exp).varid in
+         let unknowns = Set.diff fv_exp knowns in
          E.throw (string_of_error at (
                    "Can't animate if premise: " ^ string_of_exp exp ^ ".\n" ^
                    "  ▹ Unknowns: " ^ string_of_varset unknowns ^ "\n" ^
@@ -1175,8 +1230,7 @@ and animate_prem envr prem : prem list E.m =
     let* oindex = match iter with
     | ListN(len, Some i) ->
       lenvr := bind_var !lenvr i (natT ~at:len.at ());
-      let fv_len = (free_exp false len).varid in
-      if Set.is_empty (Set.diff fv_len knowns) then
+      if is_known knowns len then
         Some i |> E.return
       else
         E.throw (string_of_error prem.at ("Number of iterations is unknown: " ^ string_of_exp len))
@@ -1191,9 +1245,7 @@ and animate_prem envr prem : prem list E.m =
     ) xes;
     (* Split xes into inflow and outflow binding lists. *)
     let in_xes, out_xes = List.fold_left (fun (is, os) (x, e) ->
-      let fv_e = (free_exp false e).varid in
-      let unknowns_e = Set.diff fv_e knowns in
-      if Set.is_empty unknowns_e then is@[(x,e)], os else is, os@[(x,e)]
+      if is_known knowns e then is@[(x,e)], os else is, os@[(x,e)]
     ) ([], []) xes in
     (* Initial known set inside the iterator *)
     let knowns_inner = Set.union knowns (List.map (fun (x, _) -> x.it) in_xes |> Set.of_list) in
