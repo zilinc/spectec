@@ -17,6 +17,8 @@ type t =
 val empty : t
 val union : t -> t -> t
 
+val funcs : Set.t -> t
+
 val typeuse : Types.typeuse -> t
 val heaptype : Types.heaptype -> t
 

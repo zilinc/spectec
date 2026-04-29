@@ -1084,7 +1084,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
           { it = IterE (exp2', (List, xes2)); _ }) ->
     todo "maybe better off just handle the rules manually."
   *)
-  | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs))
+  | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs ^ "\n" ^
+                                      "  ▹ knowns: " ^ string_of_varset knowns))
 
 
 (** ASSUMES: [e] contains unknown vars, whereas [es] is fully known.
