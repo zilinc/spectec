@@ -408,7 +408,7 @@ relation Blocktype_ok     hint(animate %1 %2 %3 -> bool)
 relation Expr_ok          hint(animate %1 %2 %3 -> bool)
 relation Expr_const       hint(animate %1 %2 %3 -> bool)
 relation Expr_ok_const    hint(animate %1 %2 %3 -> bool)
-relation Datamode_ok      hint(animate %1 %2 -> %3)  ;; Output is a singleton type
+relation Datamode_ok      hint(animate %1 %2 %3 -> bool)  ;; Output is a singleton type
 relation Elemmode_ok      hint(animate %1 %2 %3 -> bool)
 
 relation Type_ok          hint(animate %1 %2 -> %3)

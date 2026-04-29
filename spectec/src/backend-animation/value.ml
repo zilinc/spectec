@@ -211,6 +211,7 @@ let vl_of_tup fvl = List.map (fun (f, v) -> f v) fvl |> tupV
 
 let valA a = ValA a
 let typA a = TypA a
+let defA a = DefA a
 
 let none = optV None
 let some v = optV (Some v)

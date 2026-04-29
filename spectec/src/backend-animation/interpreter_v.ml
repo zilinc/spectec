@@ -31,7 +31,7 @@ let verbose : string list ref =
       (* "match_info";  *)
       (* "iter"; *)          (* Low-level debugging. *)
       (* "assign"; *)
-      (* "call"; *)
+      "call";
       (* "step"; *)
       (* "log"; *)
       ]
@@ -236,12 +236,7 @@ let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
   | _, _ -> fail ()
 
 and assign_fid ctx pid aid : VContext.t OptMonad.m =
-  let aid' = match VContext.find_opt_defid ctx aid with
-  | Some aid' -> aid'
-  | None      -> aid
-  in
-  info "assign" no (lazy ("* assign func_id: " ^ pid.it ^ " ↦ " ^ aid'.it ^ "(" ^ aid.it ^ ")"));
-  VContext.add_defid ctx pid aid' |> return
+  VContext.add_defid ctx pid aid |> return
 
 and is_value : exp -> bool = Il.Eval.is_normal_exp
 and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
@@ -381,7 +376,7 @@ and eval_exp ctx exp : value OptMonad.m =
     let fid' = (match VContext.find_opt_defid ctx fid with
                | None -> fid | Some fid' -> fid') in
     let* args' = mapM (eval_arg ctx) args in
-    call_func ctx fid'.it args'
+    call_func fid'.it args'
   (* Optimisation: v* {v <- v*} *)
   | IterE ({ it = VarE v; _ }, (List, xes)) when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
     let x_star = List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd in
@@ -601,7 +596,9 @@ and eval_arg ctx a : Value.arg OptMonad.m =
   match a.it with
   | ExpA  e  -> let* v = eval_exp ctx e in valA v |> return
   | TypA t  -> return (Value.TypA t)  (* types are reduced on demand *)
-  | DefA id -> return (Value.DefA id)
+  | DefA id -> (match VContext.find_opt_defid ctx id with
+               | None -> id | Some id' -> id'
+               ) |> defA |> return
   | GramA g -> return (Value.GramA g)
 
 and eval_prem ctx prem : VContext.t OptMonad.m =
@@ -785,8 +782,9 @@ and match_clause ctx at (fname: string) (nth: int) (clauses: clause list) (args:
     return val_
 
 
-and eval_func ctx name func_def args : value OptMonad.m =
+and eval_func name func_def args : value OptMonad.m =
   let (_, _, params, typ, fcs, _) = func_def.it in
+  let ctx = VContext.empty in
   if name = "step" then
     let* r = match_clause ctx no_region name 1 (List.map snd fcs) args in
     let CaseV (_, [_; instrs]) = r in
@@ -804,22 +802,22 @@ and eval_func ctx name func_def args : value OptMonad.m =
     match_clause ctx no_region name 1 (List.map snd fcs) args
 
 (*
-and call_func ctx name args : value OptMonad.m =
+and call_func name args : value OptMonad.m =
   let key = (name, args) in
   match C.find key fncall_cache with
   | Some v -> C.promote key fncall_cache; v
-  | None   -> let res = call_func' ctx name args in
+  | None   -> let res = call_func' name args in
               C.add key res fncall_cache;
               res
 *)
 
-and call_func ctx name args : value OptMonad.m =
+and call_func name args : value OptMonad.m =
   info "call" no (lazy ("Calling " ^ name));
   (* Hardcoded functions defined in meta.spectec *)
   if name = "Steps" then
     let [config] = args in
     let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
-    call_func ctx "steps" args'
+    call_func "steps" args'
   else if name = "Step" then
     error no "Calling $Step is not allowed."
   else if name = "Step_pure" then
@@ -839,7 +837,7 @@ and call_func ctx name args : value OptMonad.m =
     in
     (match Def.find_dl_func_def name !dl with
     (* Regular function definition. *)
-    | Some fdef when not is_builtin -> eval_func ctx name fdef args
+    | Some fdef when not is_builtin -> eval_func name fdef args
     (* Builtins and numerics *)
     | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
       if Numerics_v.mem builtin_name then
@@ -1016,7 +1014,7 @@ and dispatch_step = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step" -> call_func VContext.empty (rel_name ^ "/" ^ rule_name) [valA arg]
+      | Some (rel_name, rule_name, _) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step rule for instr" ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step") vs
@@ -1028,7 +1026,7 @@ and dispatch_step_pure = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func VContext.empty (rel_name ^ "/" ^ rule_name) [valA arg]
+      | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_pure rule for instr" ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step_pure") vs
@@ -1040,7 +1038,7 @@ and dispatch_step_read = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> call_func VContext.empty (rel_name ^ "/" ^ rule_name) [valA arg]
+      | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_read rule for instr" ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step_read") vs
@@ -1050,7 +1048,7 @@ and step_read_throw_ref_handler = {
   name = "Step_read_throw_ref_handler";
   f =
     function
-    | [arg] -> call_func VContext.empty "Step_read/throw_ref" [valA arg]
+    | [arg] -> call_func "Step_read/throw_ref" [valA arg]
     | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
 
@@ -1100,7 +1098,7 @@ and ref_ok = {
   f =
     function
     | [ store; ref; rt2 ] ->
-      let* rt1 = call_func VContext.empty "ref_infer" [valA store; valA ref] in
+      let* rt1 = call_func "ref_infer" [valA store; valA ref] in
       let rt1' = vl_to_reftype rt1 in
       let rt2' = vl_to_reftype rt2 in
       RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
@@ -1112,7 +1110,7 @@ and val_ok = {
   f =
     function
     | [ store; val_; vt2 ] ->
-      let* vt1 = call_func VContext.empty "val_infer" [valA store; valA val_] in
+      let* vt1 = call_func "val_infer" [valA store; valA val_] in
       let vt1' = vl_to_valtype vt1 in
       let vt2' = vl_to_valtype vt2 in
       RI.Match.match_valtype [] vt1' vt2' |> boolV |> return
@@ -1162,8 +1160,9 @@ and instrs_ok = {
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler; externaddr_ok; module_ok;
-  ref_ok; val_ok; reftype_sub; heaptype_sub; instrs_ok
+  step_read_throw_ref_handler;
+  externaddr_ok; ref_ok; reftype_sub; heaptype_sub; instrs_ok
+  (* module_ok; val_ok; *)
   ]
 
 and call_builtins fname args : value OptMonad.m =
@@ -1183,17 +1182,17 @@ and builtins_mem fname =
 (* Wasm interpreter entry *)
 
 let instantiate (args: Value.arg list) : value =
-  match (let* r = call_func VContext.empty "instantiate" args in
-         call_func VContext.empty "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))]) |> run_opt
+  match (let* r = call_func "instantiate" args in
+         call_func "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))]) |> run_opt
   with
   | Some v -> v
   | None -> raise (Failure "`instantiate` failed to run.")
 
 let invoke (args: Value.arg list) : value =
-  match call_func VContext.empty "invoke" args |> run_opt with
+  match call_func "invoke" args |> run_opt with
   | None -> raise (Failure "`invoke` failed to run.")
   | Some r -> let CaseV (_, [_; instrs]) = r in
-              (match call_func VContext.empty "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))] |> run_opt with
+              (match call_func "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))] |> run_opt with
               | Some r' -> r'
               | None -> raise (Failure ("`invoke` failed to reduce its result: " ^ string_of_value instrs))
               )
