@@ -8,7 +8,6 @@ open Il.Ast
 open Il.Eval
 open Il.Print
 open Xl.Atom
-open Il2al.Def
 open Il2al.Free
 open Backend_ast
 open Def

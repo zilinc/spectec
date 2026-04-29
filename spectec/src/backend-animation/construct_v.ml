@@ -1160,6 +1160,17 @@ let vl_to_globaltype v : RI.Types.globaltype =
   | [[];[];[]], [mut; vt] -> GlobalT (vl_to_mut mut, vl_to_valtype vt)
   | _ -> error_value "globaltype" v
 
+let vl_to_init v : RI.Types.init =
+  match match_caseV "init" v with
+  | [["SET"]]  , [] -> RI.Types.Set
+  | [["UNSET"]], [] -> RI.Types.Unset
+  | _ -> error_value "init" v
+
+let vl_to_localtype v : RI.Types.localtype =
+  match match_caseV "localtype" v with
+  | [[];[];[]], [init; vt] -> LocalT (vl_to_init init, vl_to_valtype vt)
+  | _ -> error_value "localtype" v
+
 let vl_to_tabletype v : RI.Types.tabletype =
   match match_caseV "tabletype" v with
   | [[];[];[];[]], [at; limits; rt] ->
@@ -2070,3 +2081,39 @@ and vl_to_value v : RI.Value.value =
   | [["REF.NULL_ADDR"]], _ -> RI.Value.Ref (vl_to_ref v)
   | [[ref_con];[]]     , _ when String.starts_with ~prefix:"REF." ref_con -> RI.Value.Ref (vl_to_ref v)
   | _ -> error_value "val" v
+
+and vl_to_context v : RI.Valid.context =
+  match v with
+  | StrV r ->
+    let deftypest   = Record.find "TYPES"   r in
+    let subtypes    = Record.find "RECS"    r in
+    let tagtypes    = Record.find "TAGS"    r in
+    let globaltypes = Record.find "GLOBALS" r in
+    let memtypes    = Record.find "MEMS"    r in
+    let tabletypes  = Record.find "TABLES"  r in
+    let deftypesf   = Record.find "FUNCS"   r in
+    let datatypes   = Record.find "DATAS"   r in
+    let elemtypes   = Record.find "ELEMS"   r in
+    let localtypes  = Record.find "LOCALS"  r in
+    let resulttypes = Record.find "LABELS"  r in
+    let resulttypeo = Record.find "RETURN"  r in
+    let funcidxs    = Record.find "REFS"    r in
+    {
+      types    = vl_to_list vl_to_deftype    deftypest  ;
+      tags     = vl_to_list vl_to_tagtype    tagtypes   ;
+      globals  = vl_to_list vl_to_globaltype globaltypes;
+      memories = vl_to_list vl_to_memorytype memtypes   ;
+      tables   = vl_to_list vl_to_tabletype  tabletypes ;
+      funcs    = vl_to_list vl_to_deftype    deftypesf  ;
+      datas    = vl_to_list (fun _ -> ())    datatypes  ;
+      elems    = vl_to_list vl_to_reftype    elemtypes  ;
+      locals   = vl_to_list vl_to_localtype  localtypes ;
+      labels   = vl_to_list vl_to_resulttype resulttypes;
+      results  = (match resulttypeo with
+                 | OptV None -> []
+                 | OptV (Some resulttype) -> vl_to_resulttype resulttype
+                 | _ -> error_value "resulttype?" resulttypeo
+                 );
+      refs     = RI.Free.funcs (vl_to_list vl_to_uN_32 funcidxs |> RI.Free.Set.of_list)  ;
+    }
+  | _ -> error_value "context" v

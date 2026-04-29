@@ -54,7 +54,7 @@ let assert_msg cond msg = if not cond then info "assertion" no msg; assert cond
 
 (* Helper *)
 
-let (--) start end_ : int list = List.init (end_ - start) (fun i -> start + i)
+let (--) start end_ (* exclusive *) : int list = List.init (end_ - start) (fun i -> start + i)
 
 module OptMonad : sig
   include Lib.Monad
@@ -154,6 +154,9 @@ module VContext = struct
   let merge ctx1 ctx2 = { vars = merge_map ctx1.vars ctx2.vars
                         ; defs = merge_map ctx1.defs ctx2.defs
                         }
+
+  let string_of_ctx ctx =
+    String.concat "\n" (ctx.vars |> Map.bindings |> List.map (fun (k, v) -> k ^ " ↦ " ^ string_of_value v))
 end
 
 
@@ -1135,14 +1138,32 @@ and heaptype_sub = {
       let ht1' = vl_to_heaptype ht1 in
       let ht2' = vl_to_heaptype ht2 in
       RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
+    | _ -> error no ("Wrong number/type of arguments to $heaptype_sub.")
 }
+
+and instrs_ok = {
+  name = "instrs_ok";
+  f =
+    function
+    | [ ctx; instrs; CaseV (_, [eps1; eps2; resulttype]) ]
+      when eq_value eps1 (listV [||] |> caseV1) && eq_value eps2 (listV [||]) ->
+      let ctx' = vl_to_context ctx in
+      let instrs' = vl_to_list vl_to_instr instrs in
+      let resulttype' = vl_to_resulttype resulttype in
+      (match RI.Valid.check_instrs ctx' (RI.Valid.NoEllipses, resulttype') instrs' with
+      | _ -> true
+      | exception e -> false
+      ) |> boolV |> return
+    | _ -> error no ("Wrong number/type of arguments to $instrs_ok.")
+
+}
+
 
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler; externaddr_ok; module_ok;
-  ref_ok; val_ok; reftype_sub; heaptype_sub
+  ref_ok; val_ok; reftype_sub; heaptype_sub; instrs_ok
   ]
 
 and call_builtins fname args : value OptMonad.m =
