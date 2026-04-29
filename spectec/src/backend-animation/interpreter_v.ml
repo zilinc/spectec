@@ -31,7 +31,7 @@ let verbose : string list ref =
       (* "match_info";  *)
       (* "iter"; *)          (* Low-level debugging. *)
       (* "assign"; *)
-      "call";
+      (* "call"; *)
       (* "step"; *)
       (* "log"; *)
       ]
