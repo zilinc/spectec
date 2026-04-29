@@ -28,7 +28,7 @@ jobs:
       - name: Setup Dune
         run: opam install --yes dune menhir mdx zarith tsort
       - name: Build
-        run: cd spectec && opam exec make
+        run: cd spectec && make
       - name: Test wasm-3.0
         run: |
           cd spectec
