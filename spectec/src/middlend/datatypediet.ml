@@ -6,8 +6,6 @@ This is because some proof assistants, like Isabelle, struggle to process dataty
 
 Instead, when a datatype has more than 50 constructors, we redefine the grammar with several layers, e.g.
 
-(* TODO: fix the names in the explanation to match what is actually output *)
-
 mydatatype =
 | Case0 of args0
 | Case1 of args1
@@ -20,41 +18,39 @@ mydatatype =
 becomes
 
 mydatatype =
-| Mydatatype_case0 of mydatatype0
-| Mydatatype_case1 of mydatatype1
-| Mydatatype_case2 of mydatatype2
+| Mydatatype_subcase_0 of mydatatype_subtype_0
+| Mydatatype_subcase_1 of mydatatype_subtype_1
+| Mydatatype_subcase_2 of mydatatype_subtype_2
 .
 .
 .
-| Mydatatype_case10 of mydataype10
+| Mydatatype_subcase_10 of mydataype_subtype_10
 
 where
 
-mydatatype_case0 =
-| Expanded_case0 of args0
-| Expanded_case1 of args1
-| Expanded_case2 of args2
+mydatatype_subtype_0 =
+| Case0 of args0
+| Case1 of args1
+| Case2 of args2
 .
 .
 .
-| Expanded_case9 of args9
+| Case9 of args9
 
 and
 
-mydatatype_case1 =
-| Expanded_case10 of args10
-| Expanded_case11 of args11
-| Expanded_case12 of args12
+mydatatype_subtype_1 =
+| Case10 of args10
+| Case11 of args11
+| Case12 of args12
 .
 .
 .
-| Expanded_case19 of args19
+| Case19 of args19
 
 etc.
 
-We can then define functions Case0 args = Mydatatype_case0 (Expanded_case0 args) to allow the user to use their constructor names on all RHS occurences.
-
-We still need to replace all occurences of constructor `Case37 args` with `Mydatatype_case3 (Expanded_case37 args)`, etc in LHS occurences.
+We then need to replace all occurences of constructor `Case37 args` with `Mydatatype_subcase_3 (Expanded_case37 args)`, etc.
 
 For optimality, when breaking up a datatype with a number N>50 of constructors, we make sqrt(N) cases. If sqrt(N) is greater than 50 we repeat the operation recursively.
 
@@ -218,11 +214,11 @@ let split_constructor id l1 quants l2 typecases ids at1 at2 at3 =
       | [] -> acc, done_cases, nexti, current_case, current_case_count
       | (casename, typ, hints) :: q ->
          let fathername =
-           Seq [ Atom { it = Xl.Atom.Atom (id.it ^ "subcase" ^ string_of_int nexti) ;
+           Seq [ Atom { it = Xl.Atom.Atom (id.it ^ "_subcase_" ^ string_of_int nexti) ;
                         at = no_region ;
                         note = Xl.Atom.info "automatically generated subcase during datatype dieting" } ;
                  Arg () ] in
-         aux (MixopMap.add casename (fathername, id.it ^ "subtype" ^ string_of_int nexti) acc)
+         aux (MixopMap.add casename (fathername, id.it ^ "_subtype_" ^ string_of_int nexti) acc)
            done_cases nexti
            ((casename, typ, hints) :: current_case)
            (current_case_count + 1) q in
@@ -235,17 +231,17 @@ let split_constructor id l1 quants l2 typecases ids at1 at2 at3 =
   if nexti * max_constr_per_case + current_case_count = n && nb_cases' = nb_cases then ()
   else failwith "arithmetic error";
   let non_recs = List.map (fun (i, typecases) ->
-                     { it = TypD (id.it ^ "subtype" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
+                     { it = TypD (id.it ^ "_subtype_" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
                                                                       at = at2 ; note = () } ]) ; at = at3 ; note = () }) non_recs in
   let yes_recs = List.map (fun (i, typecases) ->
-                     { it = TypD (id.it ^ "subtype" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
+                     { it = TypD (id.it ^ "_subtype_" ^ string_of_int i $ no_region, l1, [ { it = InstD (quants, l2, { it = VariantT typecases ; at = at1 ; note = ()}) ;
                                                                       at = at2 ; note = () } ]) ; at = at3 ; note = () }) yes_recs in
   let main_typecases = List.init nb_cases
-                         (fun i -> (Seq [Atom { it = Xl.Atom.Atom (id.it ^ "subcase" ^ string_of_int i) ;
+                         (fun i -> (Seq [Atom { it = Xl.Atom.Atom (id.it ^ "_subcase_" ^ string_of_int i) ;
                                                 at = no_region;
                                                 note = Xl.Atom.info "automatically generated subcase during datatype dieting" };
                                          Arg ()],
-                                    ((VarT (id.it ^ "subtype" ^ string_of_int i $ no_region, [])) $ no_region, [], []), [])) in (* TODO: subtype may expect args *)
+                                    ((VarT (id.it ^ "_subtype_" ^ string_of_int i $ no_region, [])) $ no_region, [], []), [])) in (* TODO: subtype may expect args *)
   let main_case =
     { it = TypD (id, l1, [
                      { it = InstD (quants, l2,
