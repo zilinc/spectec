@@ -20,5 +20,6 @@
     letintro
     patSimp
     datatypediet
+    singlepatternmatch
   )
 )
