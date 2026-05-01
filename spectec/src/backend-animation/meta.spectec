@@ -26,10 +26,8 @@ def $val_infer(s, vec) = vt
 def $val_infer(s, ref) = rt
     -- if $ref_infer(s, ref) = rt
 
-def $instrs_ok(context, instr*, instrtype) : bool
-def $instrs_ok                               hint(builtin)
-;; TODO(zilinc)
-
+;; def $instrs_ok(context, instr*, instrtype) : bool
+;; def $instrs_ok                               hint(builtin)
 
 rule Comptype_sub/struct_anim:
     C |- STRUCT ft'_1* <: STRUCT ft_2*
@@ -148,10 +146,82 @@ rule Module_ok_alg:
   -- if dt_I* = $funcsxt(xt_I*)
 
 def $module_ok(module) : moduletype
-;; def $module_ok         hint(builtin)
 def $module_ok(module) = moduletype
     -- if C = $module_prepass(module)
     -- Module_ok_alg: C |- module : moduletype
+
+syntax ellipses = NoEllipses | Ellipses
+syntax inferresulttype = ellipses `| resulttype
+syntax inferinstrtype = inferresulttype ->_(localidx*) inferresulttype
+
+def $push(context, inferresulttype, inferresulttype) : inferresulttype
+def $push(C, ell_1 `| t_1*, ell_2 `| t_2*) = Ellipses `| t_2* t_1*
+    -- if ell_1 = NoEllipses \/ t_2* = eps
+    -- if ell_1 = Ellipses \/ ell_2 = Ellipses
+def $push(C, ell_1 `| t_1*, ell_2 `| t_2*) = NoEllipses `| t_2* t_1*
+    -- if ell_1 = NoEllipses \/ t_2* = eps
+    -- otherwise
+
+def $pop(context, inferresulttype, inferresulttype) : inferresulttype
+def $pop(C, Ellipses `| t_1*, Ellipses `| t_2*) = Ellipses `| eps
+    -- if n_1 = |t_1*|
+    -- if n_2 = |t_2*|
+    -- if n = $min(n_1, n_2)
+    -- if n_3 = $(n_1 - n)
+    -- if t_21^(n_2 - n) t_22* = t_2*
+    -- if $match_stack(C, BOT^n_3 t_22*, t_1*)
+def $pop(C, NoEllipses `| t_1*, Ellipses `| t_2*) = Ellipses `| t_21^(n_2 - n)
+    -- if n_1 = |t_1*|
+    -- if n_2 = |t_2*|
+    -- if n = $min(n_1, n_2)
+    -- if n_3 = $(n_1 - n)
+    -- if t_21^(n_2 - n) t_22* = t_2*
+    -- if $match_stack(C, BOT^n_3 t_22*, t_1*)
+def $pop(C, Ellipses `| t_1*, NoEllipses `| t_2*) = NoEllipses `| eps
+    -- if n_1 = |t_1*|
+    -- if n_2 = |t_2*|
+    -- if n = $min(n_1, n_2)
+    -- if t_21^(n_2 - n) t_22* = t_2*
+    -- if $match_stack(C, t_22*, t_1*)
+def $pop(C, NoEllipses `| t_1*, NoEllipses `| t_2*) = NoEllipses `| t_21^(n_2 - n)
+    -- if n_1 = |t_1*|
+    -- if n_2 = |t_2*|
+    -- if n = $min(n_1, n_2)
+    -- if t_21^(n_2 - n) t_22* = t_2*
+    -- if $match_stack(C, t_22*, t_1*)
+
+
+def $match_stack(context, resulttype, resulttype) : bool
+def $match_stack(C, vt_1*, vt_2*) = true
+    -- (Valtype_sub: C |- vt_1 <: vt_2)*
+def $match_stack(C, vt_1*, vt_2*) = false
+    -- otherwise
+
+def $expr_ok(context, expr, resulttype) : bool
+def $expr_ok(C, instr*, vt*) = $check_block(C, instr*, eps -> vt*)
+
+def $check_block(context, expr, instrtype) : bool
+def $check_block(C, instr*, rt_1 ->_(idx*) rt_2) = true
+    -- if $check_instrs(C, NoEllipses `| rt_1, instr*) = (stack, idx'*)
+    -- if $pop(C, NoEllipses `| rt_2, stack) = ell `| eps
+def $check_block(C, instr*, rt_1 ->_(idx*) rt_2) = false  -- otherwise
+
+def $check_instrs(context, inferresulttype, instr*) : (inferresulttype, localidx*)
+def $check_instrs(C, stack, eps) = (stack, eps)
+def $check_instrs(C, stack, instr instr'*) = $check_instrs(C', stack', instr'*)
+    -- if stack_1 ->_(x_1*) stack_2 = $check_instr(C, instr, stack)
+    -- (if C.LOCALS[x_1] = init t)*
+    -- if C' = $with_locals(C, x_1*, (SET t)*)
+    -- if stack' = $push(C, stack_2, $pop(C, stack_1, stack))
+
+def $check_instr(context, instr, inferresulttype) : inferinstrtype
+def $check_instr(C, instr, stack) = (NoEllipses `| t_1*) ->_(x*) (NoEllipses `| t_2*)
+    -- Instr_ok: C |- instr : t_1* ->_(x*) t_2*
+def $check_instr(C, instr, stack) = $check_instr_ri(C, instr, stack)
+
+;; calls into the reference interpreter
+def $check_instr_ri(context, instr, inferresulttype) : inferinstrtype
+def $check_instr_ri                                    hint(builtin)
 
 
 ;; ********************************************************
@@ -326,25 +396,7 @@ def $steps(config, stackcount) = config
 
 
 ;; ********************************************************
-;; Helpers
-;; ********************************************************
-
-;; def $max_ints(int*): int
-;; def $max_ints(n) = n
-;; def $max_ints(n_1 n_2 n*) = $max_ints(n_1 n*)
-;;     -- if n_1 >= n_2
-;; def $max_ints(n_1 n_2 n*) = $max_ints(n_2 n*)
-;;     -- otherwise
-;; 
-;; 
-;; def $after(typeuse) : (typeidx, nat)
-;; def $after(deftype) = (0, 0)
-;; def $after(_IDX typeidx) = ($(typeidx + 1), 0)
-;; def $after(REC j) = (0, $(j + 1))
-
-
-;; ********************************************************
-;; Animation hints
+;;                   Animation hints
 ;; ********************************************************
 
 relation Expand           hint(animate %1 -> %2)
@@ -369,8 +421,8 @@ relation Numtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Vectype_sub      hint(animate %1 %2 %3 -> bool)
 ;; relation Heaptype_sub     hint(animate %1 %2 %3 -> bool)
 ;; relation Reftype_sub      hint(animate %1 %2 %3 -> bool)
-relation Heaptype_sub     hint(animate_manual "heaptype_sub" : %1 %2 -> %3)
-relation Reftype_sub      hint(animate_manual "reftype_sub"  : %1 %2 -> %3)
+relation Heaptype_sub     hint(animate_manual "heaptype_sub" : %1 %2 %3 -> bool)
+relation Reftype_sub      hint(animate_manual "reftype_sub"  : %1 %2 %3 -> bool)
 relation Valtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Resulttype_sub   hint(animate %1 %2 %3 -> bool)
 relation Packtype_sub     hint(animate %1 %2 %3 -> bool)
@@ -385,10 +437,12 @@ relation Ref_ok           hint(animate_manual "ref_ok" : %1 %2 %3 -> bool)
 ;; relation Ref_ok           hint(animate %1 %2 %3 -> bool)
 relation Val_ok           hint(animate %1 %2 %3 -> bool)
 
+relation Memarg_ok        hint(animate %1 %2 %3 -> bool)
+
 relation Instrtype_ok     hint(animate %1 %2 -> bool)
 relation Instr_const      hint(animate %1 %2 %3 -> bool)
-;; relation Instr_ok         hint(animate %1 %2 -> %3)
-relation Instrs_ok        hint(animate_manual "instrs_ok": %1 %2 %3 -> bool)
+relation Instr_ok         hint(animate %1 %2 -> %3)
+;; relation Instrs_ok        hint(animate_manual "instrs_ok": %1 %2 %3 -> bool)
 
 relation Expand_use       hint(animate %1 %2 -> %3)
 
@@ -404,11 +458,12 @@ relation Memtype_ok       hint(animate %1 %2 -> bool)
 relation Tabletype_ok     hint(animate %1 %2 -> bool)
 relation Defaultable      hint(animate %1 -> bool)
 relation Nondefaultable   hint(animate %1 -> bool)
-relation Blocktype_ok     hint(animate %1 %2 %3 -> bool)
-relation Expr_ok          hint(animate %1 %2 %3 -> bool)
+relation Blocktype_ok     hint(animate %1 %2 -> %3)
+;; relation Expr_ok          hint(animate %1 %2 %3 -> bool)
+relation Expr_ok          hint(animate_manual "expr_ok": %1 %2 %3 -> bool)
 relation Expr_const       hint(animate %1 %2 %3 -> bool)
 relation Expr_ok_const    hint(animate %1 %2 %3 -> bool)
-relation Datamode_ok      hint(animate %1 %2 %3 -> bool)  ;; Output is a singleton type
+relation Datamode_ok      hint(animate %1 %2 %3 -> bool)  ;; %3 is a singleton type
 relation Elemmode_ok      hint(animate %1 %2 %3 -> bool)
 
 relation Type_ok          hint(animate %1 %2 -> %3)
@@ -428,6 +483,30 @@ relation Externidx_ok     hint(animate %1 %2 -> %3)
 
 relation Types_ok         hint(animate %1 %2 -> %3)
 relation Globals_ok       hint(animate %1 %2 -> %3)
+
+rule Instr_ok/unreachable           hint(no_animate)
+rule Instr_ok/drop                  hint(no_animate)
+rule Instr_ok/select-impl           hint(no_animate)
+rule Instr_ok/block                 hint(no_animate)
+rule Instr_ok/loop                  hint(no_animate)
+rule Instr_ok/if                    hint(no_animate)
+rule Instr_ok/br                    hint(no_animate)
+rule Instr_ok/br_table              hint(no_animate)
+rule Instr_ok/br_on_null            hint(no_animate)
+rule Instr_ok/return                hint(no_animate)
+rule Instr_ok/return_call           hint(no_animate)
+rule Instr_ok/return_call_ref       hint(no_animate)
+rule Instr_ok/return_call_indirect  hint(no_animate)
+rule Instr_ok/throw                 hint(no_animate)
+rule Instr_ok/throw_ref             hint(no_animate)
+rule Instr_ok/try_table             hint(no_animate)
+rule Instr_ok/ref.is_null           hint(no_animate)
+rule Instr_ok/ref.as_non_null       hint(no_animate)
+rule Instr_ok/ref.test              hint(no_animate)
+rule Instr_ok/ref.cast              hint(no_animate)
+rule Instr_ok/extern.convert_any    hint(no_animate)
+rule Instr_ok/any.convert_extern    hint(no_animate)
+
 
 ;; relation Externaddr_ok    hint(animate %1 %2 %3 -> bool)
 relation Externaddr_ok    hint(animate_manual "externaddr_ok" : %1 %2 %3 -> bool)

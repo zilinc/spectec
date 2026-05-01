@@ -21,6 +21,7 @@ type context =
   refs : Free.t;
 }
 
+val check_block : context -> instr list -> instrtype -> Source.region -> unit
 val check_instrs : context -> infer_resulttype -> instr list -> infer_resulttype * idx list
 val check_module : Ast.module_ -> Types.moduletype (* raises Invalid *)
 val check_module_with_custom : Ast.module_ * Custom.section list -> Types.moduletype (* raises Invalid, Custom.Check *)

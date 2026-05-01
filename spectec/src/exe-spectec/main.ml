@@ -216,6 +216,7 @@ let argspec = Arg.align (
   "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), " New meta-interpreter";
   "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), " New meta-interpreter VL";
   "--new-prose-v", Arg.String (fun ofile -> target := Animate; new_prose_ofile := Some ofile; vl := true), " New prose generation";
+  "-ll-ani", Arg.String (fun s -> Backend_animation.Interpreter_v.(verbose := s :: !verbose)), "Logging switches for IL meta-interpreter";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),

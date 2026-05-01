@@ -505,8 +505,9 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     if is_anim_rel || is_anim_as_func then
       let id', mode_map =
         (match is_anim_rel, is_anim_as_func with
-        | true, false -> id.it, H.find_anim_rel id.it
-        | false, true -> H.find_anim_manual id.it
+        | true , false -> id.it, H.find_anim_rel id.it
+        | false, true  -> H.find_anim_manual id.it
+        | true , true  -> error at ("Relation " ^ id.it ^ " is marked for both manual and automatic automation. Choose one.")
         | _ -> assert false
         ) in
       let es = (match exp.it with
@@ -1064,6 +1065,25 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let start1 = mk_nat 0 in
     let len_lhs1 = mk_cvt_sub ~at:exp1.at len_rhs' len_lhs2 in
     let rhs1' = SliceE (rhs, start1, len_lhs1) $> rhs in
+    let rhs2' = SliceE (rhs, len_lhs1, len_lhs2) $> rhs in
+    let prem1 = IfPr (eqE ~at:exp1.at exp1 rhs1') $ at in
+    let prem2 = IfPr (eqE ~at:exp2.at exp2 rhs2') $ at in
+    (* Start an inner loop, in case of any dependencies between the list elements.
+    *)
+    let* s' = get () in
+    let s_new = { (init ()) with prems = [prem1; prem2]; knowns = get_knowns s' } in
+    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
+    let* () = update (put_knowns (get_knowns s_new')) in
+    E.return (prems_v_len_rhs @ prem_len :: prems')
+    (* exp1'^n ++ exp2 where n is known *)
+  | CatE (({ it = IterE (exp1', (ListN(len_lhs1, _), xes)); _} as exp1), exp2)
+    when Set.subset ((free_exp false len_lhs1).varid) knowns ->
+    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
+    let (envr, vs_len_rhs, len_rhs', prems_v_len_rhs) = bind_var_exp envr None len_rhs None `Rhs in
+    let* () = update (add_knowns (Set.of_list vs_len_rhs)) in
+    let prem_len = IfPr (leE ~at:len_rhs'.at len_lhs1 len_rhs') $ len_rhs'.at in
+    let rhs1' = SliceE (rhs, natE ~at:rhs.at Z.zero, len_lhs1) $> rhs in
+    let len_lhs2 = mk_cvt_sub ~at:exp2.at len_rhs' len_lhs1 in
     let rhs2' = SliceE (rhs, len_lhs1, len_lhs2) $> rhs in
     let prem1 = IfPr (eqE ~at:exp1.at exp1 rhs1') $ at in
     let prem2 = IfPr (eqE ~at:exp2.at exp2 rhs2') $ at in

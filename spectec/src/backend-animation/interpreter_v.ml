@@ -1145,15 +1145,14 @@ and instrs_ok = {
     function
     | [ ctx; instrs; CaseV (_, [eps1; eps2; resulttype]) ]
       when eq_value eps1 (listV [||] |> caseV1) && eq_value eps2 (listV [||]) ->
-      let ctx' = vl_to_context ctx in
+      let ctx' = vl_to_context ctx in  (* FIXME(zilinc): the ctx' isn't correct I'm afraid. The refs field is wrong. *)
       let instrs' = vl_to_list vl_to_instr instrs in
       let resulttype' = vl_to_resulttype resulttype in
-      (match RI.Valid.check_instrs ctx' (RI.Valid.NoEllipses, resulttype') instrs' with
+      (match RI.Valid.check_block ctx' instrs' (RT.InstrT ([], resulttype', [])) RI.Source.no_region with
       | _ -> true
       | exception e -> false
       ) |> boolV |> return
     | _ -> error no ("Wrong number/type of arguments to $instrs_ok.")
-
 }
 
 
@@ -1161,8 +1160,8 @@ and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
-  externaddr_ok; ref_ok; reftype_sub; heaptype_sub; instrs_ok
-  (* module_ok; val_ok; *)
+  externaddr_ok; ref_ok; reftype_sub; heaptype_sub
+  (* module_ok; val_ok; instrs_ok *)
   ]
 
 and call_builtins fname args : value OptMonad.m =

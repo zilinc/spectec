@@ -2114,6 +2114,6 @@ and vl_to_context v : RI.Valid.context =
                  | OptV (Some resulttype) -> vl_to_resulttype resulttype
                  | _ -> error_value "resulttype?" resulttypeo
                  );
-      refs     = RI.Free.funcs (vl_to_list vl_to_uN_32 funcidxs |> RI.Free.Set.of_list)  ;
+      refs     = RI.Free.funcs (vl_to_list vl_to_uN_32 funcidxs |> RI.Free.Set.of_list);
     }
   | _ -> error_value "context" v
