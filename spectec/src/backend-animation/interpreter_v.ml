@@ -1145,7 +1145,7 @@ and instrs_ok = {
     function
     | [ ctx; instrs; CaseV (_, [eps1; eps2; resulttype]) ]
       when eq_value eps1 (listV [||] |> caseV1) && eq_value eps2 (listV [||]) ->
-      let ctx' = vl_to_context ctx in  (* FIXME(zilinc): the ctx' isn't correct I'm afraid. The refs field is wrong. *)
+      let ctx' = vl_to_context ctx in
       let instrs' = vl_to_list vl_to_instr instrs in
       let resulttype' = vl_to_resulttype resulttype in
       (match RI.Valid.check_block ctx' instrs' (RT.InstrT ([], resulttype', [])) RI.Source.no_region with
@@ -1155,13 +1155,26 @@ and instrs_ok = {
     | _ -> error no ("Wrong number/type of arguments to $instrs_ok.")
 }
 
+and check_instr_ri = {
+  name = "check_instr_ri";
+  f =
+    function
+    | [ ctx; instr; infer_resulttype ] ->
+      let ctx' = vl_to_context ctx in
+      let instr' = vl_to_instr instr in
+      let infer_resulttype' = vl_to_infer_resulttype infer_resulttype in
+      let infer_instrtype' = RI.Valid.check_instr ctx' instr' infer_resulttype' in
+      vl_of_infer_instrtype infer_instrtype' |> return
+    | _ -> error no ("Wrong number/type of arguments to $check_instr_ri.")
+}
 
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
-  externaddr_ok; ref_ok; reftype_sub; heaptype_sub
+  externaddr_ok; ref_ok; reftype_sub; heaptype_sub;
   (* module_ok; val_ok; instrs_ok *)
+  check_instr_ri
   ]
 
 and call_builtins fname args : value OptMonad.m =

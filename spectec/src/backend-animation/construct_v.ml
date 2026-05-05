@@ -926,6 +926,23 @@ let vl_of_module (module_: RI.Ast.module_) =
   in
   caseV [["MODULE"];[];[];[];[];[];[];[];[];[];[];[]] es
 
+let vl_of_ellipses (ell : RI.Valid.ellipses) =
+  match ell with
+  | Ellipses   -> nullary "ELLIPSES"
+  | NoEllipses -> nullary "NOELLIPSES"
+
+let vl_of_infer_resulttype (infer_rt : RI.Valid.infer_resulttype) =
+  let ell, resulttype = infer_rt in
+  let ell' = vl_of_ellipses ell in
+  let resulttype' = vl_of_resulttype resulttype in
+  caseV [[];["|"];[]] [ell'; resulttype']
+
+let vl_of_infer_instrtype (infer_it : RI.Valid.infer_instrtype) =
+  let RI.Valid.({ins; outs}, xs) = infer_it in
+  let t1' = vl_of_infer_resulttype ins  in
+  let t2' = vl_of_infer_resulttype outs in
+  let xs' = vl_of_list vl_of_idx xs in
+  caseV [[];["->_"];[];[]] [t1'; xs'; t2']
 
 
 (* Destruct *)
@@ -2081,6 +2098,17 @@ and vl_to_value v : RI.Value.value =
   | [["REF.NULL_ADDR"]], _ -> RI.Value.Ref (vl_to_ref v)
   | [[ref_con];[]]     , _ when String.starts_with ~prefix:"REF." ref_con -> RI.Value.Ref (vl_to_ref v)
   | _ -> error_value "val" v
+
+and vl_to_ellipses v : RI.Valid.ellipses =
+  match match_caseV "ellipses" v with
+  | [["ELLIPSES"  ]], [] -> RI.Valid.Ellipses
+  | [["NOELLIPSES"]], [] -> RI.Valid.NoEllipses
+  | _ -> error_value "ellipses" v
+
+and vl_to_infer_resulttype v : RI.Valid.infer_resulttype =
+  match match_caseV "inferresulttype" v with
+  | [[];["|"];[]], [ell; resulttype] -> vl_to_ellipses ell, vl_to_resulttype resulttype
+  | _ -> error_value "inferresulttype" v
 
 and vl_to_context v : RI.Valid.context =
   match v with

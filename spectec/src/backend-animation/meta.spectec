@@ -104,7 +104,8 @@ def $check_elem_ok(C, ELEM et expr* elemmode) = (C ++ {ELEMS et}, `())
 def $module_prepass(module) : context
 def $module_prepass(module) = C_9
     -- if MODULE type* import* tag* global* mem* table* func* data* elem* start? export* = module
-    -- if C_0 = {}
+    -- if x* = $funcidx_nonfuncs(global* mem* table* elem*)
+    -- if C_0 = {REFS x*}
     -- if (C_1, u_1*) = $check_list(type  , unit, C_0, $check_type_ok  , type*  )
     -- if (C_2, u_2*) = $check_list(import, unit, C_1, $check_import_ok, import*)
     -- if (C_3, u_3*) = $check_list(tag   , unit, C_2, $check_tag_ok   , tag*   )
@@ -150,40 +151,39 @@ def $module_ok(module) = moduletype
     -- if C = $module_prepass(module)
     -- Module_ok_alg: C |- module : moduletype
 
-syntax ellipses = NoEllipses | Ellipses
+syntax ellipses = NOELLIPSES | ELLIPSES
 syntax inferresulttype = ellipses `| resulttype
 syntax inferinstrtype = inferresulttype ->_(localidx*) inferresulttype
 
 def $push(context, inferresulttype, inferresulttype) : inferresulttype
-def $push(C, ell_1 `| t_1*, ell_2 `| t_2*) = Ellipses `| t_2* t_1*
-    -- if ell_1 = NoEllipses \/ t_2* = eps
-    -- if ell_1 = Ellipses \/ ell_2 = Ellipses
-def $push(C, ell_1 `| t_1*, ell_2 `| t_2*) = NoEllipses `| t_2* t_1*
-    -- if ell_1 = NoEllipses \/ t_2* = eps
+def $push(C, NOELLIPSES `| t_1*, ell_2 `| t_2*) = ell_2 `| t_2* t_1*
+def $push(C, ell_1 `| t_1*, ell_2 `| eps) = NOELLIPSES `| t_1*
+    -- if ell_1 = NOELLIPSES /\ ell_2 = NOELLIPSES
+def $push(C, ell_1 `| t_1*, ell_2 `| eps) = ELLIPSES `| t_1*
     -- otherwise
 
 def $pop(context, inferresulttype, inferresulttype) : inferresulttype
-def $pop(C, Ellipses `| t_1*, Ellipses `| t_2*) = Ellipses `| eps
+def $pop(C, ELLIPSES `| t_1*, ELLIPSES `| t_2*) = ELLIPSES `| eps
     -- if n_1 = |t_1*|
     -- if n_2 = |t_2*|
     -- if n = $min(n_1, n_2)
     -- if n_3 = $(n_1 - n)
     -- if t_21^(n_2 - n) t_22* = t_2*
     -- if $match_stack(C, BOT^n_3 t_22*, t_1*)
-def $pop(C, NoEllipses `| t_1*, Ellipses `| t_2*) = Ellipses `| t_21^(n_2 - n)
+def $pop(C, NOELLIPSES `| t_1*, ELLIPSES `| t_2*) = ELLIPSES `| t_21^(n_2 - n)
     -- if n_1 = |t_1*|
     -- if n_2 = |t_2*|
     -- if n = $min(n_1, n_2)
     -- if n_3 = $(n_1 - n)
     -- if t_21^(n_2 - n) t_22* = t_2*
     -- if $match_stack(C, BOT^n_3 t_22*, t_1*)
-def $pop(C, Ellipses `| t_1*, NoEllipses `| t_2*) = NoEllipses `| eps
+def $pop(C, ELLIPSES `| t_1*, NOELLIPSES `| t_2*) = NOELLIPSES `| eps
     -- if n_1 = |t_1*|
     -- if n_2 = |t_2*|
     -- if n = $min(n_1, n_2)
     -- if t_21^(n_2 - n) t_22* = t_2*
     -- if $match_stack(C, t_22*, t_1*)
-def $pop(C, NoEllipses `| t_1*, NoEllipses `| t_2*) = NoEllipses `| t_21^(n_2 - n)
+def $pop(C, NOELLIPSES `| t_1*, NOELLIPSES `| t_2*) = NOELLIPSES `| t_21^(n_2 - n)
     -- if n_1 = |t_1*|
     -- if n_2 = |t_2*|
     -- if n = $min(n_1, n_2)
@@ -192,19 +192,19 @@ def $pop(C, NoEllipses `| t_1*, NoEllipses `| t_2*) = NoEllipses `| t_21^(n_2 - 
 
 
 def $match_stack(context, resulttype, resulttype) : bool
-def $match_stack(C, vt_1*, vt_2*) = true
-    -- (Valtype_sub: C |- vt_1 <: vt_2)*
-def $match_stack(C, vt_1*, vt_2*) = false
+def $match_stack(C, t_1*, t_2*) = true
+    -- (Valtype_sub: C |- t_1 <: t_2)*
+def $match_stack(C, t_1*, t_2*) = false
     -- otherwise
 
 def $expr_ok(context, expr, resulttype) : bool
-def $expr_ok(C, instr*, vt*) = $check_block(C, instr*, eps -> vt*)
+def $expr_ok(C, instr*, t*) = $check_block(C, instr*, eps -> t*)
 
 def $check_block(context, expr, instrtype) : bool
-def $check_block(C, instr*, rt_1 ->_(idx*) rt_2) = true
-    -- if $check_instrs(C, NoEllipses `| rt_1, instr*) = (stack, idx'*)
-    -- if $pop(C, NoEllipses `| rt_2, stack) = ell `| eps
-def $check_block(C, instr*, rt_1 ->_(idx*) rt_2) = false  -- otherwise
+def $check_block(C, instr*, t_1* ->_(x*) t_2*) = true
+    -- if $check_instrs(C, NOELLIPSES `| t_1*, instr*) = (stack, x'*)
+    -- if $pop(C, NOELLIPSES `| t_2*, stack) = ell `| eps
+def $check_block(C, instr*, t_1* ->_(x*) t_2*) = false  -- otherwise
 
 def $check_instrs(context, inferresulttype, instr*) : (inferresulttype, localidx*)
 def $check_instrs(C, stack, eps) = (stack, eps)
@@ -215,7 +215,7 @@ def $check_instrs(C, stack, instr instr'*) = $check_instrs(C', stack', instr'*)
     -- if stack' = $push(C, stack_2, $pop(C, stack_1, stack))
 
 def $check_instr(context, instr, inferresulttype) : inferinstrtype
-def $check_instr(C, instr, stack) = (NoEllipses `| t_1*) ->_(x*) (NoEllipses `| t_2*)
+def $check_instr(C, instr, stack) = (NOELLIPSES `| t_1*) ->_(x*) (NOELLIPSES `| t_2*)
     -- Instr_ok: C |- instr : t_1* ->_(x*) t_2*
 def $check_instr(C, instr, stack) = $check_instr_ri(C, instr, stack)
 
@@ -443,6 +443,7 @@ relation Instrtype_ok     hint(animate %1 %2 -> bool)
 relation Instr_const      hint(animate %1 %2 %3 -> bool)
 relation Instr_ok         hint(animate %1 %2 -> %3)
 ;; relation Instrs_ok        hint(animate_manual "instrs_ok": %1 %2 %3 -> bool)
+relation Instrs_ok        hint(animate_manual "check_block": %1 %2 %3 -> bool)
 
 relation Expand_use       hint(animate %1 %2 -> %3)
 
