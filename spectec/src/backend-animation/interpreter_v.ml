@@ -1052,22 +1052,6 @@ and step_read_throw_ref_handler = {
     | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
 
-and module_ok = {
-    name = "module_ok";
-    f =
-      function
-      | [ module_ ] ->
-        let module_' = vl_to_module module_ in
-        (match RI.Valid.check_module module_' with
-        | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
-        | ModuleT (its, ets) ->
-          let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
-          let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
-          caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ] |> return
-        )
-      | _ -> error no ("Wrong number/type of arguments to $module_ok.")
-}
-
 and externaddr_ok = {
   name = "externaddr_ok";
   f =
@@ -1105,26 +1089,15 @@ and ref_ok = {
     | _ -> error no ("Wrong number/type of arguments to $ref_ok.")
 }
 
-and val_ok = {
-  name = "val_ok";
-  f =
-    function
-    | [ store; val_; vt2 ] ->
-      let* vt1 = call_func "val_infer" [valA store; valA val_] in
-      let vt1' = vl_to_valtype vt1 in
-      let vt2' = vl_to_valtype vt2 in
-      RI.Match.match_valtype [] vt1' vt2' |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $val_ok.")
-}
-
 and reftype_sub = {
   name = "reftype_sub";
   f =
     function
     | [ ctx; rt1; rt2 ] ->
+      let ctx' = as_str_field "TYPES" ctx |> vl_to_list vl_to_deftype in
       let rt1' = vl_to_reftype rt1 in
       let rt2' = vl_to_reftype rt2 in
-      RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
+      RI.Match.match_reftype ctx' rt1' rt2' |> boolV |> return
     | _ -> error no ("Wrong number/type of arguments to $reftype_sub.")
 }
 
@@ -1133,26 +1106,11 @@ and heaptype_sub = {
   f =
     function
     | [ ctx; ht1; ht2 ] ->
+      let ctx' = as_str_field "TYPES" ctx |> vl_to_list vl_to_deftype in
       let ht1' = vl_to_heaptype ht1 in
       let ht2' = vl_to_heaptype ht2 in
-      RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
+      RI.Match.match_heaptype ctx' ht1' ht2' |> boolV |> return
     | _ -> error no ("Wrong number/type of arguments to $heaptype_sub.")
-}
-
-and instrs_ok = {
-  name = "instrs_ok";
-  f =
-    function
-    | [ ctx; instrs; CaseV (_, [eps1; eps2; resulttype]) ]
-      when eq_value eps1 (listV [||] |> caseV1) && eq_value eps2 (listV [||]) ->
-      let ctx' = vl_to_context ctx in
-      let instrs' = vl_to_list vl_to_instr instrs in
-      let resulttype' = vl_to_resulttype resulttype in
-      (match RI.Valid.check_block ctx' instrs' (RT.InstrT ([], resulttype', [])) RI.Source.no_region with
-      | _ -> true
-      | exception e -> false
-      ) |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $instrs_ok.")
 }
 
 and check_instr_ri = {
@@ -1173,7 +1131,6 @@ and builtin_list : builtin list = [
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
   externaddr_ok; ref_ok; reftype_sub; heaptype_sub;
-  (* module_ok; val_ok; instrs_ok *)
   check_instr_ri
   ]
 

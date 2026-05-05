@@ -69,7 +69,7 @@ and string_of_array (a: value growable_array) =
   string_of_values "; " (Array.to_list !a)
 
 and string_of_record r =
-  let str = List.fold_left (fun str (k, v) -> str ^ ", " ^ k ^ " = " ^ string_of_value !v) "" r in
+  let str = String.concat ", " (List.map (fun (k, v) -> k ^ " = " ^ string_of_value !v) r) in
   "{" ^ str ^ "}"
 
 and string_of_arg = function
