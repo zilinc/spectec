@@ -217,11 +217,43 @@ def $check_instrs(C, stack, instr instr'*) = $check_instrs(C', stack', instr'*)
 def $check_instr(context, instr, inferresulttype) : inferinstrtype
 def $check_instr(C, instr, stack) = (NOELLIPSES `| t_1*) ->_(x*) (NOELLIPSES `| t_2*)
     -- Instr_ok: C |- instr : t_1* ->_(x*) t_2*
+def $check_instr(C, instr, stack) = ist
+    -- Instr_ok_alg: C |- instr : ist -| stack
 def $check_instr(C, instr, stack) = $check_instr_ri(C, instr, stack)
+
+
 
 ;; calls into the reference interpreter
 def $check_instr_ri(context, instr, inferresulttype) : inferinstrtype
 def $check_instr_ri                                    hint(builtin)
+
+relation Instr_ok_alg: context |- instr : inferinstrtype -| inferresulttype
+
+;; rule Instr_ok_alg/unreachable:
+;;     C |- UNREACHABLE : (ELLIPSES `| eps) -> (ELLIPSES `| eps) -| stack
+
+;; rule Instr_ok_alg/drop:
+;; rule Instr_ok_alg/select-impl:
+;; rule Instr_ok_alg/block:
+;; rule Instr_ok_alg/loop:
+;; rule Instr_ok_alg/if:
+;; rule Instr_ok_alg/br:
+;; rule Instr_ok_alg/br_table:
+;; rule Instr_ok_alg/br_on_null:
+;; rule Instr_ok_alg/return:
+;; rule Instr_ok_alg/return_call:
+;; rule Instr_ok_alg/return_call_ref:
+;; rule Instr_ok_alg/return_call_indirect:
+;; rule Instr_ok_alg/throw:
+;; rule Instr_ok_alg/throw_ref:
+;; rule Instr_ok_alg/try_table:
+;; rule Instr_ok_alg/ref.is_null:
+;; rule Instr_ok_alg/ref.as_non_null:
+;; rule Instr_ok_alg/ref.test
+;; rule Instr_ok_alg/ref.cast
+;; rule Instr_ok_alg/extern.convert_any:
+;; rule Instr_ok_alg/any.convert_extern:
+
 
 
 ;; ********************************************************
@@ -508,6 +540,7 @@ rule Instr_ok/ref.cast              hint(no_animate)
 rule Instr_ok/extern.convert_any    hint(no_animate)
 rule Instr_ok/any.convert_extern    hint(no_animate)
 
+relation Instr_ok_alg               hint(animate %1 %2 %4 -> %3)
 
 ;; relation Externaddr_ok    hint(animate %1 %2 %3 -> bool)
 relation Externaddr_ok    hint(animate_manual "externaddr_ok" : %1 %2 %3 -> bool)

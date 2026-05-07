@@ -111,7 +111,6 @@ let rec remove_or def =
 let run il print_dl inline =
   H.init_animation_hints ();
   build_animation_hints il;
-  (* H.add_a_inv "proj_num__0"; *)
   let (env, dl) = il
                   |> List.filter_map is_anim_target
                   |> List.map remove_or
@@ -120,7 +119,6 @@ let run il print_dl inline =
                   |> Animate.animate
                   |> fun (il_env, dl) -> (il_env, if inline then List.map Inline.inline_dl_def dl else dl)
   in
-  (* Il2dl.list_all_dl_defs dl; *)
   if print_dl then
     print_endline (List.map string_of_dl_def dl |> String.concat "\n");
   (env, dl)

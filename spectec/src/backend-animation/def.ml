@@ -107,3 +107,6 @@ let rec string_of_dl_def = function
 | TypeDef tdef -> string_of_type_def tdef
 | FuncDef fdef -> string_of_func_def fdef
 | RecDef dl_defs -> "recursive\n" ^ String.concat "\n" (List.map string_of_dl_def dl_defs) ^ "end\n"
+
+let string_of_dl_script dl =
+  String.concat "\n" (List.map string_of_dl_def dl)
