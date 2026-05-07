@@ -34,6 +34,7 @@ type pass =
   | LetIntro
   | PatSimp
   | DatatypeDiet
+  | SinglePatternMatch
 
 (* This list declares the intended order of passes.
 
@@ -58,7 +59,8 @@ let all_passes = [
   Sideconditions;
   AliasDemut;
   ImproveIds;
-  DatatypeDiet
+  DatatypeDiet;
+  SinglePatternMatch
 ]
 
 type file_kind =
@@ -129,6 +131,7 @@ let pass_flag = function
   | LetIntro -> "let-intro"
   | PatSimp -> "pattern-simp"
   | DatatypeDiet -> "datatype-diet"
+  | SinglePatternMatch -> "single-pattern-match"
 
 let pass_desc = function
   | Sub -> "Synthesize explicit subtype coercions"
@@ -148,6 +151,7 @@ let pass_desc = function
   | LetIntro -> "Let Premise introduction"
   | PatSimp -> "Simplifies non-linear and definite iteration patterns"
   | DatatypeDiet -> "Remove datatypes with over 50 constructors"
+  | SinglePatternMatch -> "Remove functions that pattern-match on several arguments"
 
 
 let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
@@ -167,6 +171,7 @@ let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
   | ElseSimp -> Middlend.Elsesimp.transform
   | LetIntro -> Middlend.Letintro.transform
   | DatatypeDiet -> Middlend.Datatypediet.transform
+  | SinglePatternMatch -> Middlend.Singlepatternmatch.transform
 
   | PatSimp -> Middlend.PatSimp.transform
 
@@ -303,7 +308,8 @@ let () =
       enable_pass DefToRel;
       enable_pass Ite;
       enable_pass ElseSimp;
-      enable_pass DatatypeDiet
+      enable_pass DatatypeDiet;
+      enable_pass SinglePatternMatch
     | _ when !print_al || !print_al_o <> "" ->
       enable_pass Sideconditions;
     | _ -> ()

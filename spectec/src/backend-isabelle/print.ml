@@ -1,15 +1,6 @@
 open Il.Ast
 open Util.Source
-open Il.Walk
-
-
-(* NOTES FOR CONRAD MEETING *)
-(* List of reserved ids in Isabelle? *)
-(* coercion *)
-(* :> operation *)
-(* Struct extension *)
-(* axiomatization *)
-
+(* open Il.Walk *)
 
 
 module StringSet = Set.Make(String)
@@ -699,15 +690,15 @@ let render_single_type id at typids params =
   | _ -> error at ("Given projection function: " ^ id ^ " has invalid parameters!")
 
 let render_function_def id params r_typ clauses = 
-  let base_list_collector = base_collector [] (@) in
-  let c = { base_list_collector with collect_exp = needs_inh_class; collect_path = needs_inh_class_path } in
-  let inhabited_typ_vars = List.concat_map (fun clause -> 
+(*  let base_list_collector = base_collector [] (@) in
+  let c = { base_list_collector with collect_exp = needs_inh_class; collect_path = needs_inh_class_path } in *)
+(*  let inhabited_typ_vars = List.concat_map (fun clause -> 
     let DefD (_, _, exp, prems) = clause.it in 
     collect_exp c exp @ List.concat_map (collect_prem c) prems 
-                             ) clauses in
+                             ) clauses in *)
   (* TODO: deal with extra params *)
-  let extra_params = List.filter_map (render_inh_param inhabited_typ_vars) params in
-  let _e_params_render = if extra_params = [] then "" else " " ^ String.concat " " extra_params in
+  (* let extra_params = List.filter_map (render_inh_param inhabited_typ_vars) params in *)
+  (*  let _e_params_render = if extra_params = [] then "" else " " ^ String.concat " " extra_params in *)
   let typids, resl = render_param_types RHS StringSet.empty params in
   id ^ " :: " ^ quotes (resl ^ render_type RHS typids r_typ),
   (List.map
@@ -803,7 +794,7 @@ let rec components_of_def def =
   | DecD (id, params, typ, clauses) when List.exists has_prems clauses ->
     start , [Iax], [render_axiom (render_id id.it) params typ], []
   | DecD (id, params, typ, clauses) ->
-     let header, clauses = render_function_def (render_id id.it) params typ (clauses) in
+     let header, clauses = render_function_def (render_id id.it) params typ clauses in
      start, [Ifun], [header], clauses
   | RelD (id, _, _, typ, []) -> 
     start , [Iax], [render_rel_axiom (render_id id.it) typ], []
