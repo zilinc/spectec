@@ -926,16 +926,16 @@ let vl_of_module (module_: RI.Ast.module_) =
   in
   caseV [["MODULE"];[];[];[];[];[];[];[];[];[];[];[]] es
 
-let vl_of_ellipses (ell : RI.Valid.ellipses) =
+let vl_of_opt_ellipses (ell : RI.Valid.ellipses) =
   match ell with
-  | Ellipses   -> nullary "ELLIPSES"
-  | NoEllipses -> nullary "NOELLIPSES"
+  | Ellipses   -> nullary "..." |> some
+  | NoEllipses -> none
 
 let vl_of_infer_resulttype (infer_rt : RI.Valid.infer_resulttype) =
-  let ell, resulttype = infer_rt in
-  let ell' = vl_of_ellipses ell in
+  let oell, resulttype = infer_rt in
+  let oell' = vl_of_opt_ellipses oell in
   let resulttype' = vl_of_resulttype resulttype in
-  caseV [[];["|"];[]] [ell'; resulttype']
+  caseV [[];["|"];[]] [oell'; resulttype']
 
 let vl_of_infer_instrtype (infer_it : RI.Valid.infer_instrtype) =
   let RI.Valid.({ins; outs}, xs) = infer_it in
@@ -2099,15 +2099,19 @@ and vl_to_value v : RI.Value.value =
   | [[ref_con];[]]     , _ when String.starts_with ~prefix:"REF." ref_con -> RI.Value.Ref (vl_to_ref v)
   | _ -> error_value "val" v
 
-and vl_to_ellipses v : RI.Valid.ellipses =
-  match match_caseV "ellipses" v with
-  | [["ELLIPSES"  ]], [] -> RI.Valid.Ellipses
-  | [["NOELLIPSES"]], [] -> RI.Valid.NoEllipses
-  | _ -> error_value "ellipses" v
+and vl_to_opt_ellipses ov : RI.Valid.ellipses =
+  match ov with
+  | OptV (Some v) ->
+    (match match_caseV "ellipses" v with
+    | [["..."]], [] -> RI.Valid.Ellipses
+    | _ -> error_value "ellipses" v
+    )
+  | OptV None     -> RI.Valid.NoEllipses
+  | _ -> error_value "ellipses?" ov
 
 and vl_to_infer_resulttype v : RI.Valid.infer_resulttype =
   match match_caseV "inferresulttype" v with
-  | [[];["|"];[]], [ell; resulttype] -> vl_to_ellipses ell, vl_to_resulttype resulttype
+  | [[];["|"];[]], [oell; resulttype] -> vl_to_opt_ellipses oell, vl_to_resulttype resulttype
   | _ -> error_value "inferresulttype" v
 
 and vl_to_context v : RI.Valid.context =

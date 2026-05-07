@@ -151,39 +151,38 @@ def $module_ok(module) = moduletype
     -- if C = $module_prepass(module)
     -- Module_ok_alg: C |- module : moduletype
 
-syntax ellipses = NOELLIPSES | ELLIPSES
-syntax inferresulttype = ellipses `| resulttype
+syntax ellipses = `...
+syntax inferresulttype = ellipses? `| resulttype
 syntax inferinstrtype = inferresulttype ->_(localidx*) inferresulttype
 
 def $push(context, inferresulttype, inferresulttype) : inferresulttype
-def $push(C, NOELLIPSES `| t_1*, ell_2 `| t_2*) = ell_2 `| t_2* t_1*
-def $push(C, ell_1 `| t_1*, ell_2 `| eps) = NOELLIPSES `| t_1*
-    -- if ell_1 = NOELLIPSES /\ ell_2 = NOELLIPSES
-def $push(C, ell_1 `| t_1*, ell_2 `| eps) = ELLIPSES `| t_1*
+def $push(C, `| t_1*, ell? `| t_2*) = ell? `| t_2* t_1*
+def $push(C, `| t_1*, `| eps) = `| t_1*
+def $push(C, ell_1? `| t_1*, ell_2? `| eps) = (`... `| t_1*)
     -- otherwise
 
 def $pop(context, inferresulttype, inferresulttype) : inferresulttype
-def $pop(C, ELLIPSES `| t_1*, ELLIPSES `| t_2*) = ELLIPSES `| eps
+def $pop(C, `... `| t_1*, `... `| t_2*) = `... `| eps
     -- if n_1 = |t_1*|
     -- if n_2 = |t_2*|
     -- if n = $min(n_1, n_2)
     -- if n_3 = $(n_1 - n)
     -- if t_21^(n_2 - n) t_22* = t_2*
     -- if $match_stack(C, BOT^n_3 t_22*, t_1*)
-def $pop(C, NOELLIPSES `| t_1*, ELLIPSES `| t_2*) = ELLIPSES `| t_21^(n_2 - n)
+def $pop(C, `| t_1*, `... `| t_2*) = `... `| t_21^(n_2 - n)
     -- if n_1 = |t_1*|
     -- if n_2 = |t_2*|
     -- if n = $min(n_1, n_2)
     -- if n_3 = $(n_1 - n)
     -- if t_21^(n_2 - n) t_22* = t_2*
     -- if $match_stack(C, BOT^n_3 t_22*, t_1*)
-def $pop(C, ELLIPSES `| t_1*, NOELLIPSES `| t_2*) = NOELLIPSES `| eps
+def $pop(C, `... `| t_1*, `| t_2*) = `| eps
     -- if n_1 = |t_1*|
     -- if n_2 = |t_2*|
     -- if n = $min(n_1, n_2)
     -- if t_21^(n_2 - n) t_22* = t_2*
     -- if $match_stack(C, t_22*, t_1*)
-def $pop(C, NOELLIPSES `| t_1*, NOELLIPSES `| t_2*) = NOELLIPSES `| t_21^(n_2 - n)
+def $pop(C, `| t_1*, `| t_2*) = `| t_21^(n_2 - n)
     -- if n_1 = |t_1*|
     -- if n_2 = |t_2*|
     -- if n = $min(n_1, n_2)
@@ -202,8 +201,8 @@ def $expr_ok(C, instr*, t*) = $check_block(C, instr*, eps -> t*)
 
 def $check_block(context, expr, instrtype) : bool
 def $check_block(C, instr*, t_1* ->_(x*) t_2*) = true
-    -- if $check_instrs(C, NOELLIPSES `| t_1*, instr*) = (stack, x'*)
-    -- if $pop(C, NOELLIPSES `| t_2*, stack) = ell `| eps
+    -- if $check_instrs(C, `| t_1*, instr*) = (stack, x'*)
+    -- if $pop(C, `| t_2*, stack) = ell? `| eps
 def $check_block(C, instr*, t_1* ->_(x*) t_2*) = false  -- otherwise
 
 def $check_instrs(context, inferresulttype, instr*) : (inferresulttype, localidx*)
@@ -215,7 +214,7 @@ def $check_instrs(C, stack, instr instr'*) = $check_instrs(C', stack', instr'*)
     -- if stack' = $push(C, stack_2, $pop(C, stack_1, stack))
 
 def $check_instr(context, instr, inferresulttype) : inferinstrtype
-def $check_instr(C, instr, stack) = (NOELLIPSES `| t_1*) ->_(x*) (NOELLIPSES `| t_2*)
+def $check_instr(C, instr, stack) = `| t_1* ->_(x*) `| t_2*
     -- Instr_ok: C |- instr : t_1* ->_(x*) t_2*
 def $check_instr(C, instr, stack) = ist
     -- Instr_ok_alg: C |- instr : ist -| stack
@@ -229,8 +228,8 @@ def $check_instr_ri                                    hint(builtin)
 
 relation Instr_ok_alg: context |- instr : inferinstrtype -| inferresulttype
 
-;; rule Instr_ok_alg/unreachable:
-;;     C |- UNREACHABLE : (ELLIPSES `| eps) -> (ELLIPSES `| eps) -| stack
+rule Instr_ok_alg/unreachable:
+    C |- UNREACHABLE : (`... `| eps) -> (`... `| eps) -| stack
 
 ;; rule Instr_ok_alg/drop:
 ;; rule Instr_ok_alg/select-impl:
