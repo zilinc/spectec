@@ -189,6 +189,14 @@ def $pop(C, `| t_1*, `| t_2*) = `| t_21^(n_2 - n)
     -- if t_21^(n_2 - n) t_22* = t_2*
     -- if $match_stack(C, t_22*, t_1*)
 
+def $peek(nat, inferresulttype) : valtype
+;; def $peek(i, ell? `| t*) = t'
+;;     -- if t_1'* = t_1* ++ t'
+;;     -- if t* = t_1'* ++ t_2^i
+def $peek(i, ell? `| t*) = t*[n-i-1:1][0]
+    -- if n = |t*|
+def $peek(i, ell? `| t*) = BOT
+    -- otherwise
 
 def $match_stack(context, resulttype, resulttype) : bool
 def $match_stack(C, t_1*, t_2*) = true
@@ -231,7 +239,9 @@ relation Instr_ok_alg: context |- instr : inferinstrtype -| inferresulttype
 rule Instr_ok_alg/unreachable:
     C |- UNREACHABLE : (`... `| eps) -> (`... `| eps) -| stack
 
-;; rule Instr_ok_alg/drop:
+rule Instr_ok_alg/drop:
+    C |- DROP : `| $peek(0, stack) -> `| eps -| stack
+
 ;; rule Instr_ok_alg/select-impl:
 ;; rule Instr_ok_alg/block:
 ;; rule Instr_ok_alg/loop:
