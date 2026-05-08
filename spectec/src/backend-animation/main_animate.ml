@@ -61,9 +61,9 @@ let rec is_anim_target il_def =
 
 (* Remove or (Mostly copied as-is from Il2al.Preprocess). *)
 
-let remove_or_exp e : exp list =
+let rec remove_or_exp e : exp list =
   match e.it with (* TODO: recursive *)
-  | BinE (`OrOp, _, e1, e2) -> [ e1; e2 ]
+  | BinE (`OrOp, _, e1, e2) -> remove_or_exp e1 @ remove_or_exp e2
   | _ -> [ e ]
 
 let rec remove_or_prem prem : prem list =

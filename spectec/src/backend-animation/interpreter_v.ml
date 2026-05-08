@@ -488,7 +488,7 @@ and eval_exp ctx exp : value OptMonad.m =
     | NumV n ->
       (match Num.cvt nt2 n with
       | Some n' -> NumV n' |> return
-      | None -> error_eval "Numeric type conversion" exp (Some "Cannot perform conversion.")
+      | None -> error_eval "Numeric type conversion" exp (Some ("Cannot perform conversion: " ^ string_of_value v1))
       )
     | _ -> error_eval "Numeric type conversion" exp (Some ("Not a numeric:" ^ string_of_exp e1))
     )
@@ -1126,12 +1126,25 @@ and check_instr_ri = {
     | _ -> error no ("Wrong number/type of arguments to $check_instr_ri.")
 }
 
+and top_of_heaptype = {
+  name = "top_of_heaptype";
+  f =
+    function
+    | [ ctx; ht ] ->
+      let deftypes' = vl_to_list vl_to_deftype ctx in
+      let ht' = vl_to_heaptype ht in
+      let top' = RI.Match.top_of_heaptype deftypes' ht' in
+      vl_of_heaptype top' |> return
+    | _ -> error no ("Wrong number/type of arguments to $top_of_heaptype.")
+}
+
+
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
   externaddr_ok; ref_ok; reftype_sub; heaptype_sub;
-  check_instr_ri
+  top_of_heaptype
   ]
 
 and call_builtins fname args : value OptMonad.m =
