@@ -212,7 +212,8 @@ def $check_block(context, expr, instrtype) : bool
 def $check_block(C, instr*, t_1* ->_(x*) t_2*) = true
   -- if $check_instrs(C, `| t_1*, instr*) = (stack, x'*)
   -- if $pop(C, `| t_2*, stack) = ell? `| eps
-def $check_block(C, instr*, t_1* ->_(x*) t_2*) = false  -- otherwise
+def $check_block(C, instr*, t_1* ->_(x*) t_2*) = false
+  -- otherwise
 
 def $check_instrs(context, inferresulttype, instr*) : (inferresulttype, localidx*)
 def $check_instrs(C, stack, eps) = (stack, eps)
@@ -243,9 +244,21 @@ rule Instr_ok_alg/select-impl:
   ;; -- if t <- numtype vectyp BOT
   -- if t = numtype \/ t = vectype \/ t = BOT
 
-;; rule Instr_ok_alg/block:
-;; rule Instr_ok_alg/loop:
-;; rule Instr_ok_alg/if:
+rule Instr_ok_alg/block:
+  C |- BLOCK bt instr* : `| t_1* -> `| t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* -> t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* -> t_2*
+
+rule Instr_ok_alg/loop:
+  C |- LOOP bt instr* : `| t_1* -> `| t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* -> t_2*
+  -- Instrs_ok: {LABELS (t_1*)} ++ C |- instr* : t_1* -> t_2*
+
+rule Instr_ok_alg/if:
+  C |- IF bt instr_1* ELSE instr_2* : `| t_1* I32 -> `| t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* -> t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_1* : t_1* -> t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_2* : t_1* -> t_2*
 
 rule Instr_ok_alg/br:
   C |- BR l : `... `| t* -> `... `| eps -| stack
