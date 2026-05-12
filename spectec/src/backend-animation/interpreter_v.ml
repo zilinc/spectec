@@ -1052,31 +1052,6 @@ and step_read_throw_ref_handler = {
     | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
 
-and externaddr_ok = {
-  name = "externaddr_ok";
-  f =
-    function
-    | [ s; eaddr; etype ] ->
-      (match match_caseV "externaddr" eaddr with
-      | [[name];[]], [NumV (`Nat z)] ->
-        let addr = Z.to_int z in
-        let externaddr_type =
-          name^"S"
-          |> Store.access
-          |> as_list_value
-          |> (!)
-          |> Fun.flip Array.get addr
-          |> as_str_field "TYPE"
-          |> fun type_ -> caseV [[name];[]] [type_]
-          |> vl_to_externtype
-        in
-        let externtype = vl_to_externtype etype in
-        RI.Match.match_externtype [] externaddr_type externtype |> boolV |> return
-      | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
-      )
-    | _ -> error no ("Wrong number/type of arguments to $externaddr_ok.")
-}
-
 and ref_ok = {
   name = "ref_ok";
   f =
@@ -1089,11 +1064,24 @@ and ref_ok = {
     | _ -> error no ("Wrong number/type of arguments to $ref_ok.")
 }
 
+and reftype_sub = {
+  name = "reftype_sub";
+  f =
+    function
+    | [ ctx; rt1; rt2 ] ->
+      let ctx' = vl_to_context ctx in
+      let rt1' = vl_to_reftype rt1 in
+      let rt2' = vl_to_reftype rt2 in
+      RI.Match.match_reftype ctx'.types rt1' rt2' |> boolV |> return
+    | _ -> error no ("Wrong number/type of arguments to $reftype_sub.")
+}
+
+
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
-  ref_ok;
+  ref_ok; reftype_sub
   ]
 
 and call_builtins fname args : value OptMonad.m =

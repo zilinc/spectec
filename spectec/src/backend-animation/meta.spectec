@@ -37,6 +37,11 @@ rule Heaptype_sub/array-trans:
   -- Expand: deftype ~~ ARRAY fieldtype
   -- if ht <- ANY EQ
 
+rule Heaptype_sub/rec_alg:
+  C |- REC i <: typeuse'
+  -- if C.RECS[i] = SUB final? typeuse* ct
+  -- if typeuse' <- typeuse*
+
 
 rule Comptype_sub/struct_alg:
   C |- STRUCT ft'_1* <: STRUCT ft_2*
@@ -44,16 +49,11 @@ rule Comptype_sub/struct_alg:
   -- if ft_1* = ft'_1*[0:len]
   -- (Fieldtype_sub: C |- ft_1 <: ft_2)*
 
-rule Ref_ok/sub_alg:
-  s |- ref : rt
-  -- Ref_infer: s |- ref : rt'  ;; TODO(zilinc): allow a relation to be animated multiple ways.
-  -- Reftype_sub: {} |- rt' <: rt
-
 
 relation Ref_infer: store |- ref : reftype
 
 rule Ref_infer/null:
-  s |- REF.NULL_ADDR :  REF NULL BOT
+  s |- REF.NULL_ADDR : REF NULL BOT
 
 rule Ref_infer/i31:
   s |- REF.I31_NUM i : REF I31
@@ -83,6 +83,12 @@ rule Ref_infer/extern:
   -- if ref =/= REF.NULL_ADDR
 
 
+rule Ref_ok/sub_alg:
+  s |- ref : rt
+  -- Ref_infer: s |- ref : rt'
+  -- Reftype_sub: {} |- rt' <: rt
+
+
 relation Exists_heaptype_sub: context |- heaptype* <: heaptype
 
 rule Exists_heaptype_sub/base:
@@ -92,6 +98,7 @@ rule Exists_heaptype_sub/base:
 rule Exists_heaptype_sub/rec:
   C |- ht_1 ht* <: ht_2
   -- Exists_heaptype_sub: C |- ht* <: ht_2
+
 
 rule Deftype_sub/super_alg:
   C |- deftype_1 <: deftype_2
@@ -619,13 +626,16 @@ relation Comptype_ok      hint(animate %1 %2    -> bool)
 relation Subtype_ok       hint(animate %1 %2 %3 -> bool)
 relation Rectype_ok       hint(animate %1 %2 %3 -> bool)  ;; hint(animate_inverse "Rectype_infer")
 
+def $reftype_sub(store, reftype, reftype) : bool
+def $reftype_sub hint(builtin)
+
 relation Numtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Vectype_sub      hint(animate %1 %2 %3 -> bool)
 relation Heaptype_sub     hint(animate %1 %2 %3 -> bool)
 rule Heaptype_sub/trans   hint(no_animate)
 rule Heaptype_sub/rec     hint(no_animate)
-rule Heaptype_sub/def     hint(no_animate)
-relation Reftype_sub      hint(animate %1 %2 %3 -> bool)
+relation Reftype_sub      hint(animate_manual "reftype_sub": %1 %2 %3 -> bool)
+;; relation Reftype_sub      hint(animate %1 %2 %3 -> bool)
 relation Valtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Resulttype_sub   hint(animate %1 %2 %3 -> bool)
 relation Packtype_sub     hint(animate %1 %2 %3 -> bool)
@@ -643,12 +653,15 @@ rule Deftype_sub/super    hint(no_animate)
 relation Exists_heaptype_sub    hint(animate %1 %2 %3 -> bool)
 relation Externtype_sub   hint(animate %1 %2 %3 -> bool)
 
-def $ref_ok(context, ref) : reftype
+
+def $ref_ok(store, ref) : reftype
 def $ref_ok hint(builtin)
+
 
 relation Num_ok           hint(animate %1 %2 -> %3)
 relation Vec_ok           hint(animate %1 %2 -> %3)
-relation Ref_ok           hint(animate_manual "ref_ok": %1 %2 %3 -> bool)
+;; relation Ref_ok           hint(animate_manual "ref_ok": %1 %2 %3 -> bool)
+relation Ref_ok           hint(animate %1 %2 %3 -> bool)
 rule Ref_ok/sub           hint(no_animate)
 relation Ref_infer        hint(animate %1 %2 -> %3)
 relation Val_ok           hint(animate %1 %2 %3 -> bool)
@@ -726,9 +739,6 @@ rule Instr_ok/extern.convert_any    hint(no_animate)
 rule Instr_ok/any.convert_extern    hint(no_animate)
 
 relation Instr_ok_alg               hint(animate %1 %2 %4 -> %3)
-
-def $externaddr_ok(context, externaddr) : externtype
-def $externaddr_ok hint(builtin)
 
 relation Externaddr_ok              hint(animate %1 %2 %3 -> bool)
 rule Externaddr_ok/sub              hint(no_animate)
