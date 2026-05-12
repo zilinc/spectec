@@ -44,13 +44,25 @@ def $top_of_typeuse(dt*, dt') = $top_of_comptype(dt*, $expanddt(dt'))
 def $top_of_comptype(deftype*, comptype) : heaptype
 def $top_of_comptype(dt*, STRUCT ft*) = $top_of_heaptype(dt*, STRUCT)
 def $top_of_comptype(dt*, ARRAY ft) = $top_of_heaptype(dt*, STRUCT)
-def $top_of_comptype(dt*, FUNC t_1 -> t_2) = $top_of_heaptype(dt*, FUNC)
+def $top_of_comptype(dt*, FUNC t_1* -> t_2*) = $top_of_heaptype(dt*, FUNC)
 
 
+rule Heaptype_sub/trans-any:
+  C |- ht <: ANY
+  -- if ht <- STRUCT ARRAY I31
 
-rule Comptype_sub/struct  hint(no_animate)
+rule Heaptype_sub/struct-trans:
+  C |- deftype <: ht
+  -- Expand: deftype ~~ STRUCT fieldtype*
+  -- if ht <- ANY EQ
 
-rule Comptype_sub/struct_anim:
+rule Heaptype_sub/array-trans:
+  C |- deftype <: ht
+  -- Expand: deftype ~~ ARRAY fieldtype
+  -- if ht <- ANY EQ
+
+
+rule Comptype_sub/struct_alg:
   C |- STRUCT ft'_1* <: STRUCT ft_2*
   -- if len = |ft_2*|
   -- if ft_1* = ft'_1*[0:len]
@@ -563,18 +575,22 @@ relation Rectype_ok       hint(animate %1 %2 %3 -> bool)  ;; hint(animate_invers
 
 relation Numtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Vectype_sub      hint(animate %1 %2 %3 -> bool)
-relation Heaptype_sub     hint(animate_manual "heaptype_sub" : %1 %2 %3 -> bool)
-relation Reftype_sub      hint(animate_manual "reftype_sub"  : %1 %2 %3 -> bool)
+relation Heaptype_sub     hint(animate %1 %2 %3 -> bool)
+rule Heaptype_sub/trans   hint(no_animate)
+rule Heaptype_sub/rec     hint(no_animate)
+rule Heaptype_sub/def     hint(no_animate)
+relation Reftype_sub      hint(animate_manual "reftype_sub": %1 %2 %3 -> bool)
 relation Valtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Resulttype_sub   hint(animate %1 %2 %3 -> bool)
 relation Packtype_sub     hint(animate %1 %2 %3 -> bool)
 relation Fieldtype_sub    hint(animate %1 %2 %3 -> bool)
 relation Storagetype_sub  hint(animate %1 %2 %3 -> bool)
 relation Comptype_sub     hint(animate %1 %2 %3 -> bool)
+rule Comptype_sub/struct  hint(no_animate)
 
 relation Num_ok           hint(animate %1 %2 -> %3)
 relation Vec_ok           hint(animate %1 %2 -> %3)
-relation Ref_ok           hint(animate_manual "ref_ok" : %1 %2 %3 -> bool)
+relation Ref_ok           hint(animate_manual "ref_ok": %1 %2 %3 -> bool)
 relation Val_ok           hint(animate %1 %2 %3 -> bool)
 
 relation Memarg_ok        hint(animate %1 %2 %3 -> bool)
@@ -651,8 +667,8 @@ rule Instr_ok/any.convert_extern    hint(no_animate)
 
 relation Instr_ok_alg               hint(animate %1 %2 %4 -> %3)
 
-relation Externaddr_ok    hint(animate_manual "externaddr_ok" : %1 %2 %3 -> bool)
-relation Module_ok        hint(animate_manual "module_ok" : %1 -> %2)
+relation Externaddr_ok    hint(animate_manual "externaddr_ok": %1 %2 %3 -> bool)
+relation Module_ok        hint(animate_manual "module_ok": %1 -> %2)
 relation Module_ok_alg    hint(animate %1 %2 -> %3)
 
 

@@ -224,7 +224,7 @@ module Hints = struct
   let parse_fid_mode : El.Ast.exp -> text * mode IM.t = fun exp ->
     match exp.it with
     | InfixE ({ it = TextE fid; _ }, atom, mode) when atom.it = Xl.Atom.Colon -> let m = parse_mode mode in fid, m
-    | _ -> error exp.at "hint parser" ("Ill-formed animate_as hint: " ^ El.Print.string_of_exp exp)
+    | _ -> error exp.at "hint parser" ("Ill-formed animate_manual hint: " ^ El.Print.string_of_exp exp)
 
   (* A list of function ids that should be automatically inverted. *)
   let invert_funcs : id list ref = ref []  (* Def.func_def list *)

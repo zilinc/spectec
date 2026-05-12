@@ -1101,37 +1101,11 @@ and reftype_sub = {
     | _ -> error no ("Wrong number/type of arguments to $reftype_sub.")
 }
 
-and heaptype_sub = {
-  name = "heaptype_sub";
-  f =
-    function
-    | [ ctx; ht1; ht2 ] ->
-      let ctx' = as_str_field "TYPES" ctx |> vl_to_list vl_to_deftype in
-      let ht1' = vl_to_heaptype ht1 in
-      let ht2' = vl_to_heaptype ht2 in
-      RI.Match.match_heaptype ctx' ht1' ht2' |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $heaptype_sub.")
-}
-
-and check_instr_ri = {
-  name = "check_instr_ri";
-  f =
-    function
-    | [ ctx; instr; infer_resulttype ] ->
-      let ctx' = vl_to_context ctx in
-      let instr' = vl_to_instr instr in
-      let infer_resulttype' = vl_to_infer_resulttype infer_resulttype in
-      let infer_instrtype' = RI.Valid.check_instr ctx' instr' infer_resulttype' in
-      vl_of_infer_instrtype infer_instrtype' |> return
-    | _ -> error no ("Wrong number/type of arguments to $check_instr_ri.")
-}
-
-
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
-  externaddr_ok; ref_ok; reftype_sub; heaptype_sub;
+  externaddr_ok; ref_ok; reftype_sub;
   ]
 
 and call_builtins fname args : value OptMonad.m =
