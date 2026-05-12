@@ -1082,7 +1082,7 @@ and ref_ok = {
   f =
     function
     | [ store; ref; rt2 ] ->
-      let* rt1 = call_func "ref_infer" [valA store; valA ref] in
+      let* rt1 = call_func "Ref_infer" [valA store; valA ref] in
       let rt1' = vl_to_reftype rt1 in
       let rt2' = vl_to_reftype rt2 in
       RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
@@ -1093,7 +1093,7 @@ and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
-  externaddr_ok; ref_ok;
+  ref_ok;
   ]
 
 and call_builtins fname args : value OptMonad.m =

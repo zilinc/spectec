@@ -1,30 +1,6 @@
 ;; ********************************************************
-;;             Algorithmic value validation
+;;            Algorithmic validation rules
 ;; ********************************************************
-
-def $ref_infer(store, ref) : reftype
-def $ref_infer(s, REF.NULL_ADDR) = REF NULL BOT
-def $ref_infer(s, REF.I31_NUM i) = REF I31
-def $ref_infer(s, REF.STRUCT_ADDR a) = REF dt
-  -- if s.STRUCTS[a].TYPE = dt
-def $ref_infer(s, REF.ARRAY_ADDR a) = REF dt
-  -- if s.ARRAYS[a].TYPE = dt
-def $ref_infer(s, REF.FUNC_ADDR a) = REF dt
-  -- if s.FUNCS[a].TYPE = dt
-def $ref_infer(s, REF.EXN_ADDR a) = REF EXN
-  -- if s.EXNS[a] = exn
-def $ref_infer(s, REF.HOST_ADDR a) = REF ANY
-def $ref_infer(s, REF.EXTERN ref) = REF EXTERN
-  -- Ref_ok: s |- ref : REF ANY
-  -- if ref =/= REF.NULL_ADDR
-
-def $val_infer(store, val) : valtype
-def $val_infer(s, num) = nt
-  -- Num_ok: s |- num : nt
-def $val_infer(s, vec) = vt
-  -- Vec_ok: s |- vec : vt
-def $val_infer(s, ref) = rt
-  -- if $ref_infer(s, ref) = rt
 
 def $top_of_heaptype(deftype*, heaptype) : heaptype
 def $top_of_heaptype(dt*, ht) = ANY
@@ -68,18 +44,88 @@ rule Comptype_sub/struct_alg:
   -- if ft_1* = ft'_1*[0:len]
   -- (Fieldtype_sub: C |- ft_1 <: ft_2)*
 
+rule Ref_ok/sub_alg:
+  s |- ref : rt
+  -- Ref_infer: s |- ref : rt'  ;; TODO(zilinc): allow a relation to be animated multiple ways.
+  -- Reftype_sub: {} |- rt' <: rt
 
-def $reftype_sub(context, reftype, reftype) : bool
-def $reftype_sub       hint(builtin)
 
-def $heaptype_sub(context, heaptype, heaptype) : bool
-def $heaptype_sub      hint(builtin)
+relation Ref_infer: store |- ref : reftype
 
-def $ref_ok(store, ref, reftype) : bool
-def $ref_ok            hint(builtin)
+rule Ref_infer/null:
+  s |- REF.NULL_ADDR :  REF NULL BOT
 
-def $externaddr_ok(store, externaddr, externtype) : bool
-def $externaddr_ok     hint(builtin)
+rule Ref_infer/i31:
+  s |- REF.I31_NUM i : REF I31
+
+rule Ref_infer/struct:
+  s |- REF.STRUCT_ADDR a : REF dt
+  -- if s.STRUCTS[a].TYPE = dt
+
+rule Ref_infer/array:
+  s |- REF.ARRAY_ADDR a : REF dt
+  -- if s.ARRAYS[a].TYPE = dt
+
+rule Ref_infer/func:
+  s |- REF.FUNC_ADDR a : REF dt
+  -- if s.FUNCS[a].TYPE = dt
+
+rule Ref_infer/exn:
+  s |- REF.EXN_ADDR a : REF EXN
+  -- if s.EXNS[a] = exn
+
+rule Ref_infer/host:
+  s |- REF.HOST_ADDR a : REF ANY
+
+rule Ref_infer/extern:
+  s |- REF.EXTERN ref : REF EXTERN
+  -- Ref_ok: s |- ref : REF ANY
+  -- if ref =/= REF.NULL_ADDR
+
+
+relation Exists_heaptype_sub: context |- heaptype* <: heaptype
+
+rule Exists_heaptype_sub/base:
+  C |- ht_1 ht* <: ht_2
+  -- Heaptype_sub: C |- ht_1 <: ht_2
+
+rule Exists_heaptype_sub/rec:
+  C |- ht_1 ht* <: ht_2
+  -- Exists_heaptype_sub: C |- ht* <: ht_2
+
+rule Deftype_sub/super_alg:
+  C |- deftype_1 <: deftype_2
+  -- if $unrolldt(deftype_1) = SUB final? typeuse* ct
+  -- Exists_heaptype_sub: C |- typeuse* <: deftype_2
+
+
+rule Externaddr_ok/sub_alg:
+  s |- externaddr : xt
+  -- Externaddr_infer: s |- externaddr : xt'
+  -- Externtype_sub: {} |- xt' <: xt
+
+relation Externaddr_infer: store |- externaddr : externtype
+
+rule Externaddr_infer/tag:
+  s |- TAG a : TAG taginst.TYPE
+  -- if s.TAGS[a] = taginst
+
+rule Externaddr_infer/global:
+  s |- GLOBAL a : GLOBAL globalinst.TYPE
+  -- if s.GLOBALS[a] = globalinst
+
+rule Externaddr_infer/mem:
+  s |- MEM a : MEM meminst.TYPE
+  -- if s.MEMS[a] = meminst
+
+rule Externaddr_infer/table:
+  s |- TABLE a : TABLE tableinst.TYPE
+  -- if s.TABLES[a] = tableinst
+
+rule Externaddr_infer/func:
+  s |- FUNC a : FUNC funcinst.TYPE
+  -- if s.FUNCS[a] = funcinst
+
 
 def $check_list(syntax X, syntax Y, context, def $check(context, X) : (context, Y), X*) : (context, Y*)
 def $check_list(syntax X, syntax Y, C, $check, eps) = (C, eps)
@@ -587,10 +633,24 @@ relation Fieldtype_sub    hint(animate %1 %2 %3 -> bool)
 relation Storagetype_sub  hint(animate %1 %2 %3 -> bool)
 relation Comptype_sub     hint(animate %1 %2 %3 -> bool)
 rule Comptype_sub/struct  hint(no_animate)
+relation Tagtype_sub      hint(animate %1 %2 %3 -> bool)
+relation Globaltype_sub   hint(animate %1 %2 %3 -> bool)
+relation Memtype_sub      hint(animate %1 %2 %3 -> bool)
+relation Limits_sub       hint(animate %1 %2 %3 -> bool)
+relation Tabletype_sub    hint(animate %1 %2 %3 -> bool)
+relation Deftype_sub      hint(animate %1 %2 %3 -> bool)
+rule Deftype_sub/super    hint(no_animate)
+relation Exists_heaptype_sub    hint(animate %1 %2 %3 -> bool)
+relation Externtype_sub   hint(animate %1 %2 %3 -> bool)
+
+def $ref_ok(context, ref) : reftype
+def $ref_ok hint(builtin)
 
 relation Num_ok           hint(animate %1 %2 -> %3)
 relation Vec_ok           hint(animate %1 %2 -> %3)
 relation Ref_ok           hint(animate_manual "ref_ok": %1 %2 %3 -> bool)
+rule Ref_ok/sub           hint(no_animate)
+relation Ref_infer        hint(animate %1 %2 -> %3)
 relation Val_ok           hint(animate %1 %2 %3 -> bool)
 
 relation Memarg_ok        hint(animate %1 %2 %3 -> bool)
@@ -667,14 +727,19 @@ rule Instr_ok/any.convert_extern    hint(no_animate)
 
 relation Instr_ok_alg               hint(animate %1 %2 %4 -> %3)
 
-relation Externaddr_ok    hint(animate_manual "externaddr_ok": %1 %2 %3 -> bool)
-relation Module_ok        hint(animate_manual "module_ok": %1 -> %2)
-relation Module_ok_alg    hint(animate %1 %2 -> %3)
+def $externaddr_ok(context, externaddr) : externtype
+def $externaddr_ok hint(builtin)
+
+relation Externaddr_ok              hint(animate %1 %2 %3 -> bool)
+rule Externaddr_ok/sub              hint(no_animate)
+relation Externaddr_infer           hint(animate %1 %2 -> %3)
+relation Module_ok                  hint(animate_manual "module_ok": %1 -> %2)
+relation Module_ok_alg              hint(animate %1 %2 -> %3)
 
 
-relation Step             hint(animate %1 -> %2)
-relation Step_pure        hint(animate %1 -> %2)
-relation Step_read        hint(animate %1 -> %2)
+relation Step                       hint(animate %1 -> %2)
+relation Step_pure                  hint(animate %1 -> %2)
+relation Step_read                  hint(animate %1 -> %2)
 
 rule Step_pure/br-label-zero               hint(no_animate)
 rule Step_pure/br-label-succ               hint(no_animate)
