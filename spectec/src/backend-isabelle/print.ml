@@ -3,6 +3,15 @@ open Util.Source
 (* open Il.Walk *)
 
 
+(* NOTES FOR CONRAD MEETING *)
+(* List of reserved ids in Isabelle? *)
+(* coercion *)
+(* :> operation *)
+(* Struct extension *)
+(* axiomatization *)
+
+
+
 module StringSet = Set.Make(String)
 
 let ra = "⇒"
@@ -17,12 +26,24 @@ let sanitise_id s =
   
 
 
-
 type isabelle_env = Il.Env.t ref
+(*  { mutable il_env : Il.Env.t;
+    mutable partial_funs : StringSet.t
+  } *)
 
 
-let new_env () = ref Il.Env.empty
+let new_env () = Il.Env.empty
+(*  { il_env = Il.Env.empty;
+    partial_funs = StringSet.empty
+  } *)
 
+let env_ref = ref (new_env ())
+
+(* let is_partial (id : id) = StringSet.mem id.it !env_ref.partial_funs
+
+let register_partial (id : id) =
+  !env_ref.partial_funs <- StringSet.add id.it !env_ref.partial_funs
+ *)
 
 
 let iter_prem_rels_list = ["list_all"; "list_all2"; "list_all3"] 
@@ -31,7 +52,6 @@ let sup_iter_prem_rels_list = ["list_alli"]
 let iter_exp_opt_funcs = ["map_option"; "option_zipWith"; "option_map3"] 
 let error at msg = Util.Error.error at "Isabelle translation" msg 
 
-let env_ref = new_env ()
 
 let rec list_split (f : 'a -> bool) = function 
   | [] -> ([], [])
@@ -41,7 +61,7 @@ let rec list_split (f : 'a -> bool) = function
 
 let get_type_var t = 
   match t.it with
-  | VarT (id, _) when not (Il.Env.mem_typ !env_ref id) -> [id.it]
+  | VarT (id, _) when not (Il.Env.mem_typ !env_ref(* .il_env *) id) -> [id.it]
   | _ -> []
 
 let needs_inh_class e =
@@ -222,7 +242,6 @@ let render_atom ?(in_mixop = false) a =
   | Xl.Atom.Atom a -> render_id a
   | _ -> ""
 
-(* TODO: change to Isabelle? *)
 let render_mixop typ_id (m : mixop) = 
   let s = (match m with
     (* | [{it = Atom a; _}] :: tail when List.for_all ((=) []) tail -> render_id a *)
@@ -233,7 +252,7 @@ let render_mixop typ_id (m : mixop) =
   (* HACK - should be done in improve ids *)
   match s with
   | "_" -> "mk_" ^ typ_id 
-  | s when Il.Env.mem_typ !env_ref (s $ no_region) -> "mk_" ^ s
+  | s when Il.Env.mem_typ !env_ref(* .il_env *) (s $ no_region) -> "mk_" ^ s
   | s -> render_id s
 
 let get_param_id b = 
@@ -358,7 +377,7 @@ and render_exp exp_type typids exp =
     | _ -> make_proj_chain i (List.length typs - 1) e 
     end
   | CaseE (m, e) -> 
-    let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref exp.note) |> render_id in
+    let name = Il.Print.string_of_typ_name (Il.Eval.reduce_typ !env_ref(* .il_env *) exp.note) |> render_id in
     let exps = transform_case_tup e in
     begin match exps with
     | [] -> render_mixop name m
@@ -377,7 +396,6 @@ and render_exp exp_type typids exp =
      | VarT (id, _) -> parens ("append_" ^ id.it ^ " " ^ r_func e1 ^ " " ^ r_func e2)
      | _ -> error exp.at "should be record type"
      end
-     (* parens (parens (r_func e1 ^ " :: " ^ render_type exp_type typids exp.note) ^ " @@ " ^ r_func e2) *)
   | ListE [] -> "[]"
   | ListE exps -> ssreflect_square_parens (String.concat ", " (List.map r_func exps)) 
   | LiftE e -> parens ("option_to_list " ^ r_func e)
@@ -628,7 +646,7 @@ let render_record id quants fields =
     "\t\"append_" ^ id ^ inhabitance_quanters ^ " arg1 arg2 = ⦇\n\t\t" ^
       String.concat ",\n\t\t" (List.map (fun (a, (t, _, _), _) ->
                                    let record_id' = render_atom a in
-                                   match check_trivial_append !env_ref t with
+                                   match check_trivial_append !env_ref(* .il_env *) t with
                                      ListAppend -> record_id' ^ " = " ^ record_id' ^ " arg1 @ " ^ record_id' ^ " arg2"
                                    | OptionAppend -> record_id' ^ " = " ^ record_id' ^ " arg1 @@@ " ^ record_id' ^ " arg2" 
                                    | RecordAppend ->
@@ -670,9 +688,6 @@ let render_variant_typ id quants cases =
                                    "| " ^ render_mixop id m ^ render_case_typs typids t 
                                  )  cases)  
 
-(* TODO: change to Isabelle *)
-let render_extra_clause params = 
-  "|" ^ string_of_list_prefix " " ", " (fun _ -> "_") params ^ " => default_val"
 
 let render_inh_param inhib_type_vars param = 
   match param.it with
@@ -690,15 +705,6 @@ let render_single_type id at typids params =
   | _ -> error at ("Given projection function: " ^ id ^ " has invalid parameters!")
 
 let render_function_def id params r_typ clauses = 
-(*  let base_list_collector = base_collector [] (@) in
-  let c = { base_list_collector with collect_exp = needs_inh_class; collect_path = needs_inh_class_path } in *)
-(*  let inhabited_typ_vars = List.concat_map (fun clause -> 
-    let DefD (_, _, exp, prems) = clause.it in 
-    collect_exp c exp @ List.concat_map (collect_prem c) prems 
-                             ) clauses in *)
-  (* TODO: deal with extra params *)
-  (* let extra_params = List.filter_map (render_inh_param inhabited_typ_vars) params in *)
-  (*  let _e_params_render = if extra_params = [] then "" else " " ^ String.concat " " extra_params in *)
   let typids, resl = render_param_types RHS StringSet.empty params in
   id ^ " :: " ^ quotes (resl ^ render_type RHS typids r_typ),
   (List.map
@@ -728,28 +734,10 @@ let render_rel_axiom id typ =
 let render_global_declaration id typ exp = 
   id ^ " :: " ^ quotes (render_type RHS StringSet.empty typ) ^ " where\n\t" ^ quotes (id ^ " = " ^ render_exp RHS StringSet.empty exp)
 
-(* TODO: change to Isabelle *)
-let render_extra_info def = 
-  match def.it with
-  | TypD (_id, _, [{it = InstD (_quants, _, {it = VariantT _typcases; _}); _}]) ->
-     None
-(*    Some (inhabitance_proof id.it quants typcases ^ ".\n\n" ^
-    string_of_eqtype_proof true (cant_do_equality quants typcases) id.it quants) *)
-  | _ -> None
-
 let has_prems c = 
   match c.it with
   | DefD (_, _, _, prems) -> prems <> []
 
-let start_prefix def = 
-  match def.it with
-  | RelD _ -> "inductive "
-  | TypD(_, _, [inst]) when is_variant_typ inst || is_alias_typ inst -> "datatype "
-  | DecD (_, _, _, []) -> "axiomatization "
-  | DecD (_, _, _, clauses)  when List.exists has_prems clauses -> "axiomatization "
-  | DecD _ -> "fun "
-  | TypD (_, _, [inst]) when is_record_typ inst -> "record "
-  | _ -> ""
 
 let is_axiom def =
   match def.it with
@@ -794,7 +782,7 @@ let rec components_of_def def =
   | DecD (id, params, typ, clauses) when List.exists has_prems clauses ->
     start , [Iax], [render_axiom (render_id id.it) params typ], []
   | DecD (id, params, typ, clauses) ->
-     let header, clauses = render_function_def (render_id id.it) params typ clauses in
+     let header, clauses = render_function_def (render_id id.it) params typ (clauses) in
      start, [Ifun], [header], clauses
   | RelD (id, _, _, typ, []) -> 
     start , [Iax], [render_rel_axiom (render_id id.it) typ], []
@@ -831,6 +819,7 @@ let string_of_def def =
   | Ifun :: kwds, _ ->
      if List.for_all (function Ifun -> true | _ -> false) kwds
      then start ^ "fun " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\n"
+  (* then start ^ "function (sequential) " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\tby pat_completeness auto\n\n" *) 
      else error def.at "function defined mutually recursively with something that is not a function"
   | Iind :: kwds, _ ->
      if List.for_all (function Iind -> true | _ -> false) kwds
@@ -876,8 +865,6 @@ let exported_string =
   "fun repeat :: \"nat " ^ ra ^ " 'a " ^ ra ^ " 'a list\" where\n" ^
   "\t\"repeat 0 _ = []\" |\n" ^
   "\t\"repeat (Suc n) x = x # repeat n x\"\n\n" ^
-   (* "fun the :: \"'a option " ^ ra ^ "'a\" where\n" ^ (* TODO: already exists!!!! *)
-  "\t\"the (Some x) = x\"\n\n" ^ *)
   "fun list_update_func :: \"'a list " ^ ra ^ " nat " ^ ra ^ " ('a " ^ ra ^ " 'a) " ^ ra ^ " 'a list\" where\n" ^
   "\t\"list_update_func [] _ _ = []\" |\n" ^
   "\t\"list_update_func (x # l) 0 y = (y x) # l\" |\n" ^
@@ -890,106 +877,10 @@ let exported_string =
   "\t\"list_slice_update (x # l) (Suc n) m ul = x # list_slice_update l n m ul\"\n\n" ^
   "fun option_append :: \"'a option " ^ ra ^ " 'a option " ^ ra ^ " 'a option\" (infixl \"@@@\" 70) where\n" ^
   "\t\"option_append (Some x) _ = Some x\" |\n" ^
-    "\t\"option_append None y = y\"\n\n"
+  "\t\"option_append None y = y\"\n\n"
 
 
 
-    (* ^
-  "locale coercion =\n" ^
-  "\tfixes coerce :: \"'a " ^ ra ^ " 'b\"\n\n" ^
-  "interpretation option : coercion \"option_to_list :: 'a option " ^ ra ^ " 'a list\"\n\tdone\n\n" ^
-  "notation option_to_list " ^ parens (quotes (coerce "_")) ^ "\n" ^
-  "interpretation int : coercion \"nat :: int " ^ ra ^ " nat\"\n\tdone\n\n" ^
-  "notation nat " ^ parens (quotes (coerce "_")) ^ "\n" ^
-  "interpretation nat : coercion \"int :: nat " ^ ra ^ " int\"\n\tdone\n\n"   ^
-  "notation int " ^ parens (quotes (coerce "_")) ^ "\n" *)
-    (*
- (* TODO *)  "Coercion ratz: int >-> rat.\n\n" ^
-     *)
-
-(* ^ 
-
-    
-        
-  (* TODO *) "From Coq Require Import String List Unicode.Utf8 Reals.\n" ^
- (* TODO *)  "From mathcomp Require Import ssreflect ssrfun ssrnat ssrbool seq eqtype rat ssrint.\n" ^
- (* TODO *)  "From HB Require Import structures.\n" ^
- (* TODO *)  "From RecordUpdate Require Import RecordSet.\n" ^
-    (* TODO *)  "Declare Scope wasm_scope.\n\n" ^
-
-    (* TODO: figure out Inhabited in Isabelle *)
- (* TODO *)  "Class Inhabited (T: Type) := { default_val : T }.\n\n" ^
- (* TODO *)  "Definition lookup_total {T: Type} {_: Inhabited T} (l: seq T) (n: nat) : T :=\n" ^
- (* TODO *)  "\tseq.nth default_val l n.\n\n" ^
- (* TODO *)  "Definition the {T : Type} {_ : Inhabited T} (arg : option T) : T :=\n" ^
- (* TODO *)	"\tmatch arg with\n" ^
- (* TODO *)	"\t\t| None => default_val\n" ^
- (* TODO *)	"\t\t| Some v => v\n" ^
- (* TODO *)	"\tend.\n\n" ^
-
- (* TODO *)  "Fixpoint list_update {α: Type} (l: seq α) (n: nat) (y: α): seq α :=\n" ^
- (* TODO *)  "\tmatch l, n with\n" ^
- (* TODO *)  "\t\t| nil, _ => nil\n" ^
- (* TODO *)  "\t\t| x :: l', O => y :: l'\n" ^
- (* TODO *)  "\t\t| x :: l', S n => x :: list_update l' n y\n" ^
- (* TODO *)  "\tend.\n\n" ^
- 
- (* TODO *)  "Definition option_map {α β : Type} (f : α -> β) (x : option α) : option β :=\n" ^
- (* TODO *)	"\tmatch x with\n" ^
- (* TODO *)	"\t\t| Some x => Some (f x)\n" ^
- (* TODO *)	"\t\t| _ => None\n" ^
- (* TODO *)	"\tend.\n\n" ^
- (* TODO *)  "Definition list_extend {α: Type} (l: seq α) (y: α): seq α :=\n" ^
- (* TODO *)  "\ty :: l.\n\n" ^
- (* TODO *)  "Class Append (α: Type) := _append : α -> α -> α.\n\n" ^
- (* TODO *)  "Infix \"@@\" := _append (right associativity, at level 60) : wasm_scope.\n\n" ^
- (* TODO *)  "Global Instance Append_List_ {α: Type}: Append (seq α) := { _append l1 l2 := seq.cat l1 l2 }.\n\n" ^
- (* TODO *)  "Global Instance Append_Option {α: Type}: Append (option α) := { _append o1 o2 := option_append o1 o2 }.\n\n" ^
- (* TODO *)  "Global Instance Append_nat : Append (nat) := { _append n1 n2 := n1 + n2}.\n\n" ^
- (* TODO *)  "Global Instance Inh_unit : Inhabited unit := { default_val := tt }.\n\n" ^
- (* TODO *)  "Global Instance Inh_nat : Inhabited nat := { default_val := O }.\n\n" ^
- (* TODO *)  "Global Instance Inh_list {T: Type} : Inhabited (seq T) := { default_val := nil }.\n\n" ^
- (* TODO *)  "Global Instance Inh_option {T: Type} : Inhabited (option T) := { default_val := None }.\n\n" ^
- (* TODO *)  "Global Instance Inh_Z : Inhabited Z := { default_val := Z0 }.\n\n" ^
- (* TODO *)  "Global Instance Inh_prod {T1 T2: Type} {_: Inhabited T1} {_: Inhabited T2} : Inhabited (prod T1 T2) := { default_val := (default_val, default_val) }.\n\n" ^
- (* TODO *)  "Global Instance Inh_type : Inhabited Type := { default_val := nat }.\n\n" ^
- (* TODO *)  "Create HintDb eq_dec_db.\n\n" ^
- (* TODO *)  "Ltac decidable_equality_step :=\n" ^
- (* TODO *)  "  do [ by eauto with eq_dec_db | decide equality ].\n\n" ^
- (* TODO *)  "Lemma eq_dec_Equality_axiom :\n" ^
- (* TODO *)  "  forall (T : Type) (eq_dec : forall (x y : T), decidable (x = y)),\n" ^
- (* TODO *)  "  let eqb v1 v2 := is_left (eq_dec v1 v2) in Equality.axiom eqb.\n" ^
- (* TODO *)  "Proof.\n" ^
- (* TODO *)  "  move=> T eq_dec eqb x y. rewrite /eqb.\n" ^
- (* TODO *)  "  case: (eq_dec x y); by [apply: ReflectT | apply: ReflectF].\n" ^
- (* TODO *)  "Qed.\n\n" ^
- (* TODO *)  "Class Coercion (A B : Type) := { coerce : A -> B }.\n\n" ^
- (* TODO *)  "Notation \"x ':>' B\" := (coerce (A:=_) (B:=B) x)\n" ^
- (* TODO *)  "(at level 70, right associativity).\n\n" ^
- (* TODO *)  "Definition option_coerce {A B : Type} `{Coercion A B} (a_opt : option A): option B :=\n" ^
- (* TODO *)  "\tmatch a_opt with\n" ^
- (* TODO *)  "\t\t| Some a => Some (coerce a)\n" ^
- (* TODO *)  "\t\t| None => None\n" ^
- (* TODO *)  "\tend.\n\n" ^
- (* TODO *)  "Definition list_coerce {A B : Type} `{Coercion A B} (a_list : seq A): seq B :=\n" ^
- (* TODO *)  "\t[seq (coerce a) | a <- a_list].\n\n" ^
- (* TODO *)  "Definition id_coerce {A : Type} (a : A) : A := a.\n\n" ^
- (* TODO *)  "Definition transitive_coerce {A B C : Type} `{Coercion A B} `{Coercion B C} (a : A): C :=\n" ^
- (* TODO *)	"\tcoerce (coerce a).\n\n" ^
- (* TODO *)  "Definition total_coerce {A B: Type} `{Coercion A (option B)} {_ : Inhabited B} (a : A): B :=\n" ^
- (* TODO *)	"\tthe (coerce a).\n\n" ^
- (* TODO *)  "Global Instance option_coercion (A B : Type) {_: Coercion A B}: Coercion (option A) (option B) := { coerce := option_coerce }.\n\n" ^
- (* TODO *)  "Global Instance list_coercion (A B : Type) {_: Coercion A B}: Coercion (seq A) (seq B) := { coerce := list_coerce }.\n\n" ^
- (* TODO *)  "Global Instance id_coercion (A : Type): Coercion A A := { coerce := id_coerce }.\n\n" ^
- (* TODO *)  "Global Instance transitive_coercion (A B C : Type) `{Coercion A B} `{Coercion B C}: Coercion A C := { coerce := transitive_coerce }.\n\n" ^
- (* TODO *)  "Global Instance total_coercion (A B : Type) `{Coercion A (option B)} {_ : Inhabited B}: Coercion A B := { coerce := total_coerce}.\n\n" ^
- (* TODO *)  "Notation \"| x |\" := (seq.size x) (at level 60).\n" ^
- (* TODO *)  "Notation \"!( x )\" := (the x) (at level 60).\n" ^
- (* TODO *)  "Notation \"x '[|' a '|]'\" := (lookup_total x a) (at level 10).\n" ^
- (* TODO *)  "Open Scope wasm_scope.\n" ^
- (* TODO *)  "Import ListNotations.\n" ^
- (* TODO *)  "Import RecordSetNotations.\n\n"
- *)
 
 let rec filter_def def = 
   match def.it with
@@ -997,14 +888,17 @@ let rec filter_def def =
   | RecD defs -> Some {def with it = RecD (List.filter_map filter_def defs) } 
   | _ -> Some def
 
+(* let is_partial_hint hint = hint.hintid.it = "partial"
 
-let is_tf_hint h = h.hintid.it = Middlend.Typefamilyremoval.type_family_hint_id
-
-let is_proj_hint h = h.hintid.it = Middlend.Uncaseremoval.uncase_proj_hint_id
-
+let register_hints def =
+  match def.it with
+  | HintD {it = DecH (id, hints); _} when List.exists is_partial_hint hints ->
+    register_partial id
+  | _ -> () *)
      
 let string_of_script theoryname (il : script) =
-  env_ref := Il.Env.env_of_script il;
+  env_ref := (* .il_env <- *) Il.Env.env_of_script il;
+  (*  List.iter register_hints il; *)
   let il' = Backend_rocq.Disamb.transform il in
   "theory " ^ theoryname ^ "\n" ^
   exported_string ^
