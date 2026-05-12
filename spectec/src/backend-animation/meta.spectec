@@ -26,6 +26,28 @@ def $val_infer(s, vec) = vt
 def $val_infer(s, ref) = rt
   -- if $ref_infer(s, ref) = rt
 
+def $top_of_heaptype(deftype*, heaptype) : heaptype
+def $top_of_heaptype(dt*, ht) = ANY
+  -- if ht <- ANY NONE EQ STRUCT ARRAY I31
+def $top_of_heaptype(dt*, ht) = FUNC
+  -- if ht <- FUNC NOFUNC
+def $top_of_heaptype(dt*, ht) = EXN
+  -- if ht <- EXN NOEXN
+def $top_of_heaptype(dt*, ht) = EXTERN
+  -- if ht <- EXTERN NOEXTERN
+def $top_of_heaptype(dt*, typeuse) = $top_of_typeuse(dt*, typeuse)
+
+def $top_of_typeuse(deftype*, typeuse) : heaptype
+def $top_of_typeuse(dt*, _IDX x) = $top_of_comptype(dt*, $expanddt(dt*[x]))
+def $top_of_typeuse(dt*, dt') = $top_of_comptype(dt*, $expanddt(dt'))
+
+def $top_of_comptype(deftype*, comptype) : heaptype
+def $top_of_comptype(dt*, STRUCT ft*) = $top_of_heaptype(dt*, STRUCT)
+def $top_of_comptype(dt*, ARRAY ft) = $top_of_heaptype(dt*, STRUCT)
+def $top_of_comptype(dt*, FUNC t_1 -> t_2) = $top_of_heaptype(dt*, FUNC)
+
+
+
 rule Comptype_sub/struct  hint(no_animate)
 
 rule Comptype_sub/struct_anim:
@@ -210,14 +232,14 @@ def $expr_ok(C, instr*, t*) = $check_block(C, instr*, eps -> t*)
 
 def $check_block(context, expr, instrtype) : bool
 def $check_block(C, instr*, t_1* ->_(x*) t_2*) = true
-  -- if $check_instrs(C, `| t_1*, instr*) = (stack, x'*)
+  -- if $check_instrs(C, instr*, `| t_1*) = (stack, x'*)
   -- if $pop(C, `| t_2*, stack) = ell? `| eps
 def $check_block(C, instr*, t_1* ->_(x*) t_2*) = false
   -- otherwise
 
-def $check_instrs(context, inferresulttype, instr*) : (inferresulttype, localidx*)
-def $check_instrs(C, stack, eps) = (stack, eps)
-def $check_instrs(C, stack, instr instr'*) = $check_instrs(C', stack', instr'*)
+def $check_instrs(context, instr*, inferresulttype) : (inferresulttype, localidx*)
+def $check_instrs(C, eps, stack) = (stack, eps)
+def $check_instrs(C, instr instr'*, stack) = $check_instrs(C', instr'*, stack')
   -- if stack_1 ->_(x_1*) stack_2 = $check_instr(C, instr, stack)
   -- (if C.LOCALS[x_1] = init t)*
   -- if C' = $with_locals(C, x_1*, (SET t)*)
@@ -320,7 +342,7 @@ rule Instr_ok_alg/try_table:
 rule Instr_ok_alg/ref.is_null:
   C |- REF.IS_NULL : `| (REF NULL ht) -> `| I32 -| stack
   -- if $peek_ref(0, stack) = REF nul? ht
-  -- Heaptype_ok: C |- ht : OK
+  ;; -- Heaptype_ok: C |- ht : OK
 
 rule Instr_ok_alg/ref.as_non_null:
   C |- REF.AS_NON_NULL : `| (REF NULL ht) -> `| (REF ht) -| stack
@@ -347,9 +369,6 @@ rule Instr_ok_alg/any.convert_extern:
   C |- ANY.CONVERT_EXTERN : `| (REF nul? EXTERN) -> `| (REF nul? ANY) -| stack
   -- if REF nul? ht = $peek_ref(0, stack)
 
-
-def $top_of_heaptype(deftype*, heaptype) : heaptype
-def $top_of_heaptype                       hint(builtin)
 
 
 ;; ********************************************************

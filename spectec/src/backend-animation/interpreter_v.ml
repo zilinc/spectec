@@ -1126,25 +1126,12 @@ and check_instr_ri = {
     | _ -> error no ("Wrong number/type of arguments to $check_instr_ri.")
 }
 
-and top_of_heaptype = {
-  name = "top_of_heaptype";
-  f =
-    function
-    | [ ctx; ht ] ->
-      let deftypes' = vl_to_list vl_to_deftype ctx in
-      let ht' = vl_to_heaptype ht in
-      let top' = RI.Match.top_of_heaptype deftypes' ht' in
-      vl_of_heaptype top' |> return
-    | _ -> error no ("Wrong number/type of arguments to $top_of_heaptype.")
-}
-
 
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
   externaddr_ok; ref_ok; reftype_sub; heaptype_sub;
-  top_of_heaptype
   ]
 
 and call_builtins fname args : value OptMonad.m =
