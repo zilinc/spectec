@@ -618,13 +618,14 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     | None ->
       (match H.find_anim_inv fid.it with
       | Some inv_fid ->  (* hint(animate_inverse $inv_f) *)
-        (inv_fid $> fid) |> E.return
-      | None ->
         if List.mem fid !H.invert_funcs |> not then (
-          warn at ("No inverse function declared for `" ^ fid.it ^ "`, so we'll create one: `inv_" ^ fid.it ^ "`.");
+          warn at ("No inverse function defined for `" ^ fid.it ^ "`. An inverse " ^ inv_fid ^ "` will be automatically derived.");
           H.add_invert_func fid  (* Inverse function to be auto-generated. *)
         );
-        E.return ("inv_" ^ fid.it $> fid)
+        (inv_fid $> fid) |> E.return
+      | None ->
+        E.throw (string_of_error at ("No inverse is defined for `" ^ fid.it ^ "` and automatic inversion is not enabled." ^
+                                     "Consider adding an \"inverse\" or \"animate_inverse\" hint."))
       )
     | Some hint ->  (* hint(inverse) *)
       (match hint.hintexp.it with
@@ -1732,25 +1733,22 @@ let invert_clause (cl: clause) : func_clause =
   (None, cl')
 
 let animate_inv_func envr fid inv_funcs : dl_def list =
-  let inv_fid = "inv_" ^ fid.it $> fid in
   let params, rt, cls = Il.Env.find_def !envr fid in
   let ps_init, { it = ExpP (_, rt'); _ } = Lib.List.split_last params in
   let params' = ps_init @ [ExpP ("_" $ rt.at, rt) $ rt.at] in
   let cls' = List.map invert_clause cls in
+  let inv_fid = (H.find_anim_inv fid.it |> Option.get) $> fid in
   let inv_func = (inv_fid, None, params', rt', cls', None) $ fid.at in
   let inv_func' = animate_func_def envr inv_func in
-  (* Remove from the "todo" list, and add an entry of inverse hint to the IL environement. *)
+  (* Remove from the "todo" list. *)
   H.rm_invert_func fid;
-  let inverse_hint = { hintid = "animate_inverse" $ fid.at; hintexp = El.Ast.CallE(inv_fid, []) $ fid.at } in
-  envr := Il.Env.add_hint !envr (DecH (fid, [inverse_hint]) $ fid.at);
   FuncDef inv_func' :: inv_funcs
 
 let animate_inv_funcs envr (dl: dl_def list) : dl_def list =
-  let inv_ids = !H.invert_funcs in
   let rec go env do_ acc =
-  match !H.invert_funcs with
-  | [] -> acc
-  | x :: xs -> let acc' = do_ env x acc in go env do_ acc'
+    match !H.invert_funcs with
+    | [] -> acc
+    | x :: xs -> let acc' = do_ env x acc in go env do_ acc'
   in
   let inv_funcs' = go envr animate_inv_func [] in
   dl @ inv_funcs'

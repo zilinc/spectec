@@ -170,7 +170,11 @@ module Hints = struct
   type t = { mutable no_animate_funcs: string list             (* Functions in the source that won't be animated. *)
            ; mutable no_animate_rules: (string * string) list  (* Rules from a relation that won't be animated. relid * ruleid *)
            ; mutable animate_funcs   : (mode list * mode) M.t  (* arguments * result *)
-           ; mutable animate_inv     : string M.t              (* Declares the name of the inverse function. *)
+           ; mutable animate_inv     : string M.t              (* Declares the name of the auto-derived inverse function.
+                                                                  It is possible that an inverse is declared in the hint, but
+                                                                  the function does not need to be inverted. In this case, there
+                                                                  will not be an entry in the [invert_funcs] list below.
+                                                                *)
            ; mutable animate_rels    : mode IM.t M.t           (* Mode declaration for relations. In the order of expressions in the CaseE *)
            ; mutable animate_manual : (string * mode IM.t) M.t  (* Name and mode of a relation or definition whose animated definition is going to be manually supplied. *)
            }
@@ -227,15 +231,15 @@ module Hints = struct
     | InfixE ({ it = CallE (fid, []); _ }, atom, mode) when atom.it = Xl.Atom.Colon -> let m = parse_mode mode in fid.it, m
     | _ -> error exp.at "hint parser" ("Ill-formed animate_manual hint: " ^ El.Print.string_of_exp exp)
 
-  let parse_fid : El.Ast.exp -> text = fun exp ->
+  let parse_opt_fid : text -> El.Ast.exp -> text = fun fid exp ->
     match exp.it with
     | CallE (fid', []) -> fid'.it
+    | SeqE [] -> "inv_" ^ fid
     | _ -> error exp.at "hint parser" ("Ill-formed animate_inv hint: " ^ El.Print.string_of_exp exp)
 
   (* A list of function ids that should be automatically inverted. There won't be definitions
-     of these functions in the source code. The inverse functions' names are auto-generated and
-     cannot be specified by the user.
-  *)
+     of these functions in the source code. The inverse functions' names can be looked up in the
+     animation_hints.animate_inv field above. Also see the comment there. *)
   let invert_funcs : id list ref = ref []  (* Def.func_def list *)
 
   let add_invert_func id = invert_funcs := id :: !invert_funcs
