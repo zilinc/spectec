@@ -1052,36 +1052,10 @@ and step_read_throw_ref_handler = {
     | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
 
-and ref_ok = {
-  name = "ref_ok";
-  f =
-    function
-    | [ store; ref; rt2 ] ->
-      let* rt1 = call_func "Ref_infer" [valA store; valA ref] in
-      let rt1' = vl_to_reftype rt1 in
-      let rt2' = vl_to_reftype rt2 in
-      RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $ref_ok.")
-}
-
-and reftype_sub = {
-  name = "reftype_sub";
-  f =
-    function
-    | [ ctx; rt1; rt2 ] ->
-      let ctx' = vl_to_context ctx in
-      let rt1' = vl_to_reftype rt1 in
-      let rt2' = vl_to_reftype rt2 in
-      RI.Match.match_reftype ctx'.types rt1' rt2' |> boolV |> return
-    | _ -> error no ("Wrong number/type of arguments to $reftype_sub.")
-}
-
-
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
   step_read_throw_ref_handler;
-  ref_ok; reftype_sub
   ]
 
 and call_builtins fname args : value OptMonad.m =

@@ -28,6 +28,10 @@ let string_of_occ occ : string =
     acc ^ k ^ " ↦ " ^ Occ.to_string v ^ "\n"
   ) occ ""
 
+let is_affine occ v : bool =
+  match Map.find_opt v occ with
+  | Some Occ.OmegaOcc -> false
+  | _                 -> true
 
 let inc_occ occ v : occ =
   Map.update v.it (Option.fold ~none:(Some Occ.LinOcc) ~some:(fun o -> Some (Occ.inc o))) occ

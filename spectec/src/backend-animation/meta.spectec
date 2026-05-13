@@ -234,7 +234,7 @@ def $module_ok(module) = moduletype
   -- Module_ok_alg: C |- module : moduletype
 
 syntax ellipses = `...
-syntax inferresulttype = ellipses? `| resulttype
+syntax inferresulttype = ellipses? resulttype
 syntax inferinstrtype = inferresulttype ->_(localidx*) inferresulttype
 
 relation Stack_sub: context |- resulttype <: resulttype
@@ -243,33 +243,33 @@ rule Stack_sub:
   -- (Resulttype_sub: C |- t_1 <: t_2)*
 
 def $push(context, inferresulttype, inferresulttype) : inferresulttype
-def $push(C, `| t_1*, ell? `| t_2*) = ell? `| t_2* t_1*
-def $push(C, `| t_1*, `| eps) = `| t_1*
-def $push(C, ell_1? `| t_1*, ell_2? `| eps) = (`... `| t_1*)
+def $push(C, t_1*, ellipses? t_2*) = ellipses? t_2* t_1*
+def $push(C, t_1*, (eps)) = t_1*
+def $push(C, `...? t_1*, `...? eps) = (`... t_1*)
   -- otherwise
 
 def $pop(context, inferresulttype, inferresulttype) : inferresulttype
-def $pop(C, `... `| t_1*, `... `| t_2*) = `... `| eps
+def $pop(C, `... t_1*, `... t_2*) = `... eps
   -- if n_1 = |t_1*|
   -- if n_2 = |t_2*|
   -- if n = $min(n_1, n_2)
   -- if n_3 = $(n_1 - n)
   -- if t_21^(n_2 - n) t_22* = t_2*
   -- Stack_sub: C |- BOT^n_3 t_22* <: t_1*
-def $pop(C, `| t_1*, `... `| t_2*) = `... `| t_21^(n_2 - n)
+def $pop(C, t_1*, `... t_2*) = `... t_21^(n_2 - n)
   -- if n_1 = |t_1*|
   -- if n_2 = |t_2*|
   -- if n = $min(n_1, n_2)
   -- if n_3 = $(n_1 - n)
   -- if t_21^(n_2 - n) t_22* = t_2*
   -- Stack_sub: C |- BOT^n_3 t_22* <: t_1*
-def $pop(C, `... `| t_1*, `| t_2*) = `| eps
+def $pop(C, `... t_1*, t_2*) = (eps)
   -- if n_1 = |t_1*|
   -- if n_2 = |t_2*|
   -- if n = $min(n_1, n_2)
   -- if t_21^(n_2 - n) t_22* = t_2*
   -- Stack_sub: C |- t_22* <: t_1*
-def $pop(C, `| t_1*, `| t_2*) = `| t_21^(n_2 - n)
+def $pop(C, t_1*, t_2*) = t_21^(n_2 - n)
   -- if n_1 = |t_1*|
   -- if n_2 = |t_2*|
   -- if n = $min(n_1, n_2)
@@ -277,13 +277,13 @@ def $pop(C, `| t_1*, `| t_2*) = `| t_21^(n_2 - n)
   -- Stack_sub: C |- t_22* <: t_1*
 
 def $peek(nat, inferresulttype) : valtype
-;; def $peek(i, ell? `| t*) = t'
+;; def $peek(i, `...? t*) = t'
 ;;   -- if t_1'* = t_1* ++ t'
 ;;   -- if t* = t_1'* ++ t_2^i
-def $peek(i, ell? `| t*) = t*[j:1][0]
+def $peek(i, `...? t*) = t*[j:1][0]
   -- if n = |t*|
   -- if j = $(n - i - 1) >= 0  ;; -- var j : int
-def $peek(i, ell? `| t*) = BOT
+def $peek(i, `...? t*) = BOT
   -- otherwise
 
 def $peek_ref(nat, inferresulttype) : reftype
@@ -297,8 +297,8 @@ def $expr_ok(C, instr*, t*) = $check_block(C, instr*, eps -> t*)
 
 def $check_block(context, expr, instrtype) : bool
 def $check_block(C, instr*, t_1* ->_(x*) t_2*) = true
-  -- if $check_instrs(C, instr*, `| t_1*) = (stack, x'*)
-  -- if $pop(C, `| t_2*, stack) = ell? `| eps
+  -- if $check_instrs(C, instr*, t_1*) = (stack, x'*)
+  -- if $pop(C, t_2*, stack) = `...? eps
 def $check_block(C, instr*, t_1* ->_(x*) t_2*) = false
   -- otherwise
 
@@ -311,7 +311,7 @@ def $check_instrs(C, instr instr'*, stack) = $check_instrs(C', instr'*, stack')
   -- if stack' = $push(C, stack_2, $pop(C, stack_1, stack))
 
 def $check_instr(context, instr, inferresulttype) : inferinstrtype
-def $check_instr(C, instr, stack) = `| t_1* ->_(x*) `| t_2*
+def $check_instr(C, instr, stack) = t_1* ->_(x*) t_2*
   -- Instr_ok: C |- instr : t_1* ->_(x*) t_2*
 def $check_instr(C, instr, stack) = ist
   -- Instr_ok_alg: C |- instr : ist -| stack
@@ -320,39 +320,39 @@ def $check_instr(C, instr, stack) = ist
 relation Instr_ok_alg: context |- instr : inferinstrtype -| inferresulttype
 
 rule Instr_ok_alg/unreachable:
-  C |- UNREACHABLE : (`... `| eps) -> (`... `| eps) -| stack
+  C |- UNREACHABLE : (`... eps) -> (`... eps) -| stack
 
 rule Instr_ok_alg/drop:
-  C |- DROP : `| $peek(0, stack) -> `| eps -| stack
+  C |- DROP : $peek(0, stack) -> (eps) -| stack
 
 rule Instr_ok_alg/select-impl:
-  C |- SELECT : `| t t I32 -> `| t -| stack
+  C |- SELECT : t t I32 -> t -| stack
   -- if t = $peek(1, stack)
   ;; -- if t <- numtype vectyp BOT
   -- if t = numtype \/ t = vectype \/ t = BOT
 
 rule Instr_ok_alg/block:
-  C |- BLOCK bt instr* : `| t_1* -> `| t_2* -| stack
+  C |- BLOCK bt instr* : t_1* -> t_2* -| stack
   -- Blocktype_ok: C |- bt : t_1* -> t_2*
   -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* -> t_2*
 
 rule Instr_ok_alg/loop:
-  C |- LOOP bt instr* : `| t_1* -> `| t_2* -| stack
+  C |- LOOP bt instr* : t_1* -> t_2* -| stack
   -- Blocktype_ok: C |- bt : t_1* -> t_2*
   -- Instrs_ok: {LABELS (t_1*)} ++ C |- instr* : t_1* -> t_2*
 
 rule Instr_ok_alg/if:
-  C |- IF bt instr_1* ELSE instr_2* : `| t_1* I32 -> `| t_2* -| stack
+  C |- IF bt instr_1* ELSE instr_2* : t_1* I32 -> t_2* -| stack
   -- Blocktype_ok: C |- bt : t_1* -> t_2*
   -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_1* : t_1* -> t_2*
   -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_2* : t_1* -> t_2*
 
 rule Instr_ok_alg/br:
-  C |- BR l : `... `| t* -> `... `| eps -| stack
+  C |- BR l : `... t* -> `... eps -| stack
   -- if C.LABELS[l] = t*
 
 rule Instr_ok_alg/br_table:
-  C |- BR_TABLE l* l' : `... `| t^n I32 -> `... `| eps -| stack
+  C |- BR_TABLE l* l' : `... t^n I32 -> `... eps -| stack
   -- if t'* = C.LABELS[l']
   -- if n = |t'*|
   -- (if t = $peek($(n-i), stack))^(i<n)
@@ -360,29 +360,29 @@ rule Instr_ok_alg/br_table:
   -- (Stack_sub: C |- t^n <: C.LABELS[l])*
 
 rule Instr_ok_alg/br_on_null:
-  C |- BR_ON_NULL l : `| t* (REF NULL ht) -> `| t* (REF ht) -| stack
+  C |- BR_ON_NULL l : t* (REF NULL ht) -> t* (REF ht) -| stack
   -- if REF nul? ht = $peek_ref(0, stack)
   -- if C.LABELS[l] = t*
-  -- Heaptype_ok: C |- ht : OK
+  ;; -- Heaptype_ok: C |- ht : OK
 
 rule Instr_ok_alg/return:
-  C |- RETURN : `... `| t* -> `... `| eps -| stack
+  C |- RETURN : `... t* -> `... eps -| stack
   -- if C.RETURN = (t*)
 
 rule Instr_ok_alg/return_call:
-  C |- RETURN_CALL x : `... `| t_1* -> `... `| eps -| stack
+  C |- RETURN_CALL x : `... t_1* -> `... eps -| stack
   -- Expand: C.FUNCS[x] ~~ FUNC t_1* -> t_2*
   -- if C.RETURN = (t'_2*)
   -- Resulttype_sub: C |- t_2* <: t'_2*
 
 rule Instr_ok_alg/return_call_ref:
-  C |- RETURN_CALL_REF (_IDX x) : `... `| t_1* (REF NULL (_IDX x)) -> `... `| eps -| stack
+  C |- RETURN_CALL_REF (_IDX x) : `... t_1* (REF NULL (_IDX x)) -> `... eps -| stack
   -- Expand: C.TYPES[x] ~~ FUNC t_1* -> t_2*
   -- if C.RETURN = (t'_2*)
   -- Resulttype_sub: C |- t_2* <: t'_2*
 
 rule Instr_ok_alg/return_call_indirect:
-  C |- RETURN_CALL_INDIRECT x (_IDX y) : `... `| t_1* at -> `... `| eps -| stack
+  C |- RETURN_CALL_INDIRECT x (_IDX y) : `... t_1* at -> `... eps -| stack
   -- if C.TABLES[x] = at lim rt
   -- Reftype_sub: C |- rt <: (REF NULL FUNC)
   ----
@@ -391,47 +391,47 @@ rule Instr_ok_alg/return_call_indirect:
   -- Resulttype_sub: C |- t_2* <: t'_2*
 
 rule Instr_ok_alg/throw:
-  C |- THROW x : `... `| t* -> `... `| eps -| stack
+  C |- THROW x : `... t* -> `... eps -| stack
   -- Expand: $as_deftype(C.TAGS[x]) ~~ FUNC t* -> eps  ;; eps or t'*?
 
 rule Instr_ok_alg/throw_ref:
-  C |- THROW_REF : `... `| (REF NULL EXN) -> `... `| eps -| stack
+  C |- THROW_REF : `... (REF NULL EXN) -> `... eps -| stack
 
 rule Instr_ok_alg/try_table:
-  C |- TRY_TABLE bt catch* instr* : `| t_1* -> `| t_2* -| stack
+  C |- TRY_TABLE bt catch* instr* : t_1* -> t_2* -| stack
   -- Blocktype_ok: C |- bt : t_1* -> t_2*
   -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* -> t_2*
   -- (Catch_ok: C |- catch : OK)*
   ;; Blocktype_ok doesn't produce x*, which should be used in the return type as well.
 
 rule Instr_ok_alg/ref.is_null:
-  C |- REF.IS_NULL : `| (REF NULL ht) -> `| I32 -| stack
+  C |- REF.IS_NULL : (REF NULL ht) -> I32 -| stack
   -- if $peek_ref(0, stack) = REF nul? ht
   ;; -- Heaptype_ok: C |- ht : OK
 
 rule Instr_ok_alg/ref.as_non_null:
-  C |- REF.AS_NON_NULL : `| (REF NULL ht) -> `| (REF ht) -| stack
+  C |- REF.AS_NON_NULL : (REF NULL ht) -> (REF ht) -| stack
   -- if $peek_ref(0, stack) = REF nul? ht
-  -- Heaptype_ok: C |- ht : OK
+  ;; -- Heaptype_ok: C |- ht : OK
 
 rule Instr_ok_alg/ref.test:
-  C |- REF.TEST rt : `| (REF NULL ht') -> `| I32 -| stack
+  C |- REF.TEST rt : (REF NULL ht') -> I32 -| stack
   -- if REF nul? ht = rt
   -- Reftype_ok: C |- rt : OK
   -- if ht' = $top_of_heaptype(C.TYPES, ht)
 
 rule Instr_ok_alg/ref.cast:
-  C |- REF.CAST rt : `| (REF NULL ht') -> `| (REF nul? ht) -| stack
+  C |- REF.CAST rt : (REF NULL ht') -> (REF nul? ht) -| stack
   -- if REF nul? ht = rt
   -- Reftype_ok: C |- rt : OK
   -- if ht' = $top_of_heaptype(C.TYPES, ht)
 
 rule Instr_ok_alg/extern.convert_any:
-  C |- EXTERN.CONVERT_ANY : `| (REF nul? ANY) -> `| (REF nul? EXTERN) -| stack
+  C |- EXTERN.CONVERT_ANY : (REF nul? ANY) -> (REF nul? EXTERN) -| stack
   -- if REF nul? ht = $peek_ref(0, stack)
 
 rule Instr_ok_alg/any.convert_extern:
-  C |- ANY.CONVERT_EXTERN : `| (REF nul? EXTERN) -> `| (REF nul? ANY) -| stack
+  C |- ANY.CONVERT_EXTERN : (REF nul? EXTERN) -> (REF nul? ANY) -| stack
   -- if REF nul? ht = $peek_ref(0, stack)
 
 
@@ -448,7 +448,7 @@ def $is_val(instr) : bool
 def $is_val(val) = true
 def $is_val(instr) = false  -- otherwise
 
-def $find_first_instr'(instr*, instr*) : (instr*, instr?, instr*)
+def $find_first_instr'(instr*, instr*) : (val*, instr?, instr*)
 def $find_first_instr'(val*, []) = (val*, eps, eps)
 def $find_first_instr'(val*, instr instr'*) = (val*, instr, instr'*)
   -- if $is_val(instr) = false
@@ -457,7 +457,7 @@ def $find_first_instr'(val*, instr instr'*) = (val_1*, instr_1?, instr'_1*)
   ;; -- otherwise
   -- if $find_first_instr'(val* instr, instr'*) = (val_1*, instr_1?, instr'_1*)
 
-def $find_first_instr(instr*) : (instr*, instr?, instr*)
+def $find_first_instr(instr*) : (val*, instr?, instr*)
 def $find_first_instr(instr*) = $find_first_instr'(eps, instr*)
   ;; -- if instr* =/= eps
 
@@ -472,7 +472,7 @@ def $use_step_read          hint(builtin)
 def $use_step_ctxt          hint(builtin)
 
 
-syntax stepresult = STEP config | STUCK | STACK_OVERFLOW
+syntax stepresult = STEP config | STACK_OVERFLOW
 
 
 ;; According to the `instr`, call the right $Step_.../... function
@@ -506,8 +506,6 @@ def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z'; val* instr_1*)
   -- if $step_ctxt((z; instr_0), stackcount) = STEP (z'; instr_1*)
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STACK_OVERFLOW
   -- if $step_ctxt((z; instr_0), stackcount) = STACK_OVERFLOW
-def $dispatch_reduce(z, val*, instr_0, stackcount) = STUCK
-  -- otherwise
 
 
 def $Step_read_throw_ref_handler(config) : instr*
@@ -586,8 +584,6 @@ def $reduce((z; instr+), stackcount) = STEP (z'; instr_2* instr_1'*)
 def $reduce((z; instr+), stackcount) = STACK_OVERFLOW
   -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
   -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STACK_OVERFLOW
-def $reduce((s; f; instr*), stackcount) = STUCK
-  -- otherwise
 
 
 def $step(config, stackcount) = config'
@@ -619,23 +615,17 @@ relation Heaptype_ok      hint(animate %1 %2 -> bool)
 relation Reftype_ok       hint(animate %1 %2 -> bool)
 relation Valtype_ok       hint(animate %1 %2 -> bool)
 relation Typeuse_ok       hint(animate %1 %2 -> bool)
-
 rule Typeuse_ok/deftype   hint(no_animate)
-
 relation Comptype_ok      hint(animate %1 %2    -> bool)
 relation Subtype_ok       hint(animate %1 %2 %3 -> bool)
 relation Rectype_ok       hint(animate %1 %2 %3 -> bool)  ;; hint(animate_inverse "Rectype_infer")
-
-def $reftype_sub(store, reftype, reftype) : bool
-def $reftype_sub hint(builtin)
 
 relation Numtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Vectype_sub      hint(animate %1 %2 %3 -> bool)
 relation Heaptype_sub     hint(animate %1 %2 %3 -> bool)
 rule Heaptype_sub/trans   hint(no_animate)
 rule Heaptype_sub/rec     hint(no_animate)
-relation Reftype_sub      hint(animate_manual "reftype_sub": %1 %2 %3 -> bool)
-;; relation Reftype_sub      hint(animate %1 %2 %3 -> bool)
+relation Reftype_sub      hint(animate %1 %2 %3 -> bool)
 relation Valtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Resulttype_sub   hint(animate %1 %2 %3 -> bool)
 relation Packtype_sub     hint(animate %1 %2 %3 -> bool)
@@ -653,14 +643,8 @@ rule Deftype_sub/super    hint(no_animate)
 relation Exists_heaptype_sub    hint(animate %1 %2 %3 -> bool)
 relation Externtype_sub   hint(animate %1 %2 %3 -> bool)
 
-
-def $ref_ok(store, ref) : reftype
-def $ref_ok hint(builtin)
-
-
 relation Num_ok           hint(animate %1 %2 -> %3)
 relation Vec_ok           hint(animate %1 %2 -> %3)
-;; relation Ref_ok           hint(animate_manual "ref_ok": %1 %2 %3 -> bool)
 relation Ref_ok           hint(animate %1 %2 %3 -> bool)
 rule Ref_ok/sub           hint(no_animate)
 relation Ref_infer        hint(animate %1 %2 -> %3)
