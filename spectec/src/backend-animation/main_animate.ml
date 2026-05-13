@@ -18,7 +18,7 @@ let build_animation_hints il : unit =
     | DecH (fid, hints) ->
       List.iter (fun hint ->
         (match hint.hintid.it with
-        | "animate" 
+        | "animate"
         | "animate_manual" -> print_endline ("Warning: hint(animate) and hint(animate_manual) on function " ^ fid.it ^ " are not yet implemented."); ()
         | "animate_inverse" -> H.add_anim_inv fid.it (H.parse_fid hint.hintexp)
         | "no_animate"      -> H.add_no_anim_func fid.it

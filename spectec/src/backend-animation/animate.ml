@@ -517,8 +517,8 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
     if is_anim_rel || is_anim_as_func then
       let id', mode_map =
         (match is_anim_rel, is_anim_as_func with
-        | true , false -> id.it, H.find_anim_rel id.it
-        | false, true  -> H.find_anim_manual id.it
+        | true , false -> id.it, H.find_anim_rel id.it |> Option.get
+        | false, true  -> H.find_anim_manual id.it |> Option.get
         | true , true  -> error at ("Relation " ^ id.it ^ " is marked for both manual and automatic automation. Choose one.")
         | _ -> assert false
         ) in
@@ -616,13 +616,15 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let oinv_fid = find_func_hint !envr fid.it "inverse" in
     let* inv_fid = match oinv_fid with
     | None ->
-      (match H.is_anim_inv fid.it with
-      | true ->  (* hint(animate_inverse $inv_f) *)
-        (H.find_anim_inv fid.it $> fid) |> E.return
-      | false ->
+      (match H.find_anim_inv fid.it with
+      | Some inv_fid ->  (* hint(animate_inverse $inv_f) *)
+        (inv_fid $> fid) |> E.return
+      | None ->
+        if List.mem fid !H.invert_funcs |> not then (
           warn at ("No inverse function declared for `" ^ fid.it ^ "`, so we'll create one: `inv_" ^ fid.it ^ "`.");
-          H.add_invert_func fid;  (* Inverse function to be auto-generated. *)
-          E.return ("inv_" ^ fid.it $> fid)
+          H.add_invert_func fid  (* Inverse function to be auto-generated. *)
+        );
+        E.return ("inv_" ^ fid.it $> fid)
       )
     | Some hint ->  (* hint(inverse) *)
       (match hint.hintexp.it with

@@ -46,8 +46,7 @@ let error at msg = Util.Error.error at "IL -> DL" msg
 
 let il2dl_rule_clause rel_id rule : func_clause =
   let RuleD (id, binds, _, exp, prems) = rule.it in
-  assert (H.is_anim_rel rel_id.it);
-  let mode_map = H.find_anim_rel rel_id.it in
+  let mode_map = H.find_anim_rel rel_id.it |> Option.get in
   let es = match exp.it with
            | TupE es -> es
            | _ -> [exp]
@@ -73,8 +72,7 @@ let il2dl_rule_clause rel_id rule : func_clause =
 let il2dl_rule_def rule_name rel_id typ rules at : func_def =
   let osubid = if String.equal rule_name "" then None else Some (rule_name $ rel_id.at) in
   let func_clauses = List.map (il2dl_rule_clause rel_id) rules in
-  assert (H.is_anim_rel rel_id.it);
-  let mode_map = H.find_anim_rel rel_id.it in
+  let mode_map = H.find_anim_rel rel_id.it |> Option.get in
   let ts = match typ.it with
            | TupT ts -> ts
            | _ -> [("_" $ typ.at, typ)]

@@ -200,10 +200,10 @@ module Hints = struct
   let is_anim_rel     rid             = M.mem rid animation_hints.animate_rels
   let is_anim_manual  rid             = M.mem rid animation_hints.animate_manual
 
-  let find_anim_func    fid = M.find fid animation_hints.animate_funcs
-  let find_anim_inv     fid = M.find fid animation_hints.animate_inv
-  let find_anim_rel     rid = M.find rid animation_hints.animate_rels
-  let find_anim_manual  rid = M.find rid animation_hints.animate_manual
+  let find_anim_func    fid = M.find_opt fid animation_hints.animate_funcs
+  let find_anim_inv     fid = M.find_opt fid animation_hints.animate_inv
+  let find_anim_rel     rid = M.find_opt rid animation_hints.animate_rels
+  let find_anim_manual  rid = M.find_opt rid animation_hints.animate_manual
 
   type side = L | R
 
