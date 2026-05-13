@@ -656,7 +656,7 @@ relation Instrtype_ok     hint(animate %1 %2 -> bool)
 relation Instr_const      hint(animate %1 %2 %3 -> bool)
 relation Instr_ok         hint(animate %1 %2 -> %3)
 relation Catch_ok         hint(animate %1 %2 -> bool)
-relation Instrs_ok        hint(animate_manual "check_block": %1 %2 %3 -> bool)
+relation Instrs_ok        hint(animate_manual $check_block: %1 %2 %3 -> bool)
 
 relation Expand_use       hint(animate %1 %2 -> %3)
 
@@ -673,7 +673,7 @@ relation Tabletype_ok     hint(animate %1 %2 -> bool)
 relation Defaultable      hint(animate %1 -> bool)
 relation Nondefaultable   hint(animate %1 -> bool)
 relation Blocktype_ok     hint(animate %1 %2 -> %3)
-relation Expr_ok          hint(animate_manual "expr_ok": %1 %2 %3 -> bool)
+relation Expr_ok          hint(animate_manual $expr_ok: %1 %2 %3 -> bool)
 relation Expr_const       hint(animate %1 %2 %3 -> bool)
 relation Expr_ok_const    hint(animate %1 %2 %3 -> bool)
 relation Datamode_ok      hint(animate %1 %2 %3 -> bool)  ;; %3 is a singleton type
@@ -727,7 +727,7 @@ relation Instr_ok_alg               hint(animate %1 %2 %4 -> %3)
 relation Externaddr_ok              hint(animate %1 %2 %3 -> bool)
 rule Externaddr_ok/sub              hint(no_animate)
 relation Externaddr_infer           hint(animate %1 %2 -> %3)
-relation Module_ok                  hint(animate_manual "module_ok": %1 -> %2)
+relation Module_ok                  hint(animate_manual $module_ok: %1 -> %2)
 relation Module_ok_alg              hint(animate %1 %2 -> %3)
 
 
