@@ -290,7 +290,7 @@ let () =
       enable_pass ElseSimp
     | Isabelle -> 
       enable_pass Sideconditions;
-      enable_pass Totalize;
+      (*      enable_pass Totalize; *)
       enable_pass Else;
       enable_pass TypeFamilyRemoval;
       enable_pass Undep;
