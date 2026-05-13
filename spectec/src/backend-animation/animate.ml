@@ -617,19 +617,14 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* inv_fid = match oinv_fid with
     | None ->
       (match H.is_anim_inv fid.it with
-      | true ->
-        if List.mem fid !H.invert_funcs then
-          E.return ("inv_" ^ fid.it $> fid)
-        else (
-          warn at ("No inverse function declared for `" ^ fid.it ^ "`, so we'll create one: `inv_" ^ fid.it ^ "`.");
-          H.add_invert_func fid;
-          E.return ("inv_" ^ fid.it $> fid)
-        )
+      | true ->  (* hint(animate_inverse $inv_f) *)
+        (H.find_anim_inv fid.it $> fid) |> E.return
       | false ->
-        E.throw (string_of_error at ("No inverse function declared for `" ^ fid.it ^
-                                     "`; consider adding a hint(animate_inverse)."))
+          warn at ("No inverse function declared for `" ^ fid.it ^ "`, so we'll create one: `inv_" ^ fid.it ^ "`.");
+          H.add_invert_func fid;  (* Inverse function to be auto-generated. *)
+          E.return ("inv_" ^ fid.it $> fid)
       )
-    | Some hint ->
+    | Some hint ->  (* hint(inverse) *)
       (match hint.hintexp.it with
       | CallE (fid, []) -> E.return fid
       | _ -> E.throw (string_of_error at ("Ill-formed inverse hint for function `" ^ fid.it ^ "`, so can't invert it."))
@@ -1744,7 +1739,7 @@ let animate_inv_func envr fid inv_funcs : dl_def list =
   let inv_func' = animate_func_def envr inv_func in
   (* Remove from the "todo" list, and add an entry of inverse hint to the IL environement. *)
   H.rm_invert_func fid;
-  let inverse_hint = { hintid = "animate_inv" $ fid.at; hintexp = El.Ast.CallE(inv_fid, []) $ fid.at } in
+  let inverse_hint = { hintid = "animate_inverse" $ fid.at; hintexp = El.Ast.CallE(inv_fid, []) $ fid.at } in
   envr := Il.Env.add_hint !envr (DecH (fid, [inverse_hint]) $ fid.at);
   FuncDef inv_func' :: inv_funcs
 

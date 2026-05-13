@@ -618,7 +618,7 @@ relation Typeuse_ok       hint(animate %1 %2 -> bool)
 rule Typeuse_ok/deftype   hint(no_animate)
 relation Comptype_ok      hint(animate %1 %2    -> bool)
 relation Subtype_ok       hint(animate %1 %2 %3 -> bool)
-relation Rectype_ok       hint(animate %1 %2 %3 -> bool)  ;; hint(animate_inverse "Rectype_infer")
+relation Rectype_ok       hint(animate %1 %2 %3 -> bool)  ;; hint(animate_inverse $Rectype_infer)
 
 relation Numtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Vectype_sub      hint(animate %1 %2 %3 -> bool)
