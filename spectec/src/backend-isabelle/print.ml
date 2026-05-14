@@ -232,8 +232,8 @@ let is_atomid a =
   | _ -> false 
 
 let render_id id = 
-  let id = if id.[String.length id - 1] = '_' then id ^ "closed" else id in
-  let id = if id.[0] = '_' then "started" ^ id else id in
+  let id = if id.[String.length id - 1] = '_' then id ^ "underscore" else id in
+  let id = if id.[0] = '_' then "underscore" ^ id else id in
   if StringSet.mem id reserved_ids then "res_" ^ id else id
 
 let render_atom ?(in_mixop = false) a =
@@ -823,8 +823,8 @@ let string_of_def def =
      else error def.at "axiomatization defined mutually recursively with something that is not an axiomatization"
   | Ifun :: kwds, _ ->
      if List.for_all (function Ifun -> true | _ -> false) kwds
-     then start ^ "fun " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\n"
-  (* then start ^ "function (sequential) " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\tby pat_completeness auto\n\n" *) 
+                     (*     then start ^ "fun " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\n" *)
+     then start ^ "function (sequential) " ^ String.concat "\nand " hdrs ^ " where\n\t\t  " ^ String.concat "\n\t\t| " clauses ^ "\n\tby pat_completeness auto\n\n" 
      else error def.at "function defined mutually recursively with something that is not a function"
   | Iind :: kwds, _ ->
      if List.for_all (function Iind -> true | _ -> false) kwds
