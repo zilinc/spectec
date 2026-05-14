@@ -409,7 +409,7 @@ let rec transform_def (datatypes : datatypes) rec_names def =
                                     count_cases datatypes paramtyp constructor_strings
                                  | _ -> 1) params constructor_strings
                              |> List.fold_left ( * ) 1 in
-      if estimate_of_size <= limit then datatypes, [def] else
+     if estimate_of_size <= limit then datatypes, [def] else
       let pattern_match_depths = inspect_clause_depth params clauses in
       let casei, depth = find_deepest pattern_match_depths in
       if depth = 0 then
