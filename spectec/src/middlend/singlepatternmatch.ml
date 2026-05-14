@@ -222,8 +222,13 @@ let is_typ_arg x =
   | TypA _ -> true
   | _ -> false
 let has_prems c = 
+  let only_otherwise prems =
+    match prems with
+    | [{it = ElsePr; _}] -> true
+    | _ -> false
+  in
   match c.it with
-  | DefD (_, _, _, prems) -> prems <> []
+  | DefD (_, _, _, prems) -> prems <> [] && not (only_otherwise prems)
 
 let transform_case_tup e = 
   match e.it with
@@ -404,7 +409,7 @@ let rec transform_def (datatypes : datatypes) rec_names def =
                                     count_cases datatypes paramtyp constructor_strings
                                  | _ -> 1) params constructor_strings
                              |> List.fold_left ( * ) 1 in
-     if estimate_of_size <= limit then datatypes, [def] else
+      if estimate_of_size <= limit then datatypes, [def] else
       let pattern_match_depths = inspect_clause_depth params clauses in
       let casei, depth = find_deepest pattern_match_depths in
       if depth = 0 then

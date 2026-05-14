@@ -296,7 +296,7 @@ let () =
       enable_pass PatSimp
     | Isabelle -> 
       enable_pass Sideconditions;
-      enable_pass Totalize; 
+      enable_pass Totalize;  
       enable_pass Else;
       enable_pass TypeFamilyRemoval;
       enable_pass Undep;
@@ -308,8 +308,9 @@ let () =
       enable_pass DefToRel;
       enable_pass Ite;
       enable_pass ElseSimp;
+      enable_pass PatSimp;
       enable_pass DatatypeDiet;
-      enable_pass SinglePatternMatch
+      enable_pass SinglePatternMatch 
     | _ when !print_al || !print_al_o <> "" ->
       enable_pass Sideconditions;
     | _ -> ()

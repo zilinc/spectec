@@ -345,7 +345,7 @@ and render_type exp_type typids typ =
   | NumT nt -> render_numtyp nt
   | TextT -> "string"
   | TupT [] -> "unit"
-  | TupT typs -> String.concat " * " (List.map (fun (_, t) -> rt_func t) typs)
+  | TupT typs -> parens (String.concat " * " (List.map (fun (_, t) -> rt_func t) typs))
   | IterT (t, Opt) -> parens (rt_func t ^ " option")
   | IterT (t, _) -> parens (rt_func t ^ " list")
 
@@ -364,12 +364,12 @@ and render_exp exp_type typids exp =
   | CmpE (cmpop, _, e1, e2) -> parens (r_func e1 ^ render_cmpop cmpop ^ r_func e2)
   | TupE [] -> "()"
   | TupE exps -> parens (String.concat ", " (List.map r_func exps))
-  | ProjE (e, i) -> 
-    let typs = transform_case_typ e.note in 
-    let rec make_proj_chain idx len e = 
+  | ProjE (e, i) ->
+     let typs = transform_case_typ e.note in
+     let rec make_proj_chain idx len e = 
       match idx, len with
       | 0, 0 -> r_func e
-      | i, n when i <= n -> parens ("snd " ^ r_func e)
+      | i, n when i >= n -> parens ("snd " ^ r_func e)
       | _ -> parens ("fst " ^ (make_proj_chain idx (len - 1) e))
     in
     begin match typs with
@@ -585,7 +585,7 @@ let rec render_prem typids prem =
   | RulePr (id, args, _m, exp) -> parens (render_id id.it ^ string_of_list_prefix " " " " (render_arg REL typids) args ^ 
     string_of_list_prefix " " " " (render_exp REL typids) (transform_case_tup exp))
   | NegPr p -> parens ("~" ^ r_func p)
-  | ElsePr -> "True " ^ comment_parens ("Unsupported premise: otherwise") (* Will be removed by an else pass *)
+  | ElsePr -> "True" (* ^ comment_parens ("Unsupported premise: otherwise") *) (* Will be removed by an else pass *)
   | IterPr (p, (_, [])) -> r_func p
 
   | IterPr (p, (ListN (_, Some i), ps)) ->
@@ -735,8 +735,13 @@ let render_global_declaration id typ exp =
   id ^ " :: " ^ quotes (render_type RHS StringSet.empty typ) ^ " where\n\t" ^ quotes (id ^ " = " ^ render_exp RHS StringSet.empty exp)
 
 let has_prems c = 
+  let only_otherwise prems =
+    match prems with
+    | [{it = ElsePr; _}] -> true
+    | _ -> false
+  in
   match c.it with
-  | DefD (_, _, _, prems) -> prems <> []
+  | DefD (_, _, _, prems) -> prems <> [] && not (only_otherwise prems)
 
 
 let is_axiom def =
