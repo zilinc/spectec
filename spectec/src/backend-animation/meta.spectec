@@ -331,20 +331,20 @@ rule Instr_ok_alg/select-impl:
   -- if t = numtype \/ t = vectype \/ t = BOT
 
 rule Instr_ok_alg/block:
-  C |- BLOCK bt instr* : t_1* -> t_2* -| stack
-  -- Blocktype_ok: C |- bt : t_1* -> t_2*
-  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* -> t_2*
+  C |- BLOCK bt instr* : t_1* ->_(x*) t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* ->_(x*) t_2*
 
 rule Instr_ok_alg/loop:
-  C |- LOOP bt instr* : t_1* -> t_2* -| stack
-  -- Blocktype_ok: C |- bt : t_1* -> t_2*
-  -- Instrs_ok: {LABELS (t_1*)} ++ C |- instr* : t_1* -> t_2*
+  C |- LOOP bt instr* : t_1* ->_(x*) t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_1*)} ++ C |- instr* : t_1* ->_(x*) t_2*
 
 rule Instr_ok_alg/if:
-  C |- IF bt instr_1* ELSE instr_2* : t_1* I32 -> t_2* -| stack
-  -- Blocktype_ok: C |- bt : t_1* -> t_2*
-  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_1* : t_1* -> t_2*
-  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_2* : t_1* -> t_2*
+  C |- IF bt instr_1* ELSE instr_2* : t_1* I32 ->_(x*) t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_1* : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_2* : t_1* ->_(x*) t_2*
 
 rule Instr_ok_alg/br:
   C |- BR l : `... t* -> `... eps -| stack
@@ -397,11 +397,10 @@ rule Instr_ok_alg/throw_ref:
   C |- THROW_REF : `... (REF NULL EXN) -> `... eps -| stack
 
 rule Instr_ok_alg/try_table:
-  C |- TRY_TABLE bt catch* instr* : t_1* -> t_2* -| stack
-  -- Blocktype_ok: C |- bt : t_1* -> t_2*
-  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* -> t_2*
+  C |- TRY_TABLE bt catch* instr* : t_1* ->_(x*) t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* ->_(x*) t_2*
   -- (Catch_ok: C |- catch : OK)*
-  ;; Blocktype_ok doesn't produce x*, which should be used in the return type as well.
 
 rule Instr_ok_alg/ref.is_null:
   C |- REF.IS_NULL : (REF NULL ht) -> I32 -| stack
