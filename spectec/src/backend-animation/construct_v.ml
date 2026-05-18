@@ -926,24 +926,6 @@ let vl_of_module (module_: RI.Ast.module_) =
   in
   caseV [["MODULE"];[];[];[];[];[];[];[];[];[];[];[]] es
 
-let vl_of_opt_ellipses (ell : RI.Valid.ellipses) =
-  match ell with
-  | Ellipses   -> nullary "..." |> some
-  | NoEllipses -> none
-
-let vl_of_infer_resulttype (infer_rt : RI.Valid.infer_resulttype) =
-  let oell, resulttype = infer_rt in
-  let oell' = vl_of_opt_ellipses oell in
-  let resulttype' = vl_of_resulttype resulttype in
-  caseV [[];["|"];[]] [oell'; resulttype']
-
-let vl_of_infer_instrtype (infer_it : RI.Valid.infer_instrtype) =
-  let RI.Valid.({ins; outs}, xs) = infer_it in
-  let t1' = vl_of_infer_resulttype ins  in
-  let t2' = vl_of_infer_resulttype outs in
-  let xs' = vl_of_list vl_of_idx xs in
-  caseV [[];["->_"];[];[]] [t1'; xs'; t2']
-
 
 (* Destruct *)
 
@@ -2098,54 +2080,3 @@ and vl_to_value v : RI.Value.value =
   | [["REF.NULL_ADDR"]], _ -> RI.Value.Ref (vl_to_ref v)
   | [[ref_con];[]]     , _ when String.starts_with ~prefix:"REF." ref_con -> RI.Value.Ref (vl_to_ref v)
   | _ -> error_value "val" v
-
-and vl_to_opt_ellipses ov : RI.Valid.ellipses =
-  match ov with
-  | OptV (Some v) ->
-    (match match_caseV "ellipses" v with
-    | [["..."]], [] -> RI.Valid.Ellipses
-    | _ -> error_value "ellipses" v
-    )
-  | OptV None     -> RI.Valid.NoEllipses
-  | _ -> error_value "ellipses?" ov
-
-and vl_to_infer_resulttype v : RI.Valid.infer_resulttype =
-  match match_caseV "inferresulttype" v with
-  | [[];["|"];[]], [oell; resulttype] -> vl_to_opt_ellipses oell, vl_to_resulttype resulttype
-  | _ -> error_value "inferresulttype" v
-
-and vl_to_context v : RI.Valid.context =
-  match v with
-  | StrV r ->
-    let deftypest   = Record.find "TYPES"   r in
-    let subtypes    = Record.find "RECS"    r in
-    let tagtypes    = Record.find "TAGS"    r in
-    let globaltypes = Record.find "GLOBALS" r in
-    let memtypes    = Record.find "MEMS"    r in
-    let tabletypes  = Record.find "TABLES"  r in
-    let deftypesf   = Record.find "FUNCS"   r in
-    let datatypes   = Record.find "DATAS"   r in
-    let elemtypes   = Record.find "ELEMS"   r in
-    let localtypes  = Record.find "LOCALS"  r in
-    let resulttypes = Record.find "LABELS"  r in
-    let resulttypeo = Record.find "RETURN"  r in
-    let funcidxs    = Record.find "REFS"    r in
-    {
-      types    = vl_to_list vl_to_deftype    deftypest  ;
-      tags     = vl_to_list vl_to_tagtype    tagtypes   ;
-      globals  = vl_to_list vl_to_globaltype globaltypes;
-      memories = vl_to_list vl_to_memorytype memtypes   ;
-      tables   = vl_to_list vl_to_tabletype  tabletypes ;
-      funcs    = vl_to_list vl_to_deftype    deftypesf  ;
-      datas    = vl_to_list (fun _ -> ())    datatypes  ;
-      elems    = vl_to_list vl_to_reftype    elemtypes  ;
-      locals   = vl_to_list vl_to_localtype  localtypes ;
-      labels   = vl_to_list vl_to_resulttype resulttypes;
-      results  = (match resulttypeo with
-                 | OptV None -> []
-                 | OptV (Some resulttype) -> vl_to_resulttype resulttype
-                 | _ -> error_value "resulttype?" resulttypeo
-                 );
-      refs     = RI.Free.funcs (vl_to_list vl_to_uN_32 funcidxs |> RI.Free.Set.of_list);
-    }
-  | _ -> error_value "context" v
