@@ -84,7 +84,7 @@ let new_interpreter_args = ref None
 let new_prose_ofile = ref None
 let vl = ref false
 let animate_inline = ref false
-
+let repl_main = ref None
 
 let generate_ocaml = ref None
 
@@ -215,6 +215,7 @@ let argspec = Arg.align (
   "--inline", Arg.Unit (fun () -> animate_inline := true), " Enable inlining after animation";
   "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), " New meta-interpreter";
   "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), " New meta-interpreter VL";
+  "--repl", Arg.String (fun main -> target := Animate; repl_main := Some main), " Run REPL by specifying the main function";
   "--new-prose-v", Arg.String (fun ofile -> target := Animate; new_prose_ofile := Some ofile; vl := true), " New prose generation";
   "-ll-ani", Arg.String (fun s -> Backend_animation.Interpreter_v.(verbose := s :: !verbose)), "Logging switches for IL meta-interpreter";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
@@ -421,6 +422,12 @@ let () =
         else
           print_endline ("Not yet implemented due to merge.")
           (* Backend_animation.Main_interpret.run env dl args; *)
+      | None -> ()
+      );
+      (match !repl_main with
+      | Some main ->
+        log ("Running REPL on `" ^ main ^ "`...");
+        Backend_animation.Main_repl.run env dl main
       | None -> ()
       );
       (match !new_prose_ofile with

@@ -34,6 +34,7 @@
     main_runner_v
     main_prose_v
     prose_v
+    main_repl
   )
 )
 
