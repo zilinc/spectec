@@ -25,26 +25,30 @@ let is_unary_variantT : deftyp -> bool = fun deft ->
   | VariantT [_] -> true
   | _            -> false
 
+let is_list_typ env t : bool =
+  match (reduce_typ env t).it with
+  | IterT (_, (List | List1 | ListN _)) -> true
+  | _ -> false
+
 
 (* Destruct *)
-
 
 let il_to_nat e : Z.t =
   match e.it with
   | NumE (`Nat n) -> n
   | _ -> error e.at ("Il expression not a nat: " ^ string_of_exp e)
 
-let as_iter_typ env t : typ =
+let as_list_typ env t : typ =
   match (reduce_typ env t).it with
   | IterT (t', (List | List1 | ListN _)) -> t'
-  | _ -> error t.at ("Input type is not an iterated type: " ^ string_of_typ t)
+  | _ -> error t.at ("Input type is not an list type: " ^ string_of_typ t)
 
 let as_opt_typ env t : typ =
   match (reduce_typ env t).it with
   | IterT (t', Opt) -> t'
   | _ -> error t.at ("Input type is not an option type: " ^ string_of_typ t)
 
-let as_iter_typ' iter env t : typ =
+let as_iter_typ iter env t : typ =
   match (reduce_typ env t).it with
   | IterT (t1, iter') when Il.Eq.eq_iter iter iter' -> t1
   | _ -> error t.at ("Input type is not an iterated " ^ string_of_iter iter ^ " type: " ^ string_of_typ t)
@@ -191,7 +195,10 @@ and optE' ?(at = no) oe : exp = match oe with
   | Some e -> let t = iterT (e.note) in optE t oe
 and strE ?(at = no) ~note r = StrE r |> mk_expr at note
 and dotE ?(at = no) ~note e atom = DotE (e, atom) |> mk_expr at note
+(* [subE] is for subtyping, not subtraction, which is [subtrE] *)
 and subE ?(at = no) id t1 t2 = SubE (id, t1, t2) |> mk_expr at t2
+and addE ?(at = no) t e1 e2 = BinE (`AddOp, (t :> optyp), e1, e2) $$ at % (NumT t $ at)
+and subtrE ?(at = no) t e1 e2 = BinE (`SubOp, (t :> optyp), e1, e2) $$ at % (NumT t $ at)
 and eqE ?(at = no) lhs rhs =
   CmpE (`EqOp, `BoolT, lhs, rhs) $$ at % (BoolT $ at)
 and gtE ?(at = no) ?(ot = `NatT) lhs rhs =
@@ -264,8 +271,13 @@ and mk_atom ?(at = no) ~info (atom: string) : Xl.Atom.atom =
     | ".."       -> Dot2
     | "..."      -> Dot3
     | ";"        -> Semicolon
+    | "/"        -> Slash
     | "\\"       -> Backslash
+    | "~"        -> Not
+    | "/\\"      -> And
+    | "\\/"      -> Or
     | "<-"       -> Mem
+    | "</-"      -> NotMem
     | "->"       -> Arrow
     | "=>"       -> Arrow2
     | "->_"      -> ArrowSub
@@ -292,18 +304,27 @@ and mk_atom ?(at = no) ~info (atom: string) : Xl.Atom.atom =
     | "~>*_"     -> SqArrowStarSub
     | "<<"       -> Prec
     | ">>"       -> Succ
+    | "<<_"      -> PrecSub
+    | ">>_"      -> SuccSub
     | "|-"       -> Turnstile
     | "|-_"      -> TurnstileSub
     | "-|"       -> Tilesturn
     | "-|_"      -> TilesturnSub
-    | "?"        -> Quest
+    | "^?"       -> Quest
+    | "^*"       -> Star
+    | "^+"       -> Iter
     | "+"        -> Plus
-    | "*"        -> Star
+    | "-"        -> Minus
+    | "+-"       -> PlusMinus
+    | "-+"       -> MinusPlus
+    | "*"        -> Times
     | ","        -> Comma
     | "++"       -> Cat
     | "|"        -> Bar
     | "(/\\)"    -> BigAnd
     | "(\\/)"    -> BigOr
+    | "(!)"      -> BigForall
+    | "(?)"      -> BigExists
     | "(+)"      -> BigAdd
     | "(*)"      -> BigMul
     | "(++)"     -> BigCat

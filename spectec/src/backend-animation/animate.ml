@@ -308,8 +308,35 @@ let is_known knowns exp =
 
 let is_unknown knowns exp = is_known knowns exp |> not
 
-type direction = [ `Lhs | `Rhs ]
+(* ASSUMES: the input [exp] is actually a list type. *)
+let rec is_known_length exp : bool E.m =
+  let open AnimState in
+  let ( let* ) = E.(>>=) in
+  let* s = get () in
+  let knowns = get_knowns s in
+  if is_known knowns exp then E.return true
+  (* TODO(zilinc): If we have another type of information stored in [knowns],
+     derived from premises of the form -- if e1 = |e2| where e1 is known,
+     then we can conclude here that the length of e2 is known.
+   *)
+  else
+    match exp.it with
+    | ListE _ -> E.return true
+    | IterE (exp1, (ListN(n, _), xes)) when is_known knowns n -> E.return true
+    | CatE (exp1, exp2) | CompE (exp1, exp2) ->
+      let* k1 = is_known_length exp1 in
+      let* k2 = is_known_length exp2 in
+      E.return (k1 && k2)
+    | _ -> E.return false
 
+let rec length_of exp : exp =
+  match exp.it with
+  | ListE ns -> List.length ns |> Z.of_int |> natE ~at:exp.at
+  | IterE (_, (ListN(n, _), _)) -> n
+  | CatE (exp1, exp2) -> addE ~at:exp.at `NatT (length_of exp1) (length_of exp2)
+  | _ -> lenE ~at:exp.at exp  (* e.g. [exp] could be the result of a function call *)
+
+type direction = [ `Lhs | `Rhs ]
 
 (* Introduces a new binding for an expression.
    Returns the following:
@@ -1015,97 +1042,45 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* prems_str' = animate_prem envr prem_str in
     E.return (prems_fs' @ prems_str')
   *)
-  (* [e1; e2; ...; en] ++ exp2 *)
-  | CatE (({ it = ListE exps; _ } as exp1), exp2) ->
-    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
-    let (envr, vs_len_rhs, len_rhs', prems_v_len_rhs) = bind_var_exp envr empty_occ None len_rhs None `Rhs in
-    let* () = update (add_knowns (Set.of_list vs_len_rhs)) in
-    let len_lhs1 = mk_nat ~at:lhs.at (List.length exps) in
-    let prem_len = IfPr (leE ~at:len_rhs'.at len_lhs1 len_rhs') $ len_rhs'.at in
-    let prems1 = List.mapi (fun i exp ->
-      let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (natT ~at:exp.at ()) in
-      let rhs' = IdxE (rhs, idx) $$ exp.at % exp.note in
-      IfPr (eqE ~at exp rhs') $ at
-    ) exps in
-    let start2 = len_lhs1 in
-    let len_lhs2 = mk_cvt_sub ~at:exp2.at len_rhs' len_lhs1 in
-    let rhs2' = SliceE (rhs, start2, len_lhs2) $$ rhs.at % rhs.note in
-    let prem2 = IfPr (eqE ~at exp2 rhs2') $ at in
-    (* Start an inner loop, in case of any dependencies between the list elements.
-       E.g. -- if [v, v] v'* = rhs
-       The first [v] is a binding, and the second becomes a check.
-    *)
+  | CatE (exp1, exp2) when is_list_typ !envr lhs.note ->
+    let* k1 = is_known_length exp1 in
+    let* k2 = is_known_length exp2 in
+    (* The later code can only use the len1 and/or len2 that is known. *)
+    let len1 = length_of exp1 in
+    let len2 = length_of exp2 in
+    let len_rhs = length_of rhs in
+    let* prems = (match k1, k2 with
+    | true , true  ->
+      let rhs1 = SliceE (rhs, natE Z.zero, len1) $> rhs in
+      let rhs2 = SliceE (rhs, len1, len2) $> rhs in
+      let prem_len = IfPr (eqE ~at:at (addE ~at:lhs.at `NatT len1 len2) len_rhs) $ rhs.at in
+      let prem_1 = IfPr (eqE ~at:at exp1 rhs1) $ rhs.at in
+      let prem_2 = IfPr (eqE ~at:at exp2 rhs2) $ rhs.at in
+      E.return [prem_len; prem_1; prem_2]
+    | true , false ->
+      let rhs1 = SliceE (rhs, natE Z.zero, len1) $> rhs in
+      let len2' = subtrE ~at:at `NatT len_rhs len1 in
+      let rhs2 = SliceE (rhs, len1, len2') $> rhs in
+      let prem_len = IfPr (leE ~at:at len1 len_rhs) $ at in
+      let prem_1 = IfPr (eqE ~at:at exp1 rhs1) $ rhs.at in
+      let prem_2 = IfPr (eqE ~at:at exp2 rhs2) $ rhs.at in
+      E.return [prem_len; prem_1; prem_2]
+    | false, true  ->
+      let len1' = subtrE ~at:at `NatT len_rhs len2 in
+      let rhs1 = SliceE (rhs, natE Z.zero, len1') $> rhs in
+      let rhs2 = SliceE (rhs, len1', len2) $> rhs in
+      let prem_len = IfPr (leE ~at:at len2 len_rhs) $ at in
+      let prem_1 = IfPr (eqE ~at:at exp1 rhs1) $ rhs.at in
+      let prem_2 = IfPr (eqE ~at:at exp2 rhs2) $ rhs.at in
+      E.return [prem_len; prem_1; prem_2]
+    | false, false -> E.throw (string_of_error at ("LHS list concat where neither partion's length is known: "
+                                                   ^ string_of_exp lhs))
+    ) in
     let* s' = get () in
-    let s_new = { (init ()) with prems = prems1 @ [prem2]; knowns = get_knowns s' } in
+    let s_new = { (init ()) with prems; knowns = get_knowns s' } in
     let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
-    E.return (prems_v_len_rhs @ prem_len :: prems')
-  (* exp1 ++ [e1; e2; ...; en] *)
-  | CatE (exp1, ({ it = ListE exps; _ } as exp2)) ->
-    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
-    let (envr, vs_len_rhs, len_rhs', prems_v_len_rhs) = bind_var_exp envr empty_occ None len_rhs None `Rhs in
-    let* () = update (add_knowns (Set.of_list vs_len_rhs)) in
-    let len_lhs2 = mk_nat ~at:lhs.at (List.length exps) in
-    let prem_len = IfPr (leE ~at:len_rhs'.at len_lhs2 len_rhs') $ len_rhs'.at in
-    let prems2 = List.mapi (fun i exp ->
-      let idx = NumE (`Nat (Z.of_int i)) $$ exp.at % (natT ~at:exp.at ()) in
-      (* idx' = len - (len2 - idx) *)
-      let idx' = mk_cvt_sub ~at:len_lhs2.at len_rhs' (mk_cvt_sub ~at:len_lhs2.at len_lhs2 idx) in
-      let rhs' = IdxE (rhs, idx') $$ exp.at % exp.note in
-      IfPr (eqE ~at exp rhs') $ at
-    ) exps in
-    let start1 = mk_nat 0 in
-    let len_lhs1 = mk_cvt_sub ~at:exp1.at len_rhs' len_lhs2 in
-    let rhs1' = SliceE (rhs, start1, len_lhs1) $$ rhs.at % rhs.note in
-    let prem1 = IfPr (eqE ~at exp1 rhs1') $ at in
-    (* Start an inner loop, in case of any dependencies between the list elements.
-    *)
-    let* s' = get () in
-    let s_new = { (init ()) with prems = prems2 @ [prem1]; knowns = get_knowns s' } in
-    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
-    let* () = update (put_knowns (get_knowns s_new')) in
-    E.return (prems_v_len_rhs @ prem_len :: prems')
-  (* exp1 ++ exp2'^n where n is known *)
-  | CatE (exp1, ({ it = IterE (exp2', (ListN(len_lhs2, _), xes)); _} as exp2))
-    when Set.subset ((free_exp false len_lhs2).varid) knowns ->
-    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
-    let (envr, vs_len_rhs, len_rhs', prems_v_len_rhs) = bind_var_exp envr empty_occ None len_rhs None `Rhs in
-    let* () = update (add_knowns (Set.of_list vs_len_rhs)) in
-    let prem_len = IfPr (leE ~at:len_rhs'.at len_lhs2 len_rhs') $ len_rhs'.at in
-    let start1 = mk_nat 0 in
-    let len_lhs1 = mk_cvt_sub ~at:exp1.at len_rhs' len_lhs2 in
-    let rhs1' = SliceE (rhs, start1, len_lhs1) $> rhs in
-    let rhs2' = SliceE (rhs, len_lhs1, len_lhs2) $> rhs in
-    let prem1 = IfPr (eqE ~at:exp1.at exp1 rhs1') $ at in
-    let prem2 = IfPr (eqE ~at:exp2.at exp2 rhs2') $ at in
-    (* Start an inner loop, in case of any dependencies between the list elements.
-    *)
-    let* s' = get () in
-    let s_new = { (init ()) with prems = [prem1; prem2]; knowns = get_knowns s' } in
-    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
-    let* () = update (put_knowns (get_knowns s_new')) in
-    E.return (prems_v_len_rhs @ prem_len :: prems')
-    (* exp1'^n ++ exp2 where n is known *)
-  | CatE (({ it = IterE (exp1', (ListN(len_lhs1, _), xes)); _} as exp1), exp2)
-    when Set.subset ((free_exp false len_lhs1).varid) knowns ->
-    let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
-    let (envr, vs_len_rhs, len_rhs', prems_v_len_rhs) = bind_var_exp envr empty_occ None len_rhs None `Rhs in
-    let* () = update (add_knowns (Set.of_list vs_len_rhs)) in
-    let prem_len = IfPr (leE ~at:len_rhs'.at len_lhs1 len_rhs') $ len_rhs'.at in
-    let rhs1' = SliceE (rhs, natE ~at:rhs.at Z.zero, len_lhs1) $> rhs in
-    let len_lhs2 = mk_cvt_sub ~at:exp2.at len_rhs' len_lhs1 in
-    let rhs2' = SliceE (rhs, len_lhs1, len_lhs2) $> rhs in
-    let prem1 = IfPr (eqE ~at:exp1.at exp1 rhs1') $ at in
-    let prem2 = IfPr (eqE ~at:exp2.at exp2 rhs2') $ at in
-    (* Start an inner loop, in case of any dependencies between the list elements.
-    *)
-    let* s' = get () in
-    let s_new = { (init ()) with prems = [prem1; prem2]; knowns = get_knowns s' } in
-    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
-    let* () = update (put_knowns (get_knowns s_new')) in
-    E.return (prems_v_len_rhs @ prem_len :: prems')
-  (* exp1 ++ exp2 where the length of one of them is known *)
-  (* | CatE (exp1, exp2) -> _ *)
+    E.return prems'
   (* exp1* ++ [X] ++ exp2* *)
   (*
   | CatE ({ it = CatE ({ it = IterE (exp1', (List, xes1)); _ },

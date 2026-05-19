@@ -276,12 +276,11 @@ def $pop(C, t_1*, t_2*) = t_21^(n_2 - n)
   -- Stack_sub: C |- t_22* <: t_1*
 
 def $peek(nat, inferresulttype) : valtype
-;; def $peek(i, `...? t*) = t'
-;;   -- if t_1'* = t_1* ++ t'
-;;   -- if t* = t_1'* ++ t_2^i
-def $peek(i, `...? t*) = t*[j:1][0]
-  -- if n = |t*|
-  -- if j = $(n - i - 1) >= 0  ;; -- var j : int
+def $peek(i, `...? t*) = t'
+  -- if t* = t_1* ++ t' ++ t_2^i
+;; def $peek(i, `...? t*) = t*[j:1][0]
+;;   -- if n = |t*|
+;;   -- if j = $(n - i - 1) >= 0  ;; -- var j : int
 def $peek(i, `...? t*) = BOT
   -- otherwise
 

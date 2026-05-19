@@ -270,12 +270,14 @@ and eval_exp ctx exp : value OptMonad.m =
     | #Bool.binop as op' ->
       (match Bool.bin_partial op' v1 v2 of_bool_value boolV with
       | Some v -> return v
-      | None -> error_eval "Boolean binary expression" exp None
+      | None -> error_eval "Boolean binary expression" exp
+                  (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; e2 ⤳ " ^ string_of_value v2))
       )
     | #Xl.Num.binop as op' ->
       (match Num.bin_partial op' v1 v2 of_num_value numV with
       | Some v -> return v
-      | None -> error_eval "Numeric binary expression" exp None
+      | None -> error_eval "Numeric binary expression" exp
+                  (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; e2 ⤳ " ^ string_of_value v2))
       )
     )
   | CmpE (op, ot, e1, e2) ->
@@ -628,7 +630,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
         let t_star = e.note in
-        let t = Il_util.as_iter_typ !il_env t_star in
+        let t = Il_util.as_list_typ !il_env t_star in
         il_env := Il.Env.(bind_var !il_env x t);
       ) (in_binds @ out_binds);
       let* ctx' = if Z.to_int n' = 0 then (
