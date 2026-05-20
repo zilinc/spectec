@@ -325,7 +325,7 @@ rule Instr_ok_alg/drop:
 
 rule Instr_ok_alg/select-impl:
   C |- SELECT : t t I32 -> t -| stack
-  -- if t = $peek(1, stack)
+  -- if $peek(1, stack) = t
   ;; -- if t <- numtype vectyp BOT
   -- if t = numtype \/ t = vectype \/ t = BOT
 
@@ -353,15 +353,15 @@ rule Instr_ok_alg/br_table:
   C |- BR_TABLE l* l' : `... t^n I32 -> `... eps -| stack
   -- if t'* = C.LABELS[l']
   -- if n = |t'*|
-  -- (if t = $peek($(n-i), stack))^(i<n)
+  -- (if $peek($(n-i), stack) = t)^(i<n)
   -- Stack_sub: C |- t^n <: t'*
   -- (Stack_sub: C |- t^n <: C.LABELS[l])*
 
 rule Instr_ok_alg/br_on_null:
   C |- BR_ON_NULL l : t* (REF NULL ht) -> t* (REF ht) -| stack
-  -- if REF nul? ht = $peek_ref(0, stack)
+  -- if $peek_ref(0, stack) = REF nul? ht
   -- if C.LABELS[l] = t*
-  ;; -- Heaptype_ok: C |- ht : OK
+  -- Heaptype_ok: C |- ht : OK
 
 rule Instr_ok_alg/return:
   C |- RETURN : `... t* -> `... eps -| stack
@@ -404,12 +404,12 @@ rule Instr_ok_alg/try_table:
 rule Instr_ok_alg/ref.is_null:
   C |- REF.IS_NULL : (REF NULL ht) -> I32 -| stack
   -- if $peek_ref(0, stack) = REF nul? ht
-  ;; -- Heaptype_ok: C |- ht : OK
+  -- Heaptype_ok: C |- ht : OK
 
 rule Instr_ok_alg/ref.as_non_null:
   C |- REF.AS_NON_NULL : (REF NULL ht) -> (REF ht) -| stack
   -- if $peek_ref(0, stack) = REF nul? ht
-  ;; -- Heaptype_ok: C |- ht : OK
+  -- Heaptype_ok: C |- ht : OK
 
 rule Instr_ok_alg/ref.test:
   C |- REF.TEST rt : (REF NULL ht') -> I32 -| stack
@@ -425,11 +425,11 @@ rule Instr_ok_alg/ref.cast:
 
 rule Instr_ok_alg/extern.convert_any:
   C |- EXTERN.CONVERT_ANY : (REF nul? ANY) -> (REF nul? EXTERN) -| stack
-  -- if REF nul? ht = $peek_ref(0, stack)
+  -- if $peek_ref(0, stack) = REF nul? ht
 
 rule Instr_ok_alg/any.convert_extern:
   C |- ANY.CONVERT_EXTERN : (REF nul? EXTERN) -> (REF nul? ANY) -| stack
-  -- if REF nul? ht = $peek_ref(0, stack)
+  -- if $peek_ref(0, stack) = REF nul? ht
 
 
 
@@ -611,11 +611,13 @@ relation Vectype_ok       hint(animate %1 %2 -> bool)
 relation Heaptype_ok      hint(animate %1 %2 -> bool)
 relation Reftype_ok       hint(animate %1 %2 -> bool)
 relation Valtype_ok       hint(animate %1 %2 -> bool)
+relation Deftype_ok       hint(animate %1 %2 -> bool)
 relation Typeuse_ok       hint(animate %1 %2 -> bool)
-rule Typeuse_ok/deftype   hint(no_animate)
 relation Comptype_ok      hint(animate %1 %2    -> bool)
 relation Subtype_ok       hint(animate %1 %2 %3 -> bool)
+relation Subtype_ok2      hint(animate %1 %2 %3 -> bool)
 relation Rectype_ok       hint(animate %1 %2 %3 -> bool)
+relation Rectype_ok2      hint(animate %1 %2 %3 -> bool)
 
 relation Numtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Vectype_sub      hint(animate %1 %2 %3 -> bool)

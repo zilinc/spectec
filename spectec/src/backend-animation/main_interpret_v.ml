@@ -169,6 +169,9 @@ let print_fail at failtype expected actual =
   print_endline ("Got " ^ actual ^ ".");
   fail
 
+let print_fail' at msg =
+  print_endline (R.Source.string_of_region at ^ ": " ^ msg); fail
+
 let run_action action : value =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
@@ -229,7 +232,7 @@ let run_command' command =
     log "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     let module_ = module_of_def def in
     (match RI.Valid.check_module module_ with
-    | exception RI.Valid.Invalid(at, msg) -> fail
+    | exception RI.Valid.Invalid(at, msg) -> print_fail' at msg
     | _ -> Modules.add_with_var var_opt module_; success
     )
   | Instance (var1_opt, var2_opt) ->

@@ -113,3 +113,13 @@
   (module (start $f) (func $f (drop (ref.func $f))))
   "undeclared function reference"
 )
+
+(module
+  (func $f (import "M" "f") (param i32) (result i32))
+  (global funcref (ref.func $f))
+  (func (export "as_non_null-f")
+    (drop (ref.as_non_null (ref.func $f)))
+  )
+)
+
+(assert_return (invoke "as_non_null-f"))
