@@ -24,6 +24,8 @@ f Atwo x = fAtwo x
 
 Here, Isabelle would add 99 cases to fAone, 99 cases to fAtwo and 98 cases to f, instead of the 9998 cases it would otherwise have added to the old f
 
+Known issue: this can introduce redunt pattern-matching cases!
+
  *)
 
 let limit = 100 (* max number of cases we can tolerate *)
@@ -388,6 +390,22 @@ let get_rec_names defs =
       | DecD (id, _, _, _) -> Some id.it
       | _ -> None) defs
 
+let is_catchall cl =
+  match cl.it with
+  | DefD (_, args, _, _) ->
+     List.for_all (fun arg ->
+         match arg.it with
+         | ExpA e ->
+            begin match e.it with
+            | VarE _ -> true
+            | _ -> false end
+         | _ -> true) args
+
+let rec stop_at_first_catchall = function
+  | [] -> []
+  | cl :: _ when is_catchall cl -> [cl]
+  | t :: q -> t :: stop_at_first_catchall q
+
 let rec transform_def (datatypes : datatypes) rec_names def =
   match def.it with
   | TypD (id, _, [{it = InstD (_, _, {it = VariantT typcases; _}); _}]) -> 
@@ -425,6 +443,7 @@ let rec transform_def (datatypes : datatypes) rec_names def =
         let new_defs, toplevelclauses =
           MixopMap.fold (fun op (paramtyps, packaged_paramtyps) (new_defs, toplevelclauses) ->
               let split_clauses = generate_split_clauses clauses casei op paramtyps packaged_paramtyps in
+              let split_clauses = stop_at_first_catchall split_clauses in
               match split_clauses with
               | [] -> new_defs, toplevelclauses
               | _ -> (DecD ({ id with it = id.it ^ "_" ^ to_string op },
