@@ -1092,24 +1092,33 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   | _ -> E.throw (string_of_error at ("Can't pattern match or compute LHS: " ^ string_of_exp lhs ^ "\n" ^
                                       "  ▹ knowns: " ^ string_of_varset knowns))
 
-
-(** ASSUMES: [e] contains unknown vars, whereas [es] is fully known.
-    ENSURES: When it returns Error, it means that the original premise should be
-    used as the animated premise.
- *)
 and animate_exp_mem envr at e es : prem list E.m =
   let open AnimState in
   let ( let* ) = E.( >>= ) in
-  let (envr, vs, e', prems_v) = bind_pat_exp envr empty_occ None e None in
-  let (envr, vs', es', prems_es) = bind_var_exp envr empty_occ None es None `Rhs in
-  let* () = update (add_knowns (Set.of_list vs')) in
-  let prem_len_es = IfPr (gtE ~at:at (lenE ~at:(es'.at) es') (natE ~at:at Z.zero)) $ at in
-  let zero = NumE (`Nat Z.zero) $$ e'.at % (natT ~at:e'.at ()) in
-  let es_0 = IdxE (es', zero) $$ es'.at % e'.note in
-  let* () = update (add_knowns (Set.of_list vs)) in
-  let prem' = LetPr (e', es_0, vs) $ at in
-  let* prems_v' = E.(mapM (animate_prem envr) prems_v <&> List.concat) in
-  E.return (prems_es @ [prem_len_es; prem'] @ prems_v')
+  let* s = get () in
+  let knowns = get_knowns s in
+  (match is_known knowns e, is_known knowns es with
+  | true , true -> assert false
+  | false, true when can_guess s ->
+    let (envr, vs, e', prems_v) = bind_pat_exp envr empty_occ None e None in
+    let (envr, vs', es', prems_es) = bind_var_exp envr empty_occ None es None `Rhs in
+    let* () = update (add_knowns (Set.of_list vs')) in
+    let prem_len_es = IfPr (gtE ~at:at (lenE ~at:(es'.at) es') (natE ~at:at Z.zero)) $ at in
+    let zero = NumE (`Nat Z.zero) $$ e'.at % (natT ~at:e'.at ()) in
+    let es_0 = IdxE (es', zero) $$ es'.at % e'.note in
+    let* () = update (add_knowns (Set.of_list vs)) in
+    let prem' = LetPr (e', es_0, vs) $ at in
+    let* prems_v' = E.(mapM (animate_prem envr) prems_v <&> List.concat) in
+    E.return (prems_es @ [prem_len_es; prem'] @ prems_v')
+  | false, true -> E.throw (string_of_error at ("Can't yet guess membership."))
+  | true , false -> E.throw (string_of_error at (
+                              "e2 in e1 ∈ e2 contains unknowns.\n" ^
+                              "  ▹ e2 = " ^ string_of_exp es))
+  | false, false -> E.throw (string_of_error at (
+                               "e1 ∈ e2 where both sides have unknowns.\n" ^
+                               "  ▹ e1 = " ^ string_of_exp e ^ "\n" ^
+                               "  ▹ e2 = " ^ string_of_exp es))
+  )
 
 and animate_if_prem envr at exp : prem list E.m =
   let open AnimState in
@@ -1148,25 +1157,7 @@ and animate_if_prem envr at exp : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return prems'
   (* Membership or nondeterministic choice: e1 ∈ e2 *)
-  | MemE (e1, e2) ->
-    let fv1 = (free_exp false e1).varid in
-    let fv2 = (free_exp false e2).varid in
-    let unknowns1 = Set.diff fv1 knowns in
-    let unknowns2 = Set.diff fv2 knowns in
-    (match Set.is_empty unknowns1, Set.is_empty unknowns2 with
-    | true , true  -> assert false
-    | true , false -> E.throw (string_of_error at (
-                                "e2 in e1 ∈ e2 contains unknowns.\n" ^
-                                "  ▹ e2 = " ^ string_of_exp e2))
-    | false, true  -> if can_guess s then
-                        animate_exp_mem envr exp.at e1 e2
-                      else
-                        E.throw (string_of_error at ("Yet can't guess."))
-    | false, false -> E.throw (string_of_error at (
-                                 "e1 ∈ e2 where both sides have unknowns.\n" ^
-                                 "  ▹ e1 = " ^ string_of_exp e1 ^ "\n" ^
-                                 "  ▹ e2 = " ^ string_of_exp e2))
-    )
+  | MemE (e1, e2) -> animate_exp_mem envr exp.at e1 e2
   | IterE (exp', iterexp) ->
     animate_prem envr (IterPr ([IfPr exp' $ exp'.at], iterexp) $ at)
   | _ -> let fv_exp = (free_exp false exp).varid in
