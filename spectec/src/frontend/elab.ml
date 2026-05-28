@@ -2772,65 +2772,6 @@ let populate_def env (d' : Il.def) : Il.def =
 
 (* Scripts *)
 
-let origins i (map : int Map.t ref) (set : Il.Free.Set.t) =
-  Il.Free.Set.iter (fun id -> map := Map.add id i !map) set
-
-let deps (map : int Map.t) (set : Il.Free.Set.t) : int array =
-  Array.map (fun id ->
-    try Map.find id map with Not_found -> failwith ("recursify dep " ^ id)
-  ) (Array.of_seq (Il.Free.Set.to_seq set))
-
-
-let check_recursion (ds' : Il.def list) =
-  List.iter (fun d' ->
-    match d'.it, (List.hd ds').it with
-    | Il.HintD _, _ | _, Il.HintD _
-    | Il.TypD _, Il.TypD _
-    | Il.RelD _, Il.RelD _
-    | Il.DecD _, Il.DecD _
-    | Il.GramD _, Il.GramD _ -> ()
-    | _, _ ->
-      error (List.hd ds').at (" " ^ string_of_region d'.at ^
-        ": invalid recursion between definitions of different sort")
-  ) ds'
-  (* TODO(4, rossberg): check that notations are non-recursive and defs are inductive? *)
-
-let recursify_defs (ds' : Il.def list) : Il.def list =
-  let open Il.Free in
-  let da = Array.of_list ds' in
-  let map_typid = ref Map.empty in
-  let map_relid = ref Map.empty in
-  let map_defid = ref Map.empty in
-  let map_gramid = ref Map.empty in
-  let frees = Array.map Il.Free.free_def da in
-  let bounds = Array.map Il.Free.bound_def da in
-  Array.iteri (fun i bound ->
-    origins i map_typid bound.typid;
-    origins i map_relid bound.relid;
-    origins i map_defid bound.defid;
-    origins i map_gramid bound.gramid;
-  ) bounds;
-  let graph =
-    Array.map (fun free ->
-      Array.concat
-        [ deps !map_typid free.typid;
-          deps !map_relid free.relid;
-          deps !map_defid free.defid;
-          deps !map_gramid free.gramid;
-        ];
-    ) frees
-  in
-  let sccs = Scc.sccs graph in
-  List.map (fun set ->
-    let ds'' = List.map (fun i -> da.(i)) (Scc.Set.elements set) in
-    check_recursion ds'';
-    let i = Scc.Set.choose set in
-    match ds'' with
-    | [d'] when Il.Free.disjoint bounds.(i) frees.(i) -> d'
-    | ds'' -> Il.RecD ds'' $ Source.over_region (List.map at ds'')
-  ) sccs
-
-
 let implicit_typdef id (at, atom) (ds : def list) : def list =
   let hint = {hintid = "show" $ at; hintexp = AtomE atom $ at} in
   let t = ConT ((AtomT (El.Iter.clone_atom atom) $ at, []), []) $ at in
@@ -2845,7 +2786,7 @@ let elab (ds : script) : Il.script * env =
   let ds2' = List.concat_map (elab_def_pass2 env) ds in
   check_dots env;
   let ds' = List.map (populate_def env) (ds1' @ ds2') in
-  recursify_defs ds', env
+  Il.Dep.recursify_defs ds', env
 
 let elab_exp env (e : exp) (t : typ) : Il.exp =
   let env' = local_env env in
