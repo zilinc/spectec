@@ -745,11 +745,17 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       ) xes1 xes2
       in
       let xes'' = merge xes' xes in
-      let iter_prems = List.map (fun prem_lhs -> (IterPr (prem_lhs, (iter, xes'')) $ at)) prems_lhs in
-      let s_new = { (init ()) with prems = iter_prems; knowns } in
-      let* (prems_iter', s_new') = run_inner s_new (animate_prems' envr at) in
+      let iter_prems = List.map (fun prem_lhs ->
+        let fv_prem = (free_prem false prem_lhs).varid in
+        let xes_each = List.filter (fun (x, e) -> Set.mem x.it fv_prem) xes'' in
+        (IterPr (prem_lhs, (iter, xes_each)) $ at)
+      ) prems_lhs in
+      let* s' = get () in
+      let knowns' = get_knowns s' in
+      let s_new = { (init ()) with prems = iter_prems; knowns = knowns' } in
+      let* (iter_prems', s_new') = run_inner s_new (animate_prems' envr at) in
       let* () = update (put_knowns (get_knowns s_new')) in
-      E.return (prem_opt :: prems_iter')
+      E.return (prem_opt :: iter_prems')
     (* Optimisation for -- let v* = rhs *)
     | VarE v, List when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
       let e_star = List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd in
@@ -777,12 +783,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     (* Inductive cases *)
     | _, ListN(len, None) ->
       let i = fresh_id (Some "i") at in
-      let i_star = Frontend.Dim.annot_varid i [iter] in
-      let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
-      let i_star_e = VarE i_star $$ i_star.at % t_star in
-      envr := bind_var !envr i_star t_star;
-      let xes' = (i, i_star_e) :: xes in
-      animate_exp_eq envr at (IterE (lhs', (ListN(len, Some i), xes')) $> lhs) rhs
+      animate_exp_eq envr at (IterE (lhs', (ListN(len, Some i), xes)) $> lhs) rhs
     | _, List | _, List1 ->
       let len_rhs = LenE rhs $$ rhs.at % (natT ~at:rhs.at ()) in
       let len_v = fresh_id (Some "len") len_rhs.at in
@@ -1228,12 +1229,7 @@ and animate_prem envr prem : prem list E.m =
   | IterPr (prem1, (ListN(len, None) as iter, xes)) ->
     (* Reduce them to ListN(_, Some _). *)
     let i = fresh_id (Some "i") len.at in
-    let i_star = Frontend.Dim.annot_varid i [iter] in
-    let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
-    let i_star_e = VarE i_star $$ i_star.at % t_star in
-    envr := bind_var !envr i_star t_star;
-    let xes' = (i, i_star_e) :: xes in
-    let prem' = IterPr (prem1, (ListN(len, Some i), xes')) $ prem.at in
+    let prem' = IterPr (prem1, (ListN(len, Some i), xes)) $ prem.at in
     animate_prem envr prem'
   | IterPr (prem1, (((Opt|ListN(_, Some _)) as iter, xes) as iterexp)) ->
     (* [envr] is the environment outside of the iteration, and [lenvr] is the one
@@ -1353,7 +1349,7 @@ and animate_prem envr prem : prem list E.m =
            ;; vvvvvv The appended new stuff... vvvvvv
            -- if |a*| > 0
            -- where a' = a*[0]
-           (-- if a' = a*[i])^(i < |a*|){ ..., i <- i*, a <- a*}
+           (-- if a' = a*[i])^(i < |a*|){ ..., a <- a*}
       *)
       let VarE x_star = e.it in
       let len = LenE e $$ e.at % (natT ~at:e.at ()) in
@@ -1366,15 +1362,11 @@ and animate_prem envr prem : prem list E.m =
       let xe' = VarE x' $$ x'.at % t in
       let prem_x0 = LetPr ([ExpP (x', t) $ x'.at], xe', x0) $ xe'.at in
       let i = fresh_id (Some "i") len.at in
-      let i_star = Frontend.Dim.annot_varid i [iter] in
-      let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
-      let i_star_e = VarE i_star $$ i_star.at % t_star in
       let iter = ListN (len, Some i) in
       let e_i = IdxE (e, VarE i $$ i.at % (natT ~at:i.at ())) $$ e.at % x0.note in
       let prem_eq = IfPr (eqE ~at:xe'.at xe' e_i) $ xe'.at in
-      let prem_eq_iter = IterPr (prem_eq, (iter, [(i, i_star_e); (x, e)])) $ xe'.at in
-      envr := bind_var !envr i_star t_star;
-      ([x'.it; x_star.it; i_star.it], [x.it], [prem_len; prem_x0; prem_eq_iter])
+      let prem_eq_iter = IterPr (prem_eq, (iter, [(x, e)])) $ xe'.at in
+      ([x'.it; x_star.it], [x.it], [prem_len; prem_x0; prem_eq_iter])
     ) xes_static
     in
     let knowns_outer1, unknowns_outer1, e_prems1, xes'' = Lib.List.unzip4 blob1 in
@@ -1389,13 +1381,16 @@ and animate_prem envr prem : prem list E.m =
     let knowns_outer = get_knowns s_outer in  (* This should be the initial known set before iteration. *)
     let knowns_outer = Set.union knowns_outer (Set.of_list (knowns_outer1 @ knowns_outer2)) in
     let knowns_outer = Set.diff knowns_outer (Set.of_list (unknowns_outer1 @ unknowns_outer2)) in
-    let s_end = { (init ()) with prems = e_prems1; knowns = knowns_outer} in
+    let s_end = { (init ()) with prems = e_prems1; knowns = knowns_outer } in
     let* (e_prems1', s_end') = run_inner s_end (animate_prems' envr prem.at) in
     let* () = update (put_knowns (get_knowns s_end')) in
-    let prem_iters = List.map (fun prem_body ->
-      (IterPr (prem_body, (iter, in_xes @ xes'' @ xes_static)) $ prem.at)
+    let iter_prems = List.map (fun prem_body ->
+      let xes_all = in_xes @ xes'' @ xes_static in
+      let fv_prem = (free_prem false prem_body).varid in
+      let xes_each = List.filter (fun (x, e) -> Set.mem x.it fv_prem) xes_all in
+      (IterPr (prem_body, (iter, xes_each)) $ prem.at)
     ) prems_body' in
-    E.return (prem_iters @ e_prems1' @ e_prems2)
+    E.return (iter_prems @ e_prems1' @ e_prems2)
   | _ -> error prem.at ("Unable to animate premise: " ^ string_of_prem prem)
 
 

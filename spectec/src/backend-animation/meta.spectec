@@ -14,8 +14,10 @@ def $top_of_heaptype(dt*, ht) = EXTERN
 def $top_of_heaptype(dt*, typeuse) = $top_of_typeuse(dt*, typeuse)
 
 def $top_of_typeuse(deftype*, typeuse) : heaptype
-def $top_of_typeuse(dt*, _IDX x) = $top_of_comptype(dt*, $expanddt(dt*[x]))
-def $top_of_typeuse(dt*, dt') = $top_of_comptype(dt*, $expanddt(dt'))
+def $top_of_typeuse(dt*, _IDX x) = $top_of_comptype(dt*, comptype)
+  -- Expand: dt*[x] ~~ comptype
+def $top_of_typeuse(dt*, dt') = $top_of_comptype(dt*, comptype)
+  -- Expand: dt' ~~ comptype
 
 def $top_of_comptype(deftype*, comptype) : heaptype
 def $top_of_comptype(dt*, STRUCT ft*) = $top_of_heaptype(dt*, STRUCT)
@@ -37,7 +39,7 @@ rule Heaptype_sub/array-trans:
   -- Expand: deftype ~~ ARRAY fieldtype
   -- if ht <- ANY EQ
 
-rule Heaptype_sub/rec_alg:
+rule Heaptype_sub/rec-sub_alg:
   C |- REC i <: typeuse'
   -- if C.RECS[i] = SUB final? typeuse* ct
   -- if typeuse' <- typeuse*
@@ -628,7 +630,7 @@ relation Numtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Vectype_sub      hint(animate %1 %2 %3 -> bool)
 relation Heaptype_sub     hint(animate %1 %2 %3 -> bool)
 rule Heaptype_sub/trans   hint(no_animate)
-rule Heaptype_sub/rec     hint(no_animate)
+rule Heaptype_sub/rec-sub hint(no_animate)
 relation Reftype_sub      hint(animate %1 %2 %3 -> bool)
 relation Valtype_sub      hint(animate %1 %2 %3 -> bool)
 relation Resulttype_sub   hint(animate %1 %2 %3 -> bool)
@@ -768,4 +770,6 @@ relation Eval_expr hint(animate (%1, %2) -> (%3, %4))
 
 relation Steps hint(animate_manual $Steps: %1 -> %2)
 
-def $utf8 hint(no_animate)
+
+def $NotImmutReachable                     hint(no_animate)
+def $utf8                                  hint(no_animate)

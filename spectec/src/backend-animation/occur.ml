@@ -86,7 +86,7 @@ and occ_arg pred m occ arg : occ = match arg.it with
 and occ_prem pred m occ prem : occ =
   match prem.it with
   | IfPr exp -> occ_exp pred m occ exp
-  | LetPr(lhs, rhs, binds) -> occ_exp pred m occ rhs
+  | LetPr(_qs, lhs, rhs) -> occ_exp pred m occ rhs
   | ElsePr -> occ
   | IterPr (prem1, (iter, xes)) ->
     let occ1 = List.fold_left (fun o (x, e) -> occ_exp pred m o e) occ xes in
