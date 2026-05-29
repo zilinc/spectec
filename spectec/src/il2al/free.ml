@@ -83,10 +83,10 @@ let rec free_prem ignore_listN prem =
   match prem.it with
   | RulePr (_id, args, _op, e) -> free_list fa args ++ f e
   | IfPr e -> f e
-  | LetPr (e1, e2, _ids) -> f e1 ++ f e2
+  | LetPr (_qs, e1, e2) -> f e1 ++ f e2
   | ElsePr -> empty
-  | IterPr (prems, iter) ->
-    let free1 = free_list fp prems in
+  | IterPr (prem', iter) ->
+    let free1 = fp prem' in
     let bound, free2 = fi iter in
     (free1 ++ free2) -- bound
   | NegPr prem' -> fp prem'

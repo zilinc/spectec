@@ -1,15 +1,3 @@
-(*
-This transformation make explicit the following implicit side conditions
-of terms in premises and conclusions:
-
- * Array access          a[i]         i < |a|
- * Joint iteration       e*{v1,v2}    |v1*| = |v2*|
- * Option projection     !(e)         e =!= null
-
-(The option projection would probably be nicer by rewriting !(e) to a fresh
-variable x and require e=?x. Maybe later.)
-*)
-
 open Util
 open Source
 open Il.Ast
@@ -28,13 +16,12 @@ let lenE e = match e.it with
 | _ -> LenE e $$ e.at % (NumT `NatT $ e.at)
 
 (* Smart constructor for IterPr that removes dead iter-variables *)
-let iterPr (prs, (iter, vars)) =
-  let frees = free_list free_prem prs in
+let iterPr (pr, (iter, vars)) =
+  let frees = free_prem pr in
   let vars' = List.filter (fun (id, _) ->
-    Set.mem id.it frees.varid ||
-    (match iter with | ListN(_, Some i) -> Il.Eq.eq_id id i | _ -> false)
+    Set.mem id.it frees.varid
   ) vars in
-  IterPr (prs, (iter, vars'))
+  IterPr (pr, (iter, vars'))
 
 let is_null e = CmpE (`EqOp, `BoolT, e, OptE None $$ e.at % e.note) $$ e.at % (BoolT $ e.at)
 let iffE e1 e2 = IfPr (BinE (`EquivOp, `BoolT, e1, e2) $$ e1.at % (BoolT $ e1.at)) $ e1.at
@@ -79,19 +66,18 @@ let rec t_exp env e =
     (
     iter_prems @ 
     collect_iter collector1 iter @ 
-    List.map (fun pr -> iterPr ([pr], iterexp) $ e.at) (collect_exp collector2 e1), false)
+    List.map (fun pr -> iterPr (pr, iterexp) $ e.at) (collect_exp collector2 e1), false)
   | _ -> ([], true)
 and t_prem env prem =
   let res, continue = (match prem.it with
-  | IterPr ([prem'], ((iter, _) as iterexp))
+  | IterPr (prem', ((iter, _) as iterexp))
   -> 
     let env' = env_under_iter env iterexp in
     let collector1 = create_collector env in
     let collector2 = create_collector env' in
     (iter_side_conditions env iterexp @
     collect_iter collector1 iter @
-    List.map (fun pr -> iterPr ([pr], iterexp) $ prem'.at) (collect_prem collector2 prem' @ [prem']), false)
-  | IterPr (_prems, _) -> assert false  (* Yet to be implemented. *)
+    List.map (fun pr -> iterPr (pr, iterexp) $ prem'.at) (collect_prem collector2 prem' @ [prem']), false)
   | NegPr _ -> 
     (* We do not want to infer anything from NegPr *)
     ([], false)
@@ -119,10 +105,21 @@ let is_true prem = match prem.it with
 (* Does prem1 obviously imply prem2? *)
 let rec implies prem1 prem2 = Il.Eq.eq_prem prem1 prem2 ||
   match prem2.it with
-  | IterPr ([prem2'], _) -> implies prem1 prem2'
+  | IterPr (prem2', _) -> implies prem1 prem2'
   | _ -> false
 
+(* Remove empty premise iterators *)
+let rec flatten_empty_iter prem =
+  match prem.it with
+  | IterPr (prem', iterexp) ->
+    let prem'' = flatten_empty_iter prem' in
+    (match iterexp with
+    | ((Opt | List | List1), []) -> prem''
+    | _ -> IterPr (prem'', iterexp) $ prem.at)
+  | _ -> prem
+
 let reduce_prems prems = prems
+  |> List.map flatten_empty_iter
   |> Util.Lib.List.filter_not is_true
   |> Util.Lib.List.nub implies
 

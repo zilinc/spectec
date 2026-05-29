@@ -221,30 +221,21 @@ and string_of_sym g =
 
 (* Premises *)
 
-and string_of_prem' lv prem =
+and string_of_prem prem =
   match prem.it with
   | RulePr (x, as1, mixop, e) ->
     string_of_id x ^ string_of_args as1 ^ ": " ^
     string_of_mixop mixop ^ string_of_exp_args e
   | IfPr e -> "if " ^ string_of_exp e
-  | LetPr (e1, e2, xs) ->
-    let xs' = List.map (fun x -> x $ no_region) xs in
-    "where " ^ string_of_exp e1 ^ " = " ^ string_of_exp e2 ^
-    " {" ^ (String.concat ", " (List.map string_of_id xs')) ^ "}"
+  | LetPr (qs, e1, e2) ->
+    "let" ^ string_of_quants qs ^ " " ^
+    string_of_exp e1 ^ " = " ^ string_of_exp e2
   | ElsePr -> "otherwise"
-  | IterPr ([{it = IterPr _; _} as prem'], iter) ->
-    string_of_prem' (lv+1) prem' ^ string_of_iterexp iter
-  | IterPr ([prem'], iter) ->
-    "(" ^ string_of_prem' (lv+1) prem' ^ ")" ^ string_of_iterexp iter
-  | IterPr (prems', iter) ->
-    let spaces = String.make (2*(lv+1)) ' ' in
-    let pre = "\n" ^ spaces ^ "-- " in
-    "(" ^
-    concat "" (List.map (prefix pre (string_of_prem' (lv+1))) prems') ^
-    "\n" ^ spaces ^ ")" ^ string_of_iterexp iter
+  | IterPr ({it = IterPr _; _} as prem', iter) ->
+    string_of_prem prem' ^ string_of_iterexp iter
+  | IterPr (prem', iter) ->
+    "(" ^ string_of_prem prem' ^ ")" ^ string_of_iterexp iter
   | NegPr prem' -> "~ " ^ string_of_prem prem'
-
-and string_of_prem prem = string_of_prem' 2 prem
 
 
 (* Definitions *)

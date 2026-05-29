@@ -606,7 +606,7 @@ and eval_arg ctx a : Value.arg OptMonad.m =
 and eval_prem ctx prem : VContext.t OptMonad.m =
   match prem.it with
   | ElsePr -> return ctx
-  | LetPr (lhs, rhs, _vs) ->
+  | LetPr (_qs, lhs, rhs) ->
     let* rhs' = eval_exp ctx rhs in
     assign ctx lhs rhs'
   | IfPr e ->
@@ -614,7 +614,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
     if b = boolV true then return ctx
     else
       fail ()
-  | IterPr (prems, (iter, xes)) ->
+  | IterPr (prem1, (iter, xes)) ->
     (* Work out which variables are inflow and which are outflow. *)
     let in_binds, out_binds = List.fold_right (fun (x, e) (ins, ous) ->
       let fv_e = (free_exp false e).varid in
@@ -650,7 +650,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
             VContext.add_varid ctx x e' |> return
           ) ctx in_binds
           in
-          let* ctx = eval_prems ctx prems in
+          let* ctx = eval_prem ctx prem1 in
           (* Out-flow: Only collect them in [ctx_out], but don't add them to the local
              value context, otherwise it will interfere with later iterations, where
              it will see partially assigned outer variables and wrongly treat them as knowns.
@@ -707,7 +707,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           let OptV (Some val_) = opt_val in
           VContext.add_varid ctx x val_ |> return
         ) ctx in_vals in
-        let* ctx = eval_prems ctx prems in
+        let* ctx = eval_prem ctx prem1 in
         (* Out-flow *)
         foldlM (fun ctx (x, e) ->
           let vx = VContext.find_varid ctx x in

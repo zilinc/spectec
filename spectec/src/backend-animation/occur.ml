@@ -88,9 +88,9 @@ and occ_prem pred m occ prem : occ =
   | IfPr exp -> occ_exp pred m occ exp
   | LetPr(lhs, rhs, binds) -> occ_exp pred m occ rhs
   | ElsePr -> occ
-  | IterPr (prems, (iter, xes)) ->
+  | IterPr (prem1, (iter, xes)) ->
     let occ1 = List.fold_left (fun o (x, e) -> occ_exp pred m o e) occ xes in
-    let occ2 = occ_prems (fun v -> pred v && not (List.mem v (List.map fst xes))) `Many occ1 prems in
+    let occ2 = occ_prem (fun v -> pred v && not (List.mem v (List.map fst xes))) `Many occ1 prem1 in
     let occ3 = (match iter with
     | ListN (n, _) -> occ_exp pred m occ2 n
     | _ -> occ2

@@ -309,7 +309,8 @@ warning: syntax `code` was never spliced
 warning: syntax `comptype` was never spliced
 warning: syntax `config` was never spliced
 warning: syntax `consttype` was never spliced
-warning: syntax `context` was never spliced
+warning: syntax `context/syn` was never spliced
+warning: syntax `context/sem` was never spliced
 warning: syntax `cvtop__` was never spliced
 warning: syntax `cvtop__` was never spliced
 warning: syntax `cvtop__` was never spliced
@@ -538,6 +539,7 @@ warning: grammar `Bexterntype` was never spliced
 warning: grammar `Bf32` was never spliced
 warning: grammar `Bf64` was never spliced
 warning: grammar `BfN` was never spliced
+warning: grammar `Bfieldidx` was never spliced
 warning: grammar `Bfieldtype` was never spliced
 warning: grammar `Bfunc` was never spliced
 warning: grammar `Bfuncidx` was never spliced
@@ -901,6 +903,7 @@ warning: grammar `Tplaininstr_/vec-extun-i32x4` was never spliced
 warning: grammar `Tplaininstr_/vec-extbin-i16x8` was never spliced
 warning: grammar `Tplaininstr_/vec-extbin-i32x4` was never spliced
 warning: grammar `Tplaininstr_/vec-extbin-i64x2` was never spliced
+warning: grammar `Tplaininstr_/vec-exttern-i32x4` was never spliced
 warning: grammar `Trectype_/base` was never spliced
 warning: grammar `Trectype_/abbrev` was never spliced
 warning: grammar `Treftype_/base` was never spliced
@@ -1047,7 +1050,10 @@ warning: rule `Heaptype_sub/func` was never spliced
 warning: rule `Heaptype_sub/def` was never spliced
 warning: rule `Heaptype_sub/typeidx-l` was never spliced
 warning: rule `Heaptype_sub/typeidx-r` was never spliced
-warning: rule `Heaptype_sub/rec` was never spliced
+warning: rule `Heaptype_sub/rec-struct` was never spliced
+warning: rule `Heaptype_sub/rec-array` was never spliced
+warning: rule `Heaptype_sub/rec-func` was never spliced
+warning: rule `Heaptype_sub/rec-sub` was never spliced
 warning: rule `Heaptype_sub/none` was never spliced
 warning: rule `Heaptype_sub/nofunc` was never spliced
 warning: rule `Heaptype_sub/noexn` was never spliced
@@ -1586,7 +1592,6 @@ warning: definition `evalexprs` was never spliced
 warning: definition `evalexprss` was never spliced
 warning: definition `evalglobals` was never spliced
 warning: definition `exninst` was never spliced
-warning: definition `expanddt` was never spliced
 warning: definition `expon` was never spliced
 warning: definition `exportsd` was never spliced
 warning: definition `extend__` was never spliced
@@ -1910,7 +1915,7 @@ warning: definition `unpack` was never spliced
 warning: definition `unpackfield_` was never spliced
 warning: definition `unpackshape` was never spliced
 warning: definition `unrolldt` was never spliced
-warning: definition `unrollht` was never spliced
+warning: definition `unrollht_` was never spliced
 warning: definition `unrollrt` was never spliced
 warning: definition `utf8` was never spliced
 warning: definition `var` was never spliced
@@ -2512,7 +2517,6 @@ warning: definition prose `evalexprs` was never spliced
 warning: definition prose `evalexprss` was never spliced
 warning: definition prose `evalglobals` was never spliced
 warning: definition prose `exninst` was never spliced
-warning: definition prose `expanddt` was never spliced
 warning: definition prose `expon` was never spliced
 warning: definition prose `exportsd` was never spliced
 warning: definition prose `fnat` was never spliced
@@ -2768,7 +2772,7 @@ warning: definition prose `unpack` was never spliced
 warning: definition prose `unpackfield_` was never spliced
 warning: definition prose `unpackshape` was never spliced
 warning: definition prose `unrolldt` was never spliced
-warning: definition prose `unrollht` was never spliced
+warning: definition prose `unrollht_` was never spliced
 warning: definition prose `unrollrt` was never spliced
 warning: definition prose `var` was never spliced
 warning: definition prose `vbinop_` was never spliced

@@ -8,10 +8,10 @@ let typing_functions = ref []
 
 let rec transform_rulepr_prem prem =
   match prem.it with
-  | IterPr ([prem], iterexp) ->
+  | IterPr (prem, iterexp) ->
     prem
     |> transform_rulepr_prem
-    |> (fun new_prem -> IterPr ([new_prem], iterexp) $ prem.at)
+    |> (fun new_prem -> IterPr (new_prem, iterexp) $ prem.at)
   | IfPr ({ it = CmpE (`EqOp, _, { it = CallE (id, args); note; at; _ }, rhs); _ })
   when List.mem id.it !typing_functions ->
     IfPr (CallE (id, args @ [ExpA rhs $ rhs.at]) $$ at % note) $ prem.at
@@ -44,11 +44,10 @@ let remove_or_exp e =
 let rec remove_or_prem prem =
   match prem.it with
   | IfPr e -> e |> remove_or_exp |> List.map (fun e' -> IfPr e' $ prem.at)
-  | IterPr ([prem], iterexp) ->
+  | IterPr (prem, iterexp) ->
     prem
     |> remove_or_prem
-    |> List.map (fun new_prem -> IterPr ([new_prem], iterexp) $ prem.at)
-  | IterPr (_, _) -> assert false
+    |> List.map (fun new_prem -> IterPr (new_prem, iterexp) $ prem.at)
   | _ -> [ prem ]
 
 let remove_or_rule rule =
@@ -125,11 +124,10 @@ let remove_block_context def =
 (* Pre-process a premise *)
 let rec preprocess_prem prem =
   match prem.it with
-  | IterPr ([prem], iterexp) ->
+  | IterPr (prem, iterexp) ->
     prem
     |> preprocess_prem
-    |> List.map (fun new_prem -> IterPr ([new_prem], iterexp) $ prem.at)
-  | IterPr (_, _) -> assert false
+    |> List.map (fun new_prem -> IterPr (new_prem, iterexp) $ prem.at)
   | RulePr (id, _args, mixop, exp) ->
     let lhs_rhs_opt = 
       match Xl.Mixop.flatten mixop, exp.it with
@@ -193,8 +191,7 @@ let preprocess_def (def: def) : def =
   | GramD (id, ps, t, prods) ->
     Al.Valid.il_env := Env.bind_gram !Al.Valid.il_env id (ps, t, prods); def'
   | RecD _ -> assert (false);
-  | HintD hintdef ->
-    Al.Valid.il_env := Env.add_hint !Al.Valid.il_env hintdef; def'
+  | HintD hintdef -> hintdefs := hintdef :: !hintdefs; def'
 
 let flatten_rec def =
   match def.it with

@@ -261,12 +261,12 @@ and check_prem dims ctx prem =
     check_exp dims ctx e
   | IfPr e -> check_exp dims ctx e
   | ElsePr -> ()
-  | LetPr (e1, e2, _xs) ->
+  | LetPr (qs, e1, e2) ->
+    List.iter (check_param dims) qs;
     check_exp dims ctx e1;
     check_exp dims ctx e2
-  | IterPr ([prem1], ite) ->
+  | IterPr (prem1, ite) ->
     check_iterexp dims ctx check_prem prem1 ite
-  | IterPr (_, _) -> assert false
   | NegPr prem1 ->
     check_prem dims ctx prem1
 
@@ -687,17 +687,17 @@ and annot_prem dims prem : prem * occur =
     | IfPr e ->
       let e', occur = annot_exp `Rhs dims e in
       IfPr e', occur
-    | LetPr (e1, e2, ids) ->
+    | LetPr (qs, e1, e2) ->
+      let qs', occurs = List.split (List.map (annot_param dims) qs) in
       let e1', occur1 = annot_exp `Lhs dims e1 in
       let e2', occur2 = annot_exp `Rhs dims e2 in
-      LetPr (e1', e2', ids), union occur1 occur2
+      LetPr (qs', e1', e2'), List.fold_left union (union occur1 occur2) occurs
     | ElsePr ->
       ElsePr, Map.empty
-    | IterPr ([prem1], iter) ->
+    | IterPr (prem1, iter) ->
       let prem1', occur1 = annot_prem dims prem1 in
       let iter', occur' = annot_iterexp `Rhs dims occur1 iter prem.at in
-      IterPr ([prem1'], iter'), occur'
-    | IterPr (_, _) -> assert false
+      IterPr (prem1', iter'), occur'
     | NegPr prem1 ->
       let prem1', occur1 = annot_prem dims prem1 in
       NegPr prem1', occur1

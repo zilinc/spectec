@@ -336,6 +336,13 @@ let rec length_of exp : exp =
   | CatE (exp1, exp2) -> addE ~at:exp.at `NatT (length_of exp1) (length_of exp2)
   | _ -> lenE ~at:exp.at exp  (* e.g. [exp] could be the result of a function call *)
 
+let varset_of_quants qs : Set.t =
+  List.map (fun q -> match q.it with
+  | ExpP (v, t) -> v.it
+  | _ -> error q.at ("Invalid quantifier " ^ string_of_quant q)
+  ) qs |> Set.of_list
+
+
 type direction = [ `Lhs | `Rhs ]
 
 (* Introduces a new binding for an expression.
@@ -347,12 +354,12 @@ type direction = [ `Lhs | `Rhs ]
       - `Lhs: can also include if premises for non-linear patterns; need to animate the premises.
       - `Rhs: already animated premises.
 *)
-let bind_var_exp envr occ oname exp ot dir : Il.Env.t ref * string list * exp * prem list =
+let bind_var_exp envr occ oname exp ot dir : Il.Env.t ref * quant list * exp * prem list =
   let ( let* ) = Result.bind in
   match exp.it with
   | VarE v -> (
     if is_affine occ v.it || dir == `Rhs then
-     (envr, [v.it], exp, [])
+     (envr, [ExpP (v, exp.note) $ v.at], exp, [])
     else
       (* Deal with non-linear occurrences of variables in patterns *)
       let v' = fresh_id oname exp.at in
@@ -360,7 +367,7 @@ let bind_var_exp envr occ oname exp ot dir : Il.Env.t ref * string list * exp * 
       envr := bind_var !envr v' t;
       let ve' = VarE v' $$ v'.at % t in
       let prem_v = IfPr (eqE ~at:exp.at ve' exp) $ exp.at in
-      (envr, [v'.it], ve', [prem_v])
+      (envr, [ExpP (v', t) $ v'.at], ve', [prem_v])
   )
   | _ ->
     let v = fresh_id oname exp.at in
@@ -369,14 +376,14 @@ let bind_var_exp envr occ oname exp ot dir : Il.Env.t ref * string list * exp * 
     let ve = VarE v $$ v.at % t in
     let prem_v = match dir with
     | `Lhs -> IfPr (eqE ~at:exp.at ve exp) $ exp.at
-    | `Rhs -> LetPr (ve, exp, [v.it]) $ exp.at
+    | `Rhs -> LetPr ([ExpP (v, t) $ v.at], ve, exp) $ exp.at
     in
-    (envr, [v.it], ve, [prem_v])
+    (envr, [ExpP (v, t) $ v.at], ve, [prem_v])
 
 (* Instead of binding an expression to a new variable, it binds an expression
    to a *pattern*.
  *)
-let rec bind_pat_exp envr occ oname exp ot : Il.Env.t ref * string list * exp * prem list =
+let rec bind_pat_exp envr occ oname exp ot : Il.Env.t ref * quant list * exp * prem list =
   let ( let* ) = Result.bind in
   match exp.it with
   | SubE (exp', t1, t2) ->
@@ -610,7 +617,7 @@ and animate_exp_eq envr at lhs rhs : prem list E.m =
   let ( let* ) = E.( >>= ) in
   info "anf" at (lazy ("lhs = " ^ string_of_exp lhs ^ "; rhs = " ^ string_of_exp rhs));
   let (envr, vs_rhs, rhs', prems_rhs) = bind_var_exp envr empty_occ None rhs None `Rhs in
-  let* () = update (add_knowns (Set.of_list vs_rhs)) in
+  let* () = update (add_knowns (varset_of_quants vs_rhs)) in
   let* prems = animate_exp_eq' envr at lhs rhs' in
   E.return (prems_rhs @ prems)
 
@@ -623,7 +630,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   (* Base case: single variable assignment. *)
   | VarE v ->
     let* () = update (add_knowns (Set.singleton v.it)) in
-    E.return [ LetPr (lhs, rhs, [v.it]) $ at ]
+    E.return [ LetPr ([ExpP (v, lhs.note) $ v.at], lhs, rhs) $ at ]
   (* Treated as atomic. Will add to the known_info field. *)
   (*
   | LenE exp1 ->
@@ -703,28 +710,30 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     begin match lhs'.it, iter with
     (* Special case *)
     | _, Opt ->
-      let (envr, vs, ve, prems_lhs) = bind_var_exp envr empty_occ None lhs' None `Lhs in
-      let blob = List.map (fun v ->
-        (match List.find_opt (fun (x, e) -> x.it = v) xes with
+      let (envr, vqs, ve, prems_lhs) = bind_var_exp envr empty_occ None lhs' None `Lhs in
+      let blob = List.map (fun q -> match q.it with
+      | ExpP (v, t) ->
+        (match List.find_opt (fun (x, e) -> Il.Eq.eq_id x v) xes with
         | Some (xI, eI) ->
           let v_eI = (match eI.it with
           | VarE v_eI -> v_eI
           | _ -> assert false
           ) in
-          (xI, v_eI, eI)
+          (ExpP (v_eI, t) $ v_eI.at, (xI, eI))
         | None ->
-          let v' = Frontend.Dim.annot_varid (v $ no) [iter] in
-          let v_question = fresh_id (Some v'.it) ve.at in
-          let t = find_var !envr (v $ no) in
-          let t_question = IterT (t, iter) $ no in
-          let ve_question = VarE v_question $$ ve.at % t_question in
-          envr := bind_var !envr v_question t_question;
-          (v $ no, v_question, ve_question)
+          let v' = Frontend.Dim.annot_varid v [iter] in
+          let v_quest = fresh_id (Some v'.it) ve.at in
+          let t = find_var !envr v in
+          let t_quest = IterT (t, iter) $ no in
+          let ve_quest = VarE v_quest $$ ve.at % t_quest in
+          envr := bind_var !envr v_quest t_quest;
+          (ExpP (v_quest, t_quest) $ v_quest.at, (v, ve_quest))
         )
-      ) vs in
-      let xes', v_questions = Lib.List.unzip3 blob |> fun (xs, ys, zs) -> (List.combine xs zs, List.map it ys) in
-      let prem_opt = LetPr (IterE (ve, (iter, xes')) $$ lhs.at % lhs'.note, rhs, v_questions) $ at in
-      let* () = update (add_knowns (Set.of_list v_questions)) in
+      | _ -> error q.at ("Invalid quantifier")
+      ) vqs in
+      let v_quests, xes' = Lib.List.unzip blob in
+      let prem_opt = LetPr (v_quests, IterE (ve, (iter, xes')) $$ lhs.at % lhs'.note, rhs) $ at in
+      let* () = update (add_knowns (varset_of_quants v_quests)) in
       (* [xes'] contains only the bindings in the new inner LHS, i.e. [ve], but when the new LHS is
          different from the old LHS, the bindings of the old LHS, which are stored in [xes], need to be included.
       *)
@@ -736,7 +745,10 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       ) xes1 xes2
       in
       let xes'' = merge xes' xes in
-      let* prems_iter' = animate_prem envr (IterPr (prems_lhs, (iter, xes'')) $ at) in
+      let iter_prems = List.map (fun prem_lhs -> (IterPr (prem_lhs, (iter, xes'')) $ at)) prems_lhs in
+      let s_new = { (init ()) with prems = iter_prems; knowns } in
+      let* (prems_iter', s_new') = run_inner s_new (animate_prems' envr at) in
+      let* () = update (put_knowns (get_knowns s_new')) in
       E.return (prem_opt :: prems_iter')
     (* Optimisation for -- let v* = rhs *)
     | VarE v, List when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
@@ -753,7 +765,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
         let prem_body = IfPr (eqE ~at lhs' rhs') $ at in
         let* prems_body' = bracket (add_knowns (Set.singleton i.it))
                                    (remove_knowns (Set.singleton i.it))
-                                   (animate_prem envr (IterPr ([prem_body], iterexp) $ at)) in
+                                   (animate_prem envr (IterPr (prem_body, iterexp) $ at)) in
         E.return (prem_len :: prems_body')
       else
         (* Inductive case where [len] is unknown. *)
@@ -802,16 +814,16 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return prems'
   | SubE (exp, t1, t2) ->
-    let (envr, vs, ve, prems_v) = bind_var_exp envr empty_occ None exp None `Lhs in
-    let prem' = LetPr (SubE (ve, t1, t2) $> lhs, rhs, vs) $ at in
-    let* () = update (add_knowns (Set.of_list vs)) in
+    let (envr, vqs, ve, prems_v) = bind_var_exp envr empty_occ None exp None `Lhs in
+    let prem' = LetPr (vqs, SubE (ve, t1, t2) $> lhs, rhs) $ at in
+    let* () = update (add_knowns (varset_of_quants vqs)) in
     let* prems_v' = E.(mapM (animate_prem envr) prems_v <&> List.concat) in
     E.return (prem' :: prems_v')
   | OptE None -> assert false  (* Because lhs must contain unknowns *)
   | OptE (Some exp) ->
-    let (envr', vs, ve, prems_v) = bind_var_exp envr empty_occ None exp None `Lhs in
-    let prem_opt = LetPr (OptE (Some ve) $$ lhs.at % rhs.note, rhs, vs) $ at in
-    let* () = update (add_knowns (Set.of_list vs)) in
+    let (envr', vqs, ve, prems_v) = bind_var_exp envr empty_occ None exp None `Lhs in
+    let prem_opt = LetPr (vqs, OptE (Some ve) $$ lhs.at % rhs.note, rhs) $ at in
+    let* () = update (add_knowns (varset_of_quants vqs)) in
     let* prems_v' = E.(mapM (animate_prem envr) prems_v <&> List.concat) in
     E.return (prem_opt :: prems_v')
   | TheE lhs' ->
@@ -867,19 +879,22 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       | TupE es ->
         let (_, (t', _qs, _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
         let ets = as_tup_typ !envr t' in
-        let (envr, vs, ves, prem_vs) = List.fold_left (fun acc (e, (_, t)) ->
-          let (envr, vs, ves, prem_vs) = acc in
+        let (envr, vqs, ves, prem_vs) = List.fold_left (fun acc (e, (_, t)) ->
+          let (envr, vqs, ves, prem_vs) = acc in
           (* NOTE: If we use `t` to type the new variable below, then it's possible that some of them
              do not reduce, and will cause later pattern matching on the types to fail.
           *)
-          let (envr', vs', ve, prems_v) = bind_var_exp envr empty_occ None e None `Lhs in
-          (envr', vs @ vs', ves@[ve], prem_vs @ prems_v)
+          let (envr', vqs', ve, prems_v) = bind_var_exp envr empty_occ None e None `Lhs in
+          (envr', vqs @ vqs', ves@[ve], prem_vs @ prems_v)
         ) (envr, [], [], []) (List.combine es ets) in
         let tup = TupE ves $$ lhs.at % lhs.note in
         let* (subst_vs, tup', prems_ves) = elim_lhs_known_vars envr tup.at tup in
-        let vs' = List.map subst_vs vs in
-        let prem_case = LetPr (CaseE (mixop, tup') $$ lhs.at % rhs.note, rhs, vs') $ at in
-        let* () = update (add_knowns (Set.of_list vs')) in
+        let vqs' = List.map (fun q -> match q.it with
+        | ExpP (v, t) -> ExpP (subst_vs v.it $ v.at, t) $ q.at
+        | _ -> assert false
+        ) vqs in
+        let prem_case = LetPr (vqs', CaseE (mixop, tup') $$ lhs.at % rhs.note, rhs) $ at in
+        let* () = update (add_knowns (varset_of_quants vqs')) in
         (* FIXME(zilinc): It may not handle patterns like C(v, v, v) correctly. *)
         let* s' = get () in
         let s_new = { (init ()) with prems = prem_vs @ prems_ves; knowns = get_knowns s' } in
@@ -1104,14 +1119,14 @@ and animate_exp_mem envr at e es : prem list E.m =
   (match is_known knowns e, is_known knowns es with
   | true , true -> assert false
   | false, true when can_guess s ->
-    let (envr, vs, e', prems_v) = bind_pat_exp envr empty_occ None e None in
-    let (envr, vs', es', prems_es) = bind_var_exp envr empty_occ None es None `Rhs in
-    let* () = update (add_knowns (Set.of_list vs')) in
+    let (envr, vqs, e', prems_v) = bind_pat_exp envr empty_occ None e None in
+    let (envr, vqs', es', prems_es) = bind_var_exp envr empty_occ None es None `Rhs in
+    let* () = update (add_knowns (varset_of_quants vqs')) in
     let prem_len_es = IfPr (gtE ~at:at (lenE ~at:(es'.at) es') (natE ~at:at Z.zero)) $ at in
     let zero = NumE (`Nat Z.zero) $$ e'.at % (natT ~at:e'.at ()) in
     let es_0 = IdxE (es', zero) $$ es'.at % e'.note in
-    let* () = update (add_knowns (Set.of_list vs)) in
-    let prem' = LetPr (e', es_0, vs) $ at in
+    let* () = update (add_knowns (varset_of_quants vqs)) in
+    let prem' = LetPr (vqs, e', es_0) $ at in
     let* prems_v' = E.(mapM (animate_prem envr) prems_v <&> List.concat) in
     E.return (prems_es @ [prem_len_es; prem'] @ prems_v')
   | false, true -> E.throw (string_of_error at ("Can't yet guess membership."))
@@ -1163,7 +1178,7 @@ and animate_if_prem envr at exp : prem list E.m =
   (* Membership or nondeterministic choice: e1 ∈ e2 *)
   | MemE (e1, e2) -> animate_exp_mem envr exp.at e1 e2
   | IterE (exp', iterexp) ->
-    animate_prem envr (IterPr ([IfPr exp' $ exp'.at], iterexp) $ at)
+    animate_prem envr (IterPr (IfPr exp' $ exp'.at, iterexp) $ at)
   | _ -> let fv_exp = (free_exp false exp).varid in
          let unknowns = Set.diff fv_exp knowns in
          E.throw (string_of_error at (
@@ -1187,8 +1202,7 @@ and animate_prem envr prem : prem list E.m =
     error prem.at ("Can't animate LetPr: " ^ string_of_prem prem)
   | ElsePr ->
     E.return [ prem ]
-  | IterPr ([], _) -> E.return []
-  | IterPr (prems, ((List|List1) as iter, xes)) ->
+  | IterPr (prem1, ((List|List1) as iter, xes)) ->
     (* Reduce them to ListN(_, None). *)
     let olist_e = List.find_map (fun (x, e) ->
       let fv_e = (free_exp false e).varid in
@@ -1199,19 +1213,19 @@ and animate_prem envr prem : prem list E.m =
     | Some list_e ->
       let len_v = fresh_id (Some "len") list_e.at in
       envr := bind_var !envr len_v (natT ());
-      let len_e = VarE len_v $$ len_v.at % (natT ()) in
-      let prem_len = LetPr (len_e, LenE list_e $> len_e, [len_v.it]) $ prem.at in
+      let len_e = VarE len_v $$ len_v.at % (natT ~at:len_v.at ()) in
+      let prem_len = LetPr ([ExpP (len_v, natT ~at:len_v.at ()) $ len_v.at], len_e, LenE list_e $> len_e) $ prem.at in
       let* () = update (add_knowns (Set.singleton len_v.it)) in
       let prem_list1 = match iter with
       | List  -> []
       | List1 -> [IfPr (gtE ~at:prem.at len_e (mk_nat ~at:len_e.at 0)) $ prem.at]
       | _ -> assert false
       in
-      let prem' = IterPr (prems, (ListN(len_e, None), xes)) $ prem.at in
+      let prem' = IterPr (prem1, (ListN(len_e, None), xes)) $ prem.at in
       let* prems' = animate_prem envr prem' in
       E.return (prem_len :: prem_list1 @ prems')
     )
-  | IterPr (prems, (ListN(len, None) as iter, xes)) ->
+  | IterPr (prem1, (ListN(len, None) as iter, xes)) ->
     (* Reduce them to ListN(_, Some _). *)
     let i = fresh_id (Some "i") len.at in
     let i_star = Frontend.Dim.annot_varid i [iter] in
@@ -1219,9 +1233,9 @@ and animate_prem envr prem : prem list E.m =
     let i_star_e = VarE i_star $$ i_star.at % t_star in
     envr := bind_var !envr i_star t_star;
     let xes' = (i, i_star_e) :: xes in
-    let prem' = IterPr (prems, (ListN(len, Some i), xes')) $ prem.at in
+    let prem' = IterPr (prem1, (ListN(len, Some i), xes')) $ prem.at in
     animate_prem envr prem'
-  | IterPr (prems, (((Opt|ListN(_, Some _)) as iter, xes) as iterexp)) ->
+  | IterPr (prem1, (((Opt|ListN(_, Some _)) as iter, xes) as iterexp)) ->
     (* [envr] is the environment outside of the iteration, and [lenvr] is the one
        inside the iteration.
     *)
@@ -1254,7 +1268,7 @@ and animate_prem envr prem : prem list E.m =
     | None   -> knowns_inner
     | Some i -> Set.add i.it knowns_inner
     in
-    let s_body = { (init ()) with prems; knowns = knowns_inner } in
+    let s_body = { (init ()) with prems = [prem1]; knowns = knowns_inner } in
     let old_lenv = !lenvr in
     let* (prems_body', s_body') = run_inner s_body (animate_prems' lenvr prem.at) in
     (* We can't use the set of new bindings in the typing context to generate the new
@@ -1350,7 +1364,7 @@ and animate_prem envr prem : prem list E.m =
       (* -- let x' = x0 {x'} will be out of the iteration, so adding binding to [envr]. *)
       envr := bind_var !envr x' t;
       let xe' = VarE x' $$ x'.at % t in
-      let prem_x0 = LetPr (xe', x0, [x'.it]) $ xe'.at in
+      let prem_x0 = LetPr ([ExpP (x', t) $ x'.at], xe', x0) $ xe'.at in
       let i = fresh_id (Some "i") len.at in
       let i_star = Frontend.Dim.annot_varid i [iter] in
       let t_star = IterT (natT ~at:i_star.at (), List) $ i_star.at in
@@ -1358,7 +1372,7 @@ and animate_prem envr prem : prem list E.m =
       let iter = ListN (len, Some i) in
       let e_i = IdxE (e, VarE i $$ i.at % (natT ~at:i.at ())) $$ e.at % x0.note in
       let prem_eq = IfPr (eqE ~at:xe'.at xe' e_i) $ xe'.at in
-      let prem_eq_iter = IterPr ([prem_eq], (iter, [(i, i_star_e); (x, e)])) $ xe'.at in
+      let prem_eq_iter = IterPr (prem_eq, (iter, [(i, i_star_e); (x, e)])) $ xe'.at in
       envr := bind_var !envr i_star t_star;
       ([x'.it; x_star.it; i_star.it], [x.it], [prem_len; prem_x0; prem_eq_iter])
     ) xes_static
@@ -1378,7 +1392,10 @@ and animate_prem envr prem : prem list E.m =
     let s_end = { (init ()) with prems = e_prems1; knowns = knowns_outer} in
     let* (e_prems1', s_end') = run_inner s_end (animate_prems' envr prem.at) in
     let* () = update (put_knowns (get_knowns s_end')) in
-    E.return ((IterPr (prems_body', (iter, in_xes @ xes'' @ xes_static)) $ prem.at) :: e_prems1' @ e_prems2)
+    let prem_iters = List.map (fun prem_body ->
+      (IterPr (prem_body, (iter, in_xes @ xes'' @ xes_static)) $ prem.at)
+    ) prems_body' in
+    E.return (prem_iters @ e_prems1' @ e_prems2)
   | _ -> error prem.at ("Unable to animate premise: " ^ string_of_prem prem)
 
 
@@ -1474,8 +1491,8 @@ let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) 
   let occ = List.fold_left (occ_arg (Fun.const true) `Once) empty_occ args in
   let (vss, args', prems_args) = List.mapi (fun i arg -> match arg.it with
     | ExpA exp' ->
-      let (lenvr, vs, ve, prems_v) = bind_pat_exp lenvr occ (Some ("a" ^ string_of_int i)) exp' None in
-      (vs, ExpA ve $> arg, prems_v)
+      let (lenvr, vqs, ve, prems_v) = bind_pat_exp lenvr occ (Some ("a" ^ string_of_int i)) exp' None in
+      (varset_of_quants vqs |> Set.to_list, ExpA ve $> arg, prems_v)
     | _ -> ([], arg, [])
   ) args |> Lib.List.unzip3
   in

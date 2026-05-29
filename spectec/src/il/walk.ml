@@ -153,9 +153,9 @@ and transform_prem t p =
   let it = match p.it with
     | RulePr (id, args, op, e) -> RulePr (t.transform_rel_id id, List.map (transform_arg t) args, op, transform_exp t e)
     | IfPr e -> IfPr (transform_exp t e)
-    | LetPr (e1, e2, ss) -> LetPr (transform_exp t e1, transform_exp t e2, ss)
+    | LetPr (quants, e1, e2) -> LetPr (List.map (transform_param t) quants, transform_exp t e1, transform_exp t e2)
     | ElsePr -> ElsePr
-    | IterPr (ps, ie) -> IterPr (List.map (transform_prem t) ps, transform_iterexp t ie)
+    | IterPr (p, ie) -> IterPr (transform_prem t p, transform_iterexp t ie)
     | NegPr p -> NegPr (transform_prem t p)
   in
   f { p with it }
@@ -326,9 +326,9 @@ and collect_prem c p =
   let traverse_list = match p.it with
     | RulePr (_, args, _, e) -> compose_list c (collect_arg c) args $@ collect_exp c e
     | IfPr e -> collect_exp c e
-    | LetPr (e1, e2, _) -> collect_exp c e1 $@ collect_exp c e2
+    | LetPr (quants, e1, e2) -> compose_list c (collect_param c) quants $@ collect_exp c e1 $@ collect_exp c e2
     | ElsePr -> c.default
-    | IterPr (ps, ie) -> compose_list c (collect_prem c) ps $@ collect_iterexp c ie
+    | IterPr (p, ie) -> collect_prem c p $@ collect_iterexp c ie
     | NegPr p -> collect_prem c p
   in
   let (res, continue) = f p in 

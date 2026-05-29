@@ -1,14 +1,3 @@
-(*
-This transformation removes use of the ! operator from relations, by
-introducing fresh variables.
-
-An occurrence of !(e) will be replaced with a fresh variable x of the suitable
-type (and dimension), and a new condition e = ?(x) is added.
-
-This is an alternative to to how the Sideconditions pass handles the ! operator.
-If you need both, passes, run this one first.
-*)
-
 open Util
 open Source
 open Il.Ast
@@ -53,7 +42,7 @@ let under_iterexp (iter, vs) eqns : iterexp * eqns =
    ) eqns in
    let eqns' = List.map2 (fun (param, pr) (v, e) ->
      let iterexp' = update_iterexp_vars (Il.Free.free_prem pr) (iter, vs @ [(v, e)]) in
-     let pr' = IterPr ([pr], iterexp') $ no_region in
+     let pr' = IterPr (pr, iterexp') $ no_region in
      (ExpP (v, e.note) $ param.at, pr')
    ) eqns new_vs in
    (iter, vs @ new_vs), eqns'
@@ -199,15 +188,14 @@ and t_prem' n prem : eqns * prem' =
   match prem with
   | RulePr (a, args, b, exp) -> binary (fun n x -> t_list t_arg n x Fun.id) t_exp n (args, exp) (fun (args', exp') -> RulePr (a, args', b, exp'))
   | IfPr e -> unary t_exp n e (fun e' -> IfPr e')
-  | LetPr (e1, e2, ids) -> binary t_exp t_exp n (e1, e2) (fun (e1', e2') -> LetPr (e1', e2', ids))
+  | LetPr (qs, e1, e2) -> binary t_exp t_exp n (e1, e2) (fun (e1', e2') -> LetPr (qs, e1', e2'))
   | ElsePr -> [], prem
-  | IterPr ([prem], iterexp) ->
+  | IterPr (prem, iterexp) ->
     let eqns1, prem' = t_prem n prem in
     let iterexp', eqns1' = under_iterexp iterexp eqns1 in
     let eqns2, iterexp'' = t_iterexp n iterexp' in
     let iterexp''' = update_iterexp_vars (Il.Free.free_prem prem') iterexp'' in
-    eqns1' @ eqns2, IterPr ([prem'], iterexp''')
-  | IterPr (_, _) -> assert false
+    eqns1' @ eqns2, IterPr (prem', iterexp''')
   | NegPr prem ->
     let eqns1, prem' = t_prem n prem in
     eqns1, NegPr (prem')

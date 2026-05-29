@@ -142,7 +142,7 @@ let is_winstr_prem = is_let_prem_with_rhs_type "inputT"
 
 let lhs_of_prem pr =
   match pr.it with
-  | Il.LetPr (lhs, _, _) -> lhs
+  | Il.LetPr (_, lhs, _) -> lhs
   | _ -> Error.error pr.at "prose translation" "expected a LetPr"
 
 let rec is_wasm_value e =
@@ -978,14 +978,14 @@ and translate_prem prem =
   match prem.it with
   | Il.IfPr exp -> [ ifI (translate_exp exp, [], []) ~at ]
   | Il.ElsePr -> [ otherwiseI [] ~at ]
-  | Il.LetPr (exp1, exp2, ids) ->
+  | Il.LetPr (qs, exp1, exp2) ->
+    let ids = List.filter_map (fun q -> match q.it with (Il.ExpP (id, _)) -> Some id.it | _ -> None) qs in
     init_lhs_id ();
     translate_letpr exp1 exp2 ids
   | Il.RulePr (id, args, _, exp) ->
     if args <> [] then error prem.at "Cannot handle rule arguments";
     translate_rulepr id exp
-  | Il.IterPr ([pr], iterexp) -> translate_iterpr pr iterexp
-  | Il.IterPr (_, _) -> assert false
+  | Il.IterPr (pr, iterexp) -> translate_iterpr pr iterexp
   | Il.NegPr _ -> error at "encountered a negated premise"
 
 
@@ -1218,13 +1218,7 @@ and translate_rgroup (rule: rule_def) =
   let winstr = extract_winstr (List.hd rgroup) rule.at in
   let instrs = translate_rgroup' rule in
 
-  let name =
-    try
-      match Mixop.head (case_of_case winstr) with
-      | Some atom -> atom
-      | _ -> failwith ""
-    with _ -> error rule.at "The reduction rules do not have valid or consistent target Wasm instructions."
-  in
+  let name = case_of_case winstr in
   let anchor = rel_id.it ^ "/" ^ instr_name in
   let al_params =
     if List.mem instr_name ["frame"; "label"; "handler"] then [] else

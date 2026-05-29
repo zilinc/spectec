@@ -280,7 +280,7 @@ and ocaml_of_args ?(typearg=true) = function
 
 let ocaml_of_iterprem (iterlist : (id * exp) list) (len : exp) (id_opt : id option) (prem : prem' phrase) : string t =
   match prem.it with
-  | LetPr (lhs, rhs, _) ->
+  | LetPr (_, lhs, rhs) ->
     (* Out-flow: if we have n <- n* and let n = ...,
        we can build n* from n *)
     begin
@@ -308,7 +308,7 @@ let ocaml_of_iterprem (iterlist : (id * exp) list) (len : exp) (id_opt : id opti
 let ocaml_of_prems (prems : prem' phrase list) : string t =
   concat_mapM "\n"
   (function p -> match p.it with
-    | LetPr (lhs, rhs, _) ->
+    | LetPr (_, lhs, rhs) ->
         let* lhs_str = ocaml_of_exp lhs in
         let* rhs_str = ocaml_of_exp rhs in
         return (Printf.sprintf "  let* %s = %s in" lhs_str rhs_str)
@@ -317,11 +317,11 @@ let ocaml_of_prems (prems : prem' phrase list) : string t =
         return (Printf.sprintf "  if not (%s) then None else" cond_str)
     | RulePr _ -> return "(* TODO: RulePr *)"
     | ElsePr -> return ""
-    | IterPr (prems, (iter, iterlist)) -> match iter with
+    | IterPr (prem1, (iter, iterlist)) -> match iter with
       | Opt -> return "(* TODO: IterPr Opt *)"
       | List -> return "(* TODO: IterPr List *)"
       | List1 -> return "(* TODO: IterPr List1 *)"
-      | ListN (e, id_opt) -> concat_mapM "\n" (ocaml_of_iterprem iterlist e id_opt) prems
+      | ListN (e, id_opt) -> ocaml_of_iterprem iterlist e id_opt prem1
   ) prems
 
 (* todo: the bracketing is possibly wrong *)

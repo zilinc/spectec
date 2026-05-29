@@ -62,7 +62,12 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
     if not (Set.is_empty unknowns) then
       error_pr prem.at ("IfPr uses unknown variables: " ^ string_of_varset unknowns) prem;
     known
-  | LetPr (lhs, rhs, vars) ->
+  | LetPr (qs, lhs, rhs) ->
+    let vars = List.map (fun q -> match q.it with
+    | ExpP (v, _) -> v.it
+    | _ -> assert false
+    ) qs
+    in
     let vars_set = Set.of_list vars in
     let rhs_fvs = free_vars_exp rhs in
     let unknowns = Set.diff rhs_fvs known in
@@ -73,7 +78,7 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
       error_pr prem.at ("Some -- where premise binders " ^ string_of_varset vars_set ^ " already known.\n" ^
                         "  ▹ Knowns: " ^ string_of_varset known) prem;
     Set.union vars_set known
-  | IterPr (plist, (iter, pairs)) ->
+  | IterPr (prem1, (iter, pairs)) ->
     (* In-flow *)
     let in_flow_knowns acc (x, e) =
       let fv_e = free_vars_exp e in
@@ -100,7 +105,7 @@ let rec valid_prem (known : Set.t) (prem : prem) : Set.t =
         | _ -> new_knowns
       ) in
     (* Validate body premise *)
-    let new_knowns'' = (List.fold_left valid_prem new_knowns' plist) in
+    let new_knowns'' = valid_prem new_knowns' prem1 in
     (* Out-flow *)
     let out_flow_knowns acc (x, e) =
       if (Set.mem x.it new_knowns'') then

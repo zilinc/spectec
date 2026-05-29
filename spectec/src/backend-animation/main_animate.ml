@@ -70,11 +70,10 @@ let rec remove_or_exp e : exp list =
 let rec remove_or_prem prem : prem list =
   match prem.it with
   | IfPr e -> e |> remove_or_exp |> List.map (fun e' -> IfPr e' $ prem.at)
-  | IterPr ([prem], iterexp) ->
+  | IterPr (prem, iterexp) ->
     prem
     |> remove_or_prem
-    |> List.map (fun new_prem -> IterPr ([new_prem], iterexp) $ prem.at)
-  | IterPr (_, _) -> assert false
+    |> List.map (fun new_prem -> IterPr (new_prem, iterexp) $ prem.at)
   | _ -> [ prem ]
 
 let remove_or_rule rule : rule list =

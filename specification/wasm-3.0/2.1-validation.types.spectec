@@ -72,11 +72,10 @@ rule Instrtype_ok:
 
 relation Expand: deftype ~~ comptype hint(macro "%expanddt") hint(tabular)
   hint(prose "The :ref:`expansion <aux-expand-deftype>` of %1 is %2")  ;; TODO(3, ?): avoid hardcoding reST
-
 relation Expand_use: typeuse ~~_context comptype  hint(macro "%expandyy") hint(tabular)
   hint(prose "The :ref:`expansion <aux-expand-typeuse>` of %2 is %3")  ;; TODO(3, ?): avoid hardcoding reST
 
-rule Expand: deftype ~~ comptype   -- if $expanddt(deftype) = comptype
+rule Expand: deftype ~~ comptype   -- if $unrolldt(deftype) = SUB final? typeuse* comptype
 
 rule Expand_use/deftype: deftype ~~_C comptype       -- Expand: deftype ~~ comptype
 rule Expand_use/typeidx: _IDX typeidx ~~_C comptype  -- Expand: C.TYPES[typeidx] ~~ comptype
@@ -85,9 +84,9 @@ rule Expand_use/typeidx: _IDX typeidx ~~_C comptype  -- Expand: C.TYPES[typeidx]
 ;; Type definitions
 
 syntax oktypeidx hint(show OK#((typeidx))) hint(prose_desc "type index") =
-  | OK typeidx   hint(show OK#(%))      hint(macro "%subtype") hint(prose "%1")
+  | OK typeidx   hint(show OK#(%))  hint(macro "%subtype") hint(prose "%1")
 syntax oktypenat hint(show OK#(n)) =
-  | OK nat       hint(show OK#(%))      hint(macro "%subtypeext")
+  | OK nat       hint(show OK#(%))  hint(macro "%subtypeext") hint(prose "%1")
 
 relation Packtype_ok: context |- packtype : OK          hint(name "K-pack")    hint(macro "%packtype")
 relation Fieldtype_ok: context |- fieldtype : OK        hint(name "K-field")   hint(macro "%fieldtype")
@@ -156,21 +155,22 @@ rule Subtype_ok:
   -- Comptype_ok: C |- comptype : OK
   -- (Comptype_sub: C |- comptype <: comptype')*
 
-def $before(typeuse, nat) : bool   hint(show % << %) hint(macro "before")
+def $before(typeuse, nat) : bool   hint(show % << %) hint(macro none)
 def $before(REC j, i) = j < i
 def $before(typeuse, i) = true  -- otherwise
 
-def $unrollht(context, heaptype) : subtype  hint(show $unroll_(%,%))
-def $unrollht(C, deftype) = $unrolldt(deftype)
-def $unrollht(C, _IDX typeidx) = $unrolldt(C.TYPES[typeidx])
-def $unrollht(C, REC i) = C.RECS[i]
+def $unrollht_(context, heaptype) : subtype
+def $unrollht_(C, deftype) = $unrolldt(deftype)
+def $unrollht_(C, _IDX typeidx) = $unrolldt(C.TYPES[typeidx])
+def $unrollht_(C, REC i) = C.RECS[i]
 
 rule Subtype_ok2:
   C |- SUB FINAL? typeuse* comptype : OK(i)
   -- if |typeuse*| <= 1
   -- (Typeuse_ok: C |- typeuse : OK)*
   -- (if $before(typeuse, i))*
-  -- (if $unrollht(C, typeuse) = SUB typeuse'* comptype')*
+  ----
+  -- (if $unrollht_(C, typeuse) = SUB typeuse'* comptype')*
   ----
   -- Comptype_ok: C |- comptype : OK
   -- (Comptype_sub: C |- comptype <: comptype')*
