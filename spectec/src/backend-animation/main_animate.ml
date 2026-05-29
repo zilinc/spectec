@@ -121,7 +121,7 @@ let run il print_dl inline =
                   |> fun (il_env, dl) -> (il_env, if inline then List.map Inline.inline_dl_def dl else dl)
   in
   let il' = Dl2il.dl2il dl in
-  let il'' = (* Il.Dep.recursify_defs *) il' in
+  let il'' = Il.Dep.recursify_defs il' in
   let dl' = Il2dl.il2dl il'' in
   if print_dl then
     print_endline (List.map string_of_dl_def dl' |> String.concat "\n");

@@ -25,14 +25,21 @@ let check_recursion (ds' : def list) =
     | GramD _, GramD _ -> ()
     | _, _ ->
       error (List.hd ds').at (" " ^ string_of_region d'.at ^
-        ": invalid recursion between definitions of different sort")
+        ": invalid recursion between definitions of different sort:\n" ^
+        "  ▹ " ^ Print.string_of_def_id d' ^ "\n" ^
+        "  ▹ " ^ Print.string_of_def_id (List.hd ds') ^ "\n")
   ) ds'
   (* TODO(4, rossberg): check that notations are non-recursive and defs are inductive? *)
 
+let flatten ds : script =
+  List.concat_map (fun d -> match d.it with
+  | RecD ds -> ds
+  | _ -> [d]
+  ) ds
 
-let recursify_defs (ds' : script) : script =
+let recursify_defs (ds : script) : script =
   let open Free in
-  let da = Array.of_list ds' in
+  let da = Array.of_list (flatten ds) in
   let map_typid = ref Map.empty in
   let map_relid = ref Map.empty in
   let map_defid = ref Map.empty in

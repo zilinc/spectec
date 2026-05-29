@@ -343,6 +343,21 @@ let rec string_of_def ?(suppress_pos = false) d =
   | HintD _ ->
     ""
 
+let rec string_of_def_id d =
+  let pre = "\n" ^ region_comment "" d.at in
+  match d.it with
+  | TypD (x, _, _) ->
+    pre ^ "syntax " ^ string_of_id x
+  | RelD (x, _, _, _, _) ->
+    pre ^ "relation " ^ string_of_id x
+  | DecD (x, _, _, _) ->
+    pre ^ "def $" ^ string_of_id x
+  | GramD (x, _, _, _) ->
+    pre ^ "grammar " ^ string_of_id x
+  | RecD ds ->
+    pre ^ "rec {\n" ^ concat "" (List.map string_of_def_id ds) ^ "}" ^ "\n"
+  | HintD _ ->
+    "hint"
 
 (* Scripts *)
 
