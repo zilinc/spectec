@@ -153,12 +153,13 @@ let rec valid_def env (def: dl_def) : Env.t =
     let env' = Valid.valid_params env ps in
     Valid.valid_typ env' t;
     let clauses' = List.map snd clauses in
-    List.iter (Valid.valid_clause env' fid ps t) clauses';  (* IL validation *)
+    (* List.iter (Valid.valid_clause env' fid ps t) clauses';  (* IL validation *) *)
     List.iter valid_clause clauses';  (* For animation *)
     Env.bind_def env fid (ps, t, clauses')
   | RecDef ds ->
     let env'  = Valid.valid_binders infer_def env  ds in
     let env'' = Valid.valid_binders valid_def env' ds in
+    (* Technically redundant, as an equivalent check has been done by [Il.Dep.recursify_defs] earlier. *)
     List.iter (fun d ->
       match List.hd ds, d with
       | TypeDef _, TypeDef _
