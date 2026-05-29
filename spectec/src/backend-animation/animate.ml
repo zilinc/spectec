@@ -1059,14 +1059,18 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       E.return [prem_len; prem_1; prem_2]
     | true , false ->
       let rhs1 = SliceE (rhs, natE Z.zero, len1) $> rhs in
-      let len2' = subtrE ~at:at `NatT len_rhs len1 in
+      let len2' = subtrE ~at:at `IntT (cvtE ~at:rhs.at (len_rhs, `NatT, `IntT))
+                                      (cvtE ~at:exp1.at (len1, `NatT, `IntT))
+                  |> fun e -> cvtE ~at:e.at (e, `IntT, `NatT) in
       let rhs2 = SliceE (rhs, len1, len2') $> rhs in
       let prem_len = IfPr (leE ~at:at len1 len_rhs) $ at in
       let prem_1 = IfPr (eqE ~at:at exp1 rhs1) $ rhs.at in
       let prem_2 = IfPr (eqE ~at:at exp2 rhs2) $ rhs.at in
       E.return [prem_len; prem_1; prem_2]
     | false, true  ->
-      let len1' = subtrE ~at:at `NatT len_rhs len2 in
+      let len1' = subtrE ~at:at `IntT (cvtE ~at:rhs.at (len_rhs, `NatT, `IntT))
+                                      (cvtE ~at:exp2.at (len2, `NatT, `IntT))
+                  |> fun e -> cvtE ~at:e.at (e, `IntT, `NatT) in
       let rhs1 = SliceE (rhs, natE Z.zero, len1') $> rhs in
       let rhs2 = SliceE (rhs, len1', len2) $> rhs in
       let prem_len = IfPr (leE ~at:at len2 len_rhs) $ at in
