@@ -13,8 +13,8 @@ open Source
 let error at msg = Error.error at "animation/valid" msg
 let error_pr at msg prem = error at (msg ^ "\n" ^ "In premise: " ^ string_of_prem prem)
 
-let free_vars_exp e = (Il2al.Free.free_exp false e).varid
-let free_vars_args args = (free_list (Il2al.Free.free_arg false) args).varid
+let free_vars_exp e = (free_exp e).varid
+let free_vars_args args = (free_list free_arg args).varid
 
 let rec valid_pattern lhs (vars: string list) prem : unit =
   let vars_set = Set.of_list vars in

@@ -1,6 +1,5 @@
 open Il.Ast
 open Il.Env
-open Il2al.Free
 open Util.Error
 open Util.Source
 open Def

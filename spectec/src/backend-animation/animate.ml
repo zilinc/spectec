@@ -5,10 +5,10 @@ open Lib.Option
 open Source
 open Il.Env
 open Il.Ast
+open Il.Free
 open Il.Eval
 open Il.Print
 open Xl.Atom
-open Il2al.Free
 open Backend_ast
 open Def
 open Il_util
@@ -225,19 +225,19 @@ let env_of_quants quants envr : Il.Env.t ref =
 let sort_quants fid quants : quant list =
   let graph = ref [] in
   let ids = List.map (fun b -> match b.it with
-    | ExpP  (id, _)    -> Il.Free.free_varid id
-    | TypP   id        -> Il.Free.free_typid id
-    | DefP  (id, _, _) -> Il.Free.free_defid id
-    | GramP (id, _, _) -> Il.Free.free_gramid id
+    | ExpP  (id, _)    -> free_varid id
+    | TypP   id        -> free_typid id
+    | DefP  (id, _, _) -> free_defid id
+    | GramP (id, _, _) -> free_gramid id
   ) quants in
   let bound_typ_bind b = match b.it with
-  | ExpP (_, t) -> Il.Free.bound_typ t
+  | ExpP (_, t) -> bound_typ t
   | _ -> empty
   in
   let vss = List.map (fun q -> union (free_quant q) (bound_typ_bind q)) quants in
   List.iteri (fun i vs ->
     let deps = ref [] in
-    List.iteri (fun j id -> if Il.Free.subset id vs then deps := j :: !deps) ids;
+    List.iteri (fun j id -> if subset id vs then deps := j :: !deps) ids;
     graph := (i, !deps) :: !graph
   ) vss;
   let open Tsort in
@@ -252,7 +252,7 @@ let update f = S.update f |> E.lift
 
 
 let is_known knowns exp =
-  let fv = (free_exp false exp).varid in
+  let fv = (free_exp exp).varid in
   if Set.subset fv knowns |> not then
     false
   else
@@ -420,7 +420,7 @@ let elim_lhs_known_vars envr at exp : ((string -> string) * exp * prem list) E.m
   let ( let* ) = E.( >>= ) in
   let* s = get () in
   let knowns = get_knowns s in
-  let pvs = (free_exp true exp).varid in
+  let pvs = (free_exp exp).varid in
   let knowns_exp = Set.inter pvs knowns in
   if Set.is_empty knowns_exp then
     E.return (Fun.id, exp, [])
@@ -508,8 +508,8 @@ let invert_bin_exp at op e1 e2 (t: numtyp) rhs : (exp * exp) E.m =
   let ( let* ) = E.( >>= ) in
   let* s = get () in
   let knowns = get_knowns s in
-  let fv_e1 = (free_exp false e1).varid in
-  let fv_e2 = (free_exp false e2).varid in
+  let fv_e1 = (free_exp e1).varid in
+  let fv_e2 = (free_exp e2).varid in
   let unknowns_e1 = Set.diff fv_e1 knowns in
   let unknowns_e2 = Set.diff fv_e2 knowns in
   let* op', t' = match op with
@@ -588,8 +588,8 @@ let rec animate_rule_prem envr at id mixop exp : prem list E.m =
   in
   let fncall = CallE (id' $> id, List.map (fun e -> ExpA e $ e.at) lhs) $$ at % rt in
   (* Let res = $call(args) *)
-  let unknowns_res    = Set.diff (free_exp false res   ).varid knowns in
-  let unknowns_fncall = Set.diff (free_exp false fncall).varid knowns in
+  let unknowns_res    = Set.diff (free_exp res   ).varid knowns in
+  let unknowns_fncall = Set.diff (free_exp fncall).varid knowns in
   (match is_known knowns fncall, is_known knowns res with
   | true, true ->
     (* The rule is fully known, then check. *)
@@ -645,7 +645,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   (* function call; invert it. *)
   | CallE (fid, args) when can_invert s ->
     let varid = fun s -> s.varid in
-    let fv_args = List.map (free_arg false) args |> List.map varid in
+    let fv_args = List.map free_arg args |> List.map varid in
     let unknowns = List.map (fun fv_arg -> Set.diff fv_arg knowns) fv_args in
     let oinv_fid = find_func_hint !envr fid.it "inverse" in
     let* inv_fid = match oinv_fid with
@@ -671,7 +671,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     (* Only the last argument is invertible. *)
     let args_init, arg_last = Lib.List.split_last args in
     let o_unknown_arg = List.find_opt (fun arg ->
-      let fv_arg = (free_arg false arg).varid in
+      let fv_arg = (free_arg arg).varid in
       Set.is_empty (Set.diff fv_arg knowns) |> not
     ) args_init in
     begin match o_unknown_arg with
@@ -687,7 +687,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
                                      "  ▹ Argument: " ^ string_of_arg arg_last))
       end
     | Some unknown_arg ->
-      let unknowns_arg = Set.diff ((free_arg false unknown_arg).varid) knowns in
+      let unknowns_arg = Set.diff ((free_arg unknown_arg).varid) knowns in
       E.throw (string_of_error at ("We can only invert the last argument of function `" ^ fid.it ^ "`,\n" ^
                                    "but the following argument contains unknowns: " ^ string_of_arg unknown_arg ^ "\n" ^
                                    "  ▹ Unknowns: " ^ string_of_varset unknowns_arg))
@@ -746,8 +746,9 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       in
       let xes'' = merge xes' xes in
       let iter_prems = List.map (fun prem_lhs ->
-        let fv_prem = (free_prem false prem_lhs).varid in
-        let xes_each = List.filter (fun (x, e) -> Set.mem x.it fv_prem) xes'' in
+        let fv_prem = (free_prem prem_lhs).varid in
+        let bd_prem = (bound_prem prem_lhs).varid in
+        let xes_each = List.filter (fun (x, e) -> Set.mem x.it (Set.union fv_prem bd_prem)) xes'' in
         (IterPr (prem_lhs, (iter, xes_each)) $ at)
       ) prems_lhs in
       let* s' = get () in
@@ -1034,8 +1035,8 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     | StructT tfs -> E.return tfs
     | _ -> E.throw ("Can't animate LHS when it's CompE over non-structs")
     ) in
-    let fv1 = (free_exp false exp1).varid in
-    let fv2 = (free_exp false exp2).varid in
+    let fv1 = (free_exp exp1).varid in
+    let fv2 = (free_exp exp2).varid in
     let unknowns1 = Set.diff fv1 knowns in
     let unknowns2 = Set.diff fv2 knowns in
     let* prem_str = (match Set.is_empty unknowns1, Set.is_empty unknowns2 with
@@ -1151,8 +1152,8 @@ and animate_if_prem envr at exp : prem list E.m =
     E.return [ IfPr exp $ at ]
   (* lhs = rhs *)
   | CmpE (`EqOp, t, e1, e2) ->
-    let fv1 = (free_exp false e1).varid in
-    let fv2 = (free_exp false e2).varid in
+    let fv1 = (free_exp e1).varid in
+    let fv2 = (free_exp e2).varid in
     let unknowns1 = Set.diff fv1 knowns in
     let unknowns2 = Set.diff fv2 knowns in
     (match is_known knowns e1, is_known knowns e2 with
@@ -1180,7 +1181,7 @@ and animate_if_prem envr at exp : prem list E.m =
   | MemE (e1, e2) -> animate_exp_mem envr exp.at e1 e2
   | IterE (exp', iterexp) ->
     animate_prem envr (IterPr (IfPr exp' $ exp'.at, iterexp) $ at)
-  | _ -> let fv_exp = (free_exp false exp).varid in
+  | _ -> let fv_exp = (free_exp exp).varid in
          let unknowns = Set.diff fv_exp knowns in
          E.throw (string_of_error at (
                    "Can't animate if premise: " ^ string_of_exp exp ^ ".\n" ^
@@ -1193,7 +1194,7 @@ and animate_prem envr prem : prem list E.m =
   let ( let* ) = E.( >>= ) in
   let* s = get () in
   let knowns = get_knowns s in
-  let fv_prem = (free_prem false prem).varid in
+  let fv_prem = (free_prem prem).varid in
   match prem.it with
   | RulePr (id, args, mixop, exp) ->
     (* TODO(zilinc): Not yet supports parameterised relation. *)
@@ -1206,7 +1207,7 @@ and animate_prem envr prem : prem list E.m =
   | IterPr (prem1, ((List|List1) as iter, xes)) ->
     (* Reduce them to ListN(_, None). *)
     let olist_e = List.find_map (fun (x, e) ->
-      let fv_e = (free_exp false e).varid in
+      let fv_e = (free_exp e).varid in
       if Set.subset fv_e knowns then Some e else None
     ) xes in
     (match olist_e with
@@ -1386,8 +1387,9 @@ and animate_prem envr prem : prem list E.m =
     let* () = update (put_knowns (get_knowns s_end')) in
     let iter_prems = List.map (fun prem_body ->
       let xes_all = in_xes @ xes'' @ xes_static in
-      let fv_prem = (free_prem false prem_body).varid in
-      let xes_each = List.filter (fun (x, e) -> Set.mem x.it fv_prem) xes_all in
+      let fv_prem = (free_prem prem_body).varid in
+      let bd_prem = (bound_prem prem_body).varid in
+      let xes_each = List.filter (fun (x, e) -> Set.mem x.it (Set.union fv_prem bd_prem)) xes_all in
       (IterPr (prem_body, (iter, xes_each)) $ prem.at)
     ) prems_body' in
     E.return (iter_prems @ e_prems1' @ e_prems2)
@@ -1492,7 +1494,7 @@ let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) 
   ) args |> Lib.List.unzip3
   in
   let ins = List.concat vss |> Set.of_list in
-  let ous = (free_exp false exp).varid in
+  let ous = (free_exp exp).varid in
   let prems' = animate_prems lenvr cl.at ins ous (List.concat prems_args @ prems) in
   match prems' with
   | Error s      -> Error s
