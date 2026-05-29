@@ -11,6 +11,7 @@
     ; construct
     def
     il2dl
+    dl2il
     il_util
     inline
     ; interpreter

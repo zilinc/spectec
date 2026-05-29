@@ -816,11 +816,7 @@ and call_func name args : value OptMonad.m =
 and call_func name args : value OptMonad.m =
   info "call" no (lazy ("Calling " ^ name));
   (* Hardcoded functions defined in meta.spectec *)
-  if name = "Steps" then
-    let [config] = args in
-    let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
-    call_func "steps" args'
-  else if name = "Step" then
+  if name = "Step" then
     error no "Calling $Step is not allowed."
   else if name = "Step_pure" then
     error no "Calling $Step_pure is not allowed."
@@ -1054,10 +1050,20 @@ and step_read_throw_ref_handler = {
     | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
 
+and _Steps = {
+  name = "Steps";
+  f =
+    function
+    | [config] ->
+      let args' = [ValA config; ValA (natV (Z.of_int !RI.Flags.budget))] in
+      call_func "steps" args'
+    | vs -> error_values ("Args to $Step") vs
+}
+
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler;
+  step_read_throw_ref_handler; _Steps;
   ]
 
 and call_builtins fname args : value OptMonad.m =

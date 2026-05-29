@@ -599,6 +599,11 @@ def $steps(config, stackcount) = config_2
 def $steps(config, stackcount) = config
   -- otherwise
 
+;; When calling this function in the interpreter, it will
+;; manufacture the [stackcount] and pass it in as an extra
+;; argument to $steps.
+def $Steps(config) : config
+def $Steps           hint(builtin)
 
 ;; ********************************************************
 ;;                   Animation hints
@@ -760,5 +765,7 @@ rule Step/ctxt-frame                       hint(no_animate)
 rule Step/ctxt-handler                     hint(no_animate)
 
 relation Eval_expr hint(animate (%1, %2) -> (%3, %4))
+
+relation Steps hint(animate_manual $Steps: %1 -> %2)
 
 def $utf8 hint(no_animate)
