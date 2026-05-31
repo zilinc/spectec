@@ -719,12 +719,12 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
           | VarE v_eI -> v_eI
           | _ -> assert false
           ) in
-          (ExpP (v_eI, t) $ v_eI.at, (xI, eI))
+          (ExpP (v_eI, IterT (t, iter) $ t.at) $ v_eI.at, (xI, eI))
         | None ->
           let v' = Frontend.Dim.annot_varid v [iter] in
           let v_quest = fresh_id (Some v'.it) ve.at in
           let t = find_var !envr v in
-          let t_quest = IterT (t, iter) $ no in
+          let t_quest = IterT (t, iter) $ t.at in
           let ve_quest = VarE v_quest $$ ve.at % t_quest in
           envr := bind_var !envr v_quest t_quest;
           (ExpP (v_quest, t_quest) $ v_quest.at, (v, ve_quest))
