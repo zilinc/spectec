@@ -35,7 +35,7 @@ lemma main_inversion_lemma:
     by (metis instr_subtyping_trans instr_subtyping_frame_rule)
   done
 
-lemma
+lemma inversion_nop:
   assumes "Instrs_ok C [e] ft"
     "e = (instr_subcase_0 NOP)"
   shows "(mk_functype (mk_list []) (mk_list []) <ti: ft)"
@@ -44,5 +44,13 @@ lemma
     apply(cases rule: Instr_ok.cases)
   by auto
 
+lemma inversion_drop:
+  assumes "Instrs_ok C [e] ft"
+    "e = (instr_subcase_0 DROP)"
+  shows "\<exists> t. (mk_functype (mk_list [t]) (mk_list []) <ti: ft)"
+  using main_inversion_lemma[OF assms(1)] assms(2)
+  apply auto
+    apply(cases rule: Instr_ok.cases)
+  by auto
 
 end
