@@ -53,4 +53,14 @@ lemma inversion_drop:
     apply(cases rule: Instr_ok.cases)
   by auto
 
+lemma b_e_type_cnum:
+  assumes "Instrs_ok C [e] ft"
+          "e = instr_subcase_1 (res_CONST v_numtype var_0)"
+          "ft = (mk_functype (mk_list ts) (mk_list ts'))"
+  shows   "instr_subtyping (mk_functype (mk_list []) (mk_list [(valtype_numtype v_numtype)])) (mk_functype (mk_list ts) (mk_list ts'))"
+  using main_inversion_lemma[OF assms(1)] assms(2,3)
+  apply auto
+    apply(cases rule: Instr_ok.cases)
+  by auto
+
 end
