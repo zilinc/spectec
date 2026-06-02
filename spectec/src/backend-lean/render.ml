@@ -16,19 +16,40 @@ let rec render_command (cmd : Lean_ast.command) : string =
   | Lean_ast.Def def -> render__def def
   | Lean_ast.Inductive ind -> render__inductive ind
   | Lean_ast.Abbrev ab -> render__abbrev ab
+  | Lean_ast.Structure s -> render__structure s
+
+and render_term (term : Lean_ast.term) : string =
+  match term with
+  | Lean_ast.Hole _ -> "_"
+  | Lean_ast.Fun (ident, body) ->
+    let body_str = render_term body in
+    Printf.sprintf "fun %s => %s" ident body_str
+
+and render__structure (s : Lean_ast._structure) : string =
+  let modifier_str = render_decl_modifier s.modifier in
+  let binders = List.map render_bracketed_binder s.binders in
+  let res = match s.res with
+  | None -> ""
+  | Some r -> render_term r
+  in
+  let constructor = match s.constructor with
+  | None -> ""
+  | Some (constructor_modifier, constructor_id) -> ""
+  in
+  Printf.sprintf "%s structure %s %s %s where %s \n %s \n %s" modifier_str s.id 
 
 and render__def (def : Lean_ast._def) : string =
   match def with
-  | Lean_ast.DefAsgn (modifier, decl_id, opt_decl_sig, term) ->
-    let modifier_str = render_decl_modifier modifier in
-    let decl_sig_str = render_opt_decl_sig opt_decl_sig in
-    let term_str = render_term term in
-    Printf.sprintf "%s def %s %s := %s" modifier_str decl_id decl_sig_str term_str
-  | Lean_ast.DefCases (modifier, decl_id, opt_decl_sig, cases) ->
-    let modifier_str = render_decl_modifier modifier in
-    let decl_sig_str = render_opt_decl_sig opt_decl_sig in
-    let cases_str = String.concat "\n" (List.map render__def_case cases) in
-    Printf.sprintf "%s def %s %s\n\t%s" modifier_str decl_id decl_sig_str cases_str
+  | Lean_ast.DefAsgn d ->
+    let modifier_str = render_decl_modifier d.modifier in
+    let decl_sig_str = render_opt_decl_sig d.signature in
+    let term_str = render_term d.body in
+    Printf.sprintf "%s def %s %s := %s" modifier_str d.id decl_sig_str term_str
+  | Lean_ast.DefCases d ->
+    let modifier_str = render_decl_modifier d.modifier in
+    let decl_sig_str = render_opt_decl_sig d.signature in
+    let cases_str = String.concat "\n" (List.map render__def_case d.body) in
+    Printf.sprintf "%s def %s %s\n\t%s" modifier_str d.id decl_sig_str cases_str
 
 and render__def_case (case : Lean_ast._def_case) : string =
   let (pattern, body) = case in
@@ -37,12 +58,15 @@ and render__def_case (case : Lean_ast._def_case) : string =
   Printf.sprintf "| %s => %s" pattern_str body_str
 
 and render__inductive (ind : Lean_ast._inductive) : string =
-  let (modifier, decl_id, opt_decl_sig, cases, deriving) = ind in
-  let modifier_str = render_decl_modifier modifier in
-  let decl_sig_str = render_opt_decl_sig opt_decl_sig in
-  let cases_str = String.concat "\n" (List.map render__inductive_case cases) in
-  let deriving_str = render__inductive_deriving deriving in
-  Printf.sprintf "%s inductive %s %s\n\t%s\n%s" modifier_str decl_id decl_sig_str cases_str deriving_str
+  (* let (modifier, decl_id, opt_decl_sig, cases, deriving) = ind in *)
+  let modifier_str = render_decl_modifier ind.modifier in
+  let decl_sig_str = render_opt_decl_sig ind.signature in
+  let cases_str = String.concat "\n" (List.map render__inductive_case ind.cases) in
+  let deriving_str = match ind.deriving with 
+    | None -> ""
+    | Some der -> render__inductive_deriving der
+  in
+  Printf.sprintf "%s inductive %s %s\n\t%s\n%s" modifier_str ind.id decl_sig_str cases_str deriving_str
 
 and render__inductive_case (case : Lean_ast._inductive_case) : string =
   let (decl_id, ident, opt_decl_sig) = case in
@@ -51,18 +75,18 @@ and render__inductive_case (case : Lean_ast._inductive_case) : string =
 
 and render__abbrev (abbrev : Lean_ast._abbrev) : string =
   match abbrev with
-  | Lean_ast.AbbrevAsgn (modifier, decl_id, opt_decl_sig, term) ->
-    let modifier_str = render_decl_modifier modifier in
-    let decl_sig_str = render_opt_decl_sig opt_decl_sig in
-    let term_str = render_term term in
-    Printf.sprintf "%s abbrev %s %s := %s" modifier_str decl_id decl_sig_str term_str
-  | Lean_ast.AbbrevCases (modifier, decl_id, opt_decl_sig, cases) ->
-    let modifier_str = render_decl_modifier modifier in
-    let decl_sig_str = render_opt_decl_sig opt_decl_sig in
-    let cases_str = String.concat "\n" (List.map render__def_case cases) in
-    Printf.sprintf "%s abbrev %s %s\n\t%s" modifier_str decl_id decl_sig_str cases_str
+  | Lean_ast.AbbrevAsgn a ->
+    let modifier_str = render_decl_modifier a.modifier in
+    let decl_sig_str = render_opt_decl_sig a.signature in
+    let term_str = render_term a.body in
+    Printf.sprintf "%s abbrev %s %s := %s" modifier_str a.id decl_sig_str term_str
+  | Lean_ast.AbbrevCases a ->
+    let modifier_str = render_decl_modifier a.modifier in
+    let decl_sig_str = render_opt_decl_sig a.signature in
+    let cases_str = String.concat "\n" (List.map render__def_case a.body) in
+    Printf.sprintf "%s abbrev %s %s\n\t%s" modifier_str a.id decl_sig_str cases_str
 
-and render__inductive_deriving (deriving : Lean_ast._inductive_deriving) : string =
+and render__inductive_deriving (deriving : Lean_ast._deriving) : string =
   match deriving with
   | [] -> ""
   | idents -> Printf.sprintf "deriving %s" (String.concat ", " idents)
@@ -123,11 +147,4 @@ and render_bracketed_binder (binder : Lean_ast.bracketed_binder) : string =
     let idents_str = String.concat " " (List.map render__ident_or_hole (idents.head :: idents.tail)) in
     let term_str = render_term term in
     Printf.sprintf "{%s : %s}" idents_str term_str
-
-and render_term (term : Lean_ast.term) : string =
-  match term with
-  | Lean_ast.Hole _ -> "_"
-  | Lean_ast.Fun (ident, body) ->
-    let body_str = render_term body in
-    Printf.sprintf "fun %s => %s" ident body_str
 
