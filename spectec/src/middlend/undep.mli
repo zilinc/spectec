@@ -45,11 +45,23 @@ module StringMap : Map.S with type key = string
 
 type env = {
   mutable wf_set : int StringMap.t;
-  mutable proj_set : StringSet.t;
   mutable il_env : Il.Env.t;
+
+  (* Hint sets *)
+  mutable proj_set : StringSet.t;
+  mutable tf_set : StringSet.t;
+  mutable wfopt_set : StringSet.t;
+  mutable il_hintenv : Hints.t 
 }
 
+type wfstate =
+  | WfAll     (* Places wf premises whenever it encounters a term/variable that needs well-formedness check*)
+  | WfMinimal (* Places only wf premises in terms in relations and functions that do not appear in the conclusion *)
+  | WfNone    (* Does not place any wf premises in relations/functions *)
+
 val wf_hint_id : string
-val wf_pred_prefix : string
+val wf_func_id : string
+val wf_rel_id : string
+val wf_state : wfstate ref
 val transform : Il.Ast.script -> Il.Ast.script
 val env : env

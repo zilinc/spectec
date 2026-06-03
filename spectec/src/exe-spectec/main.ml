@@ -29,6 +29,8 @@ type pass =
   | AliasDemut
   | ImproveIds
   | Ite
+  | PatSimp
+  | DefToRel
   | ElseSimp
   | LetIntroMech
 
@@ -48,9 +50,11 @@ let all_passes = [
   Else;
   ElseSimp;
   Uncaseremoval;
-  Sideconditions;
   SubExpansion;
+  PatSimp;
   Sub;
+  DefToRel;
+  Sideconditions;
   AliasDemut;
   ImproveIds
 ]
@@ -128,6 +132,8 @@ let pass_flag = function
   | Uncaseremoval -> "uncase-removal"
   | ImproveIds -> "improve-ids"
   | Ite -> "ite"
+  | PatSimp -> "pattern-simp"
+  | DefToRel -> "definition-to-relation"
   | ElseSimp -> "else-simplification"
   | LetIntroMech -> "let-intro-mech"
 
@@ -144,6 +150,8 @@ let pass_desc = function
   | AliasDemut -> "Lifts type aliases out of mutual groups"
   | ImproveIds -> "Disambiguates ids used from each other"
   | Ite -> "If-then-else introduction"
+  | PatSimp -> "Simplifies non-linear and definite iteration patterns"
+  | DefToRel -> "Transform specific function definitions into relations"
   | ElseSimp -> "Simplifies generated otherwise relations (after else pass)"
   | LetIntroMech -> "Let Premise introduction for mechanization backends"
 
@@ -161,8 +169,20 @@ let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
   | AliasDemut -> Middlend.AliasDemut.transform
   | ImproveIds -> Middlend.Improveids.transform
   | Ite -> Middlend.Ite.transform
+  | PatSimp -> Middlend.PatSimp.transform
+  | DefToRel -> Middlend.Deftorel.transform
   | LetIntroMech -> Middlend.Letintromech.transform
   | ElseSimp -> Middlend.Elsesimp.transform
+
+(* Argument parsing - Specific for undep pass *)
+let set_wf_state s =
+  Middlend.Undep.wf_state :=
+    match s with
+    | "minimal" -> Middlend.Undep.WfMinimal
+    | "all" -> Middlend.Undep.WfAll
+    | "none" -> Middlend.Undep.WfNone
+    | _ ->
+        raise (Arg.Bad "wf-state must be minimal, all, or none")
 
 (* Argument parsing *)
 
@@ -250,7 +270,11 @@ let argspec = Arg.align (
   "--all-passes", Arg.Unit (fun () -> List.iter enable_pass all_passes)," Run all passes";
 
   "--test-version", Arg.Int (fun i -> Backend_interpreter.Construct.version := i; Il2al.Translate.version := i), " Wasm version to assume for tests (default: 3)";
-
+  "--wf-state", Arg.String set_wf_state, " Denotes the placement of wfness relations for the remove-indexed-types pass 
+    (default: minimal):
+    minimal: Places wfness premises for terms that do not appear in the conclusion
+    all: Places wfness premises whenever it encounters a term that needs it
+    none: Does not place any wfness premises";
   "-help", Arg.Unit ignore, "";
   "--help", Arg.Unit ignore, "";
 ] )
