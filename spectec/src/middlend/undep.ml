@@ -6,15 +6,16 @@ open Il.Walk
 open Util
 
 module StringSet = Set.Make(String)
+module StringMap = Map.Make(String)
 
 type env = {
-  mutable wf_set : StringSet.t;
+  mutable wf_set : int StringMap.t;
   mutable proj_set : StringSet.t;
   mutable il_env : Il.Env.t;
 }
 
 let empty () = {
-  wf_set = StringSet.empty;
+  wf_set = StringMap.empty;
   proj_set = StringSet.empty;
   il_env = Il.Env.empty
 }
@@ -41,9 +42,9 @@ let remove_last_char s =
   if len = 0 then s
   else String.sub s 0 (len - 1)
 
-let bind_wf_set env id =
+let bind_wf_set env id arity =
   if id <> "" && id <> "_" then
-  env.wf_set <- StringSet.add id env.wf_set
+  env.wf_set <- StringMap.add id arity env.wf_set
 
 let is_part_of_quant (free_set : Free.sets) p =
   match p.it with
@@ -157,7 +158,7 @@ let needs_wfness env def =
     | _ -> []
     in
     List.exists (fun b -> match b.it with
-      | ExpP (id, _) -> StringSet.mem id.it env.wf_set
+      | ExpP (id, _) -> StringMap.mem id.it env.wf_set
       | _ -> false 
     ) quants ||
     List.exists (fun prems -> prems <> []) prems_list
@@ -175,7 +176,7 @@ let rec get_wf_pred env (exp, t) =
   let t' = Utils.reduce_type_aliasing env.il_env t in
   let exp' = {exp with note = t'} in 
   match t'.it with
-    | VarT (id, args) when StringSet.mem id.it env.wf_set ->
+    | VarT (id, args) when StringMap.mem id.it env.wf_set ->
       let new_mixop = Xl.Mixop.(Seq (List.init (List.length args + 1) (fun _ -> Arg ()))) in
       let exp_args = List.filter_map (fun a -> match a.it with 
         | ExpA exp -> Some exp
@@ -245,7 +246,7 @@ let create_well_formed_predicate env id inst =
     ) rules in
     if has_no_prems then [] else 
     let relation = RelD (wf_pred_prefix ^ id.it $ id.at, [], new_mixop dep_exp_typ_pairs, tupt pairs_without_names, rules) $ at in 
-    bind_wf_set env id.it;
+    bind_wf_set env id.it (List.length dep_exp_typ_pairs);
     [relation; hint]
 
   (* Struct/Record well formedness predicate creation *)
@@ -279,7 +280,7 @@ let create_well_formed_predicate env id inst =
   
     if new_prems = [] then [] else 
     let relation = RelD (wf_pred_prefix ^ id.it $ id.at, [], new_mixop dep_exp_typ_pairs, tupt pairs_without_names, [rule]) $ at in 
-    bind_wf_set env id.it;
+    bind_wf_set env id.it (List.length pairs_without_names);
     [relation; hint]
   | _ -> []
 
@@ -344,6 +345,11 @@ let get_def_id def =
   | TypD (id, _, _) -> id
   | _ -> "" $ def.at
 
+let get_def_arity def =
+  match def.it with
+  | TypD (_, qs, _) -> List.length qs
+  | _ -> 0
+
 let remove_unused_params def =
   match def.it with
   | DecD (id, params, typ, clauses) -> 
@@ -383,7 +389,7 @@ let rec t_def env def =
     (GramD (id, List.map (transform_param tf) params, transform_typ tf typ, List.map (transform_prod tf) prods) $ def.at, [])
   | RecD defs -> 
     if List.exists (needs_wfness env) defs 
-      then List.iter (fun d -> bind_wf_set env (get_def_id d).it) defs; 
+      then List.iter (fun d -> bind_wf_set env (get_def_id d).it (get_def_arity d)) defs; 
     let defs', wf_relations = List.map (t_def env) defs |> List.split in
     let rec_defs = RecD defs' $ def.at in
     if List.concat wf_relations = [] then (rec_defs, []) else
@@ -401,8 +407,10 @@ let create_proj_map_def set (d : def) =
     ) 
   | _ -> ()
 
+
+let env = empty ()
+
 let transform (il : script): script =
-  let env = empty () in 
   env.il_env <- Il.Env.env_of_script il;
   let proj_set = ref StringSet.empty in
   List.iter (create_proj_map_def proj_set) il;

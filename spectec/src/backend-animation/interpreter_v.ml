@@ -776,6 +776,11 @@ and match_clause ctx at (fname: string) (nth: int) (clauses: clause list) (args:
                   match_clause ctx at fname (nth+1) cls args
         )
       | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
+                if fname = "binop_" then
+                  (
+                    info "log" at (lazy ("  * pargs = " ^ string_of_args pargs ^ "\n" ^
+                                         "    aargs = " ^ Value.string_of_args args));
+                  );
                 match_clause ctx at fname (nth+1) cls args
       )
     in

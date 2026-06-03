@@ -179,6 +179,10 @@ module Hints = struct
            ; mutable animate_manual : (string * mode IM.t) M.t  (* Name and mode of a relation or definition whose animated definition is going to be manually supplied. *)
            }
 
+  let string_of_mode m = match m with In -> "In" | Out -> "Out"
+  let string_of_modemap mm =
+    String.concat " " (List.map (fun (k, v) -> "%" ^ string_of_int k ^ ": " ^ string_of_mode v) (IM.to_list mm))
+
   let animation_hints : t = { no_animate_funcs = [];  no_animate_rules = []
                             ; animate_funcs = M.empty; animate_inv = M.empty
                             ; animate_rels = M.empty; animate_manual = M.empty

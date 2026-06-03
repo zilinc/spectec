@@ -111,6 +111,17 @@ let rec remove_or def =
 let run il print_dl inline =
   H.init_animation_hints ();
   build_animation_hints il;
+  Middlend.Undep.StringSet.iter (fun func ->
+    let proj_func = Middlend.Typefamilyremoval.proj_prefix ^ func in
+    print_endline ("INFO: Adding function `" ^ proj_func ^ "` to be invertible during animation.");
+    H.add_anim_inv proj_func ("inv_" ^ proj_func)
+  ) Middlend.Undep.env.proj_set;
+  Middlend.Undep.StringMap.iter (fun rel arity ->
+    let wf_rel = Middlend.Undep.wf_pred_prefix ^ rel in
+    let mode_map = H.IM.of_list (List.init (arity+1) (fun i -> (i+1, H.In))) in
+    print_endline ("INFO: Adding relation `" ^ wf_rel ^ "` to be animated: " ^ H.string_of_modemap mode_map);
+    H.add_anim_rel wf_rel mode_map;
+  ) Middlend.Undep.env.wf_set;
   let (env, dl) = il
                   |> List.filter_map is_anim_target
                   |> List.map remove_or
