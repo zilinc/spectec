@@ -426,7 +426,7 @@ let remove_unused_params def =
 let rec return_type_needs_wfness env (rt : typ) : bool =
   let rt' = Utils.reduce_type_aliasing env.il_env rt in 
   match rt'.it with
-  | VarT (id, _) -> StringSet.mem id.it env.wf_set
+  | VarT (id, _) -> StringMap.mem id.it env.wf_set
   | TupT tups -> tups |> List.map snd |> List.exists (return_type_needs_wfness env)
   | IterT (t, _) -> return_type_needs_wfness env t
   | _ -> false

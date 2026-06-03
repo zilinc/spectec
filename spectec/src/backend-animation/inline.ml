@@ -28,7 +28,7 @@ let simp : transformer = {
   transform_def_id = id;
   transform_gram_id = id;
 
-  filter_exp = fun x -> Some x;
+  transform_types_of_exp = true
 }
 
 

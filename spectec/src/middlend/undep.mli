@@ -40,6 +40,7 @@ This pass requires the typefamilyremoval pass to be ran first, as it ensures tha
 transformed correctly.
 *)
 
+
 module StringSet : Set.S with type elt = string
 module StringMap : Map.S with type key = string
 
@@ -51,7 +52,7 @@ type env = {
   mutable proj_set : StringSet.t;
   mutable tf_set : StringSet.t;
   mutable wfopt_set : StringSet.t;
-  mutable il_hintenv : Hints.t 
+  mutable il_hintenv : Il.Hints.t 
 }
 
 type wfstate =
@@ -62,6 +63,7 @@ type wfstate =
 val wf_hint_id : string
 val wf_func_id : string
 val wf_rel_id : string
+val wf_pred_prefix : string
 val wf_state : wfstate ref
 val transform : Il.Ast.script -> Il.Ast.script
 val env : env
