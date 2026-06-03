@@ -57,7 +57,7 @@ next
   then have "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))"
     using seq.hyps(3) by blast
   then show ?case
-    using \<open>instr_1 = e\<close> helper_lemma seq.hyps(1)
+    using \<open>instr_1 = e\<close> functype_weakening seq.hyps(1)
       by blast
 next
   case (sub C t_1_lst t_2_lst t'_1_lst t'_2_lst)

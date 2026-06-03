@@ -177,17 +177,25 @@ proof -
     by (metis append_assoc)
 qed
 
-lemma helper_lemma:
+lemma Resulttype_sub_append:
+assumes "Resulttype_sub (mk_list ts1') (mk_list ts)"
+        "Resulttype_sub (mk_list ts2') (mk_list tf1_ran_sub)"
+shows   "Resulttype_sub (mk_list (ts1' @ ts2')) (mk_list (ts @ tf1_ran_sub))"
+by (cases rule: Resulttype_sub.cases[OF assms(1)];
+    cases rule: Resulttype_sub.cases[OF assms(2)];
+    auto intro: Resulttype_sub.mk_Resulttype_sub
+                 list_all2_appendI)
+
+lemma functype_weakening: (*TODO: rename this*)
   assumes "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list ts2) (mk_list ts3))"
   shows "(mk_functype (mk_list ts1) (mk_list ts2)) <ti: (mk_functype (mk_list ts1) (mk_list ts3))"
 proof -
   have "Resulttype_sub (mk_list ts2) (mk_list ts3)"
-    using assms
-    unfolding instr_subtyping_def
-    
-    sledgehammer sorry
+    using assms instr_subtyping_def Resulttype_sub.simps Resulttype_sub_split_left Resulttype_sub_refl Resulttype_sub_append
+      by simp
+  then show ?thesis
+    using Resulttype_sub_refl instr_subtyping_sub_rule
+      by force
 qed
-
-
 
 end
