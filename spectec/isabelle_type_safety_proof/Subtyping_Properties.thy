@@ -177,4 +177,17 @@ proof -
     by (metis append_assoc)
 qed
 
+lemma helper_lemma:
+  assumes "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list ts2) (mk_list ts3))"
+  shows "(mk_functype (mk_list ts1) (mk_list ts2)) <ti: (mk_functype (mk_list ts1) (mk_list ts3))"
+proof -
+  have "Resulttype_sub (mk_list ts2) (mk_list ts3)"
+    using assms
+    unfolding instr_subtyping_def
+    
+    sledgehammer sorry
+qed
+
+
+
 end
