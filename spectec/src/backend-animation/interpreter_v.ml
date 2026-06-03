@@ -1050,20 +1050,10 @@ and step_read_throw_ref_handler = {
     | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
 
-and _Steps = {
-  name = "Steps";
-  f =
-    function
-    | [config] ->
-      let args' = [ValA config; ValA (natV (Z.of_int !RI.Flags.budget))] in
-      call_func "steps" args'
-    | vs -> error_values ("Args to $Step") vs
-}
-
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler; _Steps;
+  step_read_throw_ref_handler;
   ]
 
 and call_builtins fname args : value OptMonad.m =
@@ -1084,16 +1074,14 @@ and builtins_mem fname =
 
 let instantiate (args: Value.arg list) : value =
   match (let* r = call_func "instantiate" args in
-         call_func "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))]) |> run_opt
+         call_func "reduce_expr" [ValA r]) |> run_opt
   with
   | Some v -> v
   | None -> raise (Failure "`instantiate` failed to run.")
 
 let invoke (args: Value.arg list) : value =
-  match call_func "invoke" args |> run_opt with
+  match (let* r = call_func "invoke" args in
+         call_func "reduce_expr" [ValA r]) |> run_opt
+  with
+  | Some v -> v
   | None -> raise (Failure "`invoke` failed to run.")
-  | Some r -> let CaseV (_, [_; instrs]) = r in
-              (match call_func "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))] |> run_opt with
-              | Some r' -> r'
-              | None -> raise (Failure ("`invoke` failed to reduce its result: " ^ string_of_value instrs))
-              )
