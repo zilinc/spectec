@@ -965,7 +965,7 @@ and use_step : builtin = {
     | [instr] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> boolV (rel_name = "Step") |> return
+      | Some (rel_name, _) -> boolV (rel_name = "Step") |> return
       | None -> BoolV false |> return
       )
     | vs -> error_values ("Args to $use_step") vs
@@ -977,7 +977,7 @@ and use_step_pure = {
     | [instr] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> BoolV (rel_name = "Step_pure") |> return
+      | Some (rel_name, _) -> BoolV (rel_name = "Step_pure") |> return
       | None -> BoolV false |> return
       )
     | vs -> error_values ("Args to $use_step_pure") vs
@@ -989,7 +989,7 @@ and use_step_read = {
     | [instr] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> boolV (rel_name = "Step_read") |> return
+      | Some (rel_name, _) -> boolV (rel_name = "Step_read") |> return
       | None -> boolV false |> return
       )
     | vs -> error_values ("Args to $use_step_read") vs
@@ -1012,7 +1012,7 @@ and dispatch_step = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | Some (rel_name, rule_name) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step rule for instr" ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step") vs
@@ -1024,7 +1024,7 @@ and dispatch_step_pure = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | Some (rel_name, rule_name) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_pure rule for instr" ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step_pure") vs
@@ -1036,7 +1036,7 @@ and dispatch_step_read = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | Some (rel_name, rule_name) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_read rule for instr" ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step_read") vs

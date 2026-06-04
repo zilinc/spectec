@@ -570,7 +570,6 @@ def $dispatch_step_handler(n, eps, TRAP, z, catch*, true) = z; TRAP
 def $dispatch_step_handler(n, val*, eps, z, catch*, true) = z; val*
 
 
-
 def $reduce((s; f; instr+), stackcount) = STEP (s; f; TRAP)
   -- if $find_first_instr(instr+) = (val*, TRAP, instr_1'*)
   -- if val* =/= eps \/ instr_1'* =/= eps
