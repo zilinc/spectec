@@ -119,7 +119,7 @@ type opaque = {
   modifier: decl_modifier;
   id: decl_id;
   signature: decl_sig;
-  rhs: term;
+  rhs: term option;
 }
 
 (* TODO: technically, this is not just _def, but also theorems. *)
@@ -132,6 +132,3 @@ type command =
   | Structure of _structure
   | Opaque of opaque
   | Mutual of mutual
-
-
-  

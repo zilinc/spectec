@@ -17,6 +17,16 @@ let rec render_command (cmd : Lean_ast.command) : string =
   | Lean_ast.Inductive ind -> render__inductive ind
   | Lean_ast.Abbrev ab -> render__abbrev ab
   | Lean_ast.Structure s -> render__structure s
+  | Lean_ast.Opaque o -> render_opaque o
+
+and render_opaque (op : Lean_ast.opaque) : string =
+  let modifier_str = render_decl_modifier op.modifier in
+  let decl_sig_str = render_decl_sig op.signature in
+  let rhs_string = match op.rhs with
+  | None -> ""
+  | Some r -> Printf.sprintf ":= %s" (render_term r)
+  in
+  Printf.sprintf "%s opaque %s %s %s" modifier_str op.id decl_sig_str rhs_string
 
 and render_term (term : Lean_ast.term) : string =
   match term with
@@ -27,16 +37,25 @@ and render_term (term : Lean_ast.term) : string =
 
 and render__structure (s : Lean_ast._structure) : string =
   let modifier_str = render_decl_modifier s.modifier in
-  let binders = List.map render_bracketed_binder s.binders in
+  let binders = String.concat "" (List.map render_bracketed_binder s.binders) in
   let res = match s.res with
   | None -> ""
   | Some r -> render_term r
   in
   let constructor = match s.constructor with
   | None -> ""
-  | Some (constructor_modifier, constructor_id) -> ""
+  | Some (constructor_modifier, constructor_id) -> (render_decl_modifier constructor_modifier) ^ constructor_id ^ ":: "
   in
-  Printf.sprintf "%s structure %s %s %s where %s \n %s \n %s" modifier_str s.id 
+  let fields_str = String.concat "\n" (List.map render_struct_field s.fields) in
+  let deriving_str = match s.deriving with 
+  | None -> ""
+  | Some der -> render__deriving der
+  in
+  Printf.sprintf "%s structure %s %s %s where %s \n %s \n %s" modifier_str s.id binders res constructor fields_str deriving_str
+
+and render_struct_field (sf : Lean_ast.struct_field) : string =
+  match sf with
+  | StructSimpleBinder ssb -> Printf.sprintf "%s %s : %s" (render_decl_modifier ssb.modifier) ssb.id (render_opt_decl_sig ssb.signature)
 
 and render__def (def : Lean_ast._def) : string =
   match def with
@@ -64,7 +83,7 @@ and render__inductive (ind : Lean_ast._inductive) : string =
   let cases_str = String.concat "\n" (List.map render__inductive_case ind.cases) in
   let deriving_str = match ind.deriving with 
     | None -> ""
-    | Some der -> render__inductive_deriving der
+    | Some der -> render__deriving der
   in
   Printf.sprintf "%s inductive %s %s\n\t%s\n%s" modifier_str ind.id decl_sig_str cases_str deriving_str
 
@@ -86,7 +105,7 @@ and render__abbrev (abbrev : Lean_ast._abbrev) : string =
     let cases_str = String.concat "\n" (List.map render__def_case a.body) in
     Printf.sprintf "%s abbrev %s %s\n\t%s" modifier_str a.id decl_sig_str cases_str
 
-and render__inductive_deriving (deriving : Lean_ast._deriving) : string =
+and render__deriving (deriving : Lean_ast._deriving) : string =
   match deriving with
   | [] -> ""
   | idents -> Printf.sprintf "deriving %s" (String.concat ", " idents)
@@ -110,6 +129,12 @@ and render_decl_modifier (modifier : Lean_ast.decl_modifier) : string =
     | None -> ""
   in
   String.concat " " [comment_str; visibility_str; noncomputable_str; unsafe_str; recursion_str]
+
+and render_decl_sig (params, term : Lean_ast.decl_sig) : string =
+  (* Technically this is a subset of opt_decl_sig, but Lean's reference found it convenient to distinguish the two *)
+  let params_str = String.concat " " (List.map render_params params) in
+  let term_str = render_term term in
+  Printf.sprintf "%s : %s" params_str term_str
 
 and render_opt_decl_sig (opt_decl_sig : Lean_ast.opt_decl_sig) : string =
   match opt_decl_sig with
@@ -147,4 +172,3 @@ and render_bracketed_binder (binder : Lean_ast.bracketed_binder) : string =
     let idents_str = String.concat " " (List.map render__ident_or_hole (idents.head :: idents.tail)) in
     let term_str = render_term term in
     Printf.sprintf "{%s : %s}" idents_str term_str
-
