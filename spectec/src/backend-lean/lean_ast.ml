@@ -17,9 +17,28 @@ type 'a non_empty_list = {
   tail: 'a list;
 }
 
+(* TODO: check again *)
+type level =
+  | LevelLit of int           (* 0, 1, 2, ... *)
+  | LevelVar of ident         (* u, v *)
+  | LevelAdd of level * int   (* Level + n *)
+  | LevelMax of level * level
+  | LevelIMax of level * level
+
 type term =
   | Hole of hole
   | Fun of ident * term
+  | Ident of ident
+  | Sort of level
+  | Type of level option
+  | Prop
+  | Prod of term list (* According to https://lean-lang.org/doc/reference/latest/Basic-Types/Tuples/ this should technically be term * term, but I'm doing this for convenience *)
+  | FunApp of term * argument non_empty_list
+  | FunAppEllipsis of term * argument list
+
+and argument =
+  | Term of term
+
 
 type _ident_or_hole =
   | Ident of ident

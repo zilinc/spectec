@@ -1,15 +1,46 @@
 open Il.Ast
 open Util.Source
 open Il.Walk
+open Lean_ast
+open Lean_builder
 
+let error at msg = Util.Error.error at "Lean4 translation" msg 
 
 let preamble = "" (* TODO *)
 
-let convert_def (d : Il.Ast.def) : string = match d with
-| TypD d -> failwith ""
+(* let convert_alias (id : string) () *)
+
+let convert_numtyp (nt : Il.Ast.numtyp) : term = match nt with
+  (* TODO: check again *)
+  | `NatT -> Ident "Nat"
+  | `IntT -> Ident "Nat"
+  | `RatT -> Ident "Nat"
+  | `RealT -> Ident "Nat"
+
+let rec convert_iter (iter : Il.Ast.iter) (t : typ) : term = match iter with
+  | Opt -> Ident "Option"
+  | List -> FunApp (Ident "List", {head = Term (convert_typ t); tail = []})
+  | List1 -> FunApp (Ident "List", {head = Term (convert_typ t); tail = []})
+  | ListN (e, xo) -> failwith ""
+
+and convert_typ (t : Il.Ast.typ) : term = match t.it with
+  | VarT (id, []) -> Ident id.it
+  | VarT (_, _) -> error t.at "arg list in VarT must be empty because they should be eliminated by undep!"
+  | BoolT -> Ident "Bool"
+  | NumT nt -> convert_numtyp nt
+  | TextT -> Ident "String"
+  | TupT [] -> Ident "Unit"
+  | TupT l -> Prod (List.map (Fun.compose convert_typ snd) l)
+  | IterT (t, iter) -> convert_iter iter t
+
+let convert_def (d : Il.Ast.def) : command = match d.it with
+| TypD (id, params, [{it = (InstD (quants, args, {it = AliasT t; _})); _}]) -> Abbrev (AbbrevAsgn {
+    modifier = empty_modifier;
+    id = id.it;
+    signature = ([], Some Type);
+    body = convert_typ t;
+  })0
 
 
-let convert_script (il : script) : string =
-  preamble ^
-  "(* Generated Code *)\n" ^
-  String.concat "" (List.map (convert_def) il)
+let convert_script (il : script) : command list =
+  List.map convert_def il
