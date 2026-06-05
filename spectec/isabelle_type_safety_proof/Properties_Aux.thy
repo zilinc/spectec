@@ -113,4 +113,14 @@ lemma b_e_type_cnum:
     apply(cases rule: Instr_ok.cases)
   by auto
 
+(*Needed for stored extension*)
+
+lemma type_const_v_typing:
+  assumes "\<S>\<bullet>\<C> \<turnstile> [$C v] : (ts _> ts')"
+  shows
+    "instr_subtyping ([]_>[typeof v]) (ts _> ts')"
+    "v_typing \<S> v (typeof v)"
+  using assms
+sorry
+
 end
