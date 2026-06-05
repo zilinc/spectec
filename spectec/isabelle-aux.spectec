@@ -1,0 +1,12 @@
+def $is_val(admininstr) : bool
+def $is_val(val) = true
+def $is_val(admininstr) = false  -- otherwise
+
+def $is_instr(admininstr) : bool
+def $is_instr(instr) = true
+def $is_instr(admininstr) = false  -- otherwise
+
+def $is_admininstr(admininstr) : bool
+def $is_admininstr(instr) = false
+def $is_admininstr(admininstr) = true  -- otherwise
+
