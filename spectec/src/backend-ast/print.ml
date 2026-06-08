@@ -11,7 +11,12 @@ open Ast
 let bool b = Atom (Bool.to_string b)
 let text t = Atom ("\"" ^ String.escaped t ^ "\"")
 let id x = text x.it
-let mixop op = text (Mixop.to_string op)
+let rec mixop = function
+  | Mixop.Arg () -> Atom "Arg"
+  | Mixop.Atom a -> Node ("Atom", [Atom (Atom.to_string a)])
+  | Mixop.Brack (l, m, r) -> Node ("Brack", [Atom (Atom.to_string l); mixop m; Atom (Atom.to_string r)])
+  | Mixop.Infix (m1, a, m2) -> Node ("Infix", [mixop m1; Atom (Atom.to_string a); mixop m2])
+  | Mixop.Seq ms -> Node ("Seq", List.map mixop ms)
 
 let num = function
   | `Nat n -> Node ("Nat", [Atom (Z.to_string n)])

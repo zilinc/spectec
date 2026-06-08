@@ -33,11 +33,30 @@ and convert_typ (t : Il.Ast.typ) : term = match t.it with
   | TupT l -> Prod (List.map (Fun.compose convert_typ snd) l)
   | IterT (t, iter) -> convert_iter iter t
 
-let convert_typcase (tc : Il.Ast.typcase) : _inductive_case = {
-  modifier = empty_modifier;
-  id = tc.id;
-  signature = ([], Some (Type None));
-}
+
+(* let atom_string (a : Il.Ast.atom) : string = match a.it with
+  | Atom s -> s
+  | _ -> failwith "uhh compare this with the old backend" *)
+
+let mixop_to_id (m : Il.Ast.mixop) : string = Xl.Mixop.to_string_with (Fun.const "") "" m
+
+let convert_typcase_params (i : Il.Ast.id) (t : Il.Ast.typ) : bracketed_binder =
+  ExplicitParam (
+    {head = Ident i.it; tail = []},
+    convert_typ t
+  )
+
+let convert_tupt (t : Il.Ast.typ) : _params list = match t.it with
+  | TupT l -> List.map (fun (i, t) -> BracketedBinder (convert_typcase_params i t)) l
+  | _ -> failwith "typ under typcase must be TupT!"
+
+let convert_typcase (parent_type : Il.Ast.id) (tc : Il.Ast.typcase) : _inductive_case =
+  let (m, (t, qs, ps), hs) = tc in
+  {
+    modifier = empty_modifier;
+    id = mixop_to_id m;
+    signature = (convert_tupt t, Some (Type None));
+  }
 
 let convert_def (d : Il.Ast.def) : command = match d.it with
   | TypD (id, params, [{it = (InstD (quants, args, {it = AliasT t; _})); _}])
@@ -52,7 +71,22 @@ let convert_def (d : Il.Ast.def) : command = match d.it with
       modifier = empty_modifier;
       id = id.it;
       signature = ([], Some (Type None));
-      cases = 
+      cases = List.map (convert_typcase id) ts;
+      deriving = None; (* TODO: look into deriving *)
+    }
+  | TypD (id, params, [{it = (InstD (quants, args, {it = StructT ts; _})); _}])
+    -> Structure {
+      modifier = empty_modifier;
+      id = id.it;
+      binders = [];
+      universe = None;
+      constructor = None; (* TODO: previous version did this *)
+      fields = List.map (fun (i, (t, qs, ps), hs) -> StructSimpleBinder {
+        modifier = empty_modifier;
+        id = i.it;
+        signature = ([], Some (convert_typ t));
+      }) ts;
+      deriving = None; (* TODO: look into deriving *)
     }
   | _ -> failwith "here to stop incomplete case linting lol"
 

@@ -131,7 +131,7 @@ type _structure = {
   modifier: decl_modifier;
   id: decl_id;
   binders: bracketed_binder list;
-  res: term option;
+  universe: term option;
   (* TODO: extends *)
   constructor: (decl_modifier * ident) option;
   fields: struct_field list;
