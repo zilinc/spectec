@@ -338,9 +338,10 @@ let rec length_of exp : exp =
      rest* (val^m ( BLOCK bt instr* ))  ;; where m is unknown
      ~>
      (rest* val^m) ( BLOCK bt instr* )
-   If such a partition doesn't exist, return the original expression.
  *)
-let reassociate knowns exp : exp =
+let reassociate exp : exp E.m =
+  let open AnimState in
+  let ( let* ) = E.( >>= ) in
   let rec flatten exp : exp list =
     (match exp.it with
     | CatE (exp1, exp2) -> flatten exp1 @ flatten exp2
@@ -355,19 +356,22 @@ let reassociate knowns exp : exp =
     )
   in
   let exps = flatten exp in
+  let* s = get () in
+  let knowns = get_knowns s in
   let kl1 = List.take_while (fun e -> is_known_length knowns e) exps in  (* length known *)
   let ul2 = List.drop (List.length kl1) exps in                          (* length unknown *)
   (* The unknown side of the list must be non-empty, otherwise we should know the length of the whole list. *)
   if List.is_empty kl1 |> not then
-    CatE (concat kl1 exp.at exp.note, concat ul2 exp.at exp.note) $> exp
+    CatE (concat kl1 exp.at exp.note, concat ul2 exp.at exp.note) $> exp |> E.return
   else
     let re_exps = List.rev exps in
     let kl2 = List.take_while (fun e -> is_known_length knowns e) re_exps |> List.rev in  (* length known *)
     let ul1 = List.drop (List.length kl2) re_exps |> List.rev in                          (* length unknown *)
     if List.is_empty kl2 |> not then
-      CatE (concat ul1 exp.at exp.note, concat kl2 exp.at exp.note) $> exp
+      CatE (concat ul1 exp.at exp.note, concat kl2 exp.at exp.note) $> exp |> E.return
     else
-      exp
+      E.throw (string_of_error exp.at ("LHS list concat where neither segment's length is known: "
+                                       ^ string_of_exp exp))
 
 
 let varset_of_quants qs : Set.t =
@@ -1094,7 +1098,6 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     E.return (prems_fs' @ prems_str')
   *)
   | CatE (exp1, exp2) when is_list_typ !envr lhs.note ->
-    let CatE (exp1, exp2) = (reassociate knowns lhs).it in
     let k1 = is_known_length knowns exp1 in
     let k2 = is_known_length knowns exp2 in
     (* The later code can only use the len1 and/or len2 that is known. *)
@@ -1129,17 +1132,15 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       let prem_1 = IfPr (eqE ~at:at exp1 rhs1) $ rhs.at in
       let prem_2 = IfPr (eqE ~at:at exp2 rhs2) $ rhs.at in
       E.return [prem_len; prem_1; prem_2]
-    | false, false -> E.throw (string_of_error at ("LHS list concat where neither segment's length is known: "
-                                                   ^ string_of_exp lhs))
+    | false, false ->
+      let* lhs' = reassociate lhs in
+      animate_exp_eq' envr at lhs' rhs
     ) in
-    let* s' = get () in
-    let s_new = { (init ()) with prems; knowns = get_knowns s' } in
-    (* FIXME(zilinc): They need to be solved together with the rest of premises from the level above to
-       break circularity.
+    (* NOTE: They need to be solved together with the rest of premises from the level above to
+       break circularity in the premises.
      *)
-    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
-    let* () = update (put_knowns (get_knowns s_new')) in
-    E.return prems'
+    let* () = update (push_prems prems) in
+    E.return []
   (* exp1* ++ [X] ++ exp2* *)
   (*
   | CatE ({ it = CatE ({ it = IterE (exp1', (List, xes1)); _ },
@@ -1591,7 +1592,7 @@ let transform_step_vals envr in_stack out_stack prems : quant list * exp * exp *
      generalise it so that we can pass in the entire value stack, instead of manually pick a
      certain number of operands to feed to the instruction.
   *)
-  | _ ->
+  | ListE _ | CatE (_, _) ->
     let iter' = List in
     let rest = fresh_id (Some "rest") in_stack.at in
     let rest_e = VarE rest $$ in_stack.at % (t_var "val") in
@@ -1601,6 +1602,9 @@ let transform_step_vals envr in_stack out_stack prems : quant list * exp * exp *
     let in_stack' = CatE (rest_star_e, in_stack) $> in_stack in
     let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
     ([ExpP (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
+  (* Cases like Step/pure: z; instr* ~> z; instr* which doesn't need to re-introduce the eval context. *)
+  | IterE _ -> [], in_stack, out_stack, prems
+  | _ -> assert false
 
 let transform_step_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
