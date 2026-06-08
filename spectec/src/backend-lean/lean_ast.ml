@@ -91,7 +91,11 @@ type _def =
       body: _def_case list;
     }
 
-type _inductive_case = decl_id * ident * opt_decl_sig
+type _inductive_case = {
+  modifier: decl_modifier;
+  id: ident;
+  signature: opt_decl_sig;
+}
 
 type _inductive = {
   modifier: decl_modifier;
