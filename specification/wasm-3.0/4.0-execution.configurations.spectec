@@ -112,8 +112,6 @@ syntax moduleinst hint(desc "module instance") hint(macro "%" "MI%") =
 
 ;; State
 
-syntax hoststate = HOSTSTATE
-
 syntax store hint(desc "store") hint(macro "%" "S%") =
   { TAGS taginst*,
     GLOBALS globalinst*,
@@ -124,8 +122,7 @@ syntax store hint(desc "store") hint(macro "%" "S%") =
     ELEMS eleminst*,
     STRUCTS structinst*,
     ARRAYS arrayinst*,
-    EXNS exninst*,
-    HOST hoststate }
+    EXNS exninst* }
 
 syntax frame hint(desc "frame") hint(macro "%" "A%") =
   { LOCALS (val?)*, MODULE moduleinst }

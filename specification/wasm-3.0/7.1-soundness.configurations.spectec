@@ -202,8 +202,7 @@ rule Store_ok:
   -- (NotImmutReachable: `~ (REF.EXN_ADDR a) >>_s (REF.EXN_ADDR a))^(a<|exninst*|)
   ----
   -- if s = {TAGS taginst*, GLOBALS globalinst*, MEMS meminst*, TABLES tableinst*, FUNCS funcinst*,
-             DATAS datainst*, ELEMS eleminst*, STRUCTS structinst*, ARRAYS arrayinst*, EXNS exninst*,
-             HOST HOSTSTATE}
+             DATAS datainst*, ELEMS eleminst*, STRUCTS structinst*, ARRAYS arrayinst*, EXNS exninst*}
 
 
 relation ImmutReachable: fieldval >>_store fieldval
