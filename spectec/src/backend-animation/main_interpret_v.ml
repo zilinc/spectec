@@ -135,7 +135,6 @@ and instantiate module_ : value * value =
   let CaseV (_, [store'; frame']) = state' in
   let StrV [_; (fname, moduleinst)] = frame' in
   assert ("MODULE" = fname);
-  (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
   log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);
@@ -149,7 +148,6 @@ and invoke moduleinst_name funcname args : value =
   let funcaddr = get_export_addr funcname moduleinst_name in
   let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; valA args ] in
   let CaseV (_, [store'; _]) = state' in
-  (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
   log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);

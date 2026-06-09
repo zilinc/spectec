@@ -143,6 +143,14 @@ let find_func_hint env fname hintid =
     | _ -> None
   ) env.hints
 
+let find_rule_hint env relid ruleid hintid =
+  List.find_map (fun hintdef ->
+    match hintdef.it with
+    | RuleH (relid', ruleid', hints) when relid = relid'.it && ruleid = ruleid'.it ->
+      List.find_opt (fun hint -> hint.hintid.it = hintid) hints
+    | _ -> None
+  ) env.hints
+
 
 (* Extraction *)
 

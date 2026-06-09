@@ -740,6 +740,9 @@ relation Step                       hint(animate %1 -> %2)
 relation Step_pure                  hint(animate %1 -> %2)
 relation Step_read                  hint(animate %1 -> %2)
 
+rule Step/pure                             hint(context_rule)
+rule Step/read                             hint(context_rule)
+
 rule Step_pure/br-label-zero               hint(no_animate)
 rule Step_pure/br-label-succ               hint(no_animate)
 rule Step_pure/br-handler                  hint(no_animate)

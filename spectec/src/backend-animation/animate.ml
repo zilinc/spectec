@@ -1544,67 +1544,29 @@ let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) 
     Ok (oid, DefD (quants'', args', exp, prems') $ cl.at)
 
 
-(* Many $Step rules are dependent in their arguments. For example,
-  ```
+(* Add back the rest of the value stack that is not part of the redex. It allows us to do
+   pattern matching against the whole value stack, without having to know the arity of each
+   rule. For example,
+
   rule Step_read/block:
     z; val^m ( BLOCK bt instr* )  ~>  ( LABEL_ n `{eps} val^m instr* )
-    -- if $blocktype_(z, bt) = t_1^m -> t_2^n
-  ```
-  `m` is initially unknown, and we need to use the second part of the pattern
-  `( BLOCK bt instr* )` and the premise to compute `m` and then to determine
-  what values this pattern can match. This violates the precondition that all
-  variables in the input (or LHS of a rule) are known.
-  This transformation eliminates this circularity:
-  ```
-  rule Step_read/block:
-    z; val* ( BLOCK bt instr* )  ~>  rest* ( LABEL_ n `{eps} val^m instr* )
-    -- if $blocktype_(z, bt) = t_1^m -> t_2^n
-    -- if rest* val^m = val*
-  ```
-  so that we can match the first part of the argument unconditionally and then
-  compute `m` in the premises.
- *)
 
+  ~>
+
+  rule Step_read/block:
+    z; rest* val^m ( BLOCK bt instr* ) ~> rest* ( LABEL_ n `{eps} val^m instr* )
+
+ *)
 let transform_step_vals envr in_stack out_stack prems : quant list * exp * exp * prem list =
-  match in_stack.it with
-  (*
-  | CatE ({ it = IterE (vals, (ListN(n, _), xes)); _ } as in_vals, in_stack2) ->
-    let iter' = List in
-    let val_ = fresh_id (Some "val") vals.at in
-    let val_e = VarE val_ $$ vals.at % (t_var "val") in
-    let val_e' = SubE (val_e, t_var "val", t_var "instr") $$ vals.at % t_var "instr" in
-    let val_star = Frontend.Dim.annot_varid val_ [iter'] in
-    let val_star_e = IterE (val_e', (iter', [(val_, VarE val_star $$ vals.at % t_star "val")])) $> vals in
-    let rest = fresh_id (Some "rest") vals.at in
-    let rest_e = VarE rest $> val_e in
-    let rest_e' = SubE (rest_e, t_var "val", t_var "instr") $> val_e' in
-    let rest_star = Frontend.Dim.annot_varid rest [iter'] in
-    let rest_star_e = IterE (rest_e', (iter', [(rest, VarE rest_star $$ vals.at % t_star "val")])) $> vals in
-    let in_vals' = val_star_e in
-    let in_stack' = CatE (in_vals', in_stack2) $> in_stack in
-    let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
-    let prems' = (IfPr (eqE ~at:rest_star_e.at in_vals' (CatE (rest_star_e, in_vals) $> in_vals)) $ rest_star_e.at) :: prems in
-    ([ExpP (rest_star, t_star "val") $ rest_star_e.at;
-      ExpP (val_star, t_star "val") $ val_star_e.at],
-     in_stack', out_stack', prems')
-  *)
-  (* In this case, the LHS pattern is not circular dependent as the above case, but we still
-     generalise it so that we can pass in the entire value stack, instead of manually pick a
-     certain number of operands to feed to the instruction.
-  *)
-  | ListE _ | CatE (_, _) ->
-    let iter' = List in
-    let rest = fresh_id (Some "rest") in_stack.at in
-    let rest_e = VarE rest $$ in_stack.at % (t_var "val") in
-    let rest_e' = SubE (rest_e, t_var "val", t_var "instr") $$ rest_e.at % t_var "instr" in
-    let rest_star = Frontend.Dim.annot_varid rest [iter'] in
-    let rest_star_e = IterE (rest_e', (iter', [(rest, VarE rest_star $$ in_stack.at % t_star "val")])) $> in_stack in
-    let in_stack' = CatE (rest_star_e, in_stack) $> in_stack in
-    let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
-    ([ExpP (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems)
-  (* Cases like Step/pure: z; instr* ~> z; instr* which doesn't need to re-introduce the eval context. *)
-  | IterE _ -> [], in_stack, out_stack, prems
-  | _ -> assert false
+  let iter' = List in
+  let rest = fresh_id (Some "rest") in_stack.at in
+  let rest_e = VarE rest $$ in_stack.at % (t_var "val") in
+  let rest_e' = SubE (rest_e, t_var "val", t_var "instr") $$ rest_e.at % t_var "instr" in
+  let rest_star = Frontend.Dim.annot_varid rest [iter'] in
+  let rest_star_e = IterE (rest_e', (iter', [(rest, VarE rest_star $$ in_stack.at % t_star "val")])) $> in_stack in
+  let in_stack' = CatE (rest_star_e, in_stack) $> in_stack in
+  let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
+  [ExpP (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems
 
 let transform_step_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
   let oid, cl = fc in
@@ -1636,32 +1598,22 @@ let transform_step_read_clause envr fid (fc: func_clause) : (func_clause, region
   let lhs' = CaseE (in_mixop, in_tup') $> lhs in
   animate_clause0 envr fid (oid, DefD (quants @ quants', [ ExpA lhs' $ lhs'.at ], out_stack', prems') $> cl)
 
-(* $step_ctxt: config -> config *)
-let transform_step_ctxt_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
-  let oid, cl = fc in
-  let DefD (quants, [{it = ExpA lhs; _}], rhs, prems) = cl.it in
-  let CaseE (out_mixop, out_tup) = rhs.it in
-  let CaseE (in_mixop, in_tup) = lhs.it in
-  let TupE [in_z; in_stack] = in_tup.it in
-  let TupE [out_z; out_stack] = out_tup.it in
-  let quants', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
-  let in_tup' = TupE [in_z; in_stack'] $> in_tup in
-  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
-  let out_tup' = TupE [out_z; out_stack'] $> out_tup in
-  let rhs' = CaseE (out_mixop, out_tup') $> rhs in
-  animate_clause0 envr fid (oid, DefD (quants @ quants', [ExpA lhs' $ lhs'.at], rhs', prems) $> cl)
-
 
 let animate_clause envr id osubid (fc: func_clause) : (func_clause option, region * string) result =
   let orule_id, cl = fc in
   let fid = string_of_funcname id osubid $> id in
   let DefD (_, _, _, _) = cl.it in
+  let rule_id = (match orule_id with Some id -> id.it | None -> "") in
+  (* If [add_ctxt], then these rules need to be rewritten to add back the non-redex portion of
+     the value stack, for the operands to be pattern matched.
+   *)
+  let add_ctxt = find_rule_hint !envr id.it rule_id "context_rule" |> Option.is_none in
   let ocl' =
-    if is_step_rule id.it then
+    if is_step_rule id.it && add_ctxt then
       transform_step_clause envr fid fc
-    else if is_step_pure_rule id.it then
+    else if is_step_pure_rule id.it && add_ctxt then
       transform_step_pure_clause envr fid fc
-    else if is_step_read_rule id.it then
+    else if is_step_read_rule id.it && add_ctxt then
       transform_step_read_clause envr fid fc
     else
       animate_clause0 envr fid fc
