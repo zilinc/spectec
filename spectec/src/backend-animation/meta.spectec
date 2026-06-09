@@ -489,7 +489,6 @@ def $dispatch_step_pure           hint(builtin)
 def $dispatch_step_read           hint(builtin)
 
 
-;; The input `config` consists of the whole value stack, plus the first instruction.
 def $dispatch_reduce(state, val*, instr, stackcount) : stepresult
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
   -- if $use_step_pure(instr_0) = true
@@ -506,9 +505,6 @@ def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z'; val* instr_1*)
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STACK_OVERFLOW
   -- if $step_ctxt((z; instr_0), stackcount) = STACK_OVERFLOW
 
-
-def $Step_read_throw_ref_handler(config) : instr*
-def $Step_read_throw_ref_handler           hint(builtin)
 
 def $reduce(config, stackcount) : stepresult
 
@@ -565,7 +561,8 @@ def $dispatch_step_handler(n, val*, BR l, z, catch*, bl) = z; val* (BR l)
 def $dispatch_step_handler(n, val*, RETURN_CALL_REF yy, z, catch*, bl) = z; val* (RETURN_CALL_REF yy)
 def $dispatch_step_handler(n, val*, RETURN, z, catch*, bl) = z; val* RETURN
 def $dispatch_step_handler(n, REF.EXN_ADDR a, THROW_REF, z, catch*, true) = z; instr'*
-  -- if $Step_read_throw_ref_handler(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = instr'*
+  -- if instr_0' = HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF
+  -- if $dispatch_step_read(instr_0', z; instr_0') = instr'*
 def $dispatch_step_handler(n, eps, TRAP, z, catch*, true) = z; TRAP
 def $dispatch_step_handler(n, val*, eps, z, catch*, true) = z; val*
 
@@ -740,9 +737,6 @@ relation Step                       hint(animate %1 -> %2)
 relation Step_pure                  hint(animate %1 -> %2)
 relation Step_read                  hint(animate %1 -> %2)
 
-rule Step/pure                             hint(context_rule)
-rule Step/read                             hint(context_rule)
-
 rule Step_pure/br-label-zero               hint(no_animate)
 rule Step_pure/br-label-succ               hint(no_animate)
 rule Step_pure/br-handler                  hint(no_animate)
@@ -767,6 +761,10 @@ rule Step/ctxt-instrs                      hint(no_animate)
 rule Step/ctxt-label                       hint(no_animate)
 rule Step/ctxt-frame                       hint(no_animate)
 rule Step/ctxt-handler                     hint(no_animate)
+
+rule Step/pure                             hint(context_rule)
+rule Step/read                             hint(context_rule)
+
 
 relation Eval_expr                         hint(animate_manual $eval_expr: (%1, %2) -> (%3, %4))
 

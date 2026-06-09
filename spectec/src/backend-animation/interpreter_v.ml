@@ -1042,18 +1042,10 @@ and dispatch_step_read = {
     | vs -> error_values ("Args to $dispatch_step_read") vs
 }
 
-and step_read_throw_ref_handler = {
-  name = "Step_read_throw_ref_handler";
-  f =
-    function
-    | [arg] -> call_func "Step_read/throw_ref" [valA arg]
-    | vs -> error_values ("Args to $Step_read/throw_ref") vs
-}
 
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler;
   ]
 
 and call_builtins fname args : value OptMonad.m =
