@@ -58,6 +58,31 @@ let convert_typcase (parent_type : Il.Ast.id) (tc : Il.Ast.typcase) : _inductive
     signature = (convert_tupt t, Some (Type None));
   }
 
+let convert_struct_field (tf : Il.Ast.typfield) : struct_field =
+  let (a, (t, qs, ps), hs) = tf in
+  StructSimpleBinder {
+    modifier = empty_modifier;
+    id = Xl.Atom.to_string a;
+    signature = ([], Some (convert_typ t));
+  }
+
+let rec term_chain_to_curried_func (term_chain : term list) : term =
+  match term_chain with
+  | [] -> failwith "term_chain_to_curried_func: empty term_chain"
+  | [t] -> t
+  | t :: ts -> Fun (t, term_chain_to_curried_func ts)
+
+let form_rel_typ_chain (t : Il.Ast.typ) : term = match t.it with
+  | VarT (id, []) -> Ident id.it
+  | VarT _ -> failwith "undep should ensure empty arg list" 
+  | TupT l ->
+    let types = List.map (fun (_, t) -> convert_typ t) l in
+    let types_and_prop = types @ [Ident "Prop"] in
+    term_chain_to_curried_func types_and_prop
+  | _ -> failwith "no other typ should be here!"
+
+let 
+
 let convert_def (d : Il.Ast.def) : command = match d.it with
   | TypD (id, params, [{it = (InstD (quants, args, {it = AliasT t; _})); _}])
     -> Abbrev (AbbrevAsgn {
@@ -80,12 +105,16 @@ let convert_def (d : Il.Ast.def) : command = match d.it with
       id = id.it;
       binders = [];
       universe = None;
-      constructor = None; (* TODO: previous version did this *)
-      fields = List.map (fun (i, (t, qs, ps), hs) -> StructSimpleBinder {
-        modifier = empty_modifier;
-        id = i.it;
-        signature = ([], Some (convert_typ t));
-      }) ts;
+      constructor = Some (empty_modifier, "MK" ^ id.it); (* following previous version *)
+      fields = List.map convert_struct_field ts;
+      deriving = None; (* TODO: look into deriving *)
+    }
+  | RelD (id, params, m, t, rs)
+    -> Inductive {
+      modifier = empty_modifier;
+      id = id.it;
+      signature = ([], Some (form_rel_typ_chain t));
+      cases = List.map (convert_typcase id) rs;
       deriving = None; (* TODO: look into deriving *)
     }
   | _ -> failwith "here to stop incomplete case linting lol"

@@ -27,7 +27,7 @@ type level =
 
 type term =
   | Hole of hole
-  | Fun of ident * term
+  | Fun of term * term
   | Ident of ident
   | Sort of level
   | Type of level option
