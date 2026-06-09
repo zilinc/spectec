@@ -815,41 +815,45 @@ and call_func name args : value OptMonad.m =
 
 and call_func name args : value OptMonad.m =
   info "call" no (lazy ("Calling " ^ name));
-  (* Hardcoded functions defined in meta.spectec *)
+
+  (* These functions are the generated unoptimised Step functions.
+     For better performance, consider calling the manually defined
+     functions in meta.spectec.
+   *)
   if name = "Step" then
-    error no "Calling $Step is not allowed."
-  else if name = "Step_pure" then
-    error no "Calling $Step_pure is not allowed."
-  else if name = "Step_read" then
-    error no "Calling $Step_read is not allowed."
-  else
-    (* Built-in functions *)
-    let builtin_name, is_builtin =
-      match Il.Env.find_func_hint !il_env name "builtin" with
-      | None -> (name, false)
-      | Some hint ->
-        match hint.hintexp.it with
-        | SeqE []     -> (name , true)  (* hint(builtin) *)
-        | TextE fname -> (fname, true)  (* hint(builtin "g") *)
-        | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
-    in
-    (match Def.find_dl_func_def name !dl with
-    (* Regular function definition. *)
-    | Some fdef when not is_builtin -> eval_func name fdef args
-    (* Builtins and numerics *)
-    | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
-      if Numerics_v.mem builtin_name then
-        Numerics_v.call_numerics builtin_name args |> return
-      else if builtins_mem builtin_name then
-        call_builtins builtin_name args
-      else if builtin_name = "hostcall" then
-        hostcall args
-      else
-        error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
-    | _ when is_builtin ->
-      error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
-    | None -> error no (sprintf "There is no function named `%s`." name)
-    )
+    warn no "Calling $Step can be slow.";
+  if name = "Step_pure" then
+    warn no "Calling $Step_pure can be slow.";
+  if name = "Step_read" then
+    warn no "Calling $Step_read can be slow.";
+
+  (* Built-in functions *)
+  let builtin_name, is_builtin =
+    match Il.Env.find_func_hint !il_env name "builtin" with
+    | None -> (name, false)
+    | Some hint ->
+      match hint.hintexp.it with
+      | SeqE []     -> (name , true)  (* hint(builtin) *)
+      | TextE fname -> (fname, true)  (* hint(builtin "g") *)
+      | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
+  in
+  (match Def.find_dl_func_def name !dl with
+  (* Regular function definition. *)
+  | Some fdef when not is_builtin -> eval_func name fdef args
+  (* Builtins and numerics *)
+  | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
+    if Numerics_v.mem builtin_name then
+      Numerics_v.call_numerics builtin_name args |> return
+    else if builtins_mem builtin_name then
+      call_builtins builtin_name args
+    else if builtin_name = "hostcall" then
+      hostcall args
+    else
+      error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
+  | _ when is_builtin ->
+    error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
+  | None -> error no (sprintf "There is no function named `%s`." name)
+  )
 
 
 (* Host instructions *)
@@ -1013,7 +1017,7 @@ and dispatch_step = {
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, rule_name) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
-      | _ -> error no ("No $Step rule for instr" ^ string_of_value instr)
+      | _ -> error no ("No $Step rule for instr " ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step") vs
 }
@@ -1025,7 +1029,7 @@ and dispatch_step_pure = {
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, rule_name) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
-      | _ -> error no ("No $Step_pure rule for instr" ^ string_of_value instr)
+      | _ -> error no ("No $Step_pure rule for instr " ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step_pure") vs
 }
@@ -1037,7 +1041,7 @@ and dispatch_step_read = {
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, rule_name) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
-      | _ -> error no ("No $Step_read rule for instr" ^ string_of_value instr)
+      | _ -> error no ("No $Step_read rule for instr " ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step_read") vs
 }
