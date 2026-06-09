@@ -492,13 +492,19 @@ def $dispatch_step_read           hint(builtin)
 def $dispatch_reduce(state, val*, instr, stackcount) : stepresult
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
   -- if $use_step_pure(instr_0) = true
-  -- Step_pure: val* instr_0 ~> instr_1*
+  -- if $dispatch_step_pure(instr_0, val* instr_0) = instr_1*
+  ;; Slow version
+  ;; -- Step_pure: val* instr_0 ~> instr_1*
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
   -- if $use_step_read(instr_0) = true
-  -- Step_read: z; val* instr_0 ~> instr_1*
+  -- if $dispatch_step_read(instr_0, (z; val* instr_0)) = instr_1*
+  ;; Slow version
+  ;; -- Step_read: z; val* instr_0 ~> instr_1*
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP config_1
   -- if $use_step(instr_0) = true
-  -- Step: z; val* instr_0 ~> config_1
+  -- if $dispatch_step(instr_0, (z; val* instr_0)) = config_1
+  ;; Slow version
+  ;; -- Step: z; val* instr_0 ~> config_1
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z'; val* instr_1*)
   -- if $use_step_ctxt(instr_0) = true
   -- if $step_ctxt((z; instr_0), stackcount) = STEP (z'; instr_1*)
