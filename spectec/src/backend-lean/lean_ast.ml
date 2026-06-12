@@ -35,9 +35,19 @@ type term =
   | Prod of term list (* According to https://lean-lang.org/doc/reference/latest/Basic-Types/Tuples/ this should technically be term * term, but I'm doing this for convenience *)
   | FunApp of term * argument non_empty_list
   | FunAppEllipsis of term * argument list
+  | Num of _numtype (* check if this makes sense *)
+  | Text of string
 
 and argument =
   | Term of term
+
+
+
+and _numtype =
+  | LeanNat of Z.t
+  | LeanInt of Z.t
+  | LeanRat of Q.t
+  | LeanReal of float
 
 
 type _ident_or_hole =

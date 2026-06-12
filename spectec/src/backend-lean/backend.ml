@@ -78,6 +78,43 @@ let create_inductive_type_with_params_applied
         FunApp (Ident parent_type.it, nel args)
     | _ -> failwith "all params of a typecase should be TypP"
 
+let create_unop (op : Il.Ast.unop) : string
+  = match op with
+    | `PlusOp -> "+"
+    | `MinusOp -> "-"
+
+let create_optyp (t : Il.Ast.optyp) : term
+  = match t with
+    | `BoolT -> Ident "Bool"
+    | `NatT -> Ident "Nat"
+    | `IntT -> Ident "Int"
+    | `RatT -> Ident "Rat"
+
+let create_exp (e : Il.Ast.exp) : term
+  = match e.it with
+    | VarE id -> Ident id.it
+    | BoolE b -> if b then Ident "true" else Ident "false"
+    | NumE n -> match n with
+      | `Nat n -> Num (LeanNat n)
+      | `Int i -> Num (LeanInt i)
+      | `Rat r -> Num (LeanRat r)
+      | `Real r -> Num (LeanReal r)
+    | TextE t -> Text t
+
+    (* | VarE (_, _) -> error e.at "arg list in VarE must be empty because they should be eliminated by undep!"
+    | BoolE b -> if b then Ident "true" else Ident "false"
+    | NumE n -> Num n
+    | TextE s -> Text s
+    | TupE [] -> Unit
+    | TupE l -> Tuple (List.map create_exp l)
+    | CatE (e1, e2) -> FunApp (Ident "List.append", nel [Term (create_exp e1); Term (create_exp e2)])
+    | BinE (op, typ, e1, e2) ->
+      let op_str = match op with
+        | AddOp -> "+"
+        | SubOp -> "-"
+        | MulOp -> "*"
+        | DivOp -> "/" *)
+
 let create_prem (p : Il.Ast.prem) : term = match p.it with
   | RulePr (
     (id : Il.Ast.id),
@@ -87,9 +124,8 @@ let create_prem (p : Il.Ast.prem) : term = match p.it with
   ) -> failwith ""
 
 
-
 let append_prems_to_term (term : term) (prems : Il.Ast.prem list) : term
-  = if List.is_empty prems then term
+  = if prems = [] then term
     else
       let prems_as_terms = List.map create_prem prems in
       create_curried_func (term :: prems_as_terms)
@@ -257,18 +293,32 @@ let create_def (def : Il.Ast.def) : command
               prems   (* (RulePr "fun_sum" (Seq Arg Arg) (TupE (VarE "n'_lst") (VarE "var_0"))) *)
             )
             ->
-            let params_from_args : _params list
-              = q
+            let params_from_args : _params list (* (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) *)
+              = List.map (
+                fun q -> match q.it with
+                  | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
+                    nel [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
+                    create_typ typ
+                  ))
+                  | _ -> failwith "only ExpP should be here"
+              ) quants
             in
+            
             {
               modifier = empty_modifier;
               id = id.it;                 (* fun_sum_case_1 *)
               signature = (
                 params_from_args,         (* (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) *)
-                Some (create_term exp)    (*
-                                              fun_sum n'_lst var_0 →
-                                              fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
-                                          *)
+
+                (*
+                    fun_sum n'_lst var_0 →
+                    fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
+                *)
+                Some (
+                  append_prems_to_term
+                  (create_exp exp)
+                  prems
+                )
               );
             }
           | _ -> failwith "no other `rule'` exists in the AST at time of writing"
