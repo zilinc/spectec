@@ -524,11 +524,10 @@ let expand_notation env t =
     | ps, Defined ({it = Il.VariantT [tc]; _}, _, _) ->
       let as_ = List.map il_arg_of_param ps in
       (match Il.Eval.(match_list match_arg (to_il_env env) Il.Subst.empty as' as_) with
-      | Ok (Some s) ->
+      | Some s ->
         let mixop, (t, _qs, prems), _ = Il.Subst.subst_typcase s tc in
         Some (t, mixop, Mixop.apply mixop (untup_typ' t), prems)
-      | Ok None -> None
-      | Error _ -> error_typ env t.at "term" t
+      | None -> None
       )
     | _, _ -> None
     )
