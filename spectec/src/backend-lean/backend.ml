@@ -44,7 +44,16 @@ and create_typ (t : Il.Ast.typ) : term
     | NumT nt -> create_numtyp nt
     | TextT -> Ident "String"
     | TupT [] -> Ident "Unit"
-    | TupT l -> Prod (List.map (Fun.compose create_typ snd) l)
+    | TupT id_typ_list -> (
+      let terms = List.map (fun (_, typ) -> create_typ typ) id_typ_list in
+      let rec construct_prod l
+        = match l with
+          | [] -> failwith "should have been handled by earlier case"
+          | [t] -> t
+          | t :: ts -> Prod (t, construct_prod ts)
+      in
+      construct_prod terms
+    )
     | IterT (t, iter) -> create_iter iter t
 
 
@@ -78,10 +87,33 @@ let create_inductive_type_with_params_applied
         FunApp (Ident parent_type.it, nel args)
     | _ -> failwith "all params of a typecase should be TypP"
 
-let create_unop (op : Il.Ast.unop) : string
+let create_unop (op : Il.Ast.unop) : term
   = match op with
-    | `PlusOp -> "+"
-    | `MinusOp -> "-"
+    | `PlusOp -> Ident "+"
+    | `MinusOp -> Ident "-"
+    | `NotOp -> Ident "¬"
+
+let create_binop (op : Il.Ast.binop) : term
+  = match op with
+    | `AndOp -> Ident "&&"
+    | `OrOp -> Ident "||"
+    | `ImplOp -> Ident "→"
+    | `EquivOp -> Ident "↔"
+    | `AddOp -> Ident "+"
+    | `SubOp -> Ident "-"
+    | `MulOp -> Ident "*"
+    | `DivOp -> Ident "/"
+    | `ModOp -> Ident "%"
+    | `PowOp -> Ident "^"
+
+let create_cmpop (op : Il.Ast.cmpop) : term
+  = match op with
+    | `EqOp -> Ident "="
+    | `NeOp -> Ident "≠"
+    | `LtOp -> Ident "<"
+    | `GtOp -> Ident ">"
+    | `LeOp -> Ident "≤"
+    | `GeOp -> Ident "≥"
 
 let create_optyp (t : Il.Ast.optyp) : term
   = match t with
@@ -89,17 +121,99 @@ let create_optyp (t : Il.Ast.optyp) : term
     | `NatT -> Ident "Nat"
     | `IntT -> Ident "Int"
     | `RatT -> Ident "Rat"
+    | `RealT -> Ident "Real"
 
-let create_exp (e : Il.Ast.exp) : term
+let create_atom (a : Il.Ast.atom) : string
+  = match a.it with
+    | Atom s -> s
+    | _ -> failwith "expected Atom"
+
+let create_path (p : Il.Ast.path) : string list
+  = match p.it with
+    | Path id_list -> List.map (fun id -> id.it) id_list
+
+let rec create_exp (e : Il.Ast.exp) : term
   = match e.it with
     | VarE id -> Ident id.it
     | BoolE b -> if b then Ident "true" else Ident "false"
-    | NumE n -> match n with
-      | `Nat n -> Num (LeanNat n)
-      | `Int i -> Num (LeanInt i)
-      | `Rat r -> Num (LeanRat r)
-      | `Real r -> Num (LeanReal r)
+    | NumE n -> (
+      match n with
+        | `Nat n -> Num (LeanNat n)
+        | `Int i -> Num (LeanInt i)
+        | `Rat r -> Num (LeanRat r)
+        | `Real r -> Num (LeanReal r)
+      )
     | TextE t -> Text t
+    | UnE (op, _, e) 
+      -> FunApp (
+        create_unop op,
+        nel [Term (create_exp e)]
+      )
+    | BinE (op, _, e1, e2)
+      -> BinaryInfixFunApp (
+        Term (create_exp e1),
+        create_binop op,
+        Term (create_exp e2)
+      )
+    | CmpE (op, _, e1, e2)
+      -> BinaryInfixFunApp (
+        Term (create_exp e1),
+        create_cmpop op,
+        Term (create_exp e2)
+      )
+    | TupE exps -> Tuple (List.map create_exp exps)
+    | ProjE (exp, int) -> failwith ""
+    | CaseE (mixop, exp) -> failwith ""
+    | UncaseE (exp, mixop) -> failwith ""
+    | OptE (Some exp) -> FunApp (Ident "some", nel [Term (create_exp exp)])
+    | OptE (None) -> Ident "none"
+    | TheE exp -> FunApp (DotProj (Ident "Option", Ident "get!"), nel [Term (create_exp exp)])
+    | StrE struct_fields
+      ->
+        let field_terms = List.map (
+          fun (atom, exp) -> (create_atom atom, create_exp exp)
+        ) struct_fields in
+        Struct {
+          fields = List.map (fun (field_name, field_value) -> AssignedField {
+            l_val = Ident_SILV field_name;
+            is_private = false;
+            term = field_value;
+          }) field_terms;
+          type_annotation = None;
+        }
+    | DotE (exp, atom)
+      -> DotProj (create_exp exp, Ident (create_atom atom))
+    | CompE (e1, e2) -> BinaryInfixFunApp (Term (create_exp e1), Ident "append", Term (create_exp e2))
+    | ListE exps -> List (List.map create_exp exps)
+    | LiftE option_term -> FunApp (DotProj (Ident "Option", Ident "toList"), nel [Term (create_exp option_term)])
+    | MemE (e1, e2) -> FunApp (DotProj (Ident "List", Ident "contains"), nel [Term (create_exp e1); Term (create_exp e2)])
+    | LenE e1 -> FunApp (DotProj (Ident "List", Ident "length"), nel [Term (create_exp e1)])
+    (* TODO: tackle pattern matching version of CatE *)
+    | CatE (e1, e2) -> BinaryInfixFunApp (Term (create_exp e1), Ident "++", Term (create_exp e2))
+    | IdxE (e1, e2) -> Index {
+        collection = create_exp e1;
+        index = create_exp e2;
+        index_type = Unsafe
+      }
+    | SliceE (e1, e2, e3) -> Slice {
+        collection = create_exp e1;
+        bounds = SliceBetween (create_exp e2, create_exp e3);
+      }
+    | UpdE (e1, p, e2) -> UpdateStruct {
+        struct_to_update = create_exp e1;
+        fields_to_update = [
+          AssignedField {
+            l_val = DotProj (Ident_SILV "", Ident "field"); (* TODO: get field name from path *)
+            is_private = false;
+            term = create_exp e2;
+          }
+        ];
+      }
+    | _ -> failwith "not implemented yet"
+    
+        
+        
+    (* | BinE (op, t, e1, e2) -> *)
 
     (* | VarE (_, _) -> error e.at "arg list in VarE must be empty because they should be eliminated by undep!"
     | BoolE b -> if b then Ident "true" else Ident "false"

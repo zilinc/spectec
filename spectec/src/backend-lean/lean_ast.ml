@@ -25,6 +25,11 @@ type level =
   | LevelMax of level * level
   | LevelIMax of level * level
 
+type _index_type =
+  | Plain
+  | Option
+  | Unsafe
+
 type term =
   | Hole of hole
   | Fun of term * term
@@ -32,11 +37,65 @@ type term =
   | Sort of level
   | Type of level option
   | Prop
-  | Prod of term list (* According to https://lean-lang.org/doc/reference/latest/Basic-Types/Tuples/ this should technically be term * term, but I'm doing this for convenience *)
+  | Prod of term * term (* According to https://lean-lang.org/doc/reference/latest/Basic-Types/Tuples/ this should technically be term * term, but I'm doing this for convenience *)
   | FunApp of term * argument non_empty_list
   | FunAppEllipsis of term * argument list
   | Num of _numtype (* check if this makes sense *)
   | Text of string
+  (*
+    BinaryInfixFunApp does not exist in core Lean4 grammar;
+    
+    e.g. x + y desugars to HAdd.hAdd x y
+
+    Nevertheless, this serves our conventional rendering
+  *)
+  | BinaryInfixFunApp of argument * term * argument
+  | Tuple of term list (* unsure if this is officially in the Lean 4 grammar *)
+  | DotProj of term * term (* unsure if this is officially in the Lean 4 grammar *)
+  | Struct of {
+    fields: struct_inst_field list;
+    type_annotation: term option;
+  }
+  | List of term list
+  | Index of {
+    collection: term;
+    index: term;
+    index_type: _index_type;
+  }
+  | Slice of {
+    collection: term;
+    bounds: _slice_bounds;
+  }
+  | UpdateStruct of {
+    struct_to_update: term;
+    fields_to_update: struct_inst_field list;
+  }
+
+
+
+and _slice_bounds =
+  | SliceFrom of term
+  | SliceTo of term
+  | SliceBetween of term * term
+
+and struct_inst_field =
+  | Ident_SIF of ident
+  | AssignedField of {
+    l_val: struct_inst_l_val;
+    is_private: bool;
+    term: term;
+  }
+
+
+  
+and struct_inst_l_val =
+  | Ident_SILV of ident
+  | Num_SILV of int
+  (*
+    TODO: currently unused and thus not yet implemented, but there is one more form described in:
+
+    https://lean-lang.org/doc/reference/latest/The-Type-System/Inductive-Types/#Lean___Parser___Term___structInstLVal:~:text=a%20term%20in%20square%20brackets%2C%20followed%20by%20a%20sequence%20of%20zero%20or%20more%20subfields
+  *)
 
 and argument =
   | Term of term
