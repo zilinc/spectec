@@ -2055,8 +2055,8 @@ let vl_to_module : value -> RI.Ast.module_ = vl_to_phrase vl_to_module'
 (* Destruct value *)
 
 let rec vl_to_field v : RI.Aggr.field =
-  match match_caseV "field" v with
-  | [["PACK"];[];[]], [pt; c] -> RI.Aggr.PackField (vl_to_packtype pt, ref (as_singleton_case c |> as_nat_value |> Z.to_int))
+  match match_caseV' "field" v with
+  | [["PACK"];[];[]], TupV [pt; c] -> RI.Aggr.PackField (vl_to_packtype pt, ref (as_singleton_case c |> as_nat_value |> Z.to_int))
   | _ -> RI.Aggr.ValField (ref (vl_to_value v))
 
 and vl_to_array v : RI.Aggr.array =
