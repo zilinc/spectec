@@ -307,7 +307,7 @@ let vl_of_cvtop cop =
   let open RI.Ast in
   let vl_of_int_cvtop num_bits cop =
     match cop with
-    | IntOp.ExtendI32 sx     -> nullary "I32", caseV [["EXTEND"   ];[]] [vl_of_sx sx]
+    | IntOp.ExtendI32 sx     -> nullary "I32", caseV' [["EXTEND"   ];[]] (vl_of_sx sx)
     | IntOp.WrapI64          -> nullary "I64", nullary "WRAP"
     | IntOp.TruncF32 sx      -> nullary "F32", caseV' [["TRUNC"    ];[]] (vl_of_sx sx)
     | IntOp.TruncF64 sx      -> nullary "F64", caseV' [["TRUNC"    ];[]] (vl_of_sx sx)
@@ -434,11 +434,11 @@ let vl_of_int_vbinop_opt : RI.Ast.V128Op.ibinop -> value option = function
   | RI.Ast.V128Op.Add             -> Some (nullary "ADD")
   | RI.Ast.V128Op.Sub             -> Some (nullary "SUB")
   | RI.Ast.V128Op.Mul             -> Some (nullary "MUL")
-  | RI.Ast.V128Op.Min sx          -> Some (caseV [["MIN"];[]] [vl_of_sx sx])
-  | RI.Ast.V128Op.Max sx          -> Some (caseV [["MAX"];[]] [vl_of_sx sx])
+  | RI.Ast.V128Op.Min sx          -> Some (caseV' [["MIN"];[]] (vl_of_sx sx))
+  | RI.Ast.V128Op.Max sx          -> Some (caseV' [["MAX"];[]] (vl_of_sx sx))
   | RI.Ast.V128Op.AvgrU           -> Some (caseV [["AVGR"; "U"]] [])
-  | RI.Ast.V128Op.AddSat sx       -> Some (caseV [["ADD_SAT"];[]] [vl_of_sx sx])
-  | RI.Ast.V128Op.SubSat sx       -> Some (caseV [["SUB_SAT"];[]] [vl_of_sx sx])
+  | RI.Ast.V128Op.AddSat sx       -> Some (caseV' [["ADD_SAT"];[]] (vl_of_sx sx))
+  | RI.Ast.V128Op.SubSat sx       -> Some (caseV' [["SUB_SAT"];[]] (vl_of_sx sx))
   | RI.Ast.V128Op.Q15MulRSatS     -> Some (caseV [["Q15MULR_SAT"; "S"]] [])
   | RI.Ast.V128Op.RelaxedQ15MulRS -> Some (caseV [["RELAXED_Q15MULR"; "S"]] [])
   | _ -> None
@@ -502,7 +502,7 @@ let vl_of_int_vcvtop_opt = function
   | _ -> None
 
 let vl_of_float32_vcvtop_opt = function
-  | RI.Ast.V128Op.DemoteZeroF64x2 -> Some (Some (vl_of_shape (nullary "F64") two ), caseV [["DEMOTE"];[]] [nullary "ZERO"])
+  | RI.Ast.V128Op.DemoteZeroF64x2 -> Some (Some (vl_of_shape (nullary "F64") two ), caseV' [["DEMOTE"];[]] (nullary "ZERO"))
   | RI.Ast.V128Op.ConvertI32x4 sx -> Some (Some (vl_of_shape (nullary "I32") four), caseV [["CONVERT"];[];[]] [none; vl_of_sx sx])
   | _ -> None
 
@@ -562,9 +562,9 @@ let vl_of_special_vcvtop =
   let open Value in
   function
   | V128 (V128.I16x8 (V128Op.ExtAddPairwise sx)) ->
-    caseV [["VEXTUNOP"];[];[];[]] [ vl_of_ishape (nullary "I16") eight; vl_of_ishape (nullary "I8" ) sixteen; caseV [["EXTADD_PAIRWISE"];[]] [vl_of_sx sx] ]
+    caseV [["VEXTUNOP"];[];[];[]] [ vl_of_ishape (nullary "I16") eight; vl_of_ishape (nullary "I8" ) sixteen; caseV' [["EXTADD_PAIRWISE"];[]] (vl_of_sx sx) ]
   | V128 (V128.I32x4 (V128Op.ExtAddPairwise sx)) ->
-    caseV [["VEXTUNOP"];[];[];[]] [ vl_of_ishape (nullary "I32") four ; vl_of_ishape (nullary "I16") eight  ; caseV [["EXTADD_PAIRWISE"];[]] [vl_of_sx sx] ]
+    caseV [["VEXTUNOP"];[];[];[]] [ vl_of_ishape (nullary "I32") four ; vl_of_ishape (nullary "I16") eight  ; caseV' [["EXTADD_PAIRWISE"];[]] (vl_of_sx sx) ]
   | vop -> BI.Construct.error_instr "vl_of_special_vcvtop" (VecConvert vop)
 
 let vl_of_int_vshiftop : RI.Ast.V128Op.ishiftop -> value = function
@@ -1306,14 +1306,14 @@ let vl_to_int_cvtop vs : RI.Ast.IntOp.cvtop =
   let open RI.Ast in
   match vs with
   | [_; numtype2; op] ->
-    (match match_caseV "integer cvtop numtype2" numtype2, match_caseV "integer cvtop op" op with
-    | ([["I32"]], []), ([["EXTEND"];[]], [sx]) -> IntOp.ExtendI32 (vl_to_sx sx)
-    | ([["I64"]], []), ([["WRAP"]], []) -> IntOp.WrapI64
-    | ([["F32"]], []), ([["TRUNC"];[]], [sx]) -> IntOp.TruncF32 (vl_to_sx sx)
-    | ([["F64"]], []), ([["TRUNC"];[]], [sx]) -> IntOp.TruncF64 (vl_to_sx sx)
-    | ([["F32"]], []), ([["TRUNC_SAT"];[]], [sx]) -> IntOp.TruncSatF32 (vl_to_sx sx)
-    | ([["F64"]], []), ([["TRUNC_SAT"];[]], [sx]) -> IntOp.TruncSatF64 (vl_to_sx sx)
-    | _, ([["REINTERPRET"]], []) -> IntOp.ReinterpretFloat
+    (match match_caseV "integer cvtop numtype2" numtype2, match_caseV' "integer cvtop op" op with
+    | ([["I32"]], []), ([["EXTEND"];[]], sx) -> IntOp.ExtendI32 (vl_to_sx sx)
+    | ([["I64"]], []), ([["WRAP"]], TupV []) -> IntOp.WrapI64
+    | ([["F32"]], []), ([["TRUNC"];[]], TupV [sx]) -> IntOp.TruncF32 (vl_to_sx sx)
+    | ([["F64"]], []), ([["TRUNC"];[]], TupV [sx]) -> IntOp.TruncF64 (vl_to_sx sx)
+    | ([["F32"]], []), ([["TRUNC_SAT"];[]], TupV [sx]) -> IntOp.TruncSatF32 (vl_to_sx sx)
+    | ([["F64"]], []), ([["TRUNC_SAT"];[]], TupV [sx]) -> IntOp.TruncSatF64 (vl_to_sx sx)
+    | _, ([["REINTERPRET"]], TupV []) -> IntOp.ReinterpretFloat
     | _ -> error_values "integer cvtop [numtype2; op]" [numtype2; op]
     )
   | _ -> error_values "integer cvtop" vs
@@ -1441,11 +1441,11 @@ let vl_to_int_vbinop : value -> RI.Ast.V128Op.ibinop = function
   | CaseV ([["ADD"             ]    ], TupV [  ]) -> RI.Ast.V128Op.Add
   | CaseV ([["SUB"             ]    ], TupV [  ]) -> RI.Ast.V128Op.Sub
   | CaseV ([["MUL"             ]    ], TupV [  ]) -> RI.Ast.V128Op.Mul
-  | CaseV ([["MIN"             ];[] ], TupV [sx]) -> RI.Ast.V128Op.Min (vl_to_sx sx)
-  | CaseV ([["MAX"             ];[] ], TupV [sx]) -> RI.Ast.V128Op.Max (vl_to_sx sx)
+  | CaseV ([["MIN"             ];[] ], sx       ) -> RI.Ast.V128Op.Min (vl_to_sx sx)
+  | CaseV ([["MAX"             ];[] ], sx       ) -> RI.Ast.V128Op.Max (vl_to_sx sx)
   | CaseV ([["AVGR"; "U"       ]    ], TupV [  ]) -> RI.Ast.V128Op.AvgrU
-  | CaseV ([["ADD_SAT"         ];[] ], TupV [sx]) -> RI.Ast.V128Op.AddSat (vl_to_sx sx)
-  | CaseV ([["SUB_SAT"         ];[] ], TupV [sx]) -> RI.Ast.V128Op.SubSat (vl_to_sx sx)
+  | CaseV ([["ADD_SAT"         ];[] ], sx       ) -> RI.Ast.V128Op.AddSat (vl_to_sx sx)
+  | CaseV ([["SUB_SAT"         ];[] ], sx       ) -> RI.Ast.V128Op.SubSat (vl_to_sx sx)
   | CaseV ([["Q15MULR_SAT"; "S"    ]], TupV [  ]) -> RI.Ast.V128Op.Q15MulRSatS
   | CaseV ([["RELAXED_Q15MULR"; "S"]], TupV [  ]) -> RI.Ast.V128Op.RelaxedQ15MulRS
   | v -> error_value "integer vbinop" v
@@ -1554,7 +1554,7 @@ let vl_to_int_vcvtop : value list -> RI.Ast.V128Op.icvtop = function
   | l -> error_values "integer vcvtop" l
 
 let vl_to_float_vcvtop : value list -> RI.Ast.V128Op.fcvtop = function
-  | [ _sh; CaseV ([["DEMOTE" ];[]    ], TupV [ _zero     ]) ] -> RI.Ast.V128Op.DemoteZeroF64x2
+  | [ _sh; CaseV ([["DEMOTE" ];[]    ], _zero             ) ] -> RI.Ast.V128Op.DemoteZeroF64x2
   | [ _sh; CaseV ([["CONVERT"];[];[] ], TupV [ _half; sx ]) ] -> RI.Ast.V128Op.ConvertI32x4 (vl_to_sx sx)
   | [ _sh; CaseV ([["PROMOTE"; "LOW"]], TupV [           ]) ] -> RI.Ast.V128Op.PromoteLowF32x4
   | l -> error_values "float vcvtop" l
@@ -1582,11 +1582,11 @@ let vl_to_special_vcvtop = function
     (match [ as_singleton_case ishape1; as_singleton_case ishape2; vextunop ] with
     | [ CaseV ([[];["X"];[]], TupV [ CaseV ([["I16"]], TupV []); z1 ])
       ; CaseV ([[];["X"];[]], TupV [ CaseV ([["I8" ]], TupV []); z2 ])
-      ; CaseV ([["EXTADD_PAIRWISE"];[]], TupV [ sx ]) ] when z1 = eight && z2 = sixteen ->
+      ; CaseV ([["EXTADD_PAIRWISE"];[]], sx) ] when z1 = eight && z2 = sixteen ->
       RI.Value.V128 (RI.V128.I16x8 (RI.Ast.V128Op.ExtAddPairwise (vl_to_sx sx)))
     | [ CaseV ([[];["X"];[]], TupV [ CaseV ([["I32"]], TupV []); z1 ])
       ; CaseV ([[];["X"];[]], TupV [ CaseV ([["I16"]], TupV []); z2 ])
-      ; CaseV ([["EXTADD_PAIRWISE"];[]], TupV [ sx ]) ] when z1 = four  && z2 = eight   ->
+      ; CaseV ([["EXTADD_PAIRWISE"];[]], sx) ] when z1 = four  && z2 = eight   ->
       RI.Value.V128 (RI.V128.I32x4 (RI.Ast.V128Op.ExtAddPairwise (vl_to_sx sx)))
     | l -> error_values "special vcvtop [2]" l
     )
