@@ -107,14 +107,10 @@ let textual_to_module textual =
   | _ -> assert false
 
 let get_export_addr name moduleinst_name : value =
-  let vl =
-    moduleinst_name
-    |> get_export name
-    |> as_str_field "ADDR"
-    |> as_case_value
-  in
-  try List.hd vl with Failure _ ->
-    failwith ("Function export doesn't contain function address")
+  moduleinst_name
+  |> get_export name
+  |> as_str_field "ADDR"
+  |> as_case_value
 
 let get_global_value module_name globalname : value (* val *) =
   get_export_addr globalname module_name
@@ -131,8 +127,8 @@ and instantiate module_ : value * value =
   let il_module = C.vl_of_module module_ in
   let externaddrs = List.map get_externaddr module_.it.imports in
   let store = Store.get () in
-  let CaseV (_, [state'; instrs']) = Interpreter_v.instantiate [ valA store ; valA il_module; listV_of_list externaddrs |> valA ] in
-  let CaseV (_, [store'; frame']) = state' in
+  let CaseV (_, TupV [state'; instrs']) = Interpreter_v.instantiate [ valA store ; valA il_module; listV_of_list externaddrs |> valA ] in
+  let CaseV (_, TupV [store'; frame']) = state' in
   let StrV [_; (fname, moduleinst)] = frame' in
   assert ("MODULE" = fname);
   Store.put store';
@@ -146,8 +142,8 @@ and invoke moduleinst_name funcname args : value =
   let t1 = Sys.time () in
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
-  let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; valA args ] in
-  let CaseV (_, [store'; _]) = state' in
+  let CaseV (_, TupV [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; valA args ] in
+  let CaseV (_, TupV [store'; _]) = state' in
   Store.put store';
   let t2 = Sys.time () in
   log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);
@@ -191,21 +187,21 @@ let test_assertion assertion =
   | AssertTrap (action, re) ->
     let result = run_action action |> as_list_value' in
     (match result with
-    | [ CaseV ([["TRAP"]], []) ] -> success
+    | [ CaseV ([["TRAP"]], TupV []) ] -> success
     | _ -> print_fail assertion.at "runtime" re (string_of_values ", " result)
     )
   | AssertException action ->
     let result = run_action action |> as_list_value' in
     (match result with
-    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], TupV []) ] -> success
     | _ -> print_fail assertion.at "expected exception" "" (string_of_values ", " result)
     )
   | AssertUninstantiable (var_opt, re) ->
     let (moduleinst, instrs) = Modules.find (Modules.get_module_name var_opt) |> instantiate in
     let result = instrs |> as_list_value' in
     (match result with
-    | [ CaseV ([["TRAP"]], []) ]
-    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | [ CaseV ([["TRAP"]], TupV []) ]
+    | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], TupV []) ] -> success
     | _ -> print_fail assertion.at "instantiation" re (string_of_values ", " result)
     )
   | AssertInvalid (def, re)

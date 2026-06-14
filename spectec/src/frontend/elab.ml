@@ -1514,14 +1514,14 @@ and elab_expfields' env tid (efs : expfield list) (tfs : Il.typfield list) (t0 :
     let atom' = string_of_atom atom in
     let* e1' = cast_empty ("omitted record field `" ^ atom' ^ "`") env tF at in
     let e' = if prems = [] then e1' else Il.TupE [e1'] $$ at % tF in
-    let* efs2' = elab_expfields ~side env tid efs tfs2 t0 at in
+    let* efs2' = elab_expfields env tid efs tfs2 t0 at in
     Ok ((elab_atom atom tid, e') :: efs2')
   | (atom, e)::efs2, tfs ->
     match find_typfield atom tfs with
     | None -> fail_atom e.at atom t0 "undefined or misplaced record field"
     | Some ((_, (tF, _qs, prems), _), tfs2) ->
-      let* e' = elab_exp ~side env e tF in
-      let* efs2' = elab_expfields ~side env tid efs2 tfs2 t0 at in
+      let* e' = elab_exp env e tF in
+      let* efs2' = elab_expfields env tid efs2 tfs2 t0 at in
       let e' = if prems = [] then e' else Il.TupE [e'] $$ e.at % tF in
       Ok ((elab_atom atom tid, e') :: efs2')
 
@@ -1554,16 +1554,16 @@ and elab_exp_iter' env (es : exp list) (t1, iter) t at : Il.exp' attempt =
   | _, (List1 | ListN _) ->
     assert false
 
-and elab_exp_notation ?(side = `Rhs) env tid (e : exp) (t1, mixop, not, prems) t : Il.exp attempt =
+and elab_exp_notation env tid (e : exp) (t1, mixop, not, prems) t : Il.exp attempt =
   (* Convert notation into applications of mixin operators *)
   assert (valid_tid tid);
-  let* es', _s = nest e.at t (elab_exp_notation' ~side env tid e not) in
+  let* es', _s = nest e.at t (elab_exp_notation' env tid e not) in
   let e' =
     match es' with
     | [e'] when prems = [] -> e'
     | _ -> Il.TupE es' $$ e.at % t1
   in
-  Ok (Il.CaseE (mixop, e', Unchecked) $$ e.at % t)
+  Ok (Il.CaseE (mixop, e') $$ e.at % t)
 
 and elab_exp_notation' env tid (e : exp) not : (Il.exp list * Il.Subst.t) attempt =
   Debug.(log_at "el.elab_exp_notation" e.at
@@ -1785,14 +1785,13 @@ and elab_exp_variant env tid (e : exp) (tcs : Il.typcase list) t at : Il.exp att
       Ok [("_" $ tC.at, tC)]
   in
   let not = Mixop.apply mixop xts in
-  let* es', _s = elab_exp_notation' ~side env tid e not in
+  let* es', _s = elab_exp_notation' env tid e not in
   let e' =
     match es' with
     | [e'] when prems = [] -> e'
     | _ -> Il.TupE es' $$ e.at % tC
   in
-  let ch' = if side = `Lhs then Il.Checked else Il.Unchecked in
-  Ok (Il.CaseE (mixop, e', ch') $$ at % t)
+  Ok (Il.CaseE (mixop, e') $$ at % t)
 
 
 (*
@@ -1886,13 +1885,13 @@ and cast_exp' phrase env (e' : Il.exp) t1 t2 : Il.exp' attempt =
           | _ -> List.mapi (fun i t1I -> Il.ProjE (e'', i) $$ e''.at % t1I) ts1
         in
         let* es'' = map2_attempt (fun eI' (t1I, t2I) ->
-          cast_exp ~side phrase env eI' t1I t2I) es' (List.combine ts1 ts2) in
+          cast_exp phrase env eI' t1I t2I) es' (List.combine ts1 ts2) in
         let e''' =
           match es'' with
           | [e'''] when prems2 = [] -> e'''
           | _ -> Il.TupE es'' $$ e'.at % tC2
         in
-        Ok (Il.CaseE (mixop2, e''', Unchecked))
+        Ok (Il.CaseE (mixop2, e'''))
       )
       else
       (
@@ -1910,7 +1909,7 @@ and cast_exp' phrase env (e' : Il.exp) t1 t2 : Il.exp' attempt =
         | Il.TupT [(_, t11')] ->
           let e'' = Il.UncaseE (e', mixop1) $$ e'.at % tC1 in
           let e''' = if prems1 = [] then e'' else Il.ProjE (e'', 0) $$ e'.at % t11' in
-          cast_exp' ~side phrase env e''' t11' t2'
+          cast_exp' phrase env e''' t11' t2'
         | _ -> fail_typ2 env e'.at phrase t1 t2 ""
       )
 
@@ -1972,7 +1971,7 @@ and cast_exp' phrase env (e' : Il.exp) t1 t2 : Il.exp' attempt =
           | Il.TupT [(_, t11')] ->
             let e'' = Il.UncaseE (e', mixop1) $$ e'.at % tC1 in
             let e''' = if prems1 = [] then e'' else Il.ProjE (e'', 0) $$ e'.at % t11' in
-            cast_exp' ~side phrase env e''' t11' t2'
+            cast_exp' phrase env e''' t11' t2'
           | _ -> fail_typ2 env e'.at phrase t1 t2 ""
         );
       ]
@@ -1987,9 +1986,9 @@ and cast_exp' phrase env (e' : Il.exp) t1 t2 : Il.exp' attempt =
       (* A ConT payload can be cast to the ConT *)
       (match expand env tC2 with
       | Il.TupT [(_, t21')] ->
-        let* e1' = cast_exp ~side phrase env e' t1' t21' in
+        let* e1' = cast_exp phrase env e' t1' t21' in
         let e'' = if prems2 = [] then e1' else Il.TupE [e1'] $$ e'.at % tC2 in
-        Ok (Il.CaseE (mixop2, e'', Unchecked))
+        Ok (Il.CaseE (mixop2, e''))
       | _ -> fail_typ2 env e'.at phrase t1 t2 ""
       )
 

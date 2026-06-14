@@ -422,36 +422,21 @@ let bind_var_exp envr occ oname exp ot dir : Il.Env.t ref * quant list * exp * p
 (* Instead of binding an expression to a new variable, it binds an expression
    to a *pattern*.
  *)
-let rec bind_pat_exp envr occ oname exp ot : Il.Env.t ref * quant list * exp * prem list =
+let bind_pat_exp envr occ oname exp ot : Il.Env.t ref * quant list * exp * prem list =
   let ( let* ) = Result.bind in
   match exp.it with
   | SubE (exp', t1, t2) ->
-    let (envr, vs, ve, prems_eq) = bind_var_exp envr occ oname exp' None `Lhs in
+    let (envr, qs, ve, prems_eq) = bind_var_exp envr occ oname exp' None `Lhs in
     let ve' = SubE (ve, t1, t2) $> exp in
-    (envr, vs, ve', prems_eq)
+    (envr, qs, ve', prems_eq)
   | CvtE (exp', t1, t2) ->
-    let (envr, vs, ve, prems_eq) = bind_var_exp envr occ oname exp' None `Lhs in
+    let (envr, qs, ve, prems_eq) = bind_var_exp envr occ oname exp' None `Lhs in
     let ve' = CvtE (ve, t1, t2) $> exp in
-    (envr, vs, ve', prems_eq)
-  | CaseE (mixop, tup) ->
-    (match tup.it with
-    | TupE es ->
-      let tcases = as_variant_typ !envr exp.note in
-      let _, (t, _qs, _), _ = List.find (fun (m, _, _) -> Il.Eq.eq_mixop m mixop) tcases in
-      let TupT ts = t.it in
-      let (envr, vs, ves, prems_e, _) = List.fold_left (fun acc e ->
-        let (envr, vss, ves, premss_e, ctx) = acc in
-        let (envr, vs, ve, prems_eq) = bind_pat_exp envr occ oname e None in
-        let ctx' = ctx in
-        (envr, vss @ vs, ves @ [ve], premss_e @ prems_eq, ctx')
-      ) (envr, [], [], [], Map.empty) es in
-      let ts' = List.map (fun ve -> "_" $ ve.at, ve.note) ves in (* TODO(zilinc) *)
-      let t_tup' = TupT ts' $ tup.at in
-      let tup' = TupE ves $$ tup.at % t_tup' in
-      let ve' = CaseE (mixop, tup') $> exp in
-      (envr, vs, ve', prems_e)
-    | _ -> error exp.at ("CaseE payload is not a tuple: " ^ string_of_exp tup)
-    )
+    (envr, qs, ve', prems_eq)
+  | CaseE (mixop, exp') ->
+    let (envr, qs, ve, prems_eq) = bind_var_exp envr occ oname exp' None `Lhs in
+    let ve' = CaseE (mixop, ve) $> exp in
+    (envr, qs, ve', prems_eq)
   | _ -> bind_var_exp envr occ oname exp ot `Lhs
 
 let elim_lhs_known_vars envr at exp : ((string -> string) * exp * prem list) E.m =
@@ -894,7 +879,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return ([prem_len] @ prems')
   | CaseE (mixop, lhs') ->
-    begin match as_variant_typ !envr rhs.note with
+    (match as_variant_typ !envr rhs.note with
     | [] -> assert false
     | [(mixop', (_t, _, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
       info "case" at (lazy ("The payload of unary constructor " ^ string_of_mixop mixop ^ " is " ^ string_of_exp lhs' ^
@@ -904,36 +889,13 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
                             "The unary variant is " ^ string_of_typ _t));
       animate_exp_eq envr at lhs' (UncaseE (rhs, mixop) $$ rhs.at % lhs'.note)
     | tcases ->
-      begin match lhs'.it with
-      | TupE es ->
-        let (_, (t', _qs, _), _) = List.find (fun (mixop', _, _) -> Il.Eq.eq_mixop mixop mixop') tcases in
-        let ets = as_tup_typ !envr t' in
-        let (envr, vqs, ves, prem_vs) = List.fold_left (fun acc (e, (_, t)) ->
-          let (envr, vqs, ves, prem_vs) = acc in
-          (* NOTE: If we use `t` to type the new variable below, then it's possible that some of them
-             do not reduce, and will cause later pattern matching on the types to fail.
-          *)
-          let (envr', vqs', ve, prems_v) = bind_var_exp envr empty_occ None e None `Lhs in
-          (envr', vqs @ vqs', ves@[ve], prem_vs @ prems_v)
-        ) (envr, [], [], []) (List.combine es ets) in
-        let tup = TupE ves $$ lhs.at % lhs.note in
-        let* (subst_vs, tup', prems_ves) = elim_lhs_known_vars envr tup.at tup in
-        let vqs' = List.map (fun q -> match q.it with
-        | ExpP (v, t) -> ExpP (subst_vs v.it $ v.at, t) $ q.at
-        | _ -> assert false
-        ) vqs in
-        let prem_case = LetPr (vqs', CaseE (mixop, tup') $$ lhs.at % rhs.note, rhs) $ at in
-        let* () = update (add_knowns (varset_of_quants vqs')) in
-        (* FIXME(zilinc): It may not handle patterns like C(v, v, v) correctly. *)
-        let* s' = get () in
-        let s_new = { (init ()) with prems = prem_vs @ prems_ves; knowns = get_knowns s' } in
-        let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
-        let* () = update (put_knowns (get_knowns s_new')) in
-        E.return (prem_case :: prems')
-      | _ ->
-        assert false
-      end
-    end
+      let occ = occ_exp (Fun.const true) `Once empty_occ lhs' in
+      let (envr, qs, ve, prems_eq) = bind_var_exp envr occ None lhs' None `Lhs in
+      let fv_ve = (free_exp ve).varid in
+      let prem' = LetPr (qs, CaseE (mixop, ve) $> lhs, rhs) $ at in
+      let* () = update (add_knowns fv_ve >>> push_prems prems_eq) in
+      E.return [prem']
+    )
   | TupE es ->
     (* simp *)
     let prems = List.mapi (fun i e ->
@@ -942,15 +904,13 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       IfPr (eqE ~at e proj_rhs) $ at
     ) es
     in
-    (* Need to animate the components in a loop. This is needed
-       if we have premises like `(... x ..., x) = (e1, e2)`, where the first
+    (* Need to animate the components in a loop.
+       If we have premises like `(... x ..., x) = (e1, e2)`, where the first
        component cannot be animated when `x` is unknown. By solving the second
        first, we turn the first into a check.
     *)
-    let s_new = { (init ()) with prems; knowns = get_knowns s } in
-    let* (prems', s_new') = run_inner s_new (animate_prems' envr at) in
-    let* () = update (put_knowns (get_knowns s_new')) in
-    E.return prems'
+    let* () = update (push_prems prems) in
+    E.return []
   | CvtE (lhs', t1, t2) ->
     (* TODO(zilinc): Conversion is not checked. *)
     animate_exp_eq envr at lhs' (CvtE (rhs, t2, t1) $$ rhs.at % lhs'.note)
@@ -977,14 +937,6 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
                             "; rhs = " ^ string_of_exp rhs ^
                             "; t_rhs = " ^ string_of_typ rhs.note));
       animate_exp_eq envr at e1 (TupE [rhs] $$ rhs.at % t1)
-    | NumT _ ->
-      (* It is possible that both e1.0 and e1 have the same type. *)
-      info "proj" at (lazy ("ProjE.0 in num type.\n" ^
-                            "  e1 = " ^ string_of_exp e1 ^
-                            "; t_e1 = " ^ string_of_typ t1 ^
-                            "; rhs = " ^ string_of_exp rhs ^
-                            "; t_rhs = " ^ string_of_typ rhs.note));
-      animate_exp_eq envr at e1 rhs
     | TupT _ -> E.throw (string_of_error at
                           ("Can't invert ProjE.0: " ^ string_of_exp e1 ^ " of type " ^ string_of_typ t1))
     end
@@ -1003,8 +955,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       (* FIXME(zilinc): Here it relies on the fact that the elaboration only generates
          UncaseE for alias types.
        *)
-      let rhs' = TupE [rhs] $$ rhs.at % t1 in
-      animate_exp_eq envr at e1 (CaseE (mixop, rhs') $$ rhs.at % e1.note)
+      animate_exp_eq envr at e1 (CaseE (mixop, rhs) $$ rhs.at % e1.note)
       (*
       (* TODO(zilinc): The side-condition from the type definition.
          For now, we don't check it. But the check can be added in a separate

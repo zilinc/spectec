@@ -19,7 +19,7 @@ and value =
   | ListV of value growable_array      (* list of values *)
   | TupV of value list                 (* tuple of values *)
   | OptV of value option               (* optional value *)
-  | CaseV of mixop * value list        (* constructor *)
+  | CaseV of mixop * value             (* constructor *)
   | StrV of (string, value) record     (* key-value mapping *)
 
 and arg =
@@ -57,7 +57,7 @@ let rec string_of_value = function
   | ListV a -> "[" ^ string_of_array a ^ "]"
   | TupV vs -> "⦅" ^ string_of_values ", " vs ^ "⦆"
   | OptV ov -> "?(" ^ string_of_values "" (Option.to_list ov) ^ ")"
-  | CaseV (m, vs) -> string_of_mixop m ^ "(" ^ string_of_values ", " vs ^ ")"
+  | CaseV (m, v) -> string_of_mixop m ^ "(" ^ string_of_value v ^ ")"
   | StrV  r -> string_of_record r
 
 and string_of_values delim = function
@@ -100,7 +100,7 @@ let rec eq_value v1 v2 = match v1, v2 with
   | ListV a1, ListV a2 -> Array.length !a1 = Array.length !a2 && Array.for_all2 (=) !a1 !a2
   | TupV vs1, TupV vs2 -> List.for_all2 eq_value vs1 vs2
   | OptV ov1, OptV ov2 -> Option.equal eq_value ov1 ov2
-  | CaseV (m1, vs1), CaseV (m2, vs2) -> m1 = m2 && List.for_all2 eq_value vs1 vs2
+  | CaseV (m1, v1), CaseV (m2, v2) -> m1 = m2 && eq_value v1 v2
   | StrV r1 , StrV r2  -> eq_record eq_value r1 r2
   | _ -> false
 
@@ -135,12 +135,16 @@ let as_text_value : value -> string = function
   | v -> error no ("as_text_value: " ^ string_of_value v)
 
 let as_singleton_case = function
-  | CaseV ([[];[]], [v]) -> v
+  | CaseV ([[];[]], TupV [v]) -> v
   | v -> error no ("as_singleton_case: " ^ string_of_value v)
 
 let as_case_value = function
-  | CaseV (_, vs) -> vs
+  | CaseV (_, v) -> v
   | v ->  error no ("as_case_value: " ^ string_of_value v)
+
+let as_case_values = function
+  | CaseV (_, TupV vs) -> vs
+  | v ->  error no ("as_case_values: " ^ string_of_value v)
 
 let as_str_value = function
   | StrV str -> str
@@ -171,10 +175,13 @@ let of_num_value = function
 
 let match_caseV name v : string list list * value list =
   match v with
-  | CaseV (tag, vs) -> tag, vs
+  | CaseV (tag, TupV vs) -> tag, vs
   | _ -> error_value (name ^ " (match_caseV)") v
 
-
+let match_caseV' name v : string list list * value =
+  match v with
+  | CaseV (tag, v) -> tag, v
+  | _ -> error_value (name ^ " (match_caseV')") v
 
 let listV a = ListV (ref a)
 let listV_of_list l = Array.of_list l |> listV
@@ -185,10 +192,12 @@ let numV n = NumV n
 let boolV b = BoolV b
 let textV s = TextV s
 let optV ov = OptV ov
-let caseV mixop vs = CaseV (mixop, vs)
-let caseV1 v = caseV [[];[]] [v]
 let tupV vs = TupV vs
 let strV fvs = StrV fvs
+let caseV mixop vs = CaseV (mixop, tupV vs)
+let caseV' mixop v = CaseV (mixop, v)
+let caseV1 v = caseV [[];[]] [v]
+
 
 (* dim *)
 let num i = natV (Z.of_int i) |> caseV1

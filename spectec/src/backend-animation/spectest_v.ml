@@ -29,15 +29,15 @@ let il_of_spectest () : value =
       listV [||];
       comptype
     ] in
-    let rectype = caseV [["REC"];[]] [
+    let rectype = caseV' [["REC"];[]] (
       vl_of_list' Fun.id [subtype]
-    ] in
+    ) in
     let deftype = caseV [["_DEF"];[];[]] [
       rectype; vl_of_nat 0
     ] in
-    let funccode = caseV [["_HOSTFUNC"];[]] [
+    let funccode = caseV' [["_HOSTFUNC"];[]] (
       textV name
-    ] in
+    ) in
     name, strV [
       "TYPE"  , ref deftype;
       "MODULE", ref (strV []); (* dummy module *)
@@ -122,7 +122,7 @@ let il_of_spectest () : value =
       | _ -> assert false
     in
     let new_inst =
-      strV [ ("NAME", textV name |> caseV1 |> ref); ("ADDR", caseV [[kind];[]] [ vl_of_nat addr ] |> ref) ]
+      strV [ ("NAME", textV name |> caseV1 |> ref); ("ADDR", caseV' [[kind];[]] (vl_of_nat addr) |> ref) ]
     in
 
     (* Update Store *)

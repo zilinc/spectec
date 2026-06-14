@@ -35,18 +35,12 @@ let rec valid_pattern lhs (vars: string list) prem : unit =
      in
      if var_question.it <> var then
        error_pr lhs.at ("Variable `" ^ var_question.it ^ "` on the LHS of this -- where premise doesn't match binder `" ^ var ^ "`.") prem
-  | CaseE (_, { it = TupE es; _ }) ->
-    List.iter (fun e -> match e.it with
-      | VarE _ -> ()
-      | _ -> error_pr e.at ("Component of data constructor payload is not a variable: " ^ string_of_exp e) prem
-    ) es;
-    let e_vars = List.map free_vars_exp es in
-    let lhs_vars = List.fold_left Set.union Set.empty e_vars in
-    if Set.equal lhs_vars vars_set |> not then
-      error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " doesn't match binding list " ^ string_of_varset vars_set) prem;
-    let e_vars' = List.concat (List.map Set.to_list e_vars) in
-    if List.length e_vars' <> List.length (Set.of_list e_vars' |> Set.to_list) then
-      error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " is a non-linear pattern.") prem
+  | CaseE (_, { it = VarE lhs_var; _ }) ->
+    if List.length vars <> 1 then
+       error_pr prem.at ("Only one binder is allowed on this -- where premise but got " ^ string_of_varset vars_set) prem;
+    let var = List.hd vars in
+    if lhs_var.it <> var then
+      error_pr lhs.at ("LHS of LetPr " ^ string_of_exp lhs ^ " doesn't match binding list " ^ string_of_varset vars_set) prem
   | OptE (Some lhs')
   | SubE (lhs', _, _)
   -> valid_pattern lhs' vars prem

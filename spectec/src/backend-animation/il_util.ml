@@ -183,7 +183,7 @@ and natE ?(at = no) i = NumE (`Nat i) |> mk_expr at (natT ())
 and intE ?(at = no) i = NumE (`Int i) |> mk_expr at (NumT `IntT $ at)
 and textE ?(at = no) s = TextE s |> mk_expr at (TextT $ at)
 and cvtE ?(at = no) (e, nt1, nt2) = CvtE (e, nt1, nt2) |> mk_expr at (NumT nt2 $ at)
-and caseE ?(at = no) ~note (mixop, es) = CaseE (mixop, es) |> mk_expr at note
+and caseE ?(at = no) ~note (mixop, e) = CaseE (mixop, e) |> mk_expr at note
 and tupE ?(at = no) ~note el = TupE el |> mk_expr at note
 and listE ?(at = no) t es : exp = mk_expr at t (ListE es)
 and listE' ?(at = no) es : exp = match es with
@@ -338,12 +338,11 @@ and mk_atom ?(at = no) ~info (atom: string) : Xl.Atom.atom =
   ) $$ at % info
 
 
-and mk_case' ?(at = no) tname mixop es : exp =
+and mk_case' ?(at = no) tname mixop e : exp =
   let t = t_var tname in
-  mk_case t mixop es
+  mk_case t mixop e
 
-and mk_case ?(at = no) t mixop es : exp =
-  let e = mk_tup es in
+and mk_case ?(at = no) t mixop e : exp =
   caseE ~note:t (mixop, e)
 
 and mk_nullary' ?(at = no) tname con : exp =
@@ -354,7 +353,7 @@ and mk_nullary ?(at = no) t con : exp =
   let info = Xl.Atom.{def = ""; case = ""} in
   let atom' = Xl.Atom.Atom (String.uppercase_ascii con) in
   let atom = atom' $$ (at, info) in
-  mk_case t (Xl.Mixop.Atom atom) []
+  mk_case t (Xl.Mixop.Atom atom) (mk_tup ~at:at [])
 
 and mk_tup ?(at = no) es : exp =
   let ts = List.map (fun e -> e.note) es in

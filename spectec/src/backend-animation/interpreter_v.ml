@@ -15,8 +15,6 @@ open Il2al.Free
 open Lazy
 (* open Lru *)
 module HS = State_v.HostState
-module A  = Al.Ast
-module I  = Backend_interpreter
 module RI = Reference_interpreter
 
 
@@ -207,22 +205,18 @@ let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
     ) ctx' xes
   | TupE lhs_s, TupV rhs_s when List.length lhs_s = List.length rhs_s ->
     foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s rhs_s)
-  | CaseE (lhs_tag, lhs_s), CaseV (rhs_tag, rhs_s) ->
-    begin match lhs_s.it with
-    | TupE lhs_s' ->
-      if vl_of_mixop lhs_tag = rhs_tag && List.length lhs_s' = List.length rhs_s then
-        foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s' rhs_s)
+  | CaseE (lhs_tag, lhs'), CaseV (rhs_tag, rhs') ->
+      if vl_of_mixop lhs_tag = rhs_tag then
+        assign ctx lhs' rhs'
       else
         fail ()
-    | _ -> fail ()
-    end
   | OptE (Some lhs'), OptV (Some rhs'') -> assign ctx lhs' rhs''
   | CvtE (e1, nt, _), NumV n ->
     (match Xl.Num.cvt nt n with
     | Some n' -> assign ctx e1 (NumV n')
     | None -> fail ()
     )
-  | SubE (p, t1, t2), CaseV (mixop, vs) ->
+  | SubE (p, t1, t2), CaseV (mixop, _) ->
     let tcs = as_variant_typ !il_env t1 in
     (match List.find_map (fun (mixop', tcase, _) ->
       if vl_of_mixop mixop' = mixop then Some (mixop', tcase) else None) tcs
@@ -446,9 +440,9 @@ and eval_exp ctx exp : value OptMonad.m =
   | UncaseE (e1, mixop) ->
     let* v1 = eval_exp ctx e1 in
     (match v1 with
-    | CaseV (mixop', vs) ->
+    | CaseV (mixop', v) ->
       if Value.vl_of_mixop mixop = mixop' then
-        return (TupV vs)
+        return v
       else
         error_eval "Constructor unwrapping expression" exp
                    (Some ("mixop = " ^ string_of_mixop mixop ^ "; mixop' = " ^ Value.string_of_mixop mixop'))
@@ -480,10 +474,8 @@ and eval_exp ctx exp : value OptMonad.m =
     | _ -> error_eval "Sequence concatenation expression" exp None
     ) |> return
   | CaseE (op, e1) ->
-    (match e1.it with
-    | TupE es -> let* vs = mapM (eval_exp ctx) es in CaseV (vl_of_mixop op, vs) |> return
-    | _ -> let* v = eval_exp ctx e1 in CaseV (vl_of_mixop op, [v]) |> return
-    )
+    let* v = eval_exp ctx e1 in
+    CaseV (vl_of_mixop op, v) |> return
   | CvtE (e1, _nt1, nt2) ->
     let* v1 = eval_exp ctx e1 in
     (match v1 with
@@ -789,7 +781,7 @@ and eval_func name func_def args : value OptMonad.m =
   let ctx = VContext.empty in
   if name = "step" then
     let* r = match_clause ctx no_region name 1 (List.map snd fcs) args in
-    let CaseV (_, [_; instrs]) = r in
+    let CaseV (_, TupV [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
     info "step" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
     return r
@@ -797,7 +789,7 @@ and eval_func name func_def args : value OptMonad.m =
     (* Capture stack overflow signal. *)
     let* r = match_clause ctx no_region name 1 (List.map snd fcs) args in
     (match r with
-    | CaseV ([["STACK_OVERFLOW"]], []) -> raise BI.Exception.OutOfMemory
+    | CaseV ([["STACK_OVERFLOW"]], TupV []) -> raise BI.Exception.OutOfMemory
     | _ -> return r
     )
   else
@@ -865,8 +857,8 @@ and is_host = function
 and call_hostfunc name s vs =
   (* ty ∈ {"I32", "I64", "F32", "F64"} *)
   let as_const ty = function
-  | CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]) when ty = ty' -> n
-  | OptV (Some (CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]))) when ty = ty' -> n
+  | CaseV ([["CONST"];[];[]], TupV [CaseV ([[ty']], TupV []); n]) when ty = ty' -> n
+  | OptV (Some (CaseV ([["CONST"];[];[]], TupV [CaseV ([[ty']], TupV []); n]))) when ty = ty' -> n
   | v -> error no ("Host function call: Not " ^ ty ^ ".CONST: " ^ string_of_value v)
   in
   let argc = List.length vs in
@@ -929,20 +921,20 @@ and call_hostfunc name s vs =
   in
   let hs' = HS.inc_timestamp (get_hoststate s) in
   let s' = set_hoststate hs' s in
-  let hostcallresult = caseV [["RES"];[];[]] [s'; caseV [["_VALS"];[]] [listV [||]]] in
+  let hostcallresult = caseV [["RES"];[];[]] [s'; caseV' [["_VALS"];[]] (listV [||])] in
   let res = [ hostcallresult ] |> listV_of_list in
   (res, effs)
 
 and hostcall : Value.arg list -> value OptMonad.m = function
-  | [ ValA name; ValA s; ValA val_ ] ->
+  | [ ValA name; ValA s; ValA vals ] ->
     let name' = (match name with
-    | CaseV ([["_HOSTFUNC"];[]], [hf]) -> as_text_value hf
+    | CaseV ([["_HOSTFUNC"];[]], hf) -> as_text_value hf
     | _ -> error no ("Not a hostfunc")
     )
     in
     let glb_hs = HS.get_glb_state () in
     let lcl_hs = as_str_field "HOST" s in
-    let vals = as_list_value' val_ in
+    let vals' = as_list_value' vals in
     (match HS.chk_state lcl_hs with
     | Earlier ->
       (* Host function has been called already. Look up the effect registry. *)
@@ -951,7 +943,7 @@ and hostcall : Value.arg list -> value OptMonad.m = function
       | None -> error no ("No such entry in effect resgistry: " ^ name')
       )
     | Good ->
-      let res, effs = call_hostfunc name' s vals in
+      let res, effs = call_hostfunc name' s vals' in
       HS.add_effects name' res effs;
       return res
     | Later -> error no ("Host function `" ^ name' ^ "` is calling into the future.")
@@ -967,7 +959,7 @@ and use_step : builtin = {
   f =
     function
     | [instr] ->
-      let mixop, _ = match_caseV "instr" instr in
+      let mixop, _ = match_caseV' "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, _) -> boolV (rel_name = "Step") |> return
       | None -> BoolV false |> return
@@ -979,7 +971,7 @@ and use_step_pure = {
   f =
     function
     | [instr] ->
-      let mixop, _ = match_caseV "instr" instr in
+      let mixop, _ = match_caseV' "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, _) -> BoolV (rel_name = "Step_pure") |> return
       | None -> BoolV false |> return
@@ -991,7 +983,7 @@ and use_step_read = {
   f =
     function
     | [instr] ->
-      let mixop, _ = match_caseV "instr" instr in
+      let mixop, _ = match_caseV' "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, _) -> boolV (rel_name = "Step_read") |> return
       | None -> boolV false |> return
@@ -1003,7 +995,7 @@ and use_step_ctxt = {
   f =
     function
     | [instr] ->
-      let mixop, _ = match_caseV "instr" instr in
+      let mixop, _ = match_caseV' "instr" instr in
       List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"] |> boolV |> return
     | vs -> error_values ("Args to $use_step_ctxt") vs
 }
@@ -1014,7 +1006,7 @@ and dispatch_step = {
   f =
     function
     | [instr; arg] ->
-      let mixop, _ = match_caseV "instr" instr in
+      let mixop, _ = match_caseV' "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, rule_name) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step rule for instr " ^ string_of_value instr)
@@ -1026,7 +1018,7 @@ and dispatch_step_pure = {
   f =
     function
     | [instr; arg] ->
-      let mixop, _ = match_caseV "instr" instr in
+      let mixop, _ = match_caseV' "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, rule_name) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_pure rule for instr " ^ string_of_value instr)
@@ -1038,7 +1030,7 @@ and dispatch_step_read = {
   f =
     function
     | [instr; arg] ->
-      let mixop, _ = match_caseV "instr" instr in
+      let mixop, _ = match_caseV' "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
       | Some (rel_name, rule_name) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
       | _ -> error no ("No $Step_read rule for instr " ^ string_of_value instr)
