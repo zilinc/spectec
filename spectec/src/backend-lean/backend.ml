@@ -128,9 +128,15 @@ let create_atom (a : Il.Ast.atom) : string
     | Atom s -> s
     | _ -> failwith "expected Atom"
 
-let create_path (p : Il.Ast.path) : string list
-  = match p.it with
-    | Path id_list -> List.map (fun id -> id.it) id_list
+
+type path_seg =
+  | DotSeg of Il.Ast.atom
+  | IdxSeg of Il.Ast.exp
+  | SliceSeg of Il.Ast.exp * Il.Ast.exp
+
+let create_arg (arg : Il.Ast.arg) : term
+  = match arg.it with
+    | ExpA exp -> create_exp exp
 
 let rec create_exp (e : Il.Ast.exp) : term
   = match e.it with
@@ -199,16 +205,17 @@ let rec create_exp (e : Il.Ast.exp) : term
         collection = create_exp e1;
         bounds = SliceBetween (create_exp e2, create_exp e3);
       }
-    | UpdE (e1, p, e2) -> UpdateStruct {
-        struct_to_update = create_exp e1;
-        fields_to_update = [
-          AssignedField {
-            l_val = DotProj (Ident_SILV "", Ident "field"); (* TODO: get field name from path *)
-            is_private = false;
-            term = create_exp e2;
-          }
-        ];
+    | UpdE (e1, p, e2) -> create_upd_exp e1 p e2
+    | ExtE (e1, p, e2) -> failwith "not implemented yet"
+    | IfE (if_exp, then_exp, else_exp) -> IfThenElse {
+        cond = create_exp if_exp;
+        then_branch = create_exp then_exp;
+        else_branch = create_exp else_exp;
       }
+    | CallE (id, args) -> 
+      let func = (Ident id.it : term) in
+      let arg_terms = List.map (fun arg -> Term (create_arg arg)) args in
+      FunApp (func, nel arg_terms)
     | _ -> failwith "not implemented yet"
     
         
@@ -228,6 +235,64 @@ let rec create_exp (e : Il.Ast.exp) : term
         | SubOp -> "-"
         | MulOp -> "*"
         | DivOp -> "/" *)
+
+(* TODO check AI-generated *)
+and create_upd_exp
+  (root : Il.Ast.exp)
+  (p : Il.Ast.path)
+  (new_val : Il.Ast.exp)
+  : term =
+  
+  let flatten_path (p : Il.Ast.path) : path_seg list =
+    let rec go p = match p.it with
+      | RootP -> []
+      | DotP (p', a)       -> go p' @ [DotSeg a]
+      | IdxP (p', e)       -> go p' @ [IdxSeg e]
+      | SliceP (p', e1, e2)-> go p' @ [SliceSeg (e1, e2)]
+    in go p
+  in
+
+
+  let counter = ref 0 in
+  let fresh () = incr counter; "elem_" ^ string_of_int !counter in
+
+
+  (* List.modify lst idx body *)
+  let create_list_modify (lst : term) (idx : term) (body : term) =
+    FunApp (DotProj (Ident "List", Ident "modify"),
+            nel [Term lst; Term idx; Term body])
+  in
+
+
+  let rec go prev segs =
+    match segs with
+    | [] -> create_exp new_val
+    | [DotSeg a] ->
+        UpdateStruct {
+          struct_to_update = prev;
+          fields_to_update = [AssignedField {
+            l_val = Ident_SILV (create_atom a);
+            is_private = false;
+            term = create_exp new_val;
+          }]
+        }
+    | DotSeg a :: rest ->
+        let field = create_atom a in
+        UpdateStruct {
+          struct_to_update = prev;
+          fields_to_update = [AssignedField {
+            l_val = Ident_SILV field;
+            is_private = false;
+            term = go (DotProj (prev, Ident field)) rest;
+          }]
+        }
+    | IdxSeg e :: rest ->
+        let v = fresh () in
+        create_list_modify prev (create_exp e) (simple_lambda v (go (Ident v) rest))
+    | SliceSeg _ :: _ ->
+        failwith "SliceP inside UpdE not yet supported"
+  in
+  go (create_exp root) (flatten_path p)
 
 let create_prem (p : Il.Ast.prem) : term = match p.it with
   | RulePr (

@@ -8,6 +8,12 @@ let empty_modifier : decl_modifier = {
   recursion_modifer = None;
 }
 
+let simple_lambda (param : ident) (body : term) : term =
+  Lambda {
+    params = { head = Ident_FB param; tail = [] }; (* TODO: non empty list util *)
+    body = body
+  }
+
 (* let rec write__abbrev (dm : decl_modifier) (id : ) : _abbrev =
   AbbrevAsgn {
     modifier = dm;

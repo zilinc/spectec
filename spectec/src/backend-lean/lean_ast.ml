@@ -71,7 +71,25 @@ type term =
     fields_to_update: struct_inst_field list;
   }
 
+  | Lambda of {
+    params: fun_binder non_empty_list;
+    body: term;
+  }
 
+  | IfThenElse of {
+    cond: term;
+    then_branch: term;
+    else_branch: term;
+  }
+
+  (* | UpdateList of {
+    name_of_list_to_update: term;
+    index: term;
+    new_value: term;
+  } *)
+
+and fun_binder =
+  | Ident_FB of ident
 
 and _slice_bounds =
   | SliceFrom of term
@@ -87,7 +105,7 @@ and struct_inst_field =
   }
 
 
-  
+
 and struct_inst_l_val =
   | Ident_SILV of ident
   | Num_SILV of int
