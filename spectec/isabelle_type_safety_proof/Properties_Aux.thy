@@ -187,7 +187,52 @@ lemma instr_inversion_1:
       (\<exists> v_mut t.
       ((proj_uN_0 x) < (length (context_GLOBALS C))) \<and>
 		  (((context_GLOBALS C) ! (proj_uN_0 x)) = (mk_globaltype v_mut t)) \<and>
-      ((mk_functype (mk_list []) (mk_list [t])) <ti: ft))"
+      ((mk_functype (mk_list []) (mk_list [t])) <ti: ft))" and
+    inv_global_set: "e = (instr_subcase_4 (GLOBAL_SET x)) \<Longrightarrow>
+      (\<exists> MUT t.
+      ((proj_uN_0 x) < (length (context_GLOBALS C))) \<and>
+		  (((context_GLOBALS C) ! (proj_uN_0 x)) = (mk_globaltype (Some MUT) t)) \<and>
+      ((mk_functype (mk_list [t]) (mk_list [])) <ti: ft))" and
+    inv_table_get: "e = (instr_subcase_5 (TABLE_GET x)) \<Longrightarrow>
+      (\<exists> lim rt.
+      ((proj_uN_0 x) < (length (context_TABLES C))) \<and>
+		  (((context_TABLES C) ! (proj_uN_0 x)) = (mk_tabletype lim rt)) \<and>
+		  (wf_tabletype (mk_tabletype lim rt)) \<and>
+      ((mk_functype (mk_list [valtype_I32]) (mk_list [(valtype_reftype rt)])) <ti: ft))" and
+    inv_table_set: "e =  (instr_subcase_5 (TABLE_SET x)) \<Longrightarrow>
+      (\<exists> lim rt.
+      ((proj_uN_0 x) < (length (context_TABLES C))) \<and>
+		  (((context_TABLES C) ! (proj_uN_0 x)) = (mk_tabletype lim rt)) \<and>
+		  (wf_tabletype (mk_tabletype lim rt)) \<and>
+      ((mk_functype (mk_list [valtype_I32, (valtype_reftype rt)]) (mk_list [])) <ti: ft))" and
+    inv_table_size: "e = (instr_subcase_5 (TABLE_SIZE x)) \<Longrightarrow>
+      (\<exists> lim rt.
+      ((proj_uN_0 x) < (length (context_TABLES C))) \<and>
+		  (((context_TABLES C) ! (proj_uN_0 x)) = (mk_tabletype lim rt)) \<and>
+		  (wf_tabletype (mk_tabletype lim rt)) \<and>
+      ((mk_functype (mk_list []) (mk_list [valtype_I32])) <ti: ft))" and
+    inv_table_grow: "e = (instr_subcase_5 (TABLE_GROW x)) \<Longrightarrow>
+      (\<exists> lim rt.
+      ((proj_uN_0 x) < (length (context_TABLES C))) \<and>
+		  (((context_TABLES C) ! (proj_uN_0 x)) = (mk_tabletype lim rt)) \<and>
+		  (wf_tabletype (mk_tabletype lim rt)) \<and>
+      ((mk_functype (mk_list [(valtype_reftype rt), valtype_I32]) (mk_list [valtype_I32])) <ti: ft))" and
+    inv_table_fill: "e = (instr_subcase_5 (TABLE_FILL x)) \<Longrightarrow>
+      (\<exists> lim rt.
+      ((proj_uN_0 x) < (length (context_TABLES C))) \<and>
+		  (((context_TABLES C) ! (proj_uN_0 x)) = (mk_tabletype lim rt)) \<and>
+		  (wf_tabletype (mk_tabletype lim rt)) \<and>
+      ((mk_functype (mk_list [valtype_I32, (valtype_reftype rt), valtype_I32]) (mk_list [])) <ti: ft))" and
+    inv_table_copy: "e = (instr_subcase_5 (TABLE_COPY x_1 x_2)) \<Longrightarrow>
+      (\<exists> lim_1 rt lim_2.
+      ((proj_uN_0 x_1) < (length (context_TABLES C))) \<and>
+		  (((context_TABLES C) ! (proj_uN_0 x_1)) = (mk_tabletype lim_1 rt)) \<and>
+		  ((proj_uN_0 x_2) < (length (context_TABLES C))) \<and>
+		  (((context_TABLES C) ! (proj_uN_0 x_2)) = (mk_tabletype lim_2 rt)) \<and>
+		  (wf_tabletype (mk_tabletype lim_1 rt)) \<and>
+		  (wf_tabletype (mk_tabletype lim_2 rt)) \<and>
+		  ((mk_functype (mk_list [valtype_I32, valtype_I32, valtype_I32]) (mk_list [])) <ti: ft))"
+
 
   using instr_inversion_helper[OF assms]
   apply auto
