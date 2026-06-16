@@ -231,6 +231,7 @@ let argspec = Arg.align (
   "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args),
     " Generate interpreter";
   "--rocq", Arg.Unit (fun () -> target := Rocq), " Generate Rocq Inductive Definitions";
+  "--lean", Arg.Unit (fun () -> target := Lean), " Generate Lean definitions";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),
@@ -448,12 +449,13 @@ let () =
       )
     | Lean -> 
       log "Lean Generation...";
+      let lean_ast = Backend_lean.Backend.create_script il in
+      let lean_str = Backend_lean.Render.render__script lean_ast in
       (match !odsts with
-      | [] -> print_endline (Backend_rocq.Print.string_of_script il)
-      | [odst] -> 
-        let coq_code = Backend_rocq.Print.string_of_script il in
+      | [] -> print_endline lean_str
+      | [odst] ->
         let oc = Out_channel.open_text odst in
-        Fun.protect (fun () -> Out_channel.output_string oc coq_code)
+        Fun.protect (fun () -> Out_channel.output_string oc lean_str)
           ~finally:(fun () -> Out_channel.close oc)
       | _ ->
         prerr_endline "too many output file names";

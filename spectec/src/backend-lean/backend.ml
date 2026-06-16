@@ -1,25 +1,20 @@
 open Il.Ast
 open Util.Source
-open Il.Walk
+(* open Il.Walk *)
 open Lean_ast
 open Lean_builder
 
 let error at msg = Util.Error.error at "Lean4 translation" msg 
-
+module NonEmptyList = Util.Lib.NonEmptyList
 let preamble = "" (* TODO *)
 
 (* let convert_alias (id : string) () *)
-
-let nel (l : 'a list) : 'a non_empty_list
-  = match l with
-    | [] -> failwith "expected non-empty list"
-    | head :: tail -> {head; tail}
 
 let rec create_curried_func (term_chain : term list) : term
   = match term_chain with
     | [] -> failwith "create_curried_func: empty term_chain"
     | [t] -> t
-    | t :: ts -> Fun (t, create_curried_func ts)
+    | t :: ts -> FunType (t, create_curried_func ts)
 
 let create_numtyp (nt : Il.Ast.numtyp) : term
   = match nt with
@@ -31,10 +26,10 @@ let create_numtyp (nt : Il.Ast.numtyp) : term
 
 let rec create_iter (iter : Il.Ast.iter) (t : typ) : term
   = match iter with
-    | Opt -> Ident "Option"
-    | List -> FunApp (Ident "List", {head = Term (create_typ t); tail = []})
-    | List1 -> FunApp (Ident "List", {head = Term (create_typ t); tail = []})
-    | ListN _ -> FunApp (Ident "List", {head = Term (create_typ t); tail = []})
+    | Opt -> FunApp (Ident "Option", NonEmptyList.from_list_unsafe [Term (create_typ t)])
+    | List -> FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (create_typ t)])
+    | List1 -> FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (create_typ t)])
+    | ListN _ -> FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (create_typ t)])
 
 and create_typ (t : Il.Ast.typ) : term
   = match t.it with
@@ -84,7 +79,7 @@ let create_inductive_type_with_params_applied
             | TypP t -> Term (Ident t.it)
             | _ -> failwith "all params of a typecase should be TypP"
         ) params in
-        FunApp (Ident parent_type.it, nel args)
+        FunApp (Ident parent_type.it, NonEmptyList.from_list_unsafe args)
     | _ -> failwith "all params of a typecase should be TypP"
 
 let create_unop (op : Il.Ast.unop) : term
@@ -134,9 +129,6 @@ type path_seg =
   | IdxSeg of Il.Ast.exp
   | SliceSeg of Il.Ast.exp * Il.Ast.exp
 
-let create_arg (arg : Il.Ast.arg) : term
-  = match arg.it with
-    | ExpA exp -> create_exp exp
 
 let rec create_exp (e : Il.Ast.exp) : term
   = match e.it with
@@ -153,7 +145,7 @@ let rec create_exp (e : Il.Ast.exp) : term
     | UnE (op, _, e) 
       -> FunApp (
         create_unop op,
-        nel [Term (create_exp e)]
+        NonEmptyList.from_list_unsafe [Term (create_exp e)]
       )
     | BinE (op, _, e1, e2)
       -> BinaryInfixFunApp (
@@ -171,9 +163,9 @@ let rec create_exp (e : Il.Ast.exp) : term
     | ProjE (exp, int) -> failwith ""
     | CaseE (mixop, exp) -> failwith ""
     | UncaseE (exp, mixop) -> failwith ""
-    | OptE (Some exp) -> FunApp (Ident "some", nel [Term (create_exp exp)])
+    | OptE (Some exp) -> FunApp (Ident "some", NonEmptyList.from_list_unsafe [Term (create_exp exp)])
     | OptE (None) -> Ident "none"
-    | TheE exp -> FunApp (DotProj (Ident "Option", Ident "get!"), nel [Term (create_exp exp)])
+    | TheE exp -> FunApp (DotProj (Ident "Option", Ident "get!"), NonEmptyList.from_list_unsafe [Term (create_exp exp)])
     | StrE struct_fields
       ->
         let field_terms = List.map (
@@ -191,9 +183,9 @@ let rec create_exp (e : Il.Ast.exp) : term
       -> DotProj (create_exp exp, Ident (create_atom atom))
     | CompE (e1, e2) -> BinaryInfixFunApp (Term (create_exp e1), Ident "append", Term (create_exp e2))
     | ListE exps -> List (List.map create_exp exps)
-    | LiftE option_term -> FunApp (DotProj (Ident "Option", Ident "toList"), nel [Term (create_exp option_term)])
-    | MemE (e1, e2) -> FunApp (DotProj (Ident "List", Ident "contains"), nel [Term (create_exp e1); Term (create_exp e2)])
-    | LenE e1 -> FunApp (DotProj (Ident "List", Ident "length"), nel [Term (create_exp e1)])
+    | LiftE option_term -> FunApp (DotProj (Ident "Option", Ident "toList"), NonEmptyList.from_list_unsafe [Term (create_exp option_term)])
+    | MemE (e1, e2) -> FunApp (DotProj (Ident "List", Ident "contains"), NonEmptyList.from_list_unsafe [Term (create_exp e1); Term (create_exp e2)])
+    | LenE e1 -> FunApp (DotProj (Ident "List", Ident "length"), NonEmptyList.from_list_unsafe [Term (create_exp e1)])
     (* TODO: tackle pattern matching version of CatE *)
     | CatE (e1, e2) -> BinaryInfixFunApp (Term (create_exp e1), Ident "++", Term (create_exp e2))
     | IdxE (e1, e2) -> Index {
@@ -215,10 +207,17 @@ let rec create_exp (e : Il.Ast.exp) : term
     | CallE (id, args) -> 
       let func = (Ident id.it : term) in
       let arg_terms = List.map (fun arg -> Term (create_arg arg)) args in
-      FunApp (func, nel arg_terms)
+      FunApp (func, NonEmptyList.from_list_unsafe arg_terms)
     | _ -> failwith "not implemented yet"
     
-        
+
+and create_arg (arg : Il.Ast.arg) : term
+  = match arg.it with
+    | ExpA exp -> create_exp exp
+    | TypA typ -> create_typ typ
+    | DefA id -> Ident id.it
+    | GramA _ -> failwith "not implemented yet"
+
         
     (* | BinE (op, t, e1, e2) -> *)
 
@@ -228,7 +227,7 @@ let rec create_exp (e : Il.Ast.exp) : term
     | TextE s -> Text s
     | TupE [] -> Unit
     | TupE l -> Tuple (List.map create_exp l)
-    | CatE (e1, e2) -> FunApp (Ident "List.append", nel [Term (create_exp e1); Term (create_exp e2)])
+    | CatE (e1, e2) -> FunApp (Ident "List.append", NonEmptyList.from_list_unsafe [Term (create_exp e1); Term (create_exp e2)])
     | BinE (op, typ, e1, e2) ->
       let op_str = match op with
         | AddOp -> "+"
@@ -260,7 +259,7 @@ and create_upd_exp
   (* List.modify lst idx body *)
   let create_list_modify (lst : term) (idx : term) (body : term) =
     FunApp (DotProj (Ident "List", Ident "modify"),
-            nel [Term lst; Term idx; Term body])
+            NonEmptyList.from_list_unsafe [Term lst; Term idx; Term body])
   in
 
 
@@ -300,7 +299,8 @@ let create_prem (p : Il.Ast.prem) : term = match p.it with
     ([] : Il.Ast.arg list),
     (mixop : Il.Ast.mixop),
     (exp : Il.Ast.exp)
-  ) -> failwith ""
+  ) -> Ident "TEMPORARY_PREM"
+  | _ -> Ident "TEMPORARY_PREM"
 
 
 let append_prems_to_term (term : term) (prems : Il.Ast.prem list) : term
@@ -350,7 +350,7 @@ let create_typcase
         | TupT id_typ_list 
             -> List.map (
               fun (id, typ) -> BracketedBinder(ExplicitParam(
-                nel [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
+                NonEmptyList.from_list_unsafe [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
                 create_typ typ
               ))
             ) id_typ_list
@@ -361,7 +361,7 @@ let create_typcase
     = List.map (
       fun q -> match q.it with
         | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-          nel [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
+          NonEmptyList.from_list_unsafe [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
           create_typ typ
         ))
         | _ -> failwith "only ExpP should be here"
@@ -377,25 +377,25 @@ let create_typcase
     );
   }
 
-let create_def (def : Il.Ast.def) : command
+let create_def (def : Il.Ast.def) : command option
   = match def.it with
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = AliasT t; _})); _}])
-      -> Abbrev (AbbrevAsgn {
+      -> Some (Abbrev (AbbrevAsgn {
         modifier = empty_modifier;
         id = id.it;
         signature = ([], Some (Type None));
         body = create_typ t;
-      })
+      }))
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = VariantT ts; _})); _}])
-      -> Inductive {
+      -> Some (Inductive {
         modifier = empty_modifier;
         id = id.it;
         signature = ([], Some (Type None));
         cases = List.map (create_typcase id params) ts;
         deriving = None; (* TODO: look into deriving *)
-      }
+      })
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = StructT ts; _})); _}])
       ->
@@ -408,7 +408,7 @@ let create_def (def : Il.Ast.def) : command
           signature = ([], Some (create_typ typ));
         }
       in
-      Structure {
+      Some (Structure {
         modifier = empty_modifier;
         id = id.it;
         binders = [];
@@ -416,7 +416,7 @@ let create_def (def : Il.Ast.def) : command
         constructor = Some (empty_modifier, "MK" ^ id.it); (* following previous version *)
         fields = List.map create_struct_field ts;
         deriving = None; (* TODO: look into deriving *)
-      }
+      })
 
     | RelD (
         id,     (* fun_sum *)
@@ -476,7 +476,7 @@ let create_def (def : Il.Ast.def) : command
               = List.map (
                 fun q -> match q.it with
                   | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-                    nel [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
+                    NonEmptyList.from_list_unsafe [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
                     create_typ typ
                   ))
                   | _ -> failwith "only ExpP should be here"
@@ -500,11 +500,10 @@ let create_def (def : Il.Ast.def) : command
                 )
               );
             }
-          | _ -> failwith "no other `rule'` exists in the AST at time of writing"
 
       in
 
-      Inductive {
+      Some (Inductive {
         modifier = empty_modifier;
         id = id.it;                       (* fun_sum *)
         signature = (
@@ -513,10 +512,15 @@ let create_def (def : Il.Ast.def) : command
         );
         cases = List.map create_relations_inductive_case rules;
         deriving = None; (* TODO: look into deriving *)
-      }
+      })
 
-    | _ -> failwith "unexpected case in create_def"
+    | GramD _ -> None
+    | RecD _ -> None
+    | HintD _ -> None
+    | RelD _ -> failwith "should have been handled by earlier case"
+    | DecD _ -> None
+    | TypD _ -> None
 
 
 let create_script (il : script) : command list
-  = List.map create_def il
+  = List.filter_map create_def il

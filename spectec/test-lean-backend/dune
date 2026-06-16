@@ -1,0 +1,20 @@
+
+; TODO: check Claude-generated file
+(rule                                    ; declares a build rule — "here's how to produce something"
+  (action (with-stdout-to test_spectec_output.lean.act   ; captures stdout into this file
+    (run ../src/exe-spectec/main.exe          ; run this executable...
+         test.spectec                         ; ...with this positional arg (the input file)
+         --lean                               ; ...and this flag  ← ADD MORE ARGS HERE
+    )
+  ))
+  (deps                                  ; things this rule depends on (triggers rebuild if changed)
+    (file ../src/exe-spectec/main.exe)   ; the executable itself
+    (glob_files *.spectec)               ; any .spectec file in this directory
+  )
+)
+
+(rule
+  (alias runtest)                        ; `dune runtest` triggers this
+  (action (diff test_spectec_output.lean         ; diff: left = expected (golden file, committed to git)
+                test_spectec_output.lean.act))       ;       right = actual (just produced by the rule above)
+)                                        ; test PASSES if files are identical, FAILS if different

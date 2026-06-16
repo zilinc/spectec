@@ -1,0 +1,51 @@
+;;
+;; NanoWasm
+;;
+
+;; Abstract Syntax
+
+syntax localidx = nat
+syntax globalidx = nat
+
+syntax mut = MUT
+syntax valtype = I32 | I64 | F32 | F64
+syntax functype = valtype* -> valtype*
+syntax globaltype = mut? valtype
+
+syntax const = nat
+
+syntax instr =
+    | NOP
+    | DROP
+    | SELECT
+    | CONST valtype const   hint(show %.CONST %)
+    | LOCAL.GET localidx
+    | LOCAL.SET localidx
+    | GLOBAL.GET globalidx
+    | GLOBAL.SET globalidx
+
+
+;; Validation
+
+syntax context = { GLOBALS globaltype*, LOCALS valtype* }
+
+var C : context
+
+;; Execution
+
+syntax addr = nat
+syntax moduleinst = { GLOBALS addr* }
+
+syntax val = CONST valtype const
+
+syntax store = { GLOBALS val* }
+syntax frame = { LOCALS val*, MODULE moduleinst }
+syntax state = store; frame
+syntax config = state; instr*
+
+var f : frame
+var s : store
+var z : state
+
+def $local(state, localidx) : val
+def $local((s; f), x) = f.LOCALS[x]

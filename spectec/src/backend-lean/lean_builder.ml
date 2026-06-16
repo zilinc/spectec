@@ -1,4 +1,5 @@
 open Lean_ast
+open Util.Lib
 
 let empty_modifier : decl_modifier = {
   comment = None;
@@ -10,7 +11,8 @@ let empty_modifier : decl_modifier = {
 
 let simple_lambda (param : ident) (body : term) : term =
   Lambda {
-    params = { head = Ident_FB param; tail = [] }; (* TODO: non empty list util *)
+    params = NonEmptyList.from_list_unsafe [Ident_FB param];
+    (* params = { head = Ident_FB param; tail = [] }; TODO: non empty list util *)
     body = body
   }
 

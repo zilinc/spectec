@@ -12,18 +12,21 @@ type decl_id = string
 type ident = string
 type hole = Hole
 
-type 'a non_empty_list = {
-  head: 'a;
-  tail: 'a list;
-}
+type 'a non_empty_list = 'a Util.Lib.NonEmptyList.t
 
 (* TODO: check again *)
 type level =
   | LevelLit of int           (* 0, 1, 2, ... *)
   | LevelVar of ident         (* u, v *)
-  | LevelAdd of level * int   (* Level + n *)
+
+  (*
+    TODO: currently unused and thus not yet implemented, but there are some other productions from 
+    
+    https://lean-lang.org/doc/reference/latest/find/?domain=Verso.Genre.Manual.section&name=level-expressions
+  *)
+  (* | LevelAdd of level * int   (* Level + n *)
   | LevelMax of level * level
-  | LevelIMax of level * level
+  | LevelIMax of level * level *)
 
 type _index_type =
   | Plain
@@ -32,14 +35,17 @@ type _index_type =
 
 type term =
   | Hole of hole
-  | Fun of term * term
+  | FunType of term * term (* this is the X -> Y type, whereas Lambda is the concrete fun x => y *)
   | Ident of ident
   | Sort of level
   | Type of level option
   | Prop
   | Prod of term * term (* According to https://lean-lang.org/doc/reference/latest/Basic-Types/Tuples/ this should technically be term * term, but I'm doing this for convenience *)
   | FunApp of term * argument non_empty_list
+
+  (* what is this even for lol *)
   | FunAppEllipsis of term * argument list
+
   | Num of _numtype (* check if this makes sense *)
   | Text of string
   (*
@@ -233,7 +239,16 @@ type opaque = {
 }
 
 (* TODO: technically, this is not just _def, but also theorems. *)
-type mutual = _def list
+type mutual =
+  (*
+  I split this into two subtypes based on an error I've encountered:
+
+  invalid mutual block: either all elements of the block must be
+  inductive/structure declarations, or they must all be
+  definitions/theorems/abbrevs
+  *)
+  | MutualInductiveStructure of _inductive list * _structure list
+  | MutualDefAbbrev of _def list * _abbrev list
 
 type command =
   | Def of _def

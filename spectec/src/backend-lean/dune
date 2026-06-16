@@ -2,4 +2,5 @@
   (name backend_lean)
   (libraries il middlend xl)
   (modules backend lean_ast render lean_builder)
+  (flags (:standard -warn-error -27))
 )
