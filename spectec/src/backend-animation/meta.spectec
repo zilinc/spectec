@@ -1,56 +1,438 @@
 ;; ********************************************************
-;;             Algorithmic value validation
+;;            Algorithmic validation rules
 ;; ********************************************************
 
-def $ref_infer(store, ref) : reftype
-def $ref_infer(s, REF.NULL_ADDR) = REF NULL BOT
-def $ref_infer(s, REF.I31_NUM i) = REF I31
-def $ref_infer(s, REF.STRUCT_ADDR a) = REF dt
+def $top_of_heaptype(deftype*, heaptype) : heaptype
+def $top_of_heaptype(dt*, ht) = ANY
+  -- if ht <- ANY NONE EQ STRUCT ARRAY I31
+def $top_of_heaptype(dt*, ht) = FUNC
+  -- if ht <- FUNC NOFUNC
+def $top_of_heaptype(dt*, ht) = EXN
+  -- if ht <- EXN NOEXN
+def $top_of_heaptype(dt*, ht) = EXTERN
+  -- if ht <- EXTERN NOEXTERN
+def $top_of_heaptype(dt*, typeuse) = $top_of_typeuse(dt*, typeuse)
+
+def $top_of_typeuse(deftype*, typeuse) : heaptype
+def $top_of_typeuse(dt*, _IDX x) = $top_of_comptype(dt*, comptype)
+  -- Expand: dt*[x] ~~ comptype
+def $top_of_typeuse(dt*, dt') = $top_of_comptype(dt*, comptype)
+  -- Expand: dt' ~~ comptype
+
+def $top_of_comptype(deftype*, comptype) : heaptype
+def $top_of_comptype(dt*, STRUCT ft*) = $top_of_heaptype(dt*, STRUCT)
+def $top_of_comptype(dt*, ARRAY ft) = $top_of_heaptype(dt*, STRUCT)
+def $top_of_comptype(dt*, FUNC t_1* -> t_2*) = $top_of_heaptype(dt*, FUNC)
+
+
+rule Heaptype_sub/trans-any:
+  C |- ht <: ANY
+  -- if ht <- STRUCT ARRAY I31
+
+rule Heaptype_sub/struct-trans:
+  C |- deftype <: ht
+  -- Expand: deftype ~~ STRUCT fieldtype*
+  -- if ht <- ANY EQ
+
+rule Heaptype_sub/array-trans:
+  C |- deftype <: ht
+  -- Expand: deftype ~~ ARRAY fieldtype
+  -- if ht <- ANY EQ
+
+rule Heaptype_sub/rec-sub_alg:
+  C |- REC i <: typeuse'
+  -- if C.RECS[i] = SUB final? typeuse* ct
+  -- if typeuse' <- typeuse*
+
+
+rule Comptype_sub/struct_alg:
+  C |- STRUCT ft'_1* <: STRUCT ft_2*
+  -- if len = |ft_2*|
+  -- if ft_1* = ft'_1*[0:len]
+  -- (Fieldtype_sub: C |- ft_1 <: ft_2)*
+
+
+relation Ref_infer: store |- ref : reftype
+
+rule Ref_infer/null:
+  s |- REF.NULL_ADDR : REF NULL BOT
+
+rule Ref_infer/i31:
+  s |- REF.I31_NUM i : REF I31
+
+rule Ref_infer/struct:
+  s |- REF.STRUCT_ADDR a : REF dt
   -- if s.STRUCTS[a].TYPE = dt
-def $ref_infer(s, REF.ARRAY_ADDR a) = REF dt
+
+rule Ref_infer/array:
+  s |- REF.ARRAY_ADDR a : REF dt
   -- if s.ARRAYS[a].TYPE = dt
-def $ref_infer(s, REF.FUNC_ADDR a) = REF dt
+
+rule Ref_infer/func:
+  s |- REF.FUNC_ADDR a : REF dt
   -- if s.FUNCS[a].TYPE = dt
-def $ref_infer(s, REF.EXN_ADDR a) = REF EXN
+
+rule Ref_infer/exn:
+  s |- REF.EXN_ADDR a : REF EXN
   -- if s.EXNS[a] = exn
-def $ref_infer(s, REF.HOST_ADDR a) = REF ANY
-def $ref_infer(s, REF.EXTERN ref) = REF EXTERN
+
+rule Ref_infer/host:
+  s |- REF.HOST_ADDR a : REF ANY
+
+rule Ref_infer/extern:
+  s |- REF.EXTERN ref : REF EXTERN
   -- Ref_ok: s |- ref : REF ANY
   -- if ref =/= REF.NULL_ADDR
 
-def $val_infer(store, val) : valtype
-def $val_infer(s, num) = nt
-    -- Num_ok: s |- num : nt
-def $val_infer(s, vec) = vt
-    -- Vec_ok: s |- vec : vt
-def $val_infer(s, ref) = rt
-    -- if $ref_infer(s, ref) = rt
+
+rule Ref_ok/sub_alg:
+  s |- ref : rt
+  -- Ref_infer: s |- ref : rt'
+  -- Reftype_sub: {} |- rt' <: rt
 
 
-;; ********************************************************
-;;                 Non-deterministic rules
-;; ********************************************************
+relation Exists_heaptype_sub: context |- heaptype* <: heaptype
 
-rule Step/memory.grow_det-succeed:
-  z; (CONST at n) (MEMORY.GROW x)  ~>  $with_meminst(z, x, mi); (CONST at $(|$mem(z, x).BYTES| / $($(64 * $Ki))))
+rule Exists_heaptype_sub/base:
+  C |- ht_1 ht* <: ht_2
+  -- Heaptype_sub: C |- ht_1 <: ht_2
+
+rule Exists_heaptype_sub/rec:
+  C |- ht_1 ht* <: ht_2
+  -- Exists_heaptype_sub: C |- ht* <: ht_2
+
+
+rule Deftype_sub/super_alg:
+  C |- deftype_1 <: deftype_2
+  -- if $unrolldt(deftype_1) = SUB final? typeuse* ct
+  -- Exists_heaptype_sub: C |- typeuse* <: deftype_2
+
+
+rule Externaddr_ok/sub_alg:
+  s |- externaddr : xt
+  -- Externaddr_infer: s |- externaddr : xt'
+  -- Externtype_sub: {} |- xt' <: xt
+
+relation Externaddr_infer: store |- externaddr : externtype
+
+rule Externaddr_infer/tag:
+  s |- TAG a : TAG taginst.TYPE
+  -- if s.TAGS[a] = taginst
+
+rule Externaddr_infer/global:
+  s |- GLOBAL a : GLOBAL globalinst.TYPE
+  -- if s.GLOBALS[a] = globalinst
+
+rule Externaddr_infer/mem:
+  s |- MEM a : MEM meminst.TYPE
+  -- if s.MEMS[a] = meminst
+
+rule Externaddr_infer/table:
+  s |- TABLE a : TABLE tableinst.TYPE
+  -- if s.TABLES[a] = tableinst
+
+rule Externaddr_infer/func:
+  s |- FUNC a : FUNC funcinst.TYPE
+  -- if s.FUNCS[a] = funcinst
+
+
+def $check_list(syntax X, context, def $check(context, X) : context, X*) : context
+def $check_list(syntax X, C, $check, eps) = C
+def $check_list(syntax X, C, $check, u u'*) = C''
+  -- if $check(C, u) = C'
+  -- if $check_list(syntax X, C', $check, u'*) = C''
+
+
+def $check_type_ok(context, type) : context
+def $check_type_ok(C, TYPE rectype) = C ++ {TYPES dt*}
+  -- if x = |C.TYPES|
+  -- if dt* = $rolldt(x, rectype)
+
+def $check_import_ok(context, import) : context
+def $check_import_ok(C, IMPORT name_1 name_2 xt) = C ++ {TAGS jt}
+  -- if $clos_externtype(C, xt) = TAG jt
+def $check_import_ok(C, IMPORT name_1 name_2 xt) = C ++ {GLOBALS gt}
+  -- if $clos_externtype(C, xt) = GLOBAL gt
+def $check_import_ok(C, IMPORT name_1 name_2 xt) = C ++ {MEMS mt}
+  -- if $clos_externtype(C, xt) = MEM mt
+def $check_import_ok(C, IMPORT name_1 name_2 xt) = C ++ {TABLES tt}
+  -- if $clos_externtype(C, xt) = TABLE tt
+def $check_import_ok(C, IMPORT name_1 name_2 xt) = C ++ {FUNCS dt}
+  -- if $clos_externtype(C, xt) = FUNC ut
+  -- if $as_deftype(ut) = dt
+
+def $check_tag_ok(context, tag) : context
+def $check_tag_ok(C, TAG tagtype) = C ++ {TAGS jt}
+  -- if $clos_tagtype(C, tagtype) = jt
+
+def $check_func_ok(context, func) : context
+def $check_func_ok(C, FUNC x local* expr) = C ++ {FUNCS (C.TYPES[x])}
+
+def $check_mem_ok(context, mem) : context
+def $check_mem_ok(C, MEMORY mt) = C ++ {MEMS mt}
+
+def $check_table_ok(context, table) : context
+def $check_table_ok(C, TABLE tt expr) = C ++ {TABLES tt}
+
+def $check_global_ok(context, global) : context
+def $check_global_ok(C, GLOBAL gt expr) = C ++ {GLOBALS gt}
+
+def $check_data_ok(context, data) : context
+def $check_data_ok(C, DATA b* datamode) = C ++ {DATAS OK}
+
+def $check_elem_ok(context, elem) : context
+def $check_elem_ok(C, ELEM et expr* elemmode) = C ++ {ELEMS et}
+
+def $module_prepass(module) : context
+def $module_prepass(module) = C_9
+  -- if MODULE type* import* tag* global* mem* table* func* data* elem* start? export* = module
+  -- if x* = $funcidx_nonfuncs(global* mem* table* elem* start? export*)
+  -- if C_0 = {REFS x*}
+  -- if C_1 = $check_list(type  , C_0, $check_type_ok  , type*  )
+  -- if C_2 = $check_list(import, C_1, $check_import_ok, import*)
+  -- if C_3 = $check_list(tag   , C_2, $check_tag_ok   , tag*   )
+  -- if C_4 = $check_list(func  , C_3, $check_func_ok  , func*  )
+  -- if C_5 = $check_list(mem   , C_4, $check_mem_ok   , mem*   )
+  -- if C_6 = $check_list(table , C_5, $check_table_ok , table* )
+  -- if C_7 = $check_list(global, C_6, $check_global_ok, global*)
+  -- if C_8 = $check_list(data  , C_7, $check_data_ok  , data*  )
+  -- if C_9 = $check_list(elem  , C_8, $check_elem_ok  , elem*  )
+
+;; Assumes that we have run a pre-pass to figure out C.
+;; An argument C is added to the relation; the body is exactly the same as Module_ok.
+relation Module_ok_alg: context |- module : moduletype
+rule Module_ok_alg:
+  C |- MODULE type* import* tag* global* mem* table* func* data* elem* start? export* : $clos_moduletype(C, xt_I* -> xt_E*)
+  -- Types_ok: {} |- type* : dt'*
+  -- (Import_ok: {TYPES dt'*} |- import : xt_I)*
   ----
-  -- if ~ (at = I32 /\ $(n + |$mem(z, x).BYTES| / (64 * $Ki) > 0xFFFF))
-  -- if mi = $growmem($mem(z, x), n)
+  -- (Tag_ok: C' |- tag : jt)*
+  -- Globals_ok: C' |- global* : gt*
+  -- (Mem_ok: C' |- mem : mt)*
+  -- (Table_ok: C' |- table : tt)*
+  -- (Func_ok: C |- func : dt)*
+  ----
+  -- (Data_ok: C |- data : ok)*
+  -- (Elem_ok: C |- elem : rt)*
+  -- (Start_ok: C |- start : OK)?
+  -- (Export_ok: C |- export : nm xt_E)*
+  -- if $disjoint_(name, nm*)
+  ----
+  -- if C = C' ++ {TAGS jt_I* jt*, GLOBALS gt*, MEMS mt_I* mt*, TABLES tt_I* tt*, DATAS ok*, ELEMS rt*}
+  ----
+  -- if C' = {TYPES dt'*, GLOBALS gt_I*, FUNCS dt_I* dt*, REFS x*}
+  -- if x* = $funcidx_nonfuncs(global* mem* table* elem* start? export*)
+  ----
+  -- if jt_I* = $tagsxt(xt_I*)
+  -- if gt_I* = $globalsxt(xt_I*)
+  -- if mt_I* = $memsxt(xt_I*)
+  -- if tt_I* = $tablesxt(xt_I*)
+  -- if dt_I* = $funcsxt(xt_I*)
 
-rule Step/memory.grow_det-fail:
-  z; (CONST at n) (MEMORY.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
+def $module_ok(module) : moduletype
+def $module_ok(module) = moduletype
+  -- if C = $module_prepass(module)
+  -- Module_ok_alg: C |- module : moduletype
+
+syntax ellipses = `...
+syntax inferresulttype = ellipses? resulttype
+syntax inferinstrtype = inferresulttype ->_(localidx*) inferresulttype
+
+relation Stack_sub: context |- resulttype <: resulttype
+rule Stack_sub:
+  C |- t_1* <: t_2*
+  -- (Resulttype_sub: C |- t_1 <: t_2)*
+
+def $push(context, inferresulttype, inferresulttype) : inferresulttype
+def $push(C, t_1*, ellipses? t_2*) = ellipses? t_2* t_1*
+def $push(C, t_1*, (eps)) = t_1*
+def $push(C, `...? t_1*, `...? eps) = (`... t_1*)
   -- otherwise
 
+def $pop(context, inferresulttype, inferresulttype) : inferresulttype
+def $pop(C, `... t_1*, `... t_2*) = `... eps
+  -- if n_1 = |t_1*|
+  -- if n_2 = |t_2*|
+  -- if n = $min(n_1, n_2)
+  -- if n_3 = $(n_1 - n)
+  -- if t_21^(n_2 - n) t_22* = t_2*
+  -- Stack_sub: C |- BOT^n_3 t_22* <: t_1*
+def $pop(C, t_1*, `... t_2*) = `... t_21^(n_2 - n)
+  -- if n_1 = |t_1*|
+  -- if n_2 = |t_2*|
+  -- if n = $min(n_1, n_2)
+  -- if n_3 = $(n_1 - n)
+  -- if t_21^(n_2 - n) t_22* = t_2*
+  -- Stack_sub: C |- BOT^n_3 t_22* <: t_1*
+def $pop(C, `... t_1*, t_2*) = (eps)
+  -- if n_1 = |t_1*|
+  -- if n_2 = |t_2*|
+  -- if n = $min(n_1, n_2)
+  -- if t_21^(n_2 - n) t_22* = t_2*
+  -- Stack_sub: C |- t_22* <: t_1*
+def $pop(C, t_1*, t_2*) = t_21^(n_2 - n)
+  -- if n_1 = |t_1*|
+  -- if n_2 = |t_2*|
+  -- if n = $min(n_1, n_2)
+  -- if t_21^(n_2 - n) t_22* = t_2*
+  -- Stack_sub: C |- t_22* <: t_1*
 
-rule Step/table.grow_det-succeed:
-  z; ref (CONST at n) (TABLE.GROW x)  ~>  $with_tableinst(z, x, ti); (CONST at $(|$table(z, x).REFS|))
-  ----
-  -- if ~ (at = I32 /\ $(n + |$table(z, x).REFS| > 0xFFFF_FFFF))
-  -- if ti = $growtable($table(z, x), n, ref)
-
-rule Step/table.grow_det-fail:
-  z; ref (CONST at n) (TABLE.GROW x)  ~>  z; (CONST at $inv_signed_($size(at), $(-1)))
+def $peek(nat, inferresulttype) : valtype
+def $peek(i, `...? t*) = t'
+  -- if t* = t_1* ++ t' ++ t_2^i
+;; def $peek(i, `...? t*) = t*[j:1][0]
+;;   -- if n = |t*|
+;;   -- if j = $(n - i - 1) >= 0  ;; -- var j : int
+def $peek(i, `...? t*) = BOT
   -- otherwise
+
+def $peek_ref(nat, inferresulttype) : reftype
+def $peek_ref(i, stack) = rt
+  -- if $peek(i, stack) = rt
+def $peek_ref(i, stack) = REF BOT
+  -- if $peek(i, stack) = BOT
+
+def $expr_ok(context, expr, resulttype) : bool
+def $expr_ok(C, instr*, t*) = $check_block(C, instr*, eps -> t*)
+
+def $check_block(context, expr, instrtype) : bool
+def $check_block(C, instr*, t_1* ->_(x*) t_2*) = true
+  -- if $check_instrs(C, instr*, t_1*) = (stack, x'*)
+  -- if $pop(C, t_2*, stack) = `...? eps
+def $check_block(C, instr*, t_1* ->_(x*) t_2*) = false
+  -- otherwise
+
+def $check_instrs(context, instr*, inferresulttype) : (inferresulttype, localidx*)
+def $check_instrs(C, eps, stack) = (stack, eps)
+def $check_instrs(C, instr instr'*, stack) = $check_instrs(C', instr'*, stack')
+  -- if stack_1 ->_(x_1*) stack_2 = $check_instr(C, instr, stack)
+  -- (if C.LOCALS[x_1] = init t)*
+  -- if C' = $with_locals(C, x_1*, (SET t)*)
+  -- if stack' = $push(C, stack_2, $pop(C, stack_1, stack))
+
+def $check_instr(context, instr, inferresulttype) : inferinstrtype
+def $check_instr(C, instr, stack) = t_1* ->_(x*) t_2*
+  -- Instr_ok: C |- instr : t_1* ->_(x*) t_2*
+def $check_instr(C, instr, stack) = ist
+  -- Instr_ok_alg: C |- instr : ist -| stack
+
+
+relation Instr_ok_alg: context |- instr : inferinstrtype -| inferresulttype
+
+rule Instr_ok_alg/unreachable:
+  C |- UNREACHABLE : (`... eps) -> (`... eps) -| stack
+
+rule Instr_ok_alg/drop:
+  C |- DROP : $peek(0, stack) -> (eps) -| stack
+
+rule Instr_ok_alg/select-impl:
+  C |- SELECT : t t I32 -> t -| stack
+  -- if $peek(1, stack) = t
+  ;; -- if t <- numtype vectyp BOT
+  -- if t = numtype \/ t = vectype \/ t = BOT
+
+rule Instr_ok_alg/block:
+  C |- BLOCK bt instr* : t_1* ->_(x*) t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* ->_(x*) t_2*
+
+rule Instr_ok_alg/loop:
+  C |- LOOP bt instr* : t_1* ->_(x*) t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_1*)} ++ C |- instr* : t_1* ->_(x*) t_2*
+
+rule Instr_ok_alg/if:
+  C |- IF bt instr_1* ELSE instr_2* : t_1* I32 ->_(x*) t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_1* : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr_2* : t_1* ->_(x*) t_2*
+
+rule Instr_ok_alg/br:
+  C |- BR l : `... t* -> `... eps -| stack
+  -- if C.LABELS[l] = t*
+
+rule Instr_ok_alg/br_table:
+  C |- BR_TABLE l* l' : `... t^n I32 -> `... eps -| stack
+  -- if t'* = C.LABELS[l']
+  -- if n = |t'*|
+  -- (if $peek($(n-i), stack) = t)^(i<n)
+  -- Stack_sub: C |- t^n <: t'*
+  -- (Stack_sub: C |- t^n <: C.LABELS[l])*
+
+rule Instr_ok_alg/br_on_null:
+  C |- BR_ON_NULL l : t* (REF NULL ht) -> t* (REF ht) -| stack
+  -- if $peek_ref(0, stack) = REF nul? ht
+  -- if C.LABELS[l] = t*
+  -- Heaptype_ok: C |- ht : OK
+
+rule Instr_ok_alg/return:
+  C |- RETURN : `... t* -> `... eps -| stack
+  -- if C.RETURN = (t*)
+
+rule Instr_ok_alg/return_call:
+  C |- RETURN_CALL x : `... t_1* -> `... eps -| stack
+  -- Expand: C.FUNCS[x] ~~ FUNC t_1* -> t_2*
+  -- if C.RETURN = (t'_2*)
+  -- Resulttype_sub: C |- t_2* <: t'_2*
+
+rule Instr_ok_alg/return_call_ref:
+  C |- RETURN_CALL_REF (_IDX x) : `... t_1* (REF NULL (_IDX x)) -> `... eps -| stack
+  -- Expand: C.TYPES[x] ~~ FUNC t_1* -> t_2*
+  -- if C.RETURN = (t'_2*)
+  -- Resulttype_sub: C |- t_2* <: t'_2*
+
+rule Instr_ok_alg/return_call_indirect:
+  C |- RETURN_CALL_INDIRECT x (_IDX y) : `... t_1* at -> `... eps -| stack
+  -- if C.TABLES[x] = at lim rt
+  -- Reftype_sub: C |- rt <: (REF NULL FUNC)
+  ----
+  -- Expand: C.TYPES[y] ~~ FUNC t_1* -> t_2*
+  -- if C.RETURN = (t'_2*)
+  -- Resulttype_sub: C |- t_2* <: t'_2*
+
+rule Instr_ok_alg/throw:
+  C |- THROW x : `... t* -> `... eps -| stack
+  -- Expand: $as_deftype(C.TAGS[x]) ~~ FUNC t* -> eps  ;; eps or t'*?
+
+rule Instr_ok_alg/throw_ref:
+  C |- THROW_REF : `... (REF NULL EXN) -> `... eps -| stack
+
+rule Instr_ok_alg/try_table:
+  C |- TRY_TABLE bt catch* instr* : t_1* ->_(x*) t_2* -| stack
+  -- Blocktype_ok: C |- bt : t_1* ->_(x*) t_2*
+  -- Instrs_ok: {LABELS (t_2*)} ++ C |- instr* : t_1* ->_(x*) t_2*
+  -- (Catch_ok: C |- catch : OK)*
+
+rule Instr_ok_alg/ref.is_null:
+  C |- REF.IS_NULL : (REF NULL ht) -> I32 -| stack
+  -- if $peek_ref(0, stack) = REF nul? ht
+  -- Heaptype_ok: C |- ht : OK
+
+rule Instr_ok_alg/ref.as_non_null:
+  C |- REF.AS_NON_NULL : (REF NULL ht) -> (REF ht) -| stack
+  -- if $peek_ref(0, stack) = REF nul? ht
+  -- Heaptype_ok: C |- ht : OK
+
+rule Instr_ok_alg/ref.test:
+  C |- REF.TEST rt : (REF NULL ht') -> I32 -| stack
+  -- if REF nul? ht = rt
+  -- Reftype_ok: C |- rt : OK
+  -- if ht' = $top_of_heaptype(C.TYPES, ht)
+
+rule Instr_ok_alg/ref.cast:
+  C |- REF.CAST rt : (REF NULL ht') -> (REF nul? ht) -| stack
+  -- if REF nul? ht = rt
+  -- Reftype_ok: C |- rt : OK
+  -- if ht' = $top_of_heaptype(C.TYPES, ht)
+
+rule Instr_ok_alg/extern.convert_any:
+  C |- EXTERN.CONVERT_ANY : (REF nul? ANY) -> (REF nul? EXTERN) -| stack
+  -- if $peek_ref(0, stack) = REF nul? ht
+
+rule Instr_ok_alg/any.convert_extern:
+  C |- ANY.CONVERT_EXTERN : (REF nul? EXTERN) -> (REF nul? ANY) -| stack
+  -- if $peek_ref(0, stack) = REF nul? ht
+
 
 
 ;; ********************************************************
@@ -63,30 +445,20 @@ syntax stackcount = nat
 
 def $is_val(instr) : bool
 def $is_val(val) = true
-;; def $is_val(CONST  numtype  i) = true
-;; def $is_val(VCONST vectype  c) = true
-;; def $is_val(REF.NULL_ADDR    ) = true
-;; def $is_val(REF.I31_NUM     n) = true
-;; def $is_val(REF.STRUCT_ADDR a) = true
-;; def $is_val(REF.ARRAY_ADDR  a) = true
-;; def $is_val(REF.FUNC_ADDR   a) = true
-;; def $is_val(REF.EXN_ADDR    a) = true
-;; def $is_val(REF.HOST_ADDR   a) = true
-;; def $is_val(REF.EXTERN     ar) = true
 def $is_val(instr) = false  -- otherwise
 
-def $find_first_instr'(instr*, instr*) : (instr*, instr?, instr*)
+def $find_first_instr'(instr*, instr*) : (val*, instr?, instr*)
 def $find_first_instr'(val*, []) = (val*, eps, eps)
 def $find_first_instr'(val*, instr instr'*) = (val*, instr, instr'*)
-    -- if $is_val(instr) = false
+  -- if $is_val(instr) = false
 def $find_first_instr'(val*, instr instr'*) = (val_1*, instr_1?, instr'_1*)
-    -- if $is_val(instr) = true
-    ;; -- otherwise
-    -- if $find_first_instr'(val* instr, instr'*) = (val_1*, instr_1?, instr'_1*)
+  -- if $is_val(instr) = true
+  ;; -- otherwise
+  -- if $find_first_instr'(val* instr, instr'*) = (val_1*, instr_1?, instr'_1*)
 
-def $find_first_instr(instr*) : (instr*, instr?, instr*)
+def $find_first_instr(instr*) : (val*, instr?, instr*)
 def $find_first_instr(instr*) = $find_first_instr'(eps, instr*)
-    ;; -- if instr* =/= eps
+  ;; -- if instr* =/= eps
 
 def $use_step(instr)      : bool
 def $use_step_pure(instr) : bool
@@ -99,7 +471,7 @@ def $use_step_read          hint(builtin)
 def $use_step_ctxt          hint(builtin)
 
 
-syntax stepresult = STEP config | STUCK | STACK_OVERFLOW
+syntax stepresult = STEP config | STACK_OVERFLOW
 
 
 ;; According to the `instr`, call the right $Step_.../... function
@@ -117,64 +489,64 @@ def $dispatch_step_pure           hint(builtin)
 def $dispatch_step_read           hint(builtin)
 
 
-;; The input `config` consists of the whole value stack, plus the first instruction.
 def $dispatch_reduce(state, val*, instr, stackcount) : stepresult
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
-    -- if $use_step_pure(instr_0) = true
-    -- if $dispatch_step_pure(instr_0, val* instr_0) = instr_1*
+  -- if $use_step_pure(instr_0) = true
+  -- if $dispatch_step_pure(instr_0, val* instr_0) = instr_1*
+  ;; Slow version
+  ;; -- Step_pure: val* instr_0 ~> instr_1*
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z; instr_1*)
-    -- if $use_step_read(instr_0) = true
-    -- if $dispatch_step_read(instr_0, (z; val* instr_0)) = instr_1*
+  -- if $use_step_read(instr_0) = true
+  -- if $dispatch_step_read(instr_0, (z; val* instr_0)) = instr_1*
+  ;; Slow version
+  ;; -- Step_read: z; val* instr_0 ~> instr_1*
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP config_1
-    -- if $use_step(instr_0) = true
-    -- if $dispatch_step(instr_0, (z; val* instr_0)) = config_1
+  -- if $use_step(instr_0) = true
+  -- if $dispatch_step(instr_0, (z; val* instr_0)) = config_1
+  ;; Slow version
+  ;; -- Step: z; val* instr_0 ~> config_1
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STEP (z'; val* instr_1*)
-    -- if $use_step_ctxt(instr_0) = true
-    -- if $step_ctxt((z; instr_0), stackcount) = STEP (z'; instr_1*)
+  -- if $use_step_ctxt(instr_0) = true
+  -- if $step_ctxt((z; instr_0), stackcount) = STEP (z'; instr_1*)
 def $dispatch_reduce(z, val*, instr_0, stackcount) = STACK_OVERFLOW
-    -- if $step_ctxt((z; instr_0), stackcount) = STACK_OVERFLOW
-def $dispatch_reduce(z, val*, instr_0, stackcount) = STUCK
-    -- otherwise
+  -- if $step_ctxt((z; instr_0), stackcount) = STACK_OVERFLOW
 
-
-def $Step_read_throw_ref_handler(config) : instr*
-def $Step_read_throw_ref_handler           hint(builtin)
 
 def $reduce(config, stackcount) : stepresult
+
+syntax progress = bool
 def $step(config, stackcount) : config
-;; A non-reflexive version of the transitive closure of single step reduction.
-def $steps_pg(config, stackcount) : config?
-def $steps(config, stackcount) : config
+def $steps(config, stackcount) : (config, progress)
 
 
 def $step_ctxt((z; LABEL_ n `{instr_1*} instr*), stackcount) = STEP config
-    -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
-    -- if bl = (instr'* = eps)
-    -- if $dispatch_step_label(n, val*, instr_0?, z, instr_1*, bl) = config
+  -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
+  -- if bl = (instr'* = eps)
+  -- if $dispatch_step_label(n, val*, instr_0?, z, instr_1*, bl) = config
 def $step_ctxt((z; LABEL_ n `{instr_1*} instr*), stackcount) = STEP (z'; (LABEL_ n `{instr_1*} instr'*))
-    -- if $steps_pg((z; instr*), stackcount) = z'; instr'*
+  -- if $steps((z; instr*), stackcount) = (z'; instr'*, true)
 def $step_ctxt((z; FRAME_ n `{f'} instr*), stackcount) = STEP config
-    -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
-    -- if bl = (instr'* = eps)
-    -- if $dispatch_step_frame(n, val*, instr_0?, z, bl) = config
+  -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
+  -- if bl = (instr'* = eps)
+  -- if $dispatch_step_frame(n, val*, instr_0?, z, bl) = config
 def $step_ctxt((s; f; FRAME_ n `{f'} instr*), stackcount) = STEP (s'; f; (FRAME_ n `{f''} instr'*))
-    -- if stackcount > 0
-    -- if $steps_pg((s; f'; instr*), $(stackcount-1)) = s'; f''; instr'*
+  -- if stackcount > 0
+  -- if $steps((s; f'; instr*), $(stackcount-1)) = (s'; f''; instr'*, true)
 def $step_ctxt((s; f; FRAME_ n `{f'} instr*), stackcount) = STACK_OVERFLOW
-    -- if stackcount <= 0
+  -- if stackcount <= 0
 def $step_ctxt((z; HANDLER_ n `{catch*} instr*), stackcount) = STEP config
-    -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
-    -- if bl = (instr'* = eps)
-    -- if $dispatch_step_handler(n, val*, instr_0?, z, catch*, bl) = config
+  -- if $find_first_instr(instr*) = (val*, instr_0?, instr'*)
+  -- if bl = (instr'* = eps)
+  -- if $dispatch_step_handler(n, val*, instr_0?, z, catch*, bl) = config
 def $step_ctxt((z; HANDLER_ n `{catch*} instr*), stackcount) = STEP (z'; (HANDLER_ n `{catch*} instr'*))
-    -- if $steps_pg((z; instr*), stackcount) = z'; instr'*
+  -- if $steps((z; instr*), stackcount) = (z'; instr'*, true)
 
 
 def $dispatch_step_label(n, val*, BR l, z, instr*, bl) = z; val''^n instr*
-    -- if val'* val''^n = val*
-    -- if l = 0
+  -- if val'* val''^n = val*
+  -- if l = 0
 def $dispatch_step_label(n, val*, BR l, z, instr*, bl) = z; val* (BR $(l - 1))
-    -- if l > 0
+  -- if l > 0
 def $dispatch_step_label(n, val*, RETURN_CALL_REF yy, z, instr*, bl) = z; val* (RETURN_CALL_REF yy)
 def $dispatch_step_label(n, val*, RETURN, z, instr*, bl) = z; val* RETURN
 def $dispatch_step_label(n, REF.EXN_ADDR a, THROW_REF, z, instr*, true) = z; (REF.EXN_ADDR a) THROW_REF
@@ -183,10 +555,10 @@ def $dispatch_step_label(n, val*, eps, z, instr*, true) = z; val*
 
 def $dispatch_step_frame(n, val* REF.NULL_ADDR, RETURN_CALL_REF yy, z, bl) = z; TRAP
 def $dispatch_step_frame(k, val* (REF.FUNC_ADDR a), RETURN_CALL_REF yy, z, bl) = z; val''^n (REF.FUNC_ADDR a) (CALL_REF yy)
-    -- if val'* val''^n = val*
-    -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
+  -- if val'* val''^n = val*
+  -- Expand: $funcinst(z)[a].TYPE ~~ FUNC t_1^n -> t_2^m
 def $dispatch_step_frame(n, val*, RETURN, z, bl) = z; val''^n
-    -- if val'* val''^n = val*
+  -- if val'* val''^n = val*
 def $dispatch_step_frame(n, REF.EXN_ADDR a, THROW_REF, z, true) = z; (REF.EXN_ADDR a) THROW_REF
 def $dispatch_step_frame(n, eps, TRAP, z, true) = z; TRAP
 def $dispatch_step_frame(n, val^n, eps, z, true) = z; val^n
@@ -195,95 +567,212 @@ def $dispatch_step_handler(n, val*, BR l, z, catch*, bl) = z; val* (BR l)
 def $dispatch_step_handler(n, val*, RETURN_CALL_REF yy, z, catch*, bl) = z; val* (RETURN_CALL_REF yy)
 def $dispatch_step_handler(n, val*, RETURN, z, catch*, bl) = z; val* RETURN
 def $dispatch_step_handler(n, REF.EXN_ADDR a, THROW_REF, z, catch*, true) = z; instr'*
-    -- if $Step_read_throw_ref_handler(z; (HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF)) = instr'*
+  -- if instr_0' = HANDLER_ n `{catch*} (REF.EXN_ADDR a) THROW_REF
+  -- Step_read: z; instr_0' ~> instr'*
 def $dispatch_step_handler(n, eps, TRAP, z, catch*, true) = z; TRAP
 def $dispatch_step_handler(n, val*, eps, z, catch*, true) = z; val*
 
 
-
 def $reduce((s; f; instr+), stackcount) = STEP (s; f; TRAP)
-    -- if $find_first_instr(instr+) = (val*, TRAP, instr_1'*)
-    -- if val* =/= eps \/ instr_1'* =/= eps
+  -- if $find_first_instr(instr+) = (val*, TRAP, instr_1'*)
+  -- if val* =/= eps \/ instr_1'* =/= eps
 def $reduce((s; f; instr+), stackcount) = STEP (s; f; (REF.EXN_ADDR a) THROW_REF)
-    -- if $find_first_instr(instr+) = (val* (REF.EXN_ADDR a), THROW_REF, instr_1'*)
-    -- if val* =/= eps \/ instr_1'* =/= eps
+  -- if $find_first_instr(instr+) = (val* (REF.EXN_ADDR a), THROW_REF, instr_1'*)
+  -- if val* =/= eps \/ instr_1'* =/= eps
 def $reduce((z; instr+), stackcount) = STEP (z'; instr_2* instr_1'*)
-    -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
-    -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STEP (z'; instr_2*)
+  -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
+  -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STEP (z'; instr_2*)
 def $reduce((z; instr+), stackcount) = STACK_OVERFLOW
-    -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
-    -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STACK_OVERFLOW
-def $reduce((s; f; instr*), stackcount) = STUCK
-    -- otherwise
+  -- if $find_first_instr(instr+) = (val*, instr_1, instr_1'*)
+  -- if $dispatch_reduce(z, val*, instr_1, stackcount) = STACK_OVERFLOW
 
 
 def $step(config, stackcount) = config'
-    -- if $reduce(config, stackcount) = STEP config'
+  -- if $reduce(config, stackcount) = STEP config'
 
+def $steps(config, stackcount) = (config_2, true)
+  -- if $step(config, stackcount) = config_1
+  -- if $steps(config_1, stackcount) = (config_2, progress)
+def $steps(config, stackcount) = (config, false)
+  -- otherwise
 
-def $steps_pg(config, stackcount) = config_2
-    -- if $step(config, stackcount) = config_1
-    -- if $steps(config_1, stackcount) = config_2
-def $steps_pg(config, stackcount) = eps
-    -- otherwise
+;; The artificial stack size limit.
+def $budget : stackcount
+def $budget = 256
 
-def $steps(config, stackcount) = config_2
-    -- if $step(config, stackcount) = config_1
-    -- if $steps(config_1, stackcount) = config_2
-def $steps(config, stackcount) = config
-    -- otherwise
+def $eval_expr(state, expr) : (state, val*)
+def $eval_expr(z, instr*) = (z', val*)
+  -- if $reduce_expr(z; instr*) = z'; val*
 
+def $reduce_expr(config) : config
+def $reduce_expr(config) = config'
+  -- if $steps(config, $budget) = (config', progress)
 
 
 ;; ********************************************************
-;; Animation hints
+;;                   Animation hints
 ;; ********************************************************
 
-relation Expand        hint(animate %1 -> %2)
+relation Expand           hint(animate %1 -> %2)
 
-relation Num_ok        hint(animate %1 %2 -> %3)
-relation Vec_ok        hint(animate %1 %2 -> %3)
+relation Numtype_ok       hint(animate %1 %2 -> bool)
+relation Vectype_ok       hint(animate %1 %2 -> bool)
+relation Heaptype_ok      hint(animate %1 %2 -> bool)
+relation Reftype_ok       hint(animate %1 %2 -> bool)
+relation Valtype_ok       hint(animate %1 %2 -> bool)
+relation Deftype_ok       hint(animate %1 %2 -> bool)
+relation Typeuse_ok       hint(animate %1 %2 -> bool)
+relation Comptype_ok      hint(animate %1 %2    -> bool)
+relation Subtype_ok       hint(animate %1 %2 %3 -> bool)
+relation Subtype_ok2      hint(animate %1 %2 %3 -> bool)
+relation Rectype_ok       hint(animate %1 %2 %3 -> bool)
+relation Rectype_ok2      hint(animate %1 %2 %3 -> bool)
 
-relation Ref_ok        hint(animate_builtin %1 %2 %3 -> bool)
-relation Val_ok        hint(animate_builtin %1 %2 %3 -> bool)
-relation Externaddr_ok hint(animate_builtin %1 %2 %3 -> bool)
-relation Module_ok     hint(animate_builtin %1 -> %2)
+relation Numtype_sub      hint(animate %1 %2 %3 -> bool)
+relation Vectype_sub      hint(animate %1 %2 %3 -> bool)
+relation Heaptype_sub     hint(animate %1 %2 %3 -> bool)
+rule Heaptype_sub/trans   hint(no_animate)
+rule Heaptype_sub/rec-sub hint(no_animate)
+relation Reftype_sub      hint(animate %1 %2 %3 -> bool)
+relation Valtype_sub      hint(animate %1 %2 %3 -> bool)
+relation Resulttype_sub   hint(animate %1 %2 %3 -> bool)
+relation Packtype_sub     hint(animate %1 %2 %3 -> bool)
+relation Fieldtype_sub    hint(animate %1 %2 %3 -> bool)
+relation Storagetype_sub  hint(animate %1 %2 %3 -> bool)
+relation Comptype_sub     hint(animate %1 %2 %3 -> bool)
+rule Comptype_sub/struct  hint(no_animate)
+relation Tagtype_sub      hint(animate %1 %2 %3 -> bool)
+relation Globaltype_sub   hint(animate %1 %2 %3 -> bool)
+relation Memtype_sub      hint(animate %1 %2 %3 -> bool)
+relation Limits_sub       hint(animate %1 %2 %3 -> bool)
+relation Tabletype_sub    hint(animate %1 %2 %3 -> bool)
+relation Deftype_sub      hint(animate %1 %2 %3 -> bool)
+rule Deftype_sub/super    hint(no_animate)
+relation Exists_heaptype_sub    hint(animate %1 %2 %3 -> bool)
+relation Externtype_sub   hint(animate %1 %2 %3 -> bool)
 
-relation Reftype_sub   hint(animate_builtin %1 %2 %3 -> bool)
-relation Heaptype_sub  hint(animate_builtin %1 %2 %3 -> bool)
+relation Num_ok           hint(animate %1 %2 -> %3)
+relation Vec_ok           hint(animate %1 %2 -> %3)
+relation Ref_ok           hint(animate %1 %2 %3 -> bool)
+rule Ref_ok/sub           hint(no_animate)
+relation Ref_infer        hint(animate %1 %2 -> %3)
+relation Val_ok           hint(animate %1 %2 %3 -> bool)
+
+relation Memarg_ok        hint(animate %1 %2 %3 -> bool)
+
+relation Instrtype_ok     hint(animate %1 %2 -> bool)
+relation Instr_const      hint(animate %1 %2 %3 -> bool)
+relation Instr_ok         hint(animate %1 %2 -> %3)
+relation Catch_ok         hint(animate %1 %2 -> bool)
+relation Instrs_ok        hint(animate_manual $check_block: %1 %2 %3 -> bool)
+
+relation Expand_use       hint(animate %1 %2 -> %3)
+
+relation Limits_ok        hint(animate %1 %2 %3 -> bool)
+relation Externtype_ok    hint(animate %1 %2 -> bool)
+relation Fieldtype_ok     hint(animate %1 %2 -> bool)
+relation Packtype_ok      hint(animate %1 %2 -> bool)
+relation Storagetype_ok   hint(animate %1 %2 -> bool)
+relation Resulttype_ok    hint(animate %1 %2 -> bool)
+relation Globaltype_ok    hint(animate %1 %2 -> bool)
+relation Tagtype_ok       hint(animate %1 %2 -> bool)
+relation Memtype_ok       hint(animate %1 %2 -> bool)
+relation Tabletype_ok     hint(animate %1 %2 -> bool)
+relation Defaultable      hint(animate %1 -> bool)
+relation Nondefaultable   hint(animate %1 -> bool)
+relation Blocktype_ok     hint(animate %1 %2 -> %3)
+relation Expr_ok          hint(animate_manual $expr_ok: %1 %2 %3 -> bool)
+relation Expr_const       hint(animate %1 %2 %3 -> bool)
+relation Expr_ok_const    hint(animate %1 %2 %3 -> bool)
+relation Datamode_ok      hint(animate %1 %2 %3 -> bool)  ;; %3 is a singleton type
+relation Elemmode_ok      hint(animate %1 %2 %3 -> bool)
+
+relation Type_ok          hint(animate %1 %2 -> %3)
+relation Tag_ok           hint(animate %1 %2 -> %3)
+relation Global_ok        hint(animate %1 %2 -> %3)
+relation Mem_ok           hint(animate %1 %2 -> %3)
+relation Table_ok         hint(animate %1 %2 -> %3)
+relation Func_ok          hint(animate %1 %2 -> %3)
+relation Data_ok          hint(animate %1 %2 -> %3)
+relation Elem_ok          hint(animate %1 %2 -> %3)
+relation Start_ok         hint(animate %1 %2 -> bool)
+relation Local_ok         hint(animate %1 %2 -> %3)
+
+relation Import_ok        hint(animate %1 %2 -> %3)
+relation Export_ok        hint(animate %1 %2 -> %3 %4)
+relation Externidx_ok     hint(animate %1 %2 -> %3)
+
+relation Types_ok         hint(animate %1 %2 -> %3)
+relation Globals_ok       hint(animate %1 %2 -> %3)
+
+relation Stack_sub        hint(animate %1 %2 %3 -> bool)
+
+rule Instr_ok/unreachable           hint(no_animate)
+rule Instr_ok/drop                  hint(no_animate)
+rule Instr_ok/select-impl           hint(no_animate)
+rule Instr_ok/block                 hint(no_animate)
+rule Instr_ok/loop                  hint(no_animate)
+rule Instr_ok/if                    hint(no_animate)
+rule Instr_ok/br                    hint(no_animate)
+rule Instr_ok/br_table              hint(no_animate)
+rule Instr_ok/br_on_null            hint(no_animate)
+rule Instr_ok/return                hint(no_animate)
+rule Instr_ok/return_call           hint(no_animate)
+rule Instr_ok/return_call_ref       hint(no_animate)
+rule Instr_ok/return_call_indirect  hint(no_animate)
+rule Instr_ok/throw                 hint(no_animate)
+rule Instr_ok/throw_ref             hint(no_animate)
+rule Instr_ok/try_table             hint(no_animate)
+rule Instr_ok/ref.is_null           hint(no_animate)
+rule Instr_ok/ref.as_non_null       hint(no_animate)
+rule Instr_ok/ref.test              hint(no_animate)
+rule Instr_ok/ref.cast              hint(no_animate)
+rule Instr_ok/extern.convert_any    hint(no_animate)
+rule Instr_ok/any.convert_extern    hint(no_animate)
+
+relation Instr_ok_alg               hint(animate %1 %2 %4 -> %3)
+
+relation Externaddr_ok              hint(animate %1 %2 %3 -> bool)
+rule Externaddr_ok/sub              hint(no_animate)
+relation Externaddr_infer           hint(animate %1 %2 -> %3)
+relation Module_ok                  hint(animate_manual $module_ok: %1 -> %2)
+relation Module_ok_alg              hint(animate %1 %2 -> %3)
 
 
-relation Step          hint(animate %1 -> %2)
-relation Step_pure     hint(animate %1 -> %2)
-relation Step_read     hint(animate %1 -> %2)
+relation Step                       hint(animate %1 -> %2)
+relation Step_pure                  hint(animate %1 -> %2)
+relation Step_read                  hint(animate %1 -> %2)
 
-(;
-;; Syntax not supported in SpecTec.
+rule Step_pure/br-label-zero               hint(no_animate)
+rule Step_pure/br-label-succ               hint(no_animate)
+rule Step_pure/br-handler                  hint(no_animate)
 
-rule Step_pure /br-label-zero
-               /br-label-succ
-               /br-handler
-               /return-frame
-               /return-label
-               /return-handler
-     hint(no_animate)
+rule Step_pure/return-frame                hint(no_animate)
+rule Step_pure/return-label                hint(no_animate)
+rule Step_pure/return-handler              hint(no_animate)
 
-rule Step_read /return_call_ref-label
-               /return_call_ref-handler
-               /return_call_ref-frame-null
-               /return_call_ref-frame-addr
-     hint(no_animate)
+rule Step_read/return_call_ref-label       hint(no_animate)
+rule Step_read/return_call_ref-handler     hint(no_animate)
+rule Step_read/return_call_ref-frame-null  hint(no_animate)
+rule Step_read/return_call_ref-frame-addr  hint(no_animate)
 
-rule Step_pure /trap-instrs /throw_ref-instrs hint(no_animate)
+rule Step_pure/trap-instrs                 hint(no_animate)
+rule Step_pure/trap-label                  hint(no_animate)
+rule Step_pure/trap-handler                hint(no_animate)
+rule Step_pure/trap-frame                  hint(no_animate)
 
-rule Step /ctxt-instrs
-          /ctxt-label
-          /ctxt-frame
-          /ctxt-handler
-     hint(no_animate)
-;)
+rule Step_read/throw_ref-instrs            hint(no_animate)
 
-relation Eval_expr hint(animate (%1, %2) -> (%3, %4))
+rule Step/ctxt-instrs                      hint(no_animate)
+rule Step/ctxt-label                       hint(no_animate)
+rule Step/ctxt-frame                       hint(no_animate)
+rule Step/ctxt-handler                     hint(no_animate)
 
-def $utf8 hint(no_animate)
+rule Step/pure                             hint(context_rule)
+rule Step/read                             hint(context_rule)
 
+
+relation Eval_expr                         hint(animate_manual $eval_expr: (%1, %2) -> (%3, %4))
+
+def $NotImmutReachable                     hint(no_animate)
+def $utf8                                  hint(no_animate)

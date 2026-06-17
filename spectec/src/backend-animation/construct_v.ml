@@ -1079,21 +1079,20 @@ let vl_of_export (export: RI.Ast.export) =
 (* Wasm-3: MODULE type* import* tag* global* mem* table* func* data* elem* start? export* *)
 let vl_of_module (module_: RI.Ast.module_) =
   let es = [
-            vl_of_list vl_of_type module_.it.types;
-            vl_of_list vl_of_import module_.it.imports;
-            vl_of_list vl_of_tag module_.it.tags;
-            vl_of_list vl_of_global module_.it.globals;
-            vl_of_list vl_of_memory module_.it.memories;
-            vl_of_list vl_of_table module_.it.tables;
-            vl_of_list vl_of_func module_.it.funcs;
-            vl_of_list vl_of_data module_.it.datas;
-            vl_of_list vl_of_elem module_.it.elems;
-            vl_of_opt  vl_of_start module_.it.start;
-            vl_of_list vl_of_export module_.it.exports;
+            vl_of_list' vl_of_type module_.it.types;
+            vl_of_list' vl_of_import module_.it.imports;
+            vl_of_list' vl_of_tag module_.it.tags;
+            vl_of_list' vl_of_global module_.it.globals;
+            vl_of_list' vl_of_memory module_.it.memories;
+            vl_of_list' vl_of_table module_.it.tables;
+            vl_of_list' vl_of_func module_.it.funcs;
+            vl_of_list' vl_of_data module_.it.datas;
+            vl_of_list' vl_of_elem module_.it.elems;
+            vl_of_opt   vl_of_start module_.it.start;
+            vl_of_list' vl_of_export module_.it.exports;
           ]
   in
   caseV [["MODULE"];[];[];[];[];[];[];[];[];[];[];[]] es
-
 
 
 (* Destruct *)
@@ -1328,6 +1327,17 @@ let vl_to_globaltype v : RI.Types.globaltype =
   match match_caseV "globaltype" v with
   | [[];[];[]], [mut; vt] -> GlobalT (vl_to_mut mut, vl_to_valtype vt)
   | _ -> error_value "globaltype" v
+
+let vl_to_init v : RI.Types.init =
+  match match_caseV "init" v with
+  | [["SET"]]  , [] -> RI.Types.Set
+  | [["UNSET"]], [] -> RI.Types.Unset
+  | _ -> error_value "init" v
+
+let vl_to_localtype v : RI.Types.localtype =
+  match match_caseV "localtype" v with
+  | [[];[];[]], [init; vt] -> LocalT (vl_to_init init, vl_to_valtype vt)
+  | _ -> error_value "localtype" v
 
 let vl_to_tabletype v : RI.Types.tabletype =
   match match_caseV "tabletype" v with
@@ -2312,17 +2322,17 @@ let vl_to_module' v : RI.Ast.module_' =
       types; imports; tags; globals; memories; tables; funcs; datas; elems; start; exports
     ] ->
     {
-      types    = vl_to_list vl_to_type   types   ;
-      imports  = vl_to_list vl_to_import imports ;
-      tags     = vl_to_list vl_to_tag    tags    ;
-      globals  = vl_to_list vl_to_global globals ;
-      memories = vl_to_list vl_to_memory memories;
-      tables   = vl_to_list vl_to_table  tables  ;
-      funcs    = vl_to_list vl_to_func   funcs   ;
-      datas    = vl_to_list vl_to_data   datas   ;
-      elems    = vl_to_list vl_to_elem   elems   ;
-      start    = vl_to_opt  vl_to_start  start   ;
-      exports  = vl_to_list vl_to_export exports ;
+      types    = vl_to_list' vl_to_type   types   ;
+      imports  = vl_to_list' vl_to_import imports ;
+      tags     = vl_to_list' vl_to_tag    tags    ;
+      globals  = vl_to_list' vl_to_global globals ;
+      memories = vl_to_list' vl_to_memory memories;
+      tables   = vl_to_list' vl_to_table  tables  ;
+      funcs    = vl_to_list' vl_to_func   funcs   ;
+      datas    = vl_to_list' vl_to_data   datas   ;
+      elems    = vl_to_list' vl_to_elem   elems   ;
+      start    = vl_to_opt   vl_to_start  start   ;
+      exports  = vl_to_list' vl_to_export exports ;
     }
   | _ -> error_value "module" v
 let vl_to_module : value -> RI.Ast.module_ = vl_to_phrase vl_to_module'

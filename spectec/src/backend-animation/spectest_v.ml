@@ -6,7 +6,7 @@ open Construct_v
 module RI = Reference_interpreter
 
 
-let error at msg = Error.error at "animation/script_v" msg
+let error at msg = Error.error at "animation/spectest_v" msg
 
 (* Host *)
 

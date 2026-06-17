@@ -16,7 +16,7 @@ module Map = Map.Make(String)
 
 type var_def = typ
 type typ_def = param list * inst list
-type rel_def = mixop * typ * rule list
+type rel_def = param list * mixop * typ * rule list
 type def_def = param list * typ * clause list
 type gram_def = param list * typ * prod list
 
@@ -143,6 +143,14 @@ let find_func_hint env fname hintid =
     | _ -> None
   ) env.hints
 
+let find_rule_hint env relid ruleid hintid =
+  List.find_map (fun hintdef ->
+    match hintdef.it with
+    | RuleH (relid', ruleid', hints) when relid = relid'.it && ruleid = ruleid'.it ->
+      List.find_opt (fun hint -> hint.hintid.it = hintid) hints
+    | _ -> None
+  ) env.hints
+
 
 (* Extraction *)
 
@@ -150,10 +158,18 @@ let rec env_of_def env d =
   match d.it with
   | TypD (id, ps, insts) -> bind_typ env id (ps, insts)
   | DecD (id, ps, t, clauses) -> bind_def env id (ps, t, clauses)
-  | RelD (id, mixop, t, rules) -> bind_rel env id (mixop, t, rules)
+  | RelD (id, ps, mixop, t, rules) -> bind_rel env id (ps, mixop, t, rules)
   | GramD (id, ps, t, prods) -> bind_gram env id (ps, t, prods)
   | RecD ds -> List.fold_left env_of_def env ds
   | HintD h -> add_hint env h
 
 let env_of_script ds =
   List.fold_left env_of_def empty ds
+
+
+(* Pretty-printing *)
+
+let string_of_env_typs env =
+  let m = env.typs |> Map.to_list in
+  let mk_def n tdef = let (ps, ins) = tdef in TypD (n $ no_region, ps, ins) $ no_region in
+  String.concat ", " (List.map (fun (k, v) -> k ^ " ↦ " ^ Print.string_of_def (mk_def k v)) m)

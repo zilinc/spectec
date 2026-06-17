@@ -59,18 +59,18 @@ let string_of_type_def td =
   let id, ps, insts = td.it in
   let blob = List.map (fun inst -> (id, inst)) insts in
   "syntax " ^ string_of_id id ^ string_of_params ps ^ " where\n" ^
-  String.concat "\n" (List.map (fun (id, {it = InstD (bs, as_, dt); _}) ->
-  "syntax " ^ string_of_id id ^ string_of_binds bs ^ string_of_args as_ ^ " = " ^
-    string_of_deftyp `V dt) blob) ^ "\n"
+  String.concat "\n" (List.map (fun (id, {it = InstD (qs, as_, dt); _}) ->
+  "syntax " ^ string_of_id id ^ string_of_quants qs ^ string_of_args as_ ^ " = " ^
+    string_of_deftyp ~layout:`V dt) blob) ^ "\n"
 
 
 let string_of_rule_clause rc =
-  let id, bs, e1, e2, prems = rc.it in
+  let id, qs, e1, e2, prems = rc.it in
   Printf.sprintf "%s%s: %s ~> %s%s"
-    (Il.Print.string_of_id    id)
-    (Il.Print.string_of_binds bs)
-    (Il.Print.string_of_exp   e1)
-    (Il.Print.string_of_exp   e2)
+    (Il.Print.string_of_id     id)
+    (Il.Print.string_of_quants qs)
+    (Il.Print.string_of_exp    e1)
+    (Il.Print.string_of_exp    e2)
     (concat "" (List.map (prefix "\n    -- " Il.Print.string_of_prem) prems))
 
 let string_of_rule_def rd =
@@ -85,9 +85,9 @@ let region_comment ?(suppress_pos = false) omsg indent at =
   s1 ^ s2
 
 let string_of_func_clause fid (fc: func_clause) =
-  let oid, { it = DefD (bs, as_, e, prems); at; _ } = fc in
+  let oid, { it = DefD (qs, as_, e, prems); at; _ } = fc in
     "\n" ^ region_comment (Option.map (fun id -> "Derived from rule " ^ id.it) oid) "  " at ^
-    "  def $" ^ string_of_id fid ^ string_of_binds bs ^ string_of_args as_ ^ " = " ^
+    "  def $" ^ string_of_id fid ^ string_of_quants qs ^ string_of_args as_ ^ " = " ^
       string_of_exp e ^
       concat "" (List.map (prefix "\n    -- " string_of_prem) prems)
 
@@ -107,3 +107,6 @@ let rec string_of_dl_def = function
 | TypeDef tdef -> string_of_type_def tdef
 | FuncDef fdef -> string_of_func_def fdef
 | RecDef dl_defs -> "recursive\n" ^ String.concat "\n" (List.map string_of_dl_def dl_defs) ^ "end\n"
+
+let string_of_dl_script dl =
+  String.concat "\n" (List.map string_of_dl_def dl)

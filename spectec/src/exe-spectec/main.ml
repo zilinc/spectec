@@ -29,6 +29,8 @@ type pass =
   | AliasDemut
   | ImproveIds
   | Ite
+  | ElseSimp
+  | LetIntroMech
 
 (* This list declares the intended order of passes.
 
@@ -39,10 +41,12 @@ flags on the command line.
 let _skip_passes = [ Unthe ]  (* Not clear how to extend them to indexed types *)
 let all_passes = [
   Ite;
+  LetIntroMech;
   TypeFamilyRemoval;
   Undep;
   Totalize;
   Else;
+  ElseSimp;
   Uncaseremoval;
   Sideconditions;
   SubExpansion;
@@ -84,7 +88,7 @@ let new_interpreter_args = ref None
 let new_prose_ofile = ref None
 let vl = ref false
 let animate_inline = ref false
-
+let repl_main = ref None
 
 let generate_ocaml = ref None
 
@@ -124,6 +128,8 @@ let pass_flag = function
   | Uncaseremoval -> "uncase-removal"
   | ImproveIds -> "improve-ids"
   | Ite -> "ite"
+  | ElseSimp -> "else-simplification"
+  | LetIntroMech -> "let-intro-mech"
 
 let pass_desc = function
   | Sub -> "Synthesize explicit subtype coercions"
@@ -138,6 +144,8 @@ let pass_desc = function
   | AliasDemut -> "Lifts type aliases out of mutual groups"
   | ImproveIds -> "Disambiguates ids used from each other"
   | Ite -> "If-then-else introduction"
+  | ElseSimp -> "Simplifies generated otherwise relations (after else pass)"
+  | LetIntroMech -> "Let Premise introduction for mechanization backends"
 
 
 let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
@@ -153,7 +161,8 @@ let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
   | AliasDemut -> Middlend.AliasDemut.transform
   | ImproveIds -> Middlend.Improveids.transform
   | Ite -> Middlend.Ite.transform
-
+  | LetIntroMech -> Middlend.Letintromech.transform
+  | ElseSimp -> Middlend.Elsesimp.transform
 
 (* Argument parsing *)
 
@@ -187,7 +196,7 @@ let argspec = Arg.align (
   "-o", Arg.Unit (fun () -> file_kind := Output), " Output files";
   "-l", Arg.Set logging, " Log execution steps";
   "-ll", Arg.Unit (fun () -> Backend_interpreter.Runner.logging := true;
-                             Backend_animation.Main_interpret.logging := true;
+                             (* Backend_animation.Main_interpret.logging := true; *)
                              Backend_animation.Main_interpret_v.logging := true), " Log interpreter execution";
   "-dl", Arg.String (fun s -> Util.Debug_log.(active := s :: !active)),
     " Debug-log function";
@@ -216,7 +225,9 @@ let argspec = Arg.align (
   "--inline", Arg.Unit (fun () -> animate_inline := true), " Enable inlining after animation";
   "--new-interpreter", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args), " New meta-interpreter";
   "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), " New meta-interpreter VL";
+  "--repl", Arg.String (fun main -> target := Animate; repl_main := Some main), " Run REPL by specifying the main function";
   "--new-prose-v", Arg.String (fun ofile -> target := Animate; new_prose_ofile := Some ofile; vl := true), " New prose generation";
+  "-ll-ani", Arg.String (fun s -> Backend_animation.Interpreter_v.(verbose := s :: !verbose)), "Logging switches for IL meta-interpreter";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
   "--unified-vars", Arg.Unit (fun () -> Il2al.Unify.rename := false),
@@ -232,6 +243,7 @@ let argspec = Arg.align (
   "--print-dl", Arg.Set print_dl, " Print dl";
   "--print-al", Arg.Set print_al, " Print al";
   "--print-al-o", Arg.Set_string print_al_o, " Print al with given name";
+  "--print-il-notes", Arg.Set Il.Print.print_notes, " Print IL with type annotations";
   "--print-no-pos", Arg.Set print_no_pos, " Suppress position info in output";
   "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
     " Generate OCaml code for DL types and functions";
@@ -321,8 +333,8 @@ let () =
     let match_algo_name algo_name al_elt =
       algo_name = "" ||
       (match al_elt.Util.Source.it with
-      | Al.Ast.RuleA (a, _, _, _) ->
-        Al.Print.string_of_atom a = String.uppercase_ascii algo_name
+      | Al.Ast.RuleA (m, _, _, _) ->
+        Al.Print.string_of_mixop m = String.uppercase_ascii algo_name
       | Al.Ast.FuncA (id , _, _) ->
         id = String.lowercase_ascii algo_name)
     in
@@ -436,7 +448,14 @@ let () =
         if !vl then
           Backend_animation.Main_interpret_v.run env dl args
         else
-          Backend_animation.Main_interpret.run env dl args;
+          print_endline ("Not yet implemented due to merge.")
+          (* Backend_animation.Main_interpret.run env dl args; *)
+      | None -> ()
+      );
+      (match !repl_main with
+      | Some main ->
+        log ("Running REPL on `" ^ main ^ "`...");
+        Backend_animation.Main_repl.run env dl main
       | None -> ()
       );
       (match !new_prose_ofile with

@@ -126,11 +126,11 @@ let rec text_prose_exp (exp: exp) : string =
 let rec text_prose_premise (lv: int) (nth: int option) (prem: prem) : text =
   let number = (match nth with | None -> "" | Some n -> lister lv n ^ " ") in
   match prem.it with
-  | RulePr (id, mixop, exp) -> assert false
+  | RulePr _ -> assert false
   | IfPr e -> [number ^ "If " ^ text_prose_exp e ^ ", continue; otherwise fail."]
-  | LetPr (lhs, rhs, _bs) -> [number ^ "If pattern " ^ text_prose_exp lhs ^ " can be matched by " ^ text_prose_exp rhs ^ ", continue; otherwise, fail."]
+  | LetPr (_qs, lhs, rhs) -> [number ^ "If pattern " ^ text_prose_exp lhs ^ " can be matched by " ^ text_prose_exp rhs ^ ", continue; otherwise, fail."]
   | ElsePr -> [number ^ "If no clause above has succeeded:"]
-  | IterPr (prems, ((iter, xes) as iterexp)) ->
+  | IterPr (prem1, ((iter, xes) as iterexp)) ->
     let text_iter = (match iter with
     | Opt   -> [number ^ "Run optionally:"]
     | List  -> [number ^ "Iterate through the lists:"]
@@ -138,8 +138,8 @@ let rec text_prose_premise (lv: int) (nth: int option) (prem: prem) : text =
     | ListN (n, None)   -> [number ^ "Iterate " ^ string_of_exp n ^ " times"]
     | ListN (n, Some i) -> [number ^ "Let " ^ string_of_id i ^ " iterate from 0 until " ^ string_of_exp n ^ "."]
     ) in
-    let text_prems = text_prose_premises (lv + 1) (Some 1) prems in
-    text_iter @ indent 2 text_prems
+    let text_prem = text_prose_premise (lv + 1) (Some 1) prem1 in
+    text_iter @ indent 2 text_prem
   | NegPr prem' -> "It is not true that:" :: text_prose_premise lv None prem'
 
 and text_prose_premises (lv: int) (nth: int option) (prems: prem list) : text =

@@ -1,8 +1,3 @@
-(*
-This pass recongizes when multiple subsequent clauses of a definition share the pattern and have
-only boolean premises, and rewrites that to a single clause using if-then-else on the right-hand side.
-*)
-
 open Util
 open Source
 open Il.Ast
@@ -13,8 +8,8 @@ open Il.Ast
 
 let clauses_have_same_args (c1 : clause) (c2 : clause) =
   match (c1.it, c2.it) with
-  | (DefD (binds1, args1, _, _), DefD (binds2, args2, _, _)) ->
-    Il.Eq.eq_list Il.Eq.eq_bind binds1 binds2 &&
+  | (DefD (quants1, args1, _, _), DefD (quants2, args2, _, _)) ->
+    Il.Eq.eq_list Il.Eq.eq_param quants1 quants2 &&
     Il.Eq.eq_list Il.Eq.eq_arg args1 args2
  
 let group_clauses_by_same_args clauses =
@@ -94,8 +89,8 @@ let t_clause_group (clauses : clause list) : clause list =
   | None -> clauses
   | Some exp -> 
     let rep = List.hd clauses in
-    let DefD (binds, args, _rhs, _prems) = rep.it in
-    [{ rep with it = DefD (binds, args, exp, []) }]
+    let DefD (quants, args, _rhs, _prems) = rep.it in
+    [{ rep with it = DefD (quants, args, exp, []) }]
 
 
 let t_clauses clauses =

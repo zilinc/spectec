@@ -9,14 +9,13 @@ module Inline = Util.Lib.State (struct type t = Il.Subst.t end)
 
 open Inline
 
-let simp : 'env transformer = {
+let simp : transformer = {
   transform_exp =
     (fun exp -> match exp.it with
     | IterE ({ it = VarE v; _ }, (List, xes)) when List.exists (fun (x, _) -> Il.Eq.eq_id x v) xes ->
       List.find (fun (x, _) -> Il.Eq.eq_id x v) xes |> snd
     | _ -> exp
     );
-  transform_bind = id;
   transform_prem = id;
   transform_iterexp = id;
   transform_typ = id;
@@ -27,9 +26,10 @@ let simp : 'env transformer = {
   transform_typ_id = id;
   transform_rel_id = id;
   transform_def_id = id;
-  transform_gram_id = id
-}
+  transform_gram_id = id;
 
+  filter_exp = fun x -> Some x;
+}
 
 
 let rec inline_exp occ exp : exp Inline.m =
@@ -44,24 +44,24 @@ and inline_prem occ prem : prem list Inline.m =
   | IfPr exp ->
     let* exp' = inline_exp occ exp in
     return [ IfPr exp' $> prem ]
-  | LetPr (lhs, rhs, bs) ->
+  | LetPr (qs, lhs, rhs) ->
     (match lhs.it with
     | VarE v when Map.exists (fun v' o -> v.it = v' && o = Occur.Occ.LinOcc) occ ->
       let ctx' = Il.Subst.add_varid ctx v (Il.Subst.subst_exp ctx rhs) in
       let* () = put ctx' in
       return []
     | _ -> let* rhs' = inline_exp occ rhs in
-           return [ LetPr (lhs, rhs', bs) $> prem ]
+           return [ LetPr (qs, lhs, rhs') $> prem ]
     )
   | ElsePr -> return [prem]
-  | IterPr (prems, (iter, xes)) ->
+  | IterPr (prem1, (iter, xes)) ->
     let* iter' = (match iter with
     | ListN (n, oi) -> let* n' = inline_exp occ n in return (ListN (n', oi))
     | _ -> return iter
     ) in
-    let occ' = Occur.occ_prems (Fun.const true) `Once Occur.empty_occ prems in
+    let occ' = Occur.occ_prem (Fun.const true) `Once Occur.empty_occ prem1 in
     let* ctx = get () in
-    let prems', ctx_inner = run_state (inline_prems occ' prems) ctx in
+    let prems1', ctx_inner = run_state (inline_prem occ' prem1) ctx in
     (* If nested iterations, x <- x* may be removed because x is substituted.
        But in the outer binding list, x* <- x** should also be removed.
     *)
@@ -78,7 +78,7 @@ and inline_prem occ prem : prem list Inline.m =
         let* e' = inline_exp occ e in
         return (xes' @ [(x, e')])
     ) [] xes in
-    return [ IterPr (prems', (iter', xes')) $> prem ]
+    return (List.map (fun prem' -> IterPr (prem', (iter', xes')) $> prem) prems1')
   | _ -> assert false
 
 and inline_prems occ prems : prem list Inline.m =

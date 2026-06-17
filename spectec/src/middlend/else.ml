@@ -1,23 +1,3 @@
-(*
-This transformation removes uses of the `otherwise` (`ElsePr`) premise from
-inductive relations.
-
-It only supports binary relations.
-
-1. It figures out which rules are meant by “otherwise”:
-
-  * All previous rules
-  * Excluding those that definitely can’t apply when the present rule applies
-    (decided by a simple and conservative comparision of the LHS).
-
-2. It creates an auxillary inductive unary predicate with these rules (LHS only).
-  * Note that these rules will be applied a simple naming scheme (just adding a number in front of it)
-    For now to resolve naming 
-
-3. It replaces the `ElsePr` with the negation of that rule.
-
-*)
-
 open Util
 open Source
 open Il.Ast
@@ -26,6 +6,8 @@ module StringMap = Map.Make(String)
 module StringSet = Set.Make(String)
 
 let env_ref = ref Il.Env.empty
+
+let else_relation_hint_id = "else-relation"
 
 (* Brought from Apart.ml *)
 
@@ -114,8 +96,7 @@ and snoc_list_apart (tailelems1, listelems1) (tailelems2, listelems2) =
 
 let error at msg = Error.error at "else removal" msg
 
-let empty_info: region * Xl.Atom.info = (no_region, {def = ""; case = ""})
-let unary_mixfix : mixop = [[Xl.Atom.Atom "" $$ empty_info]; [Xl.Atom.Atom "" $$ empty_info]]
+let unary_mixfix : mixop = Xl.Mixop.Arg ()
 
 (* Generates a fresh name if necessary, and goes up to a maximum which then it will return an error*)
 let generate_next_rule_name ids rule =
@@ -129,7 +110,7 @@ let generate_next_rule_name ids rule =
       else name
   in
   (match rule.it with
-    | RuleD (id, binds, mixop, exp, prems) -> RuleD (go id.it start $ id.at, binds, mixop, exp, prems) 
+    | RuleD (id, quants, mixop, exp, prems) -> RuleD (go id.it start $ id.at, quants, mixop, exp, prems) 
   ) $ rule.at
 
 let is_else prem = prem.it = ElsePr
@@ -139,24 +120,26 @@ let get_rule_id rule =
     | RuleD (id, _, _, _, _) -> id.it
 
 let replace_else aux_name lhs prem = match prem.it with
-  | ElsePr -> NegPr (RulePr (aux_name, unary_mixfix, lhs) $ prem.at) $ prem.at
+  | ElsePr -> NegPr (RulePr (aux_name, [], unary_mixfix, lhs) $ prem.at) $ prem.at
   | _ -> prem
 
 let unarize rule = match rule.it with 
-  | RuleD (rid, binds, _mixop, exp, prems) ->
+  | RuleD (rid, quants, _mixop, exp, prems) ->
     let lhs = match exp.it with
       | TupE [lhs; _] -> lhs
       | _ -> error exp.at "expected manifest pair"
     in
-    { rule with it = RuleD (rid, binds, unary_mixfix, lhs, prems) }
+    { rule with it = RuleD (rid, quants, unary_mixfix, lhs, prems) }
 
 let not_apart lhs rule = match rule.it with
   | RuleD (_, _, _, lhs2, _) -> not (apart lhs lhs2)
 
+let generate_else_rel_hint rel_id at: hint = { hintid = else_relation_hint_id $ at; hintexp = El.Ast.TextE rel_id.it $ at} 
+
 let rec go hint_map used_names at id mixop typ typ1 prev_rules : rule list -> def list = function
-  | [] -> [ RelD (id, mixop, typ, List.rev prev_rules) $ at ]
+  | [] -> [ RelD (id, [], mixop, typ, List.rev prev_rules) $ at ]
   | r :: rules -> match r.it with
-    | RuleD (rid, binds, rmixop, exp, prems) ->
+    | RuleD (rid, quants, rmixop, exp, prems) ->
       if List.exists is_else prems
       then
         let lhs = match exp.it with
@@ -175,13 +158,13 @@ let rec go hint_map used_names at id mixop typ typ1 prev_rules : rule list -> de
         in 
         if applicable_prev_rules = [] then (error id.at "Could not find any applicable rule") 
         else
-        [ RelD (aux_name, unary_mixfix, typ1, applicable_prev_rules) $ r.at ] @
+        [ RelD (aux_name, [], unary_mixfix, typ1, applicable_prev_rules) $ r.at ] @
         let extra_hintdef = match (StringMap.find_opt id.it hint_map) with
-          | Some hints -> [ HintD (RelH (aux_name, hints) $ at) $ at ]
-          | _ -> []
+          | Some hints -> [ HintD (RelH (aux_name, generate_else_rel_hint id at :: hints) $ at) $ at ]
+          | _ -> [ HintD (RelH (aux_name, [generate_else_rel_hint id at]) $ at) $ at ]
         in
         let prems' = List.map (replace_else aux_name lhs) prems in
-        let rule' = { r with it = RuleD (rid, binds, rmixop, exp, prems') } in
+        let rule' = { r with it = RuleD (rid, quants, rmixop, exp, prems') } in
         extra_hintdef @
         go hint_map (StringSet.union ids_used used_names) at id mixop typ typ1 (rule' :: prev_rules) rules
       else
@@ -189,7 +172,7 @@ let rec go hint_map used_names at id mixop typ typ1 prev_rules : rule list -> de
 
 let rec t_def (hint_map : (hint list) StringMap.t) (def : def) : def list = match def.it with
   | RecD defs -> [ { def with it = RecD (List.concat_map (t_def hint_map) defs) } ]
-  | RelD (id, mixop, typ, rules) -> begin match typ.it with
+  | RelD (id, [], mixop, typ, rules) -> begin match typ.it with
     | TupT [(_exp1, typ1); (_exp2, _typ2)] ->
       go hint_map StringSet.empty def.at id mixop typ typ1 [] rules
     | _ -> [ def ]

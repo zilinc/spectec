@@ -626,7 +626,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
         match e.it with
         | VarE x_star ->
           let t_star = Il.Env.find_var !il_env x_star in
-          let t = Il_util.as_iter_typ !il_env t_star in
+          let t = Il_util.as_list_typ !il_env t_star in
           il_env := Il.Env.(bind_var !il_env x t);
         | _ -> assert false
       ) (in_binds @ out_binds);

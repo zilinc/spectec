@@ -54,7 +54,7 @@ let assert_msg cond msg = if not cond then info "assertion" no msg; assert cond
 
 (* Helper *)
 
-let (--) start end_ : int list = List.init (end_ - start) (fun i -> start + i)
+let (--) start end_ (* exclusive *) : int list = List.init (end_ - start) (fun i -> start + i)
 
 module OptMonad : sig
   include Lib.Monad
@@ -154,6 +154,9 @@ module VContext = struct
   let merge ctx1 ctx2 = { vars = merge_map ctx1.vars ctx2.vars
                         ; defs = merge_map ctx1.defs ctx2.defs
                         }
+
+  let string_of_ctx ctx =
+    String.concat "\n" (ctx.vars |> Map.bindings |> List.map (fun (k, v) -> k ^ " ↦ " ^ string_of_value v))
 end
 
 
@@ -225,13 +228,15 @@ let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
       if vl_of_mixop mixop' = mixop then Some (mixop', tcase) else None) tcs
      with
      | Some (_, tcase) ->
-       let (binds, typ, prems) = tcase in
+       let (_quants, typ, prems) = tcase in
        let* ctx' = return ctx in  (* eval_prems ctx prems in *)
        assign ctx' p rhs
      | None -> fail ()
     )
   | _, _ -> fail ()
 
+and assign_fid ctx pid aid : VContext.t OptMonad.m =
+  VContext.add_defid ctx pid aid |> return
 
 and is_value : exp -> bool = Il.Eval.is_normal_exp
 and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
@@ -265,12 +270,14 @@ and eval_exp ctx exp : value OptMonad.m =
     | #Bool.binop as op' ->
       (match Bool.bin_partial op' v1 v2 of_bool_value boolV with
       | Some v -> return v
-      | None -> error_eval "Boolean binary expression" exp None
+      | None -> error_eval "Boolean binary expression" exp
+                  (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; e2 ⤳ " ^ string_of_value v2))
       )
     | #Xl.Num.binop as op' ->
       (match Num.bin_partial op' v1 v2 of_num_value numV with
       | Some v -> return v
-      | None -> error_eval "Numeric binary expression" exp None
+      | None -> error_eval "Numeric binary expression" exp
+                  (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; e2 ⤳ " ^ string_of_value v2))
       )
     )
   | CmpE (op, ot, e1, e2) ->
@@ -483,7 +490,7 @@ and eval_exp ctx exp : value OptMonad.m =
     | NumV n ->
       (match Num.cvt nt2 n with
       | Some n' -> NumV n' |> return
-      | None -> error_eval "Numeric type conversion" exp (Some "Cannot perform conversion.")
+      | None -> error_eval "Numeric type conversion" exp (Some ("Cannot perform conversion: " ^ string_of_value v1))
       )
     | _ -> error_eval "Numeric type conversion" exp (Some ("Not a numeric:" ^ string_of_exp e1))
     )
@@ -591,13 +598,15 @@ and eval_arg ctx a : Value.arg OptMonad.m =
   match a.it with
   | ExpA  e  -> let* v = eval_exp ctx e in valA v |> return
   | TypA t  -> return (Value.TypA t)  (* types are reduced on demand *)
-  | DefA id -> return (Value.DefA id)
+  | DefA id -> (match VContext.find_opt_defid ctx id with
+               | None -> id | Some id' -> id'
+               ) |> defA |> return
   | GramA g -> return (Value.GramA g)
 
 and eval_prem ctx prem : VContext.t OptMonad.m =
   match prem.it with
   | ElsePr -> return ctx
-  | LetPr (lhs, rhs, _vs) ->
+  | LetPr (_qs, lhs, rhs) ->
     let* rhs' = eval_exp ctx rhs in
     assign ctx lhs rhs'
   | IfPr e ->
@@ -605,7 +614,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
     if b = boolV true then return ctx
     else
       fail ()
-  | IterPr (prems, (iter, xes)) ->
+  | IterPr (prem1, (iter, xes)) ->
     (* Work out which variables are inflow and which are outflow. *)
     let in_binds, out_binds = List.fold_right (fun (x, e) (ins, ous) ->
       let fv_e = (free_exp false e).varid in
@@ -621,7 +630,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
       (* Extend il_env with "local" variables in the iteration *)
       List.iter (fun (x, e) ->
         let t_star = e.note in
-        let t = Il_util.as_iter_typ !il_env t_star in
+        let t = Il_util.as_list_typ !il_env t_star in
         il_env := Il.Env.(bind_var !il_env x t);
       ) (in_binds @ out_binds);
       let* ctx' = if Z.to_int n' = 0 then (
@@ -641,7 +650,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
             VContext.add_varid ctx x e' |> return
           ) ctx in_binds
           in
-          let* ctx = eval_prems ctx prems in
+          let* ctx = eval_prem ctx prem1 in
           (* Out-flow: Only collect them in [ctx_out], but don't add them to the local
              value context, otherwise it will interfere with later iterations, where
              it will see partially assigned outer variables and wrongly treat them as knowns.
@@ -698,7 +707,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           let OptV (Some val_) = opt_val in
           VContext.add_varid ctx x val_ |> return
         ) ctx in_vals in
-        let* ctx = eval_prems ctx prems in
+        let* ctx = eval_prem ctx prem1 in
         (* Out-flow *)
         foldlM (fun ctx (x, e) ->
           let vx = VContext.find_varid ctx x in
@@ -728,7 +737,7 @@ and match_arg ctx at (pat: arg) (arg: Value.arg) : VContext.t OptMonad.m =
   match pat.it, arg with
   | TypA ptyp , Value.TypA atyp -> match_typ ctx at ptyp atyp
   | ExpA pexp , Value.ValA aval -> assign ctx pexp aval
-  | DefA pid  , Value.DefA aid  -> VContext.add_defid ctx pid aid |> return
+  | DefA pid  , Value.DefA aid  -> assign_fid ctx pid aid
   | GramA psym, Value.GramA _   -> todo "match_arg GramA"
   | _ -> fail ()
 
@@ -741,37 +750,33 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
     let* ctx'' = match_args ctx' at pargs' args' in
     return ctx''
 
-and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
+and match_clause ctx at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
   match clauses with
   | [] -> info "log" at (lazy ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses")); fail ()
   | cl :: cls ->
-    let DefD (binds, pargs, exp, prems) = cl.it in
+    let DefD (quants, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
     (* Add bindings to [il_env]. *)
-    let _ = Animate.env_of_binds binds il_env in
+    let _ = Animate.env_of_quants quants il_env in
     if not (List.length pargs = List.length args) then
       error at ("Function `" ^ fname ^ "` is called with " ^ string_of_int (List.length args) ^ " arguments");
     let* val_ =
-      (match match_args VContext.empty cl.at pargs args |> run_opt with
-      | Some ctx ->
-        (match eval_prems ctx prems |> run_opt with
-        | Some ctx' ->
+      (match match_args ctx cl.at pargs args |> run_opt with
+      | Some ctx' ->
+        (match eval_prems ctx' prems |> run_opt with
+        | Some ctx'' ->
           (* If [exp] is partial, it means this clause is refuted. *)
-          (match eval_exp ctx' exp |> run_opt with
-          | Some v -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
-                      then info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth)));
+          (match eval_exp ctx'' exp |> run_opt with
+          | Some v -> info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
                       return v
-          | None   -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
-                      then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth)));
-                      match_clause at fname (nth+1) cls args
+          | None   -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
+                      match_clause ctx at fname (nth+1) cls args
           )
-        | None -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
-                  then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth)));
-                  match_clause at fname (nth+1) cls args
+        | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
+                  match_clause ctx at fname (nth+1) cls args
         )
-      | None -> (if String.starts_with ~prefix:"step" fname || String.starts_with ~prefix:"dispatch" fname
-                then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth)));
-                match_clause at fname (nth+1) cls args
+      | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
+                match_clause ctx at fname (nth+1) cls args
       )
     in
     (* Resume global environment. *)
@@ -781,21 +786,22 @@ and match_clause at (fname: string) (nth: int) (clauses: clause list) (args: Val
 
 and eval_func name func_def args : value OptMonad.m =
   let (_, _, params, typ, fcs, _) = func_def.it in
+  let ctx = VContext.empty in
   if name = "step" then
-    let* r = match_clause no_region name 1 (List.map snd fcs) args in
+    let* r = match_clause ctx no_region name 1 (List.map snd fcs) args in
     let CaseV (_, [_; instrs]) = r in
     let instrs' = instrs |> as_list_value' in
     info "step" no (lazy ("* $step result is " ^ string_of_values ", " instrs'));
     return r
   else if name = "reduce" then
     (* Capture stack overflow signal. *)
-    let* r = match_clause no_region name 1 (List.map snd fcs) args in
+    let* r = match_clause ctx no_region name 1 (List.map snd fcs) args in
     (match r with
     | CaseV ([["STACK_OVERFLOW"]], []) -> raise BI.Exception.OutOfMemory
     | _ -> return r
     )
   else
-    match_clause no_region name 1 (List.map snd fcs) args
+    match_clause ctx no_region name 1 (List.map snd fcs) args
 
 (*
 and call_func name args : value OptMonad.m =
@@ -808,67 +814,46 @@ and call_func name args : value OptMonad.m =
 *)
 
 and call_func name args : value OptMonad.m =
-  (if String.starts_with ~prefix:"step" name || String.starts_with ~prefix:"dispatch" name
-  then info "log" no (lazy ("Calling " ^ name)));
-  if State_v.Hints.is_a_builtin name then
-    (match name with
-    (* Hardcoded functions defined in the compiler. *)
-    | "Module_ok"     -> module_ok     args
-    | "Externaddr_ok" -> externaddr_ok args
-    | "Ref_ok"        -> ref_ok        args
-    | "Val_ok"        -> val_ok        args
-    | "Reftype_sub"   -> reftype_sub   args
-    | "Heaptype_sub"  -> heaptype_sub  args
-    | _               -> error no ("Builtin animation not implemented: " ^ name ^ ".")
-    )
-  else
-    (* Hardcoded functions defined in meta.spectec *)
-  if name = "Steps" then
-    let [config] = args in
-    let args' = [config; ValA (natV (Z.of_int !RI.Flags.budget))] in
-    call_func "steps" args'
-  else if name = "Step" then
-    error no "Calling $Step is not allowed."
-  else if name = "Step_pure" then
-    error no "Calling $Step_pure is not allowed."
-  else if name = "Step_read" then
-    error no "Calling $Step_read is not allowed."
-  else if name = "Step/memory.grow" then
-    call_func "Step/memory.grow_det" args
-  else if name = "Step/table.grow" then
-    call_func "Step/table.grow_det" args
-  (*
-  else if name = "growmem" then
-    growmem args
-  *)
-  else
-    (* Built-in functions *)
-    let builtin_name, is_builtin =
-      match Il.Env.find_func_hint !il_env name "builtin" with
-      | None -> (name, false)
-      | Some hint ->
-        match hint.hintexp.it with
-        | SeqE []     -> (name , true)  (* hint(builtin) *)
-        | TextE fname -> (fname, true)  (* hint(builtin "g") *)
-        | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
-    in
-    (match Def.find_dl_func_def name !dl with
-    (* Regular function definition. *)
-    | Some fdef when not is_builtin -> eval_func name fdef args
-    (* Builtins and numerics *)
-    | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
-      if  Numerics_v_new.mem builtin_name then
-         Numerics_v_new.call_numerics builtin_name args |> return
-      else if builtins_mem builtin_name then
-        call_builtins builtin_name args
-      else if builtin_name = "hostcall" then
-        hostcall args
-      else
-        error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
-    | _ when is_builtin ->
-      error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
-    | None -> error no (sprintf "There is no function named `%s`." name)
-    )
+  info "call" no (lazy ("Calling " ^ name));
+
+  (* These functions are the generated unoptimised Step functions.
+     For better performance, consider calling the manually defined
+     functions in meta.spectec.
+   *)
+  if name = "Step" then
+    warn no "Calling $Step can be slow.";
+  if name = "Step_pure" then
+    warn no "Calling $Step_pure can be slow.";
+  if name = "Step_read" then
+    warn no "Calling $Step_read can be slow.";
+
+  (* Built-in functions *)
+  let builtin_name, is_builtin =
+    match Il.Env.find_func_hint !il_env name "builtin" with
+    | None -> (name, false)
+    | Some hint ->
+      match hint.hintexp.it with
+      | SeqE []     -> (name , true)  (* hint(builtin) *)
+      | TextE fname -> (fname, true)  (* hint(builtin "g") *)
+      | _ -> error no (sprintf "Ill-formed builtin hint for definition `%s`." name)
+  in
+  (match Def.find_dl_func_def name !dl with
+  (* Regular function definition. *)
+  | Some fdef when not is_builtin -> eval_func name fdef args
+  (* Builtins and numerics *)
+  | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
+    if Numerics_v.mem builtin_name then
+      Numerics_v.call_numerics builtin_name args |> return
+    else if builtins_mem builtin_name then
+      call_builtins builtin_name args
+    else if builtin_name = "hostcall" then
+      hostcall args
+    else
+      error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
+  | _ when is_builtin ->
+    error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
+  | None -> error no (sprintf "There is no function named `%s`." name)
+  )
 
 
 (* Host instructions *)
@@ -985,7 +970,7 @@ and use_step : builtin = {
     | [instr] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> boolV (rel_name = "Step") |> return
+      | Some (rel_name, _) -> boolV (rel_name = "Step") |> return
       | None -> BoolV false |> return
       )
     | vs -> error_values ("Args to $use_step") vs
@@ -997,7 +982,7 @@ and use_step_pure = {
     | [instr] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> BoolV (rel_name = "Step_pure") |> return
+      | Some (rel_name, _) -> BoolV (rel_name = "Step_pure") |> return
       | None -> BoolV false |> return
       )
     | vs -> error_values ("Args to $use_step_pure") vs
@@ -1009,7 +994,7 @@ and use_step_read = {
     | [instr] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, _, _) -> boolV (rel_name = "Step_read") |> return
+      | Some (rel_name, _) -> boolV (rel_name = "Step_read") |> return
       | None -> boolV false |> return
       )
     | vs -> error_values ("Args to $use_step_read") vs
@@ -1032,8 +1017,8 @@ and dispatch_step = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
-      | _ -> error no ("No $Step rule for instr" ^ string_of_value instr)
+      | Some (rel_name, rule_name) when rel_name = "Step" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | _ -> error no ("No $Step rule for instr " ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step") vs
 }
@@ -1044,8 +1029,8 @@ and dispatch_step_pure = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
-      | _ -> error no ("No $Step_pure rule for instr" ^ string_of_value instr)
+      | Some (rel_name, rule_name) when rel_name = "Step_pure" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | _ -> error no ("No $Step_pure rule for instr " ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step_pure") vs
 }
@@ -1056,29 +1041,20 @@ and dispatch_step_read = {
     | [instr; arg] ->
       let mixop, _ = match_caseV "instr" instr in
       (match Common.Map.find_opt (List.hd (List.hd mixop)) !Common.step_table with
-      | Some (rel_name, rule_name, _) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
-      | _ -> error no ("No $Step_read rule for instr" ^ string_of_value instr)
+      | Some (rel_name, rule_name) when rel_name = "Step_read" -> call_func (rel_name ^ "/" ^ rule_name) [valA arg]
+      | _ -> error no ("No $Step_read rule for instr " ^ string_of_value instr)
       )
     | vs -> error_values ("Args to $dispatch_step_read") vs
-}
-
-and step_read_throw_ref_handler = {
-  name = "Step_read_throw_ref_handler";
-  f =
-    function
-    | [arg] -> call_func "Step_read/throw_ref" [valA arg]
-    | vs -> error_values ("Args to $Step_read/throw_ref") vs
 }
 
 
 and builtin_list : builtin list = [
   use_step; use_step_pure; use_step_read; use_step_ctxt;
   dispatch_step; dispatch_step_pure; dispatch_step_read;
-  step_read_throw_ref_handler;
   ]
 
 and call_builtins fname args : value OptMonad.m =
-  match List.find_opt (fun numerics -> numerics.name = fname) builtin_list with
+  match List.find_opt (fun builtin -> builtin.name = fname) builtin_list with
   | Some builtin ->
     let args' = List.map (function
     | ValA v -> v
@@ -1091,130 +1067,18 @@ and builtins_mem fname =
   List.exists (fun builtin -> builtin.name = fname) builtin_list
 
 
-
-
-
-(* Hard-coded relations *)
-
-
-(* $Module_ok : module -> moduletype *)
-and module_ok args : value OptMonad.m =
-  match args with
-  | [ ValA module_ ] ->
-    let module_' = vl_to_module module_ in
-    (match RI.Valid.check_module module_' with
-    | exception e -> raise (BI.Exception.Invalid (e, Printexc.get_raw_backtrace ()))
-    | ModuleT (its, ets) ->
-      let importtypes = List.map (fun (RI.Types.ImportT (_, _, xt)) -> vl_of_externtype xt) its in
-      let exporttypes = List.map (fun (RI.Types.ExportT (_,    xt)) -> vl_of_externtype xt) ets in
-      caseV [[];["->"];[]] [ listV_of_list importtypes; listV_of_list exporttypes ] |> return
-    )
-  | _ -> error no ("Wrong number/type of arguments to $Module_ok.")
-
-(* $Externaddr_ok : store -> externaddr -> externtype -> bool *)
-and externaddr_ok = function
-  | [ ValA s; ValA eaddr; ValA etype ] ->
-    (match match_caseV "externaddr" eaddr with
-    | [[name];[]], [NumV (`Nat z)] ->
-      let addr = Z.to_int z in
-      let externaddr_type =
-        name^"S"
-        |> Store.access
-        |> as_list_value
-        |> (!)
-        |> Fun.flip Array.get addr
-        |> as_str_field "TYPE"
-        |> fun type_ -> caseV [[name];[]] [type_]
-        |> vl_to_externtype
-      in
-      let externtype = vl_to_externtype etype in
-      RI.Match.match_externtype [] externaddr_type externtype |> boolV |> return
-    | _ -> error_value "$Externaddr_ok (externaddr)" eaddr
-    )
-  | _ -> error no ("Wrong number/type of arguments to $Externaddr_ok.")
-
-(* Ref_ok : store -> ref -> reftype -> bool *)
-and ref_ok = function
-  | [ ValA _ as store; ValA _ as ref; ValA rt2 ] ->
-    let* rt1 = call_func "ref_infer" [store; ref] in
-    let rt1' = vl_to_reftype rt1 in
-    let rt2' = vl_to_reftype rt2 in
-    RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
-  | _ -> error no ("Wrong number/type of arguments to $Ref_ok.")
-
-(* Val_ok : store -> val -> valtype -> bool *)
-and val_ok = function
-  | [ ValA _ as store; ValA _ as val_; ValA vt2 ] ->
-    let* vt1 = call_func "val_infer" [store; val_] in
-    let vt1' = vl_to_valtype vt1 in
-    let vt2' = vl_to_valtype vt2 in
-    RI.Match.match_valtype [] vt1' vt2' |> boolV |> return
-  | _ -> error no ("Wrong number/type of arguments to $Val_ok.")
-
-
-(* Reftype_sub : context -> reftype -> reftype -> bool *)
-and reftype_sub = function
-  | [ ValA ctx; ValA rt1; ValA rt2 ] ->
-    let rt1' = vl_to_reftype rt1 in
-    let rt2' = vl_to_reftype rt2 in
-    RI.Match.match_reftype [] rt1' rt2' |> boolV |> return
-  | _ -> error no ("Wrong number/type of arguments to $Reftype_sub.")
-
-(* Heaptype_sub : context -> heaptype -> heaptype -> bool *)
-and heaptype_sub = function
-  | [ ValA ctx; ValA ht1; ValA ht2 ] ->
-    let ht1' = vl_to_heaptype ht1 in
-    let ht2' = vl_to_heaptype ht2 in
-    RI.Match.match_heaptype [] ht1' ht2' |> boolV |> return
-  | _ -> error no ("Wrong number/type of arguments to $Heaptype_sub.")
-
-
-and growmem = function
-  | [ ValA meminst; ValA n ] ->
-    let open Xl.Atom in
-    let memtyp = as_str_field "TYPE" meminst in
-    let bs  = as_str_field "BYTES" meminst in
-    let bs_arr = !(as_list_value bs) in
-    let CaseV ([[];[];["PAGE"]], [at; limits]) = memtyp in
-    let CaseV ([["["];[".."];["]"]], [i; oj]) = limits in
-    let ki = 1024 in
-    let NumV (`Nat n_nat) = n in
-    let n_int = Z.to_int n_nat in
-    let i_int' = (Array.length bs_arr) / (64 * ki) + n_int in
-    let i' = natV (Z.of_int i_int') in
-    let ok = match oj with
-    | OptV (Some j) ->
-      let NumV (`Nat j_nat) = as_singleton_case j in
-      i_int' <= Z.to_int j_nat
-    | OptV None -> true
-    in
-    if ok then
-      let limits' = caseV [["["];[".."];["]"]] [i'; oj] in
-      let memtyp' = caseV [[];[];["PAGE"]] [at; limits'] in
-      let zero = caseV1 (natV Z.zero) in
-      let bs_arr' = Array.append bs_arr (Array.make (n_int * 64 * ki) zero) in
-      let bs' = listV bs_arr' in
-      let meminst' = strV ([("TYPE", ref memtyp'); ("BYTES", ref bs')]) in
-      return meminst'
-    else
-      fail ()
-  | _ -> error no ("Wrong number/type of arguments to $growmem.")
-
-
 (* Wasm interpreter entry *)
 
 let instantiate (args: Value.arg list) : value =
   match (let* r = call_func "instantiate" args in
-         call_func "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))]) |> run_opt
+         call_func "reduce_expr" [ValA r]) |> run_opt
   with
   | Some v -> v
   | None -> raise (Failure "`instantiate` failed to run.")
 
 let invoke (args: Value.arg list) : value =
-  match call_func "invoke" args |> run_opt with
+  match (let* r = call_func "invoke" args in
+         call_func "reduce_expr" [ValA r]) |> run_opt
+  with
+  | Some v -> v
   | None -> raise (Failure "`invoke` failed to run.")
-  | Some r -> let CaseV (_, [_; instrs]) = r in
-              (match call_func "steps" [ValA r; ValA (natV (Z.of_int !RI.Flags.budget))] |> run_opt with
-              | Some r' -> r'
-              | None -> raise (Failure ("`invoke` failed to reduce its result: " ^ string_of_value instrs))
-              )

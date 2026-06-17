@@ -1,50 +1,3 @@
-(*
-This transformation focuses on transforming uncase expressions into explicit projection functions.
-
-This is achieved through the following steps:
-  * The uncase expressions are collected and placed in a map (as a first pass). This is a map from id
-  to a list of mixops.
-  * When encountering a user defined type definition, we lookup in the map and generate
-  the projection functions accordingly for each mixop in the list. If there is more than one case,
-  the projection function returns the case tuple wrapped in an optional type.
-  * When encountering an uncase expression, we just simply make the appropriate transformation
-  to a function call.
-
-This pass works with/without dependent types. It will simply add the dependent type parameters
-to the projection function whenver necessary.
-
-As an example,
-given the following type:
-
-syntax foo =
-  | A v
-  | B c v
-
-where A and B are case constructors, and v c are types.
-
-Assume we have uncase expressions somewhere in our script (with x being a variable of type foo):
-(x!A).0 and (x!B).1
-
-This is transformed into: 
-
-syntax foo =
-  | A v
-  | B c v
-
-def $proj_foo_0(x : foo) : (v)?
-  def $proj_foo_0{var : v}(A(var)) = ?(var)
-  def $proj_foo_0{var : foo}(var) = ?()
-
-def $proj_foo_1(x : foo) : (c, v)?
-  def $proj_foo_0{v_c : c, v_v : v}(B(v_c, v_v)) = ?((v_c, v_v))
-  def $proj_foo_0{var : foo}(var) = ?()
-
-with uncase expressions being transformed into:
-(the($proj_foo_0(x))).0 and (the($proj_foo_1(x))).1
-
-Names were specifically chosen here for simplicity.
-*)
-
 open Il.Ast
 open Il
 open Il.Walk
@@ -71,7 +24,7 @@ let proj_prefix = "proj_"
 let get_case_typs t = 
   match t.it with
   | TupT typs -> typs
-  | _ -> [(VarE ("_" $ t.at) $$ t.at % t, t)]
+  | _ -> [("_" $ t.at, t)]
 
 let iter_name i = 
   match i with
@@ -92,20 +45,12 @@ let make_arg p =
   | ExpP (id, typ) -> ExpA (VarE id $$ id.at % typ) 
   | TypP id -> TypA (VarT (id, []) $ id.at) (* TODO unsure this makes sense*)
   | DefP (id, _, _) -> DefA id 
-  | GramP (_, _) -> assert false (* Avoid this *)
-  ) $ p.at
-
-let make_bind p = 
-  (match p.it with 
-  | ExpP (id, typ) -> ExpB (id, typ)
-  | TypP id -> TypB id
-  | DefP (id, params, typ) -> DefB (id, params, typ)
-  | GramP _ -> assert false (* Avoid this *)
+  | GramP (_, _, _) -> assert false (* Avoid this *)
   ) $ p.at
 
 let create_projection_functions id params mixops inst =
   let get_deftyp inst' = (match inst'.it with
-    | InstD (_binds, _args, deftyp) -> deftyp.it
+    | InstD (_quants, _args, deftyp) -> deftyp.it
   ) in 
   let at = inst.at in 
   let user_typ = VarT (id, List.map make_arg params) $ at in 
@@ -115,25 +60,25 @@ let create_projection_functions id params mixops inst =
   let make_func m case_typs has_one_case idx = 
     let new_var_exps = List.mapi (fun idx (_, t) -> VarE (var_prefix ^ typ_name t ^ "_" ^ Int.to_string idx $ at) $$ at % t) case_typs in 
     let tupt = TupT case_typs $ at in
-    let no_name_tupt = TupT (List.map (fun (e, t) -> ({e with it = VarE ("_" $ e.at)}, t)) case_typs) $ at in
+    let no_name_tupt = TupT (List.map (fun (e, t) -> "_" $ e.at, t) case_typs) $ at in
     let new_tup = TupE (new_var_exps) $$ at % tupt in
     let new_case_exp = CaseE(m, new_tup) $$ at % user_typ in
 
     let new_params = params @ [new_param] in 
-    let new_binds = List.mapi (fun idx (_, t) -> ExpB (var_prefix ^ typ_name t ^ "_" ^ Int.to_string idx $ at, t) $ at) case_typs in
+    let new_quants = List.mapi (fun idx (_, t) -> ExpP (var_prefix ^ typ_name t ^ "_" ^ Int.to_string idx $ at, t) $ at) case_typs in
     let new_arg = ExpA new_case_exp $ at in 
     if has_one_case then 
-      let clause = DefD (List.map make_bind params @ new_binds, List.map make_arg params @ [new_arg], new_tup, []) $ at in 
+      let clause = DefD (params @ new_quants, List.map make_arg params @ [new_arg], new_tup, []) $ at in 
       DecD ((proj_prefix ^ id.it ^ "_" ^ Int.to_string idx) $ id.at, new_params, no_name_tupt, [clause])
     else
       (* extra handling in case that it has more than one case *)
       let extra_arg = ExpA (VarE (fresh_name $ at) $$ at % user_typ) $ at in
-      let new_bind = ExpB (fresh_name $ at, user_typ) $ at in 
+      let new_quant = ExpP (fresh_name $ at, user_typ) $ at in 
       let opt_type = IterT (no_name_tupt, Opt) $ at in
       let none_exp = OptE (None) $$ at % no_name_tupt in
       let opt_tup = OptE (Some new_tup) $$ at % opt_type in 
-      let clause' = DefD (List.map make_bind params @ new_binds, List.map make_arg params @ [new_arg], opt_tup, []) $ at in
-      let extra_clause = DefD (List.map make_bind params @ new_binds @ [new_bind], List.map make_arg params @ [extra_arg], none_exp, []) $ at in
+      let clause' = DefD (params @ new_quants, List.map make_arg params @ [new_arg], opt_tup, []) $ at in
+      let extra_clause = DefD (params @ new_quants @ [new_quant], List.map make_arg params @ [extra_arg], none_exp, []) $ at in
       DecD ((proj_prefix ^ id.it ^ "_" ^ Int.to_string idx) $ id.at, new_params, opt_type, [clause'; extra_clause])
   in
 
@@ -144,7 +89,7 @@ let create_projection_functions id params mixops inst =
     (* Should not be allowed since struct does not have cases *)
     | StructT _ -> error inst.at "Found struct construction while constructing projection functions, should not happen" 
     | VariantT typcases -> 
-      let mixop_opt = List.find_map (fun (i, (m', (_, t, _), _)) -> 
+      let mixop_opt = List.find_map (fun (i, (m', (t, _, _), _)) -> 
         if not (Eq.eq_mixop m m') then None else 
         Some (i, m, t)
       ) (List.mapi (fun i t -> (i, t)) typcases) in
@@ -161,7 +106,7 @@ let get_proj_info p_env m id =
   let opt = Env.find_opt_typ p_env.env (id $ no_region) in
   match opt with
   | Some (_, [{it = InstD(_, _, {it = VariantT typcases; _}); _}]) -> 
-    List.find_map (fun (i, (m', (_, t, _), _)) -> 
+    List.find_map (fun (i, (m', (t, _, _), _)) -> 
       if Eq.eq_mixop m m' then Some (i, t) else None
     ) (List.mapi (fun i t -> (i, t)) typcases) |>
     Option.map (fun (i, t) -> (i, t, List.length typcases = 1))
@@ -169,7 +114,7 @@ let get_proj_info p_env m id =
 
 let transform_tuple_type t = 
   match t.it with
-  | TupT ts -> TupT (List.map (fun (e, t) -> (VarE ("_" $ e.at) $$ e.at % t, t)) ts) $ t.at
+  | TupT ts -> TupT (List.map (fun (id, t) -> ("_" $ id.at, t)) ts) $ t.at
   | _ -> t
 
 let t_exp p_env e = 

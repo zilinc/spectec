@@ -35,8 +35,8 @@ type iter =
   | ListN of value * id option
 
 
-let vl_of_mixop : Xl.Mixop.mixop -> mixop = function
-  | mss -> List.map (fun ms -> List.map Atom.to_string ms) mss
+let vl_of_mixop : 'a Xl.Mixop.mixop -> mixop = function
+  | mss -> Xl.Mixop.flatten mss |> List.map (fun ms -> List.map Atom.to_string ms)
 
 
 let rec string_of_mixop =
@@ -69,7 +69,7 @@ and string_of_array (a: value growable_array) =
   string_of_values "; " (Array.to_list !a)
 
 and string_of_record r =
-  let str = List.fold_left (fun str (k, v) -> str ^ ", " ^ k ^ " = " ^ string_of_value !v) "" r in
+  let str = String.concat ", " (List.map (fun (k, v) -> k ^ " = " ^ string_of_value !v) r) in
   "{" ^ str ^ "}"
 
 and string_of_arg = function
@@ -211,6 +211,7 @@ let vl_of_tup fvl = List.map (fun (f, v) -> f v) fvl |> tupV
 
 let valA a = ValA a
 let typA a = TypA a
+let defA a = DefA a
 
 let none = optV None
 let some v = optV (Some v)

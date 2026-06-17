@@ -22,6 +22,13 @@ module C = Construct_v_new
 module Assert = Reference_interpreter.Error.Make ()
 let error at msg = Error.error at "interpreter" msg
 
+let region_to_region : R.Source.region -> Source.region =
+  let loc_to_pos : R.Source.loc -> Source.pos = function
+  | { file ; line; column } -> { file ; line; column }
+  in
+  function
+  | { left ; right } -> { left = loc_to_pos left; right = loc_to_pos right}
+
 (* Logging *)
 
 let logging = ref false
@@ -128,7 +135,6 @@ and instantiate module_ : value * value =
   let CaseV (_, [store'; frame']) = state' in
   let StrV [_; (fname, moduleinst)] = frame' in
   assert ("MODULE" = fname);
-  (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
   log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);
@@ -140,9 +146,8 @@ and invoke moduleinst_name funcname args : value =
   let t1 = Sys.time () in
   let store = Store.get () in
   let funcaddr = get_export_addr funcname moduleinst_name in
-  let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; vl_of_list C.vl_of_value args |> valA ] in
+  let CaseV (_, [state'; instrs']) = Interpreter_v.invoke [ valA store; valA funcaddr; valA args ] in
   let CaseV (_, [store'; _]) = state' in
-  (* FIXME(zilinc): Do we keep the store if it returns trap or exception? *)
   Store.put store';
   let t2 = Sys.time () in
   log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);
@@ -157,17 +162,24 @@ let module_of_def def =
   | Encoded (name, bs) -> R.Decode.decode name bs.it
   | Quoted (_, s) -> R.Parse.Module.parse_string s.it |> textual_to_module
 
-let run_action action : value =
-  match action.it with
-  | Invoke (var_opt, funcname, args) ->
-    invoke (Register.get_module_name var_opt) (Utf8.encode funcname) (List.map it args)
-  | Get (var_opt, globalname) ->
-    [ get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname) ] |> listV_of_list
-
 let print_fail at failtype expected actual =
   print_endline (R.Source.string_of_region at ^ ": Expected " ^ failtype ^ " failure: " ^ expected);
   print_endline ("Got " ^ actual ^ ".");
   fail
+
+let print_fail' at msg =
+  print_endline (R.Source.string_of_region at ^ ": " ^ msg); fail
+
+let run_action action : value =
+  match action.it with
+  | Invoke (var_opt, funcname, args) ->
+    invoke (Register.get_module_name var_opt) (Utf8.encode funcname)
+           (vl_of_list (fun lit ->  match lit.it with
+                       | ValLit v   -> C.vl_of_value v
+                       | NullLit ht -> C.vl_of_value (RI.Value.Ref RI.Value.NullRef)
+                       ) args)
+  | Get (var_opt, globalname) ->
+    [ get_global_value (Register.get_module_name var_opt) (Utf8.encode globalname) ] |> listV_of_list
 
 let test_assertion assertion =
   let open R in
@@ -218,7 +230,7 @@ let run_command' command =
     log "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     let module_ = module_of_def def in
     (match RI.Valid.check_module module_ with
-    | exception RI.Valid.Invalid(at, msg) -> fail
+    | exception RI.Valid.Invalid(at, msg) -> print_fail' at msg
     | _ -> Modules.add_with_var var_opt module_; success
     )
   | Instance (var1_opt, var2_opt) ->
@@ -293,7 +305,7 @@ let run_wasm' args module_ =
     let make_value s = R.Value.Num (I32 (Int32.of_string s)) in
 
     (* Invoke *)
-    invoke (Register.get_module_name None) funcname (List.map make_value args')
+    invoke (Register.get_module_name None) funcname (List.map make_value args'|> vl_of_list C.vl_of_value)
     (* Print invocation result. We don't really have to convert it to reference
        interpreter's value type though.
     *)

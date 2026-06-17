@@ -1,5 +1,6 @@
 open Value
 open Il.Ast
+open Util.Error
 module Ds = Backend_interpreter.Ds
 
 
@@ -166,43 +167,51 @@ module Hints = struct
   module M  = Map.Make(String)
   module IM = Map.Make(Int)
   type mode = In | Out
-  type t = { mutable no_animate_funcs: string list
+  type t = { mutable no_animate_funcs: string list             (* Functions in the source that won't be animated. *)
+           ; mutable no_animate_rules: (string * string) list  (* Rules from a relation that won't be animated. relid * ruleid *)
            ; mutable animate_funcs   : (mode list * mode) M.t  (* arguments * result *)
-           ; mutable animate_inv     : string list
-           ; mutable animate_rels    : mode IM.t M.t           (* in the order of expressions in the CaseE *)
-           ; mutable animate_builtin : mode IM.t M.t
-           ; mutable no_animate_rules: (string * string) list  (* relid * ruleid *)
+           ; mutable animate_inv     : string M.t              (* Declares the name of the auto-derived inverse function.
+                                                                  It is possible that an inverse is declared in the hint, but
+                                                                  the function does not need to be inverted. In this case, there
+                                                                  will not be an entry in the [invert_funcs] list below.
+                                                                *)
+           ; mutable animate_rels    : mode IM.t M.t           (* Mode declaration for relations. In the order of expressions in the CaseE *)
+           ; mutable animate_manual : (string * mode IM.t) M.t  (* Name and mode of a relation or definition whose animated definition is going to be manually supplied. *)
            }
 
-  let animation_hints : t = { no_animate_funcs = []; animate_funcs = M.empty; animate_inv = []
-                            ; animate_rels = M.empty; animate_builtin = M.empty; no_animate_rules = []
+  let animation_hints : t = { no_animate_funcs = [];  no_animate_rules = []
+                            ; animate_funcs = M.empty; animate_inv = M.empty
+                            ; animate_rels = M.empty; animate_manual = M.empty
                             }
   let init_animation_hints () = animation_hints.no_animate_funcs <- [];
+                                animation_hints.no_animate_rules <- [];
                                 animation_hints.animate_funcs    <- M.empty;
-                                animation_hints.animate_inv      <- [];
+                                animation_hints.animate_inv      <- M.empty;
                                 animation_hints.animate_rels     <- M.empty;
-                                animation_hints.animate_builtin  <- M.empty;
-                                animation_hints.no_animate_rules <- []
+                                animation_hints.animate_manual   <- M.empty
 
-  let add_na_func fid          = animation_hints.no_animate_funcs <- animation_hints.no_animate_funcs @ [fid]
-  let add_a_func  fid args res = animation_hints.animate_funcs    <- M.add fid (args, res) animation_hints.animate_funcs
-  let add_a_inv fid            = animation_hints.animate_inv      <- animation_hints.animate_inv @ [fid]
-  let add_a_rel   rid mm       = animation_hints.animate_rels     <- M.add rid mm animation_hints.animate_rels
-  let add_a_builtin rid mm     = animation_hints.animate_builtin  <- M.add rid mm animation_hints.animate_builtin
+  let add_no_anim_func fid            = animation_hints.no_animate_funcs <- animation_hints.no_animate_funcs @ [fid]
+  let add_no_anim_rule rel_id rule_id = animation_hints.no_animate_rules <- animation_hints.no_animate_rules @ [(rel_id, rule_id)]
+  let add_anim_func  fid args res     = animation_hints.animate_funcs    <- M.add fid (args, res) animation_hints.animate_funcs
+  let add_anim_inv fid fid'           = animation_hints.animate_inv      <- M.add fid fid' animation_hints.animate_inv
+  let add_anim_rel   rid mm           = animation_hints.animate_rels     <- M.add rid mm animation_hints.animate_rels
+  let add_anim_manual rid fid_mm      = animation_hints.animate_manual  <- M.add rid fid_mm animation_hints.animate_manual
 
-  let is_na_func   fid = List.mem fid animation_hints.no_animate_funcs
-  let is_a_func    fid = M.mem fid animation_hints.animate_funcs
-  let is_a_inv     fid = (List.mem fid animation_hints.animate_inv) || (String.starts_with ~prefix:"proj_" fid)
-  let is_a_rel     rid = M.mem rid animation_hints.animate_rels
-  let is_a_builtin rid = M.mem rid animation_hints.animate_builtin
+  let is_no_anim_func fid             = List.mem fid animation_hints.no_animate_funcs
+  let is_no_anim_rule rel_id rule_id  = List.mem (rel_id, rule_id) animation_hints.no_animate_rules
+  let is_anim_func    fid             = M.mem fid animation_hints.animate_funcs
+  let is_anim_inv     fid             = M.mem fid animation_hints.animate_inv
+  let is_anim_rel     rid             = M.mem rid animation_hints.animate_rels
+  let is_anim_manual  rid             = M.mem rid animation_hints.animate_manual
 
-  let find_a_func    fid = M.find fid animation_hints.animate_funcs
-  let find_a_rel     rid = M.find rid animation_hints.animate_rels
-  let find_a_builtin rid = M.find rid animation_hints.animate_builtin
+  let find_anim_func    fid = M.find_opt fid animation_hints.animate_funcs
+  let find_anim_inv     fid = M.find_opt fid animation_hints.animate_inv
+  let find_anim_rel     rid = M.find_opt rid animation_hints.animate_rels
+  let find_anim_manual  rid = M.find_opt rid animation_hints.animate_manual
 
   type side = L | R
 
-  let parse_hintexp : El.Ast.exp -> mode IM.t =
+  let parse_mode : El.Ast.exp -> mode IM.t =
     let rec go side (exp: El.Ast.exp) mm = match exp.it with
     | HoleE (`Num i) -> if side = L then IM.add i In mm else IM.add i Out mm
     | VarE (b, []) when b.it = "bool" -> mm
@@ -215,9 +224,22 @@ module Hints = struct
       let lm = go L lhs IM.empty in
       let rm = go R rhs lm in
       rm
-    | _ -> print_endline ("Warning: Possibly ill-formed animate hint: " ^ El.Print.string_of_exp exp); IM.empty
+    | _ -> print_warn exp.at ("Ill-formed animate hint: " ^ El.Print.string_of_exp exp); IM.empty
 
-  (* A list of function ids that should be automatically inverted. *)
+  let parse_fid_mode : El.Ast.exp -> text * mode IM.t = fun exp ->
+    match exp.it with
+    | InfixE ({ it = CallE (fid, []); _ }, atom, mode) when atom.it = Xl.Atom.Colon -> let m = parse_mode mode in fid.it, m
+    | _ -> error exp.at "hint parser" ("Ill-formed animate_manual hint: " ^ El.Print.string_of_exp exp)
+
+  let parse_opt_fid : text -> El.Ast.exp -> text = fun fid exp ->
+    match exp.it with
+    | CallE (fid', []) -> fid'.it
+    | SeqE [] -> "inv_" ^ fid
+    | _ -> error exp.at "hint parser" ("Ill-formed animate_inv hint: " ^ El.Print.string_of_exp exp)
+
+  (* A list of function ids that should be automatically inverted. There won't be definitions
+     of these functions in the source code. The inverse functions' names can be looked up in the
+     animation_hints.animate_inv field above. Also see the comment there. *)
   let invert_funcs : id list ref = ref []  (* Def.func_def list *)
 
   let add_invert_func id = invert_funcs := id :: !invert_funcs

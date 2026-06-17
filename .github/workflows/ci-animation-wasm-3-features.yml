@@ -4,7 +4,7 @@ name: CI for DL meta-interpreter on Wasm-3.0 features
 on:
   push:
     branches: [ il-animate ]
-    paths: [ spectec/** ]
+    paths: [ spectec/**, specification/wasm-3.0/** ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -24,11 +24,13 @@ jobs:
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: 5.1.x
+          ocaml-compiler: 5.3.x
       - name: Setup Dune
         run: opam install --yes dune menhir mdx zarith tsort
       - name: Build
-        run: cd spectec && opam exec make
+        run: |
+          eval $(opam env)
+          cd spectec && make
       - name: Test wasm-3.0 features
         run: |
           cd spectec

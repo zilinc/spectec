@@ -25,8 +25,6 @@ val match_resulttype : context -> resulttype -> resulttype -> bool
 
 val match_storagetype : context -> storagetype -> storagetype -> bool
 
-val match_heaptype : context -> heaptype -> heaptype -> bool
-
 val match_comptype : context -> comptype -> comptype -> bool
 val match_deftype : context -> deftype -> deftype -> bool
 

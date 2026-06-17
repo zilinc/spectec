@@ -8,10 +8,10 @@ let typing_functions = ref []
 
 let rec transform_rulepr_prem prem =
   match prem.it with
-  | IterPr ([prem], iterexp) ->
+  | IterPr (prem, iterexp) ->
     prem
     |> transform_rulepr_prem
-    |> (fun new_prem -> IterPr ([new_prem], iterexp) $ prem.at)
+    |> (fun new_prem -> IterPr (new_prem, iterexp) $ prem.at)
   | IfPr ({ it = CmpE (`EqOp, _, { it = CallE (id, args); note; at; _ }, rhs); _ })
   when List.mem id.it !typing_functions ->
     IfPr (CallE (id, args @ [ExpA rhs $ rhs.at]) $$ at % note) $ prem.at
@@ -27,8 +27,8 @@ let transform_rulepr_clause (clause: clause) : clause =
 
 let transform_rulepr_def (def: def) : def =
   match def.it with
-  | RelD (id, mixop, t, rules) ->
-    RelD (id, mixop, t, List.map transform_rulepr_rule rules) $ def.at
+  | RelD (id, ps, mixop, t, rules) ->
+    RelD (id, ps, mixop, t, List.map transform_rulepr_rule rules) $ def.at
   | DecD (id, ps, t, clauses) ->
     DecD (id, ps, t, List.map transform_rulepr_clause clauses) $ def.at
   | _ -> def
@@ -44,11 +44,10 @@ let remove_or_exp e =
 let rec remove_or_prem prem =
   match prem.it with
   | IfPr e -> e |> remove_or_exp |> List.map (fun e' -> IfPr e' $ prem.at)
-  | IterPr ([prem], iterexp) ->
+  | IterPr (prem, iterexp) ->
     prem
     |> remove_or_prem
-    |> List.map (fun new_prem -> IterPr ([new_prem], iterexp) $ prem.at)
-  | IterPr (_, _) -> assert false
+    |> List.map (fun new_prem -> IterPr (new_prem, iterexp) $ prem.at)
   | _ -> [ prem ]
 
 let remove_or_rule rule =
@@ -86,8 +85,8 @@ let remove_or_clause clause =
 
 let remove_or def =
   match def.it with
-  | RelD (id, mixop, typ, rules) ->
-    RelD (id, mixop, typ, List.concat_map remove_or_rule rules) $ def.at
+  | RelD (id, params, mixop, typ, rules) ->
+    RelD (id, params, mixop, typ, List.concat_map remove_or_rule rules) $ def.at
   | DecD (id, params, typ, clauses) ->
     DecD (id, params, typ, List.concat_map remove_or_clause clauses) $ def.at
   | _ -> def
@@ -117,22 +116,21 @@ let is_block_context_rule rule =
   | _ -> false
 let remove_block_context def =
   match def.it with
-  | RelD (id, mixop, typ, rules) ->
-    RelD (id, mixop, typ, Util.Lib.List.filter_not is_block_context_rule rules) $ def.at
+  | RelD (id, params, mixop, typ, rules) ->
+    RelD (id, params, mixop, typ, Util.Lib.List.filter_not is_block_context_rule rules) $ def.at
   | _ -> def
 
 
 (* Pre-process a premise *)
 let rec preprocess_prem prem =
   match prem.it with
-  | IterPr ([prem], iterexp) ->
+  | IterPr (prem, iterexp) ->
     prem
     |> preprocess_prem
-    |> List.map (fun new_prem -> IterPr ([new_prem], iterexp) $ prem.at)
-  | IterPr (_, _) -> assert false
-  | RulePr (id, mixop, exp) ->
+    |> List.map (fun new_prem -> IterPr (new_prem, iterexp) $ prem.at)
+  | RulePr (id, _args, mixop, exp) ->
     let lhs_rhs_opt = 
-      match mixop, exp.it with
+      match Xl.Mixop.flatten mixop, exp.it with
       (* `id`: |- `lhs` : `rhs` *)
       | [[turnstile]; [colon]; []], TupE [lhs; rhs]
       (* `id`: C |- `lhs` : `rhs` *)
@@ -184,17 +182,16 @@ let preprocess_def (def: def) : def =
   match def'.it with
   | TypD (id, ps, insts) ->
     Al.Valid.il_env := Env.bind_typ !Al.Valid.il_env id (ps, insts); def'
-  | RelD (id, mixop, t, rules) ->
-    Al.Valid.il_env := Env.bind_rel !Al.Valid.il_env id (mixop, t, rules);
-    RelD (id, mixop, t, List.map preprocess_rule rules) $ def.at
+  | RelD (id, ps, mixop, t, rules) ->
+    Al.Valid.il_env := Env.bind_rel !Al.Valid.il_env id (ps, mixop, t, rules);
+    RelD (id, ps, mixop, t, List.map preprocess_rule rules) $ def.at
   | DecD (id, ps, t, clauses) ->
     Al.Valid.il_env := Env.bind_def !Al.Valid.il_env id (ps, t, clauses);
     DecD (id, ps, t, List.map preprocess_clause clauses) $ def.at
   | GramD (id, ps, t, prods) ->
     Al.Valid.il_env := Env.bind_gram !Al.Valid.il_env id (ps, t, prods); def'
   | RecD _ -> assert (false);
-  | HintD hintdef ->
-    Al.Valid.il_env := Env.add_hint !Al.Valid.il_env hintdef; def'
+  | HintD hintdef -> hintdefs := hintdef :: !hintdefs; def'
 
 let flatten_rec def =
   match def.it with
@@ -207,14 +204,14 @@ let preprocess (il: script) : rule_def list * helper_def list =
   let is_al_target def =
     match def.it with
     | DecD (id, _, _, _) when id.it = "utf8" -> None
-    | RelD (id, mixop, t, rules) when List.mem id.it [ "Step"; "Step_read"; "Step_pure" ] ->
+    | RelD (id, ps, mixop, t, rules) when List.mem id.it [ "Step"; "Step_read"; "Step_pure" ] ->
       (* HARDCODE: Exclude administrative rules *)
       let filter_rule rule =
         ["pure"; "read"; "trap"; "ctxt"]
         |> List.mem (name_of_rule rule)
         |> not
       in
-      Some (RelD (id, mixop, t, List.filter filter_rule rules) $ def.at)
+      Some (RelD (id, ps, mixop, t, List.filter filter_rule rules) $ def.at)
     | RelD _ -> None
     | _ -> Some def
   in

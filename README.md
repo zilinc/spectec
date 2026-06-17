@@ -5,6 +5,9 @@
 [![CI for specs](https://github.com/WebAssembly/spec/actions/workflows/ci-spec.yml/badge.svg)](https://github.com/WebAssembly/spec/actions/workflows/ci-spec.yml)
 [![CI for interpreter & tests](https://github.com/WebAssembly/spec/actions/workflows/ci-interpreter.yml/badge.svg)](https://github.com/WebAssembly/spec/actions/workflows/ci-interpreter.yml)
 
+[![IL meta-interpreter Wasm 3.0 core](https://github.com/zilinc/spectec/actions/workflows/ci-animation.yml/badge.svg?branch=il-animate)](https://github.com/zilinc/spectec/actions/workflows/ci-animation.yml)
+[![IL meta-interpreter Wasm 3.0 features](https://github.com/zilinc/spectec/actions/workflows/ci-animation-wasm-3-features.yml/badge.svg?branch=il-animate)](https://github.com/zilinc/spectec/actions/workflows/ci-animation-wasm-3-features.yml)
+
 
 # spec
 

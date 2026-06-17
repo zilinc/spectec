@@ -1,6 +1,5 @@
 open Il.Ast
 open Il.Env
-open Il2al.Free
 open Util.Error
 open Util.Source
 open Def
@@ -28,6 +27,10 @@ let string_of_occ occ : string =
     acc ^ k ^ " ↦ " ^ Occ.to_string v ^ "\n"
   ) occ ""
 
+let is_affine occ v : bool =
+  match Map.find_opt v occ with
+  | Some Occ.OmegaOcc -> false
+  | _                 -> true
 
 let inc_occ occ v : occ =
   Map.update v.it (Option.fold ~none:(Some Occ.LinOcc) ~some:(fun o -> Some (Occ.inc o))) occ
@@ -82,11 +85,11 @@ and occ_arg pred m occ arg : occ = match arg.it with
 and occ_prem pred m occ prem : occ =
   match prem.it with
   | IfPr exp -> occ_exp pred m occ exp
-  | LetPr(lhs, rhs, binds) -> occ_exp pred m occ rhs
+  | LetPr(_qs, lhs, rhs) -> occ_exp pred m occ rhs
   | ElsePr -> occ
-  | IterPr (prems, (iter, xes)) ->
+  | IterPr (prem1, (iter, xes)) ->
     let occ1 = List.fold_left (fun o (x, e) -> occ_exp pred m o e) occ xes in
-    let occ2 = occ_prems (fun v -> pred v && not (List.mem v (List.map fst xes))) `Many occ1 prems in
+    let occ2 = occ_prem (fun v -> pred v && not (List.mem v (List.map fst xes))) `Many occ1 prem1 in
     let occ3 = (match iter with
     | ListN (n, _) -> occ_exp pred m occ2 n
     | _ -> occ2
