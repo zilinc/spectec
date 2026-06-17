@@ -63,22 +63,21 @@ fun option_append :: "'a option ⇒ 'a option ⇒ 'a option" (infixl "@@@" 70) w
 	"option_append (Some x) _ = Some x" |
 	"option_append None y = y"
 
-fun list_alli_aux :: "(nat ⇒ 'a ⇒bool) ⇒ nat ⇒ 'a list ⇒ bool" where
+fun list_alli_aux :: "(nat ⇒ 'a ⇒ bool) ⇒ nat ⇒ 'a list ⇒ bool" where
 	"list_alli_aux f n [] = True" |
 	"list_alli_aux f n (x # q) = (f n x ∧ list_alli_aux f (Suc n) q)"
 
-definition list_alli :: "(nat ⇒ 'a ⇒bool) ⇒ 'a list ⇒ bool" where
+definition list_alli :: "(nat ⇒ 'a ⇒ bool) ⇒ 'a list ⇒ bool" where
 	"list_alli f l = list_alli_aux f 0 l"
 
-fun holds_upto :: "(nat ⇒ bool) ⇒ nat ⇒ bool" where
-	"holds_upto P 0 = P 0" |
-	"holds_upto P (Suc n) = (P (Suc n) ∧ holds_upto P n)"
+definition holds_upto :: "(nat ⇒ bool) ⇒ nat ⇒ bool" where
+	"holds_upto P n ≡ ∀ i < n. P i"
 
 (* Generated Code *)
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:162.14-162.17 *)
 datatype r_MUT =
 	  MUT
-	
+
 
 (* Type Alias Definition at: ../specification/wasm-2.0/0-aux.spectec:7.1-7.15 *)
 type_synonym N = "nat"
@@ -158,7 +157,7 @@ function (sequential) disjoint_underscore :: "('X list) ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:6.1-6.49 *)
 datatype 'X res_list  =
 	  mk_list "('X list)"
-	
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:6.1-6.49 *)
 function (sequential) proj_list_0 :: "('X res_list) ⇒ (('X list))" where
@@ -168,7 +167,7 @@ function (sequential) proj_list_0 :: "('X res_list) ⇒ (('X list))" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:15.1-15.36 *)
 datatype bit =
 	  mk_bit "nat"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:15.8-15.11 *)
 inductive wf_bit :: "bit ⇒ bool" where
@@ -179,7 +178,7 @@ inductive wf_bit :: "bit ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:16.1-16.50 *)
 datatype byte =
 	  mk_byte "nat"
-	
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:16.1-16.50 *)
 function (sequential) proj_byte_0 :: "byte ⇒ (nat)" where
@@ -195,7 +194,7 @@ inductive wf_byte :: "byte ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:18.1-19.25 *)
 datatype uN =
 	  mk_uN "nat"
-	
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:18.1-19.25 *)
 function (sequential) proj_uN_0 :: "uN ⇒ (nat)" where
@@ -211,7 +210,7 @@ inductive wf_uN :: "N ⇒ uN ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:20.1-21.49 *)
 datatype sN =
 	  mk_sN "nat"
-	
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:20.1-21.49 *)
 function (sequential) proj_sN_0 :: "sN ⇒ (nat)" where
@@ -355,7 +354,7 @@ type_synonym vN = "iN"
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:88.1-88.85 *)
 datatype res_char =
 	  mk_char "nat"
-	
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:88.1-88.85 *)
 function (sequential) proj_char_0 :: "res_char ⇒ (nat)" where
@@ -400,7 +399,7 @@ inductive utf8_is_wf :: "(res_char list) ⇒ (byte list) ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:92.1-92.70 *)
 datatype name =
 	  mk_name "(res_char list)"
-	
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:92.1-92.70 *)
 function (sequential) proj_name_0 :: "name ⇒ ((res_char list))" where
@@ -458,7 +457,7 @@ datatype numtype =
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:129.1-130.9 *)
 datatype vectype =
 	  V128
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:132.1-133.22 *)
 datatype consttype =
@@ -616,7 +615,7 @@ type_synonym mut = "(r_MUT option)"
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:164.1-165.17 *)
 datatype limits =
 	  mk_limits "u32" "(u32 option)"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:164.8-164.14 *)
 inductive wf_limits :: "limits ⇒ bool" where
@@ -627,17 +626,17 @@ inductive wf_limits :: "limits ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:167.1-168.14 *)
 datatype globaltype =
 	  mk_globaltype "mut" "valtype"
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:169.1-170.27 *)
 datatype functype =
 	  mk_functype "resulttype" "resulttype"
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:171.1-172.17 *)
 datatype tabletype =
 	  mk_tabletype "limits" "reftype"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:171.8-171.17 *)
 inductive wf_tabletype :: "tabletype ⇒ bool" where
@@ -648,7 +647,7 @@ inductive wf_tabletype :: "tabletype ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:173.1-174.14 *)
 datatype memtype =
 	  PAGE "limits"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:173.8-173.15 *)
 inductive wf_memtype :: "memtype ⇒ bool" where
@@ -662,7 +661,7 @@ type_synonym elemtype = "reftype"
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:177.1-178.5 *)
 datatype res_datatype =
 	  OK
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:179.1-180.70 *)
 datatype externtype =
@@ -687,7 +686,7 @@ inductive wf_externtype :: "externtype ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:318.1-318.60 *)
 datatype dim =
 	  mk_dim "nat"
-	
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:318.1-318.60 *)
 function (sequential) proj_dim_0 :: "dim ⇒ (nat)" where
@@ -703,7 +702,7 @@ inductive wf_dim :: "dim ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:319.1-319.69 *)
 datatype shape =
 	  X "lanetype" "dim"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:319.8-319.13 *)
 inductive wf_shape :: "shape ⇒ bool" where
@@ -906,7 +905,7 @@ datatype sx =
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:280.1-280.56 *)
 datatype sz =
 	  mk_sz "nat"
-	
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:280.1-280.56 *)
 function (sequential) proj_sz_0 :: "sz ⇒ (nat)" where
@@ -1016,12 +1015,12 @@ function (sequential) proj_binop__1 :: "binop_underscore ⇒ (binop_Fnn option)"
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:293.1-293.24 *)
 datatype testop_Inn =
 	  EQZ
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:293.1-293.24 *)
 datatype testop_underscore =
 	  mk_testop__0 "Inn" "testop_Inn"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:293.8-293.16 *)
 inductive wf_testop_underscore :: "numtype ⇒ testop_underscore ⇒ bool" where
@@ -1092,7 +1091,7 @@ datatype cvtop =
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:320.1-320.69 *)
 datatype ishape =
 	  ishape_X "Jnn" "dim"
-	
+
 
 (* Auxiliary Definition at:  *)
 function (sequential) shape_ishape :: "ishape ⇒ shape" where
@@ -1108,7 +1107,7 @@ inductive wf_ishape :: "ishape ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:321.1-321.69 *)
 datatype fshape =
 	  fshape_X "Fnn" "dim"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:321.8-321.14 *)
 inductive wf_fshape :: "fshape ⇒ bool" where
@@ -1119,7 +1118,7 @@ inductive wf_fshape :: "fshape ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:322.1-322.69 *)
 datatype pshape =
 	  pshape_X "Pnn" "dim"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:322.8-322.14 *)
 inductive wf_pshape :: "pshape ⇒ bool" where
@@ -1147,7 +1146,7 @@ function (sequential) shsize :: "shape ⇒ nat" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:327.1-327.20 *)
 datatype vvunop =
 	  NOT
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:328.1-328.41 *)
 datatype vvbinop =
@@ -1159,12 +1158,12 @@ datatype vvbinop =
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:329.1-329.28 *)
 datatype vvternop =
 	  BITSELECT
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:330.1-330.27 *)
 datatype vvtestop =
 	  ANY_TRUE
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:332.1-332.21 *)
 datatype vunop_Jnn_N =
@@ -1300,12 +1299,12 @@ function (sequential) proj_vbinop__1 :: "vbinop_underscore ⇒ (vbinop_Fnn_N opt
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.1-350.23 *)
 datatype vtestop_Jnn_N =
 	  ALL_TRUE
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.1-350.23 *)
 datatype vtestop_underscore =
 	  mk_vtestop__0 "Jnn" "N" "vtestop_Jnn_N"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.8-350.17 *)
 inductive wf_vtestop_underscore :: "shape ⇒ vtestop_underscore ⇒ bool" where
@@ -1390,7 +1389,7 @@ datatype half =
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:363.1-363.19 *)
 datatype zero =
 	  ZERO
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:365.1-365.99 *)
 datatype vcvtop =
@@ -1408,7 +1407,7 @@ datatype vshiftop_Jnn_N =
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:367.1-367.25 *)
 datatype vshiftop_underscore =
 	  mk_vshiftop__0 "Jnn" "N" "vshiftop_Jnn_N"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:367.8-367.18 *)
 inductive wf_vshiftop_underscore :: "ishape ⇒ vshiftop_underscore ⇒ bool" where
@@ -1424,7 +1423,7 @@ function (sequential) proj_vshiftop__0 :: "vshiftop_underscore ⇒ vshiftop_Jnn_
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:370.1-370.25 *)
 datatype vextunop_Jnn_N =
 	  EXTADD_PAIRWISE "sx"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:370.8-370.18 *)
 inductive wf_vextunop_Jnn_N :: "Jnn ⇒ N ⇒ vextunop_Jnn_N ⇒ bool" where
@@ -1435,7 +1434,7 @@ inductive wf_vextunop_Jnn_N :: "Jnn ⇒ N ⇒ vextunop_Jnn_N ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:370.1-370.25 *)
 datatype vextunop_underscore =
 	  mk_vextunop__0 "Jnn" "N" "vextunop_Jnn_N"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:370.8-370.18 *)
 inductive wf_vextunop_underscore :: "ishape ⇒ vextunop_underscore ⇒ bool" where
@@ -1465,7 +1464,7 @@ inductive wf_vextbinop_Jnn_N :: "Jnn ⇒ N ⇒ vextbinop_Jnn_N ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:373.1-373.26 *)
 datatype vextbinop_underscore =
 	  mk_vextbinop__0 "Jnn" "N" "vextbinop_Jnn_N"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:373.8-373.19 *)
 inductive wf_vextbinop_underscore :: "ishape ⇒ vextbinop_underscore ⇒ bool" where
@@ -1502,7 +1501,7 @@ inductive wf_memarg :: "memarg ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:385.1-385.24 *)
 datatype loadop_Inn =
 	  mk_loadop_Inn "sz" "sx"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:385.8-385.16 *)
 inductive wf_loadop_Inn :: "Inn ⇒ loadop_Inn ⇒ bool" where
@@ -1514,7 +1513,7 @@ inductive wf_loadop_Inn :: "Inn ⇒ loadop_Inn ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:385.1-385.24 *)
 datatype loadop_underscore =
 	  mk_loadop__0 "Inn" "loadop_Inn"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:385.8-385.16 *)
 inductive wf_loadop_underscore :: "numtype ⇒ loadop_underscore ⇒ bool" where
@@ -1917,17 +1916,17 @@ inductive wf_datamode :: "datamode ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:539.1-540.16 *)
 datatype type =
 	  res_TYPE "functype"
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:541.1-542.16 *)
 datatype local =
 	  LOCAL "valtype"
-	
+
 
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:543.1-544.27 *)
 datatype func =
 	  func_FUNC "typeidx" "(local list)" "expr"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:543.8-543.12 *)
 inductive wf_func :: "func ⇒ bool" where
@@ -1939,7 +1938,7 @@ inductive wf_func :: "func ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:545.1-546.25 *)
 datatype global =
 	  global_GLOBAL "globaltype" "expr"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:545.8-545.14 *)
 inductive wf_global :: "global ⇒ bool" where
@@ -1950,7 +1949,7 @@ inductive wf_global :: "global ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:547.1-548.18 *)
 datatype table =
 	  table_TABLE "tabletype"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:547.8-547.13 *)
 inductive wf_table :: "table ⇒ bool" where
@@ -1961,7 +1960,7 @@ inductive wf_table :: "table ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:549.1-550.17 *)
 datatype mem =
 	  MEMORY "memtype"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:549.8-549.11 *)
 inductive wf_mem :: "mem ⇒ bool" where
@@ -1972,7 +1971,7 @@ inductive wf_mem :: "mem ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:551.1-552.30 *)
 datatype elem =
 	  ELEM "reftype" "(expr list)" "elemmode"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:551.8-551.12 *)
 inductive wf_elem :: "elem ⇒ bool" where
@@ -1984,7 +1983,7 @@ inductive wf_elem :: "elem ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:553.1-554.22 *)
 datatype data =
 	  DATA "(byte list)" "datamode"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:553.8-553.12 *)
 inductive wf_data :: "data ⇒ bool" where
@@ -1996,7 +1995,7 @@ inductive wf_data :: "data ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:555.1-556.16 *)
 datatype start =
 	  START "funcidx"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:555.8-555.13 *)
 inductive wf_start :: "start ⇒ bool" where
@@ -2029,7 +2028,7 @@ inductive wf_externidx :: "externidx ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:560.1-561.24 *)
 datatype export =
 	  EXPORT "name" "externidx"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:560.8-560.14 *)
 inductive wf_export :: "export ⇒ bool" where
@@ -2041,7 +2040,7 @@ inductive wf_export :: "export ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:562.1-563.30 *)
 datatype import =
 	  IMPORT "name" "name" "externtype"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:562.8-562.14 *)
 inductive wf_import :: "import ⇒ bool" where
@@ -2054,7 +2053,7 @@ inductive wf_import :: "import ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:565.1-566.76 *)
 datatype module =
 	  MODULE "(type list)" "(import list)" "(func list)" "(global list)" "(table list)" "(mem list)" "(elem list)" "(data list)" "(start option)" "(export list)"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:565.8-565.14 *)
 inductive wf_module :: "module ⇒ bool" where
@@ -5391,43 +5390,43 @@ sorry
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I8_mkdim_X_I8 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I8_mkdim_X_I8 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I8 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Jnn Jnn_I8)) v_sx iN_1) in 
+		  "vcvtop___X_I8_mkdim_X_I8 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I8 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Jnn Jnn_I8)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I8 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I8_mkdim_X_I64 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I8_mkdim_X_I64 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I8 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Jnn Jnn_I64)) v_sx iN_1) in 
+		  "vcvtop___X_I8_mkdim_X_I64 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I8 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Jnn Jnn_I64)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I64 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I8_mkdim_X_I32 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I8_mkdim_X_I32 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I8 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Jnn Jnn_I32)) v_sx iN_1) in 
+		  "vcvtop___X_I8_mkdim_X_I32 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I8 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Jnn Jnn_I32)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I32 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I8_mkdim_X_I16 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I8_mkdim_X_I16 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I8 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Jnn Jnn_I16)) v_sx iN_1) in 
+		  "vcvtop___X_I8_mkdim_X_I16 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I8 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Jnn Jnn_I16)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I16 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I8_mkdim_X_F64 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I8_mkdim_X_F64 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I8 iN_1) = 
-			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Fnn Fnn_F64)) v_sx iN_1) in 
+		  "vcvtop___X_I8_mkdim_X_F64 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I8 iN_1) =
+			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Fnn Fnn_F64)) v_sx iN_1) in
 			 [(mk_lane__0 (numtype_Fnn Fnn_F64) (mk_num__1 Fnn_F64 fN_2))])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I8_mkdim_X_F32 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I8_mkdim_X_F32 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I8 iN_1) = 
-			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Fnn Fnn_F32)) v_sx iN_1) in 
+		  "vcvtop___X_I8_mkdim_X_F32 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I8 iN_1) =
+			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I8)) (lsizenn2 (lanetype_Fnn Fnn_F32)) v_sx iN_1) in
 			 [(mk_lane__0 (numtype_Fnn Fnn_F32) (mk_num__1 Fnn_F32 fN_2))])"
 	by pat_completeness auto
 
@@ -5453,43 +5452,43 @@ function (sequential) vcvtop___X_I8 :: "dim ⇒ shape ⇒ vcvtop ⇒ lane_unders
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I64_mkdim_X_I8 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I64_mkdim_X_I8 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I64 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Jnn Jnn_I8)) v_sx iN_1) in 
+		  "vcvtop___X_I64_mkdim_X_I8 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I64 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Jnn Jnn_I8)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I8 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I64_mkdim_X_I64 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I64_mkdim_X_I64 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I64 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Jnn Jnn_I64)) v_sx iN_1) in 
+		  "vcvtop___X_I64_mkdim_X_I64 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I64 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Jnn Jnn_I64)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I64 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I64_mkdim_X_I32 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I64_mkdim_X_I32 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I64 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Jnn Jnn_I32)) v_sx iN_1) in 
+		  "vcvtop___X_I64_mkdim_X_I32 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I64 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Jnn Jnn_I32)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I32 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I64_mkdim_X_I16 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I64_mkdim_X_I16 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I64 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Jnn Jnn_I16)) v_sx iN_1) in 
+		  "vcvtop___X_I64_mkdim_X_I16 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I64 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Jnn Jnn_I16)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I16 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I64_mkdim_X_F64 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I64_mkdim_X_F64 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I64 iN_1) = 
-			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Fnn Fnn_F64)) v_sx iN_1) in 
+		  "vcvtop___X_I64_mkdim_X_F64 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I64 iN_1) =
+			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Fnn Fnn_F64)) v_sx iN_1) in
 			 [(mk_lane__0 (numtype_Fnn Fnn_F64) (mk_num__1 Fnn_F64 fN_2))])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I64_mkdim_X_F32 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I64_mkdim_X_F32 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I64 iN_1) = 
-			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Fnn Fnn_F32)) v_sx iN_1) in 
+		  "vcvtop___X_I64_mkdim_X_F32 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I64 iN_1) =
+			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I64)) (lsizenn2 (lanetype_Fnn Fnn_F32)) v_sx iN_1) in
 			 [(mk_lane__0 (numtype_Fnn Fnn_F32) (mk_num__1 Fnn_F32 fN_2))])"
 	by pat_completeness auto
 
@@ -5515,43 +5514,43 @@ function (sequential) vcvtop___X_I64 :: "dim ⇒ shape ⇒ vcvtop ⇒ lane_under
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I32_mkdim_X_I8 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I32_mkdim_X_I8 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I32 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Jnn Jnn_I8)) v_sx iN_1) in 
+		  "vcvtop___X_I32_mkdim_X_I8 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I32 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Jnn Jnn_I8)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I8 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I32_mkdim_X_I64 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I32_mkdim_X_I64 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I32 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Jnn Jnn_I64)) v_sx iN_1) in 
+		  "vcvtop___X_I32_mkdim_X_I64 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I32 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Jnn Jnn_I64)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I64 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I32_mkdim_X_I32 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I32_mkdim_X_I32 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I32 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Jnn Jnn_I32)) v_sx iN_1) in 
+		  "vcvtop___X_I32_mkdim_X_I32 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I32 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Jnn Jnn_I32)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I32 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I32_mkdim_X_I16 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I32_mkdim_X_I16 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I32 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Jnn Jnn_I16)) v_sx iN_1) in 
+		  "vcvtop___X_I32_mkdim_X_I16 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I32 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Jnn Jnn_I16)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I16 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I32_mkdim_X_F64 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I32_mkdim_X_F64 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I32 iN_1) = 
-			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Fnn Fnn_F64)) v_sx iN_1) in 
+		  "vcvtop___X_I32_mkdim_X_F64 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I32 iN_1) =
+			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Fnn Fnn_F64)) v_sx iN_1) in
 			 [(mk_lane__0 (numtype_Fnn Fnn_F64) (mk_num__1 Fnn_F64 fN_2))])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I32_mkdim_X_F32 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I32_mkdim_X_F32 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I32 iN_1) = 
-			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Fnn Fnn_F32)) v_sx iN_1) in 
+		  "vcvtop___X_I32_mkdim_X_F32 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I32 iN_1) =
+			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I32)) (lsizenn2 (lanetype_Fnn Fnn_F32)) v_sx iN_1) in
 			 [(mk_lane__0 (numtype_Fnn Fnn_F32) (mk_num__1 Fnn_F32 fN_2))])"
 	by pat_completeness auto
 
@@ -5577,43 +5576,43 @@ function (sequential) vcvtop___X_I32 :: "dim ⇒ shape ⇒ vcvtop ⇒ lane_under
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I16_mkdim_X_I8 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I16_mkdim_X_I8 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I16 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Jnn Jnn_I8)) v_sx iN_1) in 
+		  "vcvtop___X_I16_mkdim_X_I8 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I16 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Jnn Jnn_I8)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I8 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I16_mkdim_X_I64 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I16_mkdim_X_I64 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I16 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Jnn Jnn_I64)) v_sx iN_1) in 
+		  "vcvtop___X_I16_mkdim_X_I64 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I16 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Jnn Jnn_I64)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I64 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I16_mkdim_X_I32 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I16_mkdim_X_I32 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I16 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Jnn Jnn_I32)) v_sx iN_1) in 
+		  "vcvtop___X_I16_mkdim_X_I32 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I16 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Jnn Jnn_I32)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I32 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I16_mkdim_X_I16 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I16_mkdim_X_I16 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I16 iN_1) = 
-			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Jnn Jnn_I16)) v_sx iN_1) in 
+		  "vcvtop___X_I16_mkdim_X_I16 M_1 (mk_dim M_2) (vcvtop_EXTEND v_half v_sx) (mk_lane__2 Jnn_I16 iN_1) =
+			 (let iN_2 = (extend__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Jnn Jnn_I16)) v_sx iN_1) in
 			 [(mk_lane__2 Jnn_I16 iN_2)])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I16_mkdim_X_F64 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I16_mkdim_X_F64 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I16 iN_1) = 
-			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Fnn Fnn_F64)) v_sx iN_1) in 
+		  "vcvtop___X_I16_mkdim_X_F64 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I16 iN_1) =
+			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Fnn Fnn_F64)) v_sx iN_1) in
 			 [(mk_lane__0 (numtype_Fnn Fnn_F64) (mk_num__1 Fnn_F64 fN_2))])"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_I16_mkdim_X_F32 :: "nat ⇒ dim ⇒ vcvtop ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_I16_mkdim_X_F32 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I16 iN_1) = 
-			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Fnn Fnn_F32)) v_sx iN_1) in 
+		  "vcvtop___X_I16_mkdim_X_F32 M_1 (mk_dim M_2) (vcvtop_CONVERT half_opt v_sx) (mk_lane__2 Jnn_I16 iN_1) =
+			 (let fN_2 = (convert__underscore (lsizenn1 (lanetype_Jnn Jnn_I16)) (lsizenn2 (lanetype_Fnn Fnn_F32)) v_sx iN_1) in
 			 [(mk_lane__0 (numtype_Fnn Fnn_F32) (mk_num__1 Fnn_F32 fN_2))])"
 	by pat_completeness auto
 
@@ -5639,8 +5638,8 @@ function (sequential) vcvtop___X_I16 :: "dim ⇒ shape ⇒ vcvtop ⇒ lane_under
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F64_mkdim_X_I64_mkdim_TRUNCSAT :: "nat ⇒ nat ⇒ sx ⇒ (zero option) ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F64_mkdim_X_I64_mkdim_TRUNCSAT M_1 M_2 v_sx zero_opt (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) = 
-			 (let iN_2_opt = (trunc_sat__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Inn Inn_I64)) v_sx fN_1) in 
+		  "vcvtop___X_F64_mkdim_X_I64_mkdim_TRUNCSAT M_1 M_2 v_sx zero_opt (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) =
+			 (let iN_2_opt = (trunc_sat__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Inn Inn_I64)) v_sx fN_1) in
 			 (list_underscore  (map_option (λ (iN_2_8 :: iN). (mk_lane__0 (numtype_Inn Inn_I64) (mk_num__0 Inn_I64 iN_2_8))) iN_2_opt)))"
 	by pat_completeness auto
 
@@ -5656,8 +5655,8 @@ function (sequential) vcvtop___X_F64_mkdim_X_I64 :: "nat ⇒ dim ⇒ vcvtop ⇒ 
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F64_mkdim_X_I32_mkdim_TRUNCSAT :: "nat ⇒ nat ⇒ sx ⇒ (zero option) ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F64_mkdim_X_I32_mkdim_TRUNCSAT M_1 M_2 v_sx zero_opt (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) = 
-			 (let iN_2_opt = (trunc_sat__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Inn Inn_I32)) v_sx fN_1) in 
+		  "vcvtop___X_F64_mkdim_X_I32_mkdim_TRUNCSAT M_1 M_2 v_sx zero_opt (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) =
+			 (let iN_2_opt = (trunc_sat__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Inn Inn_I32)) v_sx fN_1) in
 			 (list_underscore  (map_option (λ (iN_2_6 :: iN). (mk_lane__0 (numtype_Inn Inn_I32) (mk_num__0 Inn_I32 iN_2_6))) iN_2_opt)))"
 	by pat_completeness auto
 
@@ -5673,15 +5672,15 @@ function (sequential) vcvtop___X_F64_mkdim_X_I32 :: "nat ⇒ dim ⇒ vcvtop ⇒ 
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F64_mkdim_X_F64_mkdim_PROMOTELOW :: "nat ⇒ nat ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F64_mkdim_X_F64_mkdim_PROMOTELOW M_1 M_2 (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) = 
-			 (let fN_2_lst = (promote__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Fnn Fnn_F64)) fN_1) in 
+		  "vcvtop___X_F64_mkdim_X_F64_mkdim_PROMOTELOW M_1 M_2 (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) =
+			 (let fN_2_lst = (promote__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Fnn Fnn_F64)) fN_1) in
 			 (map (λ (fN_2_16 :: fN). (mk_lane__0 (numtype_Fnn Fnn_F64) (mk_num__1 Fnn_F64 fN_2_16))) fN_2_lst))"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F64_mkdim_X_F64_mkdim_DEMOTE :: "nat ⇒ nat ⇒ zero ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F64_mkdim_X_F64_mkdim_DEMOTE M_1 M_2 ZERO (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) = 
-			 (let fN_2_lst = (demote__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Fnn Fnn_F64)) fN_1) in 
+		  "vcvtop___X_F64_mkdim_X_F64_mkdim_DEMOTE M_1 M_2 ZERO (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) =
+			 (let fN_2_lst = (demote__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Fnn Fnn_F64)) fN_1) in
 			 (map (λ (fN_2_8 :: fN). (mk_lane__0 (numtype_Fnn Fnn_F64) (mk_num__1 Fnn_F64 fN_2_8))) fN_2_lst))"
 	by pat_completeness auto
 
@@ -5698,15 +5697,15 @@ function (sequential) vcvtop___X_F64_mkdim_X_F64 :: "nat ⇒ dim ⇒ vcvtop ⇒ 
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F64_mkdim_X_F32_mkdim_PROMOTELOW :: "nat ⇒ nat ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F64_mkdim_X_F32_mkdim_PROMOTELOW M_1 M_2 (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) = 
-			 (let fN_2_lst = (promote__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Fnn Fnn_F32)) fN_1) in 
+		  "vcvtop___X_F64_mkdim_X_F32_mkdim_PROMOTELOW M_1 M_2 (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) =
+			 (let fN_2_lst = (promote__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Fnn Fnn_F32)) fN_1) in
 			 (map (λ (fN_2_14 :: fN). (mk_lane__0 (numtype_Fnn Fnn_F32) (mk_num__1 Fnn_F32 fN_2_14))) fN_2_lst))"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F64_mkdim_X_F32_mkdim_DEMOTE :: "nat ⇒ nat ⇒ zero ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F64_mkdim_X_F32_mkdim_DEMOTE M_1 M_2 ZERO (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) = 
-			 (let fN_2_lst = (demote__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Fnn Fnn_F32)) fN_1) in 
+		  "vcvtop___X_F64_mkdim_X_F32_mkdim_DEMOTE M_1 M_2 ZERO (mk_lane__0 F64 (mk_num__1 Fnn_F64 fN_1)) =
+			 (let fN_2_lst = (demote__underscore (lsizenn1 (lanetype_Fnn Fnn_F64)) (lsizenn2 (lanetype_Fnn Fnn_F32)) fN_1) in
 			 (map (λ (fN_2_6 :: fN). (mk_lane__0 (numtype_Fnn Fnn_F32) (mk_num__1 Fnn_F32 fN_2_6))) fN_2_lst))"
 	by pat_completeness auto
 
@@ -5741,8 +5740,8 @@ function (sequential) vcvtop___X_F64 :: "dim ⇒ shape ⇒ vcvtop ⇒ lane_under
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F32_mkdim_X_I64_mkdim_TRUNCSAT :: "nat ⇒ nat ⇒ sx ⇒ (zero option) ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F32_mkdim_X_I64_mkdim_TRUNCSAT M_1 M_2 v_sx zero_opt (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) = 
-			 (let iN_2_opt = (trunc_sat__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Inn Inn_I64)) v_sx fN_1) in 
+		  "vcvtop___X_F32_mkdim_X_I64_mkdim_TRUNCSAT M_1 M_2 v_sx zero_opt (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) =
+			 (let iN_2_opt = (trunc_sat__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Inn Inn_I64)) v_sx fN_1) in
 			 (list_underscore  (map_option (λ (iN_2_4 :: iN). (mk_lane__0 (numtype_Inn Inn_I64) (mk_num__0 Inn_I64 iN_2_4))) iN_2_opt)))"
 	by pat_completeness auto
 
@@ -5758,8 +5757,8 @@ function (sequential) vcvtop___X_F32_mkdim_X_I64 :: "nat ⇒ dim ⇒ vcvtop ⇒ 
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F32_mkdim_X_I32_mkdim_TRUNCSAT :: "nat ⇒ nat ⇒ sx ⇒ (zero option) ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F32_mkdim_X_I32_mkdim_TRUNCSAT M_1 M_2 v_sx zero_opt (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) = 
-			 (let iN_2_opt = (trunc_sat__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Inn Inn_I32)) v_sx fN_1) in 
+		  "vcvtop___X_F32_mkdim_X_I32_mkdim_TRUNCSAT M_1 M_2 v_sx zero_opt (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) =
+			 (let iN_2_opt = (trunc_sat__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Inn Inn_I32)) v_sx fN_1) in
 			 (list_underscore  (map_option (λ (iN_2_2 :: iN). (mk_lane__0 (numtype_Inn Inn_I32) (mk_num__0 Inn_I32 iN_2_2))) iN_2_opt)))"
 	by pat_completeness auto
 
@@ -5775,15 +5774,15 @@ function (sequential) vcvtop___X_F32_mkdim_X_I32 :: "nat ⇒ dim ⇒ vcvtop ⇒ 
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F32_mkdim_X_F64_mkdim_PROMOTELOW :: "nat ⇒ nat ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F32_mkdim_X_F64_mkdim_PROMOTELOW M_1 M_2 (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) = 
-			 (let fN_2_lst = (promote__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Fnn Fnn_F64)) fN_1) in 
+		  "vcvtop___X_F32_mkdim_X_F64_mkdim_PROMOTELOW M_1 M_2 (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) =
+			 (let fN_2_lst = (promote__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Fnn Fnn_F64)) fN_1) in
 			 (map (λ (fN_2_12 :: fN). (mk_lane__0 (numtype_Fnn Fnn_F64) (mk_num__1 Fnn_F64 fN_2_12))) fN_2_lst))"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F32_mkdim_X_F64_mkdim_DEMOTE :: "nat ⇒ nat ⇒ zero ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F32_mkdim_X_F64_mkdim_DEMOTE M_1 M_2 ZERO (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) = 
-			 (let fN_2_lst = (demote__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Fnn Fnn_F64)) fN_1) in 
+		  "vcvtop___X_F32_mkdim_X_F64_mkdim_DEMOTE M_1 M_2 ZERO (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) =
+			 (let fN_2_lst = (demote__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Fnn Fnn_F64)) fN_1) in
 			 (map (λ (fN_2_4 :: fN). (mk_lane__0 (numtype_Fnn Fnn_F64) (mk_num__1 Fnn_F64 fN_2_4))) fN_2_lst))"
 	by pat_completeness auto
 
@@ -5800,15 +5799,15 @@ function (sequential) vcvtop___X_F32_mkdim_X_F64 :: "nat ⇒ dim ⇒ vcvtop ⇒ 
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F32_mkdim_X_F32_mkdim_PROMOTELOW :: "nat ⇒ nat ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F32_mkdim_X_F32_mkdim_PROMOTELOW M_1 M_2 (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) = 
-			 (let fN_2_lst = (promote__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Fnn Fnn_F32)) fN_1) in 
+		  "vcvtop___X_F32_mkdim_X_F32_mkdim_PROMOTELOW M_1 M_2 (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) =
+			 (let fN_2_lst = (promote__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Fnn Fnn_F32)) fN_1) in
 			 (map (λ (fN_2_10 :: fN). (mk_lane__0 (numtype_Fnn Fnn_F32) (mk_num__1 Fnn_F32 fN_2_10))) fN_2_lst))"
 	by pat_completeness auto
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:383.1-384.41 *)
 function (sequential) vcvtop___X_F32_mkdim_X_F32_mkdim_DEMOTE :: "nat ⇒ nat ⇒ zero ⇒ lane_underscore ⇒ (lane_underscore list)" where
-		  "vcvtop___X_F32_mkdim_X_F32_mkdim_DEMOTE M_1 M_2 ZERO (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) = 
-			 (let fN_2_lst = (demote__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Fnn Fnn_F32)) fN_1) in 
+		  "vcvtop___X_F32_mkdim_X_F32_mkdim_DEMOTE M_1 M_2 ZERO (mk_lane__0 F32 (mk_num__1 Fnn_F32 fN_1)) =
+			 (let fN_2_lst = (demote__underscore (lsizenn1 (lanetype_Fnn Fnn_F32)) (lsizenn2 (lanetype_Fnn Fnn_F32)) fN_1) in
 			 (map (λ (fN_2_2 :: fN). (mk_lane__0 (numtype_Fnn Fnn_F32) (mk_num__1 Fnn_F32 fN_2_2))) fN_2_lst))"
 	by pat_completeness auto
 
@@ -6132,7 +6131,7 @@ datatype externaddr =
 (* Inductive Type Definition at: ../specification/wasm-2.0/4-runtime.spectec:37.1-38.62 *)
 datatype num =
 	  num_CONST "numtype" "num_underscore"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:37.8-37.11 *)
 inductive wf_num :: "num ⇒ bool" where
@@ -6143,7 +6142,7 @@ inductive wf_num :: "num ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/4-runtime.spectec:39.1-40.62 *)
 datatype vec =
 	  vec_VCONST "vectype" "vec_underscore"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:39.8-39.11 *)
 inductive wf_vec :: "vec ⇒ bool" where
@@ -6416,7 +6415,7 @@ inductive wf_frame :: "frame ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/4-runtime.spectec:116.1-116.47 *)
 datatype state =
 	  mk_state "store" "frame"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:116.8-116.13 *)
 inductive wf_state :: "state ⇒ bool" where
@@ -6875,7 +6874,7 @@ inductive wf_admininstr :: "admininstr ⇒ bool" where
 (* Inductive Type Definition at: ../specification/wasm-2.0/4-runtime.spectec:117.1-117.62 *)
 datatype config =
 	  mk_config "state" "(admininstr list)"
-	
+
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:117.8-117.14 *)
 inductive wf_config :: "config ⇒ bool" where
@@ -8866,7 +8865,6 @@ inductive Step :: "config ⇒ config ⇒ bool" where
 		 Step (mk_config z admininstr_lst) (mk_config z admininstr'_lst)"
 	| read :
 		"(Step_read (mk_config z admininstr_lst) admininstr'_lst) ⟹
-		 (wf_config (mk_config z admininstr_lst)) ⟹
 		 Step (mk_config z admininstr_lst) (mk_config z admininstr'_lst)"
 	| ctxt_label :
 		"(Step (mk_config z admininstr_lst) (mk_config z' admininstr'_lst)) ⟹
@@ -9333,8 +9331,8 @@ sorry
 function (sequential) runelem :: "elem ⇒ idx ⇒ (instr list)" where
 		  "runelem (ELEM v_reftype expr_lst PASSIVE) i = []"
 		| "runelem (ELEM v_reftype expr_lst DECLARE) i = [(instr_subcase_5 (ELEM_DROP i))]"
-		| "runelem (ELEM v_reftype expr_lst (ACTIVE x instr_lst)) i = 
-			 (let v_n = (length expr_lst) in 
+		| "runelem (ELEM v_reftype expr_lst (ACTIVE x instr_lst)) i =
+			 (let v_n = (length expr_lst) in
 			 (instr_lst @ [(instr_subcase_1 (res_CONST I32 (mk_num__0 Inn_I32 (mk_uN 0)))), (instr_subcase_1 (res_CONST I32 (mk_num__0 Inn_I32 (mk_uN v_n)))), (instr_subcase_5 (TABLE_INIT x i)), (instr_subcase_5 (ELEM_DROP i))]))"
 	by pat_completeness auto
 
@@ -9349,8 +9347,8 @@ sorry
 (* Auxiliary Definition at: ../specification/wasm-2.0/9-module.spectec:161.1-161.47 *)
 function (sequential) rundata :: "data ⇒ idx ⇒ ((instr list) option)" where
 		  "rundata (DATA byte_lst datamode_PASSIVE) i = (Some [])"
-		| "rundata (DATA byte_lst (datamode_ACTIVE (mk_uN 0) instr_lst)) i = 
-			 (let v_n = (length byte_lst) in 
+		| "rundata (DATA byte_lst (datamode_ACTIVE (mk_uN 0) instr_lst)) i =
+			 (let v_n = (length byte_lst) in
 			 (Some (instr_lst @ [(instr_subcase_1 (res_CONST I32 (mk_num__0 Inn_I32 (mk_uN 0)))), (instr_subcase_1 (res_CONST I32 (mk_num__0 Inn_I32 (mk_uN v_n)))), (instr_subcase_7 (MEMORY_INIT i)), (instr_subcase_7 (DATA_DROP i))])))"
 		| "rundata x0 x1 = None"
 	by pat_completeness auto
@@ -9390,8 +9388,8 @@ inductive fun_instantiate :: "store ⇒ module ⇒ (externaddr list) ⇒ config 
 		 list_all2 (λ (expr_E_lst_2 :: (expr list)) (ref_lst_3 :: (ref list)). list_all2 (λ (expr_E_2 :: expr) (ref_7 :: ref). (Eval_expr z expr_E_2 z [(val_ref ref_7)])) expr_E_lst_2 ref_lst_3) expr_E_lst_lst ref_lst_lst ⟹
 		 ((s', v_moduleinst) = var_2) ⟹
 		 (f = ⦇ LOCALS = [], frame_MODULE = v_moduleinst ⦈) ⟹
-		 holds_upto (λ i_50539. (i_50539 < (length elem_lst))) n_E ⟹
-		 (instr_E_lst = (concat_underscore  (mkseq (λ i_50539. (runelem (elem_lst ! i_50539) (mk_uN i_50539))) n_E))) ⟹
+		 holds_upto (λ i_71298. (i_71298 < (length elem_lst))) n_E ⟹
+		 (instr_E_lst = (concat_underscore  (mkseq (λ i_71298. (runelem (elem_lst ! i_71298) (mk_uN i_71298))) n_E))) ⟹
 		 holds_upto (λ j_17. ((rundata (data_lst ! j_17) (mk_uN j_17)) ≠ None)) n_D ⟹
 		 holds_upto (λ j_17. (j_17 < (length data_lst))) n_D ⟹
 		 (instr_D_lst = (concat_underscore  (mkseq (λ j_17. (the ((rundata (data_lst ! j_17) (mk_uN j_17))))) n_D))) ⟹
@@ -9407,7 +9405,7 @@ inductive fun_instantiate :: "store ⇒ module ⇒ (externaddr list) ⇒ config 
 		 (wf_frame ⦇ LOCALS = [], frame_MODULE = moduleinst_init ⦈) ⟹
 		 (wf_state (mk_state s f_init)) ⟹
 		 (wf_frame ⦇ LOCALS = [], frame_MODULE = v_moduleinst ⦈) ⟹
-		 holds_upto (λ i_50542. (wf_uN 32 (mk_uN i_50542))) n_E ⟹
+		 holds_upto (λ i_71301. (wf_uN 32 (mk_uN i_71301))) n_E ⟹
 		 holds_upto (λ j_18. (wf_uN 32 (mk_uN j_18))) n_D ⟹
 		 fun_instantiate s v_module externaddr_lst (mk_config (mk_state s' f) ((map (λ (instr_E :: instr). (admininstr_instr instr_E)) instr_E_lst) @ ((map (λ (instr_D :: instr). (admininstr_instr instr_D)) instr_D_lst) @ (option_to_list (map_option (λ (x :: idx). (admininstr_subcase_1 (admininstr_subtype_1_CALL x))) x_opt)))))"
 
@@ -9697,23 +9695,23 @@ inductive Globalinst_ok :: "store ⇒ globalinst ⇒ globaltype ⇒ bool" where
 (* Inductive Relations Definition at: ../specification/wasm-2.0/B-soundness.spectec:151.1-151.48 *)
 inductive Meminst_ok :: "store ⇒ meminst ⇒ memtype ⇒ bool" where
 	  mk_Meminst_ok :
-		"(Memtype_ok (PAGE (mk_limits (mk_uN v_n) (Some (mk_uN v_m))))) ⟹
+		"(Memtype_ok (PAGE (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt)))) ⟹
 		 ((length b_lst) = (v_n * (64 * (Ki )))) ⟹
 		 (wf_store s) ⟹
-		 (wf_meminst ⦇ meminst_TYPE = (PAGE (mk_limits (mk_uN v_n) (Some (mk_uN v_m)))), BYTES = b_lst ⦈) ⟹
-		 (wf_memtype (PAGE (mk_limits (mk_uN v_n) (Some (mk_uN v_m))))) ⟹
-		 Meminst_ok s ⦇ meminst_TYPE = (PAGE (mk_limits (mk_uN v_n) (Some (mk_uN v_m)))), BYTES = b_lst ⦈ (PAGE (mk_limits (mk_uN v_n) (Some (mk_uN v_m))))"
+		 (wf_meminst ⦇ meminst_TYPE = (PAGE (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt))), BYTES = b_lst ⦈) ⟹
+		 (wf_memtype (PAGE (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt)))) ⟹
+		 Meminst_ok s ⦇ meminst_TYPE = (PAGE (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt))), BYTES = b_lst ⦈ (PAGE (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt)))"
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/B-soundness.spectec:152.1-152.54 *)
 inductive Tableinst_ok :: "store ⇒ tableinst ⇒ tabletype ⇒ bool" where
 	  mk_Tableinst_ok :
-		"(Tabletype_ok (mk_tabletype (mk_limits (mk_uN v_n) (Some (mk_uN v_m))) rt)) ⟹
+		"(Tabletype_ok (mk_tabletype (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt)) rt)) ⟹
 		 list_all (λ (v_ref :: ref). (Ref_ok s v_ref rt)) ref_lst ⟹
 		 ((length ref_lst) = v_n) ⟹
 		 (wf_store s) ⟹
-		 (wf_tableinst ⦇ tableinst_TYPE = (mk_tabletype (mk_limits (mk_uN v_n) (Some (mk_uN v_m))) rt), REFS = ref_lst ⦈) ⟹
-		 (wf_tabletype (mk_tabletype (mk_limits (mk_uN v_n) (Some (mk_uN v_m))) rt)) ⟹
-		 Tableinst_ok s ⦇ tableinst_TYPE = (mk_tabletype (mk_limits (mk_uN v_n) (Some (mk_uN v_m))) rt), REFS = ref_lst ⦈ (mk_tabletype (mk_limits (mk_uN v_n) (Some (mk_uN v_m))) rt)"
+		 (wf_tableinst ⦇ tableinst_TYPE = (mk_tabletype (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt)) rt), REFS = ref_lst ⦈) ⟹
+		 (wf_tabletype (mk_tabletype (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt)) rt)) ⟹
+		 Tableinst_ok s ⦇ tableinst_TYPE = (mk_tabletype (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt)) rt), REFS = ref_lst ⦈ (mk_tabletype (mk_limits (mk_uN v_n) (map_option (λ (v_m :: m). (mk_uN v_m)) m_opt)) rt)"
 
 (* Inductive Relations Definition at: ../specification/wasm-2.0/B-soundness.spectec:153.1-153.51 *)
 inductive Funcinst_ok :: "store ⇒ funcinst ⇒ functype ⇒ bool" where
@@ -9834,9 +9832,195 @@ inductive Config_ok :: "config ⇒ resulttype ⇒ bool" where
 		"(State_ok (mk_state s f) C) ⟹
 		 (Expr_ok2 s C admininstr_lst (mk_list t_lst)) ⟹
 		 (wf_context C) ⟹
-		 list_all (λ (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst ⟹
-		 (wf_config (mk_config (mk_state s f) (map (λ (v_instr :: instr). (admininstr_instr v_instr)) instr_lst))) ⟹
+		 (wf_config (mk_config (mk_state s f) admininstr_lst)) ⟹
 		 (wf_state (mk_state s f)) ⟹
-		 Config_ok (mk_config (mk_state s f) (map (λ (v_instr :: instr). (admininstr_instr v_instr)) instr_lst)) (mk_list t_lst)"
+		 Config_ok (mk_config (mk_state s f) admininstr_lst) (mk_list t_lst)"
+
+(* Auxiliary Definition at: isabelle/wasm-2.0/C-mech-aux.spectec:1.1-1.31 *)
+function (sequential) is_val :: "admininstr ⇒ bool" where
+		  "is_val (admininstr_subcase_7 (admininstr_subtype_7_REF_HOST_ADDR v_hostaddr)) = True"
+		| "is_val (admininstr_subcase_7 (admininstr_subtype_7_REF_FUNC_ADDR v_funcaddr)) = True"
+		| "is_val (admininstr_subcase_4 (admininstr_subtype_4_REF_NULL v_reftype)) = True"
+		| "is_val (admininstr_subcase_2 (admininstr_subtype_2_VCONST v_vectype var_1)) = True"
+		| "is_val (admininstr_subcase_1 (admininstr_subtype_1_CONST v_numtype var_0)) = True"
+		| "is_val v_admininstr = False"
+	by pat_completeness auto
+
+(* Auxiliary Definition at: isabelle/wasm-2.0/C-mech-aux.spectec:5.1-5.33 *)
+function (sequential) is_instr :: "admininstr ⇒ bool" where
+		  "is_instr (admininstr_subcase_7 (admininstr_subtype_7_DATA_DROP dataidx_0)) = True"
+		| "is_instr (admininstr_subcase_7 (admininstr_subtype_7_MEMORY_INIT v_dataidx)) = True"
+		| "is_instr (admininstr_subcase_7 admininstr_subtype_7_MEMORY_COPY) = True"
+		| "is_instr (admininstr_subcase_7 admininstr_subtype_7_MEMORY_FILL) = True"
+		| "is_instr (admininstr_subcase_7 admininstr_subtype_7_MEMORY_GROW) = True"
+		| "is_instr (admininstr_subcase_6 admininstr_subtype_6_MEMORY_SIZE) = True"
+		| "is_instr (admininstr_subcase_6 (admininstr_subtype_6_VSTORE_LANE vectype_7 sz_0 memarg_4 laneidx_2)) = True"
+		| "is_instr (admininstr_subcase_6 (admininstr_subtype_6_VSTORE vectype_6 memarg_3)) = True"
+		| "is_instr (admininstr_subcase_6 (admininstr_subtype_6_VLOAD_LANE vectype_5 v_sz memarg_2 laneidx_1)) = True"
+		| "is_instr (admininstr_subcase_6 (admininstr_subtype_6_VLOAD vectype_4 vloadop_opt memarg_1)) = True"
+		| "is_instr (admininstr_subcase_6 (admininstr_subtype_6_STORE numtype_6 sz_opt memarg_0)) = True"
+		| "is_instr (admininstr_subcase_6 (admininstr_subtype_6_LOAD numtype_5 var_13_opt v_memarg)) = True"
+		| "is_instr (admininstr_subcase_6 (admininstr_subtype_6_ELEM_DROP elemidx_0)) = True"
+		| "is_instr (admininstr_subcase_6 (admininstr_subtype_6_TABLE_INIT tableidx_7 v_elemidx)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_COPY tableidx_5 tableidx_6)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_FILL tableidx_4)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_GROW tableidx_3)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_SIZE tableidx_2)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_SET tableidx_1)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_GET tableidx_0)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_GLOBAL_SET globalidx_0)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_GLOBAL_GET v_globalidx)) = True"
+		| "is_instr (admininstr_subcase_5 (admininstr_subtype_5_LOCAL_TEE localidx_1)) = True"
+		| "is_instr (admininstr_subcase_4 (admininstr_subtype_4_LOCAL_SET localidx_0)) = True"
+		| "is_instr (admininstr_subcase_4 (admininstr_subtype_4_LOCAL_GET v_localidx)) = True"
+		| "is_instr (admininstr_subcase_4 admininstr_subtype_4_REF_IS_NULL) = True"
+		| "is_instr (admininstr_subcase_4 (admininstr_subtype_4_REF_FUNC funcidx_0)) = True"
+		| "is_instr (admininstr_subcase_4 (admininstr_subtype_4_REF_NULL v_reftype)) = True"
+		| "is_instr (admininstr_subcase_4 (admininstr_subtype_4_VCVTOP shape_6 shape_7 v_vcvtop)) = True"
+		| "is_instr (admininstr_subcase_4 (admininstr_subtype_4_VNARROW ishape_1_2 ishape_2_2 v_sx)) = True"
+		| "is_instr (admininstr_subcase_4 (admininstr_subtype_4_VEXTBINOP ishape_1_1 ishape_2_1 var_12)) = True"
+		| "is_instr (admininstr_subcase_4 (admininstr_subtype_4_VEXTUNOP ishape_1_0 ishape_2_0 var_11)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VREPLACE_LANE shape_5 laneidx_0)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VEXTRACT_LANE shape_4 sx_opt v_laneidx)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VSPLAT shape_3)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VSHUFFLE ishape_2 laneidx_lst)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VSWIZZLE ishape_1)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VBITMASK ishape_0)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VSHIFTOP v_ishape var_10)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VRELOP shape_2 var_9)) = True"
+		| "is_instr (admininstr_subcase_3 (admininstr_subtype_3_VTESTOP shape_1 var_8)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_VBINOP shape_0 var_7)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_VUNOP v_shape var_6)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_VVTESTOP vectype_3 v_vvtestop)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_VVTERNOP vectype_2 v_vvternop)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_VVBINOP vectype_1 v_vvbinop)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_VVUNOP vectype_0 v_vvunop)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_VCONST v_vectype var_5)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_EXTEND numtype_4 v_n)) = True"
+		| "is_instr (admininstr_subcase_2 (admininstr_subtype_2_CVTOP numtype_1_0 numtype_2_0 v_cvtop)) = True"
+		| "is_instr (admininstr_subcase_1 (admininstr_subtype_1_RELOP numtype_3 var_4)) = True"
+		| "is_instr (admininstr_subcase_1 (admininstr_subtype_1_TESTOP numtype_2 var_3)) = True"
+		| "is_instr (admininstr_subcase_1 (admininstr_subtype_1_BINOP numtype_1 var_2)) = True"
+		| "is_instr (admininstr_subcase_1 (admininstr_subtype_1_UNOP numtype_0 var_1)) = True"
+		| "is_instr (admininstr_subcase_1 (admininstr_subtype_1_CONST v_numtype var_0)) = True"
+		| "is_instr (admininstr_subcase_1 admininstr_subtype_1_RETURN) = True"
+		| "is_instr (admininstr_subcase_1 (admininstr_subtype_1_CALL_INDIRECT v_tableidx v_typeidx)) = True"
+		| "is_instr (admininstr_subcase_1 (admininstr_subtype_1_CALL v_funcidx)) = True"
+		| "is_instr (admininstr_subcase_1 (admininstr_subtype_1_BR_TABLE labelidx_lst labelidx_1)) = True"
+		| "is_instr (admininstr_subcase_0 (admininstr_subtype_0_BR_IF labelidx_0)) = True"
+		| "is_instr (admininstr_subcase_0 (admininstr_subtype_0_BR v_labelidx)) = True"
+		| "is_instr (admininstr_subcase_0 (admininstr_subtype_0_IFELSE blocktype_1 instr_lst_0_lst instr_lst_1_lst)) = True"
+		| "is_instr (admininstr_subcase_0 (admininstr_subtype_0_LOOP blocktype_0 instr_lst_0_lst)) = True"
+		| "is_instr (admininstr_subcase_0 (admininstr_subtype_0_BLOCK v_blocktype instr_lst)) = True"
+		| "is_instr (admininstr_subcase_0 (admininstr_subtype_0_SELECT valtype_lst_opt)) = True"
+		| "is_instr (admininstr_subcase_0 admininstr_subtype_0_DROP) = True"
+		| "is_instr (admininstr_subcase_0 admininstr_subtype_0_UNREACHABLE) = True"
+		| "is_instr (admininstr_subcase_0 admininstr_subtype_0_NOP) = True"
+		| "is_instr v_admininstr = False"
+	by pat_completeness auto
+
+(* Auxiliary Definition at: isabelle/wasm-2.0/C-mech-aux.spectec:9.1-9.38 *)
+function (sequential) is_admininstr :: "admininstr ⇒ bool" where
+		  "is_admininstr (admininstr_subcase_7 (admininstr_subtype_7_DATA_DROP dataidx_0)) = False"
+		| "is_admininstr (admininstr_subcase_7 (admininstr_subtype_7_MEMORY_INIT v_dataidx)) = False"
+		| "is_admininstr (admininstr_subcase_7 admininstr_subtype_7_MEMORY_COPY) = False"
+		| "is_admininstr (admininstr_subcase_7 admininstr_subtype_7_MEMORY_FILL) = False"
+		| "is_admininstr (admininstr_subcase_7 admininstr_subtype_7_MEMORY_GROW) = False"
+		| "is_admininstr (admininstr_subcase_6 admininstr_subtype_6_MEMORY_SIZE) = False"
+		| "is_admininstr (admininstr_subcase_6 (admininstr_subtype_6_VSTORE_LANE vectype_7 sz_0 memarg_4 laneidx_2)) = False"
+		| "is_admininstr (admininstr_subcase_6 (admininstr_subtype_6_VSTORE vectype_6 memarg_3)) = False"
+		| "is_admininstr (admininstr_subcase_6 (admininstr_subtype_6_VLOAD_LANE vectype_5 v_sz memarg_2 laneidx_1)) = False"
+		| "is_admininstr (admininstr_subcase_6 (admininstr_subtype_6_VLOAD vectype_4 vloadop_opt memarg_1)) = False"
+		| "is_admininstr (admininstr_subcase_6 (admininstr_subtype_6_STORE numtype_6 sz_opt memarg_0)) = False"
+		| "is_admininstr (admininstr_subcase_6 (admininstr_subtype_6_LOAD numtype_5 var_13_opt v_memarg)) = False"
+		| "is_admininstr (admininstr_subcase_6 (admininstr_subtype_6_ELEM_DROP elemidx_0)) = False"
+		| "is_admininstr (admininstr_subcase_6 (admininstr_subtype_6_TABLE_INIT tableidx_7 v_elemidx)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_COPY tableidx_5 tableidx_6)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_FILL tableidx_4)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_GROW tableidx_3)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_SIZE tableidx_2)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_SET tableidx_1)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_TABLE_GET tableidx_0)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_GLOBAL_SET globalidx_0)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_GLOBAL_GET v_globalidx)) = False"
+		| "is_admininstr (admininstr_subcase_5 (admininstr_subtype_5_LOCAL_TEE localidx_1)) = False"
+		| "is_admininstr (admininstr_subcase_4 (admininstr_subtype_4_LOCAL_SET localidx_0)) = False"
+		| "is_admininstr (admininstr_subcase_4 (admininstr_subtype_4_LOCAL_GET v_localidx)) = False"
+		| "is_admininstr (admininstr_subcase_4 admininstr_subtype_4_REF_IS_NULL) = False"
+		| "is_admininstr (admininstr_subcase_4 (admininstr_subtype_4_REF_FUNC funcidx_0)) = False"
+		| "is_admininstr (admininstr_subcase_4 (admininstr_subtype_4_REF_NULL v_reftype)) = False"
+		| "is_admininstr (admininstr_subcase_4 (admininstr_subtype_4_VCVTOP shape_6 shape_7 v_vcvtop)) = False"
+		| "is_admininstr (admininstr_subcase_4 (admininstr_subtype_4_VNARROW ishape_1_2 ishape_2_2 v_sx)) = False"
+		| "is_admininstr (admininstr_subcase_4 (admininstr_subtype_4_VEXTBINOP ishape_1_1 ishape_2_1 var_12)) = False"
+		| "is_admininstr (admininstr_subcase_4 (admininstr_subtype_4_VEXTUNOP ishape_1_0 ishape_2_0 var_11)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VREPLACE_LANE shape_5 laneidx_0)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VEXTRACT_LANE shape_4 sx_opt v_laneidx)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VSPLAT shape_3)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VSHUFFLE ishape_2 laneidx_lst)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VSWIZZLE ishape_1)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VBITMASK ishape_0)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VSHIFTOP v_ishape var_10)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VRELOP shape_2 var_9)) = False"
+		| "is_admininstr (admininstr_subcase_3 (admininstr_subtype_3_VTESTOP shape_1 var_8)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_VBINOP shape_0 var_7)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_VUNOP v_shape var_6)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_VVTESTOP vectype_3 v_vvtestop)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_VVTERNOP vectype_2 v_vvternop)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_VVBINOP vectype_1 v_vvbinop)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_VVUNOP vectype_0 v_vvunop)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_VCONST v_vectype var_5)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_EXTEND numtype_4 v_n)) = False"
+		| "is_admininstr (admininstr_subcase_2 (admininstr_subtype_2_CVTOP numtype_1_0 numtype_2_0 v_cvtop)) = False"
+		| "is_admininstr (admininstr_subcase_1 (admininstr_subtype_1_RELOP numtype_3 var_4)) = False"
+		| "is_admininstr (admininstr_subcase_1 (admininstr_subtype_1_TESTOP numtype_2 var_3)) = False"
+		| "is_admininstr (admininstr_subcase_1 (admininstr_subtype_1_BINOP numtype_1 var_2)) = False"
+		| "is_admininstr (admininstr_subcase_1 (admininstr_subtype_1_UNOP numtype_0 var_1)) = False"
+		| "is_admininstr (admininstr_subcase_1 (admininstr_subtype_1_CONST v_numtype var_0)) = False"
+		| "is_admininstr (admininstr_subcase_1 admininstr_subtype_1_RETURN) = False"
+		| "is_admininstr (admininstr_subcase_1 (admininstr_subtype_1_CALL_INDIRECT v_tableidx v_typeidx)) = False"
+		| "is_admininstr (admininstr_subcase_1 (admininstr_subtype_1_CALL v_funcidx)) = False"
+		| "is_admininstr (admininstr_subcase_1 (admininstr_subtype_1_BR_TABLE labelidx_lst labelidx_1)) = False"
+		| "is_admininstr (admininstr_subcase_0 (admininstr_subtype_0_BR_IF labelidx_0)) = False"
+		| "is_admininstr (admininstr_subcase_0 (admininstr_subtype_0_BR v_labelidx)) = False"
+		| "is_admininstr (admininstr_subcase_0 (admininstr_subtype_0_IFELSE blocktype_1 instr_lst_0_lst instr_lst_1_lst)) = False"
+		| "is_admininstr (admininstr_subcase_0 (admininstr_subtype_0_LOOP blocktype_0 instr_lst_0_lst)) = False"
+		| "is_admininstr (admininstr_subcase_0 (admininstr_subtype_0_BLOCK v_blocktype instr_lst)) = False"
+		| "is_admininstr (admininstr_subcase_0 (admininstr_subtype_0_SELECT valtype_lst_opt)) = False"
+		| "is_admininstr (admininstr_subcase_0 admininstr_subtype_0_DROP) = False"
+		| "is_admininstr (admininstr_subcase_0 admininstr_subtype_0_UNREACHABLE) = False"
+		| "is_admininstr (admininstr_subcase_0 admininstr_subtype_0_NOP) = False"
+		| "is_admininstr v_admininstr = True"
+	by pat_completeness auto
+
+(* Inductive Type Definition at: isabelle/wasm-2.0/C-mech-aux.spectec:13.1-13.44 *)
+datatype instrtype =
+	  mk_instrtype "resulttype" "resulttype"
+
+
+(* Inductive Relations Definition at: isabelle/wasm-2.0/C-mech-aux.spectec:15.1-15.50 *)
+inductive Instrtype_sub :: "instrtype ⇒ instrtype ⇒ bool" where
+	  mk_Instrtype_sub :
+		"(t_21_lst = (t_lst @ t_11'_lst)) ⟹
+		 (t_22_lst = (t'_lst @ t_12'_lst)) ⟹
+		 (Resulttype_sub (mk_list t_lst) (mk_list t'_lst)) ⟹
+		 (Resulttype_sub (mk_list t_11'_lst) (mk_list t_11_lst)) ⟹
+		 (Resulttype_sub (mk_list t_12_lst) (mk_list t_12'_lst)) ⟹
+		 Instrtype_sub (mk_instrtype (mk_list t_11_lst) (mk_list t_12_lst)) (mk_instrtype (mk_list t_21_lst) (mk_list t_22_lst))"
+
+(* Auxiliary Definition at: isabelle/wasm-2.0/C-mech-aux.spectec:24.1-24.30 *)
+function (sequential) typeofval :: "val ⇒ valtype" where
+		  "typeofval (val_CONST v_numtype c) = (valtype_numtype v_numtype)"
+		| "typeofval (val_VCONST v_vectype c) = (valtype_vectype v_vectype)"
+		| "typeofval (val_REF_NULL v_reftype) = (valtype_reftype v_reftype)"
+		| "typeofval (val_REF_FUNC_ADDR v_funcaddr) = valtype_FUNCREF"
+		| "typeofval (val_REF_HOST_ADDR v_hostaddr) = valtype_EXTERNREF"
+	by pat_completeness auto
+
+(* Inductive Relations Definition at: isabelle/wasm-2.0/C-mech-aux.spectec:31.6-31.18 *)
+inductive fun_typesofvals :: "(val list) ⇒ (valtype list) ⇒ bool" where
+	  fun_typesofvals_case_0 :
+		"((length val_lst) = (length valtype_lst)) ⟹
+		 list_all2 (λ (val_8 :: val) (valtype_215 :: valtype). ((typeofval val_8) = valtype_215)) val_lst valtype_lst ⟹
+		 fun_typesofvals val_lst valtype_lst"
 
 end
