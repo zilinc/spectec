@@ -69,7 +69,7 @@ next
     by (metis instr_subtyping_frame_rule instr_subtyping_trans)
 qed (metis Instr_ok_Instrs_ok.intros instr_subtyping_refl)+
 
-lemma instr_inversion_1:
+lemma instr_inversion_1a:
   assumes "Instrs_ok C [e] ft"
   shows
     inv_nop: "e = instr_subcase_0 NOP \<Longrightarrow> (mk_functype (mk_list []) (mk_list [])) <ti: ft" and
@@ -231,8 +231,63 @@ lemma instr_inversion_1:
 		  (((context_TABLES C) ! (proj_uN_0 x_2)) = (mk_tabletype lim_2 rt)) \<and>
 		  (wf_tabletype (mk_tabletype lim_1 rt)) \<and>
 		  (wf_tabletype (mk_tabletype lim_2 rt)) \<and>
-		  ((mk_functype (mk_list [valtype_I32, valtype_I32, valtype_I32]) (mk_list [])) <ti: ft))"
+		  ((mk_functype (mk_list [valtype_I32, valtype_I32, valtype_I32]) (mk_list [])) <ti: ft))" and
+    inv_table_init: "e = (instr_subcase_5 (TABLE_INIT x_1 x_2)) \<Longrightarrow>
+      (\<exists> lim rt.
+      ((proj_uN_0 x_1) < (length (context_TABLES C))) \<and>
+		  (((context_TABLES C) ! (proj_uN_0 x_1)) = (mk_tabletype lim rt)) \<and>
+		  ((proj_uN_0 x_2) < (length (context_ELEMS C))) \<and>
+		  (((context_ELEMS C) ! (proj_uN_0 x_2)) = rt) \<and>
+		  (wf_tabletype (mk_tabletype lim rt)) \<and>
+		  ((mk_functype (mk_list [valtype_I32, valtype_I32, valtype_I32]) (mk_list [])) <ti: ft))" and
+    inv_elem_drop: "e = (instr_subcase_5 (ELEM_DROP x)) \<Longrightarrow>
+      (\<exists> lim rt.
+      ((proj_uN_0 x) < (length (context_ELEMS C))) \<and>
+		  (((context_ELEMS C) ! (proj_uN_0 x)) = rt) \<and>
+      ((mk_functype (mk_list []) (mk_list [])) <ti: ft))"
 
+  using instr_inversion_helper[OF assms]
+  apply auto
+  by (cases rule: Instr_ok.cases, auto)+
+
+lemma instr_inversion_1b:
+  assumes "Instrs_ok C [e] ft"
+  shows
+    inv_memory_size: "e = (instr_subcase_6 MEMORY_SIZE) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+      (wf_memtype mt) \<and>
+      ((mk_functype (mk_list []) (mk_list [valtype_I32])) <ti: ft))" and
+    inv_memory_grow: "e = (instr_subcase_6 MEMORY_GROW) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+      (((context_MEMS C) ! 0) = mt) \<and>
+      (wf_memtype mt) \<and>
+      ((mk_functype (mk_list [valtype_I32]) (mk_list [valtype_I32])) <ti: ft))" and
+    inv_memory_fill: "e = (instr_subcase_6 MEMORY_FILL) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+      (((context_MEMS C) ! 0) = mt) \<and>
+      (wf_memtype mt) \<and>
+      ((mk_functype (mk_list [valtype_I32, valtype_I32, valtype_I32]) (mk_list [])) <ti: ft))" and
+    inv_memory_copy: "e = (instr_subcase_6 MEMORY_COPY) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+      (((context_MEMS C) ! 0) = mt) \<and>
+      (wf_memtype mt) \<and>
+      ((mk_functype (mk_list [valtype_I32, valtype_I32, valtype_I32]) (mk_list [])) <ti: ft))" and
+    inv_memory_init: "e = (instr_subcase_7 (MEMORY_INIT x)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+      (((context_MEMS C) ! 0) = mt) \<and>
+      ((proj_uN_0 x) < (length (context_DATAS C))) \<and>
+		  (((context_DATAS C) ! (proj_uN_0 x)) = OK) \<and>
+      (wf_memtype mt) \<and>
+      ((mk_functype (mk_list [valtype_I32, valtype_I32, valtype_I32]) (mk_list [])) <ti: ft))" and
+    inv_data_drop: "e = (instr_subcase_7 (DATA_DROP x)) \<Longrightarrow>
+      ((proj_uN_0 x) < (length (context_DATAS C))) \<and>
+		  (((context_DATAS C) ! (proj_uN_0 x)) = OKx) \<and>
+      ((mk_functype (mk_list []) (mk_list [])) <ti: ft)"
 
   using instr_inversion_helper[OF assms]
   apply auto
