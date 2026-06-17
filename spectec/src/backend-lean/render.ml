@@ -135,7 +135,7 @@ and render_term (term : term) : string =
 
   | Prop -> "Prop"
 
-  | Prod (t1, t2) -> Printf.sprintf "%s × %s" (render_term t1) (render_term t2)
+  | ProdType (t1, t2) -> Printf.sprintf "%s × %s" (render_term t1) (render_term t2)
 
   | FunApp (t1, args) ->
       let args_str = String.concat " " (List.map render_argument (NonEmptyList.to_list args)) in
@@ -167,7 +167,7 @@ and render_term (term : term) : string =
         arg2_str
 
   | Tuple terms ->
-      let terms_str = String.concat " × " (List.map render_term terms) in
+      let terms_str = String.concat ", " (List.map render_term terms) in
       Printf.sprintf
         "(%s)"
         terms_str

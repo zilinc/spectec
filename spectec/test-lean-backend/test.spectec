@@ -31,21 +31,33 @@ syntax context = { GLOBALS globaltype*, LOCALS valtype* }
 
 var C : context
 
-;; Execution
 
-syntax addr = nat
-syntax moduleinst = { GLOBALS addr* }
+relation Instr_ok: context |- instr : functype
 
-syntax val = CONST valtype const
+rule Instr_ok/nop:
+    C |- NOP : eps -> eps
 
-syntax store = { GLOBALS val* }
-syntax frame = { LOCALS val*, MODULE moduleinst }
-syntax state = store; frame
-syntax config = state; instr*
+rule Instr_ok/drop:
+    C |- DROP : t -> eps
 
-var f : frame
-var s : store
-var z : state
+rule Instr_ok/select:
+    C |- SELECT : t t I32 -> t
 
-def $local(state, localidx) : val
-def $local((s; f), x) = f.LOCALS[x]
+rule Instr_ok/const:
+    C |- CONST t c : eps -> t
+
+rule Instr_ok/local.get:
+    C |- LOCAL.GET x : eps -> t
+    -- if C.LOCALS[x] = t
+
+rule Instr_ok/local.set:
+    C |- LOCAL.SET x : t -> eps
+    -- if C.LOCALS[x] = t
+
+rule Instr_ok/global.get:
+    C |- GLOBAL.GET x : eps -> t
+    -- if C.GLOBALS[x] = MUT? t
+
+rule Instr_ok/global.set:
+    C |- GLOBAL.GET x : t -> eps
+    -- if C.GLOBALS[x] = MUT t

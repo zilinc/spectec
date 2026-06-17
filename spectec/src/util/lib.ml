@@ -109,6 +109,8 @@ struct
     head: 'a;
     tail: 'a list;
   }
+  [@@deriving show]
+
 
   let from_list_unsafe (l : 'a list) : 'a t =
     match l with

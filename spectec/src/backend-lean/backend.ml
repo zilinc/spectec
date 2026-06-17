@@ -45,7 +45,7 @@ and create_typ (t : Il.Ast.typ) : term
         = match l with
           | [] -> failwith "should have been handled by earlier case"
           | [t] -> t
-          | t :: ts -> Prod (t, construct_prod ts)
+          | t :: ts -> ProdType (t, construct_prod ts)
       in
       construct_prod terms
     )
@@ -160,9 +160,49 @@ let rec create_exp (e : Il.Ast.exp) : term
         Term (create_exp e2)
       )
     | TupE exps -> Tuple (List.map create_exp exps)
-    | ProjE (exp, int) -> failwith ""
-    | CaseE (mixop, exp) -> failwith ""
-    | UncaseE (exp, mixop) -> failwith ""
+    | ProjE (exp, idx)
+      ->
+        let length_of_exp
+          = match exp.it with
+            | TupE exps -> List.length exps
+            | _ -> 1
+        in
+
+        let selector_elems =
+          let twos : string list
+            = List.init (length_of_exp - 1) (fun _ -> "2") in
+          let final_one_or_two : string list
+            = if length_of_exp = (idx + 1)
+            then ["1"]
+            else ["2"]
+          in
+          twos @ final_one_or_two
+        in
+
+        (* Constructs a selector like x.2.2.2.2.2.1 *)
+        List.fold_left
+          (fun acc selector_elem
+            -> DotProj (acc, Ident selector_elem))
+          (create_exp exp)
+          selector_elems
+
+    | CaseE (mixop, exp)
+      ->
+        let mixop_args : term list
+          = match exp.it with
+            | TupE exps -> List.map create_exp exps
+            | _ -> [create_exp exp]
+        in
+        
+        if List.length mixop_args = 0 then
+          Ident (mixop_to_id mixop)
+        else
+          FunApp (
+            Ident (mixop_to_id mixop),
+            NonEmptyList.from_list_unsafe
+              (List.map (fun arg -> Term arg) mixop_args)
+          )
+    | UncaseE (exp, mixop) -> error exp.at "Uncase should have been eliminated by uncase-removal pass!"
     | OptE (Some exp) -> FunApp (Ident "some", NonEmptyList.from_list_unsafe [Term (create_exp exp)])
     | OptE (None) -> Ident "none"
     | TheE exp -> FunApp (DotProj (Ident "Option", Ident "get!"), NonEmptyList.from_list_unsafe [Term (create_exp exp)])
@@ -448,7 +488,7 @@ let create_def (def : Il.Ast.def) : command option
           | _ -> failwith "no other typ should be here!"  
       in
 
-      let create_relations_inductive_case (rule : Il.Ast.rule) : _inductive_case
+      let create_relations_inductive_case (rule : Il.Ast.rule) (rel_id : Il.Ast.id) : _inductive_case
         (*
           | fun_sum_case_1 (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) :
                 fun_sum n'_lst var_0 →
@@ -482,6 +522,16 @@ let create_def (def : Il.Ast.def) : command option
                   | _ -> failwith "only ExpP should be here"
               ) quants
             in
+
+            let exp_with_rel_id_prepended : term (* fun_sum ([v_n] ++ n'_lst) (v_n + var_0) *)
+              = let exp_as_term = create_exp exp in
+                let id_as_term = (Ident rel_id.it : term) in
+                prerr_endline ("exp_as_term: " ^ Lean_ast.show_term exp_as_term);
+                FunApp (
+                  id_as_term,
+                  NonEmptyList.from_list_unsafe [Term exp_as_term]
+                )
+            in
             
             {
               modifier = empty_modifier;
@@ -495,7 +545,7 @@ let create_def (def : Il.Ast.def) : command option
                 *)
                 Some (
                   append_prems_to_term
-                  (create_exp exp)
+                  exp_with_rel_id_prepended
                   prems
                 )
               );
@@ -510,15 +560,51 @@ let create_def (def : Il.Ast.def) : command option
           [],                             (* We don't need parameters for the inductive type itself *)
           Some (create_relations_inductive_type typ)   (* List Nat → Nat → Prop *)
         );
-        cases = List.map create_relations_inductive_case rules;
+        cases = List.map (fun rule -> create_relations_inductive_case rule id) rules;
         deriving = None; (* TODO: look into deriving *)
       })
 
+    | DecD (
+      id,                               (* "Ki" *)
+      [],                               (* This handles the case with no params *)
+      typ,                              (* nat *)
+      [{it = DefD ([], [], exp, prems); _}]    (* (NumE (Nat 1024)) *)
+    )
+
+    (*
+      Let's say we have a definition like
+
+      def $Ki : nat
+      def $Ki = 1024
+
+      We want to generate a Lean4 definition like
+
+      def Ki : Nat := 1024
+    *)
+      -> Some (Def (DefAsgn {
+        modifier = empty_modifier;
+        id = id.it;                               (* "Ki" *)
+        signature = (
+          [],
+          Some (create_typ typ)                   (* Nat *)
+        );
+        body = create_exp exp;                    (* 1024 *)
+      }))
+
+
+    | DecD (
+      id,
+      params,
+      typ,
+      []
+    ) -> failwith "case 1"
+    | DecD (id, [], typ, clauses) -> failwith "case 1"
+
+    | DecD _ -> None
     | GramD _ -> None
     | RecD _ -> None
     | HintD _ -> None
     | RelD _ -> failwith "should have been handled by earlier case"
-    | DecD _ -> None
     | TypD _ -> None
 
 
