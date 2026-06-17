@@ -25,7 +25,7 @@ lemma instr_inversion_helper:
   assumes "Instrs_ok C [e] ft"
   shows "\<exists> ft_principal. (Instr_ok C e ft_principal) \<and> (ft_principal <ti: ft)"
   using assms
-proof (induction C "[e]" "ft" arbitrary:  rule: Instr_ok_Instrs_ok.inducts(2)[where ?P1.0 = "\<lambda> C e ft. \<exists> ft_principal. Instr_ok C e ft_principal  \<and> ft_principal <ti: ft"])
+proof (induction C "[e]" "ft" arbitrary:  rule: Instr_ok_Instrs_ok.inducts(2)[where ?P1.0 = "\<lambda> C e ft. \<exists> ft_principal. Instr_ok C e ft_principal \<and> ft_principal <ti: ft"])
   case (block C bt t_1_lst t_2_lst instr_lst)
   then show ?case
     by (metis Instr_ok_Instrs_ok.block instr_subtyping_refl)
@@ -396,6 +396,89 @@ lemma all_wf:
 		      "(wf_instr e)"
   sorry
 
+(*Instrs_ok2*)
+lemma instr2_inversion_helper:
+  assumes "Instrs_ok2 s C [a_e] ft"
+  shows "\<exists> ft_principal. (Instr_ok2 s C a_e ft_principal) \<and> (ft_principal <ti: ft)"
+  using assms
+proof (induction s C "[a_e]" "ft" arbitrary:  rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 = "\<lambda> s C e ft. \<exists> ft_principal. Instr_ok2 s C e ft_principal \<and> ft_principal <ti: ft" and ?P3.0 = "\<lambda> s C e rt. True"])
+  case (plain C v_instr t_1_lst t_2_lst s)
+  then show ?case 
+    using Instr_ok2_Instrs_ok2_Expr_ok2.plain instr_subtyping_refl by blast
+next
+  case (label s C instr'_lst t'_lst t_lst admininstr_lst v_n)
+  then show ?case
+    by (meson Instr_ok2_Instrs_ok2_Expr_ok2.label instr_subtyping_refl)
+next
+  case (Instr_ok2__frame  s_s f_f C'_c admininstr_lst_l t_lst_r C_r v_n_r)
+  then show ?case
+    using Instr_ok2_Instrs_ok2_Expr_ok2.Instr_ok2__frame
+      instr_subtyping_refl by blast
+next
+  case (Instr_ok2__call_addr s v_funcaddr t_1_lst t_2_lst C)
+  then show ?case
+    using Instr_ok2_Instrs_ok2_Expr_ok2.Instr_ok2__call_addr instr_subtyping_refl by blast
+next
+  case (Instr_ok2__ref s v_ref rt C)
+  then show ?case
+    using Instr_ok2_Instrs_ok2_Expr_ok2.Instr_ok2__ref instr_subtyping_refl by blast
+next
+  case (Instr_ok2__trap s C t_1_lst t_2_lst)
+  then show ?case
+    by (metis admininstr_case_73 Instr_ok2__trap.hyps(2) Instr_ok2__trap.hyps(1) Instr_ok2_Instrs_ok2_Expr_ok2.Instr_ok2__trap instr_subtyping_refl)
+next
+  case Instrs_ok2__empty
+  then show ?case
+    by simp
+next
+  case (Instrs_ok2__seq s C admininstr_1 t_1_lst t_2_lst admininstr_2_lst t_3_lst)
+  then show ?case sorry
+next
+  case (Instrs_ok2__sub s C t_1_lst t_2_lst t'_1_lst t'_2_lst)
+  then show ?case
+    by (metis Instrs_ok2__sub.hyps(6) Instrs_ok2__sub.hyps(5) Instrs_ok2__sub.hyps(4) Instrs_ok2__sub.hyps(3) Instrs_ok2__sub.hyps(7) Instrs_ok2__sub.hyps(2) Instrs_ok2__sub.hyps(1) instr_subtyping_trans instr_subtyping_sub_rule)
+next
+  case (Instrs_ok2__frame s C t_1_lst t_2_lst t_lst)
+  then show ?case
+    by (metis Instrs_ok2__frame.hyps(4) Instrs_ok2__frame.hyps(3) Instrs_ok2__frame.hyps(5) Instrs_ok2__frame.hyps(2) Instrs_ok2__frame.hyps(1) instr_subtyping_frame_rule instr_subtyping_trans)
+qed
+
+lemma inv_label:
+  assumes "Instrs_ok2 s C [a_e] ft"
+    inv_label: "a_e = (admininstr_subcase_8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
+      (\<exists> t'_lst t_lst.
+      (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
+      (Instrs_ok2 s (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr> C) admininstr_lst (mk_functype (mk_list []) (mk_list t_lst))) \<and>
+		  (wf_admininstr (admininstr_subcase_8 (LABEL_underscore v_n instr'_lst admininstr_lst))) \<Longrightarrow>
+		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<Longrightarrow>
+		  (v_n = (length t'_lst)) \<Longrightarrow>
+      ((mk_functype (mk_list []) (mk_list t_lst)) <ti: ft))"
+sorry
+
+lemma inv_ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst rt.
+      (Ref_ok s v_ref rt) \<and>
+      ((mk_functype (mk_list []) (mk_list [valtype_reftype rt])) <ti: ft))"
+sorry
+
+lemma instr2_inversion_1:
+  assumes "Instrs_ok2 s C [a_e] ft"
+  shows
+    inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst.
+      ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: ft))" and
+    inv_call_addr: "a_e = (admininstr_subcase_7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst.
+      ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: ft))"
+
+  using instr2_inversion_helper[OF assms]
+  apply auto
+  apply (cases rule: Instrs_ok2.cases, auto)
+  using assms instr_subtyping_refl instr_subtyping_sub_rule instr_subtyping_frame_rule
+  apply blast+
+  apply (metis functype.exhaust res_list.exhaust)
+  
+sorry
 
 (*Testing the inversion lemma*)
 lemma inversion_nop:
