@@ -187,4 +187,19 @@ proof -
     by fastforce
 qed
 
+(*Unused properties - from Antanas' file
+
+lemma Resulttype_sub_t_list_subtyping:
+  "Resulttype_sub rt1 rt2 \<longleftrightarrow> t_list_subtyping rt1 rt2"
+  apply auto
+  subgoal
+    apply (induction rule: Resulttype_sub.induct)
+    using t_list_subtyping_def by auto
+  subgoal
+    unfolding t_list_subtyping_def
+    apply (auto split: prod.splits)
+    by (metis list_all2_lengthD mk_Resulttype_sub res_list.case res_list.exhaust)
+  done
+*)
+
 end
