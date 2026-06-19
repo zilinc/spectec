@@ -59,7 +59,7 @@ and render_opaque (op : opaque) : string =
 
 and render_argument (arg : argument) : string =
   match arg with
-  | Term t -> render_term t
+  | Term t -> Printf.sprintf "(%s)" (render_term t)
 
 and render_num (num : _numtype) : string =
   match num with
@@ -179,6 +179,12 @@ and render_term (term : term) : string =
         "%s.%s"
         t1_str
         t2_str
+
+  | LeadingDot t ->
+      let t_str = render_term t in
+      Printf.sprintf
+        ".%s"
+        t_str
 
   | Struct {
     fields = fields;

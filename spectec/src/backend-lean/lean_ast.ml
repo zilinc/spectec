@@ -63,6 +63,7 @@ type term =
   | BinaryInfixFunApp of argument * term * argument
   | Tuple of term list (* unsure if this is officially in the Lean 4 grammar *)
   | DotProj of term * term (* unsure if this is officially in the Lean 4 grammar *)
+  | LeadingDot of term (* unsure if this is officially in the Lean 4 grammar *)
   | Struct of {
     fields: struct_inst_field list;
     type_annotation: term option;

@@ -82,6 +82,8 @@ let create_inductive_type_with_params_applied
         FunApp (Ident parent_type.it, NonEmptyList.from_list_unsafe args)
     | _ -> failwith "all params of a typecase should be TypP"
 
+let standard_deriving : _deriving option = Some ["Inhabited"; "BEq"]
+
 let create_unop (op : Il.Ast.unop) : term
   = match op with
     | `PlusOp -> Ident "+"
@@ -103,7 +105,7 @@ let create_binop (op : Il.Ast.binop) : term
 
 let create_cmpop (op : Il.Ast.cmpop) : term
   = match op with
-    | `EqOp -> Ident "="
+    | `EqOp -> Ident "=="
     | `NeOp -> Ident "≠"
     | `LtOp -> Ident "<"
     | `GtOp -> Ident ">"
@@ -193,12 +195,20 @@ let rec create_exp (e : Il.Ast.exp) : term
             | TupE exps -> List.map create_exp exps
             | _ -> [create_exp exp]
         in
+
+        let namespaced_mixop = LeadingDot (Ident (mixop_to_id mixop)) in
+
+        (* TODO: see if it's feasible to make the namespacing explicit *)
+        (* let namespaced_mixop = match exp.note.it with
+          | VarT (id, _) -> (DotProj (Ident id.it, Ident (mixop_to_id mixop)))
+          | _ -> LeadingDot (Ident (mixop_to_id mixop))   (* fallback to leading-dot notation *)
+        in *)
         
         if List.length mixop_args = 0 then
-          Ident (mixop_to_id mixop)
+          namespaced_mixop
         else
           FunApp (
-            Ident (mixop_to_id mixop),
+            namespaced_mixop,
             NonEmptyList.from_list_unsafe
               (List.map (fun arg -> Term arg) mixop_args)
           )
@@ -339,7 +349,13 @@ let create_prem (p : Il.Ast.prem) : term = match p.it with
     ([] : Il.Ast.arg list),
     (mixop : Il.Ast.mixop),
     (exp : Il.Ast.exp)
-  ) -> Ident "TEMPORARY_PREM"
+  ) -> FunApp (
+    Ident id.it,
+    NonEmptyList.from_list_unsafe [Term (create_exp exp)]
+  )
+  | IfPr (
+    (exp : Il.Ast.exp)
+  ) -> create_exp exp
   | _ -> Ident "TEMPORARY_PREM"
 
 
@@ -347,7 +363,7 @@ let append_prems_to_term (term : term) (prems : Il.Ast.prem list) : term
   = if prems = [] then term
     else
       let prems_as_terms = List.map create_prem prems in
-      create_curried_func (term :: prems_as_terms)
+      create_curried_func (prems_as_terms @ [term])
 
 let create_typcase
   (* 
@@ -434,7 +450,7 @@ let create_def (def : Il.Ast.def) : command option
         id = id.it;
         signature = ([], Some (Type None));
         cases = List.map (create_typcase id params) ts;
-        deriving = None; (* TODO: look into deriving *)
+        deriving = standard_deriving; (* TODO: look into deriving *)
       })
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = StructT ts; _})); _}])
@@ -455,7 +471,7 @@ let create_def (def : Il.Ast.def) : command option
         universe = None;
         constructor = Some (empty_modifier, "MK" ^ id.it); (* following previous version *)
         fields = List.map create_struct_field ts;
-        deriving = None; (* TODO: look into deriving *)
+        deriving = standard_deriving; (* TODO: look into deriving *)
       })
 
     | RelD (
@@ -524,12 +540,15 @@ let create_def (def : Il.Ast.def) : command option
             in
 
             let exp_with_rel_id_prepended : term (* fun_sum ([v_n] ++ n'_lst) (v_n + var_0) *)
-              = let exp_as_term = create_exp exp in
+              = let mixop_args : term list
+                  = match exp.it with
+                    | TupE exps -> List.map create_exp exps
+                    | _ -> [create_exp exp]
+                in
                 let id_as_term = (Ident rel_id.it : term) in
-                prerr_endline ("exp_as_term: " ^ Lean_ast.show_term exp_as_term);
                 FunApp (
                   id_as_term,
-                  NonEmptyList.from_list_unsafe [Term exp_as_term]
+                  NonEmptyList.from_list_unsafe (List.map (fun arg -> Term arg) mixop_args)
                 )
             in
             
