@@ -616,10 +616,22 @@ let create_def (def : Il.Ast.def) : command option
       params,
       typ,
       []
-    ) -> failwith "case 1"
-    | DecD (id, [], typ, clauses) -> failwith "case 1"
+    ) -> None
+    (* | DecD (id, [], typ, clauses)
+      -> None *)
 
-    | DecD _ -> None
+    | DecD (
+      id,
+      params,
+      typ,
+      clauses
+    ) ->
+      (*
+        Let's say we have a definition like
+
+        
+      *)
+      None
     | GramD _ -> None
     | RecD _ -> None
     | HintD _ -> None

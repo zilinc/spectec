@@ -61,3 +61,23 @@ rule Instr_ok/global.get:
 rule Instr_ok/global.set:
     C |- GLOBAL.GET x : t -> eps
     -- if C.GLOBALS[x] = MUT t
+
+
+;; Execution
+
+syntax addr = nat
+syntax moduleinst = { GLOBALS addr* }
+
+syntax val = CONST valtype const
+
+syntax store = { GLOBALS val* }
+syntax frame = { LOCALS val*, MODULE moduleinst }
+syntax state = store; frame
+syntax config = state; instr*
+
+var f : frame
+var s : store
+var z : state
+
+def $Ki : nat
+def $Ki = 1024

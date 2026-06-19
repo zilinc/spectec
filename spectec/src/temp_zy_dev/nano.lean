@@ -4,14 +4,14 @@ set_option match.ignoreUnusedAlts true
 
 instance : Append (Option a) where
   append := fun o1 o2 => match o1 with | none => o2 | _ => o1
-    
+
 def Forall (R : α → Prop) (xs : List α) : Prop :=
   ∀ x ∈ xs, R x
 def Forall₂ (R : α → β → Prop) (xs : List α) (ys : List β) : Prop :=
   ∀ x y, (x,y) ∈ List.zip xs ys → R x y
 def Forall₃ (R : α → β → γ → Prop) (xs : List α) (ys : List β) (zs : List γ) : Prop :=
   ∀ x y z, (x,y,z) ∈ List.zip xs (List.zip ys zs) → R x y z
-    
+
 macro "opaqueDef" : term => `(by first | exact Inhabited.default | intros; assumption)
 
 /- written manually due to `BEq` constraint -/
@@ -93,19 +93,19 @@ inductive Instr_ok : context -> instr -> functype -> Prop where
   | drop : forall (C : context) (t : valtype), Instr_ok C .DROP (.mk_functype [t] [])
   | select : forall (C : context) (t : valtype), Instr_ok C .SELECT (.mk_functype [t, t, .I32] [t])
   | const : forall (C : context) (t : valtype) (c : const), Instr_ok C (.CONST t c) (.mk_functype [] [t])
-  | local_get : forall (C : context) (x : localidx) (t : valtype), 
+  | local_get : forall (C : context) (x : localidx) (t : valtype),
     (x < (List.length (C.LOCALS))) ->
     (((C.LOCALS)[x]!) == t) ->
     Instr_ok C (.LOCAL_GET x) (.mk_functype [] [t])
-  | local_set : forall (C : context) (x : localidx) (t : valtype), 
+  | local_set : forall (C : context) (x : localidx) (t : valtype),
     (x < (List.length (C.LOCALS))) ->
     (((C.LOCALS)[x]!) == t) ->
     Instr_ok C (.LOCAL_SET x) (.mk_functype [t] [])
-  | global_get : forall (C : context) (x : globalidx) (t : valtype), 
+  | global_get : forall (C : context) (x : globalidx) (t : valtype),
     (x < (List.length (C.GLOBALS))) ->
     (((C.GLOBALS)[x]!) == (.mk_globaltype (some .MUT) t)) ->
     Instr_ok C (.GLOBAL_GET x) (.mk_functype [] [t])
-  | global_set : forall (C : context) (x : globalidx) (t : valtype), 
+  | global_set : forall (C : context) (x : globalidx) (t : valtype),
     (x < (List.length (C.GLOBALS))) ->
     (((C.GLOBALS)[x]!) == (.mk_globaltype (some .MUT) t)) ->
     Instr_ok C (.GLOBAL_GET x) (.mk_functype [t] [])
@@ -180,6 +180,11 @@ def «local» : ∀  (v_state : state) (v_localidx : localidx) , val
   | (.mk_state s f), x =>
     ((f.LOCALS)[x]!)
 
+/- Auxiliary Definition at: doc/example/NanoWasm.spectec:82.1-82.34 -/
+def «local2» (v_state : state) (v_localidx : localidx) : val :=
+  | (.mk_state s f), x =>
+    ((f.LOCALS)[x]!)
+
 
 /- Auxiliary Definition at: doc/example/NanoWasm.spectec:85.1-85.36 -/
 def global : ∀  (v_state : state) (v_globalidx : globalidx) , val
@@ -203,28 +208,28 @@ def update_global : ∀  (v_state : state) (v_globalidx : globalidx) (v_val : va
 inductive Step_pure : (List instr) -> (List instr) -> Prop where
   | nop : Step_pure [.NOP] []
   | drop : forall (v_val : val), Step_pure [(instr_val v_val), .DROP] []
-  | select_true : forall (val_1 : val) (val_2 : val) (c : const), 
+  | select_true : forall (val_1 : val) (val_2 : val) (c : const),
     (c != 0) ->
     Step_pure [(instr_val val_1), (instr_val val_2), (.CONST .I32 c), .SELECT] [(instr_val val_1)]
-  | select_false : forall (val_1 : val) (val_2 : val) (c : const), 
+  | select_false : forall (val_1 : val) (val_2 : val) (c : const),
     (c == 0) ->
     Step_pure [(instr_val val_1), (instr_val val_2), (.CONST .I32 c), .SELECT] [(instr_val val_2)]
 
 /- Inductive Relations Definition at: doc/example/NanoWasm.spectec:95.1-95.32 -/
 inductive Step : config -> config -> Prop where
-  | pure : forall (z : state) (instr_lst : (List instr)) (instr'_lst : (List instr)), 
+  | pure : forall (z : state) (instr_lst : (List instr)) (instr'_lst : (List instr)),
     (Step_pure instr_lst instr'_lst) ->
     Step (.mk_config z instr_lst) (.mk_config z instr'_lst)
-  | local_get : forall (z : state) (x : localidx) (v_val : val), 
+  | local_get : forall (z : state) (x : localidx) (v_val : val),
     (v_val == («local» z x)) ->
     Step (.mk_config z [(.LOCAL_GET x)]) (.mk_config z [(instr_val v_val)])
-  | local_set : forall (z : state) (v_val : val) (x : localidx) (z' : state), 
+  | local_set : forall (z : state) (v_val : val) (x : localidx) (z' : state),
     (z' == (update_local z x v_val)) ->
     Step (.mk_config z [(instr_val v_val), (.LOCAL_SET x)]) (.mk_config z' [])
-  | global_get : forall (z : state) (x : globalidx) (v_val : val), 
+  | global_get : forall (z : state) (x : globalidx) (v_val : val),
     (v_val == (global z x)) ->
     Step (.mk_config z [(.GLOBAL_GET x)]) (.mk_config z [(instr_val v_val)])
-  | global_set : forall (z : state) (v_val : val) (x : globalidx) (z' : state), 
+  | global_set : forall (z : state) (v_val : val) (x : globalidx) (z' : state),
     (z' == (update_global z x v_val)) ->
     Step (.mk_config z [(instr_val v_val), (.GLOBAL_SET x)]) (.mk_config z' [])
 

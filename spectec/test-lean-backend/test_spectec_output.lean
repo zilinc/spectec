@@ -34,9 +34,9 @@ deriving Inhabited, BEq
 |      GLOBAL_SET (v_globalidx : globalidx) : instr
 deriving Inhabited, BEq
 
-     structure context   where     MKcontext::
+     structure context   where     MKcontext::  
       GLOBALS  : List (globaltype)
-      LOCALS  : List (valtype)
+     LOCALS  : List (valtype) 
  deriving Inhabited, BEq
 
      inductive Instr_ok  : context -> instr -> functype -> Prop where
@@ -48,3 +48,33 @@ deriving Inhabited, BEq
 |      local_set (C : context) (x : localidx) (t : valtype) : (x) < (List.length (C.LOCALS)) -> (C.LOCALS[x]!) == (t) -> Instr_ok (C) (.LOCAL_SET (x)) (.mk_functype ([t]) ([]))
 |      global_get (C : context) (x : globalidx) (t : valtype) : (x) < (List.length (C.GLOBALS)) -> (C.GLOBALS[x]!) == (.mk_globaltype (some (.MUT)) (t)) -> Instr_ok (C) (.GLOBAL_GET (x)) (.mk_functype ([]) ([t]))
 |      global_set (C : context) (x : globalidx) (t : valtype) : (x) < (List.length (C.GLOBALS)) -> (C.GLOBALS[x]!) == (.mk_globaltype (some (.MUT)) (t)) -> Instr_ok (C) (.GLOBAL_GET (x)) (.mk_functype ([t]) ([]))
+
+
+     abbrev addr  : Type := Nat
+
+     structure moduleinst   where     MKmoduleinst::  
+      GLOBALS  : List (addr) 
+ deriving Inhabited, BEq
+
+     inductive val  : Type where
+  |      CONST (v_valtype : valtype) (v_const : const) : val
+deriving Inhabited, BEq
+
+     structure store   where     MKstore::  
+      GLOBALS  : List (val) 
+ deriving Inhabited, BEq
+
+     structure frame   where     MKframe::  
+      LOCALS  : List (val)
+     MODULE  : moduleinst 
+ deriving Inhabited, BEq
+
+     inductive state  : Type where
+  |      mk_state (v_store : store) (v_frame : frame) : state
+deriving Inhabited, BEq
+
+     inductive config  : Type where
+  |      mk_config (v_state : state) (instr_lst : List (instr)) : config
+deriving Inhabited, BEq
+
+     def Ki  : Nat := 1024
