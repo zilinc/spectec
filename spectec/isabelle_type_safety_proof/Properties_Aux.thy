@@ -287,11 +287,91 @@ lemma instr_inversion_1b:
     inv_data_drop: "e = (instr_subcase_7 (DATA_DROP x)) \<Longrightarrow>
       ((proj_uN_0 x) < (length (context_DATAS C))) \<and>
 		  (((context_DATAS C) ! (proj_uN_0 x)) = OKx) \<and>
-      ((mk_functype (mk_list []) (mk_list [])) <ti: ft)"
+      ((mk_functype (mk_list []) (mk_list [])) <ti: ft)" and
+    inv_load_val: "e = (instr_subcase_5 (LOAD nt None v_memarg)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  ((size (valtype_numtype nt)) \<noteq> None) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> (((the ((size (valtype_numtype nt)))) :: nat) div (8 :: nat))) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32]) (mk_list [(valtype_numtype nt)])) <ti: ft))" and
+    inv_load_pack: "e = (instr_subcase_5 (LOAD (numtype_Inn v_Inn) (Some (mk_loadop__0 v_Inn (mk_loadop_Inn (mk_sz v_M) v_sx))) v_memarg)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat)))  \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32]) (mk_list [(valtype_Inn v_Inn)])) <ti: ft))" and
+    inv_store_val: "e = (instr_subcase_6 (STORE nt None v_memarg)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  ((size (valtype_numtype nt)) \<noteq> None) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> (((the ((size (valtype_numtype nt)))) :: nat) div (8 :: nat))) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32, (valtype_numtype nt)]) (mk_list [])) <ti: ft))" and
+    inv_vload: "e = (instr_subcase_6 (VLOAD V128 (Some (SHAPEX_underscore v_M v_N v_sx)) v_memarg)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat)) * (v_N :: nat)) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32]) (mk_list [valtype_V128])) <ti: ft))" and
+    inv_vload_splat: "e = (instr_subcase_6 (VLOAD V128 (Some (SPLAT v_n)) v_memarg)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_n :: nat) div (8 :: nat))) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32]) (mk_list [valtype_V128])) <ti: ft))" and
+    inv_vload_zero: "e = (instr_subcase_6 (VLOAD V128 (Some (vloadop_ZERO v_n)) v_memarg)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_n :: nat) div (8 :: nat))) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32]) (mk_list [valtype_V128])) <ti: ft))" and 
+    inv_vload_lane: "e = (instr_subcase_6 (VLOAD_LANE V128 (mk_sz v_n) v_memarg v_laneidx)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_n :: nat) div (8 :: nat))) \<and>
+      (((proj_uN_0 v_laneidx) :: nat) < ((128 :: nat) div (v_n :: nat))) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32, valtype_V128]) (mk_list [valtype_V128])) <ti: ft))" and
+    inv_vstore: "e = (instr_subcase_6 (VSTORE V128 v_memarg)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+      ((size valtype_V128) \<noteq> None) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> (((the ((size valtype_V128))) :: nat) div (8 :: nat))) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32, valtype_V128]) (mk_list [])) <ti: ft))" and
+    inv_vstore_lane: "e = (instr_subcase_6 (VSTORE_LANE V128 (mk_sz v_n) v_memarg v_laneidx)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_n :: nat) div (8 :: nat))) \<and>
+      (((proj_uN_0 v_laneidx) :: nat) < ((128 :: nat) div (v_n :: nat))) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32, valtype_V128]) (mk_list [])) <ti: ft))"
 
   using instr_inversion_helper[OF assms]
   apply auto
   by (cases rule: Instr_ok.cases, auto)+
+
+lemma instr_inversion_1c:
+  assumes "Instrs_ok C [e] ft"
+  shows
+    inv_store_pack: "e = (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) \<Longrightarrow>
+      (\<exists> mt.
+      (0 < (length (context_MEMS C))) \<and>
+		  (((context_MEMS C) ! 0) = mt) \<and>
+		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat))) \<and>
+		  (wf_memtype mt) \<and>
+		  ((mk_functype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) <ti: ft))" and
+sorry
 
 lemma instr_inversion_2:
   assumes "Instrs_ok C [e] ft"
