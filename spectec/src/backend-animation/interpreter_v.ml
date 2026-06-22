@@ -1068,6 +1068,9 @@ and builtins_mem fname =
 
 (* Wasm interpreter entry *)
 
+let module_ok (args : Value.arg list) : value option =
+  call_func "module_ok" args |> run_opt
+
 let instantiate (args: Value.arg list) : value =
   match (let* r = call_func "instantiate" args in
          call_func "reduce_expr" [ValA r]) |> run_opt

@@ -125,13 +125,26 @@ let get_global_value module_name globalname : value (* val *) =
 
 (** Main functions **)
 
-and instantiate module_ : value * value =
+let module_ok module_ : (value * value, string) Stdlib.result =
+  log "[Validating module...]\n";
+  let t1 = Sys.time () in
+  let module' = C.vl_of_module module_ in
+  let r = (match Interpreter_v.module_ok [ valA module' ] with
+  | None -> Stdlib.Error ("Module validation failed.")
+  | Some (CaseV (_, [ets1; ets2])) -> Ok (ets1, ets2)
+  | Some v -> raise (Failure ("`module_ok` returned unexpected value: " ^ string_of_value v))
+  ) in
+  let t2 = Sys.time () in
+  log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);
+  r
+
+let instantiate module_ : value * value =
   log "[Instantiating module...]\n";
   let t1 = Sys.time () in
-  let il_module = C.vl_of_module module_ in
+  let module' = C.vl_of_module module_ in
   let externaddrs = List.map get_externaddr module_.it.imports in
   let store = Store.get () in
-  let CaseV (_, [state'; instrs']) = Interpreter_v.instantiate [ valA store ; valA il_module; listV_of_list externaddrs |> valA ] in
+  let CaseV (_, [state'; instrs']) = Interpreter_v.instantiate [ valA store ; valA module'; listV_of_list externaddrs |> valA ] in
   let CaseV (_, [store'; frame']) = state' in
   let StrV [_; (fname, moduleinst)] = frame' in
   assert ("MODULE" = fname);
@@ -210,9 +223,8 @@ let test_assertion assertion =
     )
   | AssertInvalid (def, re)
   | AssertInvalidCustom (def, re) ->
-    (match def |> module_of_def |> fun m -> Fun.const m (RI.Valid.check_module m) |> instantiate |> ignore with
-    | exception RI.Valid.Invalid _ -> success
-    | exception I.Exception.Invalid _ -> success
+    (match def |> module_of_def |> module_ok with
+    | Error _ -> success
     | _ -> print_fail assertion.at "validation" re "module instance"
     )
   | AssertExhaustion (action, re) ->
@@ -229,9 +241,9 @@ let run_command' command =
   | Module (var_opt, def) ->
     log "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     let module_ = module_of_def def in
-    (match RI.Valid.check_module module_ with
-    | exception RI.Valid.Invalid(at, msg) -> print_fail' at msg
-    | _ -> Modules.add_with_var var_opt module_; success
+    (match module_ok module_ with
+    | Ok _ -> Modules.add_with_var var_opt module_; success
+    | Error e -> fail
     )
   | Instance (var1_opt, var2_opt) ->
     log "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);

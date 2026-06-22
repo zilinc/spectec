@@ -3,7 +3,7 @@ name: CI for DL meta-interpreter on Wasm-3.0 features
 
 on:
   push:
-    branches: [ il-animate ]
+    branches: [ il-animate** ]
     paths: [ spectec/**, specification/wasm-3.0/** ]
 
   # Allows you to run this workflow manually from the Actions tab
