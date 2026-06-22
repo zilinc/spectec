@@ -587,7 +587,7 @@ let create_def (def : Il.Ast.def) : command option
       id,                               (* "Ki" *)
       [],                               (* This handles the case with no params *)
       typ,                              (* nat *)
-      [{it = DefD ([], [], exp, prems); _}]    (* (NumE (Nat 1024)) *)
+      [{it = DefD ([], [], exp, []); _}]    (* (NumE (Nat 1024)) *)
     )
 
     (*
@@ -620,18 +620,118 @@ let create_def (def : Il.Ast.def) : command option
     (* | DecD (id, [], typ, clauses)
       -> None *)
 
+      
+
     | DecD (
-      id,
-      params,
-      typ,
-      clauses
+      id,     (* "local" *)
+      params, (*
+                (ExpP "v_state" (VarT "state"))
+                (ExpP "v_localidx" (VarT "localidx"))
+              *)
+      typ,    (* (VarT "val") *)
+      clauses (*
+                (DecD
+                  "local"
+                  (ExpP "v_state" (VarT "state"))
+                  (ExpP "v_localidx" (VarT "localidx"))
+                  (VarT "val")
+                  (DefD
+                    (ExpP "s" (VarT "store"))
+                    (ExpP "f" (VarT "frame"))
+                    (ExpP "x" nat)
+                    (ExpA (CaseE (Seq (Atom mk_state) Arg Arg) (TupE (VarE "s") (VarE "f"))))
+                    (ExpA (VarE "x"))
+                    (IdxE (DotE (VarE "f") (Atom LOCALS)) (VarE "x"))
+                  )
+                )
+              *)
     ) ->
       (*
         Let's say we have a definition like
 
-        
+        /- Auxiliary Definition at: doc/example/NanoWasm.spectec:82.1-82.34 -/
+        def «local» (v_state : state) (v_localidx : localidx) : val :=
+          match v_state with
+          | .mk_state s f => ((f.LOCALS)[v_localidx]!)
+
+        corresponding to IL AST
+
+        (DecD
+          "local"
+          (ExpP "v_state" (VarT "state"))
+          (ExpP "v_localidx" (VarT "localidx"))
+          (VarT "val")
+          (DefD
+            (ExpP "s" (VarT "store"))
+            (ExpP "f" (VarT "frame"))
+            (ExpP "x" nat)
+            (ExpA (CaseE (Seq (Atom mk_state) Arg Arg) (TupE (VarE "s") (VarE "f"))))
+            (ExpA (VarE "x"))
+            (IdxE (DotE (VarE "f") (Atom LOCALS)) (VarE "x"))
+          )
+        )
+
       *)
-      None
+
+
+      let signature : opt_decl_sig (* (v_state : state) (v_localidx : localidx) : val *)
+        =
+          let params_as_binders : _params list (* (v_state : state) (v_localidx : localidx) *)
+            = List.map (
+              fun p -> match p.it with
+                | TypP t -> BracketedBinder(ExplicitParam(
+                  NonEmptyList.from_list_unsafe [(Ident t.it : _ident_or_hole);], (* (X : Type) *) (* TODO: disambiguate Ident *)
+                  Type None
+                ))
+                | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
+                  NonEmptyList.from_list_unsafe [(Ident id.it : _ident_or_hole);], (* (v_state : state) *) (* TODO: disambiguate Ident *)
+                  create_typ typ
+                ))
+                | _ -> failwith "only ExpP or TypP should be here"
+            ) params
+          in
+
+          params_as_binders,
+          Some (create_typ typ) (* val *)
+      in
+
+
+      let create_clause
+        (clause : clause)
+        (params_from_parent : quant list)   (*
+                                              (ExpP "v_state" (VarT "state"))
+                                              (ExpP "v_localidx" (VarT "localidx"))
+                                            *)
+        : term * term =
+
+          let DefD (
+            quants,   (*
+                        (ExpP "s" (VarT "store"))
+                        (ExpP "f" (VarT "frame"))
+                        (ExpP "x" nat)
+                      *)
+            args,     (*
+                        corr. to v_state    ---- (ExpA (CaseE (Seq (Atom mk_state) Arg Arg) (TupE (VarE "s") (VarE "f"))))
+                        corr. to v_localidx ---- (ExpA (VarE "x"))
+                      *)
+            exp,      (* (IdxE (DotE (VarE "f") (Atom LOCALS)) (VarE "x")) *)
+            prems
+          ) = clause.it in
+
+          (* let pattern : term *)
+          failwith ""
+      in
+
+
+      Some (Def (DefAsgn {
+        modifier = empty_modifier;
+        id = id.it;
+        signature = signature;
+        body = match clauses with
+          | [{it = DefD (quants, args, exp, prems); _}]
+            -> append_prems_to_term (create_exp exp) prems
+          | _ -> failwith "only one clause should be here"
+      }))
     | GramD _ -> None
     | RecD _ -> None
     | HintD _ -> None

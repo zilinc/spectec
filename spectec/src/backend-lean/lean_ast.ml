@@ -94,12 +94,35 @@ type term =
     else_branch: term;
   }
 
+  (*
+    TODO: The actual Lean reference gives the fuller `match` grammar:
+
+    term ::= ...
+    | match
+          ((generalizing := (trueVal | falseVal)))?
+          ((motive := term))?
+          matchDiscr,*
+        with
+      (| (term,* )|* => term)*
+
+    at https://lean-lang.org/doc/reference/latest/Terms/Pattern-Matching/
+  
+    but we'll use a simplified one for now.
+  *)
+
+  | Match of {
+    match_term: term;
+    cases: (term * term) list;
+  }
+
   (* | UpdateList of {
     name_of_list_to_update: term;
     index: term;
     new_value: term;
   } *)
 [@@deriving show]
+
+
 
 and fun_binder =
   | Ident_FB of ident
