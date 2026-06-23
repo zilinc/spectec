@@ -305,7 +305,7 @@ and eval_exp ctx exp : value OptMonad.m =
           (Some ("Index out-of-range:\n" ^
                  string_of_exp e1 ^ " = " ^ string_of_value v1 ^ "\n" ^
                  "... whose length is " ^ string_of_int (Array.length !vs) ^ "\n" ^
-                 "... idx is " ^ string_of_int (Z.to_int i)
+                 "... idx " ^ string_of_exp e2 ^ " is " ^ string_of_int (Z.to_int i)
                 )
           )
     | _ -> error_eval "Indexing expression" exp

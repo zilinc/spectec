@@ -806,7 +806,6 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
         (* Base case for iterators: [len] is known. *)
         let t = reduce_typ !envr lhs'.note in
         let rhs' = IdxE (rhs, VarE i $$ i.at % (natT ~at:i.at ())) $$ rhs.at % lhs'.note in
-        (* FIXME(zilinc): Is this [prem_len] premise really needed? *)
         let prem_len = IfPr (eqE ~at len (LenE rhs $$ rhs.at % (natT ~at:at ()))) $ at in
         let prem_body = IfPr (eqE ~at lhs' rhs') $ at in
         let* prems_body' = bracket (add_knowns (Set.singleton i.it))
