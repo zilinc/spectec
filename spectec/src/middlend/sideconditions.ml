@@ -44,7 +44,7 @@ let iter_side_conditions _env ((iter, vs) : iterexp) : prem list =
   | ListN _, _ -> []
   | _ -> []
 
-let is_eq_exp e = 
+let is_eq_exp e =
   match e.it with
   | CmpE (`EqOp, _,  _, _) -> true
   | _ -> false
@@ -57,7 +57,7 @@ let rec t_exp env e =
   | IdxE (exp1, exp2) ->
     ([IfPr (CmpE (`LtOp, `NatT, exp2, LenE exp1 $$ e.at % exp2.note) $$ e.at % (BoolT $ e.at)) $ e.at], true)
   | TheE exp ->
-    ([IfPr (CmpE (`NeOp, `BoolT, exp, OptE None $$ e.at % exp.note) $$ e.at % (BoolT $ e.at)) $ e.at], true) 
+    ([IfPr (CmpE (`NeOp, `BoolT, exp, OptE None $$ e.at % exp.note) $$ e.at % (BoolT $ e.at)) $ e.at], true)
   | MemE (_exp, exp) ->
     ([IfPr (CmpE (`GtOp, `NatT, LenE exp $$ exp.at % (NumT `NatT $ exp.at), NumE (`Nat Z.zero) $$ no_region % (NumT `NatT $ no_region)) $$ e.at % (BoolT $ e.at)) $ e.at], true)
   | IterE (e1, ((iter, _) as iterexp))
@@ -65,10 +65,10 @@ let rec t_exp env e =
     let env' = env_under_iter env iterexp in
     let collector1 = create_collector env in
     let collector2 = create_collector env' in
-    let iter_prems = if is_eq_exp e1 then iter_side_conditions env iterexp else [] in 
+    let iter_prems = if is_eq_exp e1 then iter_side_conditions env iterexp else [] in
     (
-    iter_prems @ 
-    collect_iter collector1 iter @ 
+    iter_prems @
+    collect_iter collector1 iter @
     List.map (fun pr -> iterPr (pr, iterexp) $ e.at) (collect_exp collector2 e1), false)
   | _ -> ([], true)
 
@@ -131,7 +131,7 @@ let t_params env =
   List.fold_left (fun env param ->
     match param.it with
     | ExpP (v, t) -> Env.add v.it t env
-    | TypP _ | DefP _ | GramP _ -> error param.at "unexpected paramater or quantifier in rule"
+    | TypP _ | DefP _ | GramP _ -> error param.at "unexpected parameter or quantifier in rule"
   ) env
 
 let t_rule' env = function

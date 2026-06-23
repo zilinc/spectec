@@ -279,10 +279,13 @@ let () =
     Il.Valid.valid il;
 
     (match !target with
-    | Prose _ | Splice _ | Interpreter _ | Animate ->
-      enable_pass Sideconditions;
+    | Prose _ | Splice _ | Interpreter _ ->
+      enable_pass Sideconditions
+    | Animate ->
+      sideconditions_on_defs := true;
+      enable_pass Sideconditions
     | _ when !print_al || !print_al_o <> "" ->
-      enable_pass Sideconditions;
+      enable_pass Sideconditions
     | _ -> ()
     );
 
