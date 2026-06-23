@@ -7663,6 +7663,8 @@ $$
 $$
 \begin{array}{@{}c@{}}\displaystyle
 \frac{
+C \vdash t : \mathsf{ok}
+ \qquad
 {{\mathrm{default}}}_{t} \neq \epsilon
 }{
 C \vdash \mathsf{local}~t : \mathsf{set}~t
@@ -7674,6 +7676,8 @@ $$
 $$
 \begin{array}{@{}c@{}}\displaystyle
 \frac{
+C \vdash t : \mathsf{ok}
+ \qquad
 {{\mathrm{default}}}_{t} = \epsilon
 }{
 C \vdash \mathsf{local}~t : \mathsf{unset}~t

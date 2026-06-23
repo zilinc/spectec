@@ -18715,6 +18715,8 @@ The table :math:`(\mathsf{table}~{\mathit{tabletype}}~{\mathit{expr}})` is :ref:
 The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local type :math:`({\mathit{init}}~t)` if:
 
 
+   * The value type :math:`t` is :ref:`valid <valid-val>`.
+
    * Either:
 
       * The initialization status :math:`{\mathit{init}}` is of the form :math:`\mathsf{set}`.
@@ -18733,6 +18735,8 @@ The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local 
 The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local type :math:`(\mathsf{set}~t)` if:
 
 
+   * The value type :math:`t` is :ref:`valid <valid-val>`.
+
    * A :ref:`default value <aux-default>` for :math:`t` is defined.
 
 
@@ -18740,6 +18744,8 @@ The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local 
 
 The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local type :math:`(\mathsf{unset}~t)` if:
 
+
+   * The value type :math:`t` is :ref:`valid <valid-val>`.
 
    * A :ref:`default value <aux-default>` for :math:`t` is not defined.
 
@@ -31135,6 +31141,7 @@ Table_ok
 
 Local_ok
 - the local (LOCAL t) is valid with the local type (init t) if:
+  - the value type t is valid.
   - Either:
     - the initialization status init is SET.
     - A :ref:`default value <aux-default>` for t is defined.
@@ -31144,10 +31151,12 @@ Local_ok
 
 Local_ok/set
 - the local (LOCAL t) is valid with the local type (SET t) if:
+  - the value type t is valid.
   - A :ref:`default value <aux-default>` for t is defined.
 
 Local_ok/unset
 - the local (LOCAL t) is valid with the local type (UNSET t) if:
+  - the value type t is valid.
   - A :ref:`default value <aux-default>` for t is not defined.
 
 Func_ok
