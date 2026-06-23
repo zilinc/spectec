@@ -6,7 +6,7 @@ open Il.Walk
 
 (* Errors *)
 
-let error at msg = Error.error at "side condition" msg
+let _error at msg = Error.error at "side condition" msg
 
 let on_defs_ref = ref false
 
@@ -58,8 +58,7 @@ let rec t_exp env e =
     ([IfPr (CmpE (`LtOp, `NatT, exp2, LenE exp1 $$ e.at % exp2.note) $$ e.at % (BoolT $ e.at)) $ e.at], true)
   | TheE exp ->
     ([IfPr (CmpE (`NeOp, `BoolT, exp, OptE None $$ e.at % exp.note) $$ e.at % (BoolT $ e.at)) $ e.at], true)
-  | MemE (_exp, exp) ->
-    ([IfPr (CmpE (`GtOp, `NatT, LenE exp $$ exp.at % (NumT `NatT $ exp.at), NumE (`Nat Z.zero) $$ no_region % (NumT `NatT $ no_region)) $$ e.at % (BoolT $ e.at)) $ e.at], true)
+  (* SliceE _ | UpdE _ | ExtE _ -> TODO *)
   | IterE (e1, ((iter, _) as iterexp))
   ->
     let env' = env_under_iter env iterexp in
@@ -131,7 +130,7 @@ let t_params env =
   List.fold_left (fun env param ->
     match param.it with
     | ExpP (v, t) -> Env.add v.it t env
-    | TypP _ | DefP _ | GramP _ -> error param.at "unexpected parameter or quantifier in rule"
+    | _ -> env
   ) env
 
 let t_rule' env = function
