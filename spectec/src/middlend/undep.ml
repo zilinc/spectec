@@ -401,8 +401,9 @@ let create_proj_map_def set (d : def) =
     ) 
   | _ -> ()
 
+let env = empty ()
+
 let transform (il : script): script =
-  let env = empty () in 
   env.il_env <- Il.Env.env_of_script il;
   let proj_set = ref StringSet.empty in
   List.iter (create_proj_map_def proj_set) il;

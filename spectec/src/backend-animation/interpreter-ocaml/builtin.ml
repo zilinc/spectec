@@ -5,15 +5,13 @@ let use_step_pure = function
   | UNREACHABLE_instr
   | DROP_instr 
   | SELECT_instr _
-  | IF_pct__pct_ELSE_pct__instr _
-  | BR_instr _ 
+  | IFPctPctELSEPct_instr _
   | BR_IF_instr _
   | BR_TABLE_instr _
   | BR_ON_NULL_instr _
   | BR_ON_NON_NULL_instr _
   | CALL_INDIRECT_instr _
   | RETURN_CALL_INDIRECT_instr _
-  | RETURN_instr
   | UNOP_instr _
   | BINOP_instr _ 
   | TESTOP_instr _
@@ -58,7 +56,6 @@ let use_step_read = function
   | BR_ON_CAST_FAIL_instr _
   | CALL_instr _
   | RETURN_CALL_instr _
-  | RETURN_CALL_REF_instr _
   | THROW_REF_instr
   | TRY_TABLE_instr _
   | REF_dot_NULL_instr _
@@ -112,9 +109,9 @@ let use_step = function
   | _ -> false
 
 let use_step_ctxt = function 
-  | LABEL__pct__lbrackcu_pct__rbrackcu_pct__instr _
-  | FRAME__pct__lbrackcu_pct__rbrackcu_pct__instr _ 
-  | HANDLER__pct__lbrackcu_pct__rbrackcu_pct__instr _ -> true
+  | LABEL_Pct_lbrackcuPct_rbrackcuPct_instr _
+  | FRAME_Pct_lbrackcuPct_rbrackcuPct_instr _ 
+  | HANDLER_Pct_lbrackcuPct_rbrackcuPct_instr _ -> true
   | _ -> false
 let inv_concat_ a0 = failwith "TODO: implement Built-in function inv_concat_"
 let inv_concatn_ a0 a1 = failwith "TODO: implement Built-in function inv_concatn_"

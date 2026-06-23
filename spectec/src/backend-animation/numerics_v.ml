@@ -111,7 +111,7 @@ let inv_ibytes : numerics =
   }
 
 
-(*let nbytes : numerics =
+let nbytes : numerics =
   {
     name = "nbytes";
     f =
@@ -122,22 +122,8 @@ let inv_ibytes : numerics =
       | [ CaseV ([["F64"]], []); f ] -> ibytes.f [ vl_of_nat 64; vl_to_float64 f |> RI.F64.to_bits |> vl_of_uN_64 ]
       | vs -> error_values "nbytes" vs
       );
-  }*)
-
-let nbytes : numerics =
-  {
-    name = "nbytes";
-    f =
-      (function
-      | [ CaseV ([["I32"]], []); CaseV ([["mk_num__0"];[];[]], [_inn; n]) ] -> ibytes.f [ vl_of_nat 32; n ]
-      | [ CaseV ([["I64"]], []); CaseV ([["mk_num__0"];[];[]], [_inn; n]) ] -> ibytes.f [ vl_of_nat 64; n ]
-      | [ CaseV ([["F32"]], []); CaseV ([["mk_num__1"];[];[]], [_fnn; f]) ] -> ibytes.f [ vl_of_nat 32; vl_to_float32 f |> RI.F32.to_bits |> vl_of_uN_32 ]
-      | [ CaseV ([["F64"]], []); CaseV ([["mk_num__1"];[];[]], [_fnn; f]) ] -> ibytes.f [ vl_of_nat 64; vl_to_float64 f |> RI.F64.to_bits |> vl_of_uN_64 ]
-      | vs -> error_values "nbytes" vs
-      );
   }
-
-(*let inv_nbytes : numerics =
+let inv_nbytes : numerics =
   {
     name = "inv_nbytes";
     f =
@@ -146,27 +132,6 @@ let nbytes : numerics =
       | [ CaseV ([["I64"]], []); l ] -> inv_ibytes.f [ vl_of_nat 64; l ]
       | [ CaseV ([["F32"]], []); l ] -> inv_ibytes.f [ vl_of_nat 32; l ] |> vl_to_uN_32 |> RI.F32.of_bits |> vl_of_float32
       | [ CaseV ([["F64"]], []); l ] -> inv_ibytes.f [ vl_of_nat 64; l ] |> vl_to_uN_64 |> RI.F64.of_bits |> vl_of_float64
-      | vs -> error_values "inv_nbytes" vs
-      );
-  }*)
-
-let inv_nbytes : numerics =
-  {
-    name = "inv_nbytes";
-    f =
-      (function
-      | [ CaseV ([["I32"]], []); l ] -> 
-        let inn = nullary "I32" in
-        caseV [["mk_num__0"];[];[]] [inn; inv_ibytes.f [ vl_of_nat 32; l ]]
-      | [ CaseV ([["I64"]], []); l ] -> 
-        let inn = nullary "I64" in
-        caseV [["mk_num__0"];[];[]] [inn; inv_ibytes.f [ vl_of_nat 64; l ]]
-      | [ CaseV ([["F32"]], []); l ] -> 
-        let fnn = nullary "F32" in
-        caseV [["mk_num__1"];[];[]] [fnn; inv_ibytes.f [ vl_of_nat 32; l ] |> vl_to_uN_32 |> RI.F32.of_bits |> vl_of_float32]
-      | [ CaseV ([["F64"]], []); l ] -> 
-        let fnn = nullary "F64" in
-        caseV [["mk_num__1"];[];[]] [fnn; inv_ibytes.f [ vl_of_nat 64; l ] |> vl_to_uN_64 |> RI.F64.of_bits |> vl_of_float64]
       | vs -> error_values "inv_nbytes" vs
       );
   }
@@ -373,7 +338,7 @@ let extend : numerics =
       );
   }
 
-(*let reinterpret : numerics =
+let reinterpret : numerics =
   {
     name = "reinterpret";
     f =
@@ -386,31 +351,6 @@ let extend : numerics =
         i |> vl_to_float32 |> RI.Convert.I32_.reinterpret_f32 |> vl_of_uN_32
       | [ CaseV ([["F64"]], []); CaseV ([["I64"]], []); CaseV _ as i ] ->
         i |> vl_to_float64 |> RI.Convert.I64_.reinterpret_f64 |> vl_of_uN_64
-      | vs -> error_values "reinterpret" vs
-      );
-  }*)
-
-let reinterpret : numerics =
-  {
-    name = "reinterpret";
-    f =
-      (function
-      | [ CaseV ([["I32"]], []); CaseV ([["F32"]], []);
-          CaseV ([["mk_num__0"];[];[]], [_inn; i]) ] ->
-        let fnn = nullary "F32" in
-        caseV [["mk_num__1"];[];[]] [fnn; i |> vl_to_uN_32 |> RI.Convert.F32_.reinterpret_i32 |> vl_of_float32 ]
-      | [ CaseV ([["I64"]], []); CaseV ([["F64"]], []);
-          CaseV ([["mk_num__0"];[];[]], [_inn; i]) ] ->
-        let fnn = nullary "F64" in
-        caseV [["mk_num__1"];[];[]] [fnn; i |> vl_to_uN_64 |> RI.Convert.F64_.reinterpret_i64 |> vl_of_float64]
-      | [ CaseV ([["F32"]], []); CaseV ([["I32"]], []);
-          CaseV ([["mk_num__1"];[];[]], [_fnn; f]) ] ->
-        let inn = nullary "I32" in
-        caseV [["mk_num__0"];[];[]] [inn; f |> vl_to_float32 |> RI.Convert.I32_.reinterpret_f32 |> vl_of_uN_32]
-      | [ CaseV ([["F64"]], []); CaseV ([["I64"]], []);
-          CaseV ([["mk_num__1"];[];[]], [_fnn; f]) ] ->
-        let inn = nullary "I64" in
-        caseV [["mk_num__0"];[];[]] [inn; f |> vl_to_float64 |> RI.Convert.I64_.reinterpret_f64 |> vl_of_uN_64]
       | vs -> error_values "reinterpret" vs
       );
   }

@@ -315,7 +315,7 @@ let () =
       | x::xs when x <> "" -> concat_nonempty sep (x ^ sep ^ acc) xs
       | _::xs -> concat_nonempty sep acc xs
     in
-    Out_channel.output_string wfslog (concat_nonempty "\n" "" (List.map Il.Print.string_of_wf il));
+    (* Out_channel.output_string wfslog (concat_nonempty "\n" "" (List.map Il.Print.string_of_wf il)); *)
 
     let al =
       if not !print_al && !print_al_o = "" &&

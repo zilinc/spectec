@@ -129,29 +129,10 @@ let unwrap_opt opt : exp option =
   | _ -> error opt.at ("Input expression is not a optional: " ^ string_of_exp opt)
 
 
-(*let text_to_string txt : string =
-  match txt.it with
-  | TextE str -> str
-  | _ -> error txt.at ("Input expression is not a text: " ^ string_of_exp txt)*)
-
 let text_to_string txt : string =
   match txt.it with
-  | CaseE ([[];[]], { it = TupE [e]; _ }) ->
-    (match e.it with
-    | ListE chars ->
-      let char_list = List.map (fun c ->
-        match c.it with
-        | CaseE ([[];[]], { it = TupE [n]; _ }) ->
-          (match n.it with
-          | NumE (`Nat z) -> Z.to_int z |> Char.chr
-          | _ -> error n.at ("Input expression is not a nat: " ^ string_of_exp n)
-          )
-        | _ -> error c.at ("Input expression is not a char case: " ^ string_of_exp c)
-      ) chars in
-      String.of_seq (List.to_seq char_list)
-    | _ -> error e.at ("Input expression is not a list of chars: " ^ string_of_exp e)
-    )
-  | _ -> error txt.at ("Input expression is not a name case: " ^ string_of_exp txt)
+  | TextE str -> str
+  | _ -> error txt.at ("Input expression is not a text: " ^ string_of_exp txt)
 
 let of_bool_exp = function
   | BoolE b -> Some b

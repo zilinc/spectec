@@ -92,15 +92,15 @@ and string_of_typbind (x, t) =
 
 and string_of_deftyp ?(layout = `H) dt =
   match dt.it with
-  | AliasT t -> "alias: " ^ string_of_typ t
-  | StructT tfs when layout = `H -> "struct: " ^
-    "{" ^ concat ", " (List.map string_of_typfield tfs) ^ "}"
-  | StructT tfs -> "struct V: " ^
-    "\n{\n  " ^ concat ",\n  " (List.map string_of_typfield tfs) ^ "\n}"
-  | VariantT tcs when layout = `H -> 
-    "| " ^ concat " | " (List.map string_of_typcase tcs)
-  | VariantT tcs -> 
-    "\n  | " ^ concat "\n  | " (List.map string_of_typcase tcs)
+  | AliasT t -> string_of_typ t
+  | StructT tfs when layout = `H ->
+    "{" ^ concat ", " (List.map (string_of_typfield ~layout) tfs) ^ "}"
+  | StructT tfs ->
+    "\n{\n  " ^ concat ",\n  " (List.map (string_of_typfield ~layout) tfs) ^ "\n}"
+  | VariantT tcs when layout = `H ->
+    "| " ^ concat " | " (List.map (string_of_typcase ~layout) tcs)
+  | VariantT tcs ->
+    "\n  | " ^ concat "\n  | " (List.map (string_of_typcase ~layout) tcs)
 
 and string_of_typfield ?(layout = `H) (atom, (t, qs, prems), _hints) =
   string_of_mixop (Mixop.Atom atom) ^ " " ^ string_of_typ t ^
@@ -349,17 +349,6 @@ let rec string_of_def_id d =
     pre ^ "rec {\n" ^ concat "" (List.map string_of_def_id ds) ^ "}" ^ "\n"
   | HintD _ ->
     "hint"
-let rec concat_nonempty sep acc l = match l with
-  | [] -> acc
-  | x::xs when x <> "" -> concat_nonempty sep (x ^ sep ^ acc) xs
-  | _::xs -> concat_nonempty sep acc xs
-
-let rec string_of_wf d = 
-  match d.it with
-  | RelD (id, _, _, _) when String.starts_with ~prefix:"wf" id.it -> string_of_def d
-  | RecD rds ->
-    concat_nonempty "\n" "" (List.map string_of_wf rds)
-  | _ -> ""
 
 (* Scripts *)
 

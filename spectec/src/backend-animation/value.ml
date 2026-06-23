@@ -38,7 +38,6 @@ type iter =
 let vl_of_mixop : 'a Xl.Mixop.mixop -> mixop = function
   | mss -> Xl.Mixop.flatten mss |> List.map (fun ms -> List.map Atom.to_string ms)
 
-
 let rec string_of_mixop =
   let rec go = function
            | []  -> ""

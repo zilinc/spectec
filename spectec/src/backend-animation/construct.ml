@@ -62,9 +62,7 @@ let il_of_nat16 i16 = Z.of_int (RI.I16.to_int_u i16) |> il_of_z_nat
 let il_of_nat32 i32 = Z.of_int32_unsigned i32 |> il_of_z_nat
 let il_of_nat64 i64 = Z.of_int64_unsigned i64 |> il_of_z_nat
 
-(*let il_of_name name = textE (Utf8.encode name)*)
-let il_of_char char = mk_case' "char" [[];[]] [il_of_nat char]
-let il_of_name chars = mk_case' "name" [[];[]] [(il_of_list (t_star "char") il_of_char chars)]
+let il_of_name name = textE (Utf8.encode name)
 let il_of_byte byte = Char.code byte |> il_of_nat
 let il_of_bytes bytes = String.to_seq bytes |> il_of_seq il_of_byte (t_star "byte")
 let il_of_float32 f32 = RI.F32.to_bits f32 |> Z.of_int32_unsigned |> il_of_floatN BI.Construct.layout32
@@ -175,23 +173,16 @@ let il_of_memorytype = function
   | RT.MemoryT (at, limits) ->
     mk_case' "memtype" [[];[];["PAGE"]] [il_of_addrtype at; il_of_limits default_memory_max limits]
 
+
 (* Construct value *)
 
-(*let il_of_num value =
+let il_of_num value =
   let const_info = {def = "instr"; case = "CONST"} in
   match value with
   | RI.Value.I32 i32 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "I32"; il_of_uN_32 i32]
   | RI.Value.I64 i64 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "I64"; il_of_uN_64 i64]
   | RI.Value.F32 f32 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "F32"; il_of_float32 f32]
-  | RI.Value.F64 f64 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "F64"; il_of_float64 f64]*)
-
-let il_of_num value =
-  let const_info = {def = "instr"; case = "CONST"} in
-  match value with
-  | RI.Value.I32 i32 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "I32"; mk_case' "num_" [["mk_num__0"];[];[]] [mk_nullary' "Inn" "I32"; il_of_uN_32 i32]]
-  | RI.Value.I64 i64 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "I64"; mk_case' "num_" [["mk_num__0"];[];[]] [mk_nullary' "Inn" "I64"; il_of_uN_64 i64]]
-  | RI.Value.F32 f32 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "F32"; mk_case' "num_" [["mk_num__1"];[];[]] [mk_nullary' "numtype" "F32"; il_of_float32 f32]]
-  | RI.Value.F64 f64 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "F64"; mk_case' "num_" [["mk_num__1"];[];[]] [mk_nullary' "numtype" "F64"; il_of_float64 f64]]
+  | RI.Value.F64 f64 -> mk_case' "instr" [["CONST"];[];[]] [mk_nullary' "numtype" "F64"; il_of_float64 f64]
 
 let il_of_vec = function
   | RI.Value.V128 v128 -> mk_case' "instr" [["VCONST"];[];[]] [mk_nullary' "vectype" "V128"; il_of_vec128 v128]
@@ -261,7 +252,7 @@ let il_of_unop =
   in
   il_of_op il_of_int_unop il_of_float_unop
 
-(*let il_of_binop =
+let il_of_binop =
   let open RI.Ast in
   let il_of_int_binop bop =
     let t = t_app "binop_" [expA (subE (varE ~note:(t_var "Inn") "Inn") (t_var "Inn") (t_var "numtype"))] in
@@ -301,7 +292,7 @@ let il_of_testop: RI.Ast.testop -> exp list =
     | _ -> .
   in
   il_of_op il_of_int_testop il_of_float_testop
-  
+
 let il_of_relop =
   let open RI.Ast in
   let il_of_int_relop rop =
@@ -324,106 +315,7 @@ let il_of_relop =
     | FloatOp.Le -> mk_nullary t "LE"
     | FloatOp.Ge -> mk_nullary t "GE"
   in
-  il_of_op il_of_int_relop il_of_float_relop*)
-
-let il_of_testop: RI.Ast.testop -> exp list =
-  let il_of_int_testop : RI.Ast.IntOp.testop -> exp = function
-    | Eqz ->
-      let t = t_app "testop_Inn" [expA (varE ~note:(t_var "Inn") "Inn")] in
-      mk_nullary t "EQZ"
-  in
-  let t_testop = t_app "testop_" [expA (varE ~note:(t_var "numtype") "numtype")] in
-  function
-  | RI.Value.I32 op ->
-      let inn = mk_nullary' "Inn" "I32" in
-      [inn; mk_case t_testop [["mk_testop__0"];[];[]] [inn; il_of_int_testop op]]
-  | RI.Value.I64 op ->
-      let inn = mk_nullary' "Inn" "I64" in
-      [inn; mk_case t_testop [["mk_testop__0"];[];[]] [inn; il_of_int_testop op]]
-  | RI.Value.F32 _ | RI.Value.F64 _ -> .
-
-let il_of_relop =
-  let open RI.Ast in
-  let il_of_int_relop rop =
-    let t = t_app "relop_Inn" [expA (varE ~note:(t_var "Inn") "Inn")] in
-    match rop with
-    | IntOp.Eq    -> mk_nullary t "EQ"
-    | IntOp.Ne    -> mk_nullary t "NE"
-    | IntOp.Lt sx -> mk_case t [["LT"];[]] [il_of_sx sx]
-    | IntOp.Gt sx -> mk_case t [["GT"];[]] [il_of_sx sx]
-    | IntOp.Le sx -> mk_case t [["LE"];[]] [il_of_sx sx]
-    | IntOp.Ge sx -> mk_case t [["GE"];[]] [il_of_sx sx]
-  in
-  let il_of_float_relop rop =
-    let t = t_app "relop_Fnn" [expA (varE ~note:(t_var "Fnn") "Fnn")] in
-    match rop with
-    | FloatOp.Eq -> mk_nullary t "EQ"
-    | FloatOp.Ne -> mk_nullary t "NE"
-    | FloatOp.Lt -> mk_nullary t "LT"
-    | FloatOp.Gt -> mk_nullary t "GT"
-    | FloatOp.Le -> mk_nullary t "LE"
-    | FloatOp.Ge -> mk_nullary t "GE"
-  in
-  let t_relop = t_app "relop_" [expA (varE ~note:(t_var "numtype") "numtype")] in
-  function
-  | RI.Value.I32 op ->
-      let inn = mk_nullary' "Inn" "I32" in
-      [inn; mk_case t_relop [["mk_relop__0"];[];[]] [inn; il_of_int_relop op]]
-  | RI.Value.I64 op ->
-      let inn = mk_nullary' "Inn" "I64" in
-      [inn; mk_case t_relop [["mk_relop__0"];[];[]] [inn; il_of_int_relop op]]
-  | RI.Value.F32 op ->
-      let fnn = mk_nullary' "Fnn" "F32" in
-      [fnn; mk_case t_relop [["mk_relop__1"];[];[]] [fnn; il_of_float_relop op]]
-  | RI.Value.F64 op ->
-      let fnn = mk_nullary' "Fnn" "F64" in
-      [fnn; mk_case t_relop [["mk_relop__1"];[];[]] [fnn; il_of_float_relop op]]
-
-
-let il_of_binop =
-  let open RI.Ast in
-  let il_of_int_binop bop =
-    let t = t_app "binop_Inn" [expA (varE ~note:(t_var "Inn") "Inn")] in
-    match bop with
-    | IntOp.Add    -> mk_nullary t "ADD"
-    | IntOp.Sub    -> mk_nullary t "SUB"
-    | IntOp.Mul    -> mk_nullary t "MUL"
-    | IntOp.Div sx -> mk_case t [["DIV"];[]] [il_of_sx sx]
-    | IntOp.Rem sx -> mk_case t [["REM"];[]] [il_of_sx sx]
-    | IntOp.And    -> mk_nullary t "AND"
-    | IntOp.Or     -> mk_nullary t "OR"
-    | IntOp.Xor    -> mk_nullary t "XOR"
-    | IntOp.Shl    -> mk_nullary t "SHL"
-    | IntOp.Shr sx -> mk_case t [["SHR"];[]] [il_of_sx sx]
-    | IntOp.Rotl   -> mk_nullary t "ROTL"
-    | IntOp.Rotr   -> mk_nullary t "ROTR"
-  in
-  let il_of_float_binop bop =
-    let t = t_app "binop_Fnn" [expA (varE ~note:(t_var "Fnn") "Fnn")] in
-    match bop with
-    | FloatOp.Add      -> mk_nullary t "ADD"
-    | FloatOp.Sub      -> mk_nullary t "SUB"
-    | FloatOp.Mul      -> mk_nullary t "MUL"
-    | FloatOp.Div      -> mk_nullary t "DIV"
-    | FloatOp.Min      -> mk_nullary t "MIN"
-    | FloatOp.Max      -> mk_nullary t "MAX"
-    | FloatOp.CopySign -> mk_nullary t "COPYSIGN"
-  in
-  let t_binop = t_app "binop_" [expA (varE ~note:(t_var "numtype") "numtype")] in
-  function
-  | RI.Value.I32 op ->
-      let inn = mk_nullary' "Inn" "I32" in
-      [inn; mk_case t_binop [["mk_binop__0"];[];[]] [inn; il_of_int_binop op]]
-      (*[inn; mk_case t_binop [["mk_binop__0"];[]] [inn; il_of_int_binop op]]*)
-  | RI.Value.I64 op ->
-      let inn = mk_nullary' "Inn" "I64" in
-      [inn; mk_case t_binop [["mk_binop__0"];[];[]] [inn; il_of_int_binop op]]
-  | RI.Value.F32 op ->
-      let fnn = mk_nullary' "Fnn" "F32" in
-      [fnn; mk_case t_binop [["mk_binop__1"];[];[]] [fnn; il_of_float_binop op]]
-  | RI.Value.F64 op ->
-      let fnn = mk_nullary' "Fnn" "F64" in
-      [fnn; mk_case t_binop [["mk_binop__1"];[];[]] [fnn; il_of_float_binop op]]
+  il_of_op il_of_int_relop il_of_float_relop
 
 let il_of_cvtop cop =
   let open RI.Value in
@@ -1092,8 +984,7 @@ let il_of_module (module_: RI.Ast.module_) =
 (* This function also strips any SubE nodes. *)
 let rec match_caseE name exp : string list list * exp list =
   match exp.it with
-  | CaseE (tag, { it = TupE es; _ }) -> 
-    mixop_to_text tag, es
+  | CaseE (tag, { it = TupE es; _ }) -> mixop_to_text tag, es
   | SubE (exp', _, _) -> match_caseE name exp'
   | _ -> error_value (name ^ " (match_caseE)") exp
 
@@ -1183,16 +1074,7 @@ let il_to_string exp =
   match exp.it with
   | TextE str -> str
   | _ -> error_value "text" exp
-(*let il_to_name name = name |> il_to_string |> Utf8.decode*)
-let il_to_char exp = 
-  match match_caseE "name" exp with
-  | ([[];[]], [n]) -> il_to_int n
-  | _ -> error_value "char" exp
-let il_to_name exp =
-  match match_caseE "name" exp with
-  | ([[];[]], [chars]) -> il_to_list il_to_char chars
-  | _ -> error_value "name" exp
-
+let il_to_name name = name |> il_to_string |> Utf8.decode
 let il_to_bool exp = match exp.it with
   | BoolE b -> b
   | _ -> error_value "bool" exp
@@ -1438,30 +1320,13 @@ let il_to_float_binop exp : RI.Ast.FloatOp.binop =
   | [["MAX"]], [] -> FloatOp.Max
   | [["COPYSIGN"]], [] -> FloatOp.CopySign
   | _ -> error_value "float binop" exp
-(*let il_to_binop : exp list -> RI.Ast.binop = il_to_op il_to_int_binop il_to_float_binop*)
-
-let il_to_binop exps : RI.Ast.binop =
-  match exps with
-  | [numtype; op] ->
-    (match match_caseE "binop" op with
-    | [["mk_binop__0"];[];[]], [inn; inner_op] ->
-      (match match_caseE "binop Inn" inn with
-      | [["I32"]], [] -> RI.Value.I32 (il_to_int_binop inner_op)
-      | [["I64"]], [] -> RI.Value.I64 (il_to_int_binop inner_op)
-      | _ -> error_value "binop Inn" inn)
-    | [["mk_binop__1"];[];[]], [fnn; inner_op] ->
-      (match match_caseE "binop Fnn" fnn with
-      | [["F32"]], [] -> RI.Value.F32 (il_to_float_binop inner_op)
-      | [["F64"]], [] -> RI.Value.F64 (il_to_float_binop inner_op)
-      | _ -> error_value "binop Fnn" fnn)
-    | _ -> error_value "binop" op)
-  | _ -> error_values "binop" exps
+let il_to_binop : exp list -> RI.Ast.binop = il_to_op il_to_int_binop il_to_float_binop
 
 let il_to_int_testop exp : RI.Ast.IntOp.testop =
   match match_caseE "testop" exp with
   | [["EQZ"]], [] -> RI.Ast.IntOp.Eqz
   | _ -> error_value "integer testop" exp
-(*let il_to_testop exps : RI.Ast.testop =
+let il_to_testop exps : RI.Ast.testop =
   match exps with
   | [numtype; op] ->
     (match match_caseE "testop numtype" numtype with
@@ -1469,18 +1334,6 @@ let il_to_int_testop exp : RI.Ast.IntOp.testop =
     | [["I64"]], [] -> RI.Value.I64 (il_to_int_testop op)
     | _ -> error_value "testop numtype" numtype
     )
-  | _ -> error_values "testop" exps*)
-
-let il_to_testop exps : RI.Ast.testop =
-  match exps with
-  | [numtype; op] ->
-    (match match_caseE "testop" op with
-    | [["mk_testop__0"];[];[]], [inn; inner_op] ->
-      (match match_caseE "testop Inn" inn with
-      | [["I32"]], [] -> RI.Value.I32 (il_to_int_testop inner_op)
-      | [["I64"]], [] -> RI.Value.I64 (il_to_int_testop inner_op)
-      | _ -> error_value "testop Inn" inn)
-    | _ -> error_value "testop" op)
   | _ -> error_values "testop" exps
 
 let il_to_int_relop exp : RI.Ast.IntOp.relop =
@@ -1503,24 +1356,7 @@ let il_to_float_relop exp : RI.Ast.FloatOp.relop =
   | [["LE"]], [] -> FloatOp.Le
   | [["GE"]], [] -> FloatOp.Ge
   | _ -> error_value "float relop" exp
-(*let il_to_relop : exp list -> RI.Ast.relop = il_to_op il_to_int_relop il_to_float_relop*)
-
-let il_to_relop exps : RI.Ast.relop =
-  match exps with
-  | [numtype; op] ->
-    (match match_caseE "relop" op with
-    | [["mk_relop__0"];[];[]], [inn; inner_op] ->
-      (match match_caseE "relop Inn" inn with
-      | [["I32"]], [] -> RI.Value.I32 (il_to_int_relop inner_op)
-      | [["I64"]], [] -> RI.Value.I64 (il_to_int_relop inner_op)
-      | _ -> error_value "relop Inn" inn)
-    | [["mk_relop__1"];[];[]], [fnn; inner_op] ->
-      (match match_caseE "relop Fnn" fnn with
-      | [["F32"]], [] -> RI.Value.F32 (il_to_float_relop inner_op)
-      | [["F64"]], [] -> RI.Value.F64 (il_to_float_relop inner_op)
-      | _ -> error_value "relop Fnn" fnn)
-    | _ -> error_value "relop" op)
-  | _ -> error_values "relop" exps
+let il_to_relop : exp list -> RI.Ast.relop = il_to_op il_to_int_relop il_to_float_relop
 
 let il_to_int_cvtop exps : RI.Ast.IntOp.cvtop =
   let open RI.Ast in
@@ -1934,7 +1770,7 @@ let il_to_catch' exp : RI.Ast.catch' =
   | _ -> error_value "catch" exp
 let il_to_catch exp : RI.Ast.catch = il_to_phrase il_to_catch' exp
 
-(*let il_to_num exp : RI.Value.num =
+let il_to_num exp : RI.Value.num =
   match match_caseE "num" exp with
   | [["CONST"];[];[]], [numtype; num_] ->
     (match match_caseE "numtype" numtype with
@@ -1943,24 +1779,6 @@ let il_to_catch exp : RI.Ast.catch = il_to_phrase il_to_catch' exp
     | [["F32"]], [] -> F32 (il_to_float32 num_)
     | [["F64"]], [] -> F64 (il_to_float64 num_)
     | v -> error_value "numtype" numtype
-    )
-  | _ -> error_value "num" exp*)
-
-let il_to_num exp : RI.Value.num =
-  match match_caseE "num" exp with
-  | [["CONST"];[];[]], [numtype; num_] ->
-    (match match_caseE "num_" num_ with
-    | [["mk_num__0"];[];[]], [inn; inner] ->
-      (match match_caseE "num_ Inn" inn with
-      | [["I32"]], [] -> I32 (il_to_uN_32 inner)
-      | [["I64"]], [] -> I64 (il_to_uN_64 inner)
-      | _ -> error_value "num_ Inn" inn)
-    | [["mk_num__1"];[];[]], [fnn; inner] ->
-      (match match_caseE "num_ Fnn" fnn with
-      | [["F32"]], [] -> F32 (il_to_float32 inner)
-      | [["F64"]], [] -> F64 (il_to_float64 inner)
-      | _ -> error_value "num_ Fnn" fnn)
-    | _ -> error_value "num_" num_
     )
   | _ -> error_value "num" exp
 

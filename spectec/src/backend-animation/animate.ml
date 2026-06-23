@@ -16,8 +16,6 @@ open Occur
 open Lazy
 module H = State_v.Hints
 
-(* temp debugging things *)
-let wfs = ref Set.empty
 
 (* Errors *)
 
@@ -55,7 +53,7 @@ let info v at msg = if List.mem v !verbose then
 
 (* Configs *)
 
-let allow_partial_animation = ref true
+let allow_partial_animation = ref false
 
 
 (* Fresh name generation *)
@@ -1613,8 +1611,7 @@ let animate_func_def envr (fdef: func_def) : func_def =
 
 let rec animate_def envr (d: dl_def): dl_def = match d with
 | TypeDef tdef -> TypeDef tdef
-| FuncDef fdef -> let (fid, _, _ , _, _, _) = fdef.it in
-  FuncDef (animate_func_def envr fdef)
+| FuncDef fdef -> FuncDef (animate_func_def envr fdef)
 | RecDef  defs -> RecDef (List.map (animate_def envr) defs)
 
 
@@ -1678,8 +1675,7 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
   | f :: fs -> f :: merge_defs fs
 
 
-let invert_clause tempargplsremove (cl: clause) : func_clause =
-  (*Printf.printf "Inverting clause: %s\n" (string_of_clause tempargplsremove cl);*)
+let invert_clause (cl: clause) : func_clause =
   let DefD (binds, args, rhs, prems) = cl.it in
   let args_init, args_last = Lib.List.split_last args in
   let args' = args_init @ [ ExpA rhs $ rhs.at ] in
@@ -1708,99 +1704,13 @@ let animate_inv_funcs envr (dl: dl_def list) : dl_def list =
   let inv_funcs' = go envr animate_inv_func [] in
   dl @ inv_funcs'
 
-(* --- kash temp debugging things --- *)
-let string_of_hint hint = 
-  Printf.sprintf "Hintid: %s; HintExp: %s" hint.hintid.it (El.Print.string_of_exp hint.hintexp) 
-let string_of_hintdef hintdef =
-  match hintdef.it with
-  | TypH (hid, hints) -> Printf.sprintf "TypH: \n name: %s; hints: %s" hid.it (String.concat "\n" (List.map string_of_hint hints))
-  | RelH (hid, hints) -> Printf.sprintf "RelH: \n name: %s; hints: %s" hid.it (String.concat "\n" (List.map string_of_hint hints))
-  | DecH (hid, hints) -> Printf.sprintf "DecH: \n name: %s; hints: %s" hid.it (String.concat "\n" (List.map string_of_hint hints))
-  | GramH (hid, hints) -> Printf.sprintf "GramH: \n name: %s; hints: %s" hid.it (String.concat "\n" (List.map string_of_hint hints))
-
-(* (Inn : addrtype <: numtype) *)
-let addrtype = VarT ("addrtype" $ no, []) $ no
-let numtype  = VarT ("numtype" $ no,  []) $ no
-let inn_typ  = VarT ("Inn" $ no,  []) $ no
-let inn_sub  = SubE ((VarE ("Inn" $ no)) $$ no % inn_typ, addrtype, numtype) $$ no % addrtype
-
-(* iN($sizenn((Inn : addrtype <: numtype))) *)
-let sizenn_call =
-  CallE ("sizenn" $ no, [ExpA inn_sub $ no]) $$ no % (VarT ("nat" $ no, []) $ no)
-
-let iN_typ =
-  VarT ("iN" $ no, [ExpA sizenn_call $ no]) $ no
-
-(* num_((Inn : addrtype <: numtype)) *)
-let num_typ =
-  VarT ("num_" $ no, [ExpA inn_sub $ no]) $ no
-
-(* Inn : Inn, Some var_x : iN(....) Opt *)
-let params =
-  [ ExpP ("Inn" $ no,  VarT ("Inn" $ no, []) $ no) $ no;
-    ExpP ("var_x" $ no, IterT (iN_typ, Opt) $ no) $ no
-  ]
-let var_x_exp = VarE ("var_x" $ no) $$ no % iN_typ
-let inn_exp = VarE ("Inn" $ no) $$ no % inn_typ
-
-(* not sure about the mixop *)
-let mk_num_atom = 
-  {it = Atom "mk_num__0_num_"; at = no; note = {def = ""; case = ""}; mark = false}
-let mk_num_mixop = [[mk_num_atom]; []]
-
-let tup_typ = TupT [(inn_exp, inn_typ); (var_x_exp, iN_typ)] $ no
-
-let body =
-  CaseE (mk_num_mixop, TupE [inn_exp; var_x_exp] $$ no % tup_typ) $$ no % num_typ
-
-let opt_arg =
-  OptE (Some var_x_exp) $$ no % (IterT (iN_typ, Opt) $ no)
-
-let clause_args =
-  [ ExpA inn_exp  $ no
-  ; ExpA opt_arg  $ no
-  ]
-
-let inv_proj_cl : func_clause =
-  ( None, DefD ([], clause_args, body, []) $ no )
-
-let inv_proj_num__0 : func_def' =
-  ( "inv_proj_num__0" $ no, 
-     None,
-     params,
-     num_typ,
-     [inv_proj_cl],
-     Some Partial
-  )
-
-let add_proj_inv env =
-  Il.Env.add_hint !env ( DecH ("proj_num__0" $ no, [{ hintid = "inverse" $ no; hintexp = El.Ast.CallE ("inv_proj_num__0" $ no, []) $ no}]) $ no)
-
-(* --- --- --- --- --- --- *)
 
 (* Entry function *)
 let animate (dl, il) =
   let envr = ref (Il.Env.env_of_script il) in
-  (*envr := add_proj_inv envr;*)
-  (* add hints for all the wf preds *)
-  let rec add_wf_hint (d : Il.Ast.def) = 
-    match d.it with
-    | RelD (id, mixop, _, _) when (String.starts_with ~prefix:"wf" id.it) -> H.hint_of_relD id mixop;
-    | RecD rds -> List.iter add_wf_hint rds
-    | _ -> ()
-  in
-  List.iter add_wf_hint il;
-  let hintslog = open_out "hints.log" in
-  Out_channel.output_string hintslog (String.concat "\n" (List.map string_of_hintdef !envr.hints));
-
-  let animhints = open_out "anim-hints.log" in
-  Out_channel.output_string animhints (H.hints_to_string ());
   let dl' = dl |> List.map (animate_def envr)
                |> merge_defs
                |> animate_inv_funcs envr
   in
-  let wfslog = open_out "wfs.log" in
-  Out_channel.output_string wfslog (String.concat "\n" (Set.to_list !wfs));
   (* Il2dl.list_all_dl_defs dl'; *)
-  (*(!envr, dl' @ [FuncDef (inv_proj_num__0 $ no)])*)
   (!envr, dl')

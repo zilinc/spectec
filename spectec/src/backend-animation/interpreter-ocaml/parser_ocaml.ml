@@ -59,25 +59,19 @@ let vl_to_name exp =
 let gen_ocaml_of_name () = Printf.sprintf "ocaml_of_name (e : value) : DL.name =\n\
 \  match e with\n\
 \ | CaseV ([[];[]], [TextV s]) ->\n\
-\   DL.C_pct__name (List.map (fun c -> DL.C_pct__char (Z.of_int c)) (Reference_interpreter.Utf8.decode s))\n\
+\   DL.CPct_name (List.map (fun c -> DL.CPct_char (Z.of_int c)) (Reference_interpreter.Utf8.decode s))\n\
 \ | _ -> failwith \"ocaml_of_name: expected caseV1 TextV\""
 
 let gen_ocaml_to_name () = Printf.sprintf "vl_of_name (v : DL.name) : Backend_animation.Value.value =\n\
 \  match v with\n\
-\  | DL.C_pct__name chars -> textV (Reference_interpreter.Utf8.encode (List.map (fun (DL.C_pct__char n) -> (Z.to_int n)) chars)) |> caseV1"
+\  | DL.CPct_name chars -> textV (Reference_interpreter.Utf8.encode (List.map (fun (DL.CPct_char n) -> (Z.to_int n)) chars)) |> caseV1"
 
 let gen_ocaml_of_hoststate () = Printf.sprintf "ocaml_of_hoststate _ = DL.HOSTSTATE_hoststate\n\n"
 
-let mixop_to_vl_str (mixop : Xl.Mixop.mixop) : string =
-  "[" ^
-  String.concat "; "
-    (List.map (fun atoms ->
-      "[" ^ String.concat "; "
-        (List.map (fun a ->
-          Printf.sprintf "%S" (Xl.Atom.to_string a)
-        ) atoms) ^ "]"
-    ) mixop) ^
-  "]"
+let mixop_to_vl_str (mixop : 'a Xl.Mixop.mixop) : string =
+  let vl = Value.vl_of_mixop mixop in
+  let vl' = List.map (fun m -> "[" ^ (String.concat ";" (List.map (fun s -> Printf.sprintf "%S" s) m)) ^ "]") vl in
+  "[" ^ (String.concat ";" vl') ^ "]"
 
 let mixop_str mixop = match !backend with
   | IL -> mixop_to_ocaml_str mixop
@@ -143,29 +137,34 @@ let gen_ocaml_of_typ_fn (t : typ) =
             (List.mapi (fun i arg -> Printf.sprintf "(%s (List.nth es %d))" arg i) args)) tup_str)
   | _ -> gen_ocaml_of_typ t
 
+(* just changing this for now *)
 let gen_var_match_case typename tcs =
-  let mixop, (_, args, _), _ = tcs in
+  let mixop, (t, _, _), _ = tcs in
   let consstr =
     sanitize_name ~typecons:true ~typename:false
       (mixop_to_atom_str mixop)
   in
-  let* argsstr = gen_ocaml_of_typ args in
-  return (Printf.sprintf " | %S -> %s_%s %s" consstr consstr typename argsstr)
+  let consstr' = Value.string_of_mixop (Value.vl_of_mixop mixop) in
+  let* argsstr = gen_ocaml_of_typ t in
+  return (Printf.sprintf " | %S -> %s_%s %s" consstr' consstr typename argsstr)
 
-let gen_translation_typfield name i (atom, (_bs, t, _prems), _hints) =
+(* just changing this for now *)
+let gen_translation_typfield name i (atom, (t, _qs, _prems), _hints) =
   let deref = match !backend with
   | IL -> ""
   | VL -> "!"
   in
   let* typ_str = gen_ocaml_of_typ t in
+  (* just changed this now, to match new mixop type *)
   return
-    (mixop_to_atom_str ~recordfield:true [ [ atom ] ]
+    (mixop_to_atom_str ~recordfield:true (Atom atom)
     ^ "_" ^ name ^ "= (" ^ typ_str ^ " " ^ deref ^ "e" ^ string_of_int i ^ ")")
 
 let gen_match_typfield _name i (atom, (_bs, _t, _prems), _hints) =
   match !backend with
   | IL ->
-    let atom_str = mixop_to_atom_str [ [ atom ] ] in
+    (* just changed this now, to match new mixop type *)
+    let atom_str = mixop_to_atom_str (Atom atom) in
     return (Printf.sprintf "({it=(Atom \"%s\"); _}, e%d)" atom_str i)
   | VL ->
     let atom_str = Xl.Atom.to_string atom in
@@ -213,18 +212,18 @@ let gen_ocaml_of_var tcs name args : string t =
   let it_str = match !backend with
     | IL -> ".it"
     | VL -> ""
-   in
+  in
   let funcdef =
     Printf.sprintf
       "%s %s : %s =\n\
       \ match e%s with\n\
-      \ | %s -> begin match (sanitize_name ~typecons:true ~typename:false (%s mixop)) with\n\
+      \ | %s -> begin match (Backend_animation.Value.string_of_mixop mixop) with\n\
       \  %s\n\
       \   end\n\
       \ | _ -> failwith (Printf.sprintf \"Invalid expression for Variant type %s: should be a %s. Got: %%s\" (Backend_animation.Value.string_of_value e))\n"
       funcname arg
       (append_sep args name' " ")
-      it_str match_con mixopstr cases name match_con
+      it_str match_con cases name match_con
   in
   return funcdef
 
@@ -265,18 +264,20 @@ let rec gen_typarg_il (t : typ)=
       | Opt  -> return (Printf.sprintf "%sopt (%s)" (f_prefix ()) t1_str)
       | _           -> return "todo: non-list/option iterator")
 
-let gen_il_typfield name i (atom, (_bs, t, _prems), _hints) =
+(* just changed this for now - using the first arg instead of the second *)
+let gen_il_typfield name i (atom, (t, _qs, _prems), _hints) =
   let ref_ = match !backend with
   | IL -> ""
   | VL -> "ref "
   in
   let* typ_str = gen_typarg_il t in
-  let field_name = mixop_to_atom_str ~recordfield:true [ [ atom ] ] ^ "_" ^ name in
+  (* just changed this for now :( *)
+  let field_name = mixop_to_atom_str ~recordfield:true (Atom atom) ^ "_" ^ name in
   return (Printf.sprintf "(%s, %s(%s v.%s))"
     (field_key_str atom) ref_ typ_str field_name)
 
 let gen_il_cases (typename : string) (tcs : typcase) =
-  let mixop, (_, args, _), _ = tcs in
+  let mixop, (args, _, _), _ = tcs in
   let consstr =
     sanitize_name ~typecons:true ~typename:false
       (mixop_to_atom_str mixop)

@@ -35,8 +35,3 @@ val string_of_clause : ?suppress_pos: bool -> id -> clause -> string
 val string_of_script : ?suppress_pos: bool -> script -> string
 
 val print_notes : bool ref
-val string_of_wf : def -> string
-
-(* Kashish's code *)
-val string_of_typbind : exp * typ -> string
-val string_of_typfield : typfield -> string

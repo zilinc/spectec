@@ -3,21 +3,7 @@ open Il.Ast
 open Def 
 
 
-let logging = ref false 
-
-(* ===== TEMPORARY ONLY while i've switched to 5.1 ====== *)
-let rec take n xs =
-  match n, xs with
-  | n, _ when n <= 0 -> []
-  | _, [] -> []
-  | n, x :: xs -> x :: take (n - 1) xs
-
-let rec drop n xs =
-  match n, xs with
-  | n, xs when n <= 0 -> xs
-  | _, [] -> []
-  | n, _ :: xs -> drop (n - 1) xs
-(* ====================================================== *)
+let logging = ref false
 
 let is_letter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
 let is_capital c = 'A' <= c && c <= 'Z'
@@ -69,7 +55,8 @@ let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfi
     '-', "_dash";
     '>', "_right";
     ';', "_semi";
-    '/', "_slash"
+    '/', "_slash";
+    '#', "_hash"
   ] in
   let replaced = List.fold_left (fun acc (ch, repl) ->
     String.concat repl (String.split_on_char ch acc)
@@ -78,18 +65,18 @@ let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfi
   | "match" | "type" | "let" | "val" | "list" | "in" | "module" -> replaced ^ "_"
   | _ -> replaced 
 
-let mixop_to_atom_str ?(recordfield = false) (mixop : Mixop.mixop) =
-  (*Printf.printf "mixop to atom: %s\n" (Mixop.to_string mixop);
-  Printf.printf "is polymorphic?: %b\n" is_poly;*)
+let mixop_to_atom_str ?(recordfield = false) (mixop : 'a Mixop.mixop) =
   let frmt name = sanitize_name ~typename:false ~recordfield name in
   match mixop with
-  | [{it = Atom.Atom a; _}]::tail when List.for_all ((=) []) tail -> frmt a
-  | mixop ->
-    let s =
+  | Atom a -> frmt (Atom.to_string a)
+  | mixop -> 
+    (* let s =
       String.concat "_pct_" (List.map (
         fun atoms -> String.concat "" (List.map (fun x -> x |> Atom.to_string |> frmt) atoms)) mixop
       )
-    in s
+    in s*)
+    (* JUST DO THIS FOR NOW: *)
+    Mixop.to_string mixop
 
 let val_mixop_to_str ?(recordfield = false) (mixop : string list list) =
   (*Printf.printf "mixop to atom: %s\n" (Mixop.to_string mixop);
@@ -115,11 +102,8 @@ let update_slice_in l i len l' =
   let n = List.length l in
   if i < 0 || len < 0 || i + len > n || List.length l' <> len then
     failwith "update_slice: invalid indices";
-  (* temp only for 5.1 *)
-  (*let prefix = List.take i l in
-  let suffix = List.drop (i + len) l in*)
-  let prefix = take i l in
-  let suffix = drop (i + len) l in
+  let prefix = List.take i l in
+  let suffix = List.drop (i + len) l in
   prefix @ l' @ suffix
 
 let update_slice l i len l' = update_slice_in l (Z.to_int i) (Z.to_int len) l'
@@ -127,8 +111,7 @@ let update_slice l i len l' = update_slice_in l (Z.to_int i) (Z.to_int len) l'
 let slice l start len =
   if start < 0 || len < 0 || start + len > List.length l then
     failwith "slice: bad indices";
-  (*List.take len (List.drop start l) -- temp only for 5.1 *) 
-  take len (drop start l)
+  List.take len (List.drop start l)
 
 let lift e = 
   match e with 
@@ -258,41 +241,84 @@ module TypeM = struct
       "let rec %s = \n\
       \  match clauses with \n\
       \  | [] -> \n\
-      \      Printf.printf \"no matching clause in %%s\\n%%!\" err_msg;\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \       String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \       String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \       String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
+      \        Printf.printf \"no matching clause in %%s\\n%%!\" err_msg;\n\
       \      raise (NoMatchingClause err_msg)\n\
       \  | cl :: rest -> \n\
-      \    Printf.printf \"trying clause %%d\\n%%!\" idx;\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \       String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \       String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \       String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
+      \        Printf.printf \"trying clause %%d of %%s\\n%%!\" idx err_msg;\n\
       \    try \n\
       \      let res = %s in\n\
-      \      Printf.printf \"accepted at clause %%d\\n%%!\" idx;\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg || \n\
+      \         String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
+      \      Printf.printf \"%%s accepted at clause %%d\\n%%!\" err_msg idx;\n\
       \      res\n\
       \    with\n\
       \    | Match_failure _ as e ->\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
       \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
       \        %s\n\
       \    | SubtypingFailed as e ->\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
       \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
       \        %s\n\
       \    | NoMatchingClause _ as e ->\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
       \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
       \        %s\n\
       \    | CondFailed as e ->\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
       \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
       \        %s\n\
       \    | Invalid_argument _ as e ->\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
+      \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
+      \        %s\n\
+      \    | CompositionFailed as e ->\n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: reduce\" err_msg then
       \        Printf.printf \"clause %%d failed with %%s\\n%%!\" idx (Printexc.to_string e);\n\
       \        %s\n\
       \    | e -> \n\
+      \      if String.starts_with ~prefix:\"function: step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: dispatch\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: uc_step\" err_msg ||\n\
+      \         String.starts_with ~prefix:\"function: reduce\" err_msg then\n\
       \        Printf.printf \"unexpected exception at clause %%d: %%s\\n%%!\" idx (Printexc.to_string e);\n\
       \        raise e\n"
-      header call_str rec_call rec_call rec_call rec_call rec_call
+      header call_str rec_call rec_call rec_call rec_call rec_call rec_call
       else 
       Printf.sprintf "let rec %s = match clauses with \n\
       \ | [] -> raise (NoMatchingClause err_msg)\n\
       \ | cl :: rest ->\n\
       \ try %s with \n\
       \ | Match_failure _ | SubtypingFailed | NoMatchingClause _ \n\
-      \ | CondFailed | Invalid_argument _ -> %s\n\
+      \ | CondFailed | Invalid_argument _ | CompositionFailed -> %s\n\
       \ | e -> raise e\n" header call_str rec_call
 
   let gen_try_cls a : unit t =
@@ -551,12 +577,20 @@ end
    * subtyping/supertyping failure (SubtypingFailed)
    * an `-- if premise` is not satisfied (CondFailed)
    * a nested function call fails (NoMatchingClause) 
-   * an option type is none (Invalid_argument) (not sure if this can happen) *)
+   * an option type is none (Invalid_argument) (not sure if this can happen)
+   * a +++ b where both a and b are of the form Some _  *)
 
 exception SubtypingFailed
 exception NoMatchingClause of string
 exception CondFailed
 exception UnanimatedArg of string
+exception CompositionFailed
+
+let compose_opt x y = match x, y with
+  | None  , None   -> None
+  | None  , Some y -> Some y
+  | Some x, None   -> Some x
+  | Some _, Some _ -> raise CompositionFailed
   
 (* get a list of all functions (transitively) called by a particular function *)
 let rec exp_calls (e: exp) : Set.t = 
@@ -586,7 +620,7 @@ and arg_calls (arg : arg) : Set.t =
 let rec prem_calls (p : prem) : Set.t = 
   match p.it with
   | IfPr e | LetPr (_, e, _) -> exp_calls e
-  | IterPr (prems, _) -> List.fold_left Set.union Set.empty (List.map prem_calls prems)
+  | IterPr (prem, _) -> prem_calls prem
   | _ -> Set.empty
 
 let f_calls (fdef : func_def) : Set.t =
@@ -751,10 +785,14 @@ let atom_to_ocaml_str (a : Atom.atom) : string =
   in
   Printf.sprintf "{it=%s; at=no; note={Xl.Atom.def=\"\"; case=\"\"}; mark=false}" it_str
 
-let mixop_to_ocaml_str (mixop : Mixop.mixop) : string =
+(* let mixop_to_ocaml_str (mixop : 'a Mixop.mixop) : string =
   "[" ^
   String.concat "; "
     (List.map (fun atoms ->
       "[" ^ String.concat "; " (List.map atom_to_ocaml_str atoms) ^ "]"
     ) mixop) ^
-  "]"
+  "]"*)
+(* just temporary till i reconcile IL changes *)
+let mixop_to_ocaml_str (mixop : 'a Mixop.mixop) : string =
+  Mixop.to_string mixop
+

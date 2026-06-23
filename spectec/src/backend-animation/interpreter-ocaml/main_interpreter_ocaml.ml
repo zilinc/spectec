@@ -132,7 +132,8 @@ let basic_types_conv =
   let vl_of_int (i : DL.int)    : value = NumV (`Int i)\n\
   let vl_of_nat (n : DL.nat) : value = NumV (`Nat n)\n\
   let vl_of_rat (r : DL.rat)  : value = NumV (`Rat r)\n\
-  let vl_of_real (r : float) : value = NumV (`Real r)\n\n"
+  let vl_of_real (r : float) : value = NumV (`Real r)\n\n\
+  let vl_of_bool (b : bool) : value = BoolV b\n"
 
 let num_conv () =
   Printf.sprintf 

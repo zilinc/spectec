@@ -97,9 +97,9 @@ let hardcode_step (funcdefs : dl_def list) : dl_def list =
         | _ -> mark (idx + 1) (acc @ [ def ]) rest' recdefs insert)
   in
   let rest, recdefs, insert = mark 1 [] funcdefs [] (-1) in
-  take (insert - List.length recdefs) rest
+  List.take (insert - List.length recdefs) rest
   @ [ RecDef recdefs ]
-  @ drop (insert - List.length recdefs) rest 
+  @ List.drop (insert - List.length recdefs) rest 
 
 (* manually place out of order functions: 
 "inv_proj_<func>" right after "proj_<func>"
@@ -284,12 +284,12 @@ let rec get_tupsize (t : typ) : int option t =
           | AliasT alias -> get_tupsize alias
           | _ -> return (Some 1))
       | _ -> error t.at "todo: projection for multiple instance types")
-  | IterT (_, List) | IterT (_, List1) | IterT (_, ListN _) -> return None
+  | IterT (_, List) | IterT (_, List1) | IterT (_, ListN _) -> return None (* i don't think this is projection anymore *) 
   (*| _ -> error t.at "Projection in non-tuple/list/alias"*)
   | _ -> return (Some 1)
 
 let rmv_nonexp (p : param) : bool =
-  match p.it with ExpP _ -> true | _ -> false
+  match p.it with ExpP _ | DefP _ -> true | _ -> false
 
   let rmv_nonexparg (a : arg) : bool =
   match a.it with TypA _ -> false | _ -> true
@@ -339,6 +339,14 @@ let rec flatten_path (p : path) (acc : step_path list) : step_path list =
   | SliceP (p1, e1, e2) -> flatten_path p1 (SliceSP (e1, e2) :: acc)
   | DotP (p, atom) -> flatten_path p (DotSP (atom, p.note) :: acc)
 
+let check_eq_quants t1 t2 =
+  List.length t1 = List.length t2 &&
+  List.for_all2 (fun q1 q2 ->
+    match (q1.it, q2.it) with
+    | TypP id1, TypP id2 -> id1.it = id2.it
+    | _ -> false (* todo: check *)
+  ) t1 t2 
+
 let rec check_eq_typs t1 t2 =
   match (t1.it, t2.it) with
   | VarT (id1, a1), VarT (id2, a2) ->
@@ -357,15 +365,15 @@ let rec check_eq_typs t1 t2 =
       check_eq_typs t11 t21 && iter1 = iter2
   | _ -> false
 
-let get_common_consts tcs1 tcs2 =
+let get_common_consts (tcs1 : typcase list) (tcs2 : typcase list) =
   let consts1 =
     List.map
-      (fun (op, (_, t, _), _) -> (Util_ocaml.mixop_to_atom_str op, t))
+      (fun (op, (t, _, _), _) -> (Util_ocaml.mixop_to_atom_str op, t))
       tcs1
   in
   let consts2 =
     List.map
-      (fun (op, (_, t, _), _) -> (Util_ocaml.mixop_to_atom_str op, t))
+      (fun (op, (t, _, _), _) -> (Util_ocaml.mixop_to_atom_str op, t))
       tcs2
   in
   let comm =
@@ -373,6 +381,7 @@ let get_common_consts tcs1 tcs2 =
       (fun c ->
         List.exists
           (fun c2 -> fst c = fst c2 && check_eq_typs (snd c) (snd c2))
+          (*(fun c2 -> fst c = fst c2 && check_eq_quants (snd c) (snd c2))*)
           consts2)
       consts1
   in
@@ -416,6 +425,8 @@ let generate_type_arms t1name t2name (_, _, insts1) (_, _, insts2) =
                   sanitize_name ~typecons:true ~typename:false consname ^ "_" ^ name2
                 in
                 let _, argstr, _ = get_cons_args typargs in
+                (*let argstr = if List.length typargs = 0 then "" else 
+                  "(" ^ String.concat ", " (List.mapi (fun i _ -> Printf.sprintf "arg%d" i) typargs) ^ ")" in*)
                 Printf.sprintf "  | %s -> %s"
                   (append_sep cons1 argstr " ")
                   (append_sep cons2 argstr " "))
@@ -425,40 +436,6 @@ let generate_type_arms t1name t2name (_, _, insts1) (_, _, insts2) =
   in
 
   return (String.concat "\n" arms)
-
-(* generate subtyping i.e. t2_of_t1 *)
-let generate_type_conv (t1 : typ) (t2 : typ) : unit t =
-  match (t1.it, t2.it) with
-  | VarT (id1, _), VarT (id2, _) -> (
-      let lhs = sanitize_name id1.it and rhs = sanitize_name id2.it in
-      let funcname = Printf.sprintf "%s_of_%s" rhs lhs in
-      (*Printf.printf "generating %s:\n" funcname;*)
-      let* is_defined = is_defined funcname in
-      if is_defined then return ()
-      else
-        let* () = add_funcdef funcname in
-        let* type_defs = mapM get_typedef [ lhs; rhs ] in
-        match type_defs with
-        | [ Some _lhs_def; Some _rhs_def ] ->
-            let func =
-              Printf.sprintf
-                "let %s_of_%s (arg : %s) : %s =\n  match arg with\n" rhs lhs lhs
-                rhs
-            in
-            (try 
-              (let* arms = generate_type_arms lhs rhs _lhs_def.it _rhs_def.it in
-              let failcase = "\n  | _ -> raise SubtypingFailed\n" in
-              tell (func ^ arms ^ failcase))
-            with _ -> Printf.printf "Warning: cannot generate conversion between %s and %s" lhs rhs; return ())
-        | [ None; _ ] ->
-            error t1.at
-              (Printf.sprintf
-                 "Type %s: appears in sub/super type but is not defined" lhs)
-        | [ _; None ] ->
-            error t2.at
-              (Printf.sprintf
-                 "Type %s: appears in sub/super type but is not defined" rhs))
-  | _ -> tell "TODO: type conversion between non-VarTs not implemented yet\n"
 
 (*let generate_numtype_conv (t1 : numtyp) (t2 : numtyp) : unit t =
   let funcname = ocaml_of_numtyp t1 ^ "_of_" ^ ocaml_of_numtyp t2 in
@@ -630,8 +607,8 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false) ?
             else
               let* () = generate_proj len n in
               return (Printf.sprintf "(proj_%d_%d %s)" len n expstr)
-        (* if not a tuple, we are projecting out of a list *)
-        | None -> return (Printf.sprintf "(List.nth %s %d)" expstr n))
+        (* if not a tuple, assume(!) it is a 1-tuple (<type>) being treated simply as <type> *)
+        | None -> return (Printf.sprintf "%s" expstr))
     | CmpE (op, _, e1, e2) ->
         let* e1str = ocaml_of_exp e1 in
         let* e2str = ocaml_of_exp e2 in
@@ -794,7 +771,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false) ?
         let* e1str = ocaml_of_exp e1 in
         let* typeannot = ocaml_of_typ ~consannot:true e1.note in
         let mixopstr =
-          Util_ocaml.mixop_to_atom_str ~recordfield:true [ [ mixop ] ]
+          Util_ocaml.mixop_to_atom_str ~recordfield:true (Atom mixop)
         in
         return (e1str ^ "." ^ mixopstr ^ "_" ^ typeannot)
     | UpdE (e1, p, e2) ->
@@ -805,7 +782,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false) ?
           | [] -> ocaml_of_exp e2
           | DotSP (atom, typname) :: rest ->
               let mixopstr =
-                Util_ocaml.mixop_to_atom_str ~recordfield:true [ [ atom ] ]
+                Util_ocaml.mixop_to_atom_str ~recordfield:true (Atom atom)
               in
               let* typannot = ocaml_of_typ ~consannot:true typname in
               let* inner_update =
@@ -845,7 +822,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false) ?
               return (path_acc ^ " @ " ^ e2str)
           | DotSP (atom, typname) :: rest ->
               let mixopstr =
-                Util_ocaml.mixop_to_atom_str ~recordfield:true [ [ atom ] ]
+                Util_ocaml.mixop_to_atom_str ~recordfield:true (Atom atom)
               in
               let* typannot = ocaml_of_typ ~consannot:true typname in
               let* inner_update =
@@ -878,7 +855,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false) ?
         let* e1str = ocaml_of_exp e1 in
         let* e2str = ocaml_of_exp e2 in
         let* typename = ocaml_of_typ ~consannot:true e.note in
-        return ("compose_" ^ typename ^ " (" ^ e1str ^ ") (" ^ e2str ^ ")")
+        return ("(compose_" ^ typename ^ " (" ^ e1str ^ ") (" ^ e2str ^ "))")
     | LiftE e1 ->
         let* e1str = ocaml_of_exp e1 in
         return ("(lift " ^ e1str ^ ")")
@@ -899,7 +876,8 @@ and generate_uncase tcs typename : unit t =
   let typevarstr =
     String.concat " " (List.map (fun s -> "'" ^ s) (Set.to_list typevars))
   in
-  let gen_one (op, (_, typargs, _), _) : unit t =
+  (* changing this for now *)
+  let gen_one (op, (typargs, _, _), _) : unit t =
     let mixop = Util_ocaml.mixop_to_atom_str op in
     let cons = 
       sanitize_name ~typecons:true ~typename:false
@@ -945,7 +923,7 @@ and resolve_struct (typname : typ) (toplvl : bool) :
       | None -> return None)
   | IterT (_, iter) -> (
       if toplvl then return None
-      else match iter with Opt -> return None | _ -> return (Some ("", []))
+      else match iter with Opt -> return (Some ("opt", [])) | _ -> return (Some ("list", []))
         (* this is just used to check if something is composable so we don't need the name *)
       )
   | _ -> return None
@@ -972,24 +950,24 @@ and resolve_variant (typname : typ) : typ option t =
       (*Printf.printf "type is: tupt; len: %d\n" (List.length et);*) return None
   | IterT _ -> (*Printf.printf "type is: iter\n";*) return None
 
+(* just changing this for now *)
 and is_composable tfs : bool t =
-  match tfs with _, (_, inner_type, _), _ -> composable_typ inner_type
+  match tfs with _, (inner_type, _, _), _ -> composable_typ inner_type
 
 and composable_typ (t : typ) : bool t =
   match t.it with
-  | IterT (_, iter) -> (
-      match iter with Opt -> return false | _ -> return true)
+  | IterT (_, iter) -> return true
   | _ -> (
       let* tfs = resolve_struct t false in
       match tfs with
       | Some (_, fields) -> allM is_composable fields
       | None -> return false)
 
-and typ_is_list (typname : typ) : bool t =
+and typ_is_iter (typname : typ) : string t =
   let* tfs = resolve_struct typname false in
   match tfs with
-  | Some (_, []) -> return true
-  | Some _ -> return false
+  | Some (iter, []) -> return iter
+  | Some _ -> return "none"
   | None -> error typname.at "Non-composable type: shouldn't happen."
 
 and build_fields (tfs : typfield list) typename : unit t =
@@ -999,18 +977,18 @@ and build_fields (tfs : typfield list) typename : unit t =
   else
     let* fields =
       concat_mapM ";\n"
-        (fun (a, (_, ft, _), _) ->
+        (* just changing this for now *)
+        (fun (a, (ft, _, _), _) ->
           let record =
-            Util_ocaml.mixop_to_atom_str ~recordfield:true [ [ a ] ]
+            Util_ocaml.mixop_to_atom_str ~recordfield:true (Atom a)
           in
           let fieldname = record ^ "_" ^ typename in
-          let* is_list = typ_is_list ft in
+          let* iter = typ_is_iter ft in
           let* fieldtype = ocaml_of_typ ~consannot:true ft in
           let rhs =
-            if is_list then Printf.sprintf "r1.%s @ r2.%s" fieldname fieldname
-            else
-              Printf.sprintf "compose_%s r1.%s r2.%s" fieldtype fieldname
-                fieldname
+            if iter = "list" then Printf.sprintf "r1.%s @ r2.%s" fieldname fieldname
+            else if iter = "opt" then Printf.sprintf "compose_opt r1.%s r2.%s" fieldname fieldname
+            else Printf.sprintf "compose_%s r1.%s r2.%s" fieldtype fieldname fieldname
           in
           return (Printf.sprintf "  %s = %s" fieldname rhs))
         tfs
@@ -1019,7 +997,55 @@ and build_fields (tfs : typfield list) typename : unit t =
       (Printf.sprintf "let compose_%s (r1 : %s) (r2 : %s) = {\n%s\n}" typename
          typename typename fields)
 
-(* Assuming that the top-level is a struct. The nested fields may be lists or structs *)
+(* generate subtyping i.e. t2_of_t1 *)
+and generate_type_conv (t1 : typ) (t2 : typ) : unit t =
+  match (t1.it, t2.it) with
+  | VarT (id1, _), VarT (id2, _) -> (
+      let lhs = sanitize_name id1.it and rhs = sanitize_name id2.it in
+      let funcname = Printf.sprintf "%s_of_%s" rhs lhs in
+      (*Printf.printf "generating %s:\n" funcname;*)
+      let* is_defined = is_defined funcname in
+      if is_defined then return ()
+      else
+        let* () = add_funcdef funcname in
+        let* type_defs = mapM get_typedef [ lhs; rhs ] in
+        match type_defs with
+        | [ Some _lhs_def; Some _rhs_def ] ->
+            let func =
+              Printf.sprintf
+                "let %s_of_%s (arg : %s) : %s =\n  match arg with\n" rhs lhs lhs
+                rhs
+            in
+            (try 
+              (let* arms = generate_type_arms lhs rhs _lhs_def.it _rhs_def.it in
+              let failcase = "\n  | _ -> raise SubtypingFailed\n" in
+              tell (func ^ arms ^ failcase))
+            with _ -> Printf.printf "Warning: cannot generate conversion between %s and %s" lhs rhs; return ())
+        | [ None; _ ] ->
+            error t1.at
+              (Printf.sprintf
+                 "Type %s: appears in sub/super type but is not defined" lhs)
+        | [ _; None ] ->
+            error t2.at
+              (Printf.sprintf
+                 "Type %s: appears in sub/super type but is not defined" rhs))
+  | IterT (t1', List), IterT (t2', List) ->
+      let* () = generate_type_conv t1' t2' in
+      let* lhs = ocaml_of_typ t1' in
+      let* rhs = ocaml_of_typ t2' in
+      let inner = Printf.sprintf "%s_of_%s" rhs lhs in
+      let funcname = Printf.sprintf "%s_list_of_%s_list" rhs lhs in
+      let* is_defined = is_defined funcname in
+      if is_defined then return ()
+      else
+        let* () = add_funcdef funcname in
+        tell (Printf.sprintf "let %s (arg : %s list) : %s list = List.map %s arg\n" funcname lhs rhs inner)
+  | _ -> 
+    Printf.printf "type conversion between non-VarTs not implemented yet: %s and %s\n" (string_of_typ t1) (string_of_typ t2);
+    tell (Printf.sprintf "TODO: type conversion between non-VarTs not implemented yet: %s and %s\n" (string_of_typ t1) (string_of_typ t2))
+
+
+(* Assuming that the top-level is a struct. The nested fields may be lists or structs or options *)
 and generate_compose (dt : deftyp) (typename : string) : unit t =
   match dt.it with
   | StructT tfs -> build_fields tfs typename
@@ -1038,7 +1064,7 @@ and generate_compose (dt : deftyp) (typename : string) : unit t =
 and ocaml_of_expfield typename (a, e) : string t =
   let* estr = ocaml_of_exp e in
   return
-    (Util_ocaml.mixop_to_atom_str ~recordfield:true [ [ a ] ]
+    (Util_ocaml.mixop_to_atom_str ~recordfield:true (Atom a)
     ^ "_" ^ typename ^ " = " ^ estr)
 
 and ocaml_of_iter iter : string t =
@@ -1075,7 +1101,8 @@ and ocaml_of_typ ?(typearg = false) ?(consannot = false) (t : typ) : string t =
   | IterT (t1, iter) ->
       let* t1str = ocaml_of_typ ~typearg ~consannot t1 in
       let* iterstr = ocaml_of_iter iter in
-      return (t1str ^ " " ^ iterstr)
+      let sep = if consannot then "_" else " " in
+      return (t1str ^ sep ^ iterstr)
 
 and ocaml_of_typbind ?(typearg = false) ?(consannot = false) (e, t) = ocaml_of_typ ~typearg ~consannot t
 
@@ -1099,7 +1126,7 @@ and ocaml_of_bool_binop = function
   | `AndOp -> "&&"
   | `OrOp -> "||"
   | `ImplOp -> "TODO: ImplOp"
-  | `EquivOp -> "TODO: EquivOp"
+  | `EquivOp -> "="
 
 and ocaml_of_num_binop ?(float = false) ?(rat = false) op =
   match op with
@@ -1166,8 +1193,12 @@ let rec ocaml_of_prems (prems : prem list) : string t =
     (function
       | p -> (
           match p.it with
-          | LetPr (lhs, rhs, vars) -> (
-              let* () = add_knowns (List.map sanitize_name vars) in
+          | LetPr (vars, lhs, rhs) -> (
+              let* () = add_knowns (List.filter_map (fun param ->
+                match param.it with
+                | ExpP (id, _) -> Some (sanitize_name id.it)
+                | _ -> None
+              ) vars) in
               let* lhs_str = ocaml_of_exp lhs in
               let* rhs_str = ocaml_of_exp rhs in
               match lhs.it with
@@ -1175,7 +1206,11 @@ let rec ocaml_of_prems (prems : prem list) : string t =
                   return (Printf.sprintf "  let %s = %s in" lhs_str rhs_str)
               | CaseE (mixop, e) ->
                   (* this can fail and raise a Match Failure exception, which will be caught by the try_clauses function *)
-                  let let_lhs = String.concat ", " (List.map sanitize_name vars) in
+                  let let_lhs = String.concat ", " (List.filter_map (fun param ->
+                    match param.it with
+                    | ExpP (id, _) -> Some (sanitize_name id.it)
+                    | _ -> None
+                  ) vars) in
                   let* mixopstr = ocaml_of_mixop mixop rhs.note in
                   return
                     (Printf.sprintf "  let %s (%s) = %s in" mixopstr let_lhs
@@ -1234,7 +1269,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
               in
               let* () = add_knowns inflows in
               (* this will add new things to knowns, but their scope is limited *)
-              let* prem_strs = ocaml_of_prems prems in
+              let* prem_strs = ocaml_of_prems [prems] in
               let* new_knowns = get_knowns in
               let partition id_opt =
                 List.partition
@@ -1294,10 +1329,13 @@ let rec ocaml_of_prems (prems : prem list) : string t =
                          outflow_vars inflow_lists)
               | List -> return "(* TODO: IterPr List *)"
               | List1 -> return "(* TODO: IterPr List1 *)"
+              (* (id_opt < e) *)
               | ListN (e, id_opt) ->
                   let inflows, outflows = partition id_opt in
                   are_valid outflows;
                   let* list_len = ocaml_of_exp e in
+                  (* sometimes the index occurs in the iter list like {id_opt <- `id_opt*`}, 
+                  in which case it is already marked as inflow *)
                   let* idx_list = get_idx_list iterlist id_opt p.at in
                   let* freshvar = get_freshvar () in
                   let idx_listname =
@@ -1308,7 +1346,10 @@ let rec ocaml_of_prems (prems : prem list) : string t =
                       idx_listname list_len
                   in
                   let idx_var, idx_listvar =
-                    if idx_list = "" then ([ freshvar ], freshvar ^ "_list ")
+                    if idx_list = "" then 
+                    (match id_opt with 
+                      Some id -> ([ sanitize_name id.it ], freshvar ^ "_list ")
+                    | None -> ([ freshvar ], freshvar ^ "_list "))
                     else ([], "")
                   in
                   let inflow_vars =
@@ -1344,7 +1385,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
                       (def_idx_list
                       ^ Printf.sprintf
                           "  let _ = map%d (fun %s -> %s Some ()) %s in"
-                          (List.length inflows) inflow_vars prem_strs
+                          inflowsize inflow_vars prem_strs
                           inflow_lists)
                     else
                     let* () = gen_unzip_cls (List.length outflows) in
@@ -1353,7 +1394,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
                       ^ Printf.sprintf
                           "  let %s = unzip%d (map%d (fun %s -> %s %s) %s) in"
                           outflow_lists (List.length outflows)
-                          (List.length inflows) inflow_vars prem_strs
+                          inflowsize inflow_vars prem_strs
                           outflow_vars inflow_lists))))
     prems
 
@@ -1373,14 +1414,15 @@ let build_stepcases step =
   in
   let (VariantT instr_tcs) = instrsdt.it in
   concat_mapM "\n"
-    (fun (op, (_, t, _), _) ->
-      (* check: the function name should match exactly with the head of the list in the mixop?? *)
+    (* changed for now *)
+    (fun (op, (t, _, _), _) ->
+      (* check: the function name should match exactly with the head of the list in the mixop?? idk how this works with the new IL changes - leave for now *)
       let funcsuffix =
         sanitize_name ~typename:false
-          (Util_ocaml.mixop_to_atom_str [ List.hd op ])
+          (Util_ocaml.mixop_to_atom_str op)
       in
       let consname =
-        sanitize_name ~typename:false (Util_ocaml.mixop_to_atom_str op)
+        sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str op)
       in
       let funcname =
         sanitize_name (Printf.sprintf "Step%s/%s" step funcsuffix)
@@ -1513,7 +1555,9 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
                   let* () = set_typecasts "" in
                   let bodycode = typecasts ^ prems_block in
                   let full_argnames = append_sep typevar_args argnames " " in
-                  (*let bodycode = Printf.sprintf "  Printf.printf \"Calling %s (Clause %d)\n%%!\";\n" name (i+1) ^ bodycode in*)
+                  (*let bodycode = if String.starts_with ~prefix:"step" name then
+                    Printf.sprintf "  Printf.printf \"Calling %s (Clause %d)\n%%!\";\n" name (i+1) ^ bodycode 
+                  else bodycode in*)
                   if bodycode = "" then
                     return
                       (Printf.sprintf "clause_%s_%d %s : %s = %s\n" name i
@@ -1557,8 +1601,9 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
     else if val_ok_def <> "" then return (clause_funcs @ [ main_func ] @ [ val_ok_def ])
     else return (clause_funcs @ [ main_func ])
 
-(* ignoring the dependent type annotations for now *)
-let ocaml_of_typcase typename (op, (_, t, _), _hints) =
+(* ignoring the dependent type annotations for now 
+changed for now *)
+let ocaml_of_typcase typename (op, (t, _, _), _hints) =
   let* args_str = ocaml_of_typ_args t in
   if args_str = "" then
     return
@@ -1572,11 +1617,23 @@ let ocaml_of_typcase typename (op, (_, t, _), _hints) =
       ^ "_" ^ typename ^ " of " ^ args_str)
 
 (* all fields are annotated with "_typename" because OCaml cannot directly infer the type when record fields are duplicated across types *)
-let ocaml_of_typfield name (atom, (_bs, t, _prems), _hints) =
+(* changed for now *)
+let ocaml_of_typfield name (atom, (t, _qs, _prems), _hints) =
   let* typ_str = ocaml_of_typ t in
   return
-    (Util_ocaml.mixop_to_atom_str ~recordfield:true [ [ atom ] ]
+    (Util_ocaml.mixop_to_atom_str ~recordfield:true (Atom atom)
     ^ "_" ^ name ^ ": " ^ typ_str)
+
+let debug_print tcs = 
+  let* def =
+  (concat_mapM "\n" (fun (op, (t, _, _), _) -> 
+    let* args_str = ocaml_of_typ_args t in
+    let consstr = (sanitize_name ~typecons:true ~typename:false
+         (Util_ocaml.mixop_to_atom_str op)
+      ^ "_instr") in
+    if args_str = "" then return (Printf.sprintf "  | %s -> %S" consstr consstr)
+    else return (Printf.sprintf "  | %s _ -> %S" consstr consstr)) tcs) in
+  tell ("let string_of_instr = function \n" ^ def ^ "\n")
 
 let ocaml_of_deftyp dt name =
   let* () = generate_compose dt name in
@@ -1589,6 +1646,7 @@ let ocaml_of_deftyp dt name =
       let* tfs_str = concat_mapM ";\n  " (ocaml_of_typfield name) tfs in
       return ("{\n  " ^ tfs_str ^ "\n}")
   | VariantT tcs ->
+      let* () = if name = "instr" then debug_print tcs else return () in
       let* () = generate_uncase tcs name in
       concat_mapM "\n  | " (ocaml_of_typcase name) tcs
 
@@ -1691,36 +1749,8 @@ let generate_ocaml (dl_defs : dl_def list) : string * string * string * string =
     ^ "let (<|>) = Backend_animation.Util_ocaml.mplus\n"
     ^ "let (let*) = Option.bind\n"
   in
-  let hardcoded_funcs = match !Parser_ocaml.backend with
-    | IL -> Printf.sprintf "\
-    let uc_ref_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Ref_ok\" [(Il.Ast.ExpA (il_of_store a0) $ no); (Il.Ast.ExpA (il_of_ref a1) $ no); (Il.Ast.ExpA (il_of_reftype a2) $ no)])))\n\n\
-    let uc_val_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Val_ok\" [(Il.Ast.ExpA (il_of_store a0) $ no); (Il.Ast.ExpA (il_of_val_ a1) $ no); (Il.Ast.ExpA (il_of_valtype a2) $ no)])))\n\n\
-    let uc_reftype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Reftype_sub\" [(Il.Ast.ExpA (il_of_context a0) $ no); (Il.Ast.ExpA (il_of_reftype a1) $ no); (Il.Ast.ExpA (il_of_reftype a2) $ no)])))\n\n\
-    let uc_heaptype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Heaptype_sub\" [(Il.Ast.ExpA (il_of_context a0) $ no); (Il.Ast.ExpA (il_of_heaptype a1) $ no); (Il.Ast.ExpA (il_of_heaptype a2) $ no)])))\n\n\
-    let uc_module_ok_fn a0 = ocaml_of_moduletype (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Module_ok\" [(Il.Ast.ExpA (il_of_module_ a0) $ no)])))\n\n\
-    let uc_externaddr_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func \"Externaddr_ok\" [(Il.Ast.ExpA (il_of_store a0) $ no); (Il.Ast.ExpA (il_of_externaddr a1) $ no); (Il.Ast.ExpA (il_of_externtype a2) $ no)])))"
-  | VL -> (* Printf.sprintf "\
-    let uc_ref_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.ref_ok [Backend_animation.Value.ValA (vl_of_store a0); Backend_animation.Value.ValA (vl_of_ref a1); Backend_animation.Value.ValA (vl_of_reftype a2)])))\n\n\
-    let uc_val_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.val_ok [Backend_animation.Value.ValA (vl_of_store a0); Backend_animation.Value.ValA (vl_of_val_ a1); Backend_animation.Value.ValA (vl_of_valtype a2)])))\n\n\
-    let uc_reftype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.reftype_sub [Backend_animation.Value.ValA (vl_of_context a0); Backend_animation.Value.ValA (vl_of_reftype a1); Backend_animation.Value.ValA (vl_of_reftype a2)])))\n\n\
-    let uc_heaptype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.heaptype_sub [Backend_animation.Value.ValA (vl_of_context a0); Backend_animation.Value.ValA (vl_of_heaptype a1); Backend_animation.Value.ValA (vl_of_heaptype a2)])))\n\n\
-    let uc_module_ok_fn a0 = ocaml_of_moduletype (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.module_ok [Backend_animation.Value.ValA (vl_of_module_ a0)])))\n\n\
-    let uc_externaddr_ok_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.externaddr_ok [Backend_animation.Value.ValA (vl_of_store a0); Backend_animation.Value.ValA (vl_of_externaddr a1); Backend_animation.Value.ValA (vl_of_externtype a2)])))" *)
-    (* Printf.sprintf "\
-    let uc_ref_ok_fn a0 a1 a2 = true\n\
-    let uc_val_ok_fn a0 a1 a2 = true\n\
-    let uc_reftype_sub_fn a0 a1 a2 = true\n\
-    let uc_heaptype_sub_fn a0 a1 a2 = true\n\
-    let uc_module_ok_fn a0 = C_pct__dash_right_pct__moduletype ([], [])\n\
-    let uc_externaddr_ok_fn a0 a1 a2 = true\n\n" *)
-    Printf.sprintf "\
-    let uc_reftype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.reftype_sub [Backend_animation.Value.ValA (vl_of_context a0); Backend_animation.Value.ValA (vl_of_reftype a1); Backend_animation.Value.ValA (vl_of_reftype a2)])))\n\
-    let uc_heaptype_sub_fn a0 a1 a2 = ocaml_of_bool (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.heaptype_sub [Backend_animation.Value.ValA (vl_of_context a0); Backend_animation.Value.ValA (vl_of_heaptype a1); Backend_animation.Value.ValA (vl_of_heaptype a2)])))\n\
-    let uc_module_ok_fn a0 = C_pct__dash_right_pct__moduletype ([], [])\n\
-    let uc_externaddr_ok_fn a0 a1 a2 = true\n\n"
-  in
   let typeimports = "type nat = Z.t\ntype int = Z.t\ntype rat = Q.t\ntype real = float\n\n" in
   let (funcdefs, typedefs), typeconvfuncs, parser =
     eval (ocaml_of_dl_defs dl_defs)
   in
-  (main ^ hardcoded_funcs ^ funcdefs, typeimports ^ typedefs, typeconvfuncs, parser)
+  (main ^ funcdefs, typeimports ^ typedefs, typeconvfuncs, parser)
