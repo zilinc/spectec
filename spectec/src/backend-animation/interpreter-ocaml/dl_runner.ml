@@ -121,7 +121,9 @@ let rec ri_ref_of_ocaml (r : ref) = match r with
     | REF_dot_STRUCT_ADDR_ref _
     | REF_dot_ARRAY_ADDR_ref _
     | REF_dot_FUNC_ADDR_ref _ -> 
-      Backend_animation.State_v.Store.put (vl_of_store !globalstore);
+      let StrV vl_store = vl_of_store !globalstore in
+      let vl_store' = ("HOST", ref (Backend_animation.State_v.HostState.mk_state 0)) :: vl_store in
+      Backend_animation.State_v.Store.put (StrV vl_store');
       Backend_animation.Construct_v_new.vl_to_ref (vl_of_ref r)
     | REF_dot_HOST_ADDR_ref n              -> RI.Script.HostRef (Z.to_int32 n)
     | REF_dot_EXTERN_ref ref_              -> RI.Extern.ExternRef (ri_ref_of_ocaml ref_)

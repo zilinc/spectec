@@ -1416,10 +1416,11 @@ let build_stepcases step =
   concat_mapM "\n"
     (* changed for now *)
     (fun (op, (t, _, _), _) ->
-      (* check: the function name should match exactly with the head of the list in the mixop?? idk how this works with the new IL changes - leave for now *)
+      (* check: the function name should match exactly with the head of the list in the mixop?? idk how this works with the new IL changes - *)
       let funcsuffix =
+        let vl_mixop = Value.vl_of_mixop op in 
         sanitize_name ~typename:false
-          (Util_ocaml.mixop_to_atom_str op)
+          (List.hd (List.hd vl_mixop))
       in
       let consname =
         sanitize_name ~typecons:true ~typename:false (Util_ocaml.mixop_to_atom_str op)
@@ -1487,7 +1488,7 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
   in
   let full_argslist  = append_sep typevar_args argslist  " " in
   let full_argslist' = append_sep typevar_args argslist' " " in
-  (* Built-in functions like module_ok, reftype_sub etc are hardcoded to call their meta-interpeter implementations. Other builtins like dispatch, use_step_*, Step_read_throw are either generated or hardcoded in OCaml. *)
+  (* Built-in functions like module_ok, reftype_sub etc are hardcoded to call their meta-interpeter implementations. Other builtins like dispatch, use_step_*, Step_read_throw are either generated or hardcoded in OCaml. TODO: for the use_step_functions, use common.steptable to generate them instead of hardcoding builtin. *)
   if List.length clauses = 0 then
     match id.it with
     | "Step_read_throw_ref_handler" ->
