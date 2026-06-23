@@ -349,10 +349,16 @@ let create_prem (p : Il.Ast.prem) : term = match p.it with
     ([] : Il.Ast.arg list),
     (mixop : Il.Ast.mixop),
     (exp : Il.Ast.exp)
-  ) -> FunApp (
-    Ident id.it,
-    NonEmptyList.from_list_unsafe [Term (create_exp exp)]
-  )
+  ) ->
+    let flattened_mixop_args : term list
+      = match exp.it with
+        | TupE exps -> List.map create_exp exps
+        | _ -> [create_exp exp]
+    in
+    FunApp (
+      Ident id.it,
+      NonEmptyList.from_list_unsafe (List.map (fun arg -> Term arg) flattened_mixop_args)
+    )
   | IfPr (
     (exp : Il.Ast.exp)
   ) -> create_exp exp
@@ -697,12 +703,15 @@ let create_def (def : Il.Ast.def) : command option
 
 
       let create_clause
-        (clause : clause)
-        (params_from_parent : quant list)   (*
+        (*
+          | .mk_state s f => ((f.LOCALS)[v_localidx]!)
+        *)
+        (clause : Il.Ast.clause)
+        (params_from_parent : Il.Ast.quant list)   (*
                                               (ExpP "v_state" (VarT "state"))
                                               (ExpP "v_localidx" (VarT "localidx"))
                                             *)
-        : term * term =
+        : term list * term =
 
           let DefD (
             quants,   (*
@@ -718,19 +727,55 @@ let create_def (def : Il.Ast.def) : command option
             prems
           ) = clause.it in
 
-          (* let pattern : term *)
-          failwith ""
+          let arg_to_lhs_pattern (* .mk_state s f *)
+            (arg : Il.Ast.arg)
+            : term
+            = match arg.it with
+              | TypA ({it = VarT (x, []); _} as t) -> create_typ t
+              | TypA _ -> failwith "only VarT should be here"
+              | ExpA exp -> (
+                match exp.it with
+                  | CatE (exp1, exp2) -> BinaryInfixFunApp (
+                      Term (create_exp exp1),
+                      Ident "++",
+                      Term (create_exp exp2)
+                    )
+                  | IterE (exp, _) -> create_exp exp
+                  | _ -> create_exp exp
+              )
+              | _ -> failwith "only TypA or ExpA should be here"
+          in
+
+          
+          (List.map arg_to_lhs_pattern args, append_prems_to_term (create_exp exp) prems)
       in
 
+
+      let create_match_term
+        (params_from_parent : Il.Ast.quant list)   (*
+                                              (ExpP "v_state" (VarT "state"))
+                                              (ExpP "v_localidx" (VarT "localidx"))
+                                            *)
+        : term list
+        = 
+        let collected_ids = List.map (
+            fun p -> match p.it with
+              | ExpP (id, typ) -> (Ident id.it : term)
+              | TypP id -> (Ident id.it : term)
+              | _ -> failwith "only ExpP or TypP should be here"
+          ) params_from_parent
+        in
+        collected_ids
+      in
 
       Some (Def (DefAsgn {
         modifier = empty_modifier;
         id = id.it;
         signature = signature;
-        body = match clauses with
-          | [{it = DefD (quants, args, exp, prems); _}]
-            -> append_prems_to_term (create_exp exp) prems
-          | _ -> failwith "only one clause should be here"
+        body = Match {
+            match_terms = create_match_term params;
+            cases = List.map (fun clause -> create_clause clause params) clauses;
+          }
       }))
     | GramD _ -> None
     | RecD _ -> None

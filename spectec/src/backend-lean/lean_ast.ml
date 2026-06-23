@@ -111,8 +111,8 @@ type term =
   *)
 
   | Match of {
-    match_term: term;
-    cases: (term * term) list;
+    match_terms: term list;
+    cases: (term list * term) list;
   }
 
   (* | UpdateList of {

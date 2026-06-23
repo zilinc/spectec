@@ -182,8 +182,8 @@ def «local» : ∀  (v_state : state) (v_localidx : localidx) , val
 
 /- Auxiliary Definition at: doc/example/NanoWasm.spectec:82.1-82.34 -/
 def «local2» (v_state : state) (v_localidx : localidx) : val :=
-  | (.mk_state s f), x =>
-    ((f.LOCALS)[x]!)
+  match v_state with
+  | .mk_state s f => ((f.LOCALS)[v_localidx]!)
 
 
 /- Auxiliary Definition at: doc/example/NanoWasm.spectec:85.1-85.36 -/
