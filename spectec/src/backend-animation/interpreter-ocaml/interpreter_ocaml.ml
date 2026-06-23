@@ -1526,7 +1526,9 @@ let ocaml_of_func_def (fdef : func_def) : string list t =
       | IL ->
       return [ Printf.sprintf "%s_fn %s = %s (Option.get (Backend_animation.Interpreter.OptMonad.run_opt (Backend_animation.Interpreter.call_func %S [%s])))\n"
                name full_argslist ret_tr id.it args_str ]
-      | VL -> return [ Printf.sprintf "%s_fn %s = %s (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.call_func %S [%s])))\n"
+      | VL -> (* return [ Printf.sprintf "%s_fn %s = %s (Option.get (Backend_animation.Interpreter_v.OptMonad.run_opt (Backend_animation.Interpreter_v.call_func %S [%s])))\n"
+               name full_argslist ret_tr (id.it ^ osubid_str) args_str ])*)
+            return [ Printf.sprintf "%s_fn %s = %s (Backend_animation.Numerics_v_new.call_numerics %S [%s])\n"
                name full_argslist ret_tr (id.it ^ osubid_str) args_str ])
   else if (id.it = "Step" && osubid = None) then return [ "uc_step a0 = step a0\n" ]
   else
