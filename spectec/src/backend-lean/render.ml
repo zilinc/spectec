@@ -49,7 +49,7 @@ and render_opaque (op : opaque) : document =
 
 and render_argument (arg : argument) : document =
   match arg with
-  | Term t -> "(" ^^ (render_term t) ^^ ")"
+  | Term t -> string "(" ^^ (render_term t) ^^ string ")"
 
 and render_num (num : _numtype) : document =
   match num with
@@ -98,8 +98,8 @@ and render_fun_binder (binder : fun_binder) : document =
 
 (* TODO: adapt more properly from original backend *)
 and render_id a = match a with
-  | "rec" -> "rec_"
-  | "bool" -> "nat_of_bool"
+  | "rec" -> string "rec_"
+  | "bool" -> string "nat_of_bool"
   | "mut" | "local" | "export" | "import" | "catch" | "syntax" | "at"
     -> string (Printf.sprintf "«%s»" a)
   | _ -> string a
@@ -162,21 +162,21 @@ and render_term (term : term) : document =
     type_annotation = type_annotation;
   } ->
       let fields = List.map render_struct_inst_field fields in
-      let fields_str = separate (string "\n") fields in
+      let fields_str = separate hardline fields in
       let type_annotation_str = match type_annotation with
-        | None -> ""
-        | Some t -> Printf.sprintf "\n : %s" (render_term t)
+        | None -> empty
+        | Some t -> string " : " ^^ render_term t
        in
-      Printf.sprintf
-        "{\n%s%s\n}"
-        fields_str
-        type_annotation_str
+      string "{"
+      ^^ nest 2 (hardline ^^ fields_str ^^ type_annotation_str)
+      ^^ hardline
+      ^^ string "}"
 
   | List terms -> 
-      let terms_str = String.concat ", " (List.map render_term terms) in
-      Printf.sprintf
-        "[%s]"
-        terms_str
+      let terms_str = separate (string ", ") (List.map render_term terms) in
+      string "["
+      ^^ terms_str
+      ^^ string "]"
 
   | Index {
     collection = collection;
@@ -186,11 +186,11 @@ and render_term (term : term) : document =
       let collection_str = render_term collection in
       let index_str = render_term index in
       let index_type_str = render__index_type index_type in
-      Printf.sprintf
-        "%s[%s]%s"
-        collection_str
-        index_str
-        index_type_str
+      collection_str
+      ^^ string "["
+      ^^ index_str
+      ^^ string "]"
+      ^^ index_type_str
 
   | Slice {
     collection = collection;
@@ -198,10 +198,11 @@ and render_term (term : term) : document =
   } ->
       let collection_str = render_term collection in
       let bounds_str = render__slice_bounds bounds in
-      Printf.sprintf
-        "%s[%s]"
-        collection_str
-        bounds_str
+      string "["
+      ^^ collection_str
+      ^^ string "["
+      ^^ bounds_str
+      ^^ string "]"
 
   | UpdateStruct {
     struct_to_update = struct_to_update;
@@ -209,22 +210,22 @@ and render_term (term : term) : document =
   } ->
       let struct_to_update_str = render_term struct_to_update in
       let struct_inst_field_strs = List.map render_struct_inst_field fields_to_update in
-      let fields_to_update_str = String.concat "\n" struct_inst_field_strs in
-      Printf.sprintf
-        "{\n%s with \n%s\n}"
-        struct_to_update_str
-        fields_to_update_str
+      let fields_to_update_str = separate hardline struct_inst_field_strs in
+      string "{"
+      ^^ nest 2 (hardline ^^ struct_to_update_str ^^ string " with " ^^ hardline ^^ fields_to_update_str)
+      ^^ hardline
+      ^^ string "}"
 
   | Lambda {
     params = params;
     body = body;
   } ->
-      let params_str = String.concat " " (List.map render_fun_binder (NonEmptyList.to_list params)) in
+      let params_str = separate (string " ") (List.map render_fun_binder (NonEmptyList.to_list params)) in
       let body_str = render_term body in
-      Printf.sprintf
-        "fun %s => %s"
-        params_str
-        body_str
+      string "fun "
+      ^^ params_str
+      ^^ string " => "
+      ^^ body_str
 
   | IfThenElse {
     cond = cond;
@@ -234,72 +235,71 @@ and render_term (term : term) : document =
       let cond_str = render_term cond in
       let then_branch_str = render_term then_branch in
       let else_branch_str = render_term else_branch in
-      Printf.sprintf
-        "if %s then %s else %s"
-        cond_str
-        then_branch_str
-        else_branch_str
+      string "if "
+      ^^ cond_str
+      ^^ string " then "
+      ^^ then_branch_str
+      ^^ string " else "
+      ^^ else_branch_str
 
   | Match {
     match_terms = match_terms;
     cases = cases;
   } ->
-      let match_terms_str = String.concat ", " (List.map render_term match_terms) in
+      let match_terms_str = separate (string ", ") (List.map render_term match_terms) in
       let cases_strs = List.map (fun (pattern, body) ->
-        let pattern_str = String.concat ", " (List.map render_term pattern) in
+        let pattern_str = separate (string ", ") (List.map render_term pattern) in
         let body_str = render_term body in
-        Printf.sprintf "| %s => %s" pattern_str body_str
+        string "| " ^^ pattern_str ^^ string " => " ^^ body_str
       ) cases in
-      let cases_str = String.concat "\n" cases_strs in
-      Printf.sprintf
-        "match %s with\n%s"
-        match_terms_str
-        cases_str
+      let cases_str = separate hardline cases_strs in
+      string "match "
+      ^^ match_terms_str
+      ^^ string " with"
+      ^^ nest 2 cases_str
   
   (* | _ -> failwith (Printf.sprintf "render_term: unhandled term: %s" (show_term term)) *)
 
 and render_level (level : level) : document =
   match level with
-  | LevelLit n -> string_of_int n
+  | LevelLit n -> string (string_of_int n)
   | LevelVar id -> render_id id
 
 and render__structure (s : _structure) : document =
   let modifier_str = render_decl_modifier s.modifier in
   let id_str = render_id s.id in
-  let binders = String.concat "" (List.map render_bracketed_binder s.binders) in
+  let binders = separate (string " ") (List.map render_bracketed_binder s.binders) in
   let universe = match s.universe with
-  | None -> ""
+  | None -> empty
   | Some r -> render_term r
   in
   let constructor = match s.constructor with
-  | None -> ""
-  | Some (constructor_modifier, constructor_id) -> (render_decl_modifier constructor_modifier) ^ (render_id constructor_id) ^ ":: "
+  | None -> empty
+  | Some (constructor_modifier, constructor_id) -> (render_decl_modifier constructor_modifier) ^^ (render_id constructor_id) ^^ string ":: "
   in
-  let fields_str = String.concat "\n" (List.map render_struct_field s.fields) in
+  let fields_str = separate hardline (List.map render_struct_field s.fields) in
   let deriving_str = match s.deriving with 
-  | None -> ""
+  | None -> empty
   | Some der -> render__deriving der
   in
-  Printf.sprintf
-    "%s structure %s %s %s where %s \n %s \n %s"
-    modifier_str
-    id_str
-    binders
-    universe
-    constructor
-    fields_str
-    deriving_str
+  modifier_str
+  ^^ string " structure "
+  ^^ id_str
+  ^^ binders
+  ^^ universe
+  ^^ string " where "
+  ^^ constructor
+  ^^ nest 2 (hardline ^^ fields_str)
+  ^^ hardline
+  ^^ deriving_str
 
 and render_struct_field (sf : struct_field) : document =
   match sf with
   | StructSimpleBinder ssb
     ->
-      string (Printf.sprintf
-        "%s %s %s"
-        (render_decl_modifier ssb.modifier)
-        (render_id ssb.id)
-        (render_opt_decl_sig ssb.signature)
-      )
+      (render_decl_modifier ssb.modifier)
+      ^^ (render_id ssb.id)
+      ^^ (render_opt_decl_sig ssb.signature)
 
 and render__def (def : _def) : document =
   match def with
@@ -308,95 +308,94 @@ and render__def (def : _def) : document =
     let id_str = render_id d.id in
     let decl_sig_str = render_opt_decl_sig d.signature in
     let term_str = render_term d.body in
-    string (Printf.sprintf
-      "%s def %s %s := %s"
-      modifier_str
-      id_str
-      decl_sig_str
-      term_str)
+    modifier_str
+    ^^ string " def "
+    ^^ id_str
+    ^^ decl_sig_str
+    ^^ string " := "
+    ^^ nest 2 (hardline ^^ term_str)
 
   | DefCases d ->
     let modifier_str = render_decl_modifier d.modifier in
     let id_str = render_id d.id in
     let decl_sig_str = render_opt_decl_sig d.signature in
-    let cases_str = String.concat "\n" (List.map render__def_case d.body) in
-    string (
-      Printf.sprintf
-        "%s def %s %s\n  %s"
-        modifier_str
-        id_str
-        decl_sig_str
-        cases_str
-    )
+    let cases_str = separate hardline (List.map render__def_case d.body) in
+    modifier_str
+    ^^ string " def "
+    ^^ id_str
+    ^^ decl_sig_str
+    ^^ nest 2 (hardline ^^ cases_str)
 
 and render__def_case (case : _def_case) : document =
   let (pattern, body) = case in
   let pattern_str = render_term pattern in
   let body_str = render_term body in
-  string (Printf.sprintf "| %s => %s" pattern_str body_str)
+  string "|"
+  ^^ pattern_str
+  ^^ string " => "
+  ^^ body_str
 
-and render__inductive (ind : _inductive) : string =
+and render__inductive (ind : _inductive) : document =
   (* let (modifier, decl_id, opt_decl_sig, cases, deriving) = ind in *)
   let modifier_str = render_decl_modifier ind.modifier in
   let id_str = render_id ind.id in
   let decl_sig_str = render_opt_decl_sig ind.signature in
-  let cases_str = String.concat "\n" (List.map render__inductive_case ind.cases) in
+  let cases_str = separate hardline (List.map render__inductive_case ind.cases) in
   let deriving_str = match ind.deriving with 
-    | None -> ""
+    | None -> empty
     | Some der -> render__deriving der
   in
-  Printf.sprintf
-    "%s inductive %s %s where\n  %s\n%s"
-    modifier_str
-    id_str
-    decl_sig_str
-    cases_str
-    deriving_str
+  modifier_str
+  ^^ string " inductive "
+  ^^ id_str
+  ^^ decl_sig_str
+  ^^ string " where "
+  ^^ nest 2 (hardline ^^ cases_str)
+  ^^ hardline
+  ^^ deriving_str
 
-and render__inductive_case (case : _inductive_case) : string =
+and render__inductive_case (case : _inductive_case) : document =
   let modifier_str = render_decl_modifier case.modifier in
   let id_str = render_id case.id in
   let decl_sig_str = render_opt_decl_sig case.signature in
-  Printf.sprintf
-    "| %s %s %s"
-    modifier_str
-    id_str
-    decl_sig_str
+  string "|"
+  ^^ modifier_str
+  ^^ id_str
+  ^^ decl_sig_str
 
-and render__abbrev (abbrev : _abbrev) : string =
+and render__abbrev (abbrev : _abbrev) : document =
   match abbrev with
   | AbbrevAsgn a ->
     let modifier_str = render_decl_modifier a.modifier in
     let id_str = render_id a.id in
     let decl_sig_str = render_opt_decl_sig a.signature in
     let term_str = render_term a.body in
-    Printf.sprintf
-      "%s abbrev %s %s := %s"
-      modifier_str
-      id_str
-      decl_sig_str
-      term_str
+    modifier_str
+    ^^ string " abbrev "
+    ^^ id_str
+    ^^ decl_sig_str
+    ^^ string " := "
+    ^^ term_str
   | AbbrevCases a ->
     let modifier_str = render_decl_modifier a.modifier in
     let id_str = render_id a.id in
     let decl_sig_str = render_opt_decl_sig a.signature in
-    let cases_str = String.concat "\n" (List.map render__def_case a.body) in
-    Printf.sprintf
-      "%s abbrev %s %s\n  %s"
-      modifier_str
-      id_str
-      decl_sig_str
-      cases_str
+    let cases_str = separate hardline (List.map render__def_case a.body) in
+    modifier_str
+    ^^ string " abbrev "
+    ^^ id_str
+    ^^ decl_sig_str
+    ^^ cases_str
 
 and render__deriving (deriving : _deriving) : document =
   match deriving with
-  | [] -> ""
-  | idents -> string ("deriving " ^ (String.concat ", " idents))
+  | [] -> empty
+  | idents -> string ("deriving ") ^^ (separate (string ", ") (List.map string idents))
 
 and render_decl_modifier (modifier : decl_modifier) : document =
   let comment_str = match modifier.comment with
-    | Some comment -> string (Printf.sprintf "/- %s -/\n" comment)
-    | None -> ""
+    | Some comment -> string "/-" ^^ string comment ^^ string "-/" ^^ hardline
+    | None -> empty
   in
   let visibility_str = match modifier.visibility with
     | Some Private -> string "private"
@@ -411,39 +410,31 @@ and render_decl_modifier (modifier : decl_modifier) : document =
     | Some NonRec -> string "nonrec"
     | None -> string ""
   in
-  String.concat " " [comment_str; visibility_str; noncomputable_str; unsafe_str; recursion_str]
+  separate (string " ") [comment_str; visibility_str; noncomputable_str; unsafe_str; recursion_str]
 
 and render_decl_sig (params, term : decl_sig) : document =
   (* Technically this is a subset of opt_decl_sig, but Lean's reference found it convenient to distinguish the two *)
-  let params_str = String.concat " " (List.map render_params params) in
+  let params_str = separate (string " ") (List.map render_params params) in
   let term_str = render_term term in
-  Printf.sprintf
-    "%s : %s"
-    params_str
-    term_str
+  params_str ^^ string " : " ^^ term_str
 
 and render_opt_decl_sig (opt_decl_sig : opt_decl_sig) : document =
   match opt_decl_sig with
   | (params, Some term) -> 
     prerr_endline ("rendering decl sig with term: " ^ render_term term);
-    let params_str = String.concat " " (List.map render_params params) in
+    let params_str = separate (string " ") (List.map render_params params) in
     let term_str = render_term term in
-    Printf.sprintf
-      "%s : %s"
-      params_str
-      term_str
+    params_str ^^ string " : " ^^ term_str
 
   | (params, None) ->
     prerr_endline ("rendering decl sig without term" );
-    let params_str = String.concat " " (List.map render_params params) in
-    Printf.sprintf
-      "%s"
-      params_str
+    let params_str = separate (string " ") (List.map render_params params) in
+    params_str
 
 and render_params (param : _params) : document =
   match param with
   | Ident ident -> render_id ident
-  | Hole _ -> "_"
+  | Hole _ -> string "_"
   | BracketedBinder binder -> render_bracketed_binder binder
 
 and render__ident_or_hole (ioh : _ident_or_hole) : document =
@@ -454,21 +445,21 @@ and render__ident_or_hole (ioh : _ident_or_hole) : document =
 and render_bracketed_binder (binder : bracketed_binder) : document =
   match binder with
   | ExplicitParam (idents, term) ->
-    let idents_str = String.concat " " (List.map render__ident_or_hole (NonEmptyList.to_list idents)) in
+    let idents_str = separate (string " ") (List.map render__ident_or_hole (NonEmptyList.to_list idents)) in
     let term_str = render_term term in
-    Printf.sprintf "(%s : %s)" idents_str term_str
+    string "(" ^^ idents_str ^^ string " : " ^^ term_str ^^ string ")"
   | OptAutoParam (idents, term1, term2) ->
-    let idents_str = String.concat " " (List.map render__ident_or_hole (NonEmptyList.to_list idents)) in
+    let idents_str = separate (string " ") (List.map render__ident_or_hole (NonEmptyList.to_list idents)) in
     let term1_str = render_term term1 in
     let term2_str = render_term term2 in
-    Printf.sprintf "(%s : %s := %s)" idents_str term1_str term2_str
+    string "(" ^^ idents_str ^^ string " : " ^^ term1_str ^^ string " := " ^^ term2_str ^^ string ")"
   | ImplicitParam (idents, term) ->
-    let idents_str = String.concat " " (List.map render__ident_or_hole (NonEmptyList.to_list idents)) in
+    let idents_str = separate (string " ") (List.map render__ident_or_hole (NonEmptyList.to_list idents)) in
     let term_str = render_term term in
-    Printf.sprintf "{%s : %s}" idents_str term_str
+    string "{" ^^ idents_str ^^ string " : " ^^ term_str ^^ string "}"
 
 (* NOTE: _script isn't a Lean AST construct at time of writing; this function is
 just for convenience *)
 and render__script (script : command list) : document =
-  let commands_str = String.concat "\n\n" (List.map render_command script) in
-  string commands_str
+  let commands_str = separate (hardline ^^ hardline) (List.map render_command script) in
+  commands_str
