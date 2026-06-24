@@ -303,16 +303,16 @@ let test_assertion assertion =
     )
   | AssertInvalid (def, re)
   | AssertInvalidCustom (def, re) ->
-    (*(match def |> Backend_animation.Runner.module_of_def |> fun ri_m ->
+    (match def |> Backend_animation.Runner.module_of_def |> fun ri_m ->
     Fun.const ri_m (Reference_interpreter.Valid.check_module ri_m) 
     |> Backend_animation.Construct_v_new.vl_of_module
     |> ocaml_of_module_
     |> instantiate_helper |> ignore with
     | exception RI.Valid.Invalid _ -> success
     | exception I.Exception.Invalid _ -> success
-    | _ -> print_fail assertion.at "validation" re "module instance") *)
-    invalids := !invalids + 1;
-    pass
+    | _ -> print_fail assertion.at "validation" re "module instance")
+    (*invalids := !invalids + 1;
+    pass*)
   | AssertExhaustion (action, re) ->
     (match run_action action with
     | exception I.Exception.OutOfMemory -> success
