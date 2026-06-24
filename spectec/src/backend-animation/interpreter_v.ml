@@ -104,7 +104,7 @@ open OptMonad
 
 type builtin = { name : string; f : value list -> value OptMonad.m }
 
-let fail_info cat at msg = info cat at msg; fail ()
+let fail_info cat at msg = (*info cat at msg;*) fail ()
 
 let error_eval etyp exp onotes =
   let notes = match onotes with
@@ -842,8 +842,8 @@ and call_func name args : value OptMonad.m =
   | Some fdef when not is_builtin -> eval_func name fdef args
   (* Builtins and numerics *)
   | Some { it = (_, _, _, _, [], _); at; _ } when is_builtin ->
-    if Numerics_v.mem builtin_name then
-      Numerics_v.call_numerics builtin_name args |> return
+    if Numerics_v_new.mem builtin_name then
+      Numerics_v_new.call_numerics builtin_name args |> return
     else if builtins_mem builtin_name then
       call_builtins builtin_name args
     else if builtin_name = "hostcall" then
@@ -871,49 +871,50 @@ and call_hostfunc name s vs =
   in
   let argc = List.length vs in
   let print_eff s = HS.Print s in
+  Printf.printf "Host function call: %s(%s)\n" name (String.concat ", " (List.map string_of_value vs));
   let effs = (match name with
-  | "print" when argc = 0 -> [ print_eff "- print: ()\n" ]
+  | "print" when argc = 0 -> Printf.printf "calling print"; [ print_eff "- print: ()\n" ]
   | "print_i32" when argc = 1 ->
     List.hd vs
-    |> as_const "I32"
-    |> vl_to_uN_32
+    (* |> as_const "I32" *)
+    (* |> vl_to_uN_32 *) |> Construct_v.vl_to_num |> (fun (I32 i) -> i)
     |> RI.I32.to_string_s
     |> Printf.sprintf "- print_i32: %s\n"
     |> print_eff
     |> fun e -> [e]
   | "print_i64" when argc = 1 ->
     List.hd vs
-    |> as_const "I64"
-    |> vl_to_uN_64
+    (* |> as_const "I64" *)
+    (* |> vl_to_uN_64 *) |> Construct_v.vl_to_num |> (fun (I64 i) -> i)
     |> RI.I64.to_string_s
     |> Printf.sprintf "- print_i64: %s\n"
     |> print_eff
     |> fun e -> [e]
   | "print_f32" when argc = 1 ->
     List.hd vs
-    |> as_const "F32"
-    |> vl_to_float32
+    (* |> as_const "F32"
+    |> vl_to_float32 *) |> Construct_v.vl_to_num |> (fun (F32 f) -> f)
     |> RI.F32.to_string
     |> Printf.sprintf "- print_f32: %s\n"
     |> print_eff
     |> fun e -> [e]
   | "print_f64" when argc = 1 ->
     List.hd vs
-    |> as_const "F64"
-    |> vl_to_float64
+    (* |> as_const "F64"
+    |> vl_to_float64 *) |> Construct_v.vl_to_num |> (fun (F64 f) -> f)
     |> RI.F64.to_string
     |> Printf.sprintf "- print_f64: %s\n"
     |> print_eff
     |> fun e -> [e]
   | "print_i32_f32" when argc = 2 ->
     let [v1; v2] = vs in
-    let i32 = v1 |> as_const "I32" |> vl_to_uN_32   |> RI.I32.to_string_s in
-    let f32 = v2 |> as_const "F32" |> vl_to_float32 |> RI.F32.to_string   in
+    let i32 = v1 |> (* as_const "I32" |> vl_to_uN_32 *) Construct_v.vl_to_num |> (fun (I32 i) -> i) |> RI.I32.to_string_s in
+    let f32 = v2 |> (* as_const "F32" |> vl_to_float32 *) Construct_v.vl_to_num |> (fun (F32 f) -> f) |> RI.F32.to_string   in
     Printf.sprintf "- print_i32_f32: %s %s\n" i32 f32 |> print_eff |> fun e -> [e]
   | "print_f64_f64" when argc = 2 ->
     let [v1; v2] = vs in
-    let f64  = v1 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
-    let f64' = v2 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
+    let f64  = v1 |> (* as_const "F64" |> vl_to_float64 *) Construct_v.vl_to_num |> (fun (F64 f) -> f) |> RI.F64.to_string in
+    let f64' = v2 |> (* as_const "F64" |> vl_to_float64 *) Construct_v.vl_to_num |> (fun (F64 f) -> f) |> RI.F64.to_string in
     Printf.sprintf "- print_f64_f64: %s %s\n" f64 f64' |> print_eff |> fun e -> [e]
   | name -> error no ("Invalid host function call: " ^ name)
   )

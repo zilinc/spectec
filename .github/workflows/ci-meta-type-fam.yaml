@@ -1,0 +1,28 @@
+name: CI for Meta-Interpreter with Type Family Removal
+
+on:
+  push:
+    branches: [ il-interpreter ]
+    paths:
+      - spectec/**
+      - .github/workflows/ci-ocaml-interpreter.yaml
+
+  workflow_dispatch:
+
+jobs:
+  spec-tec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.1.x
+      - name: Setup Dune
+        run: opam install --yes dune menhir mdx zarith && eval $(opam env)
+      - name: Build and Test wasm-3.0 on meta-inerpreter with type family removal enabled
+        run: |
+          cd spectec
+          opam exec make
+           ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --typefamily-removal --allow-partial-animation --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/

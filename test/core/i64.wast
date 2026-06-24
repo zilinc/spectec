@@ -69,7 +69,7 @@
 (assert_return (invoke "div_s" (i64.const 1) (i64.const 1)) (i64.const 1))
 (assert_return (invoke "div_s" (i64.const 0) (i64.const 1)) (i64.const 0))
 (assert_return (invoke "div_s" (i64.const 0) (i64.const -1)) (i64.const 0))
-(assert_return (invoke "div_s" (i64.const -1) (i64.const -1)) (i64.const 1))
+(assert_return (invoke "div_s" (i64.const -1) (i64.const -1)) (i64.const 1)) 
 (assert_return (invoke "div_s" (i64.const 0x8000000000000000) (i64.const 2)) (i64.const 0xc000000000000000))
 (assert_return (invoke "div_s" (i64.const 0x8000000000000001) (i64.const 1000)) (i64.const 0xffdf3b645a1cac09))
 (assert_return (invoke "div_s" (i64.const 5) (i64.const 2)) (i64.const 2))

@@ -3,7 +3,8 @@
 NAME = spectec
 EXT = $(NAME)
 LOG = _log
-
+PRINT_DL ?= 0
+UNDEP ?= 0
 
 # Main targets
 
@@ -13,26 +14,71 @@ default: exe
 all: exe latex test
 ci: all
 
-# Build some OCaml functions from spec  
+# Build interpreter and example ocaml programs 
 
 .PHONY: build_ocamlprog
 
+SPEC ?= ../specification/testing2
+
+ifeq ($(PRINT_DL),1)
+  ifeq ($(UNDEP),1)
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --remove-indexed-types --generate-ocaml "dl_codegen"
+  else
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --generate-ocaml "dl_codegen"
+  endif
+else
+  ifeq ($(UNDEP),1)
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --remove-indexed-types --generate-ocaml "dl_codegen"
+  else
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --generate-ocaml "dl_codegen"
+  endif
+endif
+
+
+TEST ?= test-ocaml/sample.wast
+
+ifeq ($(TEST),CORE)
+TEST_PATHS := test-interpreter/spec-test-3/ \
+			  test-interpreter/spec-test-3/slow-return
+else ifeq ($(TEST),FEATURES)
+TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory
+else ifeq ($(TEST),ALL)
+TEST_PATHS := test-interpreter/spec-test-3/ \
+			  test-interpreter/spec-test-3/slow-return \
+              test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory
+else
+TEST_PATHS := $(TEST)
+endif
+
 build_ocamlprog: exe
-	./spectec ../specification/wasm-3.0/* --animate --generate-ocaml "dl_codegen" --print-dl > dl.log
-	@echo "#### spectec finished, generating code in dl-interpreter"
-	dune build src/backend-animation/dl-interpreter
-	@echo "#### dl-interpreter code compiled successfully"
+	mkdir -p src/backend-animation/interpreter-ocaml/build
+	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
+	./spectec $(SPEC) $(SPECTEC_FLAGS)
+	@echo "#### spectec finished, compiling generated code"
+#	dune build --instrument-with landmarks src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+	@echo "#### dl-interpreter code compiled successfully, running tests ... "
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
+# OCAML_LANDMARKS="on,output=stderr" dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
 
-# Build Interpreter
-
-.PHONY: build_interpreter
-
-build_interpreter: exe
-	./spectec ../specification/wasm-3.0/* --animate --print-dl > dl.log
-	@echo "#### spectec finished, generating code in dl-interpreter"
-	dune build src/backend-animation/dl-interpreter
-	@echo "#### dl-interpreter code compiled successfully"
-
+run_ocaml: 
+	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
+	@echo "#### compiling generated code"
+	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+	@echo "#### dl-interpreter code compiled successfully, running tests ... "
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
 
 # Executable
 
@@ -43,6 +89,7 @@ ROOTDIR = ..
 INTERPRETERDIR = $(ROOTDIR)/interpreter
 CLONEDIR = src/backend-interpreter/reference-interpreter
 CLONERM = dune-project jslib
+RUNNER = $(ROOTDIR)/src/backend-animation/interpreter-ocaml
 OPAMPACKAGES = zarith menhir mdx tsort
 
 

@@ -101,7 +101,7 @@ let enable_pass pass = selected_passes := PS.add pass !selected_passes
 let sideconditions_on_defs = ref false
 
 let print_il il =
-  Printf.printf "%s\n%!" (Il.Print.string_of_script ~suppress_pos:(!print_no_pos) il)
+  Printf.printf "START IL: \n %s\n END IL\n%!" (Il.Print.string_of_script ~suppress_pos:(!print_no_pos) il)
 
 let print_il_to pass_name pass_count il =
   let pass_name = if pass_name = "" then "elab" else pass_name in
@@ -210,6 +210,7 @@ let argspec = Arg.align (
 
   "--check", Arg.Unit (fun () -> target := Check), " Check only (default)";
   "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
+  "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
   "--ast", Arg.Unit (fun () -> target := Ast), " Generate AST";
   "--latex", Arg.Unit (fun () -> target := Latex), " Generate Latex";
   "--splice-latex", Arg.Unit (fun () -> target := Splice Backend_splice.Config.latex),
@@ -245,6 +246,8 @@ let argspec = Arg.align (
   "--print-al-o", Arg.Set_string print_al_o, " Print al with given name";
   "--print-il-notes", Arg.Set Il.Print.print_notes, " Print IL with type annotations";
   "--print-no-pos", Arg.Set print_no_pos, " Suppress position info in output";
+  "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
+    " Generate OCaml code for DL types and functions";
   "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
     " Generate OCaml code for DL types and functions";
 ] @ List.map pass_argspec all_passes @ [
@@ -308,10 +311,20 @@ let () =
     last_pass := "";
 
     if !print_final_il && not !print_all_il then print_il il;
+    (* temp debugging things *)
+    let wfslog = open_out "wfs-il.log" in
+    let rec concat_nonempty sep acc l =
+      match l with
+      | [] -> acc
+      | x::xs when x <> "" -> concat_nonempty sep (x ^ sep ^ acc) xs
+      | _::xs -> concat_nonempty sep acc xs
+    in
+    (* Out_channel.output_string wfslog (concat_nonempty "\n" "" (List.map Il.Print.string_of_wf il)); *)
 
     let al =
       if not !print_al && !print_al_o = "" &&
-         (!target = Check || !target = Ast || !target = Latex || !target = Animate) then []
+        
+         (!target = Check || !target = Ast || !target = Latex || !target = Animate || !target = Animate) then []
       else (
         log "Translating to AL...";
         let interp = match !target with
@@ -427,6 +440,12 @@ let () =
       let (env, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
       log "DL Validating... ";
       Backend_animation.Valid.valid dl;
+      (match !generate_ocaml with
+      | Some ocamlfile -> 
+          log "Generating OCaml..."; 
+          Backend_animation.Main_interpreter_ocaml.generate_ocaml dl (Some ocamlfile)
+      | None -> ()
+      );
       (match !new_interpreter_args with
       | Some args ->
         log "Interpreting...";
