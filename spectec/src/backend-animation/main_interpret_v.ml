@@ -243,7 +243,7 @@ let run_command' command =
     let module_ = module_of_def def in
     (match module_ok module_ with
     | Ok _ -> Modules.add_with_var var_opt module_; success
-    | Error e -> fail
+    | Error e -> log "%s\n" e; fail
     )
   | Instance (var1_opt, var2_opt) ->
     log "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
