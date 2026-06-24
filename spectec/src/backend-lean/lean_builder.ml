@@ -16,6 +16,13 @@ let simple_lambda (param : ident) (body : term) : term =
     body = body
   }
 
+let opaque_def = By [
+  TacticFirst [
+    [TacticExact (DotProj (Ident "Inhabited", Ident "default"))];
+    [TacticIntros []; TacticAssumption];
+  ]
+]
+
 (* let rec write__abbrev (dm : decl_modifier) (id : ) : _abbrev =
   AbbrevAsgn {
     modifier = dm;

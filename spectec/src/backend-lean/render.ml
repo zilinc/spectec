@@ -45,7 +45,7 @@ and render_opaque (op : opaque) : document =
   | None -> string ""
   | Some r -> (string ":= ") ^^ (render_term r)
   in
-  group (modifier_str ^^ string " opaque " ^^ id_str ^^ string " " ^^ decl_sig_str ^^ string " " ^^ rhs_str)
+  group (modifier_str ^^ string "opaque " ^^ id_str ^^ string " " ^^ decl_sig_str ^^ string " " ^^ rhs_str)
 
 and render_argument (arg : argument) : document =
   match arg with
@@ -256,9 +256,33 @@ and render_term (term : term) : document =
       string "match "
       ^^ match_terms_str
       ^^ string " with"
-      ^^ nest 2 cases_str
+      ^^ hardline
+      ^^ cases_str
   
+  | By tactic_seq ->
+      let tactic_seq_str = render_tactic_seq tactic_seq in
+      string "by "
+      ^^ nest 2 (hardline ^^ tactic_seq_str)
   (* | _ -> failwith (Printf.sprintf "render_term: unhandled term: %s" (show_term term)) *)
+
+and render_tactic_seq (tactic_seq : tactic_seq) : document =
+  let tactic_strs = List.map render_tactic tactic_seq in
+  separate (string "; ") tactic_strs
+
+and render_tactic (tactic : tactic) : document =
+  match tactic with
+  | TacticExact term ->
+      let term_str = render_term term in
+      string "exact " ^^ term_str
+  | TacticIntros idents ->
+      let idents_str = separate (string " ") (List.map render_id idents) in
+      string "intros " ^^ idents_str
+  | TacticAssumption ->
+      string "assumption"
+  | TacticFirst tactic_seqs ->
+      let tactic_seq_strs = List.map render_tactic_seq tactic_seqs in
+      let tactic_seq_str = List.map (fun s -> string " | " ^^ s ^^ hardline) tactic_seq_strs in
+      string "first" ^^ nest 2 (hardline ^^ separate empty tactic_seq_str)
 
 and render_level (level : level) : document =
   match level with
@@ -274,22 +298,25 @@ and render__structure (s : _structure) : document =
   | Some r -> render_term r
   in
   let constructor = match s.constructor with
-  | None -> empty
-  | Some (constructor_modifier, constructor_id) -> (render_decl_modifier constructor_modifier) ^^ (render_id constructor_id) ^^ string ":: "
+  | None -> None
+  | Some (constructor_modifier, constructor_id) ->
+      Some ((render_decl_modifier constructor_modifier) ^^ (render_id constructor_id) ^^ string " ::")
   in
   let fields_str = separate hardline (List.map render_struct_field s.fields) in
-  let deriving_str = match s.deriving with 
+  let deriving_str = match s.deriving with
   | None -> empty
   | Some der -> render__deriving der
   in
   modifier_str
-  ^^ string " structure "
+  ^^ string "structure "
   ^^ id_str
   ^^ binders
   ^^ universe
-  ^^ string " where "
-  ^^ constructor
-  ^^ nest 2 (hardline ^^ fields_str)
+  ^^ string " where"
+  ^^ nest 2 (
+    (match constructor with None -> empty | Some c -> hardline ^^ c)
+    ^^ hardline ^^ fields_str
+  )
   ^^ hardline
   ^^ deriving_str
 
@@ -309,10 +336,10 @@ and render__def (def : _def) : document =
     let decl_sig_str = render_opt_decl_sig d.signature in
     let term_str = render_term d.body in
     modifier_str
-    ^^ string " def "
+    ^^ string "def "
     ^^ id_str
     ^^ decl_sig_str
-    ^^ string " := "
+    ^^ string " :="
     ^^ nest 2 (hardline ^^ term_str)
 
   | DefCases d ->
@@ -321,7 +348,7 @@ and render__def (def : _def) : document =
     let decl_sig_str = render_opt_decl_sig d.signature in
     let cases_str = separate hardline (List.map render__def_case d.body) in
     modifier_str
-    ^^ string " def "
+    ^^ string "def "
     ^^ id_str
     ^^ decl_sig_str
     ^^ nest 2 (hardline ^^ cases_str)
@@ -346,10 +373,10 @@ and render__inductive (ind : _inductive) : document =
     | Some der -> render__deriving der
   in
   modifier_str
-  ^^ string " inductive "
+  ^^ string "inductive "
   ^^ id_str
   ^^ decl_sig_str
-  ^^ string " where "
+  ^^ string " where"
   ^^ nest 2 (hardline ^^ cases_str)
   ^^ hardline
   ^^ deriving_str
@@ -358,7 +385,7 @@ and render__inductive_case (case : _inductive_case) : document =
   let modifier_str = render_decl_modifier case.modifier in
   let id_str = render_id case.id in
   let decl_sig_str = render_opt_decl_sig case.signature in
-  string "|"
+  string "| "
   ^^ modifier_str
   ^^ id_str
   ^^ decl_sig_str
@@ -371,7 +398,7 @@ and render__abbrev (abbrev : _abbrev) : document =
     let decl_sig_str = render_opt_decl_sig a.signature in
     let term_str = render_term a.body in
     modifier_str
-    ^^ string " abbrev "
+    ^^ string "abbrev "
     ^^ id_str
     ^^ decl_sig_str
     ^^ string " := "
@@ -382,7 +409,7 @@ and render__abbrev (abbrev : _abbrev) : document =
     let decl_sig_str = render_opt_decl_sig a.signature in
     let cases_str = separate hardline (List.map render__def_case a.body) in
     modifier_str
-    ^^ string " abbrev "
+    ^^ string "abbrev "
     ^^ id_str
     ^^ decl_sig_str
     ^^ cases_str
@@ -393,24 +420,16 @@ and render__deriving (deriving : _deriving) : document =
   | idents -> string ("deriving ") ^^ (separate (string ", ") (List.map string idents))
 
 and render_decl_modifier (modifier : decl_modifier) : document =
-  let comment_str = match modifier.comment with
-    | Some comment -> string "/-" ^^ string comment ^^ string "-/" ^^ hardline
-    | None -> empty
-  in
-  let visibility_str = match modifier.visibility with
-    | Some Private -> string "private"
-    | Some Protected -> string "protected"
-    | Some Public -> string "public"
-    | None -> string ""
-  in
-  let noncomputable_str = if modifier.noncomputable then string "noncomputable" else string "" in
-  let unsafe_str = if modifier.unsafe then string "unsafe" else string "" in
-  let recursion_str = match modifier.recursion_modifer with
-    | Some Partial -> string "partial"
-    | Some NonRec -> string "nonrec"
-    | None -> string ""
-  in
-  separate (string " ") [comment_str; visibility_str; noncomputable_str; unsafe_str; recursion_str]
+  let parts = List.filter_map Fun.id [
+    (match modifier.comment with Some c -> Some (string "/- " ^^ string c ^^ string " -/") | None -> None);
+    (match modifier.visibility with Some Private -> Some (string "private") | Some Protected -> Some (string "protected") | Some Public -> Some (string "public") | None -> None);
+    (if modifier.noncomputable then Some (string "noncomputable") else None);
+    (if modifier.unsafe then Some (string "unsafe") else None);
+    (match modifier.recursion_modifer with Some Partial -> Some (string "partial") | Some NonRec -> Some (string "nonrec") | None -> None);
+  ] in
+  match parts with
+  | [] -> empty
+  | _ -> separate space parts ^^ space
 
 and render_decl_sig (params, term : decl_sig) : document =
   (* Technically this is a subset of opt_decl_sig, but Lean's reference found it convenient to distinguish the two *)
@@ -420,27 +439,26 @@ and render_decl_sig (params, term : decl_sig) : document =
 
 and render_opt_decl_sig (opt_decl_sig : opt_decl_sig) : document =
   match opt_decl_sig with
-  | (params, Some term) -> 
-    prerr_endline ("rendering decl sig with term: " ^ render_term term);
-    let params_str = separate (string " ") (List.map render_params params) in
-    let term_str = render_term term in
-    params_str ^^ string " : " ^^ term_str
-
+  | ([], Some term) ->
+    string " : " ^^ render_term term
+  | (params, Some term) ->
+    let params_str = separate space (List.map render_params params) in
+    space ^^ params_str ^^ string " : " ^^ render_term term
+  | ([], None) ->
+    empty
   | (params, None) ->
-    prerr_endline ("rendering decl sig without term" );
-    let params_str = separate (string " ") (List.map render_params params) in
-    params_str
+    space ^^ separate space (List.map render_params params)
 
 and render_params (param : _params) : document =
   match param with
-  | Ident ident -> render_id ident
-  | Hole _ -> string "_"
+  | Ident_P ident -> render_id ident
+  | Hole_P _ -> string "_"
   | BracketedBinder binder -> render_bracketed_binder binder
 
 and render__ident_or_hole (ioh : _ident_or_hole) : document =
   match ioh with
-  | Ident ident -> render_id ident
-  | Hole _ -> string "_"
+  | Ident_IOH ident -> render_id ident
+  | Hole_IOH _ -> string "_"
 
 and render_bracketed_binder (binder : bracketed_binder) : document =
   match binder with

@@ -412,7 +412,7 @@ let create_typcase
         | TupT id_typ_list 
             -> List.map (
               fun (id, typ) -> BracketedBinder(ExplicitParam(
-                NonEmptyList.from_list_unsafe [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
+                NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
                 create_typ typ
               ))
             ) id_typ_list
@@ -423,7 +423,7 @@ let create_typcase
     = List.map (
       fun q -> match q.it with
         | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-          NonEmptyList.from_list_unsafe [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
+          NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
           create_typ typ
         ))
         | _ -> failwith "only ExpP should be here"
@@ -538,7 +538,7 @@ let create_def (def : Il.Ast.def) : command option
               = List.map (
                 fun q -> match q.it with
                   | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-                    NonEmptyList.from_list_unsafe [(Ident id.it : _ident_or_hole);], (* TODO: disambiguate Ident *)
+                    NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* TODO: disambiguate Ident *)
                     create_typ typ
                   ))
                   | _ -> failwith "only ExpP should be here"
@@ -618,11 +618,54 @@ let create_def (def : Il.Ast.def) : command option
 
 
     | DecD (
-      id,
-      params,
-      typ,
+      id,       (* "float" *)
+      params,   (*
+                  (ExpP "nat" nat)
+                  (ExpP "var_0" (IterT nat List))
+                *)
+      typ,      (* (VarT "const") *)
       []
-    ) -> None
+    ) ->
+      (*
+        Let's say we have a definition like
+
+        /- Axiom Definition at: doc/example/NanoWasm.spectec:136.1-136.30 -/
+        opaque float (nat : Nat) (var_0 : (List Nat)) : const := opaqueDef
+
+        corresponding to IL AST
+
+        (DecD
+          "float"
+          (ExpP "nat" nat)
+          (ExpP "var_0" (IterT nat List))
+          (VarT "const")
+          []
+        )
+      *)
+      let signature : decl_sig (* (nat : Nat) (var_0 : (List Nat)) : const *)
+        =
+          List.map (
+            fun p -> match p.it with
+              | TypP t -> BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH t.it;], (* (X : Type) *)
+                Type None
+              ))
+              | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (v_state : state) *)
+                create_typ typ
+              ))
+              | _ -> failwith "only ExpP or TypP should be here"
+          ) params,
+          create_typ typ
+
+          
+      in
+      Some(Opaque {
+        modifier = empty_modifier;
+        id = id.it;                               (* "float" *)
+        signature = signature;
+        rhs = Some opaque_def;
+      })
     (* | DecD (id, [], typ, clauses)
       -> None *)
 
@@ -686,11 +729,11 @@ let create_def (def : Il.Ast.def) : command option
             = List.map (
               fun p -> match p.it with
                 | TypP t -> BracketedBinder(ExplicitParam(
-                  NonEmptyList.from_list_unsafe [(Ident t.it : _ident_or_hole);], (* (X : Type) *) (* TODO: disambiguate Ident *)
+                  NonEmptyList.from_list_unsafe [Ident_IOH t.it;], (* (X : Type) *)
                   Type None
                 ))
                 | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-                  NonEmptyList.from_list_unsafe [(Ident id.it : _ident_or_hole);], (* (v_state : state) *) (* TODO: disambiguate Ident *)
+                  NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (v_state : state) *)
                   create_typ typ
                 ))
                 | _ -> failwith "only ExpP or TypP should be here"
@@ -701,7 +744,8 @@ let create_def (def : Il.Ast.def) : command option
           Some (create_typ typ) (* val *)
       in
 
-
+      
+      (* TODO: see if we should / can remove unnecessary components of match term *)
       let create_clause
         (*
           | .mk_state s f => ((f.LOCALS)[v_localidx]!)

@@ -129,3 +129,60 @@ rule Step/global.get:
 rule Step/global.set:
     z; val (GLOBAL.SET x)  ~>  z'; eps
     -- if z' = $update_global(z, x, val)
+
+
+;; Binary Format
+
+def $float(nat, nat*) : const
+
+grammar Bbyte : nat = 0x00 | ... | 0xFF
+
+grammar Bu(N : nat) : nat =
+  | n:Bbyte              => n                       -- if $(n < 2^7 /\ n < 2^N)
+  | n:Bbyte m:Bu($(N-7)) => $(2^7 * m + (n - 2^7))  -- if $(n >= 2^7 /\ N > 7)
+
+grammar Bu32 : const = Bu(32)
+grammar Bu64 : const = Bu(64)
+
+grammar Bf(N : nat) : nat =
+  | b*:Bbyte^(N/8) => $float(N, b*)
+
+grammar Bf32 : const = Bf(32)
+grammar Bf64 : const = Bf(64)
+
+
+grammar Bvaltype : valtype =
+    | 0x7F => I32
+    | 0x7E => I64
+    | 0x7D => F32
+    | 0x7C => F64
+
+grammar Bmut : mut? =
+    | 0x00 => eps
+    | 0x01 => MUT
+
+grammar Bglobaltype : globaltype =
+    | t:Bvaltype mut:Bmut => mut t
+
+grammar Bresulttype : valtype* =
+    | n:Bu32 (t:Bvaltype)^n => t^n
+
+grammar Bfunctype : functype =
+    | 0x60 t_1*:Bresulttype t_2*:Bresulttype => t_1* -> t_2*
+
+
+grammar Bglobalidx : globalidx = x:Bu32 => x
+grammar Blocalidx : localidx = x:Bu32 => x
+
+grammar Binstr : instr =
+  | 0x01 => NOP
+  | 0x1A => DROP
+  | 0x1B => SELECT
+  | 0x20 x:Blocalidx => LOCAL.GET x
+  | 0x21 x:Blocalidx => LOCAL.SET x
+  | 0x23 x:Bglobalidx => GLOBAL.GET x
+  | 0x24 x:Bglobalidx => GLOBAL.SET x
+  | 0x41 n:Bu32 => CONST I32 n
+  | 0x42 n:Bu64 => CONST I64 n
+  | 0x43 p:Bf32 => CONST F32 p
+  | 0x44 p:Bf64 => CONST F64 p

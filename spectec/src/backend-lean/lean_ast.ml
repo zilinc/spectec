@@ -115,6 +115,8 @@ type term =
     cases: (term list * term) list;
   }
 
+  | By of tactic_seq                     (* by tacticSeq *)
+
   (* | UpdateList of {
     name_of_list_to_update: term;
     index: term;
@@ -170,30 +172,37 @@ and _numtype =
 
 
 
-type _ident_or_hole =
-  | Ident of ident
-  | Hole of hole
+and _ident_or_hole =
+  | Ident_IOH of ident
+  | Hole_IOH of hole
 [@@deriving show]
 
 
-type bracketed_binder =
+and bracketed_binder =
   | ExplicitParam of _ident_or_hole non_empty_list * term
   | OptAutoParam of _ident_or_hole non_empty_list * term * term
   | ImplicitParam of _ident_or_hole non_empty_list * term
 [@@deriving show]
 
-type _params =
-  | Ident of ident
-  | Hole of hole
+and _params =
+  | Ident_P of ident
+  | Hole_P of hole
   | BracketedBinder of bracketed_binder
 [@@deriving show]
 
-type decl_sig = _params list * term [@@deriving show]
+and decl_sig = _params list * term [@@deriving show]
 
-type opt_decl_sig = _params list * term option [@@deriving show]
+and opt_decl_sig = _params list * term option [@@deriving show]
 
 
+and tactic_seq = tactic list [@@deriving show]   (* separated by ; or newlines *)
 
+and tactic =
+  | TacticExact of term                  (* exact <term> *)
+  | TacticIntros of ident list           (* intros [x y z ...] *)
+  | TacticAssumption                     (* assumption *)
+  | TacticFirst of tactic_seq list       (* first | seq | seq | ... *)
+[@@deriving show]
 
 type visibility =
   | Private
