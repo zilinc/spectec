@@ -101,7 +101,7 @@ let enable_pass pass = selected_passes := PS.add pass !selected_passes
 let sideconditions_on_defs = ref false
 
 let print_il il =
-  Printf.printf "START IL: \n %s\n END IL\n%!" (Il.Print.string_of_script ~suppress_pos:(!print_no_pos) il)
+  Printf.printf "%s\n%!" (Il.Print.string_of_script ~suppress_pos:(!print_no_pos) il)
 
 let print_il_to pass_name pass_count il =
   let pass_name = if pass_name = "" then "elab" else pass_name in
@@ -311,20 +311,10 @@ let () =
     last_pass := "";
 
     if !print_final_il && not !print_all_il then print_il il;
-    (* temp debugging things *)
-    let wfslog = open_out "wfs-il.log" in
-    let rec concat_nonempty sep acc l =
-      match l with
-      | [] -> acc
-      | x::xs when x <> "" -> concat_nonempty sep (x ^ sep ^ acc) xs
-      | _::xs -> concat_nonempty sep acc xs
-    in
-    (* Out_channel.output_string wfslog (concat_nonempty "\n" "" (List.map Il.Print.string_of_wf il)); *)
 
     let al =
       if not !print_al && !print_al_o = "" &&
-        
-         (!target = Check || !target = Ast || !target = Latex || !target = Animate || !target = Animate) then []
+         (!target = Check || !target = Ast || !target = Latex || !target = Animate) then []
       else (
         log "Translating to AL...";
         let interp = match !target with

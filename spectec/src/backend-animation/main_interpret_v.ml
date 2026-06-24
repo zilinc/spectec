@@ -408,8 +408,6 @@ let run (env: Il.Env.t) (dl: dl_def list) (args : string list) =
   Interpreter_v.dl     := dl;
   Interpreter_v.il_env := env;
 
-  Printf.printf "Running with %d defs...\n" (List.length dl);
-
   match args with
   | path :: args' when Sys.file_exists path ->
     (* Run file *)

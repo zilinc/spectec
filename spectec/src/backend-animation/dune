@@ -1,58 +1,64 @@
 (include_subdirs unqualified)
 
 (library
- (name backend_animation)
- (libraries
-  util
-  frontend
-  il
-  al
-  backend_ast
-  il2al
-  str
-  tsort
-  reference_interpreter
-  backend_interpreter
-  middlend)
- (modules
-  main_animate
-  ; main_interpret
-  animate
-  common
-  ; construct
-  def
-  il2dl
-  dl2il
-  il_util
-  inline
-  ; interpreter
-  ; numerics
-  occur
-  ; spectest
-  ; state
-  valid
-  value
-  ; interpreter-ocaml
-  main_interpreter_ocaml
-  parser_ocaml
-  interpreter_ocaml
-  util_ocaml
-  runner
-  temp_print
-  ; VL
-  construct_v
-  construct_v_new
-  interpreter_v
-  numerics_v
-  numerics_v_new
-  state_v
-  spectest_v
-  main_interpret_v
-  main_runner_v
-  main_prose_v
-  prose_v
-  main_repl))
+  (name backend_animation)
+  (libraries
+    util
+    frontend
+    il
+    al
+    backend_ast
+    il2al
+    str
+    tsort
+    reference_interpreter
+    backend_interpreter
+    middlend
+  )
+  (modules
+    main_animate
+    ; main_interpret
+    animate
+    common
+    ; construct
+    def
+    il2dl
+    dl2il
+    il_util
+    inline
+    ; interpreter
+    ; numerics
+    occur
+    ; spectest
+    ; state
+    valid
+    value
+    ; interpreter-ocaml
+    main_interpreter_ocaml
+    parser_ocaml
+    interpreter_ocaml
+    util_ocaml
+    runner
+    temp_print
+    ; VL
+    construct_v
+    construct_v_ocaml
+    interpreter_v
+    numerics_v
+    numerics_v_ocaml
+    state_v
+    spectest_v
+    spectest_v_ocaml
+    main_interpret_v
+    main_runner_v
+    main_prose_v
+    prose_v
+    main_repl
+  )
+)
 
 (env
- (dev
-  (flags :standard -w -8-26-27-32-33-34)))
+  (dev
+    (flags :standard -w -8-26-27-32-33-34)
+  )
+)

@@ -4,13 +4,3 @@
 **/_build
 **/_output
 *.swp
-
-# macOS metadata
-.DS_Store
-
-# Logs
-*.log
-
-# Build artefacts
-/spectec/src/backend-animation/interpreter-ocaml/build/
-

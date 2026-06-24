@@ -2,7 +2,7 @@ name: CI for OCaml Interpreter
 
 on:
   push:
-    branches: [ il-interpreter ]
+    branches: [ il-interpreter, il-animate** ]
     paths:
       - spectec/**
       - .github/workflows/ci-ocaml-interpreter.yaml

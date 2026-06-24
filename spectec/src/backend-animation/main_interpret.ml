@@ -77,7 +77,7 @@ let print_runner_result name result =
     Printf.printf "Total [%d/%d] (%.2f%%)\n\n" num_success total percentage
   else
     Printf.printf "- %d/%d (%.2f%%)\n\n" num_success total percentage;
-  Printf.printf "%s took %.5f s.\n" name execution_time
+  log "%s took %.5f s.\n" name execution_time
 
 let get_export name moduleinst_name =
   Register.find moduleinst_name
@@ -118,13 +118,9 @@ let get_global_value module_name globalname : exp (* val *) =
 and instantiate module_ : exp =
   let t1 = Sys.time () in
   log "[Instantiating module...]\n";
-  flush stdout;
   match C.il_of_module module_, List.map get_externaddr module_.it.imports with
   | exception exn -> raise (I.Exception.Invalid (exn, Printexc.get_raw_backtrace ()))
   | il_module, externaddrs ->
-    log "[Instantiated module...]\n";
-    (*log "[Obtained il_module... %s]\n" (string_of_exp il_module);
-    flush stdout;*)
     let store = Store.get () in
     let config' = Interpreter.instantiate [ expA store ; expA il_module; listE (t_star "externaddr") externaddrs |> expA ] in
     let CaseE (_, tup1) = config'.it in
@@ -136,7 +132,6 @@ and instantiate module_ : exp =
     Store.put store';
     let t2 = Sys.time () in
     print_endline ("instantiate took " ^ string_of_float (t2 -. t1) ^ " s");
-    (*log "[Obtained moduleinst... %s]\n" (string_of_exp moduleinst);*)
     moduleinst
 
 
@@ -281,8 +276,6 @@ let run_wast name script =
     |> List.map run_command
     |> sum_results_with_time
   in
-  (* horrible way of testing things *)
-  (*let hi = Interpreter.call_func "name_length" [ expA (C.il_of_name (Utf8.decode ("hello world"))) ] in*)
   print_runner_result name result; result
 
 

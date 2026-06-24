@@ -1,5 +1,5 @@
 (module
-;;   (import "spectest" "print_i32" (func $print_i32 (param i32)))
+  (import "spectest" "print_i32" (func $print_i32 (param i32)))
   (global f32 (f32.const 1.4))
   (global f32 (f32.const 5.2))
   (global (mut i32) (i32.const 42))
@@ -97,7 +97,7 @@
     local.set 2
     local.get 2
   )
- 
+
   (func (export "local_get") (param i32 i32 i32) (result i32)
     local.get 2
   )
@@ -149,13 +149,13 @@
   (func (export "call_add_return_frame") (result i32)
     i32.const 1
     i32.const 2
-    call $return_frame
+    call 4
   )
 
   (func (export "call_add_return_label") (result i32)
     i32.const 1
     i32.const 2
-    call $return_label 
+    call 5
   )
 
   (func (export "block") (result i32)
@@ -185,11 +185,11 @@
       block (param i32 i32) (result i32)
         i32.const 42
         br 1
-      i32.const 52
+        i32.const 52
+      end
+      drop
+      i32.const 62
     end
-    drop
-    i32.const 62
-  end
     i32.const 1
     i32.add
   )
@@ -247,28 +247,20 @@
       call $fib
       i32.add
     end)
- 
+
   (func $foo (param i32) (br 0))
   (func $check_exit (export "check_exit") (param i32) (result i32)
     (call $foo (i32.const 42))
-    ;; (call $print_i32 (local.get 0))
+    (call $print_i32 (local.get 0))
     (local.get 0)
-  )
-
-  (func (export "fdiv") (result f32)
-    f32.const 1.0
-    f32.const 2.0
-    f32.div
   )
 )
 
 
 (assert_return (invoke "binop") (i32.const 46))
 (assert_return (invoke "testop") (i32.const 1))
-(assert_return (invoke "fdiv") (f32.const 0.5))
 (assert_return (invoke "relop_i32") (i32.const 0))
 (assert_return (invoke "relop_f32") (i32.const 0))
-
 (assert_return (invoke "nop") (i64.const 0))
 (assert_return (invoke "drop") (f64.const 3.1))
 (assert_return (invoke "select") (f64.const -0.0))
@@ -277,7 +269,6 @@
 (assert_return (invoke "local_get" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 7))
 (assert_return (invoke "local_tee" (i32.const 3) (i32.const 0) (i32.const 7)) (i32.const 6))
 (assert_return (invoke "global_set") (i32.const 43))
-
 (assert_return (invoke "global_get1") (f32.const 5.2))
 (assert_return (invoke "global_get2") (i32.const 43))
 (assert_return (invoke "table_get") (ref.null func))
@@ -290,18 +281,32 @@
 (assert_return (invoke "call_add_return_label") (i32.const 3))
 (assert_return (invoke "block") (i32.const -1))
 (assert_return (invoke "br_zero") (i32.const 43))
-;; (assert_return (invoke "br_succ") (i32.const 43))
-;; (assert_return (invoke "if_true") (i32.const 44))
-;; (assert_return (invoke "if_false") (i32.const 45))
-;; (assert_return (invoke "loop") (i32.const 42))
-;; (assert_return (invoke "fib" (i32.const 10)) (i32.const 55))
-;; (assert_return (invoke "check_exit" (i32.const 10)) (i32.const 10))
+(assert_return (invoke "br_succ") (i32.const 43))
+(assert_return (invoke "if_true") (i32.const 44))
+(assert_return (invoke "if_false") (i32.const 45))
+(assert_return (invoke "loop") (i32.const 42))
+(assert_return (invoke "fib" (i32.const 10)) (i32.const 55))
+(assert_return (invoke "check_exit" (i32.const 10)) (i32.const 10))
 
 ;;second module
 (module (func (export "f")))
 (assert_return (invoke "f"))
 
-;; (invoke $spectest "print_i32" (i32.const 42))
+(invoke $spectest "print_i32" (i32.const 42))
 
 
-;; (assert_return (invoke "testname") (i32.const 11))
+(module
+  (func (export "no_dce.i32.div_s") (param $x i32) (param $y i32)
+    (drop
+      (i32.div_s (local.get $x) (local.get $y))
+    )
+  )
+  (func (export "div_0") (result i32)
+    i32.const 19
+    i32.const 0
+    i32.div_s
+  )
+)
+
+(assert_trap (invoke "no_dce.i32.div_s" (i32.const 1) (i32.const 0)) "integer divide by zero")
+(assert_trap (invoke "div_0") "some numeric error")
