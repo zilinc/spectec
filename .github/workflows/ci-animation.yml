@@ -1,5 +1,5 @@
 
-name: CI for DL meta-interpreter on Wasm-3.0 core
+name: CI for DL meta-interpreter on Wasm-3.0
 
 on:
   push:
@@ -34,5 +34,5 @@ jobs:
       - name: Test wasm-3.0
         run: |
           cd spectec
-          ./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate ${{ matrix.inline }} --new-interpreter-v ./test-interpreter/spec-test-3/
+          make anim-test-all 'SPECTEC_FLAGS=--animate ${{ matrix.inline }} --new-interpreter-v'
 

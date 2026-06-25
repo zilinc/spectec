@@ -47,15 +47,36 @@ $(CLONEDIR): $(shell find $(INTERPRETERDIR) -type f)
 
 # IL Meta-interpreter
 
-.PHONY = anim-test anim-test-sample
+TEST ?= test-interpreter/sample.wast
 
+ifeq ($(TEST),CORE)
+TEST_PATHS := test-interpreter/spec-test-3/
+else ifeq ($(TEST),FEATURES)
+TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory
+else ifeq ($(TEST),ALL)
+TEST_PATHS := test-interpreter/spec-test-3/ \
+              test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory
+else
+TEST_PATHS := $(TEST)
+endif
+
+
+.PHONY = anim-test anim-test-all
+
+anim-test: SPECTEC_FLAGS ?= --animate --inline --new-interpreter-v
 anim-test: exe
-	./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/
+	./spectec -l $(SPEC) $(SPECTEC_FLAGS) $(TEST_PATHS)
 
-anim-test-sample: exe
-	./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/sample.wast
-
-
+anim-test-all: exe
+	$(MAKE) anim-test 'TEST=ALL'
 
 # Wasm interpreter in OCaml
 
@@ -78,29 +99,6 @@ else
   endif
 endif
 
-
-TEST ?= test-ocaml/sample.wast
-
-ifeq ($(TEST),CORE)
-TEST_PATHS := test-interpreter/spec-test-3/ \
-			  test-interpreter/spec-test-3/slow-return
-else ifeq ($(TEST),FEATURES)
-TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
-              test-interpreter/spec-test-3/exceptions \
-              test-interpreter/spec-test-3/gc \
-              test-interpreter/spec-test-3/memory64 \
-              test-interpreter/spec-test-3/multi-memory
-else ifeq ($(TEST),ALL)
-TEST_PATHS := test-interpreter/spec-test-3/ \
-			  test-interpreter/spec-test-3/slow-return \
-              test-interpreter/spec-test-3/bulk-memory \
-              test-interpreter/spec-test-3/exceptions \
-              test-interpreter/spec-test-3/gc \
-              test-interpreter/spec-test-3/memory64 \
-              test-interpreter/spec-test-3/multi-memory
-else
-TEST_PATHS := $(TEST)
-endif
 
 ocaml-build: exe
 	mkdir -p src/backend-animation/interpreter-ocaml/build
