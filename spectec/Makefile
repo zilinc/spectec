@@ -71,9 +71,10 @@ endif
 
 .PHONY = anim-test anim-test-all
 
+anim-test: SPECTEC_EXTRA_FLAGS ?= -l
 anim-test: SPECTEC_FLAGS ?= --animate --inline --new-interpreter-v
 anim-test: exe
-	./spectec -l $(SPEC) $(SPECTEC_FLAGS) $(TEST_PATHS)
+	./spectec $(SPECTEC_EXTRA_FLAGS) $(SPEC) $(SPECTEC_FLAGS) $(TEST_PATHS)
 
 anim-test-all: exe
 	$(MAKE) anim-test 'TEST=ALL'
