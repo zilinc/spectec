@@ -117,6 +117,8 @@ type term =
 
   | By of tactic_seq                     (* by tacticSeq *)
 
+  | RightPipelineField of term * term (* term |> term *)
+
   (* | UpdateList of {
     name_of_list_to_update: term;
     index: term;

@@ -49,7 +49,10 @@ and render_opaque (op : opaque) : document =
 
 and render_argument (arg : argument) : document =
   match arg with
-  | Term t -> string "(" ^^ (render_term t) ^^ string ")"
+  | Term t ->
+    match t with
+    | Ident _ | Num _ | Hole _ | LeadingDot _ | List _ -> render_term t
+    | _ -> string "(" ^^ render_term t ^^ string ")"
 
 and render_num (num : _numtype) : document =
   match num with

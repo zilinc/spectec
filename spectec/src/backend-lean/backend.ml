@@ -24,7 +24,7 @@ let create_numtyp (nt : Il.Ast.numtyp) : term
     | `RatT -> Ident "Nat"
     | `RealT -> Ident "Nat"
 
-let rec create_iter (iter : Il.Ast.iter) (t : typ) : term
+let rec create_iter_typ (iter : Il.Ast.iter) (t : typ) : term
   = match iter with
     | Opt -> FunApp (Ident "Option", NonEmptyList.from_list_unsafe [Term (create_typ t)])
     | List -> FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (create_typ t)])
@@ -49,21 +49,10 @@ and create_typ (t : Il.Ast.typ) : term
       in
       construct_prod terms
     )
-    | IterT (t, iter) -> create_iter iter t
-
-
-(* let atom_string (a : Il.Ast.atom) : string = match a.it with
-  | Atom s -> s
-  | _ -> failwith "uhh compare this with the old backend" *)
+    | IterT (t, iter) -> create_iter_typ iter t
 
 let mixop_to_id (m : Il.Ast.mixop) : string
   = Xl.Mixop.to_string_with (Fun.const "") "" m
-
-(* let create_typcase_params (i : Il.Ast.id) (t : Il.Ast.typ) : bracketed_binder =
-  ExplicitParam (
-    {head = Ident i.it; tail = []},
-    create_typ t
-  ) *)
 
 let create_inductive_type_with_params_applied
   (parent_type : Il.Ast.id)
@@ -247,8 +236,19 @@ let rec create_exp (e : Il.Ast.exp) : term
         collection = create_exp e1;
         bounds = SliceBetween (create_exp e2, create_exp e3);
       }
-    | UpdE (e1, p, e2) -> create_upd_exp e1 p e2
-    | ExtE (e1, p, e2) -> failwith "not implemented yet"
+    | UpdE (e1, p, e2) -> create_upd_exp e1 p (fun _ -> create_exp e2)
+    | ExtE (e1, p, e2) ->
+        let concat_old_term_to_new_list_exp (existing_term : term) : term
+          = BinaryInfixFunApp (
+              Term (existing_term),
+              Ident "++",
+              Term (create_exp e2)
+            )
+        in
+
+        (match e2.it with
+          | ListE _ -> create_upd_exp e1 p (fun existing_term -> concat_old_term_to_new_list_exp existing_term)
+          | _ -> failwith "ExtE must take a list as the new value")
     | IfE (if_exp, then_exp, else_exp) -> IfThenElse {
         cond = create_exp if_exp;
         then_branch = create_exp then_exp;
@@ -258,8 +258,154 @@ let rec create_exp (e : Il.Ast.exp) : term
       let func = (Ident id.it : term) in
       let arg_terms = List.map (fun arg -> Term (create_arg arg)) args in
       FunApp (func, NonEmptyList.from_list_unsafe arg_terms)
-    | _ -> failwith "not implemented yet"
+    | IterE (exp, iterexp) -> failwith "not implemented yet for create_exp"
+    | _ -> failwith "not implemented yet for create_exp"
     
+and create_iter
+  (*
+      Let's say we have an example like
+
+
+      (a.map (fun w x y z => w + x + y + z)).ap b |>.ap c |>.ap d
+
+      from
+
+      (IterE
+        (BinE AddOp NatT
+          (BinE AddOp NatT
+            (BinE AddOp NatT (VarE "a") (VarE "b"))
+            (VarE "c"))
+          (VarE "d"))
+        List
+        (iterexp "a" (ListE (NumE (Nat 1)) (NumE (Nat 2)) (NumE (Nat 3))))
+        (iterexp "b" (ListE (NumE (Nat 4)) (NumE (Nat 5)) (NumE (Nat 6))))
+        (iterexp "c" (ListE (NumE (Nat 7)) (NumE (Nat 8)) (NumE (Nat 9))))
+        (iterexp "d" (ListE (NumE (Nat 10)) (NumE (Nat 11)) (NumE (Nat 12))))
+      )
+  *)
+  (exp : Il.Ast.exp)            (*
+                                  (BinE AddOp NatT
+                                    (BinE AddOp NatT
+                                      (BinE AddOp NatT (VarE "a") (VarE "b"))
+                                      (VarE "c"))
+                                    (VarE "d"))
+                                *)
+  (iterexp : Il.Ast.iterexp)
+  : term =
+    let (
+      iter,                     (* List *)
+      id_exp_list               (*
+                                  (iterexp "a" (ListE (NumE (Nat 1)) (NumE (Nat 2)) (NumE (Nat 3))))
+                                  (iterexp "b" (ListE (NumE (Nat 4)) (NumE (Nat 5)) (NumE (Nat 6))))
+                                  (iterexp "c" (ListE (NumE (Nat 7)) (NumE (Nat 8)) (NumE (Nat 9))))
+                                  (iterexp "d" (ListE (NumE (Nat 10)) (NumE (Nat 11)) (NumE (Nat 12))))
+                                *)
+    ) = iterexp in
+    
+    let arity = List.length id_exp_list in
+    
+    match arity, iter with
+    | 0, ListN (n_exp, None) ->
+      FunApp (
+        DotProj (Ident "List", Ident "replicate"),
+        NonEmptyList.from_list_unsafe
+          [Term (create_exp n_exp); Term (create_exp n_exp)]
+      )
+    | 0, ListN (n_exp, Some id) ->
+      FunApp (
+        RightPipelineField (
+          FunApp (
+            DotProj (Ident "List", Ident "range"),
+            NonEmptyList.from_list_unsafe [Term (create_exp n_exp)]
+          ),
+          Ident "map"
+        ),
+        NonEmptyList.from_list_unsafe
+          [
+            Term (Lambda {
+
+              (* NOTE: The point of the `id` in the case of `ListN (n_exp, Some
+              id)` is that the body `exp` already uses this name in its
+              variables, so we don't need to worry about matching names in the
+              backend.*)
+              params = NonEmptyList.from_list_unsafe [Ident_FB id.it];
+
+              body = create_exp exp;
+            })
+          ]
+      )
+    | arity, ListN _ | arity, Opt | arity, List when arity > 0 ->
+
+      let elem_name_generator (id : Il.Ast.id) : string
+        = id.it ^ "_elem"
+      in
+
+      let elem_var_names : fun_binder non_empty_list
+        = NonEmptyList.from_list_unsafe
+          (List.map
+            (fun (id, _) -> Ident_FB (elem_name_generator id))
+          id_exp_list)
+      in
+
+      let rename_il_vars (exp : Il.Ast.exp) : Il.Ast.exp =
+
+        let target_ids_to_rename = List.map (fun (id, _) -> id.it) id_exp_list in
+
+        let t = { Il.Walk.base_transformer with
+          transform_var_id = fun id ->
+            if List.mem id.it target_ids_to_rename
+            then { id with it = elem_name_generator id }
+            else id
+        } in
+
+        Il.Walk.transform_exp t exp
+      in
+
+      let renamed_exp = rename_il_vars exp in
+
+      let lambda_func : term (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
+        = Lambda {
+          params = elem_var_names;          (* a_elem, b_elem, c_elem, d_elem *)
+          body = create_exp renamed_exp;    (* a_elem + b_elem + c_elem + d_elem *)
+        }
+      in
+
+      let rec create_zip
+        (* NOTE: The order of reversed_ids matters!*)
+        (reversed_ids : Il.Ast.id list)   (* [d, c, b, a]*)
+        (arity : int)                     (* 4 *)
+        (func : term)                     (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
+        : term =
+        
+        match arity with
+        | 0 -> failwith "arity should be at least 1"
+        | 1 -> 
+          let id = List.hd reversed_ids in
+          FunApp (
+            (DotProj (Ident id.it, Ident "map")),
+            NonEmptyList.from_list_unsafe
+              [Term func]
+          )
+        | _ ->
+          let id = List.hd reversed_ids in
+          let nested = create_zip (List.tl reversed_ids) (arity - 1) func in
+          FunApp (
+            RightPipelineField (
+              nested,
+              Ident "ap"
+            ),
+            NonEmptyList.from_list_unsafe
+              [Term (Ident id.it)]
+          )
+      in
+
+      let reversed_ids = List.rev (List.map (fun (id, _) -> id) id_exp_list) in
+
+      create_zip reversed_ids arity lambda_func
+    
+    (* 0, List | 0, Opt *)  
+    | 0, List | 0, Opt | 0, List1 | _, List1 -> failwith "other cases should not exist!"
+
 
 and create_arg (arg : Il.Ast.arg) : term
   = match arg.it with
@@ -289,7 +435,8 @@ and create_arg (arg : Il.Ast.arg) : term
 and create_upd_exp
   (root : Il.Ast.exp)
   (p : Il.Ast.path)
-  (new_val : Il.Ast.exp)
+  (* (new_val : Il.Ast.exp) *)
+  (operation_on_old_val : term -> term)
   : term =
   
   let flatten_path (p : Il.Ast.path) : path_seg list =
@@ -313,16 +460,18 @@ and create_upd_exp
   in
 
 
-  let rec go prev segs =
+  let rec go
+    (prev : term)
+    (segs : path_seg list) =
     match segs with
-    | [] -> create_exp new_val
+    | [] -> operation_on_old_val prev
     | [DotSeg a] ->
         UpdateStruct {
           struct_to_update = prev;
           fields_to_update = [AssignedField {
             l_val = Ident_SILV (create_atom a);
             is_private = false;
-            term = create_exp new_val;
+            term = operation_on_old_val (DotProj (prev, Ident (create_atom a)));
           }]
         }
     | DotSeg a :: rest ->
@@ -409,10 +558,25 @@ let create_typcase
 
   let params_from_typ (* (X_lst : List X) *)
     = match typ.it with
-        | TupT id_typ_list 
-            -> List.map (
-              fun (id, typ) -> BracketedBinder(ExplicitParam(
-                NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+        | TupT id_typ_list ->
+
+            (* TODO: Check Claude-generated hash table id dedup algo *)
+            let counts = Hashtbl.create 4 in
+            List.iter (fun (id, _) ->
+              let n = try Hashtbl.find counts id.it with Not_found -> 0 in
+              Hashtbl.replace counts id.it (n + 1)
+            ) id_typ_list;
+            let seen = Hashtbl.create 4 in
+            List.map (fun (id, typ) ->
+              let name =
+                if Hashtbl.find counts id.it > 1 then begin
+                  let k = try Hashtbl.find seen id.it with Not_found -> 0 in
+                  Hashtbl.replace seen id.it (k + 1);
+                  id.it ^ "_" ^ string_of_int k
+                end else id.it
+              in
+              BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH name],
                 create_typ typ
               ))
             ) id_typ_list
