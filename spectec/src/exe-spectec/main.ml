@@ -210,6 +210,7 @@ let argspec = Arg.align (
 
   "--check", Arg.Unit (fun () -> target := Check), " Check only (default)";
   "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
+  "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
   "--ast", Arg.Unit (fun () -> target := Ast), " Generate AST";
   "--latex", Arg.Unit (fun () -> target := Latex), " Generate Latex";
   "--splice-latex", Arg.Unit (fun () -> target := Splice Backend_splice.Config.latex),
@@ -245,6 +246,8 @@ let argspec = Arg.align (
   "--print-al-o", Arg.Set_string print_al_o, " Print al with given name";
   "--print-il-notes", Arg.Set Il.Print.print_notes, " Print IL with type annotations";
   "--print-no-pos", Arg.Set print_no_pos, " Suppress position info in output";
+  "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
+    " Generate OCaml code for DL types and functions";
   "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
     " Generate OCaml code for DL types and functions";
 ] @ List.map pass_argspec all_passes @ [
@@ -427,6 +430,12 @@ let () =
       let (env, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
       log "DL Validating... ";
       Backend_animation.Valid.valid dl;
+      (match !generate_ocaml with
+      | Some ocamlfile -> 
+          log "Generating OCaml..."; 
+          Backend_animation.Main_interpreter_ocaml.generate_ocaml dl (Some ocamlfile)
+      | None -> ()
+      );
       (match !new_interpreter_args with
       | Some args ->
         log "Interpreting...";

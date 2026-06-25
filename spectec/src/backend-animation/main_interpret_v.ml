@@ -183,6 +183,9 @@ let print_fail at failtype expected actual =
 let print_fail' at msg =
   print_endline (R.Source.string_of_region at ^ ": " ^ msg); fail
 
+let fail_exn (e: exn) =
+  print_endline (Printexc.to_string e); fail
+
 let run_action action : value =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
@@ -198,19 +201,25 @@ let test_assertion assertion =
   let open R in
   match assertion.it with
   | AssertReturn (action, expected) ->
-    let result = run_action action |> as_list_value' |> List.map C.vl_to_value in
-    Run.assert_results no_region result expected;
-    success
+    (try
+      let result = run_action action |> as_list_value' |> List.map C.vl_to_value in
+      Run.assert_results no_region result expected;
+      success
+    with
+    | e -> fail_exn e
+    )
   | AssertTrap (action, re) ->
     let result = run_action action |> as_list_value' in
     (match result with
     | [ CaseV ([["TRAP"]], []) ] -> success
+    | exception e -> fail_exn e
     | _ -> print_fail assertion.at "runtime" re (string_of_values ", " result)
     )
   | AssertException action ->
     let result = run_action action |> as_list_value' in
     (match result with
     | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | exception e -> fail_exn e
     | _ -> print_fail assertion.at "expected exception" "" (string_of_values ", " result)
     )
   | AssertUninstantiable (var_opt, re) ->
@@ -219,17 +228,20 @@ let test_assertion assertion =
     (match result with
     | [ CaseV ([["TRAP"]], []) ]
     | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], []) ] -> success
+    | exception e -> fail_exn e
     | _ -> print_fail assertion.at "instantiation" re (string_of_values ", " result)
     )
   | AssertInvalid (def, re)
   | AssertInvalidCustom (def, re) ->
     (match def |> module_of_def |> module_ok with
     | Error _ -> success
+    | exception e -> fail_exn e
     | _ -> print_fail assertion.at "validation" re "module instance"
     )
   | AssertExhaustion (action, re) ->
     (match run_action action |> as_list_value' with
     | exception I.Exception.OutOfMemory -> success
+    | exception e -> fail_exn e
     | vs -> print_fail assertion.at "runtime" re ("Got result " ^ string_of_values ", " vs)
     )
   (* ignore other kinds of assertions *)
@@ -244,25 +256,32 @@ let run_command' command =
     (match module_ok module_ with
     | Ok _ -> Modules.add_with_var var_opt module_; success
     | Error e -> log "%s\n" e; fail
+    | exception e -> fail_exn e
     )
   | Instance (var1_opt, var2_opt) ->
     log "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
-    Modules.find (Modules.get_module_name var2_opt)
-    |> instantiate |> fst
-    |> Register.add_with_var var1_opt;
-    success
+    (try
+      Modules.find (Modules.get_module_name var2_opt)
+      |> instantiate |> fst
+      |> Register.add_with_var var1_opt;
+      success
+    with
+    | e -> fail_exn e
+    )
   | Register (modulename, var_opt) ->
     let moduleinst = Register.find (Register.get_module_name var_opt) in
     Register.add (Utf8.encode modulename) moduleinst;
     pass
   | Action a ->
-    ignore (run_action a); success
+    (try
+      ignore (run_action a); success
+    with
+    | e -> fail_exn e
+    )
   | Assertion a -> test_assertion a
   | Meta _ -> pass
   in
   res
-
-
 
 let run_command command =
   let start_time = Sys.time () in
