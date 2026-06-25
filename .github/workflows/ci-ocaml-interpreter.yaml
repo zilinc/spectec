@@ -24,4 +24,4 @@ jobs:
       - name: Build and Test wasm-3.0
         run: |
           cd spectec
-          opam exec make ocaml-test 'TEST=ALL'
+          opam exec make ocaml-test-all
