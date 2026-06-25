@@ -71,13 +71,7 @@ build_ocamlprog: exe
 	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
 # OCAML_LANDMARKS="on,output=stderr" dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
 
-run_ocaml: 
-	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
-	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
-	cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
-	@echo "#### compiling generated code"
-	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
-	@echo "#### dl-interpreter code compiled successfully, running tests ... "
+run_ocaml: build_ocamlprog
 	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
 
 # Executable
@@ -142,6 +136,10 @@ $(TESTDIRS): test-%: exe
 doc/example: exe
 	@echo "#### Running (cd $@; make all)"
 	@(cd $@ && make out clean >$(LOG) 2>&1 && rm -f $(LOG))
+
+ocaml-test-all:
+	$echo "#### Running OCaml interpreter test."
+	$(MAKE) build_ocamlprog 'SPEC=../specification/wasm-3.0/* src/backend-animation/meta.spectec' 'TEST=ALL'
 
 
 # Specification (copy to local workspace to make dune deps for tests happy)
