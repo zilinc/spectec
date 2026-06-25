@@ -18,7 +18,7 @@ jobs:
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: 5.1.x
+          ocaml-compiler: 5.4.x
       - name: Setup Dune
         run: opam install --yes dune menhir mdx zarith && eval $(opam env)
       - name: Build and Test wasm-3.0 core (except 'return_<>.wast' files)
