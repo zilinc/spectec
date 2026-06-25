@@ -29,10 +29,10 @@ jobs:
         run: opam install --yes dune menhir mdx zarith tsort
       - name: Build
         run: |
-          eval $(opam env)
-          cd spectec && make
+          cd spectec && opam exec make
       - name: Test wasm-3.0
         run: |
           cd spectec
-          make anim-test-all 'SPECTEC_FLAGS=--animate ${{ matrix.inline }} --new-interpreter-v'
+          opam exec make anim-test-all 'SPECTEC_FLAGS=--animate ${{ matrix.inline }} --new-interpreter-v'
+
 
