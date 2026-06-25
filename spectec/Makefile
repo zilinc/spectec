@@ -57,13 +57,22 @@ TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
               test-interpreter/spec-test-3/gc \
               test-interpreter/spec-test-3/memory64 \
               test-interpreter/spec-test-3/multi-memory
-else ifeq ($(TEST),ALL)
+else ifeq ($(TEST),OCAML_ALL)
 TEST_PATHS := test-interpreter/spec-test-3/ \
               test-interpreter/spec-test-3/bulk-memory \
               test-interpreter/spec-test-3/exceptions \
               test-interpreter/spec-test-3/gc \
               test-interpreter/spec-test-3/memory64 \
-              test-interpreter/spec-test-3/multi-memory
+              test-interpreter/spec-test-3/multi-memory \
+else ifeq ($(TEST),NON_SLOW)
+TEST_PATHS := test-interpreter/spec-test-3/ \
+              test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory \
+              test-interpreter/spec-test-3/relaxed-simd \
+              test-interpreter/spec-test-3/simd
 else
 TEST_PATHS := $(TEST)
 endif
@@ -77,7 +86,7 @@ anim-test: exe
 	./spectec $(SPECTEC_EXTRA_FLAGS) $(SPEC) $(SPECTEC_FLAGS) $(TEST_PATHS)
 
 anim-test-all: exe
-	$(MAKE) anim-test 'TEST=ALL'
+	$(MAKE) anim-test 'TEST=NON_SLOW'
 
 # Wasm interpreter in OCaml
 
@@ -124,7 +133,7 @@ ocaml-test: ocaml-build
 
 ocaml-test-all: ocaml-build
 	@echo "#### Running OCaml interpreter test."
-	$(MAKE) ocaml-run 'TEST=ALL'
+	$(MAKE) ocaml-run 'TEST=OCAML_ALL'
 
 
 # Latex
