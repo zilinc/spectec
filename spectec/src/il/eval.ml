@@ -3,26 +3,7 @@ open Source
 open Ast
 open Xl
 open Env
-open Print
 
-
-
-(* Errors *)
-
-let verbose : string list ref =
-  ref ["match"; "eval"; "assign";  "iter"; "call"]
-
-let error at msg = Error.error at "Il/Eval" msg
-let error_np msg = error no_region msg
-
-let string_of_error at msg = string_of_region at ^ " Il/Eval error:\n" ^ msg
-
-let warn at msg = print_endline (string_of_region at ^ " Il/Eval warning:\n" ^ msg)
-
-let info v at msg = if List.mem v !verbose || v = "" then
-                      print_endline (string_of_region at ^ " Il/Eval info[" ^ v ^ "]:\n" ^ msg)
-                    else
-                      ()
 
 (* Environment *)
 

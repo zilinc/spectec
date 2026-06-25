@@ -552,8 +552,7 @@ let vl_of_vtestop = function
       CaseV ([["Mk_vtestop__0"];[];[]], [nullary "I32"; NumV (`Nat (Z.of_int 4)); vl_of_int_vtestop op]) ]
     | RI.V128.I64x2 op -> [ vl_of_shape (nullary "I64") two    ; 
       CaseV ([["Mk_vtestop__0"];[];[]], [nullary "I64"; NumV (`Nat (Z.of_int 2)); vl_of_int_vtestop op]) ]
-    | RI.V128.F32x4 op -> [ vl_of_shape (nullary "F32") four   ; vl_of_float_vtestop op ] (* unreachable, i think *)
-    | RI.V128.F64x2 op -> [ vl_of_shape (nullary "F64") two    ; vl_of_float_vtestop op ]
+    | RI.V128.F32x4 op | RI.V128.F64x2 op -> assert false
   )
 
 let vl_of_int_vrelop : RI.Ast.V128Op.irelop -> value = function

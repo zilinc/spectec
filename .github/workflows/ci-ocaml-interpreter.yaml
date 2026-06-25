@@ -24,12 +24,12 @@ jobs:
       - name: Build and Test wasm-3.0 core (except 'return_<>.wast' files)
         run: |
           cd spectec
-          opam exec make build_ocamlprog 'SPEC=../specification/testing2/*' 'TEST=CORE'
+          opam exec make ocaml-test 'TEST=CORE'
       - name: Test wasm-3.0 features
         run: |
           cd spectec
-          opam exec make run_ocaml 'SPEC=../specification/testing2/*' 'TEST=FEATURES'
+          opam exec make ocaml-test 'TEST=FEATURES'
       - name: Test slow return_<>.wast files
         run: |
           cd spectec
-          opam exec make run_ocaml 'SPEC=../specification/testing2/*' 'TEST=test-interpreter/spec-test-3/slow-return/'
+          opam exec make ocaml-test 'TEST=test-interpreter/spec-test-3/slow-return/'

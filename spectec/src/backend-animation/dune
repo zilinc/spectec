@@ -39,7 +39,6 @@
     interpreter_ocaml
     util_ocaml
     runner
-    temp_print
     ; VL
     construct_v
     construct_v_ocaml

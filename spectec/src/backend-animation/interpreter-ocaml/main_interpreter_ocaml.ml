@@ -44,8 +44,8 @@ let generate_dune_file () =
   close_out oc*)
 
 (* translate from numE to int/nat - todo: all these functions should be in a util file with the other things from util_ocaml *)
-let basic_types_conv = 
-  match !Parser_ocaml.backend with 
+let basic_types_conv =
+  match !Parser_ocaml.backend with
   | Parser_ocaml.IL ->
   "let ($$) = Util.Source.($$)\n\
   let ($) = Util.Source.($)\n\
@@ -136,12 +136,12 @@ let basic_types_conv =
   let vl_of_bool (b : bool) : value = BoolV b\n"
 
 let num_conv () =
-  Printf.sprintf 
+  Printf.sprintf
   "let nat_of_rat (r: rat) : nat = if Q.den r = Z.one then Q.num r else raise SubtypingFailed\n\
   let rat_of_nat (n : nat) : rat = Q.of_bigint n\n\
   let rat_of_int (i : Z.t) : rat = Q.of_bigint i\n"
 
-let generate_ocaml dl ocamlfile = 
+let generate_ocaml dl ocamlfile =
   Printf.printf "Generating OCaml code...\n";
   generate_dune_file ();
   let ocaml_filename = Option.value ~default:"dl_codegen-0" ocamlfile in
@@ -157,7 +157,7 @@ let generate_ocaml dl ocamlfile =
   let main, types, typeconv, parser = Interpreter_ocaml.generate_ocaml dl in
   let type_import = Printf.sprintf "open %s_types\n" (capsfirst ocaml_filename) in
   let cons_import = Printf.sprintf "open Construct_ocaml_new\n" in
-  let module_types = "module DL = Dl_codegen_types\n" in 
+  let module_types = "module DL = Dl_codegen_types\n" in
   let util_import = Printf.sprintf "open %s_util\n" (capsfirst ocaml_filename) in
   let util_ocaml = Printf.sprintf "open Backend_animation.Util_ocaml\n" in
   let ast_import = "open Il.Ast\nopen Backend_animation.Value\n" in

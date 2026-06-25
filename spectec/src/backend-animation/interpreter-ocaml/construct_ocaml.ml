@@ -1,5 +1,5 @@
 module RI = Reference_interpreter
-module RT = RI.Types 
+module RT = RI.Types
 module DL = Dl_codegen_types
 
 (* TEMPORARY only for debugging *)
@@ -38,7 +38,7 @@ let string_of_dlinstr = function
 let ocaml_of_list f lst = DL.C_pct__list_ (List.map f lst)
 
 let ocaml_of_codepoint (cp: RI.Utf8.codepoint) : DL.char = DL.C_pct__char cp
-let ocaml_of_name (name : RI.Ast.name) : DL.name = 
+let ocaml_of_name (name : RI.Ast.name) : DL.name =
   DL.C_pct__name (List.map ocaml_of_codepoint name)
 
 (* int32 translates to nat for now but probably should not *)
@@ -57,13 +57,13 @@ let ocaml_of_globalidx (n : RI.Ast.globalidx) : DL.globalidx = ocaml_of_idx n
 
 let ocaml_of_labelidx (n : RI.Ast.labelidx) : DL.labelidx = ocaml_of_idx n
 
-let ocaml_typeuse_of_typeidx (n : DL.typeidx) = DL.C_IDX_typeuse n 
+let ocaml_typeuse_of_typeidx (n : DL.typeidx) = DL.C_IDX_typeuse n
 let ocaml_of_int32 (n : int32) : DL.nat = Int32.to_int n
 let ocaml_of_int64 (n : int64) : DL.uc_un = DL.C_pct__uc_un (Int64.to_int n)
 
 let ocaml_unsigned_of_int (n : int) : DL.uc_un = DL.C_pct__uc_un n
 let ocaml_unsigned_of_int64 (n : int64) : DL.uc_un = DL.C_pct__uc_un (Int64.to_int n)
-let ocaml_of_mut mut = match mut with 
+let ocaml_of_mut mut = match mut with
   | RT.Cons -> None
   | RT.Var  -> Some DL.MUT_mut
 
@@ -71,19 +71,19 @@ let ocaml_of_null = function
   | RT.Null    -> Some DL.NULL_null
   | RT.NoNull -> None
 
-let ocaml_of_numtype = function 
+let ocaml_of_numtype = function
   | RT.I32T -> DL.I32_numtype
   | RT.I64T -> DL.I64_numtype
   | RT.F32T -> DL.F32_numtype
   | RT.F64T -> DL.F64_numtype
 
-let ocaml_of_numtype_storage = function 
+let ocaml_of_numtype_storage = function
   | RT.I32T -> DL.I32_storagetype
   | RT.I64T -> DL.I64_storagetype
   | RT.F32T -> DL.F32_storagetype
   | RT.F64T -> DL.F64_storagetype
 
-let ocaml_of_numtype_val = function 
+let ocaml_of_numtype_val = function
   | RT.I32T -> DL.I32_valtype
   | RT.I64T -> DL.I64_valtype
   | RT.F32T -> DL.F32_valtype
@@ -98,25 +98,25 @@ let ocaml_of_final = function
 
 (* not used i think; remove *)
 let ocaml_of_packtype s vt =
-  if s = "storagetype" then match vt with 
+  if s = "storagetype" then match vt with
     | RT.I8T  -> DL.I8_storagetype
     | RT.I16T -> DL.I16_storagetype
   else failwith "ocaml_of_packtype: type not implemented"
 
-let rec ocaml_of_valtype vt = match vt with 
+let rec ocaml_of_valtype vt = match vt with
   | RT.RefT (null, ht) -> DL.REF_valtype (ocaml_of_null null, ocaml_of_heaptype ht)
   | RT.NumT nt -> ocaml_of_numtype_val nt
   | RT.VecT _  -> DL.V128_valtype
   | RT.BotT    -> DL.BOT_valtype
 
 and ocaml_of_storagetype = function
-  | RT.ValStorageT  vt -> begin match vt with 
-    | RT.NumT nt         -> ocaml_of_numtype_storage nt 
+  | RT.ValStorageT  vt -> begin match vt with
+    | RT.NumT nt         -> ocaml_of_numtype_storage nt
     | RT.VecT _          -> DL.V128_storagetype
     | RT.RefT (null, ht) -> DL.REF_storagetype (ocaml_of_null null, ocaml_of_heaptype ht)
     | RT.BotT            -> DL.BOT_storagetype
     end
-  | RT.PackStorageT pt -> begin match pt with 
+  | RT.PackStorageT pt -> begin match pt with
     | RT.I8T  -> DL.I8_storagetype
     | RT.I16T -> DL.I16_storagetype
     end
@@ -142,7 +142,7 @@ and ocaml_of_subtype = function
 and ocaml_of_rectype = function
   | RT.RecT stl -> REC_rectype (ocaml_of_list ocaml_of_subtype stl)
 
-and ocaml_of_heaptype = function 
+and ocaml_of_heaptype = function
   | RT.AnyHT ->  DL.ANY_heaptype
   | RT.NoneHT -> DL.NONE_heaptype
   | RT.EqHT -> DL.EQ_heaptype
@@ -155,7 +155,7 @@ and ocaml_of_heaptype = function
   | RT.NoExnHT -> DL.NOEXN_heaptype
   | RT.ExternHT -> DL.EXTERN_heaptype
   | RT.NoExternHT -> DL.NOEXTERN_heaptype
-  | RT.UseHT tu -> begin match tu with 
+  | RT.UseHT tu -> begin match tu with
     | RT.Idx ti -> DL.C_IDX_heaptype (ocaml_of_typeidx ti)
     | RT.Rec n -> DL.REC_heaptype (ocaml_of_int32 n)
     | RT.Def (DefT (rt, n)) -> DL.C_DEF_heaptype (ocaml_of_rectype rt, ocaml_of_int32 n)
@@ -172,19 +172,19 @@ let ocaml_of_local (local: RI.Ast.local) =
 
 (* not sure if this is correct *)
 let ocaml_of_packsize (packsize : RI.Pack.packsize) =
-  match packsize with 
+  match packsize with
   | RI.Pack.Pack8  -> DL.C_pct__sz 8
   | RI.Pack.Pack16 -> DL.C_pct__sz 16
   | RI.Pack.Pack32 -> DL.C_pct__sz 32
   | RI.Pack.Pack64 -> DL.C_pct__sz 64
 
 let ocaml_of_sx (sx : RI.Pack.sx) =
-  match sx with 
+  match sx with
   | RI.Pack.S -> DL.S_sx
   | RI.Pack.U -> DL.U_sx
-  
+
 let ocaml_of_loadop (loadop : RI.Ast.loadop) =
-  match loadop.pack with 
+  match loadop.pack with
   | Some (packsize, sx) -> Some (DL.C_pct___pct__loadop_ (ocaml_of_packsize packsize, ocaml_of_sx sx))
   | None -> None
 
@@ -194,7 +194,7 @@ let ocaml_mem_of_loadop (loadop : RI.Ast.loadop) : DL.memarg =
   { uc_align_memarg = ocaml_unsigned_of_int align; uc_offset_memarg = ocaml_unsigned_of_int64 offset }
 
 let ocaml_of_blocktype (bt : RI.Ast.blocktype) : DL.blocktype =
-  match bt with 
+  match bt with
   | RI.Ast.VarBlockType typeidx -> DL.C_IDX_blocktype (ocaml_of_ast_typeidx typeidx)
   | ValBlockType vt_opt         -> DL.C_RESULT_blocktype (Option.map ocaml_of_valtype vt_opt)
 
@@ -229,20 +229,20 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
   | RI.Ast.Throw _           -> failwith "Throw instruction not implemented yet"
   | RI.Ast.ThrowRef          -> failwith "ThrowRef instruction not implemented yet"
   | RI.Ast.TryTable _        -> failwith "TryTable instruction not implemented yet"
-  | RI.Ast.LocalGet localidx -> DL.LOCAL_dot_GET_instr (ocaml_of_localidx localidx) 
-  | RI.Ast.LocalSet localidx -> DL.LOCAL_dot_SET_instr (ocaml_of_localidx localidx) 
-  | RI.Ast.LocalTee localidx -> DL.LOCAL_dot_TEE_instr (ocaml_of_localidx localidx) 
-  | RI.Ast.GlobalGet globalidx 
-                             -> DL.GLOBAL_dot_GET_instr (ocaml_of_globalidx globalidx) 
+  | RI.Ast.LocalGet localidx -> DL.LOCAL_dot_GET_instr (ocaml_of_localidx localidx)
+  | RI.Ast.LocalSet localidx -> DL.LOCAL_dot_SET_instr (ocaml_of_localidx localidx)
+  | RI.Ast.LocalTee localidx -> DL.LOCAL_dot_TEE_instr (ocaml_of_localidx localidx)
+  | RI.Ast.GlobalGet globalidx
+                             -> DL.GLOBAL_dot_GET_instr (ocaml_of_globalidx globalidx)
   | RI.Ast.GlobalSet globalidx
-                             -> DL.GLOBAL_dot_SET_instr (ocaml_of_globalidx globalidx) 
+                             -> DL.GLOBAL_dot_SET_instr (ocaml_of_globalidx globalidx)
   | RI.Ast.TableGet _        -> failwith "TableGet instruction not implemented yet"
   | RI.Ast.TableSet _        -> failwith "TableSet instruction not implemented yet"
   | RI.Ast.TableSize _       -> failwith "TableSize instruction not implemented yet"
   | RI.Ast.TableGrow _       -> failwith "TableGrow instruction not implemented yet"
   | RI.Ast.TableFill _       -> failwith "TableFill instruction not implemented yet"
   | RI.Ast.TableCopy _       -> failwith "TableCopy instruction not implemented yet"
-  | RI.Ast.TableInit 
+  | RI.Ast.TableInit
     (tableidx, elemidx)      -> DL.TABLE_dot_INIT_instr (ocaml_of_tableidx tableidx, ocaml_of_elemidx elemidx)
   | RI.Ast.ElemDrop elemidx  -> DL.ELEM_dot_DROP_instr (ocaml_of_elemidx elemidx)
   | RI.Ast.Load (memidx, loadop)
@@ -256,9 +256,9 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
   | RI.Ast.MemoryGrow _      -> failwith "MemoryGrow instruction not implemented yet"
   | RI.Ast.MemoryFill _      -> failwith "MemoryFill instruction not implemented yet"
   | RI.Ast.MemoryCopy _      -> failwith "MemoryCopy instruction not implemented yet"
-  | RI.Ast.MemoryInit 
+  | RI.Ast.MemoryInit
     (memoryidx, dataidx)     -> DL.MEMORY_dot_INIT_instr (ocaml_of_memoryidx memoryidx, ocaml_of_dataidx dataidx)
-  | RI.Ast.DataDrop dataidx  -> DL.DATA_dot_DROP_instr (ocaml_of_dataidx dataidx)  
+  | RI.Ast.DataDrop dataidx  -> DL.DATA_dot_DROP_instr (ocaml_of_dataidx dataidx)
   | RI.Ast.RefNull heaptype  -> DL.REF_dot_NULL_instr (ocaml_of_heaptype heaptype)
   | RI.Ast.RefFunc _         -> failwith "RefFunc instruction not implemented yet"
   | RI.Ast.RefIsNull         -> failwith "RefIsNull instruction not implemented yet"
@@ -283,17 +283,17 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
   | RI.Ast.ArrayInitData _   -> failwith "ArrayInitData instruction not implemented yet"
   | RI.Ast.ArrayInitElem _   -> failwith "ArrayInitElem instruction not implemented yet"
   | RI.Ast.ExternConvert _   -> failwith "ExternConvert instruction not implemented yet"
-  | RI.Ast.Const num         -> begin match num.it with 
+  | RI.Ast.Const num         -> begin match num.it with
     | RI.Value.I32 n         -> DL.CONST_instr (DL.I32_numtype, DL.C_pct__uc_un (Int32.to_int n))
     | RI.Value.I64 n         -> failwith "I64 not implemented yet"
     | RI.Value.F32 n         -> failwith "F32 not implemented yet"
     | RI.Value.F64 n         -> failwith "F64 not implemented yet"
     end
-  | RI.Ast.Test testop       -> begin match testop with 
+  | RI.Ast.Test testop       -> begin match testop with
     | RI.Value.I32 RI.Ast.IntOp.Eqz -> DL.TESTOP_instr (DL.I32_numtype, DL.EQZ_testop_)
     | _ -> failwith "non-i32 testop not implemented yet"
     end
-  | RI.Ast.Compare relop     -> begin match relop with 
+  | RI.Ast.Compare relop     -> begin match relop with
     | RI.Value.I32 RI.Ast.IntOp.Eq     -> DL.RELOP_instr (DL.I32_numtype, DL.EQ_relop_)
     | RI.Value.I32 RI.Ast.IntOp.Ne     -> DL.RELOP_instr (DL.I32_numtype, DL.NE_relop_)
     | RI.Value.I32 RI.Ast.IntOp.Lt sx  -> DL.RELOP_instr (DL.I32_numtype, DL.LT_relop_ (ocaml_of_sx sx))
@@ -303,7 +303,7 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
     | _                                -> failwith "non-i32 relop not implemented yet"
     end
   | RI.Ast.Unary _           -> failwith "Unary instruction not implemented yet"
-  | RI.Ast.Binary binop      -> begin match binop with 
+  | RI.Ast.Binary binop      -> begin match binop with
     | RI.Value.I32 RI.Ast.IntOp.Add    -> DL.BINOP_instr (DL.I32_numtype, DL.ADD_binop_)
     | RI.Value.I32 RI.Ast.IntOp.Sub    -> DL.BINOP_instr (DL.I32_numtype, DL.SUB_binop_)
     | RI.Value.I32 RI.Ast.IntOp.Mul    -> DL.BINOP_instr (DL.I32_numtype, DL.MUL_binop_)
@@ -344,7 +344,7 @@ let rec ocaml_of_instr (instr: RI.Ast.instr) =
     )
 
 let ocaml_of_externidx exix =
-  match exix with 
+  match exix with
   | RI.Ast.TagX tagidx       -> DL.TAG_externidx (ocaml_of_tagidx tagidx)
   | RI.Ast.GlobalX globalidx -> DL.GLOBAL_externidx (ocaml_of_globalidx globalidx)
   | RI.Ast.MemoryX memoryidx -> DL.MEM_externidx (ocaml_of_memoryidx memoryidx)
@@ -363,7 +363,7 @@ let ocaml_of_global (global : RI.Ast.global) : DL.global =
   DL.GLOBAL_global (ocaml_of_globaltype globaltype, (List.map ocaml_of_instr const.it))
 
 let ocaml_of_addrtype (addrtype : RT.addrtype) : DL.addrtype =
-  match addrtype with 
+  match addrtype with
   | RT.I32AT -> DL.I32_addrtype
   | RT.I64AT -> DL.I64_addrtype
 
@@ -411,9 +411,9 @@ let instr_of_ocaml (instr: DL.instr) : RI.Ast.instr' =
   | DL.NOP_instr              -> RI.Ast.Nop
   | DL.DROP_instr             -> RI.Ast.Drop
   | DL.SELECT_instr None      -> RI.Ast.Select None
-  | DL.CONST_instr (nt, num)    -> 
-    let C_pct__uc_un n = num in 
-    begin match nt with 
+  | DL.CONST_instr (nt, num)    ->
+    let C_pct__uc_un n = num in
+    begin match nt with
     | DL.I32_numtype          -> RI.Ast.Const (phrase_of_ocaml (RI.Value.I32 (Int32.of_int n)))
     | _ -> failwith "non-I32 const not implemented yet"
     end
@@ -421,12 +421,12 @@ let instr_of_ocaml (instr: DL.instr) : RI.Ast.instr' =
 
 let val_of_ocaml (instr: DL.instr) : RI.Value.value =
   match instr with
-  | DL.CONST_instr (nt, num) -> 
-    let C_pct__uc_un n = num in 
-    begin match nt with 
+  | DL.CONST_instr (nt, num) ->
+    let C_pct__uc_un n = num in
+    begin match nt with
     | DL.I32_numtype -> RI.Value.Num (RI.Value.I32 (Int32.of_int n))
     | _              -> failwith "TODO: non-I32 const"
     end
-  | _ -> 
+  | _ ->
     let instr_str = string_of_dlinstr instr in
     failwith ("TODO: non-CONST instruction: " ^ instr_str)

@@ -186,7 +186,7 @@ def $check_elem_ok(C, ELEM et expr* elemmode) = C ++ {ELEMS et}
 def $module_prepass(module) : context
 def $module_prepass(module) = C_9
   -- if MODULE type* import* tag* global* mem* table* func* data* elem* start? export* = module
-  -- if x* = $funcidx_nonfuncs(global* mem* table* elem* start? export*)
+  -- if x* = $funcidx_nonfuncs(global* mem* table* elem* export*)
   -- if C_0 = {REFS x*}
   -- if C_1 = $check_list(type  , C_0, $check_type_ok  , type*  )
   -- if C_2 = $check_list(import, C_1, $check_import_ok, import*)
@@ -221,7 +221,7 @@ rule Module_ok_alg:
   -- if C = C' ++ {TAGS jt_I* jt*, GLOBALS gt*, MEMS mt_I* mt*, TABLES tt_I* tt*, DATAS ok*, ELEMS rt*}
   ----
   -- if C' = {TYPES dt'*, GLOBALS gt_I*, FUNCS dt_I* dt*, REFS x*}
-  -- if x* = $funcidx_nonfuncs(global* mem* table* elem* start? export*)
+  -- if x* = $funcidx_nonfuncs(global* mem* table* elem* export*)
   ----
   -- if jt_I* = $tagsxt(xt_I*)
   -- if gt_I* = $globalsxt(xt_I*)

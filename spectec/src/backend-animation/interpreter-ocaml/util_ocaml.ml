@@ -1,6 +1,6 @@
 open Xl
 open Il.Ast
-open Def 
+open Def
 
 
 let logging = ref false
@@ -12,7 +12,7 @@ let uppcase_first s =
   match s with
   | ""                 -> ""
   | _ when s.[0] = '`' -> s (* polymorphic variant, leave as is *)
-  | _                  -> 
+  | _                  ->
     let first = s.[0] in
     (* constructors like pos and Pos may map to the same thing but idk how to deal with this *)
     if is_letter first then
@@ -63,13 +63,13 @@ let sanitize_name ?(typename=true) ?(typecons=false) ?(typearg=false) ?(recordfi
   ) raw replacements in
   match replaced with
   | "match" | "type" | "let" | "val" | "list" | "in" | "module" -> replaced ^ "_"
-  | _ -> replaced 
+  | _ -> replaced
 
 let mixop_to_atom_str ?(recordfield = false) (mixop : 'a Mixop.mixop) =
   let frmt name = sanitize_name ~typename:false ~recordfield name in
   match mixop with
   | Atom a -> frmt (Atom.to_string a)
-  | mixop -> 
+  | mixop ->
     (* let s =
       String.concat "_pct_" (List.map (
         fun atoms -> String.concat "" (List.map (fun x -> x |> Atom.to_string |> frmt) atoms)) mixop
@@ -94,7 +94,7 @@ let val_mixop_to_str ?(recordfield = false) (mixop : string list list) =
 let rec update_at_in i v = function
   | _ :: xs when i = 0 -> v :: xs
   | x :: xs            -> x :: update_at_in (i - 1) v xs
-  | [] -> failwith "update_at: index out of bounds" 
+  | [] -> failwith "update_at: index out of bounds"
 
 let update_at i v = update_at_in (Z.to_int i) v
 
@@ -113,12 +113,12 @@ let slice l start len =
     failwith "slice: bad indices";
   List.take len (List.drop start l)
 
-let lift e = 
-  match e with 
+let lift e =
+  match e with
   | Some v -> [v]
   | None -> []
 
-let unzip1 lst = lst 
+let unzip1 lst = lst
 let unzip2 (lst : ('a * 'b) list) : ('a list * 'b list) =
   let rec aux acc1 acc2 = function
     | [] -> (List.rev acc1, List.rev acc2)
@@ -141,7 +141,7 @@ let unzip4 (lst : ('a * 'b * 'c * 'd) list) : ('a list * 'b list * 'c list * 'd 
 
 let unzip_opt1 opt_a = opt_a
 
-let unzip_opt3 opt = match opt with 
+let unzip_opt3 opt = match opt with
   | Some (opt_a, opt_b, opt_c) -> (Some opt_a, Some opt_b, Some opt_c)
   | None -> None, None, None
 
@@ -162,10 +162,10 @@ let map_opt1 (f : 'a -> 'b) (opt_a : 'a option) : 'b option =
   | Some a -> Some (f a)
   | None -> None
 
-module Map = Map.Make(String) 
-module Set = Set.Make(String) 
+module Map = Map.Make(String)
+module Set = Set.Make(String)
 
-(* A State+Writer monad: 
+(* A State+Writer monad:
    The State keeps track of type definitions, known/bound/type/fresh
    variables, the Writer accumulates type-casting functions *)
 module TypeM = struct
@@ -312,7 +312,7 @@ module TypeM = struct
       \        Printf.printf \"unexpected exception at clause %%d: %%s\\n%%!\" idx (Printexc.to_string e);\n\
       \        raise e\n"
       header call_str rec_call rec_call rec_call rec_call rec_call rec_call
-      else 
+      else
       Printf.sprintf "let rec %s = match clauses with \n\
       \ | [] -> raise (NoMatchingClause err_msg)\n\
       \ | cl :: rest ->\n\
@@ -396,7 +396,7 @@ module TypeM = struct
   let is_known (x: string) : bool t =
     fun st -> (Set.mem x st.knowns, st, "", "")
 
-  let are_knowns (xs: Set.t) : bool t = fun st -> 
+  let are_knowns (xs: Set.t) : bool t = fun st ->
     (Set.subset xs st.knowns, st, "", "")
 
   let add_typevar (x : string) : unit t =
@@ -415,9 +415,9 @@ module TypeM = struct
   xs |> List.filter (fun s -> s <> "") |> String.concat sep
 
   let rec iterM (f : 'a -> unit t) (xs : 'a list) : unit t =
-    match xs with 
+    match xs with
     | [] -> return ()
-    | x :: xs -> 
+    | x :: xs ->
       let* () = f x in
       iterM f xs
 
@@ -449,7 +449,7 @@ module TypeM = struct
 
   let concat_mapM2 sep f xs =
     let* parts = mapM f xs in
-    let (lefts, rights) = List.split parts in 
+    let (lefts, rights) = List.split parts in
     return (concat_nonempty sep lefts, concat_nonempty sep rights)
 
   (* major refactor needed *)
@@ -457,10 +457,10 @@ module TypeM = struct
     let* parts = mapM f xs in
     let (lefts, rights) = List.split parts in
     let (lefts, rights) = List.flatten lefts, List.flatten rights in
-    let rec rmv_duplicates seen acc lst = 
-      match lst with 
+    let rec rmv_duplicates seen acc lst =
+      match lst with
       | [] -> List.rev acc
-      | l :: ls -> 
+      | l :: ls ->
       if Set.mem l seen then rmv_duplicates seen acc ls else
       rmv_duplicates (Set.add l seen) (l :: acc) ls
     in
@@ -468,7 +468,7 @@ module TypeM = struct
     return (concat_nonempty (List.nth seps 0) lefts', concat_nonempty (List.nth seps 1) rights')
 
   let fold_mapM3 seps seen f xs =
-    foldM (fun x (left_acc, middle_acc, right_acc, seen) -> 
+    foldM (fun x (left_acc, middle_acc, right_acc, seen) ->
       let* (left, middle, right, seen') = f x seen in
       return ( append_sep left_acc left (List.nth seps 0),
                append_sep middle_acc middle (List.nth seps 1),
@@ -478,7 +478,7 @@ module TypeM = struct
 
   let concat_mapM3 seps f xs =
     let* parts = mapM f xs in
-    let (lefts, middles, rights) = split3 parts in 
+    let (lefts, middles, rights) = split3 parts in
     return (concat_nonempty (List.nth seps 0) lefts, concat_nonempty (List.nth seps 1) middles, concat_nonempty (List.nth seps 2) rights)
 
   let mapMi (f : int -> 'a -> 'b t) (xs : 'a list) : 'b list t =
@@ -492,16 +492,16 @@ module TypeM = struct
     aux 0 xs
 
   let rec allM (f : 'a -> 'b t) (xs : 'a list) : bool t =
-    match xs with 
-    | [] -> return true 
-    | x::rest -> 
-      let* b = f x in 
-      if b then allM f rest else return false 
+    match xs with
+    | [] -> return true
+    | x::rest ->
+      let* b = f x in
+      if b then allM f rest else return false
 
   let concat_mapMi sep f xs =
     let* parts = mapMi f xs in
     return (concat_nonempty sep parts)
-  let catchM (thunk: unit -> 'a t) (handler : exn -> 'a t) : 'a t = fun st -> 
+  let catchM (thunk: unit -> 'a t) (handler : exn -> 'a t) : 'a t = fun st ->
     try (thunk ()) st with
     | e -> handler e st
 
@@ -511,8 +511,8 @@ module TypeM = struct
       let* acc' = f acc x in
       foldM f acc' xs
 
-  let eval m = 
-    let st0 = { typemap = Map.empty; 
+  let eval m =
+    let st0 = { typemap = Map.empty;
       functions = Map.empty;
       knowns = Set.empty;
       typecasts = "";
@@ -522,8 +522,8 @@ module TypeM = struct
       max_args = -1;
       max_zip = 0;
       builtins = [];
-      } in 
-    let (a, st1, w, p) = m st0 in (a, w, p) 
+      } in
+    let (a, st1, w, p) = m st0 in (a, w, p)
 
 end
 
@@ -534,12 +534,12 @@ let val_or_fail name val_ = match val_ with
 
 (* Using the standard mplus operator defined as :
     Some v <|> RHS -> Some v
-    Does not work because the RHS is evaluated eagerly. If the RHS throws an error, it will be raised immediately. 
-    To delay the evaluation we pass a thunk instead. 
+    Does not work because the RHS is evaluated eagerly. If the RHS throws an error, it will be raised immediately.
+    To delay the evaluation we pass a thunk instead.
     outdated now probably *)
 let mplus (a : 'a option) (b : unit -> 'a option) : 'a option =
   match a with
-  | Some _ -> a 
+  | Some _ -> a
   | None -> b ()
 
 (* Copied from ds.ml for now; but we use the generated ocaml types instead of the reference interpreter types *)
@@ -576,7 +576,7 @@ end
    * an expression does not match a pattern, i.e. in `let pattern = exp` (Match_failure)
    * subtyping/supertyping failure (SubtypingFailed)
    * an `-- if premise` is not satisfied (CondFailed)
-   * a nested function call fails (NoMatchingClause) 
+   * a nested function call fails (NoMatchingClause)
    * an option type is none (Invalid_argument) (not sure if this can happen)
    * a +++ b where both a and b are of the form Some _  *)
 
@@ -591,33 +591,33 @@ let compose_opt x y = match x, y with
   | None  , Some y -> Some y
   | Some x, None   -> Some x
   | Some _, Some _ -> raise CompositionFailed
-  
+
 (* get a list of all functions (transitively) called by a particular function *)
-let rec exp_calls (e: exp) : Set.t = 
+let rec exp_calls (e: exp) : Set.t =
   match e.it with
   | NumE _ | TextE _ | BoolE _| VarE _ | OptE None -> Set.empty
-  | ListE es | TupE es -> 
+  | ListE es | TupE es ->
     List.fold_left Set.union Set.empty (List.map exp_calls es)
   | CallE (id, args) ->
     Set.add id.it (List.fold_left Set.union Set.empty (List.map arg_calls args))
   | CaseE (_, e1) | UnE (_, _, e1) | UncaseE (e1, _)
-  | ProjE (e1, _) | IterE (e1, _) | SubE (e1, _, _) 
-  | CvtE (e1, _, _) | OptE (Some e1) | LenE e1 
-  | SliceE (e1, _, _) | DotE (e1, _) | LiftE e1 
+  | ProjE (e1, _) | IterE (e1, _) | SubE (e1, _, _)
+  | CvtE (e1, _, _) | OptE (Some e1) | LenE e1
+  | SliceE (e1, _, _) | DotE (e1, _) | LiftE e1
   | TheE e1 -> exp_calls e1
-  | BinE (_, _, e1, e2) | CmpE (_, _, e1, e2) 
-  | IdxE (e1, e2) | CatE (e1, e2) | MemE (e1, e2) 
-  | UpdE (e1, _, e2) | ExtE (e1, _, e2) 
+  | BinE (_, _, e1, e2) | CmpE (_, _, e1, e2)
+  | IdxE (e1, e2) | CatE (e1, e2) | MemE (e1, e2)
+  | UpdE (e1, _, e2) | ExtE (e1, _, e2)
   | CompE (e1, e2) -> Set.union (exp_calls e1) (exp_calls e2)
-  | StrE expfieldlst -> 
+  | StrE expfieldlst ->
     List.fold_left Set.union Set.empty (List.map (fun (_, e) -> exp_calls e) expfieldlst)
 
-and arg_calls (arg : arg) : Set.t = 
+and arg_calls (arg : arg) : Set.t =
   match arg.it with
   | ExpA e -> exp_calls e
   | _      -> Set.empty (* not sure if this is the case but works for now *)
 
-let rec prem_calls (p : prem) : Set.t = 
+let rec prem_calls (p : prem) : Set.t =
   match p.it with
   | IfPr e | LetPr (_, e, _) -> exp_calls e
   | IterPr (prem, _) -> prem_calls prem
@@ -635,16 +635,16 @@ let f_calls (fdef : func_def) : Set.t =
 
 (* using a list for now *)
 let rec find_fdef (flist : dl_def list) (name : string) : func_def =
-  match flist with 
+  match flist with
   | [] -> raise Not_found
-  | FuncDef fdef :: rest -> 
-    let (id, _, _, _, _, _) = fdef.it in 
-    if id.it = name then fdef else 
+  | FuncDef fdef :: rest ->
+    let (id, _, _, _, _, _) = fdef.it in
+    if id.it = name then fdef else
     find_fdef rest name
-  | (RecDef defs) :: rest -> 
-    begin try 
+  | (RecDef defs) :: rest ->
+    begin try
       find_fdef defs name
-    with Not_found -> 
+    with Not_found ->
       find_fdef rest name
     end
   | _ :: rest -> find_fdef rest name
@@ -654,8 +654,8 @@ let ( let* ) = TypeM.bind
 (* temp -- for debugging only *)
 (*open Il.Ast
 
-let match_typ name (typ : Il.Ast.typ) = 
-  match typ.it with 
+let match_typ name (typ : Il.Ast.typ) =
+  match typ.it with
   | VarT (id, _) -> (sanitize_name id.it) = name
   | _ -> false
 let rec arg_occurs vars (arg : arg) =
@@ -664,50 +664,50 @@ let rec arg_occurs vars (arg : arg) =
   | TypA typ -> Set.exists (fun name -> match_typ name typ) vars
   | _ -> false
 
-and exp_occurs vars e = 
+and exp_occurs vars e =
   if Set.exists (fun name -> match_typ name e.note) vars then true else
-  match e.it with 
+  match e.it with
   | NumE _ | TextE _ | BoolE _| VarE _ | OptE None -> false
   | ListE es | TupE es -> List.exists (exp_occurs vars) es
   | CallE (id, args) -> List.exists (arg_occurs vars) args
   | CaseE (_, e1) | UnE (_, _, e1) | UncaseE (e1, _)
-  | ProjE (e1, _) | IterE (e1, _) | OptE (Some e1) | LenE e1 
-  | TheE e1 | DotE (e1, _) | LiftE e1 | SliceE (e1, _, _) 
+  | ProjE (e1, _) | IterE (e1, _) | OptE (Some e1) | LenE e1
+  | TheE e1 | DotE (e1, _) | LiftE e1 | SliceE (e1, _, _)
   | CvtE (e1, _, _) -> exp_occurs vars e1
-  | SubE (e1, typ1, typ2) -> 
+  | SubE (e1, typ1, typ2) ->
     exp_occurs vars e1 || Set.exists (fun name -> match_typ name typ1) vars ||
     Set.exists (fun name -> match_typ name typ2) vars
   | BinE (_, _, e1, e2) | CmpE (_, _, e1, e2) | CompE (e1, e2) | MemE (e1, e2)
-  | CatE (e1, e2) | IdxE (e1, e2) | UpdE (e1, _, e2) | ExtE (e1, _, e2) -> 
+  | CatE (e1, e2) | IdxE (e1, e2) | UpdE (e1, _, e2) | ExtE (e1, _, e2) ->
     exp_occurs vars e1 || exp_occurs vars e2
-  | StrE expfieldlst -> 
+  | StrE expfieldlst ->
     List.exists (fun (_, e) -> exp_occurs vars e) expfieldlst
 
 let print_all_occ_cl fid vars ({it = DefD (_, params, ret, prems); _} : Def.func_clause) =
   let rec prem_occurs fid vars (p : prem) =
     match p.it with
-    | IfPr e -> if exp_occurs vars e then 
+    | IfPr e -> if exp_occurs vars e then
       Printf.printf "Function %s: %s\n" fid (Il.Print.string_of_prem p)
-    | LetPr (e1, e2, _) -> if exp_occurs vars e1 || exp_occurs vars e2 then 
+    | LetPr (e1, e2, _) -> if exp_occurs vars e1 || exp_occurs vars e2 then
       Printf.printf "Function %s: %s\n" fid (Il.Print.string_of_prem p)
     | IterPr (prems, _) -> List.iter (prem_occurs fid vars) prems
     | _ -> ()
-  in 
+  in
   List.iter (prem_occurs fid vars) prems;
-  if exp_occurs vars ret then 
+  if exp_occurs vars ret then
     Printf.printf "Function %s: returns %s\n" fid (Il.Print.string_of_exp ret);
   (*List.iter (fun (param : param) ->
     match param.it with
-    | ExpP (_, typ) -> 
+    | ExpP (_, typ) ->
       if Set.exists (fun name -> match_typ name typ) vars then
         Printf.printf "Function %s: parameter %s\n" fid (Il.Print.string_of_param param)
-    | TypP id -> 
+    | TypP id ->
       if Set.exists (fun name -> name = (sanitize_name id.it)) vars then
         Printf.printf "Function %s: type parameter %s\n" fid (Il.Print.string_of_param param)
     | _ -> ()
   ) params*)
   if (List.exists (arg_occurs vars) params) then
-    Printf.printf "Function %s: has parameters %s\n" fid 
+    Printf.printf "Function %s: has parameters %s\n" fid
       (String.concat ", " (List.map Il.Print.string_of_arg params))
 
 let rec print_all_occurrences dl_defs vars =

@@ -39,14 +39,14 @@ let mixopstr () = match !backend with
   | IL -> "mixop_to_atom_str"
   | VL -> "val_mixop_to_str"
 
-(* 
+(*
 
-This OCaml <-> VL encoding is hardcoded. The VL/IL definitions don't match the spec. the generated ocaml_of and ocaml_to_name will work if vl_of and vl_to are changed to:  
+This OCaml <-> VL encoding is hardcoded. The VL/IL definitions don't match the spec. the generated ocaml_of and ocaml_to_name will work if vl_of and vl_to are changed to:
 
 let vl_of_char char = caseV [[];[]] [vl_of_nat char]
-let vl_of_name chars = caseV [[];[]] [(vl_of_list vl_of_char chars)] 
+let vl_of_name chars = caseV [[];[]] [(vl_of_list vl_of_char chars)]
 and
-let vl_to_char exp = 
+let vl_to_char exp =
   match match_caseV "name" exp with
   | ([[];[]], [n]) -> vl_to_int n
   | _ -> error_value "char" exp
@@ -84,7 +84,7 @@ let field_key_str atom = match !backend with
 
 (* ===== IL/VL -> OCaml =====*)
 
-(* assume that this function is called inline, i.e. after <Cons> e -> .... 
+(* assume that this function is called inline, i.e. after <Cons> e -> ....
 the TupE branch assumes the <Cons> has shape TupE es. For other, non-inline calls, we use gen_ocaml_of_typ_fn instead *)
 let rec gen_ocaml_of_typ (t : typ) =
   match t.it with
@@ -377,7 +377,7 @@ let generate_type_il (dt : deftyp) (name : string) (args : string): string t =
           let* typedef = gen_typarg_il t in
           return (Printf.sprintf "%s%s v = %s v" (f_prefix ()) name typedef))
   | StructT tfs -> gen_str_il tfs name
-  | VariantT tcs -> 
+  | VariantT tcs ->
     if name = "name" then return (gen_ocaml_to_name ())
     else gen_var_il tcs name args
 
@@ -416,7 +416,7 @@ let gen_ocaml_of_dt (dt : deftyp) (name : string) (args : string) : string t =
           let* typedef = gen_ocaml_of_typ t in
           return (Printf.sprintf "ocaml_of_%s e = %s e" name typedef))
   | StructT tfs -> gen_ocaml_of_str tfs name
-  | VariantT tcs -> 
+  | VariantT tcs ->
     if name = "name" then return (gen_ocaml_of_name ())
     else if name = "hoststate" then return (gen_ocaml_of_hoststate ())
     else gen_ocaml_of_var tcs name args

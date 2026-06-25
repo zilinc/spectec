@@ -15,20 +15,22 @@ module Modules = Backend_interpreter.Ds.Modules
 
 module RI = Reference_interpreter
 module I = Backend_interpreter
+module A = Backend_animation
+module C = A.Construct_v_ocaml
 
 let verbose = ref false
 let invalids = ref 0
 
 (* the VL store also contains the "hoststate" which isn't part of the spec so we need to remove it before using the generated VL -> OCaml function *)
-let ocaml_of_store' store = 
-  let Backend_animation.Value.StrV record = store in
+let ocaml_of_store' store =
+  let A.Value.StrV record = store in
   let record' = List.filter (fun (name, _) -> name <> "HOST") record in
-  ocaml_of_store (Backend_animation.Value.StrV record')
+  ocaml_of_store (A.Value.StrV record')
 
-(* the initial ocaml store and spectest before any runner file. 
+(* the initial ocaml store and spectest before any runner file.
 Calling once because `ocaml_of_moduleinst` is slow. *)
-let ocaml_store = ocaml_of_store' (Backend_animation.State_v.Store.get ())
-let ocaml_spectest = ocaml_of_moduleinst (Backend_animation.Runner.spectest_v)
+let ocaml_store = ocaml_of_store' (A.State_v.Store.get ())
+let ocaml_spectest = ocaml_of_moduleinst (A.Runner.spectest_v)
 
 (* TEMP DEBUGGING *)
 let string_of_uc_un = function
@@ -120,32 +122,32 @@ let rec ri_ref_of_ocaml (r : ref) = match r with
     | REF_dot_NULL_ADDR_ref                -> NullRef
     | REF_dot_STRUCT_ADDR_ref _
     | REF_dot_ARRAY_ADDR_ref _
-    | REF_dot_FUNC_ADDR_ref _ -> 
+    | REF_dot_FUNC_ADDR_ref _ ->
       let StrV vl_store = vl_of_store !globalstore in
-      let vl_store' = ("HOST", ref (Backend_animation.State_v.HostState.mk_state 0)) :: vl_store in
-      Backend_animation.State_v.Store.put (StrV vl_store');
-      Backend_animation.Construct_v_new.vl_to_ref (vl_of_ref r)
+      let vl_store' = ("HOST", ref (A.State_v.HostState.mk_state 0)) :: vl_store in
+      A.State_v.Store.put (StrV vl_store');
+      C.vl_to_ref (vl_of_ref r)
     | REF_dot_HOST_ADDR_ref n              -> RI.Script.HostRef (Z.to_int32 n)
     | REF_dot_EXTERN_ref ref_              -> RI.Extern.ExternRef (ri_ref_of_ocaml ref_)
 
 let ri_of_ocaml (i : instr) = match i with
-  | REF_dot_I31_NUM_instr _ 
+  | REF_dot_I31_NUM_instr _
   | REF_dot_NULL_ADDR_instr
   | REF_dot_STRUCT_ADDR_instr _
   | REF_dot_ARRAY_ADDR_instr _
   | REF_dot_FUNC_ADDR_instr _
   | REF_dot_HOST_ADDR_instr _
   | REF_dot_EXTERN_instr _ ->  RI.Value.Ref (ri_ref_of_ocaml (ref_of_instr i))
-  | _ -> i |> vl_of_instr |> Backend_animation.Construct_v_new.vl_to_value
+  | _ -> i |> vl_of_instr |> C.vl_to_value
 
 let success = 1,1
 let pass = 0, 0
-let fail = 0, 1 
+let fail = 0, 1
 let print_fail at failtype expected actual =
   print_endline (RI.Source.string_of_region at ^ ": Expected " ^ failtype ^ " failure: " ^ expected ^ ":(");
   print_endline ("Got " ^ actual ^ ":O");
   fail
-let string_of_values = Backend_animation.Value.string_of_values
+let string_of_values = A.Value.string_of_values
 
 let int_of_ocamlchar (char : DL.char) = match char with
   | DL.CPct_char n -> Z.to_int n
@@ -182,9 +184,9 @@ let heaptype_of_ocaml = function
 
 (*let val_of_ocaml (instr: DL.instr) : value =
   match instr with
-  | DL.CONST_instr (nt, num) -> 
-    let C_pct__uc_un n = num in 
-    begin match nt with 
+  | DL.CONST_instr (nt, num) ->
+    let C_pct__uc_un n = num in
+    begin match nt with
     | DL.I32_numtype -> Num (I32 (Int32.of_int n))
     | _              -> failwith "TODO: non-I32 const"
     end
@@ -194,20 +196,20 @@ let heaptype_of_ocaml = function
 (* -------- *)
 
 let get_export name moduleinst_name =
-  let exports = (Register.find moduleinst_name).uc_exports_moduleinst in 
+  let exports = (Register.find moduleinst_name).uc_exports_moduleinst in
   List.find (fun export -> (string_of_ocamlname export.uc_name_exportinst) = name) exports
 
 let get_export_addr name moduleinst_name =
   let export_addr = get_export name moduleinst_name in
   (*Printf.printf "Getting funcaddr %s from moduleinst %s...\n" name moduleinst_name;*)
   match export_addr.uc_addr_exportinst with
-    | DL.TAG_externaddr    addr 
+    | DL.TAG_externaddr    addr
     | DL.GLOBAL_externaddr addr | DL.MEM_externaddr addr
     | DL.TABLE_externaddr  addr | DL.FUNC_externaddr addr -> addr
 
-let externaddr_from_import import = 
-  let IMPORT_import (moduleinst_name, item_name, _) = import in 
-  let export = get_export (string_of_ocamlname item_name) (string_of_ocamlname moduleinst_name) in 
+let externaddr_from_import import =
+  let IMPORT_import (moduleinst_name, item_name, _) = import in
+  let export = get_export (string_of_ocamlname item_name) (string_of_ocamlname moduleinst_name) in
   export.uc_addr_exportinst
 
 (* todo change this to not use uncase *)
@@ -221,10 +223,10 @@ let get_global_value module_name globalname =
   let export_addr = get_export_addr globalname module_name in
   [(List.nth !globalstore.uc_globals_store (Z.to_int export_addr)).uc_value_globalinst]
 
-let instantiate_helper (m : module_) = 
+let instantiate_helper (m : module_) =
   let t1 = Sys.time () in
   (if !verbose then
-  Printf.printf "[Instantiating module...]\n%!");  
+  Printf.printf "[Instantiating module...]\n%!");
   let MODULE_module_ (_, imports, _, _, _, _, _, _, _, _, _) = m in
   let externaddrs = List.map externaddr_from_import (uncase_list__cpct imports) in
   let config' = instantiate_fn !globalstore m externaddrs in
@@ -235,11 +237,11 @@ let instantiate_helper (m : module_) =
   Printf.printf "instantiate took %f s :)\n%!" (t2 -. t1));
   get_moduleinst config''
 
-let lit_to_vl lit = 
+let lit_to_vl lit =
   match lit.it with
-  | ValLit v   -> Backend_animation.Construct_v_new.vl_of_value v
-  | NullLit ht -> Backend_animation.Construct_v_new.vl_of_value (RI.Value.Ref RI.Value.NullRef)
-           
+  | ValLit v   -> C.vl_of_value v
+  | NullLit ht -> C.vl_of_value (RI.Value.Ref RI.Value.NullRef)
+
 let invoke_helper module_ funcname args =
   let t1 = Sys.time () in
   (if !verbose then
@@ -261,7 +263,7 @@ let run_action action =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
     Config (invoke_helper (Register.get_module_name var_opt) (Util.Utf8.encode funcname) args)
-  | Get (var_opt, globalname) -> 
+  | Get (var_opt, globalname) ->
     Values (get_global_value (Register.get_module_name var_opt) (Util.Utf8.encode globalname))
 
 let test_assertion assertion =
@@ -272,7 +274,7 @@ let test_assertion assertion =
       let result = List.map ri_of_ocaml vals in
       assert_results no_region result expected;
       success
-    | Values val_list -> 
+    | Values val_list ->
       let result = List.map (fun v -> v |> instr_of_val_ |> ri_of_ocaml) val_list in
       assert_results no_region result expected;
       success)
@@ -291,8 +293,8 @@ let test_assertion assertion =
     | _ -> print_fail assertion.at "expected exception" "" (string_of_values ", " result_vl)
     )
   | AssertUninstantiable (var_opt, re) ->
-    let (moduleinst, instrs) = Modules.find (Modules.get_module_name var_opt) 
-    |> Backend_animation.Construct_v_new.vl_of_module
+    let (moduleinst, instrs) = Modules.find (Modules.get_module_name var_opt)
+    |> C.vl_of_module
     |> ocaml_of_module_
     |> instantiate_helper in
     let result_vl = List.map vl_of_instr instrs in
@@ -303,9 +305,9 @@ let test_assertion assertion =
     )
   | AssertInvalid (def, re)
   | AssertInvalidCustom (def, re) ->
-    (match def |> Backend_animation.Runner.module_of_def |> fun ri_m ->
-    Fun.const ri_m (Reference_interpreter.Valid.check_module ri_m) 
-    |> Backend_animation.Construct_v_new.vl_of_module
+    (match def |> A.Runner.module_of_def |> fun ri_m ->
+    Fun.const ri_m (Reference_interpreter.Valid.check_module ri_m)
+    |> C.vl_of_module
     |> ocaml_of_module_
     |> instantiate_helper |> ignore with
     | exception RI.Valid.Invalid _ -> success
@@ -320,23 +322,23 @@ let test_assertion assertion =
     )
   | _ -> pass
 
-let run_command oc cmd = 
+let run_command oc cmd =
   let start_time = Sys.time () in
-  try 
+  try
   (let res = begin match cmd.it with
   | Module (var_opt, def) ->
     (if !verbose then
     Printf.printf "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt));
     def
-    |> Backend_animation.Runner.module_of_def
+    |> A.Runner.module_of_def
     |> Modules.add_with_var var_opt;
     success
   | Instance (var1_opt, var2_opt) ->
     (if !verbose then
     Printf.printf "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt));
     Modules.find (Modules.get_module_name var2_opt)
-    (* |> Backend_animation.Construct.il_of_module *)
-    |> Backend_animation.Construct_v_new.vl_of_module
+    (* |> A.Construct.il_of_module *)
+    |> C.vl_of_module
     |> ocaml_of_module_
     |> instantiate_helper |> fst
     |> Register.add_with_var var1_opt;
@@ -349,24 +351,23 @@ let run_command oc cmd =
     ignore (run_action a); success
   | Assertion a -> test_assertion a
   | Meta _ -> pass
-  | _ -> failwith "Command not implemented :("
-  end in 
+  end in
   res, Sys.time () -. start_time)
   with
   | Failure msg ->
-    Printexc.print_backtrace oc; 
-    Printf.printf "unexpected Failure :O\n %s\n" msg; 
+    Printexc.print_backtrace oc;
+    Printf.printf "unexpected Failure :O\n %s\n" msg;
     fail, Sys.time () -. start_time
-  | e -> 
-    Printexc.print_backtrace oc; 
+  | e ->
+    Printexc.print_backtrace oc;
     Printf.printf "unexpected Exception :(\n %s\n" (Printexc.to_string e); fail, Sys.time () -. start_time
 
-let run_wast oc cmds = 
+let run_wast oc cmds =
   (* initialise spectest and meta-interpreter Store / Registry *)
-  Backend_animation.State_v.Store.init ();
-  Backend_animation.Runner.Register_v.init ();
-  Backend_animation.State_v.HostState.reset_glb_timestamp ();
-  Backend_animation.Runner.Register_v.add "spectest" Backend_animation.Runner.spectest_v;
+  A.State_v.Store.init ();
+  A.Runner.Register_v.init ();
+  A.State_v.HostState.reset_glb_timestamp ();
+  A.Runner.Register_v.add "spectest" A.Runner.spectest_v;
 
   (* initialise ocaml store and registry *)
   globalstore := ocaml_store;
@@ -379,21 +380,21 @@ let () =
   Printexc.record_backtrace true
 
 let () =
-  let tests, srcs = Backend_animation.Runner.parse_args () in
+  let tests, srcs = A.Runner.parse_args () in
 
   (* initialise meta-interpreter and test files *)
   (* todo: meta-interpeter initialisation may no longer be needed. test without. *)
-  Backend_animation.Animate.allow_partial_animation := true;
-  Backend_animation.Runner.init_pipeline srcs;
+  A.Animate.allow_partial_animation := true;
+  A.Runner.init_pipeline srcs;
 
   let csv = open_out "results.csv" in
   Printf.fprintf csv "testname,passed,total,time\n";
 
   let results = List.map (fun testfile ->
-    let cmds = Backend_animation.Runner.run testfile in (* parsing *)
+    let cmds = A.Runner.run testfile in (* parsing *)
     let oc = open_out "exception.log" in
-    let result = run_wast oc cmds 
-      |> Backend_animation.Main_interpret_v.sum_results_with_time in
+    let result = run_wast oc cmds
+      |> A.Main_interpret_v.sum_results_with_time in
     print_runner_result testfile result;
 
     let ((num_success, total), _execution_time) = result in
@@ -405,8 +406,8 @@ let () =
 
     result
   ) tests in
-  
-  let total = Backend_animation.Main_interpret_v.sum_results_with_time
+
+  let total = A.Main_interpret_v.sum_results_with_time
     (List.concat_map (fun (r, t) -> [(r, t)]) results) in
   Printf.printf "Warning: %d AssertInvalids were skipped.\n" !invalids;
   print_runner_result "Total" total

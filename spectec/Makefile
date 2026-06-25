@@ -14,11 +14,55 @@ default: exe
 all: exe latex test
 ci: all
 
-# Build interpreter and example ocaml programs 
 
-.PHONY: build_ocamlprog
+# Executable
 
-SPEC ?= ../specification/testing2
+EXE = exe-$(NAME)/main.exe
+SRCDIR = src
+OUTDIR = _build/default/src
+ROOTDIR = ..
+INTERPRETERDIR = $(ROOTDIR)/interpreter
+CLONEDIR = src/backend-interpreter/reference-interpreter
+CLONERM = dune-project jslib
+RUNNER = $(ROOTDIR)/src/backend-animation/interpreter-ocaml
+OPAMPACKAGES = zarith menhir mdx tsort
+
+
+.PHONY: exe
+
+packages:
+	opam install $(OPAMPACKAGES)
+
+exe: $(CLONEDIR) packages
+	rm -f ./$(NAME)
+	dune build $(SRCDIR)/$(EXE)
+	ln -f $(OUTDIR)/$(EXE) ./$(NAME)
+
+$(CLONEDIR): $(shell find $(INTERPRETERDIR) -type f)
+	rm -rf $(CLONEDIR)
+	cp -R $(INTERPRETERDIR) $(CLONEDIR)
+	rm -r $(CLONERM:%=$@/%)
+	cp $@/../dune-ref-interp $@/dune
+
+
+# IL Meta-interpreter
+
+.PHONY = anim-test anim-test-sample
+
+anim-test: exe
+	./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/spec-test-3/
+
+anim-test-sample: exe
+	./spectec -l ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --inline --new-interpreter-v ./test-interpreter/sample.wast
+
+
+
+# Wasm interpreter in OCaml
+
+.PHONY = ocaml-build ocaml-clean ocaml-run ocaml-test ocaml-testall
+
+
+SPEC ?= ../specification/wasm-3.0/* src/backend-animation/meta.spectec
 
 ifeq ($(PRINT_DL),1)
   ifeq ($(UNDEP),1)
@@ -58,50 +102,30 @@ else
 TEST_PATHS := $(TEST)
 endif
 
-build_ocamlprog: exe
+ocaml-build: exe
 	mkdir -p src/backend-animation/interpreter-ocaml/build
 	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
 	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
 	cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
+	@echo "#### Generating OCaml interpreter."
 	./spectec $(SPEC) $(SPECTEC_FLAGS)
-	@echo "#### spectec finished, compiling generated code"
+	@echo "#### Compiling generated OCaml interpreter."
 #	dune build --instrument-with landmarks src/backend-animation/interpreter-ocaml/build/dl_runner.exe
 	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
-	@echo "#### dl-interpreter code compiled successfully, running tests ... "
+
+ocaml-clean:
+	rm -rf src/backend-animation/interpreter-ocaml/build
+
+ocaml-run: ocaml-build
 	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
-# OCAML_LANDMARKS="on,output=stderr" dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(TEST) $(SPEC)
 
-run_ocaml: build_ocamlprog
-	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
+ocaml-test: ocaml-build
+	@echo "#### Running OCaml interpreter test."
+	$(MAKE) ocaml-run
 
-# Executable
-
-EXE = exe-$(NAME)/main.exe
-SRCDIR = src
-OUTDIR = _build/default/src
-ROOTDIR = ..
-INTERPRETERDIR = $(ROOTDIR)/interpreter
-CLONEDIR = src/backend-interpreter/reference-interpreter
-CLONERM = dune-project jslib
-RUNNER = $(ROOTDIR)/src/backend-animation/interpreter-ocaml
-OPAMPACKAGES = zarith menhir mdx tsort
-
-
-.PHONY: exe
-
-packages:
-	opam install $(OPAMPACKAGES)
-
-exe: $(CLONEDIR) packages
-	rm -f ./$(NAME)
-	dune build $(SRCDIR)/$(EXE)
-	ln -f $(OUTDIR)/$(EXE) ./$(NAME)
-
-$(CLONEDIR): $(shell find $(INTERPRETERDIR) -type f)
-	rm -rf $(CLONEDIR)
-	cp -R $(INTERPRETERDIR) $(CLONEDIR)
-	rm -r $(CLONERM:%=$@/%)
-	cp $@/../dune-ref-interp $@/dune
+ocaml-test-all: ocaml-build
+	@echo "#### Running OCaml interpreter test."
+	$(MAKE) ocaml-run 'TEST=ALL'
 
 
 # Latex
@@ -136,10 +160,6 @@ $(TESTDIRS): test-%: exe
 doc/example: exe
 	@echo "#### Running (cd $@; make all)"
 	@(cd $@ && make out clean >$(LOG) 2>&1 && rm -f $(LOG))
-
-ocaml-test-all:
-	$echo "#### Running OCaml interpreter test."
-	$(MAKE) build_ocamlprog 'SPEC=../specification/wasm-3.0/* src/backend-animation/meta.spectec' 'TEST=ALL'
 
 
 # Specification (copy to local workspace to make dune deps for tests happy)
@@ -197,3 +217,4 @@ distclean: clean spec-clean
 	rm -f ./$(NAME)
 	rm -rf $(CLONEDIR)
 	for dir in $(TESTDIRS); do (cd $$dir && make distclean); done
+	rm -rf src/backend-animation/interpreter-ocaml/build
