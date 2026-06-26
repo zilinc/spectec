@@ -1,4 +1,4 @@
-theory test
+theory reference_isabelle_output_wasm1
 (* Imported Code *)
 	imports Main
 begin
@@ -2115,9 +2115,9 @@ inductive fun_growtable :: "tableinst ⇒ nat ⇒ (tableinst option) ⇒ bool" w
 		 (ti' = ⦇ tableinst_TYPE = (mk_limits (mk_uN i') j_opt), REFS = ((map (λ (a :: addr). (Some a)) a_lst) @ (repeat v_n None)) ⦈) ⟹
 		 list_all (λ (j :: u32). (i' ≤ (proj_uN_0 j))) (option_to_list j_opt) ⟹
 		 fun_growtable ti v_n (Some ti')"
-(*	| fun_growtable_case_1 :
+	| fun_growtable_case_1 :
 		"True ⟹
-		 fun_growtable x0 x1 None" *)
+		 fun_growtable x0 x1 None"
 
 (* Inductive Relations Definition at: ../specification/wasm-1.0/5-runtime-aux.spectec:103.6-103.17 *)
 inductive fun_growmemory :: "meminst ⇒ nat ⇒ (meminst option) ⇒ bool" where
@@ -2129,9 +2129,9 @@ inductive fun_growmemory :: "meminst ⇒ nat ⇒ (meminst option) ⇒ bool" wher
 		 (mi' = ⦇ meminst_TYPE = (mk_limits (mk_uN (i' :: nat)) j_opt), BYTES = (b_lst @ (repeat (v_n * (64 * (Ki ))) (mk_byte 0))) ⦈) ⟹
 		 list_all (λ (j :: u32). (i' ≤ ((proj_uN_0 j) :: nat))) (option_to_list j_opt) ⟹
 		 fun_growmemory mi v_n (Some mi')"
-(*	| fun_growmemory_case_1 :
+	| fun_growmemory_case_1 :
 		"True ⟹
-		 fun_growmemory x0 x1 None" *)
+		 fun_growmemory x0 x1 None"
 
 (* Record Creation Definition at: ../specification/wasm-1.0/6-typing.spectec:5.1-8.62 *)
 record res_context =
@@ -2373,10 +2373,13 @@ and Instrs_ok :: "res_context ⇒ (instr list) ⇒ functype ⇒ bool" where
 		 Instr_ok C (STORE (valtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg) (mk_functype [I32, (valtype_Inn v_Inn)] [])"
 	| empty :
 		"Instrs_ok C [] (mk_functype [] [])"
+	| Instrs_ok__instr :
+		"(Instr_ok C v_instr (mk_functype t_1_lst t_2_lst)) ⟹
+		 Instrs_ok C [v_instr] (mk_functype t_1_lst t_2_lst)"
 	| seq :
-		"(Instr_ok C instr_1 (mk_functype t_1_lst t_2_lst)) ⟹
+		"(Instrs_ok C instr_1_lst (mk_functype t_1_lst t_2_lst)) ⟹
 		 (Instrs_ok C instr_2_lst (mk_functype t_2_lst t_3_lst)) ⟹
-		 Instrs_ok C ([instr_1] @ instr_2_lst) (mk_functype t_1_lst t_3_lst)"
+		 Instrs_ok C (instr_1_lst @ instr_2_lst) (mk_functype t_1_lst t_3_lst)"
 	| Instrs_ok__frame :
 		"(Instrs_ok C instr_lst (mk_functype t_1_lst t_2_lst)) ⟹
 		 Instrs_ok C instr_lst (mk_functype (t_lst @ t_1_lst) (t_lst @ t_2_lst))"
@@ -2387,7 +2390,7 @@ inductive Expr_ok :: "res_context ⇒ expr ⇒ resulttype ⇒ bool" where
 		"(Instrs_ok C instr_lst (mk_functype [] (option_to_list t_opt))) ⟹
 		 Expr_ok C instr_lst t_opt"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:315.1-315.79 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:319.1-319.79 *)
 inductive Instr_const :: "res_context ⇒ instr ⇒ bool" where
 	  Instr_const__const :
 		"Instr_const C (res_CONST t c)"
@@ -2396,26 +2399,26 @@ inductive Instr_const :: "res_context ⇒ instr ⇒ bool" where
 		 (((context_GLOBALS C) ! (proj_uN_0 x)) = (mk_globaltype None t)) ⟹
 		 Instr_const C (GLOBAL_GET x)"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:316.1-316.78 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:320.1-320.78 *)
 inductive Expr_const :: "res_context ⇒ expr ⇒ bool" where
 	  mk_Expr_const :
 		"list_all (λ (v_instr :: instr). (Instr_const C v_instr)) instr_lst ⟹
 		 Expr_const C instr_lst"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:317.1-317.79 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:321.1-321.79 *)
 inductive Expr_ok_const :: "res_context ⇒ expr ⇒ (valtype option) ⇒ bool" where
 	  mk_Expr_ok_const :
 		"(Expr_ok C v_expr t_opt) ⟹
 		 (Expr_const C v_expr) ⟹
 		 Expr_ok_const C v_expr t_opt"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:341.1-341.73 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:345.1-345.73 *)
 inductive Type_ok :: "type ⇒ functype ⇒ bool" where
 	  mk_Type_ok :
 		"(Functype_ok ft) ⟹
 		 Type_ok (res_TYPE ft) ft"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:342.1-342.73 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:346.1-346.73 *)
 inductive Func_ok :: "res_context ⇒ func ⇒ functype ⇒ bool" where
 	  mk_Func_ok :
 		"(wf_context ⦇ context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_LOCALS = (t_1_lst @ t_lst), LABELS = [t_2_opt], context_RETURN = (Some t_2_opt) ⦈) ⟹
@@ -2424,7 +2427,7 @@ inductive Func_ok :: "res_context ⇒ func ⇒ functype ⇒ bool" where
 		 (Expr_ok (append_context C ⦇ context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_LOCALS = (t_1_lst @ t_lst), LABELS = [t_2_opt], context_RETURN = (Some t_2_opt) ⦈) v_expr t_2_opt) ⟹
 		 Func_ok C (func_FUNC x (map (λ (t :: valtype). (LOCAL t)) t_lst) v_expr) (mk_functype t_1_lst (option_to_list t_2_opt))"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:343.1-343.75 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:347.1-347.75 *)
 inductive Global_ok :: "res_context ⇒ global ⇒ globaltype ⇒ bool" where
 	  mk_Global_ok :
 		"(Globaltype_ok gt) ⟹
@@ -2432,19 +2435,19 @@ inductive Global_ok :: "res_context ⇒ global ⇒ globaltype ⇒ bool" where
 		 (Expr_ok_const C v_expr (Some t)) ⟹
 		 Global_ok C (global_GLOBAL gt v_expr) gt"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:344.1-344.74 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:348.1-348.74 *)
 inductive Table_ok :: "res_context ⇒ table ⇒ tabletype ⇒ bool" where
 	  mk_Table_ok :
 		"(Tabletype_ok tt) ⟹
 		 Table_ok C (table_TABLE tt) tt"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:345.1-345.72 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:349.1-349.72 *)
 inductive Mem_ok :: "res_context ⇒ mem ⇒ memtype ⇒ bool" where
 	  mk_Mem_ok :
 		"(Memtype_ok mt) ⟹
 		 Mem_ok C (MEMORY mt) mt"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:346.1-346.73 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:350.1-350.73 *)
 inductive Elem_ok :: "res_context ⇒ elem ⇒ bool" where
 	  mk_Elem_ok :
 		"(wf_limits lim) ⟹
@@ -2456,7 +2459,7 @@ inductive Elem_ok :: "res_context ⇒ elem ⇒ bool" where
 		 list_all2 (λ (ft :: functype) (x :: idx). (((context_FUNCS C) ! (proj_uN_0 x)) = ft)) ft_lst x_lst ⟹
 		 Elem_ok C (ELEM v_expr x_lst)"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:347.1-347.73 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:351.1-351.73 *)
 inductive Data_ok :: "res_context ⇒ data ⇒ bool" where
 	  mk_Data_ok :
 		"(wf_limits lim) ⟹
@@ -2465,20 +2468,20 @@ inductive Data_ok :: "res_context ⇒ data ⇒ bool" where
 		 (Expr_ok_const C v_expr (Some I32)) ⟹
 		 Data_ok C (DATA v_expr b_lst)"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:348.1-348.74 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:352.1-352.74 *)
 inductive Start_ok :: "res_context ⇒ start ⇒ bool" where
 	  mk_Start_ok :
 		"((proj_uN_0 x) < (length (context_FUNCS C))) ⟹
 		 (((context_FUNCS C) ! (proj_uN_0 x)) = (mk_functype [] [])) ⟹
 		 Start_ok C (START x)"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:396.1-396.80 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:400.1-400.80 *)
 inductive Import_ok :: "res_context ⇒ import ⇒ externtype ⇒ bool" where
 	  mk_Import_ok :
 		"(Externtype_ok xt) ⟹
 		 Import_ok C (IMPORT name_1 name_2 xt) xt"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:398.1-398.83 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:402.1-402.83 *)
 inductive Externidx_ok :: "res_context ⇒ externidx ⇒ externtype ⇒ bool" where
 	  Externidx_ok__func :
 		"((proj_uN_0 x) < (length (context_FUNCS C))) ⟹
@@ -2497,13 +2500,13 @@ inductive Externidx_ok :: "res_context ⇒ externidx ⇒ externtype ⇒ bool" wh
 		 (((context_MEMS C) ! (proj_uN_0 x)) = mt) ⟹
 		 Externidx_ok C (externidx_MEM x) (MEM mt)"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:397.1-397.80 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:401.1-401.80 *)
 inductive Export_ok :: "res_context ⇒ export ⇒ externtype ⇒ bool" where
 	  mk_Export_ok :
 		"(Externidx_ok C v_externidx xt) ⟹
 		 Export_ok C (EXPORT v_name v_externidx) xt"
 
-(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:428.1-428.62 *)
+(* Inductive Relations Definition at: ../specification/wasm-1.0/6-typing.spectec:432.1-432.62 *)
 inductive Module_ok :: "module ⇒ bool" where
 	  mk_Module_ok :
 		"(fun_globalsxt ixt_lst var_3) ⟹
