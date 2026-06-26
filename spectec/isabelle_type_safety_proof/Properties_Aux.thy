@@ -366,17 +366,35 @@ lemma instr_inversion_1b:
   apply auto
   by (cases rule: Instr_ok.cases, auto)+
 
+termination numtype_Inn
+  by lexicographic_order
+
 lemma instr_inversion_1c:
   assumes "Instrs_ok C [e] ft"
+          "e = (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))"
   shows
-    inv_store_pack: "e = (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) \<Longrightarrow>
-      (\<exists> mt.
-      (0 < (length (context_MEMS C))) \<and>
-		  (((context_MEMS C) ! 0) = mt) \<and>
-		  (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat))) \<and>
-		  (wf_memtype mt) \<and>
-		  ((mk_functype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) <ti: ft))" and
-sorry
+       "(\<exists> mt.
+        (0 < (length (context_MEMS C))) \<and>
+        (((context_MEMS C) ! 0) = mt) \<and>
+        (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat))) \<and>
+        (wf_memtype mt) \<and>
+        ((mk_functype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) <ti: ft))"
+proof -
+  obtain pt where
+     "Instr_ok C (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) pt" and
+		 "(pt <ti: ft)"
+  by (metis assms(1) assms(2) instr_inversion_helper)
+  then show ?thesis using assms(1)
+    proof (induction "C" "(instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))" "pt" arbitrary: v_Inn rule: Instr_ok_Instrs_ok.inducts(1))
+      case (store_pack C mt v_Innsa)
+      have "v_Inn = v_Innsa"
+        by (metis store_pack.hyps(7) numtype_Inn.elims numtype.distinct(1))
+      then have "mk_functype (mk_list [valtype_I32, valtype_Inn v_Inn]) (mk_list []) <ti: ft" using store_pack(7,8)
+        by simp
+      then show ?case
+        using store_pack.hyps(1,2,3,5) by auto
+    qed
+qed
 
 lemma inv_ref_func:
   assumes "Instrs_ok C [e] ft"
