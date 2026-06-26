@@ -23,6 +23,53 @@ let opaque_def = By [
   ]
 ]
 
+let list_ap : command =
+  (*
+    def List.ap (fs : List (α → β)) (xs : List α) : List β :=
+      List.zipWith (· ·) fs xs
+  *)
+  Def (DefAsgn {
+    modifier = empty_modifier;
+    id = "List.ap";
+    signature = (
+      [ BracketedBinder (ExplicitParam (NonEmptyList.from_list_unsafe [Ident_IOH "fs"],
+          FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (FunType (Ident "α", Ident "β"))])));
+        BracketedBinder (ExplicitParam (NonEmptyList.from_list_unsafe [Ident_IOH "xs"],
+          FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (Ident "α")]))) ],
+      Some (FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (Ident "β")]))
+    );
+    body = FunApp (
+      FunApp (DotProj (Ident "List", Ident "zipWith"), NonEmptyList.from_list_unsafe [Term AnonymousApp]),
+      NonEmptyList.from_list_unsafe [Term (Ident "fs"); Term (Ident "xs")]
+    );
+  })
+
+let option_ap : command =
+  (*
+    def Option.ap (f : Option (α → β)) (x : Option α) : Option β :=
+      f.bind (fun f => x.map f)
+  *)
+  Def (DefAsgn {
+    modifier = empty_modifier;
+    id = "Option.ap";
+    signature = (
+      [ BracketedBinder (ExplicitParam (NonEmptyList.from_list_unsafe [Ident_IOH "f"],
+          FunApp (Ident "Option", NonEmptyList.from_list_unsafe [Term (FunType (Ident "α", Ident "β"))])));
+        BracketedBinder (ExplicitParam (NonEmptyList.from_list_unsafe [Ident_IOH "x"],
+          FunApp (Ident "Option", NonEmptyList.from_list_unsafe [Term (Ident "α")]))) ],
+      Some (FunApp (Ident "Option", NonEmptyList.from_list_unsafe [Term (Ident "β")]))
+    );
+    body = FunApp (
+      DotProj (Ident "f", Ident "bind"),
+      NonEmptyList.from_list_unsafe [Term (Lambda {
+        params = NonEmptyList.from_list_unsafe [Ident_FB "f"];
+        body = FunApp (DotProj (Ident "x", Ident "map"), NonEmptyList.from_list_unsafe [Term (Ident "f")])
+      })]
+    );
+  })
+
+
+
 (* let rec write__abbrev (dm : decl_modifier) (id : ) : _abbrev =
   AbbrevAsgn {
     modifier = dm;

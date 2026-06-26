@@ -118,6 +118,8 @@ type term =
   | By of tactic_seq                     (* by tacticSeq *)
 
   | RightPipelineField of term * term (* term |> term *)
+  
+  | AnonymousApp            (* (· ·) — apply first arg to second *)
 
   (* | UpdateList of {
     name_of_list_to_update: term;

@@ -258,7 +258,15 @@ let rec create_exp (e : Il.Ast.exp) : term
       let func = (Ident id.it : term) in
       let arg_terms = List.map (fun arg -> Term (create_arg arg)) args in
       FunApp (func, NonEmptyList.from_list_unsafe arg_terms)
-    | IterE (exp, iterexp) -> failwith "not implemented yet for create_exp"
+    | IterE (exp, iterexp) -> create_iter exp iterexp
+    | CvtE (exp, numtyp1, numtyp2) -> 
+      let func = Ident "cast" in
+      let arg_terms = NonEmptyList.from_list_unsafe [
+        Term (create_exp exp);
+        Term (create_numtyp numtyp1);
+        Term (create_numtyp numtyp2);
+      ] in
+      FunApp (func, arg_terms)
     | _ -> failwith "not implemented yet for create_exp"
     
 and create_iter
@@ -304,14 +312,21 @@ and create_iter
     
     let arity = List.length id_exp_list in
     
+
     match arity, iter with
     | 0, ListN (n_exp, None) ->
+      (*
+        List.replicate n_exp exp
+      *)
       FunApp (
         DotProj (Ident "List", Ident "replicate"),
         NonEmptyList.from_list_unsafe
-          [Term (create_exp n_exp); Term (create_exp n_exp)]
+          [Term (create_exp n_exp); Term (create_exp exp)]
       )
     | 0, ListN (n_exp, Some id) ->
+      (*
+        List.range n_exp |>.map (fun id => exp)
+      *)
       FunApp (
         RightPipelineField (
           FunApp (
@@ -334,22 +349,32 @@ and create_iter
             })
           ]
       )
-    | arity, ListN _ | arity, Opt | arity, List when arity > 0 ->
+
+
+    | _ ->
+      
+      (*
+        The remaining cases share some infrastructure which we define below,
+        before creating another `match` case to handle each remaining case
+      *)
 
       let elem_name_generator (id : Il.Ast.id) : string
+        (*
+          Gives sensible names to the variables that will be used to represent
+          elements of a list in the lambda. For example,
+
+          a.map (fun a_elem b_elem c_elem d_elem => a_elem + b_elem + c_elem + d_elem) |>.ap b |>.ap c |>.ap d
+
+          ^          ^
+          list       list elem
+        *)
         = id.it ^ "_elem"
       in
 
-      let elem_var_names : fun_binder non_empty_list
-        = NonEmptyList.from_list_unsafe
-          (List.map
-            (fun (id, _) -> Ident_FB (elem_name_generator id))
-          id_exp_list)
-      in
+      (* [a, b, c, d] *)
+      let target_ids_to_rename = List.map (fun (id, _) -> id.it) id_exp_list in
 
-      let rename_il_vars (exp : Il.Ast.exp) : Il.Ast.exp =
-
-        let target_ids_to_rename = List.map (fun (id, _) -> id.it) id_exp_list in
+      let rename_il_vars (target_ids_to_rename : string list) (exp : Il.Ast.exp) : Il.Ast.exp =
 
         let t = { Il.Walk.base_transformer with
           transform_var_id = fun id ->
@@ -361,51 +386,114 @@ and create_iter
         Il.Walk.transform_exp t exp
       in
 
-      let renamed_exp = rename_il_vars exp in
+      let renamed_exp = rename_il_vars target_ids_to_rename exp in
 
-      let lambda_func : term (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
-        = Lambda {
-          params = elem_var_names;          (* a_elem, b_elem, c_elem, d_elem *)
-          body = create_exp renamed_exp;    (* a_elem + b_elem + c_elem + d_elem *)
-        }
-      in
+      let collections = List.map (fun (_, exp) -> create_exp exp) id_exp_list in
 
-      let rec create_zip
-        (* NOTE: The order of reversed_ids matters!*)
-        (reversed_ids : Il.Ast.id list)   (* [d, c, b, a]*)
-        (arity : int)                     (* 4 *)
-        (func : term)                     (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
+      let create_zip
+        (*
+          Creates a term that zips together the lists in `list_terms` using the
+          function `zipping_func`. For example, given
+
+          list_terms = [a, b, c, d]
+          zipping_func = fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem
+
+          The result will be the term:
+
+          a.map (fun w x y z => w + x + y + z) |>.ap b |>.ap c |>.ap d
+
+          where List.ap is our custom application function that should be defined in the prologue.
+        *)
+
+        (list_terms : term list)               (* [a, b, c, d]*)
+        (zipping_func : term)                  (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
         : term =
         
-        match arity with
-        | 0 -> failwith "arity should be at least 1"
-        | 1 -> 
-          let id = List.hd reversed_ids in
-          FunApp (
-            (DotProj (Ident id.it, Ident "map")),
-            NonEmptyList.from_list_unsafe
-              [Term func]
-          )
-        | _ ->
-          let id = List.hd reversed_ids in
-          let nested = create_zip (List.tl reversed_ids) (arity - 1) func in
-          FunApp (
-            RightPipelineField (
-              nested,
-              Ident "ap"
-            ),
-            NonEmptyList.from_list_unsafe
-              [Term (Ident id.it)]
-          )
+        (* this helper exists because we need a recursive function, but we also
+        need to reverse the terms list exactly once on entry. The reversing is
+        just to make it convenient to do hd and tl. *)
+        let rec go
+          (reversed_terms : term list)      (* [d, c, b, a]*)
+          (func : term)                     (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
+          : term =
+
+          let arity = List.length reversed_terms in
+          
+          match arity with
+          | 0 -> failwith "arity should never reach 0 here"
+          | 1 -> 
+            let term = List.hd reversed_terms in
+            FunApp (
+              (RightPipelineField (term, Ident "map")),
+              NonEmptyList.from_list_unsafe
+                [Term func]
+            )
+          | _ ->
+            let term = List.hd reversed_terms in
+            let nested = go (List.tl reversed_terms) func in
+            FunApp (
+              RightPipelineField (
+                nested,
+                Ident "ap"
+              ),
+              NonEmptyList.from_list_unsafe
+                [Term term]
+            )
+        in
+
+        go (List.rev list_terms) zipping_func
       in
+      
+      (
+        match arity, iter with
+      
+          | arity, Opt | arity, List | arity, List1 | arity, ListN (_, None)
+            when arity > 0 ->
 
-      let reversed_ids = List.rev (List.map (fun (id, _) -> id) id_exp_list) in
+            let lambda_func : term =              (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
+              Lambda {
+                params =                          (* a_elem, b_elem, c_elem, d_elem *)
+                  NonEmptyList.from_list_unsafe (
+                    List.map
+                      (fun (id, _) -> Ident_FB (elem_name_generator id))
+                    id_exp_list
+                  );
 
-      create_zip reversed_ids arity lambda_func
-    
-    (* 0, List | 0, Opt *)  
-    | 0, List | 0, Opt | 0, List1 | _, List1 -> failwith "other cases should not exist!"
+                body = create_exp renamed_exp;    (* a_elem + b_elem + c_elem + d_elem *)
+              }
+            in
 
+            create_zip collections lambda_func
+          
+          | arity, ListN (n_exp, Some id) when arity > 0 ->
+
+            let range_term =
+              FunApp (
+                DotProj (Ident "List", Ident "range"),
+                NonEmptyList.from_list_unsafe [Term (create_exp n_exp)]
+              )
+            in
+
+            let lambda_with_index = Lambda {
+                params =
+                  NonEmptyList.from_list_unsafe (
+
+                    (* extra term for index. DO NOT use elem_name_generator on
+                    this since `exp` already uses exactly this id *)
+                    Ident_FB id.it ::
+
+                    (List.map
+                      (fun (id, _) -> Ident_FB (elem_name_generator id))
+                    id_exp_list)
+                  );
+                body = create_exp renamed_exp;
+              }
+            in
+
+            create_zip (range_term :: collections) lambda_with_index
+
+          | _ -> failwith "other cases should not exist!"
+      )
 
 and create_arg (arg : Il.Ast.arg) : term
   = match arg.it with
@@ -511,6 +599,7 @@ let create_prem (p : Il.Ast.prem) : term = match p.it with
   | IfPr (
     (exp : Il.Ast.exp)
   ) -> create_exp exp
+  | 
   | _ -> Ident "TEMPORARY_PREM"
 
 
@@ -992,5 +1081,14 @@ let create_def (def : Il.Ast.def) : command option
     | TypD _ -> None
 
 
+let prologue : command list =
+  [
+    list_ap;
+    option_ap;
+  ]
+
 let create_script (il : script) : command list
-  = List.filter_map create_def il
+  =
+    let generated = List.filter_map create_def il in
+    
+    prologue @ generated

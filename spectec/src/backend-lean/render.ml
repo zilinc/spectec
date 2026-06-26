@@ -266,6 +266,17 @@ and render_term (term : term) : document =
       let tactic_seq_str = render_tactic_seq tactic_seq in
       string "by "
       ^^ nest 2 (hardline ^^ tactic_seq_str)
+
+  | RightPipelineField (term1, term2) ->
+      let term1_str = render_term term1 in
+      let term2_str = render_term term2 in
+      term1_str
+      ^^ string " |>."
+      ^^ term2_str
+
+  | AnonymousApp ->
+      string "(· ·)"
+
   (* | _ -> failwith (Printf.sprintf "render_term: unhandled term: %s" (show_term term)) *)
 
 and render_tactic_seq (tactic_seq : tactic_seq) : document =
