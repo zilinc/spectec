@@ -153,7 +153,7 @@ proof -
 (* UH OH! *)
 (* Derived "False" from these facts alone: "0"(1) "0"(2) "0"(3) "2" "3" "6" "7" C'_is(1) C'_is(3) C'_is(4) Ex_list_of_length Step_is_wf.cases a(4) admininstr_subtype_8.size_neq e_preservation_locals(1) frame.cases frame.ext_inject frame.surjective list_all2_mono step_wf *)
     have cc:"wf_context C'"
-      sorry
+      by (fastforce intro: C'_is  Moduleinst_ok.cases)
 
     have ccc:"length (context_LOCALS C) = length (LOCALS f')"
       by (simp add: "2" C'_is(3) a(3))
