@@ -28,6 +28,11 @@ let error at msg = Util.Error.error at "Rocq translation" msg
 
 let env_ref = ref (new_env ())
 
+let is_let p =
+  match p.it with
+  | LetPr _ -> true
+  | _ -> false
+
 let rec list_split (f : 'a -> bool) = function 
   | [] -> ([], [])
   | x :: xs when f x -> let x_true, x_false = list_split f xs in
@@ -82,7 +87,7 @@ let reserved_ids =
   "Import"; "Export";
   "seq"; 
   "List"; "String"; 
-  "Type"; "list"; "nat";
+  "Type"; "list"; "nat"; "int"; "rat";
   "cons"] |> StringSet.of_list
 
 let remove_iter_from_type t =
@@ -118,6 +123,14 @@ let parens s = "(" ^ s ^ ")"
 let curly_parens s = "{" ^ s ^ "}"
 let comment_parens s = "(* " ^ s ^ " *)"
 let line_parens spc s = "|" ^ spc ^ s ^ spc ^ "|"
+
+let op_parens optyp s = 
+  match optyp with
+  | `NatT -> parens s ^ "%N"
+  | `IntT -> parens s ^ "%Z"
+  | `RatT -> parens s ^ "%Q"
+  | `RealT -> parens s ^ "%nat" (* TODO *)
+  | _ -> parens s
 
 let family_type_suffix = "entry"
 
@@ -233,9 +246,9 @@ let get_param_id b =
 let render_numtyp nt = 
   match nt with
   | `NatT -> "nat"
-  | `IntT -> "nat"
-  | `RatT -> "nat"
-  | `RealT -> "nat"
+  | `IntT -> "int"
+  | `RatT -> "rat"
+  | `RealT -> "R"
 
 let transform_case_tup e = 
   match e.it with
@@ -288,9 +301,9 @@ and render_exp exp_type exp =
   | NumE (`Rat n) -> Q.to_string n (* TODO fix nums *)
   | NumE (`Real n) -> string_of_float n (* TODO fix nums *)
   | TextE s -> "\"" ^ String.escaped s ^ "\""
-  | UnE (unop, _, e1) -> parens (render_unop unop ^ r_func e1)
-  | BinE (binop, _, e1, e2) -> parens (r_func e1 ^ render_binop binop ^ r_func e2)
-  | CmpE (cmpop, _, e1, e2) -> parens (r_func e1 ^ render_cmpop cmpop ^ r_func e2)
+  | UnE (unop, optyp, e1) -> op_parens optyp (render_unop unop ^ r_func e1)
+  | BinE (binop, optyp, e1, e2) -> op_parens optyp (r_func e1 ^ render_binop binop ^ r_func e2)
+  | CmpE (cmpop, optyp, e1, e2) -> op_parens optyp (r_func e1 ^ render_cmpop cmpop ^ r_func e2)
   | TupE [] -> "()"
   | TupE exps -> parens (String.concat ", " (List.map r_func exps))
   | ProjE (e, i) -> 
@@ -554,8 +567,10 @@ let rec render_prem prem =
     string_of_list_prefix " " " " (render_exp REL) (transform_case_tup exp))
   | NegPr p -> parens ("~" ^ r_func p)
   | ElsePr -> "True " ^ comment_parens ("Unsupported premise: otherwise") (* Will be removed by an else pass *)
+  | IterPr (p, (ListN (e, Some i), [])) ->
+    let pred_name = "holds_upto" in
+    pred_name ^ " " ^ render_lambda [i.it] (r_func p) ^ " " ^ (render_exp REL e)
   | IterPr (p, (_, [])) -> r_func p
-
   | IterPr (p, (ListN (_, Some i), ps)) ->
     let quants = List.map (fun (id, e) -> parens (render_id id.it ^ " : " ^ render_type REL (remove_iter_from_type e.note))) ps in
     let iter_exps = List.map snd ps in 
@@ -577,8 +592,8 @@ let rec render_prem prem =
     in 
     pred_name ^ " " ^ render_lambda quants (r_func p) ^ " " ^ 
     String.concat " " (List.map (render_exp REL) iter_exps |> List.map option_conversion)
-  | LetPr _ -> 
-    "True " ^ comment_parens ("Unsupported premise: " ^ Il.Print.string_of_prem prem)
+  | LetPr (_, e1, e2) -> 
+    "let " ^ render_exp LHS e1 ^ " := " ^ render_exp RHS e2 ^ " in "
  
 let render_typealias id quants typ = 
   "Definition " ^ id ^ render_quants quants ^ " : Type := " ^ render_type RHS typ
@@ -683,8 +698,10 @@ let render_single_type id at params =
 let render_wfness_func_lemma id rule = 
   let RuleD (_, quants, _, _, prems) = rule.it in
   let forall_quantifiers = string_of_list "forall " ",\n\t" " " (render_param RHS) quants in
-  let string_prems = string_of_list "" "" " ->\n\t" (render_prem) prems in
-  "Lemma " ^ id ^ " : " ^ forall_quantifiers ^ string_prems ^ ".\n" ^
+  let letprems, others = List.partition is_let prems in
+  let string_lets = string_of_list "" "" "\n\t" render_prem letprems in
+  let string_prems = string_of_list "" "" " ->\n\t" render_prem others in
+  "Lemma " ^ id ^ " : " ^ forall_quantifiers ^ string_lets ^ string_prems ^ ".\n" ^
   "Proof. Admitted"
 
 let render_function_def prefix id at params r_typ clauses = 
@@ -701,8 +718,11 @@ let render_function_def prefix id at params r_typ clauses =
   prefix ^ id ^ render_params params ^ e_params_render ^ " : " ^ render_type RHS r_typ ^ " :=\n" ^
   "\tmatch " ^ render_match_quanters params ^ " return " ^ render_type RHS r_typ ^ " with\n\t\t" ^
   String.concat "\n\t\t" (List.map (fun clause -> match clause.it with
-    | DefD (_, args, exp, _) -> 
-    "|" ^ render_match_args args ^ " => " ^ render_exp RHS exp) clauses
+    | DefD (_, args, exp, prems) ->
+    let (let_prems, others) = List.partition is_let prems in
+    assert (List.for_all (fun o -> o.it = ElsePr) others); 
+    let string_of_let = string_of_list "\n\t\t\t" "\n\t\t\t" "\n\t\t\t" render_prem let_prems in 
+    "|" ^ render_match_args args ^ " => " ^ string_of_let ^ render_exp RHS exp) clauses
   ) ^
   (if has_typ_fam then "\n\t\t" ^ render_extra_clause params else "") ^
   "\n\tend" ^
@@ -716,9 +736,11 @@ let render_relation prefix id typ rules =
   prefix ^ id ^ " : " ^ string_of_relation_args typ ^ "Prop :=\n\t" ^
   String.concat "\n\t" (List.map (fun rule -> match rule.it with
     | RuleD (rule_id, quants, _, exp, prems) ->
-      let string_prems = string_of_list "\n\t\t" " ->\n\t\t" " ->\n\t\t" (render_prem) prems in
+      let letprems, others = List.partition is_let prems in
+      let string_lets = string_of_list "\n\t\t" "" "\n\t\t" render_prem letprems in
+      let string_prems = string_of_list "\n\t\t" " ->\n\t\t" " ->\n\t\t" (render_prem) others in
       let forall_quantifiers = string_of_list "forall " ", " " " (render_quant REL) quants in
-      "| " ^ render_id (rule_id.it) ^ " : " ^ forall_quantifiers ^ string_prems ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))
+      "| " ^ render_id (rule_id.it) ^ " : " ^ forall_quantifiers ^ string_lets ^ string_prems ^ render_id id ^ " " ^ String.concat " " (List.map (render_exp REL) (transform_case_tup exp))
   ) rules)
 
 let render_axiom prefix id params r_typ =
@@ -738,18 +760,24 @@ let render_extra_info def =
   | _ -> None
 
 let has_prems c = 
-  let only_otherwise prems =
+  let only_otherwise_or_let prems =
     match prems with
     | [{it = ElsePr; _}] -> true
+    | prems when List.for_all is_let prems -> true
     | _ -> false
   in
   match c.it with
-  | DefD (_, _, _, prems) -> prems <> [] && not (only_otherwise prems)
+  | DefD (_, _, _, prems) -> prems <> [] && not (only_otherwise_or_let prems)
+
+let is_wf_lemma d = 
+  match d.it with
+  | RelD (id, _, _, _, _) when StringSet.mem id.it !env_ref.wf_lemma_set ->
+    true
+  | _ -> false
 
 let start_prefix def = 
   match def.it with
-  | RelD (id, _, _, _, _) when StringSet.mem id.it !env_ref.wf_lemma_set ->
-    ""
+  | _ when is_wf_lemma def -> ""
   | _ when is_inductive def -> "Inductive "
   | DecD (_, _, _, []) -> "Axiom "
   | DecD (_, _, _, clauses)  when List.exists has_prems clauses -> "Axiom "
@@ -784,7 +812,7 @@ let rec string_of_def has_endline recursive def =
   | RelD (id, _, _, typ, []) -> 
     let prefix = if recursive then "" else "Axiom " in
     start ^ render_rel_axiom prefix (render_id id.it) typ ^ end_newline
-  | RelD (id, _, _, _, [rule]) when StringSet.mem id.it !env_ref.wf_lemma_set ->
+  | RelD (id, _, _, _, [rule]) when is_wf_lemma def ->
     start ^ render_wfness_func_lemma id.it rule ^ end_newline
   | RelD (id, _, _, typ, rules) -> 
     let prefix = if recursive then "" else "Inductive " in
@@ -792,6 +820,10 @@ let rec string_of_def has_endline recursive def =
   (* Mutual recursion - special handling for rocq *)
   | RecD defs -> start ^ (match defs with
     | [] -> ""
+    | _ when List.for_all is_wf_lemma defs -> 
+      String.concat "" (
+        List.map (string_of_def true true) defs
+      )
     | [d] -> 
       let extra_info = render_extra_info d in
       start_prefix d ^ 
@@ -814,7 +846,7 @@ let rec string_of_def has_endline recursive def =
 let exported_string = 
   "(* Imported Code *)\n" ^
   "From Coq Require Import String List Unicode.Utf8 Reals.\n" ^
-  "From mathcomp Require Import ssreflect ssrfun ssrnat ssrbool seq eqtype rat ssrint.\n" ^
+  "From mathcomp Require Import all_ssreflect all_algebra.\n" ^
   "From HB Require Import structures.\n" ^
   "From RecordUpdate Require Import RecordSet.\n" ^
   "Declare Scope wasm_scope.\n\n" ^
@@ -891,6 +923,8 @@ let exported_string =
 	"\tf n x -> Foralli_help f (n + 1) l -> Foralli_help f n (x::l).\n\n" ^
   "Definition List_Foralli {X : Type} (f : nat -> X -> Prop) (xs : list X) : Prop :=\n" ^ 
 	"\tForalli_help f 0 xs.\n\n" ^
+  "Definition holds_upto (P : nat -> Prop) (n : nat) :=\n" ^
+  "\tForall P (iota 0 n).\n\n" ^
   "Class Append (α: Type) := _append : α -> α -> α.\n\n" ^
   "Infix \"@@\" := _append (right associativity, at level 60) : wasm_scope.\n\n" ^
   "Global Instance Append_List_ {α: Type}: Append (seq α) := { _append l1 l2 := seq.cat l1 l2 }.\n\n" ^
@@ -900,7 +934,8 @@ let exported_string =
   "Global Instance Inh_nat : Inhabited nat := { default_val := O }.\n\n" ^
   "Global Instance Inh_list {T: Type} : Inhabited (seq T) := { default_val := nil }.\n\n" ^
   "Global Instance Inh_option {T: Type} : Inhabited (option T) := { default_val := None }.\n\n" ^
-  "Global Instance Inh_Z : Inhabited Z := { default_val := Z0 }.\n\n" ^
+  "Global Instance Inh_int : Inhabited int := { default_val := 0 }.\n\n" ^
+  "Global Instance Inh_rat : Inhabited rat := { default_val := 0 }.\n\n" ^
   "Global Instance Inh_prod {T1 T2: Type} {_: Inhabited T1} {_: Inhabited T2} : Inhabited (prod T1 T2) := { default_val := (default_val, default_val) }.\n\n" ^
   "Global Instance Inh_type : Inhabited Type := { default_val := nat }.\n\n" ^
   "Definition option_to_list {T: Type} (arg : option T) : seq T :=\n" ^
@@ -909,9 +944,20 @@ let exported_string =
   "\t\t| Some a => a :: nil\n" ^ 
 	"\tend.\n\n" ^
   "Coercion option_to_list: option >-> seq.\n\n" ^
-  "Coercion Z.to_nat: Z >-> nat.\n\n" ^
-  "Coercion Z.of_nat: nat >-> Z.\n\n" ^
-  "Coercion ratz: int >-> rat.\n\n" ^
+  "Definition int_to_nat (i : int) : nat :=\n" ^
+  "\tmatch i with\n" ^
+  "\t\t| Posz n => n\n" ^
+  "\t\t| Negz n => 0\n" ^
+  "\tend.\n\n" ^ 
+  "Definition rat_to_int (r : rat) : int :=\n" ^
+  "\t((numq r) %/ (denq r))%Z.\n\n" ^
+  "Definition rat_to_nat (r : rat) : nat :=\n" ^
+  "\tint_to_nat (rat_to_int r).\n\n" ^
+  
+  "Coercion int_to_nat : int >-> nat.\n\n" ^
+  "Coercion ratz : int >-> rat.\n\n" ^
+  "Coercion rat_to_int : rat >-> int.\n\n" ^
+  "Coercion rat_to_nat : rat >-> nat.\n\n" ^
   "Create HintDb eq_dec_db.\n\n" ^
   "Ltac decidable_equality_step :=\n" ^
   "  do [ by eauto with eq_dec_db | decide equality ].\n\n" ^
@@ -959,6 +1005,7 @@ let is_tf_hint h = h.hintid.it = Middlend.Typefamilyremoval.type_family_hint_id
 let is_proj_hint h = h.hintid.it = Middlend.Uncaseremoval.uncase_proj_hint_id
 let is_wf_hint h = h.hintid.it = Middlend.Undep.wf_hint_id
 let is_wf_func_hint h = h.hintid.it = Middlend.Undep.wf_func_id
+let is_wf_rel_hint h = h.hintid.it = Middlend.Undep.wf_rel_id
 
 let rec register_hints env def =
   match def.it with
@@ -967,6 +1014,8 @@ let rec register_hints env def =
   | HintD { it = DecH (id, hints); _} when List.exists is_proj_hint hints ->
     env.proj_set <- StringSet.add id.it env.proj_set
   | HintD { it = RelH (id, hints); _} when List.exists is_wf_func_hint hints -> 
+    env.wf_lemma_set <- StringSet.add id.it env.wf_lemma_set
+  | HintD { it = RelH (id, hints); _} when List.exists is_wf_rel_hint hints -> 
     env.wf_lemma_set <- StringSet.add id.it env.wf_lemma_set
   | HintD { it = RelH (rel_id, hints); _} when List.exists is_wf_hint hints ->
     begin match (List.find_opt is_wf_hint hints) with

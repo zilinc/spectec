@@ -168,7 +168,7 @@ and prem pr =
   match pr.it with
   | RulePr (x, as1, op, e) -> Node ("RulePr", id x :: List.map arg as1 @ [mixop op; exp e])
   | IfPr e -> Node ("IfPr", [exp e])
-  | LetPr (e1, e2, _xs) -> Node ("LetPr", [exp e1; exp e2])
+  | LetPr (_qs, e1, e2) -> Node ("LetPr", [exp e1; exp e2])
   | ElsePr -> Atom "ElsePr"
   | IterPr (pr1, it) -> Node ("IterPr", [prem pr1] @ iterexp it)
   | NegPr pr1 -> Node ("NegPr", [prem pr1])
