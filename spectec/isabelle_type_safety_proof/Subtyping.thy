@@ -1,6 +1,6 @@
 section \<open>Subtyping\<close>
 
-theory Subtyping imports reference_isabelle_output_wasm2 begin
+theory Subtyping imports isabelle_reference_output_wasm2 begin
 
 (*This might be auto-generated*)
 definition instr_subtyping :: "[functype, functype] \<Rightarrow> bool" ("_ '<ti: _" 60) where

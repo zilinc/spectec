@@ -1,6 +1,6 @@
 theory Wasm2_Type_Soundness
 (* Imported Code *)
-	imports reference_isabelle_output_wasm2
+	imports isabelle_reference_output_wasm2
 begin
 
 definition t_inst_match :: "res_context \<Rightarrow> res_context \<Rightarrow> bool" where

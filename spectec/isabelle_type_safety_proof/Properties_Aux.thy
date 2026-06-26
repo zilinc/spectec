@@ -1,5 +1,5 @@
 theory Properties_Aux
-	imports Main reference_isabelle_output_wasm2 Subtyping Subtyping_Properties
+	imports Main isabelle_reference_output_wasm2 Subtyping Subtyping_Properties
 begin
 
 lemma b_e_type_empty1:

@@ -1,6 +1,6 @@
 section \<open>Subtyping Properties\<close>
 
-theory Subtyping_Properties imports Subtyping reference_isabelle_output_wasm2 begin
+theory Subtyping_Properties imports Subtyping isabelle_reference_output_wasm2 begin
 
 lemma Valtype_sub_refl:
   "Valtype_sub t t"
