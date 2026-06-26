@@ -322,7 +322,7 @@ type_synonym f32 = "fN"
 type_synonym f64 = "fN"
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:68.1-68.39 *)
-function (sequential) fzero :: "N ⇒ fN" where
+function (sequential, domintros) fzero :: "N ⇒ fN" where
 		  "fzero v_N = (POS (SUBNORM 0))"
 	by pat_completeness auto
 
@@ -330,7 +330,8 @@ function (sequential) fzero :: "N ⇒ fN" where
 lemma fzero_is_wf :
 	"(ret_val = (fzero v_N)) ⟹
 	 (wf_fN v_N ret_val)"
-sorry
+	by (simp add: fzero.psimps[OF fzero.domintros] wf_fN.fN_case_0 wf_fNmag.fNmag_case_1)
+
 
 (* Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:71.1-71.39 *)
 function (sequential) fone :: "N ⇒ fN" where
