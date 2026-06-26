@@ -249,15 +249,7 @@ lemma instr_inversion_1a:
       (\<exists> lim rt.
       ((proj_uN_0 x) < (length (context_ELEMS C))) \<and>
 		  (((context_ELEMS C) ! (proj_uN_0 x)) = rt) \<and>
-      ((mk_functype (mk_list []) (mk_list [])) <ti: ft))"
-
-  using instr_inversion_helper[OF assms]
-  apply auto
-  by (cases rule: Instr_ok.cases, auto)+
-
-lemma instr_inversion_1b:
-  assumes "Instrs_ok C [e] ft"
-  shows
+      ((mk_functype (mk_list []) (mk_list [])) <ti: ft))" and
     inv_memory_size: "e = (instr_subcase_6 MEMORY_SIZE) \<Longrightarrow>
       (\<exists> mt.
       (0 < (length (context_MEMS C))) \<and>
@@ -291,7 +283,7 @@ lemma instr_inversion_1b:
       ((mk_functype (mk_list [valtype_I32, valtype_I32, valtype_I32]) (mk_list [])) <ti: ft))" and
     inv_data_drop: "e = (instr_subcase_7 (DATA_DROP x)) \<Longrightarrow>
       ((proj_uN_0 x) < (length (context_DATAS C))) \<and>
-		  (((context_DATAS C) ! (proj_uN_0 x)) = OKx) \<and>
+		  (((context_DATAS C) ! (proj_uN_0 x)) = OK) \<and>
       ((mk_functype (mk_list []) (mk_list [])) <ti: ft)" and
     inv_load_val: "e = (instr_subcase_5 (LOAD nt None v_memarg)) \<Longrightarrow>
       (\<exists> mt.
