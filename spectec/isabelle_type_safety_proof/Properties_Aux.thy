@@ -13,12 +13,15 @@ lemma b_e_type_empty1:
     unfolding instr_subtyping_def
     using Resulttype_sub_empty
     by (auto split: res_list.splits)
-  subgoal for C t_1_lst t_2_lst t'_2_lst ts
-    using instr_subtyping_trans instr_subtyping_sub_rule
-    by auto
+  subgoal for C t_1_lst t_2_lst t'_2_lst
+    using instr_subtyping_trans instr_subtyping_sub_rule func_sub_app_single
+    by blast
   subgoal
-    using instr_subtyping_trans instr_subtyping_frame_rule
-    by auto
+    using instr_subtyping_trans instr_subtyping_frame_rule instr_subtyping_sub_rule
+    by blast
+  subgoal
+    using instr_subtyping_frame_rule instr_subtyping_trans
+    by blast
   done
 
 lemma instr_inversion_helper:
@@ -127,7 +130,7 @@ lemma instr_ok_inv_cvtop_reinterpret:
       ((size (valtype_numtype nt_1)) \<noteq> None) \<and>
       ((size (valtype_numtype nt_2)) \<noteq> None) \<and>
       ((the ((size (valtype_numtype nt_1)))) = (the ((size (valtype_numtype nt_2))))) \<and>
-      ((mk_functype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)])) <ti: ft)" 
+      ((mk_functype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)])) <ti: ft)"
 proof -
 obtain pt where
   a: "Instr_ok C (instr_subcase_1 (CVTOP nt_1 nt_2 REINTERPRET)) pt" and
@@ -151,7 +154,7 @@ qed
 lemma instr_ok_inversion:
   assumes "Instrs_ok C [e] ft"
   shows
-    inv_store_pack: "e = (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) \<Longrightarrow> 
+    inv_store_pack: "e = (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) \<Longrightarrow>
         (\<exists> mt.
         (0 < (length (context_MEMS C))) \<and>
         (((context_MEMS C) ! 0) = mt) \<and>
