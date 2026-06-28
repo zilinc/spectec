@@ -2,11 +2,6 @@ theory Properties_Aux
 	imports Main reference_isabelle_output_wasm2 Subtyping Subtyping_Properties
 begin
 
-lemma b_e_type_empty:
-"Instrs_ok C [] (mk_functype (mk_list ts) (mk_list ts')) =  (mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list ts) (mk_list ts'))"
-
-oops
-
 lemma b_e_type_empty1:
   assumes "Instrs_ok C [] ft"
           "ft = (mk_functype (mk_list ts) (mk_list ts'))"
@@ -74,9 +69,105 @@ next
     by (metis instr_subtyping_frame_rule instr_subtyping_trans)
 qed (metis Instr_ok_Instrs_ok.intros instr_subtyping_refl)+
 
-lemma instr_inversion_1a:
+termination numtype_Inn
+  by lexicographic_order
+
+lemma instr_ok_inv_store_pack:
+  assumes "Instrs_ok C [e] ft"
+          "e = (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))"
+  shows
+       "(\<exists> mt.
+        (0 < (length (context_MEMS C))) \<and>
+        (((context_MEMS C) ! 0) = mt) \<and>
+        (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat))) \<and>
+        (wf_memtype mt) \<and>
+        ((mk_functype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) <ti: ft))"
+proof -
+  obtain pt where
+     "Instr_ok C (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) pt" and
+		 "(pt <ti: ft)"
+  by (metis assms(1) assms(2) instr_inversion_helper)
+  then show ?thesis using assms(1)
+    proof (induction "C" "(instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))" "pt" arbitrary: v_Inn rule: Instr_ok_Instrs_ok.inducts(1))
+      case (store_pack C mt v_Innsa)
+      have "v_Inn = v_Innsa"
+        by (metis store_pack.hyps(7) numtype_Inn.elims numtype.distinct(1))
+      then have "mk_functype (mk_list [valtype_I32, valtype_Inn v_Inn]) (mk_list []) <ti: ft" using store_pack(7,8)
+        by simp
+      then show ?case
+        using store_pack.hyps(1,2,3,5) by auto
+    qed
+qed
+
+lemma instr_ok_inv_ref_func:
+  assumes "Instrs_ok C [e] ft"
+          "e = (instr_subcase_4 (REF_FUNC x))"
+  shows"(\<exists> fta.
+        ((proj_uN_0 x) < (length (context_FUNCS C))) \<and>
+        (((context_FUNCS C) ! (proj_uN_0 x)) = fta) \<and>
+        ((mk_functype (mk_list []) (mk_list [valtype_FUNCREF])) <ti: ft))"
+proof -
+obtain pt where
+  "Instr_ok C (instr_subcase_4 (REF_FUNC x)) pt" and
+  "pt <ti: ft" by (metis assms(2) assms(1) instr_inversion_helper)
+  then show ?thesis
+    by (cases rule: Instr_ok.cases, auto)
+qed
+
+termination  reference_isabelle_output_wasm2.size
+  by lexicographic_order
+
+termination  reference_isabelle_output_wasm2.valtype_numtype
+  by lexicographic_order
+
+lemma instr_ok_inv_cvtop_reinterpret:
+  assumes "Instrs_ok C [e] ft"
+          "e = (instr_subcase_1 (CVTOP nt_1 nt_2 REINTERPRET))"
+  shows "
+      ((size (valtype_numtype nt_1)) \<noteq> None) \<and>
+      ((size (valtype_numtype nt_2)) \<noteq> None) \<and>
+      ((the ((size (valtype_numtype nt_1)))) = (the ((size (valtype_numtype nt_2))))) \<and>
+      ((mk_functype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)])) <ti: ft)" 
+proof -
+obtain pt where
+  a: "Instr_ok C (instr_subcase_1 (CVTOP nt_1 nt_2 REINTERPRET)) pt" and
+  b: "pt <ti: ft" by (metis assms(2) assms(1) instr_inversion_helper)
+  show ?thesis using a b
+  apply (induction "C" "(instr_subcase_1 (CVTOP nt_1 nt_2 REINTERPRET))" "pt" arbitrary: nt_1 nt_2 rule: Instr_ok_Instrs_ok.inducts(1))
+  apply auto+
+  subgoal for C nt_1 nt_2
+    apply (induction nt_1) by simp+
+  subgoal for C nt_1 nt_2
+    apply (induction nt_2) by simp+
+  subgoal for C nt_1 nt_2
+    proof -
+      have "nt_1 = nt_2" sorry
+      then show ?thesis
+        by simp
+    qed
+  sorry
+qed
+
+lemma instr_ok_inversion:
   assumes "Instrs_ok C [e] ft"
   shows
+    inv_store_pack: "e = (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) \<Longrightarrow> 
+        (\<exists> mt.
+        (0 < (length (context_MEMS C))) \<and>
+        (((context_MEMS C) ! 0) = mt) \<and>
+        (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat))) \<and>
+        (wf_memtype mt) \<and>
+        ((mk_functype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) <ti: ft))" and
+    inv_ref_func: "e = (instr_subcase_4 (REF_FUNC x)) \<Longrightarrow>
+        (\<exists> fta.
+        ((proj_uN_0 x) < (length (context_FUNCS C))) \<and>
+        (((context_FUNCS C) ! (proj_uN_0 x)) = fta) \<and>
+        ((mk_functype (mk_list []) (mk_list [valtype_FUNCREF])) <ti: ft))" and
+    inv_cvtop_reinterpret: "e = (instr_subcase_1 (CVTOP nt_1 nt_2 REINTERPRET)) \<Longrightarrow>
+        ((size (valtype_numtype nt_1)) \<noteq> None) \<and>
+        ((size (valtype_numtype nt_2)) \<noteq> None) \<and>
+        ((the ((size (valtype_numtype nt_1)))) = (the ((size (valtype_numtype nt_2))))) \<and>
+        ((mk_functype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)])) <ti: ft)" and
     inv_nop: "e = instr_subcase_0 NOP \<Longrightarrow> (mk_functype (mk_list []) (mk_list [])) <ti: ft" and
     inv_unreachable: "e = instr_subcase_0 UNREACHABLE \<Longrightarrow> True" and
     inv_drop: "e = instr_subcase_0 DROP \<Longrightarrow> (\<exists> t. ((mk_functype (mk_list [t]) (mk_list [])) <ti: ft))" and
@@ -354,80 +445,21 @@ lemma instr_inversion_1a:
 		  (wf_memtype mt) \<and>
 		  ((mk_functype (mk_list [valtype_I32, valtype_V128]) (mk_list [])) <ti: ft))"
 
+  using assms instr_ok_inv_store_pack apply blast
+  using assms instr_ok_inv_ref_func apply blast
+  using assms instr_ok_inv_cvtop_reinterpret apply blast
+
   using instr_inversion_helper[OF assms]
   apply auto
   by (cases rule: Instr_ok.cases, auto)+
 
-termination numtype_Inn
-  by lexicographic_order
-
-lemma instr_inversion_1c:
-  assumes "Instrs_ok C [e] ft"
-          "e = (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))"
-  shows
-       "(\<exists> mt.
-        (0 < (length (context_MEMS C))) \<and>
-        (((context_MEMS C) ! 0) = mt) \<and>
-        (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat))) \<and>
-        (wf_memtype mt) \<and>
-        ((mk_functype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) <ti: ft))"
-proof -
-  obtain pt where
-     "Instr_ok C (instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) pt" and
-		 "(pt <ti: ft)"
-  by (metis assms(1) assms(2) instr_inversion_helper)
-  then show ?thesis using assms(1)
-    proof (induction "C" "(instr_subcase_6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))" "pt" arbitrary: v_Inn rule: Instr_ok_Instrs_ok.inducts(1))
-      case (store_pack C mt v_Innsa)
-      have "v_Inn = v_Innsa"
-        by (metis store_pack.hyps(7) numtype_Inn.elims numtype.distinct(1))
-      then have "mk_functype (mk_list [valtype_I32, valtype_Inn v_Inn]) (mk_list []) <ti: ft" using store_pack(7,8)
-        by simp
-      then show ?case
-        using store_pack.hyps(1,2,3,5) by auto
-    qed
-qed
-
-lemma inv_ref_func:
-  assumes "Instrs_ok C [e] ft"
-          "e = (instr_subcase_4 (REF_FUNC x))"
-  shows"(\<exists> fta.
-        ((proj_uN_0 x) < (length (context_FUNCS C))) \<and>
-        (((context_FUNCS C) ! (proj_uN_0 x)) = fta) \<and>
-        ((mk_functype (mk_list []) (mk_list [valtype_FUNCREF])) <ti: ft))"
-proof -
-obtain pt where
-  "Instr_ok C (instr_subcase_4 (REF_FUNC x)) pt" and
-  "pt <ti: ft" by (metis assms(2) assms(1) instr_inversion_helper)
-  then show ?thesis
-    by (cases rule: Instr_ok.cases, auto)
-qed
-
-lemma instr_inversion_2:
-  assumes "Instrs_ok C [e] ft"
-  shows
-    inv_cvtop_reinterpret: "e = (instr_subcase_1 (CVTOP nt_1 nt_2 REINTERPRET)) \<Longrightarrow>
-      ((size (valtype_numtype nt_1)) \<noteq> None) \<and>
-      ((size (valtype_numtype nt_2)) \<noteq> None) \<and>
-      ((the ((size (valtype_numtype nt_1)))) = (the ((size (valtype_numtype nt_2))))) \<and>
-      ((mk_functype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)])) <ti: ft)" and
-
-  using instr_inversion_helper[OF assms]
-  apply auto
-  apply (cases rule: Instr_ok.cases, auto)
-
-sorry
-
-lemma all_wf:
+lemma instr_ok_wf:
   assumes "Instrs_ok C [e] ft"
   shows   "(wf_context C)"
 		      "(wf_instr e)"
   sorry
 
 (*Instrs_ok2*)
-lemma e_type_empty: "Instrs_ok2 s C [] (mk_functype (mk_list ts) (mk_list ts')) = (mk_functype (mk_list []) (mk_list [])) <ti: ft"
-oops
-
 lemma e_type_empty1:
   assumes "Instrs_ok2 s C [] ft"
           "ft = (mk_functype (mk_list ts) (mk_list ts'))"
@@ -441,7 +473,7 @@ using instr_subtyping_sub_rule  instr_subtyping_trans apply force
 using instr_subtyping_frame_rule instr_subtyping_trans apply force
 by simp
 
-lemma instr2_inversion_helper:
+lemma instr_ok2_inversion_helper:
   assumes "Instrs_ok2 s C [a_e] ft"
   shows "\<exists> ft_principal. (Instr_ok2 s C a_e ft_principal) \<and> (ft_principal <ti: ft)"
   using assms
@@ -475,7 +507,7 @@ next
 next
   case (Instrs_ok2__seq s C admininstr_1 t_1_lst t_2_lst admininstr_2_lst t_3_lst)
   then have "admininstr_2_lst = []" by force
-  then have "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))" using Instrs_ok2__seq.hyps(3) admin_e_type_empty1
+  then have "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))" using Instrs_ok2__seq.hyps(3) e_type_empty1
     by auto
   then show ?case using Instrs_ok2__seq(1,9) func_sub_app_single
     by auto
@@ -489,7 +521,31 @@ next
     by (metis Instrs_ok2__frame.hyps(4) Instrs_ok2__frame.hyps(3) Instrs_ok2__frame.hyps(5) Instrs_ok2__frame.hyps(2) Instrs_ok2__frame.hyps(1) instr_subtyping_frame_rule instr_subtyping_trans)
 qed
 
-(*Instr_ok2 inversion cases*)
+lemma instr_ok2_inversion:
+  assumes "Instrs_ok2 s C [a_e] ft"
+  shows
+    inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst.
+      ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: ft))" and
+    inv_call_addr: "a_e = (admininstr_subcase_7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst.
+      ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: ft))"
+
+  using instr_ok2_inversion_helper[OF assms]
+  apply auto
+  apply (cases rule: Instrs_ok2.cases, auto)
+  using assms instr_subtyping_refl instr_subtyping_sub_rule instr_subtyping_frame_rule
+  apply blast+
+  apply (metis functype.exhaust res_list.exhaust)
+  
+sorry
+
+lemma inv_ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst rt.
+      (Ref_ok s v_ref rt) \<and>
+      ((mk_functype (mk_list []) (mk_list [valtype_reftype rt])) <ti: ft))"
+sorry
+
 lemma inv_label:
   assumes "Instrs_ok2 s C [a_e] ft"
     inv_label: "a_e = (admininstr_subcase_8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
@@ -501,46 +557,5 @@ lemma inv_label:
 		  (v_n = (length t'_lst)) \<Longrightarrow>
       ((mk_functype (mk_list []) (mk_list t_lst)) <ti: ft))"
 sorry
-
-lemma inv_ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst rt.
-      (Ref_ok s v_ref rt) \<and>
-      ((mk_functype (mk_list []) (mk_list [valtype_reftype rt])) <ti: ft))"
-sorry
-
-lemma instr2_inversion_1:
-  assumes "Instrs_ok2 s C [a_e] ft"
-  shows
-    inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: ft))" and
-    inv_call_addr: "a_e = (admininstr_subcase_7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: ft))"
-
-  using instr2_inversion_helper[OF assms]
-  apply auto
-  apply (cases rule: Instrs_ok2.cases, auto)
-  using assms instr_subtyping_refl instr_subtyping_sub_rule instr_subtyping_frame_rule
-  apply blast+
-  apply (metis functype.exhaust res_list.exhaust)
-  
-sorry
-
-(*Testing the inversion lemma*)
-lemma inversion_nop:
-  assumes "Instrs_ok C [e] ft"
-    "e = (instr_subcase_0 NOP)"
-  shows "(mk_functype (mk_list []) (mk_list []) <ti: ft)"
-  using inv_nop assms by auto
-
-lemma inversion_drop:
-  assumes "Instrs_ok C [e] ft"
-    "e = (instr_subcase_0 DROP)"
-  shows "\<exists> t. (mk_functype (mk_list [t]) (mk_list []) <ti: ft)"
-  using instr_inversion_helper[OF assms(1)] assms(2)
-  apply auto
-    apply(cases rule: Instr_ok.cases)
-  by auto
 
 end
