@@ -1,6 +1,6 @@
 theory Wasm2_Type_Soundness
 (* Imported Code *)
-	imports isabelle_reference_output_wasm2
+	imports isabelle_reference_output_wasm2 store_extension_typing
 begin
 
 definition t_inst_match :: "res_context \<Rightarrow> res_context \<Rightarrow> bool" where
@@ -29,6 +29,10 @@ lemma t_inst_match_is:
 lemma step_wf: "Step_is_wf cfg cfg'"
   sorry
 
+
+
+
+
 lemma e_preservation_locals:
   assumes "Step (mk_config (mk_state s f) es) (mk_config (mk_state s' f') es')"
           "Store_ok s"
@@ -44,7 +48,310 @@ shows
           "length (LOCALS f) = length (LOCALS f')"
           "frame_MODULE f = frame_MODULE f'"
           "list_all2 (\<lambda>(t :: valtype) (v :: val). (Val_ok s' v t)) (context_LOCALS C') (LOCALS f')"
-  sorry
+  using assms
+proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'" arbitrary: es es' f f' tf rule: Step.induct)
+  case pure 
+  {
+    case 1
+    then show ?case using pure by simp
+  next
+    case 2
+    then show ?case using pure by simp
+  next
+    case 3
+    then show ?case using pure by simp
+  }
+next
+  case read
+  {
+    case 1
+    then show ?case using read by simp
+  next
+    case 2
+    then show ?case using read by simp
+  next
+    case 3
+    then show ?case using read by simp
+  }
+next
+  case (ctxt_label es0 es1 v_n instr_0_lst)
+  then have ok: "Instrs_ok2 s C' es0 tf" sorry (* inversion lemma on labels *)
+  {
+    case 1 
+    then show ?case using ok ctxt_label by simp
+  next
+    case 2
+    then show ?case using ok ctxt_label by simp
+  next
+    case 3
+    then show ?case using ok ctxt_label by simp
+  }
+next
+  case (ctxt_frame f' es0 f'' es1 v_n)
+  {
+    case 1
+    then show ?case by simp
+  next
+    case 2
+    then show ?case by simp
+  next
+    case 3
+    then show ?case using store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (ctxt_instrs es0 es1 es2)
+  then have ok: "Instrs_ok2 s C' es0 tf" sorry (* inversion lemma on concatenation *)
+  {
+    case 1
+    then show ?case using ok ctxt_instrs by simp
+  next
+    case 2
+    then show ?case using ok ctxt_instrs by simp
+  next
+    case 3
+    then show ?case using ok ctxt_instrs by simp
+  }
+next
+  case (Step__local_set v_val x)
+  {
+    case 1
+    then show ?case using Step__local_set sorry (* with_local implies same length *)
+  next
+    case 2
+    then show ?case using Step__local_set using with_local.domintros with_local.psimps by auto 
+  next
+    case 3
+    then show ?case using Step__local_set sorry (* with_local and typechecks implies all typecheck *)
+  }
+next
+  case (Step__global_set v_val x)
+  then have samef: "f = f'" by (simp add: with_global.domintros with_global.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps) 
+  }
+next
+  case (table_set_trap i x v_ref)
+  {
+    case 1
+    then show ?case by simp
+  next
+    case 2
+    then show ?case by simp
+  next
+    case 3
+    then show ?case using table_set_trap by simp
+  }
+next
+  case (table_set_val i x v_ref)
+  then have samef: "f = f'" by (simp add: with_table.domintros with_table.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (table_grow_succeed x v_n v_ref var_0 ti)
+  then have samef: "f = f'" by (simp add: with_tableinst.domintros with_tableinst.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (table_grow_fail var_0 v_ref v_n x)
+  {
+    case 1
+    then show ?case by simp
+  next
+    case 2
+    then show ?case by simp
+  next
+    case 3
+    then show ?case using table_grow_fail by simp
+  }
+next
+  case (Step__elem_drop x)
+  then have samef: "f = f'" using with_elem.domintros with_elem.psimps by force
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (store_num_trap i nt ao c)
+  {
+    case 1
+    then show ?case by simp
+  next
+    case 2
+    then show ?case by simp
+  next
+    case 3
+    then show ?case using store_num_trap by simp
+  }
+next
+  case (store_num_val i nt b_lst c ao)
+  then have samef: "f = f'" by (simp add: with_mem.domintros with_mem.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (store_pack_trap i ao v_n v_Inn c)
+  {
+    case 1
+    then show ?case by simp
+  next
+    case 2
+    then show ?case by simp
+  next
+    case 3
+    then show ?case using store_pack_trap by simp
+  }
+next
+  case (store_pack_val i v_Inn c b_lst v_n ao)
+  then have samef: "f = f'" by (simp add: with_mem.domintros with_mem.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (vstore_oob i ao c)
+  {
+    case 1
+    then show ?case by simp
+  next
+    case 2
+    then show ?case by simp
+  next
+    case 3
+    then show ?case using vstore_oob by simp
+  }
+next
+  case (vstore_val i b_lst c ao)
+  then have samef: "f = f'" by (simp add: with_mem.domintros with_mem.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (vstore_lane_oob i ao v_N c j)
+  {
+    case 1
+    then show ?case by simp
+  next
+    case 2
+    then show ?case by simp
+  next
+    case 3
+    then show ?case using vstore_lane_oob by simp
+  }
+next
+  case (vstore_lane_val i v_N v_Jnn v_M c j b_lst ao)
+  then have samef: "f = f'" by (simp add: with_mem.domintros with_mem.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (memory_grow_succeed v_n var_0 mi)
+  then have samef: "f = f'" by (simp add: with_meminst.domintros with_meminst.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+next
+  case (memory_grow_fail var_0 v_n)
+  {
+    case 1
+    then show ?case by simp
+  next
+    case 2
+    then show ?case by simp
+  next
+    case 3
+    then show ?case using memory_grow_fail by simp
+  }
+next
+  case (Step__data_drop x)
+  then have samef: "f = f'" by (simp add: with_data.domintros with_data.psimps)
+  {
+    case 1
+    then show ?case using samef by simp
+  next
+    case 2
+    then show ?case using samef by simp
+  next
+    case 3
+    then show ?case using samef store_extension_valok list_all2_mono 
+      by (metis (mono_tags, lifting) Extend_store.simps)
+  }
+qed
+
+
+
 
 
 lemma e_preservation:
