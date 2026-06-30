@@ -97,15 +97,15 @@ SPEC ?= ../specification/wasm-3.0/* src/backend-animation/meta.spectec
 
 ifeq ($(PRINT_DL),1)
   ifeq ($(UNDEP),1)
-    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --remove-indexed-types --generate-ocaml "dl_codegen"
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --remove-indexed-types --sideconditions --generate-ocaml "dl_codegen"
   else
-    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --generate-ocaml "dl_codegen"
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --sideconditions --generate-ocaml "dl_codegen"
   endif
 else
   ifeq ($(UNDEP),1)
-    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --remove-indexed-types --generate-ocaml "dl_codegen"
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --remove-indexed-types --sideconditions --generate-ocaml "dl_codegen"
   else
-    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --generate-ocaml "dl_codegen"
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --sideconditions --generate-ocaml "dl_codegen"
   endif
 endif
 
