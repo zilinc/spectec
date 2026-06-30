@@ -80,4 +80,87 @@ lemma store_extension_refl:
   apply simp+
   by (metis list_all_length)
 
+(*Store extension reduction*)
+lemma reduce_store_extension:
+  assumes "Step (mk_config (mk_state s f) admininstr_lst) (mk_config (mk_state s' f') admininstr'_lst)"
+          "Store_ok s"
+          "Moduleinst_ok s module_inst C"
+          "Instrs_ok2 s C admininstr_lst (mk_functype t_1_lst t_2_lst)"
+          "C = Ci\<lparr>context_LOCALS := (map typeofval (LOCALS f)), LABELS := lbl, context_RETURN := rtn\<rparr>"
+  shows "Extend_store s s' \<and> Store_ok s'"
+  using assms
+  proof (induction "(mk_config (mk_state s f) admininstr_lst)" "(mk_config (mk_state s' f') admininstr'_lst)" arbitrary: admininstr_lst admininstr'_lst rule: Step.induct)
+  case (pure admininstr_lst admininstr'_lst)
+    have "wf_store s"
+      using Instrs_ok2.simps pure.prems(3) by blast
+    then show ?case using store_extension_refl pure(2,4)
+      by blast
+  next
+    case (read admininstr_lst admininstr'_lst)
+    then show ?case sorry
+  next
+    case (ctxt_label admininstr_lst admininstr'_lst v_n instr_0_lst)
+    then show ?case sorry
+  next
+    case (ctxt_frame f' admininstr_lst f'' admininstr'_lst v_n)
+    then show ?case sorry
+  next
+    case (ctxt_instrs admininstr_lst admininstr'_lst val_lst admininstr_1_lst)
+    then show ?case sorry
+  next
+    case (Step__local_set v_val x)
+    then show ?case sorry
+  next
+    case (Step__global_set v_val x)
+    then show ?case sorry
+  next
+    case (table_set_trap i x v_ref)
+    then show ?case sorry
+  next
+    case (table_set_val i x v_ref)
+    then show ?case sorry
+  next
+    case (table_grow_succeed x v_n v_ref var_0 ti)
+    then show ?case sorry
+  next
+    case (table_grow_fail var_0 v_ref v_n x)
+    then show ?case sorry
+  next
+    case (Step__elem_drop x)
+    then show ?case sorry
+  next
+    case (store_num_trap i nt ao c)
+    then show ?case sorry
+  next
+    case (store_num_val i nt b_lst c ao)
+    then show ?case sorry
+  next
+    case (store_pack_trap i ao v_n v_Inn c)
+    then show ?case sorry
+  next
+    case (store_pack_val i v_Inn c b_lst v_n ao)
+    then show ?case sorry
+  next
+    case (vstore_oob i ao c)
+    then show ?case sorry
+  next
+    case (vstore_val i b_lst c ao)
+    then show ?case sorry
+  next
+    case (vstore_lane_oob i ao v_N c j)
+    then show ?case sorry
+  next
+    case (vstore_lane_val i v_N v_Jnn v_M c j b_lst ao)
+    then show ?case sorry
+  next
+    case (memory_grow_succeed v_n var_0 mi)
+    then show ?case sorry
+  next
+    case (memory_grow_fail var_0 v_n)
+    then show ?case sorry
+  next
+    case (Step__data_drop x)
+    then show ?case sorry
+  qed
+
 end
