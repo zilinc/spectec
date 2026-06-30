@@ -117,10 +117,10 @@ obtain pt where
     by (cases rule: Instr_ok.cases, auto)
 qed
 
-termination  reference_isabelle_output_wasm2.size
+termination isabelle_reference_output_wasm2.size
   by lexicographic_order
 
-termination  reference_isabelle_output_wasm2.valtype_numtype
+termination isabelle_reference_output_wasm2.valtype_numtype
   by lexicographic_order
 
 lemma instr_ok_inv_cvtop_reinterpret:
