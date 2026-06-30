@@ -113,6 +113,13 @@ let error_eval etyp exp onotes =
   in
   error exp.at (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes)
 
+let fail_eval etyp exp onotes =
+  let notes = match onotes with
+  | None     -> ""
+  | Some msg -> "\n  ▹ " ^ msg
+  in
+  fail_info "eval_fail" exp.at (lazy (etyp ^ " can't evaluate: " ^ string_of_exp exp ^ notes))
+
 let fail_assign at lhs rhs msg =
   info "assign" at (lazy ("Pattern-matching failed (" ^ msg ^ "):\n" ^
                           "  ▹ pattern: " ^ string_of_exp lhs ^ "\n" ^
@@ -301,7 +308,7 @@ and eval_exp ctx exp : value OptMonad.m =
       if i < Z.of_int (Array.length !vs) then
         Array.get !vs (Z.to_int i) |> return
       else
-        error_eval "Indexing expression" exp
+        fail_eval "Indexing expression" exp
           (Some ("Index out-of-range:\n" ^
                  string_of_exp e1 ^ " = " ^ string_of_value v1 ^ "\n" ^
                  "... whose length is " ^ string_of_int (Array.length !vs) ^ "\n" ^
@@ -320,7 +327,7 @@ and eval_exp ctx exp : value OptMonad.m =
       if Z.(i + n) <= Z.of_int (Array.length !vs) then
         ListV (Array.sub !vs (Z.to_int i) (Z.to_int n) |> ref) |> return
       else
-        error_eval "Slicing expression" exp
+        fail_eval "Slicing expression" exp
           (Some ("|es| = " ^ string_of_int (Array.length !vs) ^
                  "; i = " ^ string_of_int (Z.to_int i) ^
                  "; n = " ^ string_of_int (Z.to_int n)))
@@ -460,7 +467,7 @@ and eval_exp ctx exp : value OptMonad.m =
     let* v1 = eval_exp ctx e1 in
     (match v1 with
     | OptV (Some v11) -> return v11
-    | _ -> error_eval "THE expression" exp None
+    | _ -> fail_eval "THE expression" exp None
     )
   | ListE es -> let* vs = mapM (eval_exp ctx) es in listV (Array.of_list vs) |> return
   | LiftE e1 ->
@@ -490,7 +497,7 @@ and eval_exp ctx exp : value OptMonad.m =
     | NumV n ->
       (match Num.cvt nt2 n with
       | Some n' -> NumV n' |> return
-      | None -> error_eval "Numeric type conversion" exp (Some ("Cannot perform conversion: " ^ string_of_value v1))
+      | None -> fail_eval "Numeric type conversion" exp (Some ("Cannot perform conversion: " ^ string_of_value v1))
       )
     | _ -> error_eval "Numeric type conversion" exp (Some ("Not a numeric:" ^ string_of_exp e1))
     )
