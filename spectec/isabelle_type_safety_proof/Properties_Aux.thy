@@ -14,7 +14,7 @@ lemma b_e_type_empty1:
     using Resulttype_sub_empty
     by (auto split: res_list.splits)
   subgoal for C t_1_lst t_2_lst t'_2_lst
-    using instr_subtyping_trans instr_subtyping_sub_rule func_sub_app_single
+    using instr_subtyping_trans instr_subtyping_sub_rule func_sub_app_single_l
     by blast
   subgoal
     using instr_subtyping_trans instr_subtyping_frame_rule instr_subtyping_sub_rule
@@ -56,12 +56,27 @@ next
     by auto
 next
   case (seq C instr_1 t_1_lst t_2_lst instr_2_lst t_3_lst)
-  then have "instr_2_lst = []" "instr_1 = e" by auto
-  then have "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))"
+  then show ?case 
+  proof (cases instr_1)
+    case Nil
+    then have e2: "instr_2_lst = [e]" using seq by simp
+    then have "(mk_functype (mk_list []) (mk_list [])) <ti: 
+               (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))" 
+      using seq.hyps b_e_type_empty1 by blast
+    then show ?thesis 
+      using  \<open>instr_2_lst = [e]\<close> func_sub_app_single_r 
+              instr_subtyping_trans seq.hyps(3,4) by blast
+  next
+    case (Cons a list)
+    then have "instr_2_lst = []" "instr_1 = [e]" 
+      using seq.hyps(8) by auto
+      then have "(mk_functype (mk_list []) (mk_list [])) <ti: 
+                  (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))"
     using seq.hyps(3) b_e_type_empty1 by blast
-  then show ?case
-    using \<open>instr_1 = e\<close> func_sub_app_single seq.hyps(1)
-      by blast
+  then show ?thesis
+    using \<open>instr_1 = [e]\<close> func_sub_app_single_l seq.hyps(1) 
+  using instr_subtyping_trans seq.hyps(2) by blast
+qed
 next
   case (sub C t_1_lst t_2_lst t'_1_lst t'_2_lst)
   then show ?case

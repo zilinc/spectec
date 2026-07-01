@@ -64,7 +64,7 @@ proof -
     by fastforce
 qed
 
-lemma func_sub_app_single:
+lemma func_sub_app_single_l:
   assumes "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list ts2) (mk_list ts3))"
   shows "(mk_functype (mk_list ts1) (mk_list ts2)) <ti: (mk_functype (mk_list ts1) (mk_list ts3))"
 proof -
@@ -75,6 +75,20 @@ proof -
     using Resulttype_sub_refl instr_subtyping_sub_rule
       by force
 qed
+
+
+lemma func_sub_app_single_r:
+  assumes "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list ts1) (mk_list ts2))"
+  shows "(mk_functype (mk_list ts2) (mk_list ts3)) <ti: (mk_functype (mk_list ts1) (mk_list ts3))"
+proof -
+  have "Resulttype_sub (mk_list ts1) (mk_list ts2)"
+    using assms instr_subtyping_def Resulttype_sub.simps Resulttype_sub_split_left Resulttype_sub_refl Resulttype_sub_append
+      by simp
+  then show ?thesis
+    using Resulttype_sub_refl instr_subtyping_sub_rule
+      by force
+qed
+
 
 (*for sub*)
 lemma Resulttype_sub_split_right:
