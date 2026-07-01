@@ -530,11 +530,25 @@ next
     by simp
 next
   case (Instrs_ok2__seq s C admininstr_1 t_1_lst t_2_lst admininstr_2_lst t_3_lst)
-  then have "admininstr_2_lst = []" by force
-  then have "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))" using Instrs_ok2__seq.hyps(3) e_type_empty1
-    by auto
-  then show ?case using Instrs_ok2__seq(1,9) func_sub_app_single_l
-    by auto
+  then show ?case 
+  proof (cases admininstr_1)
+    case Nil
+    then show ?thesis sorry
+  next
+    case (Cons a list)
+    then have "admininstr_2_lst = []" using Instrs_ok2__seq by force
+    then have "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))" using Instrs_ok2__seq.hyps(3) e_type_empty1
+      by auto
+      then show ?thesis using func_sub_app_single_l 
+        by (metis \<open>mk_functype (mk_list [])
+             (mk_list []) <ti: mk_functype (mk_list t_2_lst) (mk_list t_3_lst)\<close> 
+              Instrs_ok2__seq.hyps(2) func_sub_app_single_l 
+              Instrs_ok2__seq.hyps(9)  
+              \<open>admininstr_2_lst = []\<close> instr_subtyping_trans append.right_neutral)
+  qed
+
+
+ 
 next
   case (Instrs_ok2__sub s C t_1_lst t_2_lst t'_1_lst t'_2_lst)
   then show ?case
@@ -554,13 +568,12 @@ lemma instr_ok2_inversion:
     inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
       ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: ft))"
-
   using instr_ok2_inversion_helper[OF assms]
   apply auto
   apply (cases rule: Instrs_ok2.cases, auto)
   using assms instr_subtyping_refl instr_subtyping_sub_rule instr_subtyping_frame_rule
-  apply blast+
-  apply (metis functype.exhaust res_list.exhaust)
+(*  apply blast+
+  apply (metis functype.exhaust res_list.exhaust) *)
   
 sorry
 
@@ -572,7 +585,7 @@ sorry
 
 lemma inv_label:
   assumes "Instrs_ok2 s C [a_e] ft"
-    inv_label: "a_e = (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
+  shows "a_e = (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
       (\<exists> t'_lst t_lst.
       (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
       (Instrs_ok2 s (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr> C) admininstr_lst (mk_functype (mk_list []) (mk_list t_lst))) \<and>
