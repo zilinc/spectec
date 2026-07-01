@@ -2,6 +2,7 @@ theory Properties_Aux
 	imports Main isabelle_reference_output_wasm2 Subtyping Subtyping_Properties
 begin
 
+
 lemma b_e_type_empty1:
   assumes "Instrs_ok C [] ft"
           "ft = (mk_functype (mk_list ts) (mk_list ts'))"
@@ -87,6 +88,7 @@ next
   case (Instrs_ok__frame C t_1_lst t_2_lst t_lst)
   then show ?case
     by (metis instr_subtyping_frame_rule instr_subtyping_trans)
+(* This next line takes a while *)
 qed (metis Instr_ok_Instrs_ok.intros instr_subtyping_refl)+
 
 termination numtype_Inn
@@ -470,17 +472,26 @@ lemma instr_ok_inversion:
   using assms instr_ok_inv_cvtop_reinterpret apply blast
 
   using instr_inversion_helper[OF assms]
-sorry
-(*
-  apply auto
-  by (cases rule: Instr_ok.cases, auto)+
-*)
+
+
+  apply auto                   
+(* This next line takes a full two minutes *) 
+  apply (cases rule: Instr_ok.cases, auto)+
+  done          
+
+
+
+
 
 lemma instr_ok_wf:
   assumes "Instrs_ok C [e] ft"
   shows   "(wf_context C)"
 		      "(wf_instr e)"
-  sorry
+	using instr_inversion_helper[OF assms]
+	 apply auto
+	apply (cases rule:Instr_ok.cases, auto)+
+	done
+
 
 (*Instrs_ok2*)
 lemma e_type_empty1:
@@ -491,10 +502,10 @@ using assms
 apply (induction "[] :: (admininstr list)" "ft" arbitrary: ts ts' rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2))
 apply simp+
 apply (metis instr_subtyping_refl)
-apply simp
-sorry
+   apply simp
+  sorry
 (*
-using instr_subtyping_sub_rule  instr_subtyping_trans apply force
+using instr_subtyping_sub_rule instr_subtyping_trans apply force
 using instr_subtyping_frame_rule instr_subtyping_trans apply force
 by simp
 *)
@@ -604,6 +615,19 @@ lemma inv_label:
 		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<Longrightarrow>
 		  (v_n = (length t'_lst)) \<Longrightarrow>
       ((mk_functype (mk_list []) (mk_list t_lst)) <ti: ft))"
-sorry
+  sorry
+
+
+
+lemma instr_ok2_wf:
+  assumes "Instrs_ok2 s C [e] ft"
+  shows   "(wf_context C)"
+		     (* "(wf_admininstr e)" *)
+          "wf_store s"
+	using instr_ok2_inversion_helper[OF assms]
+	 apply auto
+	  apply (cases rule:Instr_ok2.cases, auto)
+	apply (cases rule:Instr_ok2.cases, auto)
+	done
 
 end
