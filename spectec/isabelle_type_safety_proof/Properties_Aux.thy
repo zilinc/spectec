@@ -28,7 +28,9 @@ lemma instr_inversion_helper:
   assumes "Instrs_ok C [e] ft"
   shows "\<exists> ft_principal. (Instr_ok C e ft_principal) \<and> (ft_principal <ti: ft)"
   using assms
-proof (induction C "[e]" "ft" arbitrary:  rule: Instr_ok_Instrs_ok.inducts(2)[where ?P1.0 = "\<lambda> C e ft. \<exists> ft_principal. Instr_ok C e ft_principal \<and> ft_principal <ti: ft"])
+proof (induction C "[e]" "ft" arbitrary:  
+       rule: Instr_ok_Instrs_ok.inducts(2)[where ?P1.0 = 
+          "\<lambda> C e ft. \<exists> ft_principal. Instr_ok C e ft_principal \<and> ft_principal <ti: ft"])
   case (block C bt t_1_lst t_2_lst instr_lst)
   then show ?case
     by (metis Instr_ok_Instrs_ok.block instr_subtyping_refl)
@@ -533,11 +535,19 @@ next
   then show ?case 
   proof (cases admininstr_1)
     case Nil
-    then show ?thesis sorry
+    then have "admininstr_2_lst = [a_e]" using Instrs_ok2__seq by force
+    then have "(mk_functype (mk_list []) (mk_list [])) <ti: 
+               (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))" 
+      using Instrs_ok2__seq.hyps e_type_empty1 by auto
+    then show ?thesis using func_sub_app_single_r 
+      using Instrs_ok2__seq.hyps(4) \<open>admininstr_2_lst = [a_e]\<close> instr_subtyping_trans
+      by blast
   next
     case (Cons a list)
     then have "admininstr_2_lst = []" using Instrs_ok2__seq by force
-    then have "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))" using Instrs_ok2__seq.hyps(3) e_type_empty1
+    then have "(mk_functype (mk_list []) (mk_list [])) <ti: 
+               (mk_functype (mk_list t_2_lst) (mk_list t_3_lst))" 
+      using Instrs_ok2__seq.hyps(3) e_type_empty1
       by auto
       then show ?thesis using func_sub_app_single_l 
         by (metis \<open>mk_functype (mk_list [])
@@ -552,11 +562,12 @@ next
 next
   case (Instrs_ok2__sub s C t_1_lst t_2_lst t'_1_lst t'_2_lst)
   then show ?case
-    by (metis Instrs_ok2__sub.hyps(6) Instrs_ok2__sub.hyps(5) Instrs_ok2__sub.hyps(4) Instrs_ok2__sub.hyps(3) Instrs_ok2__sub.hyps(7) Instrs_ok2__sub.hyps(2) Instrs_ok2__sub.hyps(1) instr_subtyping_trans instr_subtyping_sub_rule)
+    by (metis Instrs_ok2__sub.hyps(4) Instrs_ok2__sub.hyps(3) Instrs_ok2__sub.hyps(2) 
+        instr_subtyping_trans instr_subtyping_sub_rule)
 next
   case (Instrs_ok2__frame s C t_1_lst t_2_lst t_lst)
   then show ?case
-    by (metis Instrs_ok2__frame.hyps(4) Instrs_ok2__frame.hyps(3) Instrs_ok2__frame.hyps(5) Instrs_ok2__frame.hyps(2) Instrs_ok2__frame.hyps(1) instr_subtyping_frame_rule instr_subtyping_trans)
+    by (metis Instrs_ok2__frame.hyps(2) instr_subtyping_frame_rule instr_subtyping_trans)
 qed
 
 lemma instr_ok2_inversion:
