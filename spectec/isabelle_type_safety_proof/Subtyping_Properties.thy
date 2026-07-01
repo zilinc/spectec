@@ -11,11 +11,16 @@ lemma Resulttype_sub_refl:
   apply (auto simp add: Resulttype_sub.simps)
   by (metis Valtype_sub_refl list.rel_refl res_list.exhaust)
 
-lemma instr_subtyping_refl:
+lemma Instrtype_sub_refl:
   "tf <ti: tf"
-  unfolding instr_subtyping_def using Resulttype_sub_refl
-  apply (auto split: functype.splits prod.splits res_list.splits)
-  by blast
+proof (cases tf)
+  case (mk_instrtype x1 x2)
+  then show ?thesis 
+  unfolding Instrtype_sub.simps using Resulttype_sub_refl
+  apply (auto split: instrtype.splits prod.splits res_list.splits)
+  by (metis Resulttype_sub.cases append_Nil)
+qed
+
 
 (*for Seq*)
 lemma Resulttype_sub_empty:
@@ -38,12 +43,12 @@ lemma Resulttype_sub_split_left:
   apply (auto simp add: Resulttype_sub.simps)
   by (metis list_all2_append2)
 
-lemma instr_subtyping_sub_rule:
+lemma Instrtype_sub_sub_rule:
   assumes
     "Resulttype_sub ts1' ts1"
     "Resulttype_sub ts2 ts2'"
   shows
-    "(mk_functype ts1 ts2) <ti: (mk_functype ts1' ts2')"
+    "(mk_instrtype ts1 ts2) <ti: (mk_instrtype ts1' ts2')"
 proof -
   obtain ts1_l ts2_l ts1'_l ts2'_l where defs:
     "ts1 = mk_list ts1_l"
@@ -60,32 +65,32 @@ proof -
     using assms defs Resulttype_sub_empty
     by auto
 
-  then show ?thesis using defs unfolding instr_subtyping_def
+  then show ?thesis using defs unfolding Instrtype_sub.simps
     by fastforce
 qed
 
 lemma func_sub_app_single_l:
-  assumes "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list ts2) (mk_list ts3))"
-  shows "(mk_functype (mk_list ts1) (mk_list ts2)) <ti: (mk_functype (mk_list ts1) (mk_list ts3))"
+  assumes "(mk_instrtype (mk_list []) (mk_list [])) <ti: (mk_instrtype (mk_list ts2) (mk_list ts3))"
+  shows "(mk_instrtype (mk_list ts1) (mk_list ts2)) <ti: (mk_instrtype (mk_list ts1) (mk_list ts3))"
 proof -
   have "Resulttype_sub (mk_list ts2) (mk_list ts3)"
-    using assms instr_subtyping_def Resulttype_sub.simps Resulttype_sub_split_left Resulttype_sub_refl Resulttype_sub_append
+    using assms Instrtype_sub.simps Resulttype_sub.simps Resulttype_sub_split_left Resulttype_sub_refl Resulttype_sub_append
       by simp
   then show ?thesis
-    using Resulttype_sub_refl instr_subtyping_sub_rule
+    using Resulttype_sub_refl Instrtype_sub_sub_rule
       by force
 qed
 
 
 lemma func_sub_app_single_r:
-  assumes "(mk_functype (mk_list []) (mk_list [])) <ti: (mk_functype (mk_list ts1) (mk_list ts2))"
-  shows "(mk_functype (mk_list ts2) (mk_list ts3)) <ti: (mk_functype (mk_list ts1) (mk_list ts3))"
+  assumes "(mk_instrtype (mk_list []) (mk_list [])) <ti: (mk_instrtype (mk_list ts1) (mk_list ts2))"
+  shows "(mk_instrtype (mk_list ts2) (mk_list ts3)) <ti: (mk_instrtype (mk_list ts1) (mk_list ts3))"
 proof -
   have "Resulttype_sub (mk_list ts1) (mk_list ts2)"
-    using assms instr_subtyping_def Resulttype_sub.simps Resulttype_sub_split_left Resulttype_sub_refl Resulttype_sub_append
+    using assms Instrtype_sub.simps Resulttype_sub.simps Resulttype_sub_split_left Resulttype_sub_refl Resulttype_sub_append
       by simp
   then show ?thesis
-    using Resulttype_sub_refl instr_subtyping_sub_rule
+    using Resulttype_sub_refl Instrtype_sub_sub_rule
       by force
 qed
 
@@ -117,7 +122,7 @@ lemma Resulttype_sub_trans:
   apply (auto simp add:  Resulttype_sub.simps)
   using list_all2_trans by blast
 
-lemma instr_subtyping_trans:
+lemma Instrtype_sub_trans:
   assumes
     "tf1 <ti: tf2"
     "tf2 <ti: tf3"
@@ -125,10 +130,10 @@ lemma instr_subtyping_trans:
     "tf1 <ti: tf3"
 proof - 
   obtain tf1_d tf1_r tf2_d tf2_r tf3_d tf3_r where defs:
-    "tf1 = mk_functype (mk_list tf1_d) (mk_list tf1_r)"
-    "tf2 = mk_functype (mk_list tf2_d) (mk_list tf2_r)"
-    "tf3 = mk_functype (mk_list tf3_d) (mk_list tf3_r)"
-    by (metis functype.exhaust res_list.exhaust)
+    "tf1 = mk_instrtype (mk_list tf1_d) (mk_list tf1_r)"
+    "tf2 = mk_instrtype (mk_list tf2_d) (mk_list tf2_r)"
+    "tf3 = mk_instrtype (mk_list tf3_d) (mk_list tf3_r)"
+    by (metis instrtype.exhaust res_list.exhaust)
 
   obtain ts_12 ts'_12 tf1_dom_sub_12 tf1_ran_sub_12 where defs12:
     "tf2_d = ts_12 @ tf1_dom_sub_12"
@@ -136,7 +141,7 @@ proof -
     "Resulttype_sub (mk_list ts_12) (mk_list ts'_12)"
     "Resulttype_sub (mk_list tf1_dom_sub_12) (mk_list tf1_d)"
     "Resulttype_sub (mk_list tf1_r) (mk_list tf1_ran_sub_12)"
-    using assms(1) defs unfolding instr_subtyping_def by auto
+    using assms(1) defs unfolding Instrtype_sub.simps by auto
 
   obtain ts_23 ts'_23 tf1_dom_sub_23 tf1_ran_sub_23 where defs23:
     "tf3_d = ts_23 @ tf1_dom_sub_23"
@@ -144,7 +149,7 @@ proof -
     "Resulttype_sub (mk_list ts_23) (mk_list ts'_23)"
     "Resulttype_sub (mk_list tf1_dom_sub_23) (mk_list tf2_d)"
     "Resulttype_sub (mk_list tf2_r) (mk_list tf1_ran_sub_23)"
-    using assms(2) defs unfolding instr_subtyping_def by auto
+    using assms(2) defs unfolding Instrtype_sub.simps by auto
 
   obtain tf1_ts_12 tf1_tf_dom_sub_12  where defs_split_12:
     "Resulttype_sub (mk_list tf1_ts_12) (mk_list ts_12)"
@@ -180,14 +185,14 @@ proof -
   have e: "Resulttype_sub (mk_list tf1_r) (mk_list ?tf1_ran_sub)"
     using defs12(5) defs_split_23(2) Resulttype_sub_trans by blast
   show ?thesis
-    using a b c d e defs unfolding instr_subtyping_def
-    apply (auto split: functype.splits)
+    using a b c d e defs unfolding Instrtype_sub.simps
+    apply (auto split: instrtype.splits)
     by (metis append_assoc)
 qed
 
 (*For frame*)
-lemma instr_subtyping_frame_rule:
-    "(mk_functype (mk_list ts1) (mk_list ts2)) <ti: (mk_functype (mk_list (ts@ts1)) (mk_list (ts@ts2)))"
+lemma Instrtype_sub_frame_rule:
+    "(mk_instrtype (mk_list ts1) (mk_list ts2)) <ti: (mk_instrtype (mk_list (ts@ts1)) (mk_list (ts@ts2)))"
 proof -
   have "ts @ ts1 = ts @ ts1 \<and>
         ts @ ts2 = ts @ ts2 \<and>
@@ -197,7 +202,7 @@ proof -
     by (metis Resulttype_sub_refl)
 
   then show ?thesis
-    unfolding instr_subtyping_def
+    unfolding Instrtype_sub.simps
     by fastforce
 qed
 
@@ -217,5 +222,14 @@ lemma Resulttype_sub_t_list_subtyping:
     apply (auto split: prod.splits)
     by (metis list_all2_lengthD mk_Resulttype_sub res_list.case res_list.exhaust)
   done
+
+(*
+lemma subtype_typing :
+  assumes "tf1 <ti: tf2"
+          "Instrs_ok2 s C e tf1"
+        shows "Instrs_ok2 s C e tf2"
+  using assms
+proof  
+*)
 
 end
