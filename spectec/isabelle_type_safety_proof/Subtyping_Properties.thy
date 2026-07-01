@@ -229,7 +229,7 @@ lemma subtype_typing :
           "Instrs_ok2 s C e tf1"
         shows "Instrs_ok2 s C e tf2"
   using assms
-proof  
+proof (cases assms(1))
 *)
 
 end
