@@ -1,6 +1,6 @@
 theory Wasm2_Type_Soundness
 (* Imported Code *)
-	imports isabelle_reference_output_wasm2 store_extension_typing Properties_Aux
+	imports isabelle_reference_output_wasm2 store_extension_typing Properties_Aux Subtyping_Theorem
 begin
 
 definition t_inst_match :: "res_context \<Rightarrow> res_context \<Rightarrow> bool" where
@@ -433,21 +433,37 @@ lemma e_preservation:
 
 shows
           "Instrs_ok2 s' C' es' tf"
-  using assms
+proof (cases tf)
+  case (mk_functype t1 t2)
+  show ?thesis 
+  using assms mk_functype
 proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'" 
-    arbitrary: s f es s' f' es' tf rule:Step.induct)
+    arbitrary: s f es s' f' es' tf t1 t2 rule:Step.induct)
   case (pure es0 es1)
   then show ?case 
   proof (induction rule:Step_pure.induct)
     case Step_pure__unreachable
+    then have wfs: "wf_store s" "wf_context C'" using instr_ok2_wf by auto
     then show ?case 
-      using Instrs_ok2__instr Instr_ok2__trap pure inv_unreachable
-      sorry
+         using Instrs_ok2__instr admininstr_case_73 mk_functype Instr_ok2__trap res_list.exhaust
+         by (metis wfs(1) Instrs_ok2__instr admininstr_case_73 wfs(2) Instr_ok2__trap 
+             res_list.exhaust pure.prems(9))
   next
     case Step_pure__nop
+    obtain t1' t2' where
+      ts: "mk_instrtype (mk_list t1') (mk_list t2') <ti: mk_instrtype t1 t2"
+      "Instr_ok C' (instr_sc0 NOP) (mk_functype (mk_list t1') (mk_list t2'))" 
+      using inv_plain[where ?a_e = "admininstr_sc0 (admininstr_st0_NOP)" 
+                      and ?v_instr = "instr_sc0 NOP" and ?s = "s" and ?C = "C'"
+                      and ?t1.0 = "t1" and ?t2.0 = "t2"] 
+            Step_pure__nop(8,9)
+      using admininstr_instr.domintros(1) admininstr_instr.psimps(1) by fastforce
+    then have "(mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype (mk_list t1') (mk_list t2'))" 
+      using inv_nop Instrs_ok__instr
+      using Step_pure__nop.prems(8) instr_case_0 instr_ok2_wf(1) by blast
     then show ?case 
-      using inv_nop Instrs_ok2__instr plain nop
-      sorry
+      using ts plain nop subtype_typing Instrtype_sub_trans Instrs_ok2__instr
+      by (metis Instrs_ok2__empty instr_ok2_wf(1,2) pure.prems(8,9))
   next
     case (Step_pure__drop v_val)
     then show ?case sorry

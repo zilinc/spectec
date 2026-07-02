@@ -598,7 +598,8 @@ lemma instr_ok2_inversion:
   shows
     inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2) \<and> 
+       Instr_ok C v_instr (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))" and
     inv_label: "a_e = (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
       (\<exists> t'_lst t_lst.
       (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
