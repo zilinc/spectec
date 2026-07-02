@@ -492,44 +492,13 @@ lemma instr_ok_inversion:
   done          
 
 
-
-
-(* this proof is absolutely ridiculous but it's 19:36 and I am very tired *)
 lemma instr_ok_wf:
-  assumes "Instrs_ok C [e] ft"
+  assumes "Instrs_ok C e ft"
   shows   "(wf_context C)"
-		      "(wf_instr e)"
+		      "(list_all wf_instr e)"
 	using assms
-proof (cases ft)
-  case (mk_functype x1 x2)
-  then show "wf_context C"
-  proof -
-    obtain tp1 tp2 where
-     "Instr_ok C e (mk_functype tp1 tp2)" and
-		 "(mk_instrtype tp1 tp2 <ti: mk_instrtype x1 x2)"
-      using assms instr_inversion_helper
-      using mk_functype by blast
-		then show ?thesis
-		proof (induction C e "mk_functype tp1 tp2" rule:Instr_ok_Instrs_ok.inducts(1))
-		qed(auto)+
-	qed
-next
-  show "wf_instr e"
-  proof (cases ft)
-    case (mk_functype x1 x2)
-    then show "wf_instr e"
-  proof -
-    obtain tp1 tp2 where
-     "Instr_ok C e (mk_functype tp1 tp2)" and
-		 "(mk_instrtype tp1 tp2 <ti: mk_instrtype x1 x2)"
-      using assms instr_inversion_helper
-      using mk_functype by blast
-		then show ?thesis
-		proof (induction C e "mk_functype tp1 tp2" rule:Instr_ok_Instrs_ok.inducts(1))
-		qed(auto)+
-	qed
-qed
-qed
+proof (induction)
+qed(simp)+
 
 
 (*Instrs_ok2*)
@@ -667,42 +636,12 @@ lemma inv_label:
 
 
 lemma instr_ok2_wf:
-  assumes "Instrs_ok2 s C [e] ft"
+  assumes "Instrs_ok2 s C e ft"
   shows   "(wf_context C)"
-		     (* "(wf_admininstr e)" *)
           "wf_store s"
-	using assms
-proof (cases ft)
-  case (mk_functype x1 x2)
-  then show "wf_context C"
-  proof -
-    obtain tp1 tp2 where
-     "Instr_ok2 s C e (mk_functype tp1 tp2)" and
-		 "(mk_instrtype tp1 tp2 <ti: mk_instrtype x1 x2)"
-      using assms instr_ok2_inversion_helper
-      using mk_functype by blast
-		then show ?thesis
-		proof (induction s C e "mk_functype tp1 tp2" rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(1))
-		qed(auto)+
-	qed
-next
-  show "wf_store s"
-  proof (cases ft)
-    case (mk_functype x1 x2)
-    then show "wf_store s"
-  proof -
-    obtain tp1 tp2 where
-     "Instr_ok2 s C e (mk_functype tp1 tp2)" and
-		 "(mk_instrtype tp1 tp2 <ti: mk_instrtype x1 x2)"
-      using assms instr_ok2_inversion_helper
-      using mk_functype by blast
-		then show ?thesis
-		proof (induction s C e "mk_functype tp1 tp2" rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(1))
-		qed(auto)+
-	qed
-qed
-qed
-
+  using assms
+proof(induction)
+qed(simp)+
 
 
 
