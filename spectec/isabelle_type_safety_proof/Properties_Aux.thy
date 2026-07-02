@@ -639,11 +639,11 @@ lemma instr_ok2_inversion:
 sorry
 
 lemma inv_Instrs_ok2__seq:
-  assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t3)"
+  assumes "Instrs_ok2 s C a_e (mk_functype t1 t3)"
           "a_e = (admininstr_1_lst @ admininstr_2_lst)"
   shows "(\<exists> t_1_lst t_2_lst t2.
-    (Instrs_ok2 s C admininstr_1_lst (mk_instrtype t1 t2)) \<and>
-		(Instrs_ok2 s C admininstr_2_lst (mk_instrtype t2 t3)) \<and>
+    (Instrs_ok2 s C admininstr_1_lst (mk_functype t1 t2)) \<and>
+		(Instrs_ok2 s C admininstr_2_lst (mk_functype t2 t3)) \<and>
 		(list_all (\<lambda> (admininstr_1 :: admininstr). (wf_admininstr admininstr_1)) admininstr_1_lst) \<and>
 		(list_all (\<lambda> (admininstr_2 :: admininstr). (wf_admininstr admininstr_2)) admininstr_2_lst) \<and>
     ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t3))"
@@ -653,7 +653,7 @@ sorry
 lemma inv_Instrs_ok2__sub:
   assumes "Instrs_ok2 s C admininstr_lst (mk_functype t1 t2)"
   shows "(\<exists> t_1_lst t_2_lst t2.
-		(Instrs_ok2 s C admininstr_lst (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
+		(Instrs_ok2 s C admininstr_lst (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
 		(Resulttype_sub t1 (mk_list t_1_lst)) \<and>
 		(Resulttype_sub (mk_list t_2_lst) t2) \<and>
 		(list_all (\<lambda> (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst) \<and>
@@ -664,7 +664,7 @@ sorry
 lemma inv_Instrs_ok2__frame:
   assumes "Instrs_ok2 s C admininstr_lst (mk_functype t1 t2)"
   shows "(\<exists> t_lst t_1_lst t_2_lst.
-		(Instrs_ok2 s C admininstr_lst (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
+		(Instrs_ok2 s C admininstr_lst (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
 		(list_all (\<lambda> (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst) \<and>
 		((mk_instrtype (mk_list (t_lst @ t_1_lst)) (mk_list (t_lst @ t_2_lst)) <ti: mk_instrtype t1 t2)))"
 
