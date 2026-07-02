@@ -27,12 +27,12 @@ lemma b_e_type_empty1:
 
 lemma instr_inversion_helper:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
-  shows "\<exists> tp1 tp2. ((Instr_ok C e (mk_functype tp1 tp2)) \<and> 
+  shows "\<exists> tp1 tp2. ((Instr_ok C e (mk_functype tp1 tp2)) \<and>
         (mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2))"
   using assms
-proof (induction C "[e]" "mk_functype t1 t2" arbitrary: t1 t2 
-       rule: Instr_ok_Instrs_ok.inducts(2)[where ?P1.0 = 
-          "\<lambda> C e ft. 
+proof (induction C "[e]" "mk_functype t1 t2" arbitrary: t1 t2
+       rule: Instr_ok_Instrs_ok.inducts(2)[where ?P1.0 =
+          "\<lambda> C e ft.
         (case ft of (mk_functype t1 t2) \<Rightarrow>
         \<exists> tp1 tp2. Instr_ok C e (mk_functype tp1 tp2) \<and>
         mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)"])
@@ -64,25 +64,25 @@ next
     by auto
 next
   case (seq C instr_1 t_1_lst t_2_lst instr_2_lst t_3_lst)
-  then show ?case 
+  then show ?case
   proof (cases instr_1)
     case Nil
     then have e2: "instr_2_lst = [e]" using seq by simp
-    then have "(mk_instrtype (mk_list []) (mk_list [])) <ti: 
-               (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))" 
+    then have "(mk_instrtype (mk_list []) (mk_list [])) <ti:
+               (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))"
       using seq.hyps b_e_type_empty1 by blast
-    then show ?thesis 
-      using  \<open>instr_2_lst = [e]\<close> func_sub_app_single_r 
+    then show ?thesis
+      using  \<open>instr_2_lst = [e]\<close> func_sub_app_single_r
               Instrtype_sub_trans seq.hyps(3,4) by blast
   next
     case (Cons a list)
-    then have "instr_2_lst = []" "instr_1 = [e]" 
+    then have "instr_2_lst = []" "instr_1 = [e]"
       using seq.hyps(8) by auto
-      then have "(mk_instrtype (mk_list []) (mk_list [])) <ti: 
+      then have "(mk_instrtype (mk_list []) (mk_list [])) <ti:
                   (mk_instrtype (mk_list t_2_lst) (mk_list t_3_lst))"
     using seq.hyps(3) b_e_type_empty1 by blast
   then show ?thesis
-    using \<open>instr_1 = [e]\<close> func_sub_app_single_l seq.hyps(1,2) 
+    using \<open>instr_1 = [e]\<close> func_sub_app_single_l seq.hyps(1,2)
         Instrtype_sub_trans by blast
 qed
 next
@@ -109,22 +109,22 @@ lemma instr_ok_inv_store_pack:
         (((context_MEMS C) ! 0) = mt) \<and>
         (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat))) \<and>
         (wf_memtype mt) \<and>
-        ((mk_instrtype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) <ti: 
+        ((mk_instrtype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) <ti:
         mk_instrtype t1 t2))"
 proof -
   obtain tp1 tp2 where
-     "Instr_ok C (instr_sc6 (STORE (numtype_Inn v_Inn) 
+     "Instr_ok C (instr_sc6 (STORE (numtype_Inn v_Inn)
       (Some (mk_sz v_M)) v_memarg)) (mk_functype tp1 tp2)" and
 		 "(mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)"
   by (metis assms(1) assms(2) instr_inversion_helper)
   then show ?thesis using assms(1)
-  proof (induction "C" "(instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))" 
-        "mk_functype tp1 tp2" 
+  proof (induction "C" "(instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))"
+        "mk_functype tp1 tp2"
         arbitrary: v_Inn rule: Instr_ok_Instrs_ok.inducts(1))
       case (store_pack C mt v_Innsa)
-      have "v_Inn = v_Innsa" 
+      have "v_Inn = v_Innsa"
         by (metis store_pack.hyps(7) numtype_Inn.elims numtype.distinct(1))
-      then have "mk_instrtype (mk_list [valtype_I32, valtype_Inn v_Inn]) (mk_list []) <ti: 
+      then have "mk_instrtype (mk_list [valtype_I32, valtype_Inn v_Inn]) (mk_list []) <ti:
                 mk_instrtype t1 t2" using store_pack(8,9,10)
         by simp
       then show ?case
@@ -156,7 +156,7 @@ termination isabelle_reference_output_wasm2.valtype_numtype
 lemma instr_ok_inv_cvtop_reinterpret:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
           "e = (instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET))"
-  shows " 
+  shows "
       ((size (valtype_numtype nt_1)) \<noteq> None) \<and>
       ((size (valtype_numtype nt_2)) \<noteq> None) \<and>
       ((the ((size (valtype_numtype nt_1)))) = (the ((size (valtype_numtype nt_2))))) \<and>
@@ -164,7 +164,7 @@ lemma instr_ok_inv_cvtop_reinterpret:
 proof -
 obtain tp1 tp2 where
   a: "Instr_ok C (instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET)) (mk_functype tp1 tp2)" and
-  b: "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2" 
+  b: "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2"
   by (metis assms(2) assms(1) instr_inversion_helper)
   show ?thesis using a b
   apply (induction "C" "(instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET))" "mk_functype tp1 tp2" arbitrary: nt_1 nt_2 rule: Instr_ok_Instrs_ok.inducts(1))
@@ -486,10 +486,10 @@ lemma instr_ok_inversion:
   using instr_inversion_helper[OF assms]
 
 
-  apply auto                   
-(* This next line takes a full two minutes *) 
+  apply auto
+(* This next line takes a full two minutes *)
   apply (cases rule: Instr_ok.cases, auto)+
-  done          
+  done
 
 
 
@@ -531,7 +531,6 @@ next
 qed
 qed
 
-
 (*Instrs_ok2*)
 lemma e_type_empty1:
   assumes "Instrs_ok2 s C [] ft"
@@ -550,13 +549,13 @@ done
 
 lemma instr_ok2_inversion_helper:
   assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
-  shows "\<exists> tp1 tp2. (Instr_ok2 s C a_e (mk_functype tp1 tp2)) \<and> 
+  shows "\<exists> tp1 tp2. (Instr_ok2 s C a_e (mk_functype tp1 tp2)) \<and>
         (mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)"
   using assms
 proof (induction s C "[a_e]" "mk_functype t1 t2" arbitrary:  t1 t2
-      rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 = 
-        "\<lambda> s C e ft. (case ft of (mk_functype t1 t2) \<Rightarrow> 
-        \<exists> tp1 tp2. Instr_ok2 s C e (mk_functype tp1 tp2) \<and> 
+      rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 =
+        "\<lambda> s C e ft. (case ft of (mk_functype t1 t2) \<Rightarrow>
+        \<exists> tp1 tp2. Instr_ok2 s C e (mk_functype tp1 tp2) \<and>
           mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)" and ?P3.0 = "\<lambda> s C e rt. True"])
   case (plain C v_instr t_1_lst t_2_lst s)
   then show ?case using Instr_ok2_Instrs_ok2_Expr_ok2.plain Instrtype_sub_refl
@@ -575,7 +574,7 @@ next
     by fastforce
 next
   case (Instr_ok2__ref s v_ref rt C)
-  then show ?case using Instr_ok2_Instrs_ok2_Expr_ok2.Instr_ok2__ref Instrtype_sub_refl 
+  then show ?case using Instr_ok2_Instrs_ok2_Expr_ok2.Instr_ok2__ref Instrtype_sub_refl
     by fastforce
 next
   case (Instr_ok2__trap s C t_1_lst t_2_lst)
@@ -587,33 +586,33 @@ next
     by simp
 next
   case (Instrs_ok2__seq s C admininstr_1 t_1_lst t_2_lst admininstr_2_lst t_3_lst)
-  then show ?case 
+  then show ?case
   proof (cases admininstr_1)
     case Nil
     then have "admininstr_2_lst = [a_e]" using Instrs_ok2__seq by force
-    then have "(mk_instrtype (mk_list []) (mk_list [])) <ti: 
-               (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))" 
+    then have "(mk_instrtype (mk_list []) (mk_list [])) <ti:
+               (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))"
       using Instrs_ok2__seq.hyps e_type_empty1 by auto
-    then show ?thesis using func_sub_app_single_r 
+    then show ?thesis using func_sub_app_single_r
       using Instrs_ok2__seq.hyps(4) \<open>admininstr_2_lst = [a_e]\<close> Instrtype_sub_trans
       by fastforce
   next
     case (Cons a list)
     then have "admininstr_2_lst = []" using Instrs_ok2__seq by force
-    then have "(mk_instrtype (mk_list []) (mk_list [])) <ti: 
-               (mk_instrtype (mk_list t_2_lst) (mk_list t_3_lst))" 
+    then have "(mk_instrtype (mk_list []) (mk_list [])) <ti:
+               (mk_instrtype (mk_list t_2_lst) (mk_list t_3_lst))"
       using Instrs_ok2__seq.hyps(3) e_type_empty1
       by auto
-      then show ?thesis using func_sub_app_single_l 
+      then show ?thesis using func_sub_app_single_l
         by (metis \<open>mk_instrtype (mk_list [])
-             (mk_list []) <ti: mk_instrtype (mk_list t_2_lst) (mk_list t_3_lst)\<close> 
-              Instrs_ok2__seq.hyps(2) func_sub_app_single_l 
-              Instrs_ok2__seq.hyps(9)  
+             (mk_list []) <ti: mk_instrtype (mk_list t_2_lst) (mk_list t_3_lst)\<close>
+              Instrs_ok2__seq.hyps(2) func_sub_app_single_l
+              Instrs_ok2__seq.hyps(9)
               \<open>admininstr_2_lst = []\<close> Instrtype_sub_trans append.right_neutral)
   qed
 
 
- 
+
 next
   case (Instrs_ok2__sub s C t_1_lst t_2_lst t'_1_lst t'_2_lst)
   then show ?case
@@ -631,10 +630,35 @@ lemma instr_ok2_inversion:
     inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
       ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
+    inv_label: "a_e = (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
+      (\<exists> t'_lst t_lst.
+      (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
+      (Instrs_ok2 s (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr> C) admininstr_lst (mk_functype (mk_list []) (mk_list t_lst))) \<and>
+		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<Longrightarrow>
+		  (v_n = (length t'_lst)) \<Longrightarrow>
+      ((mk_instrtype (mk_list []) (mk_list t_lst)) <ti: mk_instrtype t1 t2))" and
     inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
+    inv_Instr_ok2__frame: "a_e = (admininstr_sc8 (FRAME_underscore v_n f admininstr_lst)) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst C' t_lst.
+		  (Frame_ok s f C') \<and>
+		  (Expr_ok2 s C' admininstr_lst (mk_list t_lst)) \<and>
+		  (wf_context C') \<and>
+		  (v_n = (length t_lst)) \<and>
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
+    inv_Instr_ok2__call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst.
+      (Externaddr_ok s (externaddr_FUNC v_funcaddr) (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
+		  (wf_externtype (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
+    inv_Instr_ok2__ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst rt.
+      (Ref_ok s v_ref rt) \<and>
+      ((mk_instrtype (mk_list []) (mk_list [valtype_reftype rt])) <ti: mk_instrtype t1 t2))" and
+    inv_Instr_ok2__trap: "a_e = (admininstr_sc7 admininstr_st7_TRAP) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst.
       ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))"
-
 
   using instr_ok2_inversion_helper[OF assms]
   apply auto
@@ -642,27 +666,40 @@ lemma instr_ok2_inversion:
   using assms Instrtype_sub_refl Instrtype_sub_sub_rule Instrtype_sub_frame_rule
 (*  apply blast+
   apply (metis instrtype.exhaust res_list.exhaust) *)
-  
+
 sorry
 
-lemma inv_ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst rt.
-      (Ref_ok s v_ref rt) \<and>
-      ((mk_instrtype (mk_list []) (mk_list [valtype_reftype rt])) <ti: mk_instrtype t1 t2))"
+lemma inv_Instrs_ok2__seq:
+  assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t3)"
+          "a_e = (admininstr_1_lst @ admininstr_2_lst)"
+  shows "(\<exists> t_1_lst t_2_lst t2.
+    (Instrs_ok2 s C admininstr_1_lst (mk_instrtype t1 t2)) \<and>
+		(Instrs_ok2 s C admininstr_2_lst (mk_instrtype t2 t3)) \<and>
+		(list_all (\<lambda> (admininstr_1 :: admininstr). (wf_admininstr admininstr_1)) admininstr_1_lst) \<and>
+		(list_all (\<lambda> (admininstr_2 :: admininstr). (wf_admininstr admininstr_2)) admininstr_2_lst) \<and>
+    ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t3))"
+
 sorry
 
-lemma inv_label:
-  assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
-  shows "a_e = (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
-      (\<exists> t'_lst t_lst.
-      (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
-      (Instrs_ok2 s (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr> C) admininstr_lst (mk_functype (mk_list []) (mk_list t_lst))) \<and>
-		  (wf_admininstr (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst))) \<Longrightarrow>
-		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<Longrightarrow>
-		  (v_n = (length t'_lst)) \<Longrightarrow>
-      ((mk_instrtype (mk_list []) (mk_list t_lst)) <ti: mk_instrtype t1 t2))"
-  sorry
+lemma inv_Instrs_ok2__sub:
+  assumes "Instrs_ok2 s C admininstr_lst (mk_functype t1 t2)"
+  shows "(\<exists> t_1_lst t_2_lst t2.
+		(Instrs_ok2 s C admininstr_lst (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
+		(Resulttype_sub t1 (mk_list t_1_lst)) \<and>
+		(Resulttype_sub (mk_list t_2_lst) t2) \<and>
+		(list_all (\<lambda> (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst) \<and>
+		((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst) <ti: mk_instrtype t1 t2)))"
 
+sorry
+
+lemma inv_Instrs_ok2__frame:
+  assumes "Instrs_ok2 s C admininstr_lst (mk_functype t1 t2)"
+  shows "(\<exists> t_lst t_1_lst t_2_lst.
+		(Instrs_ok2 s C admininstr_lst (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
+		(list_all (\<lambda> (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst) \<and>
+		((mk_instrtype (mk_list (t_lst @ t_1_lst)) (mk_list (t_lst @ t_2_lst)) <ti: mk_instrtype t1 t2)))"
+
+sorry
 
 
 lemma instr_ok2_wf:
@@ -670,6 +707,7 @@ lemma instr_ok2_wf:
   shows   "(wf_context C)"
 		     (* "(wf_admininstr e)" *)
           "wf_store s"
+         (*(Instr_ok2 s C e (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))*)
 	using assms
 proof (cases ft)
   case (mk_functype x1 x2)
