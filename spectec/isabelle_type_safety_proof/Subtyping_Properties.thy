@@ -223,13 +223,6 @@ lemma Resulttype_sub_t_list_subtyping:
     by (metis list_all2_lengthD mk_Resulttype_sub res_list.case res_list.exhaust)
   done
 
-(*
-lemma subtype_typing :
-  assumes "tf1 <ti: tf2"
-          "Instrs_ok2 s C e tf1"
-        shows "Instrs_ok2 s C e tf2"
-  using assms
-proof (cases assms(1))
-*)
+
 
 end
