@@ -534,20 +534,19 @@ qed
 
 (*Instrs_ok2*)
 lemma e_type_empty1:
-  assumes "Instrs_ok2 s C [] (mk_functype t1 t2)"
-          "ft = (mk_instrtype (mk_list ts) (mk_list ts'))"
-  shows   "(mk_instrtype (mk_list []) (mk_list [])) <ti: mk_instrtype t1 t2"
+  assumes "Instrs_ok2 s C [] ft"
+          "ft = (mk_functype (mk_list t1) (mk_list t2))"
+  shows   "(mk_instrtype (mk_list []) (mk_list [])) <ti: (mk_instrtype (mk_list t1) (mk_list t2))"
 using assms
-apply (induction "[] :: (admininstr list)" "mk_functype t1 t2" arbitrary: ts ts' rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2))
+apply (induction "[] :: (admininstr list)" "ft" arbitrary: t1 t2 rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2))
 apply simp+
 apply (metis Instrtype_sub_refl)
-   apply simp
-  sorry
-(*
+apply simp
+apply (meson Instrtype_sub_trans func_sub_app_single_r)
 using Instrtype_sub_sub_rule Instrtype_sub_trans apply force
 using Instrtype_sub_frame_rule Instrtype_sub_trans apply force
-by simp
-*)
+apply simp
+done
 
 lemma instr_ok2_inversion_helper:
   assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
