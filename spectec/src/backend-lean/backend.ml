@@ -3,6 +3,7 @@ open Util.Source
 (* open Il.Walk *)
 open Lean_ast
 open Lean_builder
+open Lean_utils
 
 let error at msg = Util.Error.error at "Lean4 translation" msg 
 module NonEmptyList = Util.Lib.NonEmptyList
@@ -77,7 +78,7 @@ let create_unop (op : Il.Ast.unop) : term
   = match op with
     | `PlusOp -> Ident "+"
     | `MinusOp -> Ident "-"
-    | `NotOp -> Ident "¬"
+    | `NotOp -> Ident "!"
 
 let create_binop (op : Il.Ast.binop) : term
   = match op with
@@ -223,7 +224,7 @@ let rec create_exp (e : Il.Ast.exp) : term
     | CompE (e1, e2) -> BinaryInfixFunApp (Term (create_exp e1), Ident "append", Term (create_exp e2))
     | ListE exps -> List (List.map create_exp exps)
     | LiftE option_term -> FunApp (DotProj (Ident "Option", Ident "toList"), NonEmptyList.from_list_unsafe [Term (create_exp option_term)])
-    | MemE (e1, e2) -> FunApp (DotProj (Ident "List", Ident "contains"), NonEmptyList.from_list_unsafe [Term (create_exp e1); Term (create_exp e2)])
+    | MemE (e1, e2) -> FunApp (DotProj (Ident "List", Ident "contains"), NonEmptyList.from_list_unsafe [Term (create_exp e2); Term (create_exp e1)])
     | LenE e1 -> FunApp (DotProj (Ident "List", Ident "length"), NonEmptyList.from_list_unsafe [Term (create_exp e1)])
     (* TODO: tackle pattern matching version of CatE *)
     | CatE (e1, e2) -> BinaryInfixFunApp (Term (create_exp e1), Ident "++", Term (create_exp e2))
@@ -502,7 +503,7 @@ and create_arg (arg : Il.Ast.arg) : term
     | DefA id -> Ident id.it
     | GramA _ -> failwith "not implemented yet"
 
-        
+
     (* | BinE (op, t, e1, e2) -> *)
 
     (* | VarE (_, _) -> error e.at "arg list in VarE must be empty because they should be eliminated by undep!"
@@ -580,7 +581,116 @@ and create_upd_exp
   in
   go (create_exp root) (flatten_path p)
 
-let create_prem (p : Il.Ast.prem) : term = match p.it with
+
+(* ── IterPr helpers ─────────────────────────────────────────────────────────
+   These are standalone (not in the create_exp and-chain) because they only
+   depend on create_exp (defined above) and create_prem/create_iter_prem
+   (defined below as a mutual let rec pair).
+   ─────────────────────────────────────────────────────────────────────────── *)
+
+
+(*
+  make_left_zip collections
+
+  Build a left-associatively zipped list from two or more Lean terms using
+  the |>.zip syntax (RightPipelineField).
+
+  Example with 2 inputs [m_lst; n_lst] (Pairs_ok):
+    m_lst |>.zip (n_lst)  →  m_lst.zip n_lst  : List (m × n)
+
+  Example with 3 inputs [xs; ys; zs]:
+    xs |>.zip (ys) |>.zip (zs)  →  (xs.zip ys).zip zs  : List ((α × β) × γ)
+
+  This is only called for n ≥ 2.
+*)
+let make_left_zip (collections : term list) : term =
+  (* collections = [xs; ys; zs; ...]  (at least 2 elements) *)
+  List.fold_left
+    (fun acc coll ->
+      (* acc.zip coll  →  FunApp(RightPipelineField(acc, "zip"), [coll]) *)
+      FunApp (
+        RightPipelineField (acc, Ident "zip"),
+        NonEmptyList.from_list_unsafe [Term coll]
+      ))
+    (List.hd collections)    (* start with xs *)
+    (List.tl collections)    (* fold in ys, then zs, etc. *)
+
+(*
+  make_proj i n base
+
+  Return the Lean projection for element at 0-indexed position i in a
+  left-nested tuple of depth n, rooted at base.
+
+  Left-nested structure (how List.zip chains):
+    n=2 : α × β           → i=0: base.1   i=1: base.2
+      (Pairs_ok: base=__iter_tuple; i=0 → "v_m"=__iter_tuple.1, i=1 → "v_n"=__iter_tuple.2)
+    n=3 : (α × β) × γ     → i=0: base.1.1   i=1: base.1.2   i=2: base.2
+    n=4 : ((α×β)×γ) × δ   → i=0: base.1.1.1  i=1: base.1.1.2  i=2: base.1.2  i=3: base.2
+
+  Recursive rule:
+    n=1        → base             (scalar, no tuple)
+    i = n-1    → base.2           (last element is always the right component)
+    otherwise  → proj i (n-1) base.1   (recurse into left sub-tuple)
+*)
+let rec make_proj (i : int) (n : int) (base : term) : term =
+  if n = 1 then
+    base                                               (* n=1: element is the term itself *)
+  else if i = n - 1 then
+    DotProj (base, Ident "2")                         (* last element → .2 *)
+  else
+    make_proj i (n - 1) (DotProj (base, Ident "1"))  (* recurse into left sub-tuple via .1 *)
+
+
+(*
+  create_prem and create_iter_prem are mutually recursive:
+    create_prem dispatches IterPr to create_iter_prem
+    create_iter_prem calls create_prem on (possibly renamed) sub-premises
+
+  ── create_prem ────────────────────────────────────────────────────────────
+  Translates an IL premise into a Lean term (always a Prop-valued expression).
+
+  ── create_iter_prem ───────────────────────────────────────────────────────
+  Translates IterPr(p, iterexp) into a kernel-safe BoundedForall term.
+
+  IterPr(p, (iter, id_exp_list)) means:
+    "premise p holds for every simultaneous assignment of variables id_i to
+     elements drawn in parallel from their respective collections."
+
+  We use ∀ x ∈ xs, P x rather than inductive Forall/Forall₂ because the
+  inductive form breaks Lean's positivity checker inside mutual inductive
+  blocks (see PR #192 discussion, Lean issue leanprover/lean4#1964).
+
+  ARITY 0 — no iteration variables, emit the premise directly:
+    IterPr(IfPr(x == y), (List, []))
+    →  x == y
+
+  ARITY 1 — single collection, emit ∀ var ∈ collection, body:
+    IterPr(RulePr("TypeOk", VarE "t"), (List, [("t", VarE "ts")]))
+    →  ∀ t ∈ ts, TypeOk (t)
+
+    No renaming needed: the prem body already uses "t" as the element
+    variable, and BoundedForall binds "t" exactly.
+
+  ARITY ≥ 2 — zip all collections, bind one tuple variable, project each:
+    IterPr(
+      RulePr("Pair_ok", (Infix Arg |- Arg), TupE [VarE "v_n"; VarE "v_m"]),
+      (List, [("v_m", VarE "m_lst"); ("v_n", VarE "n_lst")])
+    )
+    →  ∀ __iter_tuple ∈ m_lst |>.zip (n_lst),
+         Pair_ok (__iter_tuple.2) (__iter_tuple.1)
+
+  Algorithm for arity ≥ 2:
+    1. Build zipped collection: m_lst |>.zip (n_lst)
+    2. create_prem on the UNCHANGED prem → Lean term with Ident "v_n", Ident "v_m"
+    3. Substitute: "v_m" (i=0) → __iter_tuple.1, "v_n" (i=1) → __iter_tuple.2
+       — this is safe (no capture) because subst_lean_term drops a name from
+       the active substitution as soon as it descends into a binder that
+       rebinds it (see subst_lean_term's BoundedForall/Lambda cases).
+    4. Wrap in BoundedForall { var = "__iter_tuple"; collection = m_lst |>.zip (n_lst); body }
+
+  For Opt iteration the option is converted to a list via Option.toList.
+*)
+let rec create_prem (p : Il.Ast.prem) : term = match p.it with
   | RulePr (
     (id : Il.Ast.id),
     ([] : Il.Ast.arg list),
@@ -599,12 +709,131 @@ let create_prem (p : Il.Ast.prem) : term = match p.it with
   | IfPr (
     (exp : Il.Ast.exp)
   ) -> create_exp exp
-  | 
+  | IterPr (inner_prem, iterexp) ->
+      create_iter_prem inner_prem iterexp   (* dispatch to the arity-independent handler *)
+  | NegPr (inner_prem) ->
+      Not (create_prem inner_prem)
   | _ -> Ident "TEMPORARY_PREM"
+
+(*
+  create_iter_prem — see the large comment block above create_prem for full docs.
+*)
+and create_iter_prem
+  (prem       : Il.Ast.prem)
+  (iterexp    : Il.Ast.iterexp)
+  : term =
+
+  let (
+    iter,           (* List *)
+    id_exp_list
+  ) = iterexp in
+
+  (* Wrap a collection term in Option.toList if this is an Opt iteration.
+     e.g. for IterPr(p, (Opt, [("x", opt_exp)])):
+       opt_exp : Option α  →  Option.toList opt_exp : List α *)
+  let to_list_if_opt (coll : term) : term =
+    match iter with
+    | Opt ->
+        FunApp (
+          DotProj (Ident "Option", Ident "toList"),
+          NonEmptyList.from_list_unsafe [Term coll]
+        )
+    | _ -> coll
+  in
+
+  match id_exp_list with
+
+  (* ── Arity 0: degenerate — no iteration, emit premise directly ───────── *)
+  | [] ->
+      create_prem prem
+
+  (* ── Arity 1: ∀ id ∈ collection, body ───────────────────────────────── *)
+  | [(id, coll_exp)] ->
+      (*
+        id.it    = "t"        the element variable name already used in prem body
+        coll_exp = VarE "ts"  the list to iterate over
+
+        No renaming needed: prem body already contains VarE "t", and we bind
+        BoundedForall var = "t" — so create_prem's Ident "t" is correct as-is.
+
+        Example:
+          IterPr(RulePr("TypeOk", VarE "t"), (List, [("t", VarE "ts")]))
+          →  ∀ t ∈ ts, TypeOk (t)
+      *)
+      let collection : term = to_list_if_opt (create_exp coll_exp) in   (* ts *)
+      let body       : term = create_prem prem in                         (* TypeOk (t) *)
+      BoundedForall { var = id.it; collection; body }
+
+  (* ── Arity ≥ 2: zip collections, bind tuple var, project each id ─────── *)
+  | _ ->
+      (*
+        Example (Pairs_ok): id_exp_list = [("v_m", VarE "m_lst"); ("v_n", VarE "n_lst")]
+          n            = 2
+          tuple_var    = "__iter_tuple"
+          collections  = [Ident "m_lst"; Ident "n_lst"]
+          zipped       = m_lst |>.zip (n_lst)        : List (m × n)
+          prem_term    = create_prem prem (UNCHANGED — no renaming)
+                       = Pair_ok (Ident "v_n") (Ident "v_m")
+          substs       = [("v_m", __iter_tuple.1); ("v_n", __iter_tuple.2)]
+          body         = Pair_ok (__iter_tuple.2) (__iter_tuple.1)
+          result       = ∀ __iter_tuple ∈ m_lst |>.zip (n_lst),
+                            Pair_ok (__iter_tuple.2) (__iter_tuple.1)
+
+        We substitute directly on the original names (t1, t2, ...) rather
+        than renaming to placeholders first — there is no safety benefit to
+        the indirection, since id_exp_list's names are already distinct
+        within this IterPr. The thing that actually has to be capture-safe
+        is subst_lean_term itself: it must stop substituting a name once it
+        descends into a nested binder (BoundedForall/Lambda) that rebinds
+        it, which it now does (see its definition above).
+      *)
+      let n : int = List.length id_exp_list in          (* e.g. 2 *)
+      let tuple_var = "__iter_tuple" in                  (* fresh bound variable *)
+
+      (* 1. Build left-nested zip: ts1 |>.zip (ts2) |>.zip (ts3) ... *)
+      let collections : term list =
+        List.map (fun (_, e) -> to_list_if_opt (create_exp e)) id_exp_list in
+      let zipped_collection : term = make_left_zip collections in
+
+      (* 2. Translate prem as-is — no renaming. create_prem produces
+            Ident "v_n", Ident "v_m", ... directly from the original names. *)
+      let prem_term : term = create_prem prem in
+
+      (* 3. Substitution: original name → make_proj i n (Ident "__iter_tuple")
+            e.g. n=2 (Pairs_ok): "v_m" (i=0) → __iter_tuple.1   "v_n" (i=1) → __iter_tuple.2
+                 n=3: "x" (i=0) → __iter_tuple.1.1  "y" (i=1) → __iter_tuple.1.2  "z" (i=2) → __iter_tuple.2 *)
+      let substs : (string * term) list =
+        List.mapi
+          (fun i (id, _) ->
+            ( id.it,                                  (* original name, e.g. "v_m" *)
+              make_proj i n (Ident tuple_var) ))      (* __iter_tuple.1.2 etc. *)
+          id_exp_list in
+
+      (* 4. Apply substitution (capture-safe — see subst_lean_term) and
+            wrap in BoundedForall *)
+      let body : term = subst_lean_term substs prem_term in
+      BoundedForall {
+        var        = tuple_var;          (* "__iter_tuple" *)
+        collection = zipped_collection;  (* ts1 |>.zip (ts2) |>.zip ... *)
+        body;
+      }
 
 
 let append_prems_to_term (term : term) (prems : Il.Ast.prem list) : term
-  = if prems = [] then term
+  
+  (* TODO: it would be nice if this could be elegantly done but only for DecD *)
+  (*
+    ElsePr ("-- otherwise") carries no actual condition to check at runtime —
+    it just marks "this is the fallback clause" for the else/else-simplification
+    middlend passes. Drop it here so it never turns into a printed guard; e.g.
+
+      def $opt_(syntax X, x1) = none  -- otherwise
+
+    should render as a plain match arm body, not `TEMPORARY_PREM → none` or
+    `True → none`.
+  *)
+  = let prems = List.filter (fun p -> match p.it with ElsePr -> false | _ -> true) prems in
+    if prems = [] then term
     else
       let prems_as_terms = List.map create_prem prems in
       create_curried_func (prems_as_terms @ [term])
@@ -692,7 +921,7 @@ let create_typcase
     );
   }
 
-let create_def (def : Il.Ast.def) : command option
+let rec create_def (def : Il.Ast.def) : command option
   = match def.it with
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = AliasT t; _})); _}])
@@ -1075,7 +1304,53 @@ let create_def (def : Il.Ast.def) : command option
           }
       }))
     | GramD _ -> None
-    | RecD _ -> None
+    | RecD defs ->
+      (
+        match List.length defs with
+          | 0 -> None
+          | 1 -> create_def (List.hd defs)
+          | _ ->
+            (* TODO: refactor to make maintenance easier *)
+            let is_inductive = fun def -> match def.it with
+              | RelD _ -> true
+              | _ -> false
+            in
+            let is_structure = fun def -> match def.it with
+              | TypD (_, _, [{it = InstD (_, _, {it = StructT _; _}); _}]) -> true
+              | _ -> false
+            in
+            let is_def = fun def -> match def.it with 
+              | DecD (_, _, _, _ :: _) -> true   (* non-empty clauses → Def; empty clauses → Opaque, excluded *)
+              | _ -> false
+            in
+            let is_abbrev = fun def -> match def.it with
+              | TypD (_, _, [{it = InstD (_, _, {it = AliasT _; _}); _}]) -> true
+              | _ -> false
+            in
+            let all_inductive_or_structure = List.for_all (fun def -> is_inductive def || is_structure def) defs in
+            let all_abbrev_or_def = List.for_all (fun def -> is_abbrev def || is_def def) defs in
+            (
+              match all_inductive_or_structure, all_abbrev_or_def with
+                | true, _ ->
+                  let inductives = List.filter_map (fun def ->
+                    match create_def def with Some (Inductive i) -> Some i | _ -> None
+                  ) defs in
+                  let structures = List.filter_map (fun def ->
+                    match create_def def with Some (Structure s) -> Some s | _ -> None
+                  ) defs in
+                  Some (Mutual (MutualInductiveStructure (inductives, structures)))
+
+                | false, true ->
+                  let defs' = List.filter_map (fun def -> (* Name collision *)
+                    match create_def def with Some (Def s) -> Some s | _ -> None
+                  ) defs in
+                  let abbrevs = List.filter_map (fun def ->
+                    match create_def def with Some (Abbrev i) -> Some i | _ -> None
+                  ) defs in
+                  Some (Mutual (MutualDefAbbrev (defs', abbrevs)))
+                | false, false -> None
+            )
+        )
     | HintD _ -> None
     | RelD _ -> failwith "should have been handled by earlier case"
     | TypD _ -> None

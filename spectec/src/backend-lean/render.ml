@@ -277,6 +277,20 @@ and render_term (term : term) : document =
   | AnonymousApp ->
       string "(· ·)"
 
+  | BoundedForall { var; collection; body } ->
+      (* Renders as:  ∀ var ∈ collection, body
+         e.g.         ∀ t ∈ ts, TypeOk t
+         e.g.         ∀ p ∈ ts1 |>.zip (ts2), ValType_sub (p.1) (p.2)  *)
+      string "∀ "
+      ^^ render_id var
+      ^^ string " ∈ "
+      ^^ render_term collection
+      ^^ string ", "
+      ^^ render_term body
+
+  | Not term ->
+      string "¬ "
+      ^^ render_term term
   (* | _ -> failwith (Printf.sprintf "render_term: unhandled term: %s" (show_term term)) *)
 
 and render_tactic_seq (tactic_seq : tactic_seq) : document =

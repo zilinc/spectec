@@ -121,6 +121,28 @@ type term =
   
   | AnonymousApp            (* (· ·) — apply first arg to second *)
 
+  (*
+    ∀ x ∈ xs, P x
+
+    This is Lean 4 macro notation (not a primitive term) that desugars to:
+
+      ∀ x, x ∈ xs → P x
+
+    It is the kernel-safe translation for IterPr: instead of defining
+    Forall inductively (which breaks the kernel for mutual inductives),
+    we emit this plain ∀ form which Lean accepts in all contexts.
+
+    See: https://lean-lang.org/doc/reference/latest/Terms/Function-Types/
+         for the underlying ∀ binder grammar this notation desugars to.
+  *)
+  | BoundedForall of {
+      var        : ident;   (* x  — the bound element variable *)
+      collection : term;    (* xs — the list being iterated over *)
+      body       : term;    (* P x — the proposition applied to each element *)
+    }
+
+  | Not of term
+
   (* | UpdateList of {
     name_of_list_to_update: term;
     index: term;
