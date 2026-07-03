@@ -503,6 +503,8 @@ and render_bracketed_binder (binder : bracketed_binder) : document =
     let idents_str = separate (string " ") (List.map render__ident_or_hole (NonEmptyList.to_list idents)) in
     let term_str = render_term term in
     string "{" ^^ idents_str ^^ string " : " ^^ term_str ^^ string "}"
+  | InstanceParam term ->
+    string "[" ^^ render_term term ^^ string "]"
 
 (* NOTE: _script isn't a Lean AST construct at time of writing; this function is
 just for convenience *)

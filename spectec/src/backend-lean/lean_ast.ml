@@ -208,6 +208,7 @@ and bracketed_binder =
   | ExplicitParam of _ident_or_hole non_empty_list * term
   | OptAutoParam of _ident_or_hole non_empty_list * term * term
   | ImplicitParam of _ident_or_hole non_empty_list * term
+  | InstanceParam of term  (* [BEq X] — anonymous instance binder *)
 [@@deriving show]
 
 and _params =

@@ -261,13 +261,18 @@ let rec create_exp (e : Il.Ast.exp) : term
       FunApp (func, NonEmptyList.from_list_unsafe arg_terms)
     | IterE (exp, iterexp) -> create_iter exp iterexp
     | CvtE (exp, numtyp1, numtyp2) -> 
-      let func = Ident "cast" in
+      BinaryInfixFunApp (
+        Term (create_exp exp),
+        Ident ":",
+        Term (create_numtyp numtyp2)
+      )
+      (* let func = Ident "cast" in
       let arg_terms = NonEmptyList.from_list_unsafe [
         Term (create_exp exp);
         Term (create_numtyp numtyp1);
         Term (create_numtyp numtyp2);
       ] in
-      FunApp (func, arg_terms)
+      FunApp (func, arg_terms) *)
     | _ -> failwith "not implemented yet for create_exp"
     
 and create_iter
@@ -933,10 +938,27 @@ let rec create_def (def : Il.Ast.def) : command option
       }))
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = VariantT ts; _})); _}])
-      -> Some (Inductive {
+      ->
+        (* (X : Type) *)
+        let create_typ_binder (quant : Il.Ast.quant) : _params
+          = match quant.it with
+            | TypP id -> BracketedBinder(ExplicitParam(
+              NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+              Type None
+            ))
+            | _ -> failwith "only TypP should be here"
+        in
+
+        Some (Inductive {
         modifier = empty_modifier;
         id = id.it;
-        signature = ([], Some (Type None));
+        signature = (
+          List.map
+            create_typ_binder
+            params,
+          
+          Some (Type None)
+        );
         cases = List.map (create_typcase id params) ts;
         deriving = standard_deriving; (* TODO: look into deriving *)
       })
@@ -1226,6 +1248,8 @@ let rec create_def (def : Il.Ast.def) : command option
           Some (create_typ typ) (* val *)
       in
 
+      let get_redundant_match_terms ()
+
       
       (* TODO: see if we should / can remove unnecessary components of match term *)
       let create_clause
@@ -1261,9 +1285,17 @@ let rec create_def (def : Il.Ast.def) : command option
               | TypA _ -> failwith "only VarT should be here"
               | ExpA exp -> (
                 match exp.it with
-                  | CatE (exp1, exp2) -> BinaryInfixFunApp (
-                      Term (create_exp exp1),
-                      Ident "++",
+                  | CatE (exp1, exp2) ->
+                    (* CatE (ListE [e], rest) in IL means [e] ++ rest = e :: rest.
+                       Unwrap the singleton ListE so the pattern binds the element,
+                       not a singleton list containing it. *)
+                    let head_pat = match exp1.it with
+                      | ListE [e] -> create_exp e
+                      | _ -> create_exp exp1
+                    in
+                    BinaryInfixFunApp (
+                      Term head_pat,
+                      Ident "::",
                       Term (create_exp exp2)
                     )
                   | IterE (exp, _) -> create_exp exp
@@ -1299,9 +1331,9 @@ let rec create_def (def : Il.Ast.def) : command option
         id = id.it;
         signature = signature;
         body = Match {
-            match_terms = create_match_term params;
-            cases = List.map (fun clause -> create_clause clause params) clauses;
-          }
+          match_terms = create_match_term params;
+          cases = List.map (fun clause -> create_clause clause params) clauses;
+        }
       }))
     | GramD _ -> None
     | RecD defs ->
