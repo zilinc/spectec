@@ -26,7 +26,9 @@ lemma t_inst_match_is:
                        context_RETURN = c \<rparr>"
   by (metis (full_types) assms unit.exhaust res_context.surjective t_inst_match_def)
 
-lemma step_wf: "Step_is_wf cfg cfg'"
+lemma step_wf: "(wf_config var_0) \<Longrightarrow>
+		 (Step var_0 var_1) \<Longrightarrow>
+		 (wf_config var_1)"
   sorry
 
 
@@ -720,7 +722,7 @@ proof -
     by blast
 
   have "Step (mk_config (mk_state s f) es) (mk_config (mk_state s' f') es')"
-    by (metis Step_is_wf.cases step_wf)
+    by (metis assms(2) cfg_is(1) cfg_is(2))
 
 	have 1:"Frame_ok s f C"
 	  using State_ok.cases cfg_is(3)
@@ -782,7 +784,8 @@ proof -
       by simp_all
 
 		have bc:"(wf_state (mk_state s' f'))"
-		  by (metis Step_is_wf.cases config.inject step_wf wf_config.cases)
+  by (metis "5" cfg_is(6) config.inject step_wf wf_config.cases)
+		  
 
     have c:"wf_store s'"
       by (metis bc state.inject wf_state.cases)
@@ -827,12 +830,10 @@ proof -
       using a(1) cfg_is(5) b
       unfolding Expr_ok2.simps
       apply simp
-      by (metis Step_is_wf.cases c config.inject proj_list_0.cases step_wf
-          wf_config.simps)
+      by (metis c inv_Instrs_ok2__frame res_list.exhaust)
 
     show ?thesis
-      by (metis State_ok.cases Step_is_wf.cases d b cfg_is(2)
-          mk_Config_ok proj_list_0.cases step_wf)
+      using "5" Config_ok.simps assms(1) b bc cfg_is(1,2,5) d step_wf by auto
 qed
 
 theorem progress:
