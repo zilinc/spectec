@@ -318,7 +318,8 @@ let rec is_known_length knowns exp : bool =
   else
     match exp.it with
     | ListE _ -> true
-    | IterE (exp1, (ListN(n, _), xes)) when is_known knowns n -> true
+    | IterE (_, (ListN(n, _), xes)) when is_known knowns n -> true
+    | IterE (_, ((List | List1 | Opt), xes)) when List.exists (fun (_, e) -> is_known_length knowns e) xes -> true
     | CatE (exp1, exp2) | CompE (exp1, exp2) ->
       let k1 = is_known_length knowns exp1 in
       let k2 = is_known_length knowns exp2 in
