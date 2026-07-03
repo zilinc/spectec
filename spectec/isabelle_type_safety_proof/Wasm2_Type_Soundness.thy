@@ -455,17 +455,14 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     obtain t1' t2' where
       ts: "mk_instrtype (mk_list t1') (mk_list t2') <ti: mk_instrtype t1 t2"
       "Instr_ok C' (instr_sc0 NOP) (mk_functype (mk_list t1') (mk_list t2'))" 
-      using inv_plain[where ?a_e = "admininstr_sc0 (admininstr_st0_NOP)" 
-                      and ?v_instr = "instr_sc0 NOP" and ?s = "s" and ?C = "C'"
-                      and ?t1.0 = "t1" and ?t2.0 = "t2"] 
+      using inv_plain[where ?v_instr = "instr_sc0 NOP"]
             Step_pure__nop(8,9)
       using admininstr_instr.domintros(1) admininstr_instr.psimps(1) by fastforce
-    then have "(mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype (mk_list t1') (mk_list t2'))" 
-      using inv_nop Instrs_ok__instr
-      using Step_pure__nop.prems(8) instr_case_0 instr_ok2_wf(1) by blast
     then show ?case 
       using ts plain nop subtype_typing Instrtype_sub_trans Instrs_ok2__instr
-      by (metis Instrs_ok2__empty instr_ok2_wf(1,2) pure.prems(8,9))
+            Instrs_ok2__empty instr_ok2_wf(1,2) pure.prems(8,9)
+            inv_nop Instrs_ok__instr Step_pure__nop.prems(8) instr_case_0
+      by (metis (no_types, lifting))
   next
     case (Step_pure__drop v_val)
     then show ?case sorry
@@ -790,10 +787,8 @@ proof -
     have c:"wf_store s'"
       by (metis bc state.inject wf_state.cases)
 
-(* UH OH! *)
-(* Derived "False" from these facts alone: "0"(1) "0"(2) "0"(3) "2" "3" "6" "7" C'_is(1) C'_is(3) C'_is(4) Ex_list_of_length Step_is_wf.cases a(4) admininstr_subtype_8.size_neq e_preservation_locals(1) frame.cases frame.ext_inject frame.surjective list_all2_mono step_wf *)
     have cc:"wf_context C'"
-      by (fastforce intro: C'_is  Moduleinst_ok.cases)
+      by (fastforce intro: C'_is Moduleinst_ok.cases)
 
     have ccc:"length (context_LOCALS C) = length (LOCALS f')"
       by (simp add: "2" C'_is(3) a(3))
