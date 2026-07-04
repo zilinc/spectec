@@ -78,7 +78,7 @@ TEST_PATHS := $(TEST)
 endif
 
 
-.PHONY = anim-test anim-test-all
+.PHONY = anim-test anim-test-all anim-test-bench
 
 anim-test: SPECTEC_EXTRA_FLAGS ?= -l
 anim-test: SPECTEC_FLAGS ?= --animate --inline --new-interpreter-v
@@ -88,9 +88,13 @@ anim-test: exe
 anim-test-all: exe
 	$(MAKE) anim-test 'TEST=NON_SLOW'
 
+anim-test-bench: exe
+	$(MAKE) anim-test 'TEST=OCAML_ALL'
+
+
 # Wasm interpreter in OCaml
 
-.PHONY = ocaml-build ocaml-clean ocaml-run ocaml-test ocaml-testall
+.PHONY = ocaml-build ocaml-clean ocaml-run ocaml-test ocaml-test-all ocaml-test-bench
 
 
 SPEC ?= ../specification/wasm-3.0/* src/backend-animation/meta.spectec
@@ -135,6 +139,7 @@ ocaml-test-all: ocaml-build
 	@echo "#### Running OCaml interpreter test."
 	$(MAKE) ocaml-run 'TEST=OCAML_ALL'
 
+ocaml-test-bench: ocaml-test-all
 
 # Latex
 
