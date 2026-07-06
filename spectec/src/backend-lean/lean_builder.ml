@@ -23,6 +23,30 @@ let opaque_def = By [
   ]
 ]
 
+(* TODO: consider how this is implemented; opaque? Mathlib? *)
+let rat_to_nat : command =
+  (*
+    opaque rat_to_nat (r : Rat) : Nat := by
+      first
+      | exact Inhabited.default
+      | intros ; assumption
+
+    Converts a Rat to Nat by truncation toward zero (same semantics as SpecTec's $() cast).
+    Defined opaquely to avoid noncomputable issues; the spec treats this as a primitive.
+  *)
+  Opaque {
+    modifier = empty_modifier;
+    id = "rat_to_nat";
+    signature = (
+      [ BracketedBinder (ExplicitParam (
+          NonEmptyList.from_list_unsafe [Ident_IOH "r"],
+          Ident "Rat"
+        )) ],
+      Ident "Nat"
+    );
+    rhs = Some opaque_def;
+  }
+
 let list_ap : command =
   (*
     def List.ap (fs : List (α → β)) (xs : List α) : List β :=

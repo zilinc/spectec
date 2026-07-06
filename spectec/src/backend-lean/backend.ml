@@ -52,8 +52,16 @@ and create_typ (t : Il.Ast.typ) : term
     )
     | IterT (t, iter) -> create_iter_typ iter t
 
+let lean_id_char c =
+  (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c = '_'
+
+(* Bracket atoms ({}, [], ()) are valid SpecTec mixop delimiters but not Lean identifiers.
+   Strip them; the enclosed arguments become explicit constructor parameters instead. *)
 let mixop_to_id (m : Il.Ast.mixop) : string
-  = Xl.Mixop.to_string_with (Fun.const "") "" m
+  = let raw = Xl.Mixop.to_string_with (Fun.const "") "" m in
+    let id = String.of_seq (Seq.filter lean_id_char (String.to_seq raw)) in
+    if id = "" then failwith ("mixop_to_id: empty Lean identifier from mixop \"" ^ raw ^ "\"")
+    else id
 
 let create_inductive_type_with_params_applied
   (parent_type : Il.Ast.id)
@@ -96,7 +104,7 @@ let create_binop (op : Il.Ast.binop) : term
 let create_cmpop (op : Il.Ast.cmpop) : term
   = match op with
     | `EqOp -> Ident "=="
-    | `NeOp -> Ident "≠"
+    | `NeOp -> Ident "!="
     | `LtOp -> Ident "<"
     | `GtOp -> Ident ">"
     | `LeOp -> Ident "≤"
@@ -259,14 +267,21 @@ let rec create_exp (e : Il.Ast.exp) : term
         then_branch = create_exp then_exp;
         else_branch = create_exp else_exp;
       }
-    | CallE (id, args) -> 
+    | CallE (id, args) ->
       let func = (Ident id.it : term) in
       let arg_terms = List.map (fun arg -> Term (create_arg arg)) args in
-      FunApp (func, NonEmptyList.from_list_unsafe arg_terms)
+      (match arg_terms with
+       | [] -> func
+       | _ -> FunApp (func, NonEmptyList.from_list_unsafe arg_terms))
     | IterE (exp, iterexp) -> create_iter exp iterexp
     | CvtE (exp, `IntT, `NatT) ->
       FunApp (
         DotProj (Ident "Int", Ident "toNat"),
+        NonEmptyList.from_list_unsafe [Term (create_exp exp)]
+      )
+    | CvtE (exp, `RatT, `NatT) | CvtE (exp, `RealT, `NatT) ->
+      FunApp (
+        Ident "rat_to_nat",
         NonEmptyList.from_list_unsafe [Term (create_exp exp)]
       )
     | CvtE (exp, _numtyp1, numtyp2) ->
@@ -590,8 +605,45 @@ and create_upd_exp
     | IdxSeg e :: rest ->
         let v = fresh () in
         create_list_modify prev (create_exp e) (simple_lambda v (go (Ident v) rest))
-    | SliceSeg _ :: _ ->
-        failwith "SliceP inside UpdE not yet supported"
+    | SliceSeg (e1, e2) :: rest ->
+        (* Slice update: extract the subrange [e1 .. e1+e2) of prev, recurse into it
+           (via go old_slice rest), then splice the updated slice back in.
+           Terminal (rest=[]):     go old_slice [] = operation_on_old_val old_slice.
+           Non-terminal (rest!=[]): go old_slice rest navigates further WITHIN the slice.
+           Mirrors how IdxSeg delegates to go (Ident v) rest on a single element.
+           Example (terminal):     s[.MEMS[x].BYTES[i : j] = b*]
+             prev = elem_1.BYTES,  e1 = i,  e2 = j,  operation_on_old_val _ = b*
+           Example (non-terminal): s[.MEMS[i : n][k] = mi]
+             prev = s.MEMS,  rest = [IdxSeg k],  operation_on_old_val _ = mi *)
+        let e1_t : term = create_exp e1 in
+        (* e1_t : term  ----  e.g.  i *)
+        let e2_t : term = create_exp e2 in
+        (* e2_t : term  ----  e.g.  j *)
+        let drop_e1 : term =
+          FunApp (DotProj (prev, Ident "drop"),
+                  NonEmptyList.from_list_unsafe [Term e1_t]) in
+        (* drop_e1 : term  ----  e.g.  elem_1.BYTES.drop i *)
+        let old_slice : term =
+          FunApp (DotProj (drop_e1, Ident "take"),
+                  NonEmptyList.from_list_unsafe [Term e2_t]) in
+        (* old_slice : term  ----  e.g.  (elem_1.BYTES.drop i).take j  = bytes[i..i+j) *)
+        let new_middle : term = go old_slice rest in
+        (* new_middle : term  ----  terminal: b*;  non-terminal: List.modify old_slice k ... *)
+        let prefix : term =
+          FunApp (DotProj (prev, Ident "take"),
+                  NonEmptyList.from_list_unsafe [Term e1_t]) in
+        (* prefix : term  ----  e.g.  elem_1.BYTES.take i *)
+        let e1_plus_e2 : term = BinaryInfixFunApp (Term e1_t, Ident "+", Term e2_t) in
+        (* e1_plus_e2 : term  ----  e.g.  i + j *)
+        let suffix : term =
+          FunApp (DotProj (prev, Ident "drop"),
+                  NonEmptyList.from_list_unsafe [Term e1_plus_e2]) in
+        (* suffix : term  ----  e.g.  elem_1.BYTES.drop (i + j) *)
+        BinaryInfixFunApp (
+          Term (BinaryInfixFunApp (Term prefix, Ident "++", Term new_middle)),
+          Ident "++",
+          Term suffix)
+        (* result : term  ----  e.g.  (elem_1.BYTES.take i ++ bs) ++ (elem_1.BYTES.drop (i + j)) *)
   in
   go (create_exp root) (flatten_path p)
 
@@ -1503,20 +1555,27 @@ let rec create_def (def : Il.Ast.def) : command option
           (* [("x", "v_localidx")] -- corr. to v_localidx via args_to_original_names_substs *)
           let substs : (string * string) list =
 
+            (* Rename every non-deconstructed (pass-through VarE) arg to its parent param name.
+               This covers two scenarios:
+               1. Pass-through in THIS clause, deconstructed in another clause:
+                  e.g.  clause A: ((s;f), Foo x)  clause B: ((s;f), y)  =>  rename "y"->"v_thing"
+               2. Pass-through everywhere, but the match is on a DIFFERENT param:
+                  e.g.  fun_type (v_state, v_typeidx): clause ((s;f), x) matches only v_state,
+                  leaving "x" unbound in the arm body without this rename. *)
             let substs_arg_to_quant : (arg * quant) list =
               List.filter
-                (fun (arg, _) -> List.mem arg args_deconstructed_in_other_clauses_but_not_here)
+                (fun (arg, _) -> not (is_deconstruction arg))
                 args_to_original_names_substs
             in
-            
-            List.map
+
+            List.filter_map
               (fun (arg, quant) -> match arg.it, quant.it with
-                | ExpA {it = VarE id; _}, ExpP (qid, _) -> (id.it, qid.it)
-                | TypA {it = VarT (id, []); _}, TypP qid -> (id.it, qid.it)
-                | _ -> failwith "only ExpA or TypA should be here"
+                | ExpA {it = VarE id; _}, ExpP (qid, _) -> Some (id.it, qid.it)
+                | TypA {it = VarT (id, []); _}, TypP qid -> Some (id.it, qid.it)
+                | _ -> None
               )
               substs_arg_to_quant
-            
+
           in
 
           let subst_func (id : string) : string =
@@ -1671,6 +1730,7 @@ let prologue : command list =
   [
     list_ap;
     option_ap;
+    rat_to_nat;
   ]
 
 let create_script (il : script) : command list
