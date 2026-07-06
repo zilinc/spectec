@@ -875,9 +875,31 @@ let create_typcase
     = create_inductive_type_with_params_applied parent_type parent_params
   in
 
-  let appended_with_prems (* X_lst.length < v_n -> vec X *)
+  (*
+  
+  NOTE: From:
+
+    syntax list(syntax X) = X*  -- if |X*| < $(2^32)
+
+  We don't create:
+
+    inductive list (X : Type) : Type where
+      | mk_list (X_lst : List X) : (List.length X_lst) < (2 ^ 32) → list X
+    deriving Inhabited, BEq
+
+  but rather:
+
+    inductive list (X : Type) : Type where
+      | mk_list (X_lst : List X) : list X
+    deriving Inhabited, BEq
+
+  because we expect a wf_list to be generated in future versions.
+  
+  *)
+
+  (* let appended_with_prems (* X_lst.length < v_n -> vec X *)
     = append_prems_to_term inductive_type_with_params_applied prems
-  in
+  in *)
 
   let params_from_typ (* (X_lst : List X) *)
     = match typ.it with
@@ -922,7 +944,7 @@ let create_typcase
     id = mixop_to_id mixop;
     signature = (
       params_from_typ @ params_from_quants,
-      Some appended_with_prems
+      Some inductive_type_with_params_applied
     );
   }
 
@@ -1227,19 +1249,68 @@ let rec create_def (def : Il.Ast.def) : command option
       *)
 
 
+      (* Collect the names of type parameters (TypP) that require a [BEq X] instance.
+         A TypP "X" needs [BEq X] when any clause body contains MemE (e1, e2)
+         where e1's type is VarT "X" -- i.e. the element being looked up has type X.
+         Example: disjoint_ has MemE (VarE "w", VarE "w'_lst") where w : X,
+         so "X" is collected and [BEq X] is inserted after (X : Type) in the signature. *)
+      let typp_names_needing_beq : string list =
+        (* ["X"] -- the TypP names from params, e.g. TypP "X" -> "X" *)
+        let typp_names = List.filter_map (fun p -> match p.it with
+          | TypP id -> Some id.it
+          | _ -> None
+        ) params in
+        let collected = ref [] in (* accumulates TypP names found in MemE positions *)
+        let t = { Il.Walk.base_transformer with
+          transform_exp = fun e ->
+            (match e.it with
+            (* MemE (VarE "w", VarE "w'_lst") where w.note = VarT "X" *)
+            | MemE (e1, _) ->
+              (match e1.note.it with
+              (* e1's type is VarT "X" and "X" is one of our TypP params *)
+              | VarT (id, []) when List.mem id.it typp_names ->
+                collected := id.it :: !collected
+              | _ -> ()
+              )
+            | _ -> ()
+            );
+            e (* return expression unchanged -- we are only collecting, not transforming *)
+        } in
+        (* Walk every clause body to find MemE occurrences *)
+        List.iter (fun clause ->
+          let DefD (_, _, exp, _) = clause.it in
+          ignore (Il.Walk.transform_exp t exp)
+        ) clauses;
+        (* ["X"] -- deduplicated, sorted *)
+        List.sort_uniq String.compare !collected
+      in
+
       let signature : opt_decl_sig (* (v_state : state) (v_localidx : localidx) : val *)
         =
-          let params_as_binders : _params list (* (v_state : state) (v_localidx : localidx) *)
-            = List.map (
+          let params_as_binders : _params list
+            (* (X : Type) [BEq X] (var_0_lst : List X)
+               ^^^^^^^^^^^^^^^^^^^
+               TypP "X" emits two binders when "X" is in typp_names_needing_beq;
+               otherwise just one. ExpP always emits one. *)
+            = List.concat_map (
               fun p -> match p.it with
-                | TypP t -> BracketedBinder(ExplicitParam(
-                  NonEmptyList.from_list_unsafe [Ident_IOH t.it;], (* (X : Type) *)
-                  Type None
-                ))
-                | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-                  NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (v_state : state) *)
+                | TypP t ->
+                  (* (X : Type) -- always emitted *)
+                  let explicit = BracketedBinder(ExplicitParam(
+                    NonEmptyList.from_list_unsafe [Ident_IOH t.it],
+                    Type None
+                  )) in
+                  if List.mem t.it typp_names_needing_beq then
+                    (* [BEq X] -- appended right after (X : Type) *)
+                    [explicit; BracketedBinder(InstanceParam(
+                      FunApp(Ident "BEq", NonEmptyList.from_list_unsafe [Term (Ident t.it)])
+                    ))]
+                  else
+                    [explicit]
+                | ExpP (id, typ) -> [BracketedBinder(ExplicitParam(
+                  NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (var_0_lst : List X) *)
                   create_typ typ
-                ))
+                ))]
                 | _ -> failwith "only ExpP or TypP should be here"
             ) params
           in
@@ -1248,8 +1319,77 @@ let rec create_def (def : Il.Ast.def) : command option
           Some (create_typ typ) (* val *)
       in
 
-      let get_redundant_match_terms ()
+      (* type param_match_arm_binding_state =
+        | NeverDeconstructed
+        | DeconstructedAtLeastOnce
+        |  *)
 
+      (* let check_params_ever_deconstructed
+        (params : Il.Ast.quant list)  (*
+                                        (ExpP "v_state" (VarT "state"))
+                                        (ExpP "v_localidx" (VarT "localidx"))
+                                      *)
+        (clause : Il.Ast.clause)
+        : bool list =
+
+        let DefD (
+          _,
+          args,     (*
+                      corr. to v_state    ---- (ExpA (CaseE (Seq (Atom mk_state) Arg Arg) (TupE (VarE "s") (VarE "f"))))
+                      corr. to v_localidx ---- (ExpA (VarE "x"))
+                    *)
+          _,
+          _
+        ) = clause.it
+        in
+
+        List.map2
+          (fun param arg ->
+            match param.it, arg.it with
+              | ExpP (param_id, _), ExpA (VarE arg_id) -> false
+              | TypP _, TypA _ -> false
+              | _, _ -> failwith "unexpected param/arg combination"
+          )
+          params
+          args
+
+      in *)
+
+      let is_deconstruction (arg : Il.Ast.arg) : bool =
+        match arg.it with
+          | ExpA {it = VarE _; _} -> false
+          | ExpA _ -> true
+          | TypA {it = VarT _; _} -> false
+          | TypA _ -> true
+          | _ -> failwith "only ExpA or TypA should be here"
+      in
+
+      let clause_deconstruction_list (clause : Il.Ast.clause) : bool list =
+        let DefD (
+          _,
+          args,     (*
+                      corr. to v_state    ---- (ExpA (CaseE (Seq (Atom mk_state) Arg Arg) (TupE (VarE "s") (VarE "f"))))
+                      corr. to v_localidx ---- (ExpA (VarE "x"))
+                    *)
+          _,
+          _
+        ) = clause.it
+        in
+        List.map is_deconstruction args
+      in
+
+      let all_clauses_deconstruction_list : bool list list =
+        List.map clause_deconstruction_list clauses
+      in
+
+      let param_ever_deconstructed_list : bool list =
+        List.fold_left
+          (List.map2 (fun acc decon -> acc || decon))
+          (List.init (List.length params) (fun _ -> false))
+          all_clauses_deconstruction_list
+      in
+
+      
       
       (* TODO: see if we should / can remove unnecessary components of match term *)
       let create_clause
@@ -1260,6 +1400,9 @@ let rec create_def (def : Il.Ast.def) : command option
         (params_from_parent : Il.Ast.quant list)   (*
                                               (ExpP "v_state" (VarT "state"))
                                               (ExpP "v_localidx" (VarT "localidx"))
+                                            *)
+        (param_ever_deconstructed_list : bool list)  (*
+                                              [true; false]
                                             *)
         : term list * term =
 
@@ -1277,10 +1420,22 @@ let rec create_def (def : Il.Ast.def) : command option
             prems
           ) = clause.it in
 
+          let args_deconstructed_in_at_least_one_clause : arg list =
+            let pairs = List.combine args param_ever_deconstructed_list in
+            let remaining
+              = List.filter_map (fun (arg, ever_deconstructed) ->
+                if ever_deconstructed then Some arg else None
+              ) pairs
+            in
+            remaining
+          in
+
           let arg_to_lhs_pattern (* .mk_state s f *)
+            ~(is_passthrough : bool)
             (arg : Il.Ast.arg)
             : term
-            = match arg.it with
+            = if is_passthrough then Hole Hole
+              else match arg.it with
               | TypA ({it = VarT (x, []); _} as t) -> create_typ t
               | TypA _ -> failwith "only VarT should be here"
               | ExpA exp -> (
@@ -1304,8 +1459,78 @@ let rec create_def (def : Il.Ast.def) : command option
               | _ -> failwith "only TypA or ExpA should be here"
           in
 
-          
-          (List.map arg_to_lhs_pattern args, append_prems_to_term (create_exp exp) prems)
+          let args_deconstructed_in_other_clauses_but_not_here : arg list =
+
+            let args_that_are_not_deconstructed_here : arg list =
+              List.filter
+                (fun arg -> not (is_deconstruction arg))
+                args
+            in
+
+            List.filter
+              (* TODO: Check if structural equality works here *)
+              (fun arg -> List.mem arg args_deconstructed_in_at_least_one_clause)
+              args_that_are_not_deconstructed_here
+          in
+
+          (*
+            [
+              (
+                (ExpA (CaseE (Seq (Atom mk_state) Arg Arg) (TupE (VarE "s") (VarE "f")))),
+                (ExpP "v_state" (VarT "state"))
+              );
+              (
+                (ExpA (VarE "x")),
+                (ExpP "v_localidx" (VarT "localidx"))
+              )
+            ]
+          *)
+          let args_to_original_names_substs : (arg * quant) list =
+            List.combine args params_from_parent
+          in
+
+          (* [("x", "v_localidx")] -- corr. to v_localidx via args_to_original_names_substs *)
+          let substs : (string * string) list =
+
+            let substs_arg_to_quant : (arg * quant) list =
+              List.filter
+                (fun (arg, _) -> List.mem arg args_deconstructed_in_other_clauses_but_not_here)
+                args_to_original_names_substs
+            in
+            
+            List.map
+              (fun (arg, quant) -> match arg.it, quant.it with
+                | ExpA {it = VarE id; _}, ExpP (qid, _) -> (id.it, qid.it)
+                | TypA {it = VarT (id, []); _}, TypP qid -> (id.it, qid.it)
+                | _ -> failwith "only ExpA or TypA should be here"
+              )
+              substs_arg_to_quant
+            
+          in
+
+          let subst_func (id : string) : string =
+            try List.assoc id substs
+            with Not_found -> id
+          in
+
+          let rename_il_vars (subst_func : string -> string) (exp : Il.Ast.exp) : Il.Ast.exp =
+
+            let t = { Il.Walk.base_transformer with
+              transform_var_id = fun id -> { id with it = subst_func id.it }
+            } in
+
+            Il.Walk.transform_exp t exp
+          in
+
+          let renamed_exp = rename_il_vars subst_func exp in
+
+          List.map
+            (fun arg ->
+              let is_passthrough = List.mem arg args_deconstructed_in_other_clauses_but_not_here in
+              arg_to_lhs_pattern ~is_passthrough arg
+            )
+            args_deconstructed_in_at_least_one_clause,
+            append_prems_to_term (create_exp renamed_exp) prems
       in
 
 
@@ -1314,26 +1539,66 @@ let rec create_def (def : Il.Ast.def) : command option
                                               (ExpP "v_state" (VarT "state"))
                                               (ExpP "v_localidx" (VarT "localidx"))
                                             *)
+        (param_ever_deconstructed_list : bool list)
         : term list
-        = 
-        let collected_ids = List.map (
-            fun p -> match p.it with
-              | ExpP (id, typ) -> (Ident id.it : term)
-              | TypP id -> (Ident id.it : term)
-              | _ -> failwith "only ExpP or TypP should be here"
-          ) params_from_parent
-        in
-        collected_ids
+        =
+        List.filter_map (fun (p, keep) ->
+          if not keep then None
+          else Some (match p.it with
+            | ExpP (id, _) -> (Ident id.it : term)
+            | TypP id      -> (Ident id.it : term)
+            | _ -> failwith "only ExpP or TypP should be here"
+          )
+        ) (List.combine params_from_parent param_ever_deconstructed_list)
+      in
+
+      let match_terms = create_match_term params param_ever_deconstructed_list in
+      let cases = List.map (fun clause -> create_clause clause params param_ever_deconstructed_list) clauses in
+
+      let body =
+        if match_terms = [] then
+          (*
+            No param was ever deconstructed — no match needed.
+            Emit the body of the (single) clause directly.
+
+            Example: def min (nat : Nat) (nat_0 : Nat) : Nat :=
+                       if nat ≤ nat_0 then nat else nat_0
+
+            create_clause's substs covers scenario 3 (pass-through here, deconstructed
+            elsewhere). When match_terms = [], nothing is deconstructed anywhere, so
+            substs = [] and the clause body still uses clause-local names (e.g. "i", "j").
+            We apply a full rename of all pass-through args to outer param names here.
+          *)
+          let DefD (_, clause_args, clause_exp, clause_prems) = (List.hd clauses).it in
+          (* [("i", "nat"); ("j", "nat_0")] *)
+          let full_substs : (string * string) list =
+            List.filter_map (fun (arg, quant) ->
+              match arg.it, quant.it with
+              (* clause uses "i" for outer param "nat" -- rename "i" -> "nat" *)
+              | ExpA {it = VarE id; _}, ExpP (qid, _) when id.it <> qid.it ->
+                Some (id.it, qid.it)
+              (* clause uses type var "X" for outer TypP "X'" -- rename if different *)
+              | TypA {it = VarT (id, []); _}, TypP qid when id.it <> qid.it ->
+                Some (id.it, qid.it)
+              | _ -> None
+            ) (List.combine clause_args params)
+          in
+          let subst_func id = try List.assoc id full_substs with Not_found -> id in
+          let t = { Il.Walk.base_transformer with
+            transform_var_id = fun id -> { id with it = subst_func id.it }
+          } in
+          (* if nat ≤ nat_0 then nat else nat_0  (after renaming i->nat, j->nat_0) *)
+          let renamed = Il.Walk.transform_exp t clause_exp in
+          append_prems_to_term (create_exp renamed) clause_prems
+        else
+          Match { match_terms; cases }
       in
 
       Some (Def (DefAsgn {
         modifier = empty_modifier;
         id = id.it;
         signature = signature;
-        body = Match {
-          match_terms = create_match_term params;
-          cases = List.map (fun clause -> create_clause clause params) clauses;
-        }
+        body;
       }))
     | GramD _ -> None
     | RecD defs ->
