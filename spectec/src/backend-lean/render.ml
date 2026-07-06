@@ -112,7 +112,13 @@ and render_term (term : term) : document =
   | Hole _ -> string "_"
 
   | FunType (t1, t2) ->
-      let t1_str = render_term t1 in
+      (* ↔ has precedence 20 in Lean 4, lower than → at 25.
+         Without parens, `A ↔ B → C` parses as `A ↔ (B → C)` rather than `(A ↔ B) → C`. *)
+      let t1_str = match t1 with
+        | BinaryInfixFunApp (_, Ident "↔", _) ->
+          string "(" ^^ render_term t1 ^^ string ")"
+        | _ -> render_term t1
+      in
       let t2_str = render_term t2 in
       t1_str ^^ string " → " ^^ t2_str
 
@@ -152,7 +158,10 @@ and render_term (term : term) : document =
       string "(" ^^ terms_str ^^ string ")"
 
   | DotProj (t1, t2) ->
-      let t1_str = render_term t1 in
+      let t1_str = match t1 with
+        | Ident _ | DotProj _ | Tuple _ | Num _ | Text _ -> render_term t1
+        | _ -> string "(" ^^ render_term t1 ^^ string ")"
+      in
       let t2_str = render_term t2 in
       t1_str ^^ string "." ^^ t2_str
 

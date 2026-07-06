@@ -19,11 +19,11 @@ let rec create_curried_func (term_chain : term list) : term
 
 let create_numtyp (nt : Il.Ast.numtyp) : term
   = match nt with
-    (* TODO: check again *)
     | `NatT -> Ident "Nat"
-    | `IntT -> Ident "Nat"
-    | `RatT -> Ident "Nat"
-    | `RealT -> Ident "Nat"
+    | `IntT -> Ident "Int" 
+    | `RatT -> Ident "Rat"   (* no stdlib Rat in Lean 4, needs import *)
+    | `RealT -> Ident "Real" (* same *)
+
 
 let rec create_iter_typ (iter : Il.Ast.iter) (t : typ) : term
   = match iter with
@@ -76,7 +76,7 @@ let standard_deriving : _deriving option = Some ["Inhabited"; "BEq"]
 
 let create_unop (op : Il.Ast.unop) : term
   = match op with
-    | `PlusOp -> Ident "+"
+    | `PlusOp -> failwith "This should never be triggered, since we want to just write a plain number. create_exp should have a special case for `PlusOp."
     | `MinusOp -> Ident "-"
     | `NotOp -> Ident "!"
 
@@ -134,7 +134,8 @@ let rec create_exp (e : Il.Ast.exp) : term
         | `Real r -> Num (LeanReal r)
       )
     | TextE t -> Text t
-    | UnE (op, _, e) 
+    | UnE (`PlusOp, _, e) -> create_exp e
+    | UnE (op, _, e)
       -> FunApp (
         create_unop op,
         NonEmptyList.from_list_unsafe [Term (create_exp e)]
@@ -154,27 +155,30 @@ let rec create_exp (e : Il.Ast.exp) : term
     | TupE exps -> Tuple (List.map create_exp exps)
     | ProjE (exp, idx)
       ->
-        let length_of_exp
-          = match exp.it with
-            | TupE exps -> List.length exps
-            | _ -> 1
+        let length_of_exp =
+          match exp.it with
+          | TupE exps -> List.length exps
+          | _ ->
+            (match exp.note.it with
+             | TupT fields -> List.length fields
+             | _ -> 1)
         in
 
+        (* For a 1-element "tuple", the Lean backend generates proj_ functions
+           returning the value directly (not wrapped in a product), so projecting
+           field 0 is a no-op. fold_left over [] returns create_exp exp unchanged. *)
         let selector_elems =
-          let twos : string list
-            = List.init (length_of_exp - 1) (fun _ -> "2") in
-          let final_one_or_two : string list
-            = if length_of_exp = (idx + 1)
-            then ["1"]
-            else ["2"]
-          in
-          twos @ final_one_or_two
+          if length_of_exp <= 1 then
+            []
+          else
+            (* Right-nested Lean tuples: idx twos, then "1" unless last element *)
+            let twos = List.init idx (fun _ -> "2") in
+            if idx = length_of_exp - 1 then twos
+            else twos @ ["1"]
         in
 
-        (* Constructs a selector like x.2.2.2.2.2.1 *)
         List.fold_left
-          (fun acc selector_elem
-            -> DotProj (acc, Ident selector_elem))
+          (fun acc selector_elem -> DotProj (acc, Ident selector_elem))
           (create_exp exp)
           selector_elems
 
@@ -260,7 +264,12 @@ let rec create_exp (e : Il.Ast.exp) : term
       let arg_terms = List.map (fun arg -> Term (create_arg arg)) args in
       FunApp (func, NonEmptyList.from_list_unsafe arg_terms)
     | IterE (exp, iterexp) -> create_iter exp iterexp
-    | CvtE (exp, numtyp1, numtyp2) -> 
+    | CvtE (exp, `IntT, `NatT) ->
+      FunApp (
+        DotProj (Ident "Int", Ident "toNat"),
+        NonEmptyList.from_list_unsafe [Term (create_exp exp)]
+      )
+    | CvtE (exp, _numtyp1, numtyp2) ->
       BinaryInfixFunApp (
         Term (create_exp exp),
         Ident ":",
@@ -755,19 +764,20 @@ and create_iter_prem
   (* ── Arity 1: ∀ id ∈ collection, body ───────────────────────────────── *)
   | [(id, coll_exp)] ->
       (*
-        id.it    = "t"        the element variable name already used in prem body
-        coll_exp = VarE "ts"  the list to iterate over
-
-        No renaming needed: prem body already contains VarE "t", and we bind
-        BoundedForall var = "t" — so create_prem's Ident "t" is correct as-is.
+        The element var in the IL (id.it) can collide with the collection var
+        (e.g. {v_expr <- v_expr}), causing Lean to see ∀ v_expr ∈ v_expr where
+        the bound v_expr shadows the outer parameter before the membership check
+        resolves.  Always rename the bound variable to id.it ^ "_elem" and
+        substitute throughout the body.  The result is alpha-equivalent.
 
         Example:
           IterPr(RulePr("TypeOk", VarE "t"), (List, [("t", VarE "ts")]))
-          →  ∀ t ∈ ts, TypeOk (t)
+          →  ∀ t_elem ∈ ts, TypeOk t_elem
       *)
-      let collection : term = to_list_if_opt (create_exp coll_exp) in   (* ts *)
-      let body       : term = create_prem prem in                         (* TypeOk (t) *)
-      BoundedForall { var = id.it; collection; body }
+      let collection : term = to_list_if_opt (create_exp coll_exp) in
+      let elem_var = id.it ^ "_elem" in
+      let body = subst_lean_term [(id.it, Ident elem_var)] (create_prem prem) in
+      BoundedForall { var = elem_var; collection; body }
 
   (* ── Arity ≥ 2: zip collections, bind tuple var, project each id ─────── *)
   | _ ->
@@ -928,7 +938,8 @@ let create_typcase
         | _ -> failwith "typ under typcase must be TupT!"
   in
 
-  let params_from_quants (* (v_n : n) *)
+  (* TODO: Check what this means and if it is needed. *)
+  (* let params_from_quants (* (v_n : n) *)
     = List.map (
       fun q -> match q.it with
         | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
@@ -937,13 +948,13 @@ let create_typcase
         ))
         | _ -> failwith "only ExpP should be here"
     ) quants
-  in
+  in *)
   
   {
     modifier = empty_modifier;
     id = mixop_to_id mixop;
     signature = (
-      params_from_typ @ params_from_quants,
+      params_from_typ,
       Some inductive_type_with_params_applied
     );
   }
@@ -1603,6 +1614,9 @@ let rec create_def (def : Il.Ast.def) : command option
     | GramD _ -> None
     | RecD defs ->
       (
+        (* HintD entries carry no code-gen information; strip them before
+           length-checking or categorizing the remaining members. *)
+        let defs = List.filter (fun d -> match d.it with HintD _ -> false | _ -> true) defs in
         match List.length defs with
           | 0 -> None
           | 1 -> create_def (List.hd defs)

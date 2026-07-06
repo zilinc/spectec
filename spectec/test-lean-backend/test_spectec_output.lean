@@ -53,7 +53,7 @@ inductive Nat_ok : Nat → Nat → Prop where
 
 
 inductive Nats_ok : List Nat → List Nat → Prop where
-  | all (n_lst : List n) : ∀ v_n ∈ n_lst, Nat_ok v_n v_n → Nats_ok n_lst n_lst
+  | all (n_lst : List n) : ∀ v_n_elem ∈ n_lst, Nat_ok v_n_elem v_n_elem → Nats_ok n_lst n_lst
 
 
 inductive Pair_ok : Nat → Nat → Prop where
@@ -81,15 +81,15 @@ inductive uN : Type where
 deriving Inhabited, BEq
 
 inductive wf_uN : N → uN → Prop where
-  | uN_case_0 (v_N : N) (i : Nat) : (i ≥ 0) && (i ≤ ((((2 ^ v_N) : Nat) - (1 : Nat)) : Nat)) → wf_uN v_N (.mk_uN i)
+  | uN_case_0 (v_N : N) (i : Nat) : (i ≥ 0) && (i ≤ (Int.toNat (((2 ^ v_N) : Int) - (1 : Int)))) → wf_uN v_N (.mk_uN i)
 
 
 inductive sN : Type where
-  | mk_sN (i : Nat) : sN
+  | mk_sN (i : Int) : sN
 deriving Inhabited, BEq
 
 inductive wf_sN : N → sN → Prop where
-  | sN_case_0 (v_N : N) (i : Nat) : (((i ≥ (- ((2 ^ (((v_N : Nat) - (1 : Nat)) : Nat)) : Nat))) && (i ≤ (- (1 : Nat)))) || (i == (0 : Nat))) || ((i ≥ (+ (1 : Nat))) && (i ≤ (((2 ^ (((v_N : Nat) - (1 : Nat)) : Nat)) : Nat) - (1 : Nat)))) → wf_sN v_N (.mk_sN i)
+  | sN_case_0 (v_N : N) (i : Int) : (((i ≥ (- ((2 ^ (Int.toNat ((v_N : Int) - (1 : Int)))) : Int))) && (i ≤ (- (1 : Int)))) || (i == (0 : Int))) || ((i ≥ (1 : Int)) && (i ≤ (((2 ^ (Int.toNat ((v_N : Int) - (1 : Int)))) : Int) - (1 : Int)))) → wf_sN v_N (.mk_sN i)
 
 
 abbrev iN : Type := uN
@@ -122,18 +122,18 @@ def fun_M (v_N : N) : Nat :=
 def E (v_N : N) : Nat :=
   Option.get! (expon v_N)
 
-abbrev exp : Type := Nat
+abbrev exp : Type := Int
 
 inductive fNmag : Type where
   | NORM (v_m : m) (v_exp : exp) : fNmag
-  | SUBNORM (v_m : m) (v_exp : exp) : fNmag
+  | SUBNORM (v_m : m) : fNmag
   | INF : fNmag
   | NAN (v_m : m) : fNmag
 deriving Inhabited, BEq
 
 inductive wf_fNmag : N → fNmag → Prop where
-  | fNmag_case_0 (v_N : N) (v_m : m) (v_exp : exp) : (v_m < (2 ^ (fun_M v_N))) && ((((2 : Nat) - ((2 ^ ((((E v_N) : Nat) - (1 : Nat)) : Nat)) : Nat)) ≤ v_exp) && (v_exp ≤ (((2 ^ ((((E v_N) : Nat) - (1 : Nat)) : Nat)) : Nat) - (1 : Nat)))) → wf_fNmag v_N (.NORM v_m v_exp)
-  | fNmag_case_1 (v_N : N) (v_exp : exp) (v_m : m) : (v_m < (2 ^ (fun_M v_N))) && (((2 : Nat) - ((2 ^ ((((E v_N) : Nat) - (1 : Nat)) : Nat)) : Nat)) == v_exp) → wf_fNmag v_N (.SUBNORM v_m)
+  | fNmag_case_0 (v_N : N) (v_m : m) (v_exp : exp) : (v_m < (2 ^ (fun_M v_N))) && ((((2 : Int) - ((2 ^ (Int.toNat (((E v_N) : Int) - (1 : Int)))) : Int)) ≤ v_exp) && (v_exp ≤ (((2 ^ (Int.toNat (((E v_N) : Int) - (1 : Int)))) : Int) - (1 : Int)))) → wf_fNmag v_N (.NORM v_m v_exp)
+  | fNmag_case_1 (v_N : N) (v_exp : exp) (v_m : m) : (v_m < (2 ^ (fun_M v_N))) && (((2 : Int) - ((2 ^ (Int.toNat (((E v_N) : Int) - (1 : Int)))) : Int)) == v_exp) → wf_fNmag v_N (.SUBNORM v_m)
   | fNmag_case_2 (v_N : N) : wf_fNmag v_N .INF
   | fNmag_case_3 (v_N : N) (v_m : m) : (1 ≤ v_m) && (v_m < (2 ^ (fun_M v_N))) → wf_fNmag v_N (.NAN v_m)
 
@@ -160,14 +160,14 @@ inductive fzero_is_wf : N → fN → Prop where
 
 
 def fone (v_N : N) : fN :=
-  .POS (.NORM 1 (0 : Nat))
+  .POS (.NORM 1 (0 : Int))
 
 inductive fone_is_wf : N → fN → Prop where
   | fone_is_wf_0 (v_N : N) (ret_val : fN) : ret_val == (fone v_N) → wf_fN v_N ret_val → fone_is_wf v_N ret_val
 
 
 def canon_ (v_N : N) : Nat :=
-  2 ^ ((((Option.get! (signif v_N)) : Nat) - (1 : Nat)) : Nat)
+  2 ^ (Int.toNat (((Option.get! (signif v_N)) : Int) - (1 : Int)))
 
 inductive char : Type where
   | mk_char (i : Nat) : char
@@ -177,14 +177,14 @@ inductive wf_char : char → Prop where
   | char_case_0 (i : Nat) : ((i ≥ 0) && (i ≤ 55295)) || ((i ≥ 57344) && (i ≤ 1114111)) → wf_char (.mk_char i)
 
 
-opaque utf8 (var_0_lst : List char) : List byte := by 
+opaque utf8 (var_0_lst : List char) : List byte := by
   first
      | exact Inhabited.default
      | intros ; assumption
 
 
 inductive utf8_is_wf : List char → List byte → Prop where
-  | utf8_is_wf_0 (var_0_lst : List char) (ret_val_lst : List byte) : ∀ var_0 ∈ var_0_lst, wf_char var_0 → ret_val_lst == (utf8 var_0_lst) → ∀ ret_val ∈ ret_val_lst, wf_byte ret_val → utf8_is_wf var_0_lst ret_val_lst
+  | utf8_is_wf_0 (var_0_lst : List char) (ret_val_lst : List byte) : ∀ var_0_elem ∈ var_0_lst, wf_char var_0_elem → ret_val_lst == (utf8 var_0_lst) → ∀ ret_val_elem ∈ ret_val_lst, wf_byte ret_val_elem → utf8_is_wf var_0_lst ret_val_lst
 
 
 inductive name : Type where
@@ -192,7 +192,7 @@ inductive name : Type where
 deriving Inhabited, BEq
 
 inductive wf_name : name → Prop where
-  | name_case_0 (char_lst : List char) : ∀ v_char ∈ char_lst, wf_char v_char → (List.length (utf8 char_lst)) < (2 ^ 32) → wf_name (.mk_name char_lst)
+  | name_case_0 (char_lst : List char) : ∀ v_char_elem ∈ char_lst, wf_char v_char_elem → (List.length (utf8 char_lst)) < (2 ^ 32) → wf_name (.mk_name char_lst)
 
 
 abbrev idx : Type := u32
@@ -276,7 +276,7 @@ inductive wf_externtype : externtype → Prop where
   | externtype_case_3 (v_memtype : memtype) : wf_limits v_memtype → wf_externtype (.MEM v_memtype)
 
 
-opaque size (v_valtype : valtype) : Nat := by 
+opaque size (v_valtype : valtype) : Nat := by
   first
      | exact Inhabited.default
      | intros ; assumption
@@ -482,7 +482,7 @@ inductive loadop_Inn : Type where
 deriving Inhabited, BEq
 
 inductive wf_loadop_Inn : Inn → loadop_Inn → Prop where
-  | loadop_Inn_case_0 (v_Inn : Inn) (v_sz : sz) (v_sx : sx) : wf_sz v_sz → (proj_sz_0 v_sz.1) < (size (valtype_Inn v_Inn)) → wf_loadop_Inn v_Inn (.mk_loadop_Inn v_sz v_sx)
+  | loadop_Inn_case_0 (v_Inn : Inn) (v_sz : sz) (v_sx : sx) : wf_sz v_sz → (proj_sz_0 v_sz) < (size (valtype_Inn v_Inn)) → wf_loadop_Inn v_Inn (.mk_loadop_Inn v_sz v_sx)
 
 
 inductive loadop_ : Type where
@@ -525,10 +525,41 @@ inductive instr : Type where
   | GLOBAL_GET (v_globalidx : globalidx) : instr
   | GLOBAL_SET (v_globalidx : globalidx) : instr
   | LOAD (v_valtype : valtype) (_ : Option loadop_) (v_memarg : memarg) : instr
-  | STORE (v_valtype : valtype) (sz_opt : Option sz) (v_memarg : memarg) (Inn_opt : Option Inn) (valtype_opt : Option valtype) : instr
+  | STORE (v_valtype : valtype) (sz_opt : Option sz) (v_memarg : memarg) : instr
   | MEMORY_SIZE : instr
   | MEMORY_GROW : instr
 deriving Inhabited, BEq
+
+inductive wf_instr : instr → Prop where
+  | instr_case_0 : wf_instr .NOP
+  | instr_case_1 : wf_instr .UNREACHABLE
+  | instr_case_2 : wf_instr .DROP
+  | instr_case_3 : wf_instr .SELECT
+  | instr_case_4 (v_blocktype : blocktype) (instr_lst : List instr) : ∀ v_instr_elem ∈ instr_lst, wf_instr v_instr_elem → wf_instr (.BLOCK v_blocktype instr_lst)
+  | instr_case_5 (v_blocktype : blocktype) (instr_lst : List instr) : ∀ v_instr_elem ∈ instr_lst, wf_instr v_instr_elem → wf_instr (.LOOP v_blocktype instr_lst)
+  | instr_case_6 (v_blocktype : blocktype) (instr_lst : List instr) (instr_lst_0_lst : List instr) : ∀ v_instr_elem ∈ instr_lst, wf_instr v_instr_elem → ∀ instr_lst_0_elem ∈ instr_lst_0_lst, wf_instr instr_lst_0_elem → wf_instr (.IFELSE v_blocktype instr_lst instr_lst_0_lst)
+  | instr_case_7 (v_labelidx : labelidx) : wf_uN 32 v_labelidx → wf_instr (.BR v_labelidx)
+  | instr_case_8 (v_labelidx : labelidx) : wf_uN 32 v_labelidx → wf_instr (.BR_IF v_labelidx)
+  | instr_case_9 (labelidx_lst : List labelidx) (v_labelidx : labelidx) : ∀ v_labelidx_elem ∈ labelidx_lst, wf_uN 32 v_labelidx_elem → wf_uN 32 v_labelidx → wf_instr (.BR_TABLE labelidx_lst v_labelidx)
+  | instr_case_10 (v_funcidx : funcidx) : wf_uN 32 v_funcidx → wf_instr (.CALL v_funcidx)
+  | instr_case_11 (v_typeidx : typeidx) : wf_uN 32 v_typeidx → wf_instr (.CALL_INDIRECT v_typeidx)
+  | instr_case_12 : wf_instr .RETURN
+  | instr_case_13 (v_valtype : valtype) (var_0 : val_) : wf_val_ v_valtype var_0 → wf_instr (.CONST v_valtype var_0)
+  | instr_case_14 (v_valtype : valtype) (var_0 : unop_) : wf_unop_ v_valtype var_0 → wf_instr (.UNOP v_valtype var_0)
+  | instr_case_15 (v_valtype : valtype) (var_0 : binop_) : wf_binop_ v_valtype var_0 → wf_instr (.BINOP v_valtype var_0)
+  | instr_case_16 (v_valtype : valtype) (var_0 : testop_) : wf_testop_ v_valtype var_0 → wf_instr (.TESTOP v_valtype var_0)
+  | instr_case_17 (v_valtype : valtype) (var_0 : relop_) : wf_relop_ v_valtype var_0 → wf_instr (.RELOP v_valtype var_0)
+  | instr_case_18 (valtype_1 : valtype) (valtype_2 : valtype) (v_cvtop : cvtop) : valtype_1 ≠ valtype_2 → wf_instr (.CVTOP valtype_1 valtype_2 v_cvtop)
+  | instr_case_19 (v_localidx : localidx) : wf_uN 32 v_localidx → wf_instr (.LOCAL_GET v_localidx)
+  | instr_case_20 (v_localidx : localidx) : wf_uN 32 v_localidx → wf_instr (.LOCAL_SET v_localidx)
+  | instr_case_21 (v_localidx : localidx) : wf_uN 32 v_localidx → wf_instr (.LOCAL_TEE v_localidx)
+  | instr_case_22 (v_globalidx : globalidx) : wf_uN 32 v_globalidx → wf_instr (.GLOBAL_GET v_globalidx)
+  | instr_case_23 (v_globalidx : globalidx) : wf_uN 32 v_globalidx → wf_instr (.GLOBAL_SET v_globalidx)
+  | instr_case_24 (v_valtype : valtype) (var_0_opt : Option loadop_) (v_memarg : memarg) : ∀ var_0_elem ∈ Option.toList var_0_opt, wf_loadop_ v_valtype var_0_elem → wf_memarg v_memarg → wf_instr (.LOAD v_valtype var_0_opt v_memarg)
+  | instr_case_25 (Inn_opt : Option Inn) (valtype_opt : Option valtype) (v_valtype : valtype) (sz_opt : Option sz) (v_memarg : memarg) : ∀ v_sz_elem ∈ Option.toList sz_opt, wf_sz v_sz_elem → wf_memarg v_memarg → ((Inn_opt == none) ↔ (sz_opt == none)) → ((Inn_opt == none) ↔ (valtype_opt == none)) → ∀ __iter_tuple ∈ Option.toList Inn_opt |>.zip (Option.toList sz_opt) |>.zip (Option.toList valtype_opt), ((__iter_tuple.2) == (valtype_Inn (__iter_tuple.1.1))) && ((proj_sz_0 (__iter_tuple.1.2)) < (size (valtype_Inn (__iter_tuple.1.1)))) → wf_instr (.STORE v_valtype sz_opt v_memarg)
+  | instr_case_26 : wf_instr .MEMORY_SIZE
+  | instr_case_27 : wf_instr .MEMORY_GROW
+
 
 abbrev expr : Type := List instr
 
@@ -545,7 +576,7 @@ inductive func : Type where
 deriving Inhabited, BEq
 
 inductive wf_func : func → Prop where
-  | func_case_0 (v_typeidx : typeidx) (local_lst : List «local») (v_expr : expr) : wf_uN 32 v_typeidx → ∀ v_expr ∈ v_expr, wf_instr v_expr → wf_func (.FUNC v_typeidx local_lst v_expr)
+  | func_case_0 (v_typeidx : typeidx) (local_lst : List «local») (v_expr : expr) : wf_uN 32 v_typeidx → ∀ v_expr_elem ∈ v_expr, wf_instr v_expr_elem → wf_func (.FUNC v_typeidx local_lst v_expr)
 
 
 inductive global : Type where
@@ -553,7 +584,7 @@ inductive global : Type where
 deriving Inhabited, BEq
 
 inductive wf_global : global → Prop where
-  | global_case_0 (v_globaltype : globaltype) (v_expr : expr) : ∀ v_expr ∈ v_expr, wf_instr v_expr → wf_global (.GLOBAL v_globaltype v_expr)
+  | global_case_0 (v_globaltype : globaltype) (v_expr : expr) : ∀ v_expr_elem ∈ v_expr, wf_instr v_expr_elem → wf_global (.GLOBAL v_globaltype v_expr)
 
 
 inductive table : Type where
@@ -577,7 +608,7 @@ inductive elem : Type where
 deriving Inhabited, BEq
 
 inductive wf_elem : elem → Prop where
-  | elem_case_0 (v_expr : expr) (funcidx_lst : List funcidx) : ∀ v_expr ∈ v_expr, wf_instr v_expr → ∀ v_funcidx ∈ funcidx_lst, wf_uN 32 v_funcidx → wf_elem (.ELEM v_expr funcidx_lst)
+  | elem_case_0 (v_expr : expr) (funcidx_lst : List funcidx) : ∀ v_expr_elem ∈ v_expr, wf_instr v_expr_elem → ∀ v_funcidx_elem ∈ funcidx_lst, wf_uN 32 v_funcidx_elem → wf_elem (.ELEM v_expr funcidx_lst)
 
 
 inductive data : Type where
@@ -585,7 +616,7 @@ inductive data : Type where
 deriving Inhabited, BEq
 
 inductive wf_data : data → Prop where
-  | data_case_0 (v_expr : expr) (byte_lst : List byte) : ∀ v_expr ∈ v_expr, wf_instr v_expr → ∀ v_byte ∈ byte_lst, wf_byte v_byte → wf_data (.DATA v_expr byte_lst)
+  | data_case_0 (v_expr : expr) (byte_lst : List byte) : ∀ v_expr_elem ∈ v_expr, wf_instr v_expr_elem → ∀ v_byte_elem ∈ byte_lst, wf_byte v_byte_elem → wf_data (.DATA v_expr byte_lst)
 
 
 inductive start : Type where
@@ -631,5 +662,4 @@ inductive module : Type where
 deriving Inhabited, BEq
 
 inductive wf_module : module → Prop where
-  | module_case_0 (type_lst : List type) (import_lst : List «import») (func_lst : List func) (global_lst : List global) (table_lst : List table) (mem_lst : List mem) (elem_lst : List elem) (data_lst : List data) (start_opt : Option start) (export_lst : List «export») : ∀ v_import ∈ import_lst, wf_import v_import → ∀ v_func ∈ func_lst, wf_func v_func → ∀ v_global ∈ global_lst, wf_global v_global → ∀ v_table ∈ table_lst, wf_table v_table → ∀ v_mem ∈ mem_lst, wf_mem v_mem → ∀ v_elem ∈ elem_lst, wf_elem v_elem → ∀ v_data ∈ data_lst, wf_data v_data → ∀ v_start ∈ Option.toList start_opt, wf_start v_start → ∀ v_export ∈ export_lst, wf_export v_export → wf_module (.MODULE type_lst import_lst func_lst global_lst table_lst mem_lst elem_lst data_lst start_opt export_lst)
-
+  | module_case_0 (type_lst : List type) (import_lst : List «import») (func_lst : List func) (global_lst : List global) (table_lst : List table) (mem_lst : List mem) (elem_lst : List elem) (data_lst : List data) (start_opt : Option start) (export_lst : List «export») : ∀ v_import_elem ∈ import_lst, wf_import v_import_elem → ∀ v_func_elem ∈ func_lst, wf_func v_func_elem → ∀ v_global_elem ∈ global_lst, wf_global v_global_elem → ∀ v_table_elem ∈ table_lst, wf_table v_table_elem → ∀ v_mem_elem ∈ mem_lst, wf_mem v_mem_elem → ∀ v_elem_elem ∈ elem_lst, wf_elem v_elem_elem → ∀ v_data_elem ∈ data_lst, wf_data v_data_elem → ∀ v_start_elem ∈ Option.toList start_opt, wf_start v_start_elem → ∀ v_export_elem ∈ export_lst, wf_export v_export_elem → wf_module (.MODULE type_lst import_lst func_lst global_lst table_lst mem_lst elem_lst data_lst start_opt export_lst)
