@@ -148,7 +148,7 @@ let rec subst_lean_term (substs : (string * term) list) (t : term) : term =
 
     | Lambda { params; body } ->
         (* CAPTURE-AVOIDANCE: remove any substs whose key is rebound by a param. *)
-        let bound        = List.map (fun (Ident_FB n) -> n)
+        let bound        = List.filter_map (function Ident_FB n -> Some n | Hole_FB -> None)
                              (NonEmptyList.to_list params) in
         let inner_substs = List.filter (fun (k, _) -> not (List.mem k bound)) substs in
         Some (Lambda { params; body = subst_lean_term inner_substs body })

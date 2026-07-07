@@ -24,6 +24,28 @@ let rec render_command (cmd : command) : document =
   | Structure s -> render__structure s
   | Opaque o -> render_opaque o
   | Mutual m -> render_mutual m
+  | Instance i -> render_instance i
+
+and render_instance (inst : instance) : document =
+  let modifier_str = render_decl_modifier inst.modifier in
+  let priority_str = match inst.priority with
+    | None -> empty
+    | Some p -> string " (priority := " ^^ string (string_of_int p) ^^ string ")"
+  in
+  let id_str = match inst.id with
+    | None -> empty
+    | Some id -> render_id id ^^ string " "
+  in
+  let decl_sig_str = render_decl_sig inst.signature in
+  let body_strs = List.map render_struct_inst_field inst.body in
+  let body_str = separate hardline body_strs in
+  modifier_str
+  ^^ string "instance "
+  ^^ priority_str
+  ^^ id_str
+  ^^ decl_sig_str
+  ^^ string " where"
+  ^^ nest 2 (hardline ^^ body_str)
 
 and render_mutual (mutual : mutual) : document =
   match mutual with
@@ -98,6 +120,7 @@ and render__slice_bounds (bounds : _slice_bounds) : document =
 and render_fun_binder (binder : fun_binder) : document =
   match binder with
   | Ident_FB id -> render_id id
+  | Hole_FB -> string "_"
 
 (* TODO: adapt more properly from original backend *)
 and render_id a = match a with
@@ -195,7 +218,7 @@ and render_term (term : term) : document =
     index = index;
     index_type = index_type;
   } ->
-      let collection_str = render_term collection in
+      let collection_str = string "(" ^^ render_term collection ^^ string ")" in
       let index_str = render_term index in
       let index_type_str = render__index_type index_type in
       collection_str
@@ -214,6 +237,7 @@ and render_term (term : term) : document =
       ^^ collection_str
       ^^ string "["
       ^^ bounds_str
+      ^^ string "]"
       ^^ string "]"
 
   | UpdateStruct {
@@ -389,6 +413,18 @@ and render__def (def : _def) : document =
     ^^ id_str
     ^^ decl_sig_str
     ^^ nest 2 (hardline ^^ cases_str)
+
+  | DefStruct d ->
+    let modifier_str = render_decl_modifier d.modifier in
+    let id_str = render_id d.id in
+    let decl_sig_str = render_opt_decl_sig d.signature in
+    let fields_str = separate hardline (List.map render_struct_inst_field d.body) in
+    modifier_str
+    ^^ string "def "
+    ^^ id_str
+    ^^ decl_sig_str
+    ^^ string " where"
+    ^^ nest 2 (hardline ^^ fields_str)
 
 and render__def_case (case : _def_case) : document =
   let (pattern, body) = case in

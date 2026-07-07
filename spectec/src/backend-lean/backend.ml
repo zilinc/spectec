@@ -7,7 +7,77 @@ open Lean_utils
 
 let error at msg = Util.Error.error at "Lean4 translation" msg 
 module NonEmptyList = Util.Lib.NonEmptyList
-let preamble = "" (* TODO *)
+
+
+
+
+
+
+
+
+let gather_types_that_need_append_instances (il : script) : string list =
+  let collected = ref [] in
+    let module Visitor = Il.Iter.Make(
+      struct
+        include Il.Iter.Skip
+        let visit_exp e =
+          match e.it with
+          | CompE (e1, e2) ->
+            if e1.note.it <> e2.note.it then
+                failwith "CompE types don't match!" (* CompE homogeneity should be enforced by valid.ml *)
+              else
+                (
+                  match e1.note.it with
+                    | VarT (id, []) -> collected := id.it :: !collected
+                    | _ -> ()
+                )
+          | _ -> ()
+      end
+    )
+    in
+  List.iter Visitor.def il;
+  List.sort_uniq String.compare !collected
+let gather_variant_type_names (il : script) : string list =
+  (* Collect names of types defined as VariantT — these become Lean inductives
+     and have proper namespaced constructors like externtype.GLOBAL.
+     Aliases (AliasT) and structs (StructT) do NOT get their own namespace.
+     Recurse into RecD to find mutual recursive types like instr/admininstr. *)
+  let rec collect_from_def def =
+    match def.it with
+    | TypD (id, _, [{it = InstD (_, _, {it = VariantT _; _}); _}]) -> [id.it]
+    | RecD defs -> List.concat_map collect_from_def defs
+    | _ -> []
+  in
+  List.concat_map collect_from_def il
+
+type whole_script_analysis =
+  {
+    types_needing_append_instances : string list;
+    variant_type_names : string list;
+  }
+
+let analyze_whole_script (il : script) : whole_script_analysis =
+  {
+    types_needing_append_instances = gather_types_that_need_append_instances il;
+    variant_type_names = gather_variant_type_names il;
+  }
+
+let analysis : whole_script_analysis ref = ref {
+  types_needing_append_instances = [];
+  variant_type_names = [];
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 (* let convert_alias (id : string) () *)
 
@@ -198,13 +268,15 @@ let rec create_exp (e : Il.Ast.exp) : term
             | _ -> [create_exp exp]
         in
 
-        let namespaced_mixop = LeadingDot (Ident (mixop_to_id mixop)) in
-
-        (* TODO: see if it's feasible to make the namespacing explicit *)
-        (* let namespaced_mixop = match exp.note.it with
-          | VarT (id, _) -> (DotProj (Ident id.it, Ident (mixop_to_id mixop)))
-          | _ -> LeadingDot (Ident (mixop_to_id mixop))   (* fallback to leading-dot notation *)
-        in *)
+        (* Qualify with the variant type name from the IL note: .GLOBAL → externtype.GLOBAL.
+           Only do this for proper VariantT inductives — they have namespaced constructors.
+           Aliases (abbrev) and structs do NOT get their own Lean namespace, so fall back
+           to leading-dot notation for those (e.g. u32 is abbrev u32 := uN, no u32.mk_uN). *)
+        let namespaced_mixop = match e.note.it with
+          | VarT (id, _) when List.mem id.it !analysis.variant_type_names ->
+              Ident (id.it ^ "." ^ mixop_to_id mixop)
+          | _ -> LeadingDot (Ident (mixop_to_id mixop))
+        in
         
         if List.length mixop_args = 0 then
           namespaced_mixop
@@ -229,11 +301,13 @@ let rec create_exp (e : Il.Ast.exp) : term
             is_private = false;
             term = field_value;
           }) field_terms;
-          type_annotation = None;
+          (* Annotate with the struct's type from the IL note so Lean can infer the struct type.
+             e.g. { TYPES := [], ... } becomes ({ ... } : context) *)
+          type_annotation = Some (create_typ e.note);
         }
     | DotE (exp, atom)
       -> DotProj (create_exp exp, Ident (create_atom atom))
-    | CompE (e1, e2) -> BinaryInfixFunApp (Term (create_exp e1), Ident "append", Term (create_exp e2))
+    | CompE (e1, e2) -> BinaryInfixFunApp (Term (create_exp e1), Ident "++", Term (create_exp e2))
     | ListE exps -> List (List.map create_exp exps)
     | LiftE option_term -> FunApp (DotProj (Ident "Option", Ident "toList"), NonEmptyList.from_list_unsafe [Term (create_exp option_term)])
     | MemE (e1, e2) -> FunApp (DotProj (Ident "List", Ident "contains"), NonEmptyList.from_list_unsafe [Term (create_exp e2); Term (create_exp e1)])
@@ -245,10 +319,22 @@ let rec create_exp (e : Il.Ast.exp) : term
         index = create_exp e2;
         index_type = Unsafe
       }
-    | SliceE (e1, e2, e3) -> Slice {
-        collection = create_exp e1;
-        bounds = SliceBetween (create_exp e2, create_exp e3);
-      }
+    | SliceE (e1, e2, e3) ->
+        (* SliceE(xs, from, len): xs[from : from+len].
+           Lean's xs[i:j] syntax gives Subarray (not List), so use List combinators. *)
+        FunApp (
+          DotProj (Ident "List", Ident "take"),
+          NonEmptyList.from_list_unsafe [
+            Term (create_exp e3);
+            Term (FunApp (
+              DotProj (Ident "List", Ident "drop"),
+              NonEmptyList.from_list_unsafe [
+                Term (create_exp e2);
+                Term (create_exp e1)
+              ]
+            ))
+          ]
+        )
     | UpdE (e1, p, e2) -> create_upd_exp e1 p (fun _ -> create_exp e2)
     | ExtE (e1, p, e2) ->
         let concat_old_term_to_new_list_exp (existing_term : term) : term
@@ -1011,16 +1097,19 @@ let create_typcase
     );
   }
 
-let rec create_def (def : Il.Ast.def) : command option
+let rec create_def (def : Il.Ast.def) : command list
   = match def.it with
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = AliasT t; _})); _}])
-      -> Some (Abbrev (AbbrevAsgn {
-        modifier = empty_modifier;
-        id = id.it;
-        signature = ([], Some (Type None));
-        body = create_typ t;
-      }))
+      ->
+      [
+        Abbrev (AbbrevAsgn {
+          modifier = empty_modifier;
+          id = id.it;
+          signature = ([], Some (Type None));
+          body = create_typ t;
+        })
+      ]
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = VariantT ts; _})); _}])
       ->
@@ -1034,19 +1123,21 @@ let rec create_def (def : Il.Ast.def) : command option
             | _ -> failwith "only TypP should be here"
         in
 
-        Some (Inductive {
-        modifier = empty_modifier;
-        id = id.it;
-        signature = (
-          List.map
-            create_typ_binder
-            params,
-          
-          Some (Type None)
-        );
-        cases = List.map (create_typcase id params) ts;
-        deriving = standard_deriving; (* TODO: look into deriving *)
-      })
+        [
+          Inductive {
+            modifier = empty_modifier;
+            id = id.it;
+            signature = (
+              List.map
+                create_typ_binder
+                params,
+              
+              Some (Type None)
+            );
+            cases = List.map (create_typcase id params) ts;
+            deriving = standard_deriving; (* TODO: look into deriving *)
+          }
+        ]
 
     | TypD (id, params, [{it = (InstD (quants, args, {it = StructT ts; _})); _}])
       ->
@@ -1059,15 +1150,149 @@ let rec create_def (def : Il.Ast.def) : command option
           signature = ([], Some (create_typ typ));
         }
       in
-      Some (Structure {
-        modifier = empty_modifier;
-        id = id.it;
-        binders = [];
-        universe = None;
-        constructor = Some (empty_modifier, "MK" ^ id.it); (* following previous version *)
-        fields = List.map create_struct_field ts;
-        deriving = standard_deriving; (* TODO: look into deriving *)
-      })
+
+      let fields = List.map create_struct_field ts in
+
+      let typ_struct : command
+        = Structure {
+          modifier = empty_modifier;
+          id = id.it;
+          binders = [];
+          universe = None;
+          constructor = Some (empty_modifier, "MK" ^ id.it); (* following previous version *)
+          fields = fields;
+          deriving = standard_deriving; (* TODO: look into deriving *)
+        }
+      in
+
+      if not (List.mem id.it !analysis.types_needing_append_instances) then
+        [typ_struct]
+      else
+        (*
+          If the type needs append instances, then create the append function,
+          then the instance. For instance (hehe):
+
+          def _append_moduleinst (arg1 arg2 : (moduleinst)) : moduleinst where
+            TYPES := arg1.TYPES ++ arg2.TYPES
+            FUNCS := arg1.FUNCS ++ arg2.FUNCS
+            GLOBALS := arg1.GLOBALS ++ arg2.GLOBALS
+            TABLES := arg1.TABLES ++ arg2.TABLES
+            MEMS := arg1.MEMS ++ arg2.MEMS
+            EXPORTS := arg1.EXPORTS ++ arg2.EXPORTS
+
+          instance : Append moduleinst where
+            append arg1 arg2 := _append_moduleinst arg1 arg2
+
+        *)
+        let append_func : command
+          =
+          
+          let is_composable_field_type (typ : Il.Ast.typ) : bool
+            = match typ.it with
+              | IterT (_t, _) -> true
+              | VarT (id, []) -> List.mem id.it !analysis.types_needing_append_instances
+              | _ -> false
+          in
+
+          let all_fields_are_composable : bool
+            = List.for_all (fun (_, (typ, _, _), _) -> is_composable_field_type typ) ts
+          in
+
+          if not all_fields_are_composable then
+            failwith ("Cannot create append function for type " ^ id.it ^ " because not all fields are composable.")
+          else
+
+            let struct_type : term = Ident id.it in
+
+            let arg1 : string = "arg1" in
+            let arg2 : string = "arg2" in
+
+            let create_appended_field (typfield : typfield) : struct_inst_field =
+              let (atom, (typ, quants, prems), hints) = typfield in
+              let field_name = Xl.Atom.to_string atom in
+
+              let append_term_for (typ : Il.Ast.typ) (a : term) (b : term) : term =
+                match typ.it with
+                | IterT (_, Opt) ->
+                  (* Option composition: b overrides a if present, else fall back to a *)
+                  FunApp (
+                    DotProj (Ident "Option", Ident "orElse"),
+                    NonEmptyList.from_list_unsafe [
+                      Term a;
+                      Term (Lambda {
+                        params = NonEmptyList.from_list_unsafe [Hole_FB];
+                        body = b;
+                      })
+                    ]
+                  )
+                | IterT (_, _) ->
+                  BinaryInfixFunApp (Term a, Ident "++", Term b)   (* List/List1/ListN *)
+                | VarT _ ->
+                  BinaryInfixFunApp (Term a, Ident "++", Term b)   (* nested composable struct *)
+                | _ -> failwith "unreachable — is_composable_field_type already checked"
+              in
+
+              AssignedField {
+                l_val = Ident_SILV (create_atom atom);
+                is_private = false;
+                term = append_term_for typ
+                  (DotProj (Ident arg1, Ident field_name))
+                  (DotProj (Ident arg2, Ident field_name));
+              }
+            in
+
+            let appended_fields : struct_inst_field list = List.map create_appended_field ts in
+          
+            Def (
+              DefStruct {
+                modifier = empty_modifier;
+                id = "append_" ^ id.it;
+                signature = (
+                  [
+                    BracketedBinder(ExplicitParam(
+                      NonEmptyList.from_list_unsafe [Ident_IOH arg1; Ident_IOH arg2],
+                      struct_type
+                    ));
+                  ],
+                  Some (struct_type)
+                );
+                body = appended_fields
+              }
+            )
+
+          
+
+        in
+
+        let append_instance : command =
+          Instance {
+            modifier = empty_modifier;
+            priority = None;
+            id = None;
+            signature = (
+              [],
+              FunApp (
+                Ident "Append",
+                NonEmptyList.from_list_unsafe [
+                  Term (Ident id.it)
+                ]
+              )
+            );
+            body = [
+              AssignedField {
+                l_val = Ident_SILV "append";
+                is_private = false;
+                term = Ident ("append_" ^ id.it); (* TODO: refactor append_ - making id function *)
+              }
+            ]
+          }
+        in
+
+        [
+          typ_struct;
+          append_func;
+          append_instance;
+        ]
 
     | RelD (
         id,     (* fun_sum *)
@@ -1090,7 +1315,7 @@ let rec create_def (def : Il.Ast.def) : command option
       let create_relations_inductive_type (typ : Il.Ast.typ) : term
         (* List Nat → Nat → Prop *)
         = match typ.it with
-          | VarT (id, []) -> Ident id.it
+          | VarT (id, []) -> FunType (Ident id.it, Ident "Prop") (* functype → Prop *)
           | VarT _ -> failwith "undep should ensure empty arg list" 
           | TupT id_typ_list ->
             let types = List.map (fun (_, typ) -> create_typ typ) id_typ_list in
@@ -1167,16 +1392,18 @@ let rec create_def (def : Il.Ast.def) : command option
 
       in
 
-      Some (Inductive {
-        modifier = empty_modifier;
-        id = id.it;                       (* fun_sum *)
-        signature = (
-          [],                             (* We don't need parameters for the inductive type itself *)
-          Some (create_relations_inductive_type typ)   (* List Nat → Nat → Prop *)
-        );
-        cases = List.map (fun rule -> create_relations_inductive_case rule id) rules;
-        deriving = None; (* TODO: look into deriving *)
-      })
+      [
+        Inductive {
+          modifier = empty_modifier;
+          id = id.it;                       (* fun_sum *)
+          signature = (
+            [],                             (* We don't need parameters for the inductive type itself *)
+            Some (create_relations_inductive_type typ)   (* List Nat → Nat → Prop *)
+          );
+          cases = List.map (fun rule -> create_relations_inductive_case rule id) rules;
+          deriving = None; (* TODO: look into deriving *)
+        }
+      ]
 
     | DecD (
       id,                               (* "Ki" *)
@@ -1195,15 +1422,18 @@ let rec create_def (def : Il.Ast.def) : command option
 
       def Ki : Nat := 1024
     *)
-      -> Some (Def (DefAsgn {
-        modifier = empty_modifier;
-        id = id.it;                               (* "Ki" *)
-        signature = (
-          [],
-          Some (create_typ typ)                   (* Nat *)
-        );
-        body = create_exp exp;                    (* 1024 *)
-      }))
+      ->
+      [
+        Def (DefAsgn {
+          modifier = empty_modifier;
+          id = id.it;                               (* "Ki" *)
+          signature = (
+            [],
+            Some (create_typ typ)                   (* Nat *)
+          );
+          body = create_exp exp;                    (* 1024 *)
+        })
+      ]
 
 
     | DecD (
@@ -1249,12 +1479,14 @@ let rec create_def (def : Il.Ast.def) : command option
 
           
       in
-      Some(Opaque {
-        modifier = empty_modifier;
-        id = id.it;                               (* "float" *)
-        signature = signature;
-        rhs = Some opaque_def;
-      })
+      [
+        Opaque {
+          modifier = empty_modifier;
+          id = id.it;                               (* "float" *)
+          signature = signature;
+          rhs = Some opaque_def;
+        }
+      ]
     (* | DecD (id, [], typ, clauses)
       -> None *)
 
@@ -1664,20 +1896,22 @@ let rec create_def (def : Il.Ast.def) : command option
           Match { match_terms; cases }
       in
 
-      Some (Def (DefAsgn {
-        modifier = empty_modifier;
-        id = id.it;
-        signature = signature;
-        body;
-      }))
-    | GramD _ -> None
+      [
+        Def (DefAsgn {
+          modifier = empty_modifier;
+          id = id.it;
+          signature = signature;
+          body;
+        })
+      ]
+    | GramD _ -> []
     | RecD defs ->
       (
         (* HintD entries carry no code-gen information; strip them before
            length-checking or categorizing the remaining members. *)
         let defs = List.filter (fun d -> match d.it with HintD _ -> false | _ -> true) defs in
         match List.length defs with
-          | 0 -> None
+          | 0 -> []
           | 1 -> create_def (List.hd defs)
           | _ ->
             (* TODO: refactor to make maintenance easier *)
@@ -1703,27 +1937,27 @@ let rec create_def (def : Il.Ast.def) : command option
               match all_inductive_or_structure, all_abbrev_or_def with
                 | true, _ ->
                   let inductives = List.filter_map (fun def ->
-                    match create_def def with Some (Inductive i) -> Some i | _ -> None
+                    match create_def def with [Inductive i] -> Some i | _ -> None
                   ) defs in
                   let structures = List.filter_map (fun def ->
-                    match create_def def with Some (Structure s) -> Some s | _ -> None
+                    match create_def def with [Structure s] -> Some s | _ -> None
                   ) defs in
-                  Some (Mutual (MutualInductiveStructure (inductives, structures)))
+                  [Mutual (MutualInductiveStructure (inductives, structures))]
 
                 | false, true ->
                   let defs' = List.filter_map (fun def -> (* Name collision *)
-                    match create_def def with Some (Def s) -> Some s | _ -> None
+                    match create_def def with [Def s] -> Some s | _ -> None
                   ) defs in
                   let abbrevs = List.filter_map (fun def ->
-                    match create_def def with Some (Abbrev i) -> Some i | _ -> None
+                    match create_def def with [Abbrev i] -> Some i | _ -> None
                   ) defs in
-                  Some (Mutual (MutualDefAbbrev (defs', abbrevs)))
-                | false, false -> None
+                  [Mutual (MutualDefAbbrev (defs', abbrevs))]
+                | false, false -> []
             )
         )
-    | HintD _ -> None
+    | HintD _ -> []
     | RelD _ -> failwith "should have been handled by earlier case"
-    | TypD _ -> None
+    | TypD _ -> []
 
 
 let prologue : command list =
@@ -1735,6 +1969,7 @@ let prologue : command list =
 
 let create_script (il : script) : command list
   =
-    let generated = List.filter_map create_def il in
+    analysis := analyze_whole_script il;
+    let generated = List.concat (List.map (fun def -> create_def def) il) in
     
     prologue @ generated

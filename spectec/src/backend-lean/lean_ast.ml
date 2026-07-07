@@ -154,6 +154,7 @@ type term =
 
 and fun_binder =
   | Ident_FB of ident
+  | Hole_FB
 [@@deriving show]
 
 and _slice_bounds =
@@ -270,6 +271,12 @@ type _def =
       signature: opt_decl_sig;
       body: _def_case list;
     }
+  | DefStruct of {
+      modifier: decl_modifier;
+      id: decl_id;
+      signature: opt_decl_sig;
+      body: struct_inst_field list;
+    }
 [@@deriving show]
 
 type _inductive_case = {
@@ -346,6 +353,15 @@ type mutual =
   | MutualDefAbbrev of _def list * _abbrev list
 [@@deriving show]
 
+type instance = {
+  modifier: decl_modifier;
+  priority: int option;           (* (priority := N) — optional *)
+  id: decl_id option;             (* optional name; auto-generated if absent *)
+  signature: decl_sig;            (* type is REQUIRED for instance (not opt_decl_sig) *)
+  body: struct_inst_field list;   (* the `where` fields *)
+}
+[@@deriving show]
+
 type command =
   | Def of _def
   | Inductive of _inductive
@@ -353,4 +369,5 @@ type command =
   | Structure of _structure
   | Opaque of opaque
   | Mutual of mutual
+  | Instance of instance
 [@@deriving show]
