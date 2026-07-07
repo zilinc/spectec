@@ -500,6 +500,7 @@ lemma instr_ok_wf:
 proof (induction)
 qed(simp)+
 
+
 (*Instrs_ok2*)
 lemma e_type_empty1:
   assumes "Instrs_ok2 s C [] ft"
@@ -637,20 +638,761 @@ lemma instr_ok2_inversion:
 (*  apply blast+
   apply (metis instrtype.exhaust res_list.exhaust) *)
 
-sorry
+  sorry
+
+lemma map_is_app :
+  assumes "map f l = res1 @ res2"
+  shows "\<exists> l1 l2. l1 @ l2 = l \<and> map f l1 = res1 \<and> map f l2 = res2"
+  using assms
+proof (induction l arbitrary: res1 res2)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a l)
+  then show ?case
+    by (metis map_eq_append_conv)
+qed
+
+(*
+fun is_const :: "instr \<Rightarrow> bool" where
+"is_const (instr_sc1 (res_CONST _ _)) = True"
+| "is_const (instr_sc1 (VCONST _ _)) = True"
+| "is_const (instr_sc4 (REF_NULL _)) = True"
+| "is_const _ = False" 
+*)
+
+lemma inv_const_list :
+  assumes "Instrs_ok2 s C e (mk_functype t1 t2)"
+          "e = map (\<lambda> v. admininstr_val v) vs" 
+        shows "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: mk_instrtype t1 t2" 
+  using assms
+proof (induction s C e "mk_functype t1 t2" arbitrary: vs t1 t2
+      rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 =
+        "(\<lambda> s C e ft. (case ft of (mk_functype t1 t2) \<Rightarrow> 
+         (\<forall> v. (e = admininstr_val v \<longrightarrow>
+         (mk_instrtype (mk_list []) (mk_list [typeofval v]) <ti: mk_instrtype t1 t2)))))
+        " and ?P3.0 = "\<lambda> s C e rt. True" ])
+  case (plain C v_instr t1l t2l s)
+  then show ?case
+    apply (auto)
+    subgoal for v
+    proof -
+      assume newassms: "Instr_ok C v_instr (mk_functype (mk_list t1l) (mk_list t2l))"
+        "wf_context C"
+        "wf_instr v_instr"
+        "admininstr_instr v_instr = admininstr_val v"
+      then show "mk_instrtype (mk_list []) (mk_list [typeofval v]) <ti: 
+                 mk_instrtype (mk_list t1l) (mk_list t2l)"
+
+    proof (induction C v_instr "mk_functype (mk_list t1l) (mk_list t2l)" arbitrary: t1l t2l v
+          rule: Instr_ok_Instrs_ok.inducts(1)[where ?P2.0 = "\<lambda> C es ft. True"])
+ case (const C nt c_nt)
+      then show ?case 
+      proof (cases v)
+        case (val_CONST tval vval)
+        then show ?thesis using const admininstr_val.domintros admininstr_val.psimps
+          admininstr_instr.domintros admininstr_instr.psimps
+          by (metis Instrtype_sub_refl admininstr.inject(2) admininstr_st1.inject(5) 
+              typeofval.domintros(1)
+              typeofval.psimps(1))
+      qed(simp add:admininstr_val.domintros admininstr_val.psimps
+                   admininstr_instr.domintros admininstr_instr.psimps)+
+    next
+      case (vconst C c)
+      then show ?case 
+      proof (cases v)
+        case (val_VCONST tval vval)
+        then show ?thesis using vconst admininstr_val.domintros(2) admininstr_val.psimps(2)
+          admininstr_instr.domintros(21) admininstr_instr.psimps(21) typeofval.domintros(2)
+          typeofval.psimps(2) Instrtype_sub_refl valtype_vectype.domintros valtype_vectype.psimps
+          by simp
+      qed(simp add:admininstr_val.domintros admininstr_val.psimps
+                   admininstr_instr.domintros admininstr_instr.psimps)+
+    next
+      case (ref_null C rt)
+      then show ?case
+      proof (cases v)
+        case (val_REF_NULL rt')
+        then show ?thesis using ref_null admininstr_val.domintros admininstr_val.psimps
+          admininstr_instr.domintros admininstr_instr.psimps 
+          by (metis Instrtype_sub_refl admininstr.inject(5) admininstr_st4.inject(4) 
+              typeofval.domintros(3)
+              typeofval.psimps(3))
+       qed(simp add:admininstr_val.domintros admininstr_val.psimps
+                   admininstr_instr.domintros admininstr_instr.psimps)+ 
+(* Shouldn't this dismiss all remaining goals?!?!?! *)
+(*  qed(cases v, simp add:admininstr_val.domintros admininstr_val.psimps
+                   admininstr_instr.domintros admininstr_instr.psimps)+  *)
+    next
+      case (nop C)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (unreachable C t_1_lst t_2_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (drop C t)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (select_expl C t)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (select_impl t t' v_numtype v_vectype C)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (block C bt t_1_lst t_2_lst instr_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (loop C bt t_1_lst t_2_lst instr_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (res_if C bt t_1_lst t_2_lst instr_1_lst instr_2_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (br l C t_lst t_1_lst t_2_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (br_if l C t_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (br_table C l_lst t_lst l' t_1_lst t_2_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (call x C t_1_lst t_2_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (call_indirect x C lim y t_1_lst t_2_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (return C t_lst t_1_lst t_2_lst)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (unop C nt unop_nt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (binop C nt binop_nt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (testop C nt testop_nt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (relop C nt relop_nt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (cvtop_reinterpret nt_1 nt_2 C)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (cvtop_convert C nt_1 nt_2 v_cvtop)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+next
+      case (ref_func x C ft)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (ref_is_null C rt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (Instr_ok__vvunop C v_vvunop)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (Instr_ok__vvbinop C v_vvbinop)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (Instr_ok__vvternop C v_vvternop)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (Instr_ok__vvtestop C v_vvtestop)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vunop C sh vunop_sh)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vbinop C sh vbinop_sh)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vtestop C sh vtestop_sh)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vrelop C sh vrelop_sh)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vshiftop C sh vshiftop_sh)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vbitmask C sh)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vswizzle C sh)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vshuffle sh i_lst C)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vsplat C sh)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vextract_lane i sh C sx_opt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vreplace_lane i sh C)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vextunop C sh_1 sh_2 vextunop)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vextbinop C sh_1 sh_2 vextbinop)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vnarrow C sh_1 sh_2 v_sx)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (Instr_ok__vcvtop C sh_1 sh_2 v_vcvtop)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (local_get x C t)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (local_set x C t)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (local_tee x C t)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (global_get x C v_mut t)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (global_set x C t)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (table_get x C lim rt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (table_set x C lim rt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (table_size x C lim rt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (table_grow x C lim rt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (table_fill x C lim rt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (table_copy x_1 C lim_1 rt x_2 lim_2)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (table_init x_1 C lim rt x_2)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (elem_drop x C rt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (memory_size C mt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (memory_grow C mt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (memory_fill C mt)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (memory_copy C mt)
+      then show ?case  proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (memory_init C mt x)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (data_drop x C)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (load_val C mt nt v_memarg)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (load_pack C mt v_memarg v_M v_Inn v_sx)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (store_val C mt nt v_memarg)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (store_pack C mt v_memarg v_M v_Inn)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vload C mt v_memarg v_M v_N v_sx)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vload_splat C mt v_memarg v_n)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vload_zero C mt v_memarg v_n)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vload_lane C mt v_memarg v_n v_laneidx)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vstore C mt v_memarg)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (vstore_lane C mt v_memarg v_n v_laneidx)
+      then show ?case proof (cases v)
+  qed (simp add:admininstr_val.domintros admininstr_val.psimps admininstr_instr.domintros
+      admininstr_instr.psimps)+
+    next
+      case (empty C)
+      then show ?case by simp
+    next
+      case (Instrs_ok__instr C v_instr t_1_lst t_2_lst)
+      then show ?case by simp
+    next
+      case (seq C instr_1_lst t_1_lst t_2_lst instr_2_lst t_3_lst)
+      then show ?case by simp
+    next
+      case (sub C instr_lst t_1_lst t_2_lst t'_1_lst t'_2_lst)
+      then show ?case by simp
+    next
+      case (Instrs_ok__frame C instr_lst t_1_lst t_2_lst t_lst)
+      then show ?case by simp
+    qed qed done
+  
+next
+  case (label s C instr'_lst t'_lst t_lst admininstr_lst v_n)
+  show ?case
+    apply (auto)
+    subgoal for v
+    proof (cases v)
+    qed(simp add:admininstr_val.domintros admininstr_val.psimps)+
+    done
+next
+  case (Instr_ok2__frame s f C' admininstr_lst t_lst C v_n)
+  show ?case
+    apply (auto)
+    subgoal for v
+    proof (cases v)
+    qed(simp add:admininstr_val.domintros admininstr_val.psimps)+
+    done
+next
+  case (Instr_ok2__call_addr s v_funcaddr t_1_lst t_2_lst C)
+  show ?case
+    apply (auto)
+    subgoal for v
+    proof (cases v)
+    qed(simp add:admininstr_val.domintros admininstr_val.psimps)+
+    done
+next
+  case (Instr_ok2__ref s v_ref rt C)
+    show ?case
+    apply (auto)
+    subgoal for v
+    proof (cases v)
+      case (val_CONST x11 x12)
+      assume "admininstr_ref v_ref = admininstr_val v" 
+      then show ?thesis using val_CONST 
+      proof (cases v_ref)
+      qed(simp add:admininstr_val.domintros admininstr_val.psimps admininstr_ref.domintros
+          admininstr_ref.psimps)+
+    next
+      case (val_VCONST x21 x22)
+      assume "admininstr_ref v_ref = admininstr_val v" 
+      then show ?thesis using val_VCONST 
+      proof (cases v_ref)
+      qed(simp add:admininstr_val.domintros admininstr_val.psimps admininstr_ref.domintros
+          admininstr_ref.psimps)+
+    next
+      case (val_REF_NULL x3)
+      assume eq: "admininstr_ref v_ref = admininstr_val v"
+      show ?thesis using Instr_ok2__ref eq val_REF_NULL
+      proof (induction rule:Ref_ok.cases)
+        case (null s rt)
+        then show ?case 
+          using Instrtype_sub_refl admininstr_val.domintros(3) 
+                admininstr_val.psimps(3) admininstr_ref.domintros(1) 
+                admininstr_ref.psimps(1)
+          by (simp add: typeofval.domintros(3) typeofval.psimps(3))
+      qed(simp add:admininstr_val.domintros admininstr_val.psimps admininstr_ref.domintros
+          admininstr_ref.psimps)+
+    next
+      case (val_REF_FUNC_ADDR x4)
+      assume eq: "admininstr_ref v_ref = admininstr_val v"
+      show ?thesis using Instr_ok2__ref eq val_REF_FUNC_ADDR
+      proof (induction rule:Ref_ok.cases)
+        case (Ref_ok__func s a ext)
+        then show ?case
+          using Instrtype_sub_refl admininstr_val.domintros admininstr_val.psimps
+            admininstr_ref.domintros admininstr_ref.psimps typeofval.domintros 
+          typeofval.psimps
+          using valtype_reftype.domintros(1) valtype_reftype.psimps(1) by presburger
+      qed(simp add:admininstr_val.domintros admininstr_val.psimps admininstr_ref.domintros
+          admininstr_ref.psimps)+
+    next
+      case (val_REF_HOST_ADDR x5)
+       assume eq: "admininstr_ref v_ref = admininstr_val v"
+      show ?thesis using Instr_ok2__ref eq val_REF_HOST_ADDR
+      proof (induction rule:Ref_ok.cases)
+        case (extern s a)
+        then show ?case
+          using Instrtype_sub_refl admininstr_val.domintros admininstr_val.psimps
+            admininstr_ref.domintros admininstr_ref.psimps typeofval.domintros 
+          typeofval.psimps valtype_reftype.domintros valtype_reftype.psimps by simp
+      qed(simp add:admininstr_val.domintros admininstr_val.psimps admininstr_ref.domintros
+          admininstr_ref.psimps)+
+    qed
+    done
+next
+  case (Instr_ok2__trap s C t_1_lst t_2_lst)
+  show ?case
+    apply (auto)
+    subgoal for v
+    proof (cases v)
+    qed(simp add:admininstr_val.domintros admininstr_val.psimps)+
+    done
+next
+  case (Instrs_ok2__empty s C)
+  then show ?case using Instrtype_sub_refl by simp
+next
+  case (Instrs_ok2__instr s C v_admininstr t_1_lst t_2_lst)
+  then show ?case 
+  proof (cases vs)
+    case Nil
+    then show ?thesis using Instrs_ok2__instr by simp
+  next
+    case (Cons a list)
+    then show ?thesis 
+    proof (cases list)
+      case Nil
+      then show ?thesis using Cons Instrs_ok2__instr
+        by simp
+    next
+      case (Cons a' list')
+      then show ?thesis using Instrs_ok2__instr
+        by auto
+    qed
+  qed 
+next
+  case (Instrs_ok2__seq s C es1 t1l t2l es2 t3l)
+  then show ?case 
+  proof -
+    obtain vs1 vs2 where "vs1 @ vs2 = vs" "es1 = map admininstr_val vs1" "es2 = map admininstr_val vs2"
+      using map_is_app Instrs_ok2__seq(9)
+      by metis
+    then show ?thesis using Instrs_ok2__seq Instrtype_sub_emptyl
+      by fastforce
+  qed
+next
+  case (Instrs_ok2__sub s C admininstr_lst t_1_lst t_2_lst t'_1_lst t'_2_lst)
+  then show ?case using Instrtype_sub_trans
+    using Instrtype_sub_sub_rule by blast
+next
+  case (Instrs_ok2__frame s C admininstr_lst t_1_lst t_2_lst t_lst)
+  then show ?case using Instrtype_sub_trans
+    using Instrtype_sub_frame_rule by blast
+next
+  case (mk_Expr_ok2 s C admininstr_lst t_lst)
+  then show ?case by simp
+qed 
+
+lemma app_app:
+  assumes "l1 @ l2 = m1 @ m2"
+  shows "\<exists> n1 n2 n3. (n1 = l1 \<and> n2 @ n3 = l2 \<and> n1 @ n2 = m1 \<and> n3 = m2) \<or>
+(n1 @ n2 = l1 \<and> n3 = l2 \<and> n1 = m1 \<and> n2 @ n3 = m2)"
+  using assms
+proof(induction l1 arbitrary: l2 m1 m2)
+  case Nil
+  then have "[] = [] \<and> m1 @ m2 = l2 \<and> [] @ m1 = m1 \<and> m2 = m2" by simp
+  then show ?case by blast
+next
+  case (Cons a l1)
+  note outer = Cons
+  then show ?case
+  proof (cases m1)
+    case Nil
+    then show ?thesis
+      by (metis local.Nil append_Nil Cons.prems)
+  next
+    case (Cons b m1')
+    then have "a = b" "l1 @ l2 = m1' @ m2" using outer by auto
+    then show ?thesis using outer(1)
+      by (metis \<open>a = b\<close> \<open>l1 @ l2 = m1' @ m2\<close> local.Cons append_Cons)
+  qed
+qed
+
 
 lemma inv_Instrs_ok2__seq:
-  assumes "Instrs_ok2 s C a_e (mk_functype t1 t3)"
-          "a_e = (admininstr_1_lst @ admininstr_2_lst)"
-  shows "(\<exists> t_1_lst t_2_lst t2.
-    (Instrs_ok2 s C admininstr_1_lst (mk_functype t1 t2)) \<and>
-		(Instrs_ok2 s C admininstr_2_lst (mk_functype t2 t3)) \<and>
-		(list_all (\<lambda> (admininstr_1 :: admininstr). (wf_admininstr admininstr_1)) admininstr_1_lst) \<and>
-		(list_all (\<lambda> (admininstr_2 :: admininstr). (wf_admininstr admininstr_2)) admininstr_2_lst) \<and>
-    ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t3))"
+  assumes "Instrs_ok2 s C es (mk_functype t1 t3)"
+          "es = (es1 @ es2)"
+  shows "(\<exists> t1' t2' t3'.
+    (Instrs_ok2 s C es1 (mk_functype t1' t2')) \<and>
+		(Instrs_ok2 s C es2 (mk_functype t2' t3')) \<and>
+    Resulttype_sub t1 t1' \<and> Resulttype_sub t3' t3)"
+  using assms
+proof(induction s C es "mk_functype t1 t3" arbitrary: t1 t3 es1 es2
+rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 =
+"\<lambda> s C e ft. True" 
+and ?P3.0 = "\<lambda> s C e rt. True" 
+])
+  case (Instrs_ok2__empty s C)
+  then show ?case
+    using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__empty Resulttype_sub_empty by blast
+next
+  case (Instrs_ok2__instr s C v_admininstr t1l t3l)
+  then show ?case 
+  proof(cases es1)
+    case Nil
+    then have okes1: "Instrs_ok2 s C es1 (mk_functype (mk_list t1l) (mk_list t1l))"
+      using Instrs_ok2__empty Instrs_ok2__frame Instrs_ok2__instr.hyps(3,4) by fastforce
+    have "Instrs_ok2 s C es2 (mk_functype (mk_list t1l) (mk_list t3l))" 
+      using Nil Instrs_ok2__instr
+      using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__instr by auto
+    then show ?thesis using okes1 
+      using Resulttype_sub_refl by blast
+  next
+    case (Cons a list)
+    then have okes1: "Instrs_ok2 s C es1 (mk_functype (mk_list t1l) (mk_list t3l))" 
+      using Instrs_ok2__instr Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__instr by force
+    have "es2 = []" using Cons Instrs_ok2__instr
+      by simp
+    then have "Instrs_ok2 s C es2 (mk_functype (mk_list t3l) (mk_list t3l))" 
+      using Instrs_ok2__empty Instrs_ok2__frame
+      using Instrs_ok2__instr.hyps(3,4) by fastforce
+    then show ?thesis using okes1 Resulttype_sub_refl by blast
+  qed
+next
+  case (Instrs_ok2__seq s C es1' t1l t2l es2' t3l)
+  obtain l1 l2 l3 where
+    "(l1 = es1' \<and> l2 @ l3 = es2' \<and> l1 @ l2 = es1 \<and> l3 = es2) \<or>
+      (l1 @ l2 = es1' \<and> l3 = es2' \<and> l1 = es1 \<and> l2 @ l3 = es2)"
+    using app_app[OF Instrs_ok2__seq(9)] by force
+  then show ?case 
+  proof
+    assume els: "l1 = es1' \<and> l2 @ l3 = es2' \<and> l1 @ l2 = es1 \<and> l3 = es2"
+    then obtain t1' t2' t3' where
+      ih: "Instrs_ok2 s C l2 (mk_functype t1' t2')"
+      "Instrs_ok2 s C l3 (mk_functype t2' t3')"
+      "Resulttype_sub (mk_list t2l) t1'" "Resulttype_sub t3' (mk_list t3l)"
+      using Instrs_ok2__seq(4) by blast
+    then show "\<exists>t1' t2' t3'.
+       Instrs_ok2 s C es1 (mk_functype t1' t2') \<and>
+       Instrs_ok2 s C es2 (mk_functype t2' t3') \<and> Resulttype_sub (mk_list t1l) t1' \<and> 
+       Resulttype_sub t3' (mk_list t3l)"
+    proof (cases t1')
+      case (mk_list t1l')
+      then have okes1': "Instrs_ok2 s C es1' (mk_functype (mk_list t1l) t1')"
+        using Instrs_ok2__sub[OF Instrs_ok2__seq(1) Resulttype_sub_refl[of "mk_list t1l"]] 
+            ih(3) Instrs_ok2__seq by blast
+      then show ?thesis
+      proof (cases t2')
+        case (mk_list t2l')
+        then have "Instrs_ok2 s C es1 (mk_functype (mk_list t1l) t2')" 
+        using ih(1) els Instrs_ok2__seq Resulttype_sub.simps okes1'
+        using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__seq ih(3) by auto
+      then show ?thesis using ih els
+        using Resulttype_sub_refl by blast
+    qed
+  qed
+next
+    assume els: "l1 @ l2 = es1' \<and> l3 = es2' \<and> l1 = es1 \<and> l2 @ l3 = es2"
+    then obtain t1' t2' t3' where
+      ih: "Instrs_ok2 s C l1 (mk_functype t1' t2')"
+      "Instrs_ok2 s C l2 (mk_functype t2' t3')"
+      "Resulttype_sub (mk_list t1l) t1'" "Resulttype_sub t3' (mk_list t2l)"
+      using Instrs_ok2__seq(2) by blast
+    then show "\<exists>t1' t2' t3'.
+       Instrs_ok2 s C es1 (mk_functype t1' t2') \<and>
+       Instrs_ok2 s C es2 (mk_functype t2' t3') \<and> Resulttype_sub (mk_list t1l) t1' \<and> 
+       Resulttype_sub t3' (mk_list t3l)"
+    proof (cases t3')
+      case (mk_list t3l')
+      then have okes1': "Instrs_ok2 s C es2' (mk_functype t3' (mk_list t3l))"
+        using Instrs_ok2__sub[OF Instrs_ok2__seq(3)]
+            Resulttype_sub_refl[of "mk_list t3l"]
+            ih(4) Instrs_ok2__seq by blast
+      then show ?thesis
+      proof (cases t2')
+        case (mk_list t2l')
+        then have "Instrs_ok2 s C es2 (mk_functype t2' (mk_list t3l))" 
+        using ih(2) els Instrs_ok2__seq Resulttype_sub.simps okes1'
+        using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__seq ih(4) by auto
+      then show ?thesis using ih els
+        using Resulttype_sub_refl by blast
+    qed
+  qed
+qed
+next
+  case (Instrs_ok2__sub s C es t1l t2l t1l' t2l')
+  then show ?case
+    by (metis Resulttype_sub_trans)
+next
+  case (Instrs_ok2__frame s C es t1l t2l tl)
+  then obtain t1' t2' t3' where ih:
+    "Instrs_ok2 s C es1 (mk_functype t1' t2')"
+    "Instrs_ok2 s C es2 (mk_functype t2' t3')"
+    "Resulttype_sub (mk_list t1l) t1'"
+    "Resulttype_sub t3' (mk_list t2l)" 
+    by blast
+  then show ?case
+  proof (cases t1')
+    case (mk_list t1l')
+    note t1eq = mk_list
+    then show ?thesis
+    proof (cases t2')
+      case (mk_list t2l')
+      note t2eq = mk_list
+      then show ?thesis 
+      proof (cases t3')
+        case (mk_list t3l')
+        then have ok1: "Instrs_ok2 s C es1 (mk_functype (mk_list (tl @ t1l')) (mk_list (tl @ t2l')))"
+          using ih(1) t1eq t2eq
+          using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__frame Instrs_ok2__frame.hyps(3,4,5)
+            Instrs_ok2__frame.prems list_all_append by blast
+        have "Instrs_ok2 s C es2 (mk_functype (mk_list (tl @ t2l')) (mk_list (tl @ t3l')))"
+          using ih(2) t2eq mk_list
+          using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__frame Instrs_ok2__frame.hyps(3,4,5)
+            Instrs_ok2__frame.prems list_all_append by blast
+        then show ?thesis using ok1 ih(3,4)
+          using Resulttype_sub_append Resulttype_sub_refl mk_list t1eq by blast
+      qed qed qed
+    qed (simp)+
+ 
 
-sorry
-
+(* Not convinced these ones will ever be necessary: the sub and frame cases are
+   an inconvenience that appears
+   in every other case, not cases we want to specifically invert on *)
+(*
 lemma inv_Instrs_ok2__sub:
   assumes "Instrs_ok2 s C admininstr_lst (mk_functype t1 t2)"
   shows "(\<exists> t_1_lst t_2_lst t2.
@@ -660,7 +1402,7 @@ lemma inv_Instrs_ok2__sub:
 		(list_all (\<lambda> (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst) \<and>
 		((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst) <ti: mk_instrtype t1 t2)))"
 
-sorry
+sorry 
 
 lemma inv_Instrs_ok2__frame:
   assumes "Instrs_ok2 s C admininstr_lst (mk_functype t1 t2)"
@@ -669,7 +1411,7 @@ lemma inv_Instrs_ok2__frame:
 		(list_all (\<lambda> (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst) \<and>
 		((mk_instrtype (mk_list (t_lst @ t_1_lst)) (mk_list (t_lst @ t_2_lst)) <ti: mk_instrtype t1 t2)))"
 
-sorry
+sorry *)
 
 
 lemma instr_ok2_wf:

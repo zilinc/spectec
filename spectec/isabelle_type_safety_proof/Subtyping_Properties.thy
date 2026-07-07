@@ -223,6 +223,34 @@ lemma Resulttype_sub_t_list_subtyping:
     by (metis list_all2_lengthD mk_Resulttype_sub res_list.case res_list.exhaust)
   done
 
+lemma Instrtype_sub_emptyl : 
+  assumes "mk_instrtype (mk_list []) (mk_list l) <ti: mk_instrtype t1 t2"
+          "mk_instrtype (mk_list []) (mk_list l') <ti: mk_instrtype t2 t3"
+        shows "mk_instrtype (mk_list []) (mk_list (l @ l')) <ti: mk_instrtype t1 t3" 
+  using assms
+proof (induction "mk_instrtype (mk_list []) (mk_list l)" "mk_instrtype t1 t2"
+        rule: Instrtype_sub.induct)
+  case (mk_Instrtype_sub t1l t1fst t1lst t2l t2fst t2lst)
+  note outer_case = mk_Instrtype_sub
+  have eqnil1: "t1lst = []" using mk_Instrtype_sub(4)
+    by (simp add: Resulttype_sub.simps)
+  show ?case using mk_Instrtype_sub(8)
+  proof (induction "mk_instrtype (mk_list []) (mk_list l')" "mk_instrtype t2 t3"
+          rule: Instrtype_sub.induct)
+    case (mk_Instrtype_sub t2l' t2fst' t2lst' t3l t3fst t3lst)
+    have eqnil2: "t2lst' = []" using mk_Instrtype_sub(4)
+      by (simp add:Resulttype_sub.simps)
+    obtain t3fstfst t3fstsnd where "t3fstfst @ t3fstsnd = t3fst" 
+        "Resulttype_sub (mk_list t2fst) (mk_list t3fstfst)"
+        "Resulttype_sub (mk_list t2lst) (mk_list t3fstsnd)"
+      using outer_case(2,7) eqnil2 mk_Instrtype_sub(1,3,6) Resulttype_sub_split_right
+      by force
+    then show ?case using outer_case mk_Instrtype_sub eqnil1 eqnil2
+       isabelle_reference_output_wasm2.mk_Instrtype_sub[of "t1l" "t1l" "[]" "t3l" "t3fstfst"
+          "t3fstsnd @ t3lst" "[]" "l @ l'"]
+      by (metis Resulttype_sub_append Resulttype_sub_trans append.right_neutral append_assoc)
+  qed
+qed
 
 
 end
