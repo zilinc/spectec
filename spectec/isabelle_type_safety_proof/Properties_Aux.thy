@@ -1422,5 +1422,319 @@ lemma instr_ok2_wf:
 proof(induction)
 qed(simp)+
 
+lemma list_all_drop:
+  assumes "list_all (\<lambda> x. P x \<and> Q x) l"
+  shows "list_all P l"
+  using assms
+proof(induction l)
+qed(auto)
+
+
+lemma wf_admininstr_instr:
+  assumes "wf_instr e"
+  shows "wf_admininstr (admininstr_instr e)"
+  using assms
+proof(induction e rule:wf_instr.induct)
+  case instr_case_0
+  then show ?case
+    using admininstr_case_0 admininstr_instr.domintros(1) admininstr_instr.psimps(1) by argo
+next
+  case instr_case_1
+  then show ?case 
+    by (simp add: admininstr_case_1 admininstr_instr.domintros(2) admininstr_instr.psimps(2))
+next
+  case instr_case_2
+  then show ?case
+    by (simp add: admininstr_case_2 admininstr_instr.domintros(3) admininstr_instr.psimps(3))
+next
+  case (instr_case_3 valtype_lst_opt)
+  then show ?case 
+by (simp add: admininstr_case_3 admininstr_instr.domintros(4) admininstr_instr.psimps(4))
+next
+  case (instr_case_4 v_blocktype instr_lst)
+  then show ?case using admininstr_case_4 list_all_drop 
+    by (metis admininstr_instr.domintros(5) admininstr_instr.psimps(5))
+next
+  case (instr_case_5 v_blocktype instr_lst)
+  then show ?case  using admininstr_case_5 list_all_drop 
+    by (metis admininstr_instr.domintros(6) admininstr_instr.psimps(6))
+next
+  case (instr_case_6 v_blocktype instr_lst instr_lst_0_lst)
+  then show ?case  using admininstr_case_6 list_all_drop 
+    by (metis admininstr_instr.domintros(7) admininstr_instr.psimps(7))
+next
+  case (instr_case_7 v_labelidx)
+  then show ?case  using admininstr_case_7 
+    by (metis admininstr_instr.domintros(8) admininstr_instr.psimps(8))
+next
+  case (instr_case_8 v_labelidx)
+  then show ?case using admininstr_case_8
+    by (metis admininstr_instr.domintros(9) admininstr_instr.psimps(9))
+next
+  case (instr_case_9 labelidx_lst v_labelidx)
+  then show ?case using admininstr_case_9
+    by (metis admininstr_instr.domintros(10) admininstr_instr.psimps(10))
+next
+  case (instr_case_10 v_funcidx)
+  then show ?case using admininstr_case_10 
+    by (metis admininstr_instr.domintros(11) admininstr_instr.psimps(11))
+next
+  case (instr_case_11 v_tableidx v_typeidx)
+  then show ?case using admininstr_case_11
+    by (metis admininstr_instr.domintros(12) admininstr_instr.psimps(12))
+next
+  case instr_case_12
+  then show ?case using admininstr_case_12 
+    by (metis admininstr_instr.domintros(13) admininstr_instr.psimps(13))
+next
+  case (instr_case_13 v_numtype var_0)
+  then show ?case using admininstr_case_13
+    by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14))
+next
+  case (instr_case_14 v_numtype var_0)
+  then show ?case using admininstr_case_14
+    by (metis admininstr_instr.domintros(15) admininstr_instr.psimps(15))
+next
+  case (instr_case_15 v_numtype var_0)
+  then show ?case using admininstr_case_15
+    by (metis admininstr_instr.domintros(16) admininstr_instr.psimps(16))
+next
+  case (instr_case_16 v_numtype var_0)
+  then show ?case using admininstr_case_16
+    by (metis admininstr_instr.domintros(17) admininstr_instr.psimps(17))
+next
+  case (instr_case_17 v_numtype var_0)
+  then show ?case using admininstr_case_17 
+    by (metis admininstr_instr.domintros(18) admininstr_instr.psimps(18))
+next
+  case (instr_case_18 numtype_1 numtype_2 v_cvtop)
+  then show ?case using admininstr_case_18 
+    by (metis admininstr_instr.domintros(19) admininstr_instr.psimps(19))
+next
+  case (instr_case_19 v_numtype v_n)
+  then show ?case using admininstr_case_19
+    by (metis admininstr_instr.domintros(20) admininstr_instr.psimps(20))
+next
+  case (instr_case_20 v_vectype var_0)
+  then show ?case using admininstr_case_20
+    by (metis admininstr_instr.domintros(21) admininstr_instr.psimps(21))
+next
+  case (instr_case_21 v_vectype v_vvunop)
+  then show ?case using admininstr_case_21
+    by (metis admininstr_instr.domintros(22) admininstr_instr.psimps(22))
+next
+  case (instr_case_22 v_vectype v_vvbinop)
+  then show ?case using admininstr_case_22
+    by (metis admininstr_instr.domintros(23) admininstr_instr.psimps(23))
+next
+  case (instr_case_23 v_vectype v_vvternop)
+  then show ?case using admininstr_case_23
+    by (metis admininstr_instr.domintros(24) admininstr_instr.psimps(24))
+next
+  case (instr_case_24 v_vectype v_vvtestop)
+  then show ?case using admininstr_case_24
+    by (metis admininstr_instr.domintros(25) admininstr_instr.psimps(25))
+next
+  case (instr_case_25 v_shape var_0)
+  then show ?case using admininstr_case_25
+    by (metis admininstr_instr.domintros(26) admininstr_instr.psimps(26))
+next
+  case (instr_case_26 v_shape var_0)
+  then show ?case using admininstr_case_26
+    by (metis admininstr_instr.domintros(27) admininstr_instr.psimps(27))
+next
+  case (instr_case_27 v_shape var_0)
+  then show ?case using admininstr_case_27
+    by (metis admininstr_instr.domintros(28) admininstr_instr.psimps(28))
+next
+  case (instr_case_28 v_shape var_0)
+  then show ?case using admininstr_case_28
+    by (metis admininstr_instr.domintros(29) admininstr_instr.psimps(29))
+next
+  case (instr_case_29 v_ishape var_0)
+  then show ?case using admininstr_case_29
+    by (metis admininstr_instr.domintros(30) admininstr_instr.psimps(30))
+next
+  case (instr_case_30 v_ishape)
+  then show ?case using admininstr_case_30
+    by (metis admininstr_instr.domintros(31) admininstr_instr.psimps(31))
+next
+  case (instr_case_31 v_ishape)
+  then show ?case using admininstr_case_31
+    by (metis admininstr_instr.domintros(32) admininstr_instr.psimps(32))
+next
+  case (instr_case_32 v_ishape laneidx_lst)
+  then show ?case using admininstr_case_32
+    by (metis admininstr_instr.domintros(33) admininstr_instr.psimps(33))
+next
+  case (instr_case_33 v_shape)
+  then show ?case using admininstr_case_33
+    by (metis admininstr_instr.domintros(34) admininstr_instr.psimps(34))
+next
+  case (instr_case_34 v_shape v_laneidx v_numtype sx_opt)
+  then show ?case using admininstr_case_34
+    by (metis admininstr_instr.domintros(35) admininstr_instr.psimps(35))
+next
+  case (instr_case_35 v_shape v_laneidx)
+  then show ?case using admininstr_case_35
+    by (metis admininstr_instr.domintros(36) admininstr_instr.psimps(36))
+next
+  case (instr_case_36 ishape_1 ishape_2 var_0)
+  then show ?case using admininstr_case_36
+    by (metis admininstr_instr.domintros(37) admininstr_instr.psimps(37))
+next
+  case (instr_case_37 ishape_1 ishape_2 var_0)
+  then show ?case using admininstr_case_37
+    by (metis admininstr_instr.domintros(38) admininstr_instr.psimps(38))
+next
+  case (instr_case_38 ishape_1 ishape_2 v_sx)
+  then show ?case using admininstr_case_38
+    by (metis admininstr_instr.domintros(39) admininstr_instr.psimps(39))
+next
+  case (instr_case_39 v_shape shape_0 v_vcvtop)
+  then show ?case using admininstr_case_39
+    by (metis admininstr_instr.domintros(40) admininstr_instr.psimps(40))
+next
+  case (instr_case_40 v_reftype)
+  then show ?case using admininstr_case_40
+    by (metis admininstr_instr.domintros(41) admininstr_instr.psimps(41))
+next
+  case (instr_case_41 v_funcidx)
+  then show ?case using admininstr_case_41
+    by (metis admininstr_instr.domintros(42) admininstr_instr.psimps(42))
+next
+  case instr_case_42
+  then show ?case using admininstr_case_42
+    by (metis admininstr_instr.domintros(43) admininstr_instr.psimps(43))
+next
+  case (instr_case_43 v_localidx)
+  then show ?case using admininstr_case_43
+    by (metis admininstr_instr.domintros(44) admininstr_instr.psimps(44))
+next
+  case (instr_case_44 v_localidx)
+  then show ?case using admininstr_case_44
+    by (metis admininstr_instr.domintros(45) admininstr_instr.psimps(45))
+next
+  case (instr_case_45 v_localidx)
+  then show ?case using admininstr_case_45
+    by (metis admininstr_instr.domintros(46) admininstr_instr.psimps(46))
+next
+  case (instr_case_46 v_globalidx)
+  then show ?case using admininstr_case_46
+    by (metis admininstr_instr.domintros(47) admininstr_instr.psimps(47))
+next
+  case (instr_case_47 v_globalidx)
+  then show ?case using admininstr_case_47
+    by (metis admininstr_instr.domintros(48) admininstr_instr.psimps(48))
+next
+  case (instr_case_48 v_tableidx)
+  then show ?case using admininstr_case_48
+    by (metis admininstr_instr.domintros(49) admininstr_instr.psimps(49))
+next
+  case (instr_case_49 v_tableidx)
+  then show ?case using admininstr_case_49
+    by (metis admininstr_instr.domintros(50) admininstr_instr.psimps(50))
+next
+  case (instr_case_50 v_tableidx)
+  then show ?case using admininstr_case_50
+    by (metis admininstr_instr.domintros(51) admininstr_instr.psimps(51))
+next
+  case (instr_case_51 v_tableidx)
+  then show ?case using admininstr_case_51
+    by (metis admininstr_instr.domintros(52) admininstr_instr.psimps(52))
+next
+  case (instr_case_52 v_tableidx)
+  then show ?case using admininstr_case_52
+    by (metis admininstr_instr.domintros(53) admininstr_instr.psimps(53))
+next
+  case (instr_case_53 v_tableidx tableidx_0)
+  then show ?case using admininstr_case_53
+    by (metis admininstr_instr.domintros(54) admininstr_instr.psimps(54))
+next
+  case (instr_case_54 v_tableidx v_elemidx)
+  then show ?case using admininstr_case_54
+    by (metis admininstr_instr.domintros(55) admininstr_instr.psimps(55))
+next
+  case (instr_case_55 v_elemidx)
+  then show ?case using admininstr_case_55
+    by (metis admininstr_instr.domintros(56) admininstr_instr.psimps(56))
+next
+  case (instr_case_56 v_numtype var_0_opt v_memarg)
+  then show ?case using admininstr_case_56
+    by (metis admininstr_instr.domintros(57) admininstr_instr.psimps(57))
+next
+  case (instr_case_57 sz_opt v_memarg Inn_opt numtype_opt v_numtype)
+  then show ?case using admininstr_case_57 
+    admininstr_instr.domintros(58) admininstr_instr.psimps(58) by simp
+next
+  case (instr_case_58 v_memarg v_vectype vloadop_opt)
+  then show ?case using admininstr_case_58
+    by (metis admininstr_instr.domintros(59) admininstr_instr.psimps(59))
+next
+  case (instr_case_59 v_sz v_memarg v_laneidx v_vectype)
+  then show ?case using admininstr_case_59
+    by (metis admininstr_instr.domintros(60) admininstr_instr.psimps(60))
+next
+  case (instr_case_60 v_memarg v_vectype)
+  then show ?case using admininstr_case_60
+    by (metis admininstr_instr.domintros(61) admininstr_instr.psimps(61))
+next
+  case (instr_case_61 v_sz v_memarg v_laneidx v_vectype)
+  then show ?case using admininstr_case_61
+    by (metis admininstr_instr.domintros(62) admininstr_instr.psimps(62))
+next
+  case instr_case_62
+  then show ?case using admininstr_case_62
+    by (metis admininstr_instr.domintros(63) admininstr_instr.psimps(63))
+next
+  case instr_case_63
+  then show ?case using admininstr_case_63
+    by (metis admininstr_instr.domintros(64) admininstr_instr.psimps(64))
+next
+  case instr_case_64
+  then show ?case using admininstr_case_64
+    by (metis admininstr_instr.domintros(65) admininstr_instr.psimps(65))
+next
+  case instr_case_65
+  then show ?case using admininstr_case_65
+    by (metis admininstr_instr.domintros(66) admininstr_instr.psimps(66))
+next
+  case (instr_case_66 v_dataidx)
+  then show ?case using admininstr_case_66
+    by (metis admininstr_instr.domintros(67) admininstr_instr.psimps(67))
+next
+  case (instr_case_67 v_dataidx)
+  then show ?case using admininstr_case_67
+    by (metis admininstr_instr.domintros(68) admininstr_instr.psimps(68))
+qed
+
+
+lemma instr_ok2_wf_instr:
+  assumes "Instrs_ok2 s C e ft"
+  shows "list_all wf_admininstr e"
+  using assms
+proof(induction s C e ft rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 =
+    "\<lambda> s C e ft. wf_admininstr e" and ?P3.0 = "\<lambda> s C e rt. True"])
+  case (plain C v_instr t_1_lst t_2_lst s)
+  then show ?case using wf_admininstr_instr by simp 
+next
+  case (Instr_ok2__ref s v_ref rt C)
+  then show ?case
+  proof (induction rule:Ref_ok.induct)
+    case (null s rt)
+    then show ?case
+      by (simp add: admininstr_case_40 admininstr_ref.domintros(1) admininstr_ref.psimps(1))
+  next
+    case (Ref_ok__func s a ext)
+    then show ?case 
+      using admininstr_case_68 admininstr_ref.domintros(2) admininstr_ref.psimps(2) by presburger
+  next
+    case (extern s a)
+    then show ?case
+      using admininstr_case_69 admininstr_ref.domintros(3) admininstr_ref.psimps(3) by presburger
+  qed
+qed(simp)+
+
+
 
 end

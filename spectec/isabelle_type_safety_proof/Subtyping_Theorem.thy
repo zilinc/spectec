@@ -8,9 +8,16 @@ lemma typing_frame_sub :
   assumes "Resulttype_sub (mk_list ts) (mk_list ts')" 
           "Instrs_ok2 s C e (mk_functype (mk_list t1) (mk_list t2))" 
         shows "Instrs_ok2 s C e (mk_functype (mk_list (ts @ t1)) (mk_list (ts' @ t2)))"
-  using Instrs_ok2__frame
-  by (metis Instrs_ok2__sub Resulttype_sub_append Resulttype_sub_refl assms(1,2) instr_ok2_wf(1,2)
-      inv_Instrs_ok2__frame)
+  using assms
+proof -
+  assume "Resulttype_sub (mk_list ts) (mk_list ts')" 
+         "Instrs_ok2 s C e (mk_functype (mk_list t1) (mk_list t2))"
+  then have "Instrs_ok2 s C e (mk_functype (mk_list (ts @ t1)) (mk_list (ts @ t2)))"
+    using Instrs_ok2__frame instr_ok2_wf instr_ok2_wf_instr by simp
+  then show ?thesis
+    by (meson Instrs_ok2__sub Resulttype_sub_append Resulttype_sub_refl assms(1) instr_ok2_wf(1,2)
+        instr_ok2_wf_instr)
+qed
 
 
 lemma subtype_typing :
@@ -23,7 +30,8 @@ proof (cases)
   have "wf_store s" "wf_context C" using assms(2) instr_ok2_wf by auto
   then have "Instrs_ok2 s C e (mk_functype (mk_list t1lst) (mk_list t2lst))"
     using Instrs_ok2__frame assms(2) 
-    using Instrs_ok2__sub inv_Instrs_ok2__frame local.mk_Instrtype_sub(1,2,8,9) by blast
+    using Instrs_ok2__sub local.mk_Instrtype_sub(1,2,8,9)
+    using instr_ok2_wf_instr by blast  
   then show ?thesis 
     using typing_frame_sub[OF mk_Instrtype_sub(7)] 
     using local.mk_Instrtype_sub(3,4,5,6) by presburger
