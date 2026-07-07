@@ -136,9 +136,12 @@ and render_term (term : term) : document =
 
   | FunType (t1, t2) ->
       (* ↔ has precedence 20 in Lean 4, lower than → at 25.
-         Without parens, `A ↔ B → C` parses as `A ↔ (B → C)` rather than `(A ↔ B) → C`. *)
+         Without parens, `A ↔ B → C` parses as `A ↔ (B → C)` rather than `(A ↔ B) → C`.
+         ∀ has even lower precedence (extends right), so `∀ x ∈ S, P → Q` parses
+         as `∀ x ∈ S, (P → Q)` rather than `(∀ x ∈ S, P) → Q`. *)
       let t1_str = match t1 with
-        | BinaryInfixFunApp (_, Ident "↔", _) ->
+        | BinaryInfixFunApp (_, Ident "↔", _)
+        | BoundedForall _ ->
           string "(" ^^ render_term t1 ^^ string ")"
         | _ -> render_term t1
       in
@@ -324,6 +327,40 @@ and render_term (term : term) : document =
   | Not term ->
       string "¬ "
       ^^ render_term term
+
+  | Premises { premises; conclusion } ->
+      (* Each premise on its own line followed by →, then the conclusion.
+         The leading hardline + nest 2 means the block starts on a new line
+         indented by 2 relative to the : that precedes it, giving e.g.:
+
+           | case_name (params...) :
+               premise_1 →
+               premise_2 →
+               conclusion
+
+         Premises whose outermost operator has lower or equal precedence to →
+         must be parenthesised, because appending " →" would otherwise be
+         parsed as part of that operator's body:
+           ∀ x ∈ S, P →   parses as  ∀ x ∈ S, (P → …)   — wrong
+           A ↔ B →         parses as  A ↔ (B → …)         — wrong
+           P → Q →         parses as  P → (Q → …)          — wrong
+      *)
+      let render_premise p =
+        let needs_parens = match p with
+          | BoundedForall _
+          | BinaryInfixFunApp (_, Ident "↔", _)
+          | FunType _ -> true
+          | _ -> false
+        in
+        let s = render_term p in
+        (if needs_parens then string "(" ^^ s ^^ string ")" else s)
+        ^^ string " →"
+      in
+      let lines =
+        List.map render_premise premises @ [render_term conclusion]
+      in
+      nest 2 (hardline ^^ separate hardline lines)
+
   (* | _ -> failwith (Printf.sprintf "render_term: unhandled term: %s" (show_term term)) *)
 
 and render_tactic_seq (tactic_seq : tactic_seq) : document =

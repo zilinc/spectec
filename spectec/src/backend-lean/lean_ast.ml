@@ -143,6 +143,27 @@ type term =
 
   | Not of term
 
+  (*
+    Premises is NOT an official Lean 4 grammar production. It exists here purely
+    for rendering convenience: it represents the premises-then-conclusion shape of
+    an inductive constructor type, where each premise should appear on its own line:
+
+      | case_name (params...) :
+          premise_1 →
+          premise_2 →
+          conclusion
+
+    The distinction from a chain of FunType nodes matters because FunType is also
+    used for value-level function types (α → β) which should remain inline.
+    Using a dedicated node lets the renderer apply the multi-line layout without
+    any heuristics, and keeps backend.ml in control of which arrow chains are
+    logical sequents vs. function types.
+  *)
+  | Premises of {
+      premises   : term list;
+      conclusion : term;
+    }
+
   (* | UpdateList of {
     name_of_list_to_update: term;
     index: term;

@@ -972,9 +972,7 @@ and create_iter_prem
       }
 
 
-let append_prems_to_term (term : term) (prems : Il.Ast.prem list) : term
-  
-  (* TODO: it would be nice if this could be elegantly done but only for DecD *)
+let filter_else_prems (prems : Il.Ast.prem list) : Il.Ast.prem list =
   (*
     ElsePr ("-- otherwise") carries no actual condition to check at runtime —
     it just marks "this is the fallback clause" for the else/else-simplification
@@ -985,11 +983,24 @@ let append_prems_to_term (term : term) (prems : Il.Ast.prem list) : term
     should render as a plain match arm body, not `TEMPORARY_PREM → none` or
     `True → none`.
   *)
-  = let prems = List.filter (fun p -> match p.it with ElsePr -> false | _ -> true) prems in
-    if prems = [] then term
-    else
-      let prems_as_terms = List.map create_prem prems in
-      create_curried_func (prems_as_terms @ [term])
+  List.filter (fun p -> match p.it with ElsePr -> false | _ -> true) prems
+
+(* For inductive proposition constructors: renders each premise on its own line.
+   Use this when building the signature of an inductive relation case. *)
+let append_prems_to_prop (conclusion : term) (prems : Il.Ast.prem list) : term =
+  let prems = filter_else_prems prems in
+  match prems with
+  | [] -> conclusion
+  | _  -> Premises { premises = List.map create_prem prems; conclusion }
+
+(* For definition bodies: renders as a flat FunType chain (inline →).
+   Use this when building the body of a def match arm or no-match clause. *)
+let append_prems_to_term (term : term) (prems : Il.Ast.prem list) : term =
+  let prems = filter_else_prems prems in
+  if prems = [] then term
+  else
+    let prems_as_terms = List.map create_prem prems in
+    create_curried_func (prems_as_terms @ [term])
 
 let create_typcase
   (* 
@@ -1383,7 +1394,7 @@ let rec create_def (def : Il.Ast.def) : command list
                     fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
                 *)
                 Some (
-                  append_prems_to_term
+                  append_prems_to_prop
                   exp_with_rel_id_prepended
                   prems
                 )

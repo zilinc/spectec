@@ -108,6 +108,9 @@ let rec walk_term (m : mapper) (t : term) : term =
           RightPipelineField (w t1, t2)  (* t2 is a method/field name — not a variable *)
 
       | Not t1 -> Not (w t1)
+
+      | Premises { premises; conclusion } ->
+          Premises { premises = List.map w premises; conclusion = w conclusion }
     )
 
 (*
