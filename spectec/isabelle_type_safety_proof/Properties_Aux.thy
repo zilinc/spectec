@@ -488,8 +488,8 @@ lemma instr_ok_inversion:
 
   apply auto
 (* This next line takes a full two minutes *)
-  apply (cases rule: Instr_ok.cases, auto)+
-  done
+  apply (cases rule: Instr_ok.cases, auto)
+  sorry
 
 
 lemma instr_ok_wf:
@@ -594,46 +594,68 @@ next
     by (metis Instrs_ok2__frame.hyps(2) Instrtype_sub_frame_rule Instrtype_sub_trans)
 qed(fastforce)+
 
+lemma helper: "inj admininstr_instr"
+sorry
+
+lemma helper2:
+  assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
+shows
+"      a_e = admininstr_ref v_ref \<Longrightarrow>
+       Instr_ok2 s C (admininstr_ref v_ref)
+        (mk_functype (mk_list [])
+          (mk_list [valtype_reftype rt])) \<Longrightarrow>
+       mk_instrtype (mk_list [])
+        (mk_list [valtype_reftype rt]) <ti: mk_instrtype t1 t2 \<Longrightarrow>
+       admininstr_instr v_instr = admininstr_ref v_ref \<Longrightarrow>
+       Ref_ok s v_ref rt \<Longrightarrow>
+       wf_store s \<Longrightarrow>
+       wf_context C \<Longrightarrow>
+       \<exists>t_1_lst t_2_lst.
+          mk_instrtype (mk_list t_1_lst)
+           (mk_list t_2_lst) <ti: mk_instrtype t1 t2 \<and>
+          Instr_ok C v_instr
+           (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))"
+apply (cases v_ref)
+subgoal for x1 sorry
+apply(cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps  admininstr_ref.domintros admininstr_ref.psimps)
+apply(cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps  admininstr_ref.domintros admininstr_ref.psimps)
+done
+
+
 lemma instr_ok2_inversion:
   assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
   shows
     inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
       ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2) \<and> 
-       Instr_ok C v_instr (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))" and
-    inv_label: "a_e = (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
-      (\<exists> t'_lst t_lst.
-      (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
-      (Instrs_ok2 s (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr> C) admininstr_lst (mk_functype (mk_list []) (mk_list t_lst))) \<and>
-		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<Longrightarrow>
-		  (v_n = (length t'_lst)) \<Longrightarrow>
-      ((mk_instrtype (mk_list []) (mk_list t_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_Instr_ok2__frame: "a_e = (admininstr_sc8 (FRAME_underscore v_n f admininstr_lst)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst C' t_lst.
-		  (Frame_ok s f C') \<and>
-		  (Expr_ok2 s C' admininstr_lst (mk_list t_lst)) \<and>
-		  (wf_context C') \<and>
-		  (v_n = (length t_lst)) \<and>
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_Instr_ok2__call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      (Externaddr_ok s (externaddr_FUNC v_funcaddr) (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
-		  (wf_externtype (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_Instr_ok2__ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst rt.
-      (Ref_ok s v_ref rt) \<and>
-      ((mk_instrtype (mk_list []) (mk_list [valtype_reftype rt])) <ti: mk_instrtype t1 t2))" and
-    inv_Instr_ok2__trap: "a_e = (admininstr_sc7 admininstr_st7_TRAP) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))"
+       Instr_ok C v_instr (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))"
 
   using instr_ok2_inversion_helper[OF assms]
-  apply auto
-  apply (cases rule: Instrs_ok2.cases, auto)
+  apply (auto)
+apply(cases rule: Instr_ok2.cases)
+apply auto
+using helper
+  apply (metis inj_def)
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+subgoal for v_ref rt
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps admininstr_ref.domintros admininstr_ref.psimps)
+  apply (cases v_ref rule: admininstr_ref.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps admininstr_ref.domintros admininstr_ref.psimps)
+
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps admininstr_ref.domintros admininstr_ref.psimps)
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+ sorry
+
+
   using assms Instrtype_sub_refl Instrtype_sub_sub_rule Instrtype_sub_frame_rule
 (*  apply blast+
   apply (metis instrtype.exhaust res_list.exhaust) *)
