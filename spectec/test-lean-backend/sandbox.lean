@@ -81,3 +81,79 @@ def concat_ (X : Type) (var_0 : List X) (var_1 : List (List X)) : List X :=
   | w' :: w''_lst => concat_ X (var_0 ++ w') w''_lst  -- w_lst2 → var_0
 
 #eval concat_ Nat [0] [[1, 2], [3]]  -- [0, 1, 2, 3]
+
+
+def myfunc (x: Nat) : Prop :=
+  match x with
+  | 0 => true -> let x := false; x -> true -> true
+  | _ => false -> false
+
+
+-- ===========================================================
+-- Scenario 4: RulePr in a def match arm body
+-- ===========================================================
+-- In the IL, a def clause can carry a RulePr premise — an inductive relation
+-- invoked as a guard.  append_prems_to_term renders it as a function arrow:
+--
+--   def $f(x) = result
+--     -- MyRel: (x, result)
+--
+-- generates:  | x_pat => MyRel x result → [result]
+--
+-- The match arm body has type  MyRel x result → List Nat  instead of  List Nat.
+-- Lean accepts this: a Prop-valued arrow in a term position is fine.
+
+inductive IsPositive : Nat → Prop where
+  | pos : n > 0 → IsPositive n
+
+-- Hypothetical backend output for a def with a RulePr premise:
+def f_RulePr (x : Nat) : Prop :=
+  match x with
+  | 0     => True                     -- no premise, base case
+  | n + 1 => True -> True -> let x := n; IsPositive (n + 1) → True  -- RulePr: IsPositive (n+1)
+
+-- Lean accepts the mixed return (True vs Prop-valued arrow) because both
+-- elaborate to Prop.  In practice the right-hand side of → would be the
+-- actual function result type, making the whole thing a function type.
+
+
+-- ===========================================================
+-- Scenario 5: IterPr in a def match arm body
+-- ===========================================================
+-- An IterPr premise is a starred/plus-iterated check over a list.
+-- append_prems_to_term renders it via create_iter_prem, which produces a
+-- BoundedForall (∀ elem ∈ list, P elem).
+--
+--   def $g(xs) = result
+--     -- (Wf: x)* {x <- xs}
+--
+-- generates:  | xs_pat => (∀ x ∈ xs, WfProp x) → result
+
+inductive WfNat : Nat → Prop where
+  | wf : n < 100 → WfNat n
+
+-- Hypothetical backend output for a def with an IterPr premise:
+def g_IterPr (xs : List Nat) : Prop :=
+  match xs with
+  | []     => True                               -- no premise on empty list
+  | _ :: _ => (∀ x ∈ xs, WfNat x) → True       -- IterPr: (WfNat: x)* {x <- xs}
+
+
+-- ===========================================================
+-- Scenario 6: NegPr in a def match arm body
+-- ===========================================================
+-- A NegPr wraps an inner premise and negates it.  create_prem renders it
+-- as  ¬ (inner_prem_term).
+--
+--   def $h(x) = result
+--     -- not (x = 0)
+--
+-- generates:  | x_pat => ¬ (x = 0) → result
+--
+-- In practice the WasmSpec uses ElsePr (-- otherwise) for fallback arms
+-- rather than an explicit NegPr, but NegPr is grammatically valid in a def.
+
+def h_NegPr (x : Nat) : Prop :=
+  match x with
+  | 0     => True              -- base case, no premise
+  | n + 1 => ¬ (n + 1 = 0) → True   -- NegPr (IfPr (x ≠ 0))

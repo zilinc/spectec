@@ -1151,7 +1151,9 @@ let rec create_prem (p : Il.Ast.prem) : term = match p.it with
       create_iter_prem inner_prem iterexp   (* dispatch to the arity-independent handler *)
   | NegPr (inner_prem) ->
       Not (create_prem inner_prem)
-  | _ -> Ident "TEMPORARY_PREM"
+  | ElsePr -> failwith "create_prem: ElsePr should have been filtered out by filter_else_prems"
+  | LetPr _  -> failwith "LetPr should have been handled separately"
+  | _ -> failwith "create_prem: unhandled premise type"
 
 (*
   create_iter_prem — see the large comment block above create_prem for full docs.
@@ -1247,6 +1249,22 @@ let filter_else_prems (prems : Il.Ast.prem list) : Il.Ast.prem list =
   *)
   List.filter (fun p -> match p.it with ElsePr -> false | _ -> true) prems
 
+let separate_out_let_prems_in_order (prems : Il.Ast.prem list) : Il.Ast.prem list * Il.Ast.prem list =
+  (*
+    We use this to extract the LetPr prems in order to render them as a series
+    of let bindings at the very start of the premise chain.
+
+    Importantly, we extract them in the order they appear in the IL, because the
+    LetPr premises may depend on each other (e.g. `let x = 1` then `let y = x +
+    1`).
+  *)
+  let let_prems, other_prems =
+    List.partition
+      (fun p -> match p.it with LetPr _ -> true | _ -> false)
+      prems
+  in
+  (let_prems, other_prems)
+
 (* For inductive proposition constructors: renders each premise on its own line.
    Use this when building the signature of an inductive relation case. *)
 let append_prems_to_prop (conclusion : term) (prems : Il.Ast.prem list) : term =
@@ -1255,14 +1273,33 @@ let append_prems_to_prop (conclusion : term) (prems : Il.Ast.prem list) : term =
   | [] -> conclusion
   | _  -> Premises { premises = List.map create_prem prems; conclusion }
 
+let prepend_let_prems (prems : Il.Ast.prem list) (next : term) : term =
+  let prepend_let_prem (p : Il.Ast.prem) (next : term) : term = match p.it with
+    | LetPr (_, exp1, exp2) ->
+        Let {
+          let_config = [];
+          let_decl = LetPatDecl ({
+            pat = create_exp exp1;
+            type_ = None;
+            value = create_exp exp2;
+          });
+          body = next;
+        }
+    | _ -> failwith "create_let_prems: expected only LetPr"
+  in
+  List.fold_right prepend_let_prem prems next
+
 (* For definition bodies: renders as a flat FunType chain (inline →).
    Use this when building the body of a def match arm or no-match clause. *)
 let append_prems_to_term (term : term) (prems : Il.Ast.prem list) : term =
   let prems = filter_else_prems prems in
-  if prems = [] then term
+
+  if prems = [] then
+    term
   else
-    let prems_as_terms = List.map create_prem prems in
-    create_curried_func (prems_as_terms @ [term])
+    let let_prems, other_prems = separate_out_let_prems_in_order prems in
+    let prems_as_terms = List.map create_prem other_prems in
+    prepend_let_prems let_prems (create_curried_func (prems_as_terms @ [term]))
 
 let create_typcase
   (* 
@@ -1585,6 +1622,7 @@ let rec create_def (def : Il.Ast.def) : command list
               fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
       *)
 
+      (* TODO: I'm pretty sure this is duplicated logic *)
       let create_relations_inductive_type (typ : Il.Ast.typ) : term
         (* List Nat → Nat → Prop *)
         = match typ.it with
@@ -1594,7 +1632,8 @@ let rec create_def (def : Il.Ast.def) : command list
             let types = List.map (fun (_, typ) -> create_typ typ) id_typ_list in
             let types_and_prop = types @ [Ident "Prop"] in
             create_curried_func types_and_prop
-          | _ -> failwith "no other typ should be here!"  
+          | IterT (t, iter) -> FunType (create_iter_typ iter t, Ident "Prop")
+          | _ -> failwith ("no other typ should be here -- " ^ (Il.Print.string_of_typ typ))
       in
 
       let create_relations_inductive_case (rule : Il.Ast.rule) (rel_id : Il.Ast.id) : _inductive_case
@@ -1657,14 +1696,15 @@ let rec create_def (def : Il.Ast.def) : command list
                 *)
                 Some (
                   append_prems_to_prop
-                  exp_with_rel_id_prepended
-                  prems
+                    exp_with_rel_id_prepended
+                    prems
                 )
               );
             }
 
       in
 
+      let () = Printf.eprintf "DEBUG create_relations_inductive_type: %s  typ=%s\n%!" id.it (Il.Print.string_of_typ typ) in
       [
         Inductive {
           modifier = empty_modifier;

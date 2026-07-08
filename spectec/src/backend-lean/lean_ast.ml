@@ -169,6 +169,101 @@ type term =
     index: term;
     new_value: term;
   } *)
+
+  (*
+    «let» ::= "let" letConfig letDecl (";")? term
+
+    from https://lean-lang.org/doc/reference/latest/Terms/Local-Definitions/
+
+    Examples:
+      let x := 42
+      x + 1
+
+      let (a, b) := pair
+      a + b
+
+      let h : x = y := rfl
+      h ▸ goal
+
+      let +nondep (a, b) := pair
+      a + b
+  *)
+  | Let of {
+      let_config: let_config_item list;
+      let_decl: let_decl;
+      body: term;
+    }
+[@@deriving show]
+
+(*
+  letOpt ::= "nondep" | "postponeValue" | "usedOnly" | "zeta" | "generalize"
+
+  Options that can be toggled on (+) or off (-) in a let configuration.
+
+  Examples:
+    let +nondep x := ...    -- enable nondep reduction
+    let -zeta x := ...      -- disable zeta reduction
+*)
+and let_opt =
+  | Nondep          (* nondep *)
+  | PostponeValue   (* postponeValue *)
+  | UsedOnly        (* usedOnly *)
+  | Zeta            (* zeta *)
+  | Generalize      (* generalize *)
+[@@deriving show]
+
+(*
+  letConfigItem ::= "+" letOpt | "-" letOpt | "(" "eq" ":=" binderIdent ")"
+
+  Each item either enables (+) or disables (-) a letOpt, or sets the equality
+  hypothesis name used in dependent elimination.
+
+  Examples:
+    +nondep          → LetOptPos Nondep
+    -zeta            → LetOptNeg Zeta
+    (eq := h)        → LetOptEq "h"
+*)
+and let_config_item =
+  | LetOptPos of let_opt      (* + letOpt *)
+  | LetOptNeg of let_opt      (* - letOpt *)
+  | LetOptEq of ident         (* (eq := binderIdent) *)
+[@@deriving show]
+
+(*
+  letPatDecl ::= term (":" term)? ":=" term
+
+  Both the pattern (LHS) and value (RHS) are full terms (termParser).
+  The optional middle term is a type annotation.
+
+  Examples:
+    x := 42
+      → { pat = Ident "x"; type_ = None; value = Num (LeanNat 42) }
+
+    (a, b) := pair
+      → { pat = Tuple [Ident "a"; Ident "b"]; type_ = None; value = Ident "pair" }
+
+    h : x = y := rfl
+      → { pat = Ident "h"; type_ = Some (BinaryInfixFunApp (Ident "x", Ident "=", Ident "y")); value = Ident "rfl" }
+
+    ⟨tag, val⟩ := instr
+      → { pat = <CaseE-derived term>; type_ = None; value = Ident "instr" }
+*)
+and let_pat_decl = {
+  pat: term;
+  type_: term option;
+  value: term;
+}
+[@@deriving show]
+
+(*
+  letDecl ::= letPatDecl(true) | letIdDecl | letPatDecl(false) | letEqnsDecl
+
+  We only need letPatDecl, since all LetPr cases (VarE, TupE, CaseE, StrE)
+  are patterns expressible as terms. letIdDecl and letEqnsDecl cover named
+  function definitions (with arguments), which the IL never generates.
+*)
+and let_decl =
+  | LetPatDecl of let_pat_decl
 [@@deriving show]
 
 

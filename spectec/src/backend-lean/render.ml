@@ -361,6 +361,28 @@ and render_term (term : term) : document =
       in
       nest 2 (hardline ^^ separate hardline lines)
 
+  (* «let» ::= "let" letConfig letDecl (";")? term
+     Rendered as:
+       let [config] pat [: type] := value
+       body
+     e.g.
+       let (a, b) := pair
+       a + b
+  *)
+  | Let { let_config; let_decl; body } ->
+      let config_doc =
+        List.fold_left (^^) empty (List.map render_let_config_item let_config)
+      in
+      let decl_doc = match let_decl with
+        | LetPatDecl { pat; type_; value } ->
+            space ^^ render_term pat
+            ^^ (match type_ with
+                | Some t -> string " : " ^^ render_term t
+                | None -> empty)
+            ^^ string " :=" ^^ space ^^ render_term value
+      in
+      string "let" ^^ config_doc ^^ decl_doc ^^ hardline ^^ render_term body
+
   (* | _ -> failwith (Printf.sprintf "render_term: unhandled term: %s" (show_term term)) *)
 
 and render_tactic_seq (tactic_seq : tactic_seq) : document =
@@ -386,6 +408,23 @@ and render_level (level : level) : document =
   match level with
   | LevelLit n -> string (string_of_int n)
   | LevelVar id -> render_id id
+
+(* letOpt ::= "nondep" | "postponeValue" | "usedOnly" | "zeta" | "generalize" *)
+and render_let_opt (opt : let_opt) : document =
+  match opt with
+  | Nondep -> string "nondep"
+  | PostponeValue -> string "postponeValue"
+  | UsedOnly -> string "usedOnly"
+  | Zeta -> string "zeta"
+  | Generalize -> string "generalize"
+
+(* letConfigItem ::= "+" letOpt | "-" letOpt | "(" "eq" ":=" binderIdent ")"
+   e.g.  +nondep     -zeta     (eq := h) *)
+and render_let_config_item (item : let_config_item) : document =
+  match item with
+  | LetOptPos opt -> string " +" ^^ render_let_opt opt
+  | LetOptNeg opt -> string " -" ^^ render_let_opt opt
+  | LetOptEq id -> string " (eq := " ^^ string id ^^ string ")"
 
 and render__structure (s : _structure) : document =
   let modifier_str = render_decl_modifier s.modifier in

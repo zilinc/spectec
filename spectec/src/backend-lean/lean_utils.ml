@@ -111,6 +111,12 @@ let rec walk_term (m : mapper) (t : term) : term =
 
       | Premises { premises; conclusion } ->
           Premises { premises = List.map w premises; conclusion = w conclusion }
+
+      | Let { let_config; let_decl; body } ->
+          let let_decl' = match let_decl with
+            | LetPatDecl d -> LetPatDecl { pat = w d.pat; type_ = Option.map w d.type_; value = w d.value }
+          in
+          Let { let_config; let_decl = let_decl'; body = w body }
     )
 
 (*
