@@ -105,7 +105,14 @@ let rec create_iter_typ (iter : Il.Ast.iter) (t : typ) : term
 and create_typ (t : Il.Ast.typ) : term
   = match t.it with
     | VarT (id, []) -> Ident id.it
-    | VarT (_, _) -> error t.at "arg list in VarT must be empty because they should be eliminated by undep!"
+    | VarT (id, args) ->
+      (* Genuine parameterised type application, e.g. list(valtype).
+         TypA args are type arguments; ExpA/DefA/GramA are not valid here. *)
+      let arg_terms = List.map (fun a -> match a.it with
+        | TypA typ -> Term (create_typ typ)
+        | _ -> error t.at ("non-TypA arg in parameterised VarT: " ^ id.it)
+      ) args in
+      FunApp (Ident id.it, NonEmptyList.from_list_unsafe arg_terms)
     | BoolT -> Ident "Bool"
     | NumT nt -> create_numtyp nt
     | TextT -> Ident "String"
@@ -199,6 +206,26 @@ type path_seg =
   | IdxSeg of Il.Ast.exp
   | SliceSeg of Il.Ast.exp * Il.Ast.exp
 
+
+let subscript_of_int (n : int) : string =
+  let sub_digit = function
+    | '0' -> "₀" | '1' -> "₁" | '2' -> "₂" | '3' -> "₃" | '4' -> "₄"
+    | '5' -> "₅" | '6' -> "₆" | '7' -> "₇" | '8' -> "₈" | '9' -> "₉"
+    | c   -> String.make 1 c
+  in
+  String.concat "" (List.map sub_digit (List.of_seq (String.to_seq (string_of_int n))))
+
+let map_name_of_arity (n : int) : string =
+  if n = 1 then "Map"
+  else "Map" ^ subscript_of_int n
+
+let used_exp_arities : int list ref = ref []
+
+let omap_name_of_arity (n : int) : string =
+  if n = 1 then "OMap"
+  else "OMap" ^ subscript_of_int n
+
+let used_opt_arities : int list ref = ref []
 
 let rec create_exp (e : Il.Ast.exp) : term
   = match e.it with
@@ -563,23 +590,48 @@ and create_iter
       (
         match arity, iter with
       
-          | arity, Opt | arity, List | arity, List1 | arity, ListN (_, None)
+          | arity, List | arity, List1 | arity, ListN (_, None)
             when arity > 0 ->
 
-            let lambda_func : term =              (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
+            let lambda_func : term =
               Lambda {
-                params =                          (* a_elem, b_elem, c_elem, d_elem *)
+                params =
                   NonEmptyList.from_list_unsafe (
                     List.map
                       (fun (id, _) -> Ident_FB (elem_name_generator id))
                     id_exp_list
                   );
-
-                body = create_exp renamed_exp;    (* a_elem + b_elem + c_elem + d_elem *)
+                body = create_exp renamed_exp;
               }
             in
+            used_exp_arities := arity :: !used_exp_arities;
+            FunApp (
+              Ident (map_name_of_arity arity),
+              NonEmptyList.from_list_unsafe (
+                Term lambda_func :: List.map (fun c -> Term c) collections
+              )
+            )
 
-            create_zip collections lambda_func
+          | arity, Opt when arity > 0 ->
+
+            let lambda_func : term =
+              Lambda {
+                params =
+                  NonEmptyList.from_list_unsafe (
+                    List.map
+                      (fun (id, _) -> Ident_FB (elem_name_generator id))
+                    id_exp_list
+                  );
+                body = create_exp renamed_exp;
+              }
+            in
+            used_opt_arities := arity :: !used_opt_arities;
+            FunApp (
+              Ident (omap_name_of_arity arity),
+              NonEmptyList.from_list_unsafe (
+                Term lambda_func :: List.map (fun c -> Term c) collections
+              )
+            )
           
           | arity, ListN (n_exp, Some id) when arity > 0 ->
 
@@ -794,6 +846,240 @@ let rec make_proj (i : int) (n : int) (base : term) : term =
 
 
 (*
+  Forall generation helpers
+  ──────────────────────────────────────────────────────────────────────────────
+  Named Forall predicates are generated once at the top of the file and then
+  referenced at every IterPr usage site, replacing inline BoundedForall nodes.
+
+  Naming: Forall (arity 1), Forall₂ (arity 2), Forall₃ (arity 3), ...
+  Definitions are constructed using make_left_zip and make_proj so the body
+  exactly mirrors the inline form — only the wrapping changes.
+
+  Example generated definitions:
+    def Forall {α₁ : Type} (P : α₁ → Prop) (xs₁ : List α₁) : Prop :=
+      ∀ t_elem ∈ xs₁, P t_elem
+
+    def Forall₂ {α₁ α₂ : Type} (P : α₁ → α₂ → Prop) (xs₁ : List α₁) (xs₂ : List α₂) : Prop :=
+      ∀ t ∈ xs₁ |>.zip xs₂, P (t.1) (t.2)
+  ──────────────────────────────────────────────────────────────────────────────
+*)
+
+let forall_name_of_arity (n : int) : string =
+  if n = 1 then "Forall"
+  else "Forall" ^ subscript_of_int n
+
+(*
+  used_prem_arities  records every arity that create_iter_prem actually emits
+  a ForallN call for during the create_def pass.  Populated as a side effect;
+  used in create_script to emit only ForallN definitions that are genuinely
+  referenced.  This avoids spurious definitions for IterPr nodes that live
+  inside GramD (or other silently-skipped IL branches) and are never reached
+  by create_iter_prem.
+*)
+let used_prem_arities : int list ref = ref []
+
+(*
+  make_forall_def n  constructs the Lean 'def' for the n-ary Forall predicate,
+  using make_left_zip and make_proj for the body so the generated definition
+  is consistent with the inline BoundedForall form it replaces.
+*)
+let make_forall_def (n : int) : command =
+  assert (n >= 1);
+  let indices  = List.init n (fun i -> i) in
+  let type_var i = Printf.sprintf "α%s" (subscript_of_int (i + 1)) in  (* α₁, α₂, … *)
+  let coll_var i = Printf.sprintf "xs%s" (subscript_of_int (i + 1)) in (* xs₁, xs₂, … *)
+  let tuple_var = "t" in
+  let elem_var  = "t_elem" in  (* used only for n = 1 *)
+
+  (* P : α₁ → α₂ → … → αN → Prop *)
+  let p_type = List.fold_right
+    (fun i acc -> FunType (Ident (type_var i), acc))
+    indices Prop
+  in
+
+  (* {α₁ α₂ … αN : Type} *)
+  let type_binder = BracketedBinder (ImplicitParam (
+    NonEmptyList.from_list_unsafe (List.map (fun i -> Ident_IOH (type_var i)) indices),
+    Type None
+  )) in
+
+  (* (P : α₁ → … → αN → Prop) *)
+  let p_binder = BracketedBinder (ExplicitParam (
+    NonEmptyList.from_list_unsafe [Ident_IOH "P"],
+    p_type
+  )) in
+
+  (* (xs₁ : List α₁) … (xsN : List αN) *)
+  let coll_binders = List.map (fun i ->
+    BracketedBinder (ExplicitParam (
+      NonEmptyList.from_list_unsafe [Ident_IOH (coll_var i)],
+      FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (Ident (type_var i))])
+    ))
+  ) indices in
+
+  let body =
+    if n = 1 then
+      BoundedForall {
+        var        = elem_var;
+        collection = Ident (coll_var 0);
+        body       = FunApp (Ident "P", NonEmptyList.from_list_unsafe [Term (Ident elem_var)]);
+      }
+    else
+      let collections = List.map (fun i -> Ident (coll_var i)) indices in
+      let zipped = make_left_zip collections in
+      let proj_args = NonEmptyList.from_list_unsafe
+        (List.map (fun i -> Term (make_proj i n (Ident tuple_var))) indices)
+      in
+      BoundedForall {
+        var        = tuple_var;
+        collection = zipped;
+        body       = FunApp (Ident "P", proj_args);
+      }
+  in
+
+  Def (DefAsgn {
+    modifier  = empty_modifier;
+    id        = forall_name_of_arity n;
+    signature = ([type_binder; p_binder] @ coll_binders, Some Prop);
+    body;
+  })
+
+(*
+  make_map_def n  constructs the Lean 'def' for the n-ary Map combinator.
+
+  def Map  {α₁ β : Type} (f : α₁ → β)           (xs₁ : List α₁) : List β :=
+    xs₁.map f
+  def Map₂ {α₁ α₂ β : Type} (f : α₁ → α₂ → β)  (xs₁ : List α₁) (xs₂ : List α₂) : List β :=
+    xs₁.map f |>.ap xs₂
+  def Map₃ {α₁ α₂ α₃ β : Type} ...               ... : List β :=
+    xs₁.map f |>.ap xs₂ |>.ap xs₃
+*)
+let make_map_def (n : int) : command =
+  assert (n >= 1);
+  let indices   = List.init n (fun i -> i) in
+  let type_var i = Printf.sprintf "α%s" (subscript_of_int (i + 1)) in
+  let coll_var i = Printf.sprintf "xs%s" (subscript_of_int (i + 1)) in
+
+  (* {α₁ ... αN β : Type} *)
+  let type_binder = BracketedBinder (ImplicitParam (
+    NonEmptyList.from_list_unsafe (
+      List.map (fun i -> Ident_IOH (type_var i)) indices @ [Ident_IOH "β"]
+    ),
+    Type None
+  )) in
+
+  (* f : α₁ → ... → αN → β *)
+  let f_type = List.fold_right
+    (fun i acc -> FunType (Ident (type_var i), acc))
+    indices (Ident "β")
+  in
+  let f_binder = BracketedBinder (ExplicitParam (
+    NonEmptyList.from_list_unsafe [Ident_IOH "f"],
+    f_type
+  )) in
+
+  (* (xs₁ : List α₁) … (xsN : List αN) *)
+  let coll_binders = List.map (fun i ->
+    BracketedBinder (ExplicitParam (
+      NonEmptyList.from_list_unsafe [Ident_IOH (coll_var i)],
+      FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (Ident (type_var i))])
+    ))
+  ) indices in
+
+  (* return type : List β *)
+  let return_type =
+    FunApp (Ident "List", NonEmptyList.from_list_unsafe [Term (Ident "β")])
+  in
+
+  (* body: xs₁.map f |>.ap xs₂ |>.ap xs₃ ... *)
+  let body =
+    List.fold_left
+      (fun acc i ->
+        FunApp (
+          RightPipelineField (acc, Ident "ap"),
+          NonEmptyList.from_list_unsafe [Term (Ident (coll_var i))]
+        )
+      )
+      (FunApp (
+        RightPipelineField (Ident (coll_var 0), Ident "map"),
+        NonEmptyList.from_list_unsafe [Term (Ident "f")]
+      ))
+      (List.tl indices)
+  in
+
+  Def (DefAsgn {
+    modifier  = empty_modifier;
+    id        = map_name_of_arity n;
+    signature = ([type_binder; f_binder] @ coll_binders, Some return_type);
+    body;
+  })
+
+(*
+  make_omap_def n  constructs the Lean 'def' for the n-ary OMap combinator,
+  the Option-valued analogue of MapN.
+
+  def OMap  {α₁ β : Type} (f : α₁ → β)          (xs₁ : Option α₁) : Option β :=
+    xs₁.map f
+  def OMap₂ {α₁ α₂ β : Type} (f : α₁ → α₂ → β) (xs₁ : Option α₁) (xs₂ : Option α₂) : Option β :=
+    xs₁.map f |>.ap xs₂
+*)
+let make_omap_def (n : int) : command =
+  assert (n >= 1);
+  let indices   = List.init n (fun i -> i) in
+  let type_var i = Printf.sprintf "α%s" (subscript_of_int (i + 1)) in
+  let coll_var i = Printf.sprintf "xs%s" (subscript_of_int (i + 1)) in
+
+  let type_binder = BracketedBinder (ImplicitParam (
+    NonEmptyList.from_list_unsafe (
+      List.map (fun i -> Ident_IOH (type_var i)) indices @ [Ident_IOH "β"]
+    ),
+    Type None
+  )) in
+
+  let f_type = List.fold_right
+    (fun i acc -> FunType (Ident (type_var i), acc))
+    indices (Ident "β")
+  in
+  let f_binder = BracketedBinder (ExplicitParam (
+    NonEmptyList.from_list_unsafe [Ident_IOH "f"],
+    f_type
+  )) in
+
+  let coll_binders = List.map (fun i ->
+    BracketedBinder (ExplicitParam (
+      NonEmptyList.from_list_unsafe [Ident_IOH (coll_var i)],
+      FunApp (Ident "Option", NonEmptyList.from_list_unsafe [Term (Ident (type_var i))])
+    ))
+  ) indices in
+
+  let return_type =
+    FunApp (Ident "Option", NonEmptyList.from_list_unsafe [Term (Ident "β")])
+  in
+
+  let body =
+    List.fold_left
+      (fun acc i ->
+        FunApp (
+          RightPipelineField (acc, Ident "ap"),
+          NonEmptyList.from_list_unsafe [Term (Ident (coll_var i))]
+        )
+      )
+      (FunApp (
+        RightPipelineField (Ident (coll_var 0), Ident "map"),
+        NonEmptyList.from_list_unsafe [Term (Ident "f")]
+      ))
+      (List.tl indices)
+  in
+
+  Def (DefAsgn {
+    modifier  = empty_modifier;
+    id        = omap_name_of_arity n;
+    signature = ([type_binder; f_binder] @ coll_binders, Some return_type);
+    body;
+  })
+
+
+(*
   create_prem and create_iter_prem are mutually recursive:
     create_prem dispatches IterPr to create_iter_prem
     create_iter_prem calls create_prem on (possibly renamed) sub-premises
@@ -899,77 +1185,53 @@ and create_iter_prem
   | [] ->
       create_prem prem
 
-  (* ── Arity 1: ∀ id ∈ collection, body ───────────────────────────────── *)
+  (* ── Arity 1 ─────────────────────────────────────────────────────────── *)
   | [(id, coll_exp)] ->
       (*
-        The element var in the IL (id.it) can collide with the collection var
-        (e.g. {v_expr <- v_expr}), causing Lean to see ∀ v_expr ∈ v_expr where
-        the bound v_expr shadows the outer parameter before the membership check
-        resolves.  Always rename the bound variable to id.it ^ "_elem" and
-        substitute throughout the body.  The result is alpha-equivalent.
+        Always rename the bound element variable to id.it ^ "_elem" to avoid
+        shadowing when the element var and collection var share the same IL name
+        (e.g. {v_expr <- v_expr}).
 
-        Example:
-          IterPr(RulePr("TypeOk", VarE "t"), (List, [("t", VarE "ts")]))
-          →  ∀ t_elem ∈ ts, TypeOk t_elem
+        Emit:  Forall (fun id_elem => body) collection
       *)
       let collection : term = to_list_if_opt (create_exp coll_exp) in
       let elem_var = id.it ^ "_elem" in
       let body = subst_lean_term [(id.it, Ident elem_var)] (create_prem prem) in
-      BoundedForall { var = elem_var; collection; body }
+      used_prem_arities := 1 :: !used_prem_arities;
+      FunApp (
+        Ident (forall_name_of_arity 1),
+        NonEmptyList.from_list_unsafe [
+          Term (Lambda {
+            params = NonEmptyList.from_list_unsafe [Ident_FB elem_var];
+            body;
+          });
+          Term collection;
+        ]
+      )
 
-  (* ── Arity ≥ 2: zip collections, bind tuple var, project each id ─────── *)
+  (* ── Arity ≥ 2 ────────────────────────────────────────────────────────── *)
   | _ ->
       (*
-        Example (Pairs_ok): id_exp_list = [("v_m", VarE "m_lst"); ("v_n", VarE "n_lst")]
-          n            = 2
-          tuple_var    = "__iter_tuple"
-          collections  = [Ident "m_lst"; Ident "n_lst"]
-          zipped       = m_lst |>.zip (n_lst)        : List (m × n)
-          prem_term    = create_prem prem (UNCHANGED — no renaming)
-                       = Pair_ok (Ident "v_n") (Ident "v_m")
-          substs       = [("v_m", __iter_tuple.1); ("v_n", __iter_tuple.2)]
-          body         = Pair_ok (__iter_tuple.2) (__iter_tuple.1)
-          result       = ∀ __iter_tuple ∈ m_lst |>.zip (n_lst),
-                            Pair_ok (__iter_tuple.2) (__iter_tuple.1)
-
-        We substitute directly on the original names (t1, t2, ...) rather
-        than renaming to placeholders first — there is no safety benefit to
-        the indirection, since id_exp_list's names are already distinct
-        within this IterPr. The thing that actually has to be capture-safe
-        is subst_lean_term itself: it must stop substituting a name once it
-        descends into a nested binder (BoundedForall/Lambda) that rebinds
-        it, which it now does (see its definition above).
+        Emit:  ForallN (fun id₁_elem … idN_elem => body) xs₁ … xsN
+        where each idᵢ_elem is id_exp_list[i].it ^ "_elem".
       *)
-      let n : int = List.length id_exp_list in          (* e.g. 2 *)
-      let tuple_var = "__iter_tuple" in                  (* fresh bound variable *)
-
-      (* 1. Build left-nested zip: ts1 |>.zip (ts2) |>.zip (ts3) ... *)
+      let n : int = List.length id_exp_list in
       let collections : term list =
         List.map (fun (_, e) -> to_list_if_opt (create_exp e)) id_exp_list in
-      let zipped_collection : term = make_left_zip collections in
-
-      (* 2. Translate prem as-is — no renaming. create_prem produces
-            Ident "v_n", Ident "v_m", ... directly from the original names. *)
       let prem_term : term = create_prem prem in
-
-      (* 3. Substitution: original name → make_proj i n (Ident "__iter_tuple")
-            e.g. n=2 (Pairs_ok): "v_m" (i=0) → __iter_tuple.1   "v_n" (i=1) → __iter_tuple.2
-                 n=3: "x" (i=0) → __iter_tuple.1.1  "y" (i=1) → __iter_tuple.1.2  "z" (i=2) → __iter_tuple.2 *)
-      let substs : (string * term) list =
-        List.mapi
-          (fun i (id, _) ->
-            ( id.it,                                  (* original name, e.g. "v_m" *)
-              make_proj i n (Ident tuple_var) ))      (* __iter_tuple.1.2 etc. *)
-          id_exp_list in
-
-      (* 4. Apply substitution (capture-safe — see subst_lean_term) and
-            wrap in BoundedForall *)
-      let body : term = subst_lean_term substs prem_term in
-      BoundedForall {
-        var        = tuple_var;          (* "__iter_tuple" *)
-        collection = zipped_collection;  (* ts1 |>.zip (ts2) |>.zip ... *)
+      used_prem_arities := n :: !used_prem_arities;
+      (* Rename each original id to id_elem; build a multi-param lambda. *)
+      let elem_vars = List.map (fun (id, _) -> id.it ^ "_elem") id_exp_list in
+      let substs = List.map2 (fun (id, _) ev -> (id.it, Ident ev)) id_exp_list elem_vars in
+      let body = subst_lean_term substs prem_term in
+      let lambda = Lambda {
+        params = NonEmptyList.from_list_unsafe (List.map (fun ev -> Ident_FB ev) elem_vars);
         body;
-      }
+      } in
+      FunApp (
+        Ident (forall_name_of_arity n),
+        NonEmptyList.from_list_unsafe (Term lambda :: List.map (fun c -> Term c) collections)
+      )
 
 
 let filter_else_prems (prems : Il.Ast.prem list) : Il.Ast.prem list =
@@ -1594,7 +1856,7 @@ let rec create_def (def : Il.Ast.def) : command list
       let signature : opt_decl_sig (* (v_state : state) (v_localidx : localidx) : val *)
         =
           let params_as_binders : _params list
-            (* (X : Type) [BEq X] (var_0_lst : List X)
+            (* (X : Type) Explain to me all the different components of `LetPr`[BEq X] (var_0_lst : List X)
                ^^^^^^^^^^^^^^^^^^^
                TypP "X" emits two binders when "X" is in typp_names_needing_beq;
                otherwise just one. ExpP always emits one. *)
@@ -1978,9 +2240,23 @@ let prologue : command list =
     rat_to_nat;
   ]
 
-let create_script (il : script) : command list
-  =
-    analysis := analyze_whole_script il;
-    let generated = List.concat (List.map (fun def -> create_def def) il) in
-    
-    prologue @ generated
+let create_script (il : script) : command list =
+  analysis := analyze_whole_script il;
+  (* Generate all commands.  Side effects record used arities for each family. *)
+  used_prem_arities := [];
+  used_exp_arities  := [];
+  used_opt_arities  := [];
+  let generated = List.concat (List.map (fun def -> create_def def) il) in
+  let forall_defs =
+    List.sort_uniq compare !used_prem_arities
+    |> List.map make_forall_def
+  in
+  let map_defs =
+    List.sort_uniq compare !used_exp_arities
+    |> List.map make_map_def
+  in
+  let omap_defs =
+    List.sort_uniq compare !used_opt_arities
+    |> List.map make_omap_def
+  in
+  prologue @ forall_defs @ map_defs @ omap_defs @ generated

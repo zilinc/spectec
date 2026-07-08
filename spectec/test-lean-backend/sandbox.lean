@@ -48,7 +48,9 @@ def disjoint_ (X : Type) [BEq X] (var_0_lst : List X) : Bool :=
 def sum_list (var_0_lst : List Nat) : Nat :=
   match var_0_lst with          -- deconstructed → kept
   | []      => 0
-  | n :: t  => n + sum_list t
+  | n :: t  =>
+    let x := n
+    x + sum_list t
 
 #eval sum_list [1, 2, 3, 4]    -- 10
 
