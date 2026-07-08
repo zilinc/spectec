@@ -453,19 +453,46 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
   next
     case Step_pure__nop
     obtain t1' t2' where
-      ts: "mk_instrtype (mk_list t1') (mk_list t2') <ti: mk_instrtype t1 t2"
+      "mk_instrtype (mk_list t1') (mk_list t2') <ti: mk_instrtype t1 t2"
       "Instr_ok C' (instr_sc0 NOP) (mk_functype (mk_list t1') (mk_list t2'))" 
       using inv_plain[where ?v_instr = "instr_sc0 NOP"]
             Step_pure__nop(8,9)
       using admininstr_instr.domintros(1) admininstr_instr.psimps(1) by fastforce
     then show ?case 
-      using ts plain nop subtype_typing Instrtype_sub_trans Instrs_ok2__instr
+      using subtype_typing
             Instrs_ok2__empty instr_ok2_wf(1,2) pure.prems(8,9)
-            inv_nop Instrs_ok__instr Step_pure__nop.prems(8) instr_case_0
+            inv_nop Instrs_ok__instr instr_case_0
       by (metis (no_types, lifting))
   next
     case (Step_pure__drop v_val)
-    then show ?case sorry
+    then obtain t1' t2' t3' where splitih:
+      "Instrs_ok2 s C' [admininstr_val v_val] (mk_functype t1' t2')"
+      "Instrs_ok2 s C' [admininstr_sc0 admininstr_st0_DROP] (mk_functype t2' t3')"
+      "Resulttype_sub t1 t1'"
+      "Resulttype_sub t3' t2" 
+      using inv_Instrs_ok2__seq[of s C' "[admininstr_val v_val, admininstr_sc0 admininstr_st0_DROP]"
+              t1 t2 "[admininstr_val v_val]" "[admininstr_sc0 admininstr_st0_DROP]"] by fastforce
+    have tv: "mk_instrtype (mk_list []) (mk_list [typeofval v_val]) <ti: mk_instrtype t1' t2'" 
+      using inv_const_list[OF splitih(1), of "[v_val]"] by simp
+    obtain t2'' t3'' where 
+      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
+      and "Instr_ok C' (instr_sc0 DROP) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      using inv_plain[where ?v_instr = "instr_sc0 DROP"]
+            Step_pure__drop(9) splitih(2)
+      using admininstr_instr.domintros admininstr_instr.psimps by metis
+    then obtain t where 
+      "mk_instrtype (mk_list [t]) (mk_list []) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
+      using inv_drop Instrs_ok__instr
+      using instr_case_2 instr_ok2_wf(1) splitih(2) by blast
+    then have "Resulttype_sub t1' t3'" 
+      using td tv Instrtype_sub_trans produce_consume by fastforce
+    then have "Resulttype_sub t1 t2" using splitih(3,4) Resulttype_sub_trans by blast
+    then have "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1 t2" 
+      using empty_sub by blast
+    then show ?case 
+      using subtype_typing 
+            Instrs_ok2__empty instr_ok2_wf(1,2) pure.prems(8,9) 
+      by fast
   next
     case (select_true c val_1 val_2 t_lst_opt)
     then show ?case sorry
@@ -825,7 +852,7 @@ proof -
       using a(1) cfg_is(5) b
       unfolding Expr_ok2.simps
       apply simp
-      by (metis c inv_Instrs_ok2__frame res_list.exhaust)
+      using Config_ok.simps assms(1) c instr_ok2_wf_instr by auto
 
     show ?thesis
       using "5" Config_ok.simps assms(1) b bc cfg_is(1,2,5) d step_wf by auto

@@ -252,5 +252,31 @@ proof (induction "mk_instrtype (mk_list []) (mk_list l)" "mk_instrtype t1 t2"
   qed
 qed
 
+lemma produce_consume:
+  assumes "mk_instrtype (mk_list []) (mk_list l) <ti: mk_instrtype t1 t2" 
+          "mk_instrtype (mk_list l') (mk_list []) <ti: mk_instrtype t2 t3" 
+          "length l = length l'" 
+        shows "Resulttype_sub t1 t3" 
+(* "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1 t3" *)
+  using assms
+proof(induction "mk_instrtype (mk_list []) (mk_list l)" "mk_instrtype t1 t2"
+      rule: Instrtype_sub.induct)
+  case (mk_Instrtype_sub t1l t1fst t1snd t2l t2fst t2snd)
+  note outer = mk_Instrtype_sub
+  show ?thesis using outer(8) outer
+  proof (induction "mk_instrtype (mk_list l') (mk_list [])" "mk_instrtype t2 t3" 
+         rule: Instrtype_sub.induct)
+    case (mk_Instrtype_sub t2l' t2fst' t2snd' t3l t3fst t3snd)
+    then show ?thesis
+      by (metis (no_types, lifting) Resulttype_sub.simps Resulttype_sub_append Resulttype_sub_trans
+          append_eq_append_conv res_list.inject)
+  qed
+qed
+
+lemma empty_sub:
+  assumes "Resulttype_sub t1 t2"
+  shows "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1 t2"
+  by (metis assms Instrtype_sub_trans append.right_neutral Instrtype_sub_frame_rule 
+      Instrtype_sub_sub_rule res_list.exhaust Resulttype_sub_refl)
 
 end
