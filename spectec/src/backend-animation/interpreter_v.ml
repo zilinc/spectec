@@ -742,7 +742,7 @@ and eval_prems ctx prems : VContext.t OptMonad.m =
   | prem :: prems ->
     (match eval_prem  ctx  prem |> run_opt with
     | Some ctx' -> eval_prems ctx' prems
-    | None      -> fail_info "log" prem.at (lazy ("Premise failed: " ^ string_of_prem prem))
+    | None      -> (* fail_info "log" prem.at (lazy ("Premise failed: " ^ string_of_prem prem))*) fail ()
     )
 
 and match_typ ctx at (pat: typ) (arg: typ) : VContext.t OptMonad.m =
@@ -768,8 +768,9 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
     return ctx''
 
 and match_clause ctx at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
+  if String.starts_with fname ~prefix:"vshiftop" then info "log" at (lazy ("Function " ^ fname ^ " is called with " ^ (Value.string_of_args args) ^ " arguments"));
   match clauses with
-  | [] -> info "log" at (lazy ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses")); fail ()
+  | [] -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" then info "log" at (lazy ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses")); fail ()
   | cl :: cls ->
     let DefD (quants, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
@@ -784,15 +785,15 @@ and match_clause ctx at (fname: string) (nth: int) (clauses: clause list) (args:
         | Some ctx'' ->
           (* If [exp] is partial, it means this clause is refuted. *)
           (match eval_exp ctx'' exp |> run_opt with
-          | Some v -> info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
+          | Some v -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" || String.starts_with fname ~prefix:"vcvtop__" then info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
                       return v
-          | None   -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
+          | None   -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
                       match_clause ctx at fname (nth+1) cls args
           )
-        | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
+        | None -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
                   match_clause ctx at fname (nth+1) cls args
         )
-      | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
+      | None -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
                 match_clause ctx at fname (nth+1) cls args
       )
     in
@@ -869,6 +870,8 @@ and call_func name args : value OptMonad.m =
       error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
   | _ when is_builtin ->
     error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
+  (* bad temp fix for hostcalls in the ocaml interpreter *)
+  | None when name = "hostcall_ocaml" -> hostcall_ocaml args
   | None -> error no (sprintf "There is no function named `%s`." name)
   )
 
@@ -969,6 +972,111 @@ and hostcall : Value.arg list -> value OptMonad.m = function
       )
     | Good ->
       let res, effs = call_hostfunc name' s vals in
+      HS.add_effects name' res effs;
+      return res
+    | Later -> error no ("Host function `" ^ name' ^ "` is calling into the future.")
+    )
+  | _ -> error no ("Invalid arguments to $hostcall")
+
+(* horrible, temporary fix *)
+and call_hostfunc_ocaml name s vs =
+  (* ty ∈ {"I32", "I64", "F32", "F64"} *)
+  let as_const ty = function
+  | CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]) when ty = ty' -> n
+  | OptV (Some (CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]))) when ty = ty' -> n
+  | v -> error no ("Host function call: Not " ^ ty ^ ".CONST: " ^ string_of_value v)
+  in
+  let argc = List.length vs in
+  let print_eff s = HS.Print s in
+  let effs = (match name with
+  | "print" when argc = 0 -> [ print_eff "- print: ()\n" ]
+  | "print_i32" when argc = 1 ->
+    List.hd vs
+    |> as_const "I32"
+    (* |> vl_to_uN_32 *)
+    |> Construct_v_ocaml.get_inner_num |> vl_to_uN_32 
+    |> RI.I32.to_string_s
+    |> Printf.sprintf "- print_i32: %s\n"
+    |> print_eff
+    |> fun e -> [e]
+  | "print_i64" when argc = 1 ->
+    List.hd vs
+    |> as_const "I64"
+    (* |> vl_to_uN_64 *)
+    |> Construct_v_ocaml.get_inner_num |> vl_to_uN_64
+    |> RI.I64.to_string_s
+    |> Printf.sprintf "- print_i64: %s\n"
+    |> print_eff
+    |> fun e -> [e]
+  | "print_f32" when argc = 1 ->
+    List.hd vs
+    |> as_const "F32"
+    (* |> vl_to_float32 *)
+    |> Construct_v_ocaml.get_inner_num |> vl_to_float32
+    |> RI.F32.to_string
+    |> Printf.sprintf "- print_f32: %s\n"
+    |> print_eff
+    |> fun e -> [e]
+  | "print_f64" when argc = 1 ->
+    List.hd vs
+    |> as_const "F64"
+    (* |> vl_to_float64 *)
+    |> Construct_v_ocaml.get_inner_num |> vl_to_float64
+    |> RI.F64.to_string
+    |> Printf.sprintf "- print_f64: %s\n"
+    |> print_eff
+    |> fun e -> [e]
+  | "print_i32_f32" when argc = 2 ->
+    let [v1; v2] = vs in
+    (*let i32 = v1 |> as_const "I32" |> vl_to_uN_32   |> RI.I32.to_string_s in
+    let f32 = v2 |> as_const "F32" |> vl_to_float32 |> RI.F32.to_string   in *)
+    let i32 = v1 |> as_const "I32" |> Construct_v_ocaml.get_inner_num |> vl_to_uN_32   |> RI.I32.to_string_s in
+    let f32 = v2 |> as_const "F32" |> Construct_v_ocaml.get_inner_num |> vl_to_float32 |> RI.F32.to_string   in
+    Printf.sprintf "- print_i32_f32: %s %s\n" i32 f32 |> print_eff |> fun e -> [e]
+  | "print_f64_f64" when argc = 2 ->
+    let [v1; v2] = vs in
+    (*let f64  = v1 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in
+    let f64' = v2 |> as_const "F64" |> vl_to_float64 |> RI.F64.to_string in*)
+    let f64  = v1 |> as_const "F64" |> Construct_v_ocaml.get_inner_num |> vl_to_float64 |> RI.F64.to_string in
+    let f64' = v2 |> as_const "F64" |> Construct_v_ocaml.get_inner_num |> vl_to_float64 |> RI.F64.to_string in
+    Printf.sprintf "- print_f64_f64: %s %s\n" f64 f64' |> print_eff |> fun e -> [e]
+  | name -> error no ("Invalid host function call: " ^ name)
+  )
+  in
+  let get_hoststate store : value =
+    let store' = as_str_value store in
+    Record.find "HOST" store'
+  in
+  let set_hoststate hs store : value =
+    let store' = as_str_value store |> List.map (fun (k, v) -> (k, ref !v)) in  (* Record.clone is not adequate. *)
+    Record.replace "HOST" hs store';
+    StrV store'
+  in
+  let hs' = HS.inc_timestamp (get_hoststate s) in
+  let s' = set_hoststate hs' s in
+  let hostcallresult = caseV [["RES"];[];[]] [s'; caseV [["_VALS"];[]] [listV [||]]] in
+  let res = [ hostcallresult ] |> listV_of_list in
+  (res, effs)
+
+and hostcall_ocaml : Value.arg list -> value OptMonad.m = function
+  | [ ValA name; ValA s; ValA val_ ] ->
+    let name' = (match name with
+    | CaseV ([["_HOSTFUNC"];[]], [hf]) -> as_text_value hf
+    | _ -> error no ("Not a hostfunc")
+    )
+    in
+    let glb_hs = HS.get_glb_state () in
+    let lcl_hs = as_str_field "HOST" s in
+    let vals = as_list_value' val_ in
+    (match HS.chk_state lcl_hs with
+    | Earlier ->
+      (* Host function has been called already. Look up the effect registry. *)
+      (match HS.lookup_effect name' (HS.get_timestamp lcl_hs) with
+      | Some (res, _effs) -> return res
+      | None -> error no ("No such entry in effect resgistry: " ^ name')
+      )
+    | Good ->
+      let res, effs = call_hostfunc_ocaml name' s vals in
       HS.add_effects name' res effs;
       return res
     | Later -> error no ("Host function `" ^ name' ^ "` is calling into the future.")
