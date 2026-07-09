@@ -57,7 +57,7 @@ TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
               test-interpreter/spec-test-3/gc \
               test-interpreter/spec-test-3/memory64 \
               test-interpreter/spec-test-3/multi-memory
-else ifeq ($(TEST),OCAML_ALL)
+else ifeq ($(TEST),OCAML_OLD)
 TEST_PATHS := test-interpreter/spec-test-3/ \
               test-interpreter/spec-test-3/bulk-memory \
               test-interpreter/spec-test-3/exceptions \
@@ -93,8 +93,7 @@ anim-test: exe
 anim-test-all: exe
 	$(MAKE) anim-test 'TEST=NON_SLOW'
 
-anim-test-bench: exe
-	$(MAKE) anim-test 'TEST=OCAML_ALL'
+anim-test-bench: anim-test-all
 
 
 # Wasm interpreter in OCaml
@@ -142,7 +141,7 @@ ocaml-test: ocaml-build
 
 ocaml-test-all: ocaml-build
 	@echo "#### Running OCaml interpreter test."
-	$(MAKE) ocaml-run 'TEST=OCAML_ALL'
+	$(MAKE) ocaml-run 'TEST=NON_SLOW'
 
 ocaml-test-bench: ocaml-test-all
 
