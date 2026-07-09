@@ -18,7 +18,7 @@ module I = Backend_interpreter
 module A = Backend_animation
 module C = A.Construct_v_ocaml
 
-let verbose = ref true
+let verbose = ref false
 let invalids = ref 0
 
 (* the VL store also contains the "hoststate" which isn't part of the spec so we need to remove it before using the generated VL -> OCaml function *)
