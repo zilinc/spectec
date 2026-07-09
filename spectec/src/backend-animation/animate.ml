@@ -1325,6 +1325,9 @@ and animate_prem envr prem : prem list E.m =
        But the entries in them generate different premises.
        We also collect the knowns [x] that will become unknowns outside of the iteration.
     *)
+    (* We can assume that [xes_static] is empty, so that we don't need to handle the very awkward
+       case in which there's static outflow variable.
+     *)
     let blob1 = List.map (fun (x, e) ->
       begin match e.it with
       | VarE v -> ([v.it], [x.it], [], (x, e))

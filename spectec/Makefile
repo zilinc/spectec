@@ -78,7 +78,12 @@ TEST_PATHS := $(TEST)
 endif
 
 
-.PHONY = anim-test anim-test-all anim-test-bench
+.PHONY = animate anim-test anim-test-all anim-test-bench
+
+animate: SPECTEC_EXTRA_FLAGS ?= -l
+animate: SPECTEC_FLAGS ?= --animate --inline
+animate: exe
+	./spectec $(SPECTEC_EXTRA_FLAGS) $(SPEC) $(SPECTEC_FLAGS)
 
 anim-test: SPECTEC_EXTRA_FLAGS ?= -l
 anim-test: SPECTEC_FLAGS ?= --animate --inline --new-interpreter-v
