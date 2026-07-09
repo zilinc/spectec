@@ -742,7 +742,7 @@ and eval_prems ctx prems : VContext.t OptMonad.m =
   | prem :: prems ->
     (match eval_prem  ctx  prem |> run_opt with
     | Some ctx' -> eval_prems ctx' prems
-    | None      -> (* fail_info "log" prem.at (lazy ("Premise failed: " ^ string_of_prem prem))*) fail ()
+    | None      -> fail_info "log" prem.at (lazy ("Premise failed: " ^ string_of_prem prem))
     )
 
 and match_typ ctx at (pat: typ) (arg: typ) : VContext.t OptMonad.m =
@@ -768,9 +768,8 @@ and match_args ctx at pargs args : VContext.t OptMonad.m =
     return ctx''
 
 and match_clause ctx at (fname: string) (nth: int) (clauses: clause list) (args: Value.arg list) : value OptMonad.m =
-  if String.starts_with fname ~prefix:"vshiftop" then info "log" at (lazy ("Function " ^ fname ^ " is called with " ^ (Value.string_of_args args) ^ " arguments"));
   match clauses with
-  | [] -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" then info "log" at (lazy ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses")); fail ()
+  | [] -> info "log" at (lazy ("Function " ^ fname ^ " has exhausted all " ^ string_of_int (nth-1) ^ " clauses")); fail ()
   | cl :: cls ->
     let DefD (quants, pargs, exp, prems) = cl.it in
     let old_env = !il_env in
@@ -785,15 +784,15 @@ and match_clause ctx at (fname: string) (nth: int) (clauses: clause list) (args:
         | Some ctx'' ->
           (* If [exp] is partial, it means this clause is refuted. *)
           (match eval_exp ctx'' exp |> run_opt with
-          | Some v -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" || String.starts_with fname ~prefix:"vcvtop__" then info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
+          | Some v -> info "log" at (lazy ("Function `" ^ fname ^ "` accepted at clause " ^ string_of_int nth));
                       return v
-          | None   -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
+          | None   -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: partial function on RHS at clause " ^ string_of_int nth));
                       match_clause ctx at fname (nth+1) cls args
           )
-        | None -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
+        | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: false premise at clause " ^ string_of_int nth));
                   match_clause ctx at fname (nth+1) cls args
         )
-      | None -> if String.starts_with fname ~prefix:"step" || String.starts_with fname ~prefix:"reduce" || String.starts_with fname ~prefix:"dispatch" || String.starts_with fname ~prefix:"lanes" || String.starts_with fname ~prefix:"inv_lanes" then info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
+      | None -> info "log" at (lazy ("Function `" ^ fname ^ "` refuted: unmatched argument at clause " ^ string_of_int nth));
                 match_clause ctx at fname (nth+1) cls args
       )
     in
@@ -870,8 +869,6 @@ and call_func name args : value OptMonad.m =
       error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
   | _ when is_builtin ->
     error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
-  (* bad temp fix for hostcalls in the ocaml interpreter *)
-  | None when name = "hostcall_ocaml" -> hostcall_ocaml args
   | None -> error no (sprintf "There is no function named `%s`." name)
   )
 
@@ -977,6 +974,7 @@ and hostcall : Value.arg list -> value OptMonad.m = function
     | Later -> error no ("Host function `" ^ name' ^ "` is calling into the future.")
     )
   | _ -> error no ("Invalid arguments to $hostcall")
+
 
 (* horrible, temporary fix *)
 and call_hostfunc_ocaml name s vs =
@@ -1084,7 +1082,6 @@ and hostcall_ocaml : Value.arg list -> value OptMonad.m = function
   | _ -> error no ("Invalid arguments to $hostcall")
 
 
-
 (* Built-in functions (meta.spectec) *)
 
 and use_step : builtin = {
@@ -1132,7 +1129,6 @@ and use_step_ctxt = {
       List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"] |> boolV |> return
     | vs -> error_values ("Args to $use_step_ctxt") vs
 }
-
 
 and dispatch_step = {
   name = "dispatch_step";
@@ -1189,6 +1185,7 @@ and call_builtins fname args : value OptMonad.m =
 
 and builtins_mem fname =
   List.exists (fun builtin -> builtin.name = fname) builtin_list
+
 
 
 (* Wasm interpreter entry *)

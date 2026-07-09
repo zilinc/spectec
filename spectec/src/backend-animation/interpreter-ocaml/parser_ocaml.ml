@@ -180,9 +180,9 @@ let gen_ocaml_of_str tfs name : string t =
    in
   let arg = Printf.sprintf "(e : %s)" exp_t in
   let* matchfields = concat_mapMi ";\n   " (gen_match_typfield name) tfs in
-  (* the VL store contains the hoststate. We need to add this manually, since it is not part of the spec 
+  (* the VL store contains the hoststate. We need to add this manually, since it is not part of the spec
   we match the "HOST" field in the input but ignore it in the result because it is never used *)
-  let matchfields' = if name = "store" then 
+  let matchfields' = if name = "store" then
     (matchfields ^ ";\n   (\"HOST\", _) ")
   else matchfields in
   let* fields = concat_mapMi ";\n     " (gen_translation_typfield name) tfs in
@@ -322,9 +322,9 @@ let gen_str_il tfs name : string t =
   let funcname = f_prefix () ^ name in
   let arg = "(v : DL." ^ name ^ ")" in
   let* fields = concat_mapMi ";\n     " (gen_il_typfield name) tfs in
-  (* the VL store also contains the hoststate. this is not part of the spec, so we add it manually. 
+  (* the VL store also contains the hoststate. this is not part of the spec, so we add it manually.
   Maybe there is a better way to do this, i.e. if the hoststate is never used except for the hostcall *)
-  let fields' = if name = "store" then 
+  let fields' = if name = "store" then
     Printf.sprintf "%s;\n     %s" fields (Printf.sprintf "(%S, ref (Backend_animation.State_v.HostState.get_glb_state ()))" "HOST")
   else fields in
   let funcdef =

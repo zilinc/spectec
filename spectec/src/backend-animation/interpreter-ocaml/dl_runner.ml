@@ -124,7 +124,7 @@ let rec ri_ref_of_ocaml (r : ref) = match r with
     | REF_dot_ARRAY_ADDR_ref _
     | REF_dot_FUNC_ADDR_ref _ ->
       let StrV vl_store = vl_of_store !globalstore in
-      (* might not need this anymore 
+      (* might not need this anymore
       let vl_store' = ("HOST", ref (A.State_v.HostState.mk_state 0)) :: vl_store in*)
       A.State_v.Store.put (StrV vl_store);
       C.vl_to_ref (vl_of_ref r)
