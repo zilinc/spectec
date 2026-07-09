@@ -122,7 +122,7 @@ next
   {
     case 1 
   then have ok: "Instrs_ok2 s C' es0 tf" 
-    using instr_ok_inversion
+    using Instrs_ok_inversion
     sorry (* inversion lemma on labels *) 
     then show ?case using ok ctxt_label 1 by simp
   next
@@ -445,7 +445,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
   then show ?case 
   proof (induction rule:Step_pure.induct)
     case Step_pure__unreachable
-    then have wfs: "wf_store s" "wf_context C'" using instr_ok2_wf by auto
+    then have wfs: "wf_store s" "wf_context C'" using Instrs_ok2_wf by auto
     then show ?case 
          using Instrs_ok2__instr admininstr_case_73 mk_functype Instr_ok2__trap res_list.exhaust
          by (metis wfs(1) Instrs_ok2__instr admininstr_case_73 wfs(2) Instr_ok2__trap 
@@ -460,7 +460,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
       using admininstr_instr.domintros(1) admininstr_instr.psimps(1) by fastforce
     then show ?case 
       using subtype_typing
-            Instrs_ok2__empty instr_ok2_wf(1,2) pure.prems(8,9)
+            Instrs_ok2__empty Instrs_ok2_wf(1,2) pure.prems(8,9)
             inv_nop Instrs_ok__instr instr_case_0
       by (metis (no_types, lifting))
   next
@@ -470,7 +470,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
       "Instrs_ok2 s C' [admininstr_sc0 admininstr_st0_DROP] (mk_functype t2' t3')"
       "Resulttype_sub t1 t1'"
       "Resulttype_sub t3' t2" 
-      using inv_Instrs_ok2__seq[of s C' "[admininstr_val v_val, admininstr_sc0 admininstr_st0_DROP]"
+      using inv_seq[of s C' "[admininstr_val v_val, admininstr_sc0 admininstr_st0_DROP]"
               t1 t2 "[admininstr_val v_val]" "[admininstr_sc0 admininstr_st0_DROP]"] by fastforce
     have tv: "mk_instrtype (mk_list []) (mk_list [typeofval v_val]) <ti: mk_instrtype t1' t2'" 
       using inv_const_list[OF splitih(1), of "[v_val]"] by simp
@@ -483,6 +483,73 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     then obtain t where 
       "mk_instrtype (mk_list [t]) (mk_list []) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
       using inv_drop Instrs_ok__instr
+      using instr_case_2 Instrs_ok2_wf(1) splitih(2) by blast
+    then have "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1' t3'" 
+      using td tv Instrtype_sub_trans produce_consume[of "[typeofval v_val]" t1' t2' "[t]" "[]"] 
+      by fastforce
+    then have "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1 t2" 
+      using splitih(3,4) 
+      using Instrtype_sub_sub_rule Instrtype_sub_trans by blast
+    then show ?case 
+      using subtype_typing 
+            Instrs_ok2__empty Instrs_ok2_wf(1,2) pure.prems(8,9) 
+      by fast
+  next
+    case (select_true c val_1 val_2 t_lst_opt)
+    then obtain t1' t2' t3' where splitih:
+      "Instrs_ok2 s C' [admininstr_val val_1, admininstr_val val_2, 
+                        admininstr_sc1 (admininstr_st1_CONST I32 c)] (mk_functype t1' t2')"
+      "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_SELECT t_lst_opt)] (mk_functype t2' t3')"
+      "Resulttype_sub t1 t1'"
+      "Resulttype_sub t3' t2" 
+      using inv_seq[of s C' "[_,_,_, admininstr_sc0 _]"
+              t1 t2 "[admininstr_val _,_,_]" "[admininstr_sc0 _]"] by fastforce
+    obtain t1v t2v t3v where splitval1:
+      "Instrs_ok2 s C' [admininstr_val val_1] (mk_functype t1v t2v)"
+      "Instrs_ok2 s C' [admininstr_val val_2, admininstr_sc1 (admininstr_st1_CONST I32 c)] 
+              (mk_functype t2v t3v)" 
+      "Resulttype_sub t1' t1v" "Resulttype_sub t3v t2'" 
+      using inv_seq[OF splitih(1), of "[_]" "[_,_]"] by fastforce
+   
+    have tv: "mk_instrtype (mk_list []) 
+              (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) <ti: mk_instrtype t1' t2'" 
+      using inv_const_list[OF splitih(1), of "[val_1,val_2,val_CONST I32 c]"] 
+        admininstr_val.domintros admininstr_val.psimps typeofval.domintros typeofval.psimps 
+       by simp
+    obtain t2'' t3'' where 
+      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
+       "Instr_ok C' (instr_sc0 (SELECT t_lst_opt)) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      using inv_plain[where ?v_instr = "instr_sc0 _"]
+            select_true(9) splitih(2)
+      using admininstr_instr.domintros admininstr_instr.psimps by metis
+    then show ?case 
+    proof (cases t_lst_opt)
+      case None
+      then obtain t v_numtype v_vectype t' where
+       "Valtype_sub t t'"
+       "(t' = valtype_numtype v_numtype \<or> t' = valtype_vectype v_vectype)"
+       "mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: 
+        mk_instrtype (mk_list t2'') (mk_list t3'')"
+        using td inv_select_impl
+        by (metis Instrs_ok__instr assms(9) instr_case_3 Instrs_ok2_wf(1))
+      then have "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3') \<and>
+            Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
+                    (mk_list [t,t,valtype_I32])"
+        using td(1) tv splitih (3,4) produce_consume[of 
+              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
+              "[t,t,valtype_I32]" "[t]" t3']
+              Instrtype_sub_trans by force
+        
+      then show ?thesis 
+        using pure.prems(8,9) splitih(3,4)
+        sorry
+    next
+      case (Some a)
+      then show ?thesis sorry
+    qed
+   (* then obtain t where 
+      "mk_instrtype (mk_list [t]) (mk_list []) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
+      using inv_select Instrs_ok__instr
       using instr_case_2 instr_ok2_wf(1) splitih(2) by blast
     then have "Resulttype_sub t1' t3'" 
       using td tv Instrtype_sub_trans produce_consume by fastforce
@@ -492,10 +559,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     then show ?case 
       using subtype_typing 
             Instrs_ok2__empty instr_ok2_wf(1,2) pure.prems(8,9) 
-      by fast
-  next
-    case (select_true c val_1 val_2 t_lst_opt)
-    then show ?case sorry
+      by fast *)
   next
     case (select_false c val_1 val_2 t_lst_opt)
     then show ?case sorry
@@ -852,7 +916,7 @@ proof -
       using a(1) cfg_is(5) b
       unfolding Expr_ok2.simps
       apply simp
-      using Config_ok.simps assms(1) c instr_ok2_wf_instr by auto
+      using Config_ok.simps assms(1) c Instrs_ok2_wf_instr by auto
 
     show ?thesis
       using "5" Config_ok.simps assms(1) b bc cfg_is(1,2,5) d step_wf by auto

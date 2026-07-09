@@ -3,7 +3,7 @@ theory Properties_Aux
 begin
 
 
-lemma b_e_type_empty1:
+lemma Instrs_ok_empty:
   assumes "Instrs_ok C [] ft"
           "ft = (mk_functype (mk_list ts) (mk_list ts'))"
   shows   "(mk_instrtype (mk_list []) (mk_list [])) <ti: (mk_instrtype (mk_list ts) (mk_list ts'))"
@@ -25,7 +25,7 @@ lemma b_e_type_empty1:
     by blast
   done
 
-lemma instr_inversion_helper:
+lemma Instr_ok_inversion_helper:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
   shows "\<exists> tp1 tp2. ((Instr_ok C e (mk_functype tp1 tp2)) \<and>
         (mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2))"
@@ -35,7 +35,7 @@ proof (induction C "[e]" "mk_functype t1 t2" arbitrary: t1 t2
           "\<lambda> C e ft.
         (case ft of (mk_functype t1 t2) \<Rightarrow>
         \<exists> tp1 tp2. Instr_ok C e (mk_functype tp1 tp2) \<and>
-        mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)"])
+        (mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2))"])
   case (block C bt t_1_lst t_2_lst instr_lst)
   then show ?case
     using Instr_ok_Instrs_ok.block Instrtype_sub_refl
@@ -70,7 +70,7 @@ next
     then have e2: "instr_2_lst = [e]" using seq by simp
     then have "(mk_instrtype (mk_list []) (mk_list [])) <ti:
                (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))"
-      using seq.hyps b_e_type_empty1 by blast
+      using seq.hyps Instrs_ok_empty by blast
     then show ?thesis
       using  \<open>instr_2_lst = [e]\<close> func_sub_app_single_r
               Instrtype_sub_trans seq.hyps(3,4) by blast
@@ -80,7 +80,7 @@ next
       using seq.hyps(8) by auto
       then have "(mk_instrtype (mk_list []) (mk_list [])) <ti:
                   (mk_instrtype (mk_list t_2_lst) (mk_list t_3_lst))"
-    using seq.hyps(3) b_e_type_empty1 by blast
+    using seq.hyps(3) Instrs_ok_empty by blast
   then show ?thesis
     using \<open>instr_1 = [e]\<close> func_sub_app_single_l seq.hyps(1,2)
         Instrtype_sub_trans by blast
@@ -100,7 +100,7 @@ qed (fastforce intro: Instr_ok_Instrs_ok.intros Instrtype_sub_refl)+
 termination numtype_Inn
   by lexicographic_order
 
-lemma instr_ok_inv_store_pack:
+lemma Instrs_ok_inv_store_pack:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
           "e = (instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))"
   shows
@@ -116,7 +116,7 @@ proof -
      "Instr_ok C (instr_sc6 (STORE (numtype_Inn v_Inn)
       (Some (mk_sz v_M)) v_memarg)) (mk_functype tp1 tp2)" and
 		 "(mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)"
-  by (metis assms(1) assms(2) instr_inversion_helper)
+  by (metis assms(1) assms(2) Instr_ok_inversion_helper)
   then show ?thesis using assms(1)
   proof (induction "C" "(instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))"
         "mk_functype tp1 tp2"
@@ -132,7 +132,7 @@ proof -
     qed
 qed
 
-lemma instr_ok_inv_ref_func:
+lemma Instrs_ok_inv_ref_func:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
           "e = (instr_sc4 (REF_FUNC x))"
   shows"(\<exists> fta.
@@ -142,7 +142,8 @@ lemma instr_ok_inv_ref_func:
 proof -
 obtain tp1 tp2 where
   "Instr_ok C (instr_sc4 (REF_FUNC x)) (mk_functype tp1 tp2)" and
-  "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2" by (metis assms(2) assms(1) instr_inversion_helper)
+  "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2" 
+  by (metis assms(2) assms(1) Instr_ok_inversion_helper)
   then show ?thesis
     by (cases rule: Instr_ok.cases, auto)
 qed
@@ -153,7 +154,7 @@ termination isabelle_reference_output_wasm2.size
 termination isabelle_reference_output_wasm2.valtype_numtype
   by lexicographic_order
 
-lemma instr_ok_inv_cvtop_reinterpret:
+lemma Instrs_ok_inv_cvtop_reinterpret:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
           "e = (instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET))"
   shows "
@@ -165,9 +166,10 @@ proof -
 obtain tp1 tp2 where
   a: "Instr_ok C (instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET)) (mk_functype tp1 tp2)" and
   b: "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2"
-  by (metis assms(2) assms(1) instr_inversion_helper)
+  by (metis assms(2) assms(1) Instr_ok_inversion_helper)
   show ?thesis using a b
-  apply (induction "C" "(instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET))" "mk_functype tp1 tp2" arbitrary: nt_1 nt_2 rule: Instr_ok_Instrs_ok.inducts(1))
+    apply (induction "C" "(instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET))" 
+          "mk_functype tp1 tp2" arbitrary: nt_1 nt_2 rule: Instr_ok_Instrs_ok.inducts(1))
   apply auto+
   subgoal for C nt_1 nt_2
     apply (induction nt_1) by simp+
@@ -182,7 +184,7 @@ obtain tp1 tp2 where
   sorry
 qed
 
-lemma instr_ok_inversion:
+lemma Instrs_ok_inversion:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
   shows
     inv_store_pack: "e = (instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) \<Longrightarrow>
@@ -267,7 +269,7 @@ lemma instr_ok_inversion:
     inv_relop: "e = (instr_sc1 (RELOP nt relop_nt)) \<Longrightarrow> (mk_instrtype (mk_list [(valtype_numtype nt), (valtype_numtype nt)]) (mk_list [valtype_I32])) <ti: mk_instrtype t1 t2" and
     inv_cvtop_convert: "e = (instr_sc1 (CVTOP nt_1 nt_2 v_cvtop)) \<Longrightarrow> (mk_instrtype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)])) <ti: mk_instrtype t1 t2" and
     inv_ref_null: "e = (instr_sc4 (REF_NULL rt)) \<Longrightarrow> (mk_instrtype (mk_list []) (mk_list [(valtype_reftype rt)])) <ti: mk_instrtype t1 t2" and
-    inv_ref_is_null: "e = (instr_sc4 REF_IS_NULL) \<Longrightarrow> (\<exists> rt. (mk_instrtype (mk_list [(valtype_reftype rt)]) (mk_list [valtype_I32])) <ti: mk_instrtype t1 t2)" and
+    inv_ref_is_null: "e = (instr_sc4 REF_IS_NULL) \<Longrightarrow> (\<exists> rt. ((mk_instrtype (mk_list [(valtype_reftype rt)]) (mk_list [valtype_I32])) <ti: mk_instrtype t1 t2))" and
     inv_vconst: "e = (instr_sc1 (VCONST V128 c)) \<Longrightarrow> (mk_instrtype (mk_list []) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
     inv_Instr_ok_vvunop: "e = (instr_sc2 (VVUNOP V128 v_vvunop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
     inv_Instr_ok__vvbinop: "e = (instr_sc2 (VVBINOP V128 v_vvbinop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128, valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
@@ -479,11 +481,11 @@ lemma instr_ok_inversion:
 		  (wf_memtype mt) \<and>
 		  ((mk_instrtype (mk_list [valtype_I32, valtype_V128]) (mk_list [])) <ti: mk_instrtype t1 t2))"
 
-  using assms instr_ok_inv_store_pack apply blast
-  using assms instr_ok_inv_ref_func apply blast
-  using assms instr_ok_inv_cvtop_reinterpret apply blast
+  using assms Instrs_ok_inv_store_pack apply blast
+  using assms Instrs_ok_inv_ref_func apply blast
+  using assms Instrs_ok_inv_cvtop_reinterpret apply blast
 
-  using instr_inversion_helper[OF assms]
+  using Instr_ok_inversion_helper[OF assms]
 
 
   apply auto
@@ -491,8 +493,15 @@ lemma instr_ok_inversion:
   apply (cases rule: Instr_ok.cases, auto)+
   done
 
+lemma Instr_ok_wf:
+  assumes "Instr_ok C e ft"
+  shows   "(wf_context C)"
+		      "(wf_instr e)"
+	using assms
+proof (induction)
+qed(simp)+
 
-lemma instr_ok_wf:
+lemma Instrs_ok_wf:
   assumes "Instrs_ok C e ft"
   shows   "(wf_context C)"
 		      "(list_all wf_instr e)"
@@ -502,7 +511,7 @@ qed(simp)+
 
 
 (*Instrs_ok2*)
-lemma e_type_empty1:
+lemma Instrs_ok2_empty:
   assumes "Instrs_ok2 s C [] ft"
           "ft = (mk_functype (mk_list t1) (mk_list t2))"
   shows   "(mk_instrtype (mk_list []) (mk_list [])) <ti: (mk_instrtype (mk_list t1) (mk_list t2))"
@@ -517,7 +526,7 @@ using Instrtype_sub_frame_rule Instrtype_sub_trans apply force
 apply simp
 done
 
-lemma instr_ok2_inversion_helper:
+lemma Instrs_ok2_inversion_helper:
   assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
   shows "\<exists> tp1 tp2. (Instr_ok2 s C a_e (mk_functype tp1 tp2)) \<and>
         (mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)"
@@ -526,7 +535,7 @@ proof (induction s C "[a_e]" "mk_functype t1 t2" arbitrary:  t1 t2
       rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 =
         "\<lambda> s C e ft. (case ft of (mk_functype t1 t2) \<Rightarrow>
         \<exists> tp1 tp2. Instr_ok2 s C e (mk_functype tp1 tp2) \<and>
-          mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)" and ?P3.0 = "\<lambda> s C e rt. True"])
+          (mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2))" and ?P3.0 = "\<lambda> s C e rt. True"])
   case (plain C v_instr t_1_lst t_2_lst s)
   then show ?case using Instr_ok2_Instrs_ok2_Expr_ok2.plain Instrtype_sub_refl
     by fastforce
@@ -562,7 +571,7 @@ next
     then have "admininstr_2_lst = [a_e]" using Instrs_ok2__seq by force
     then have "(mk_instrtype (mk_list []) (mk_list [])) <ti:
                (mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst))"
-      using Instrs_ok2__seq.hyps e_type_empty1 by auto
+      using Instrs_ok2__seq.hyps Instrs_ok2_empty by auto
     then show ?thesis using func_sub_app_single_r
       using Instrs_ok2__seq.hyps(4) \<open>admininstr_2_lst = [a_e]\<close> Instrtype_sub_trans
       by fastforce
@@ -571,7 +580,7 @@ next
     then have "admininstr_2_lst = []" using Instrs_ok2__seq by force
     then have "(mk_instrtype (mk_list []) (mk_list [])) <ti:
                (mk_instrtype (mk_list t_2_lst) (mk_list t_3_lst))"
-      using Instrs_ok2__seq.hyps(3) e_type_empty1
+      using Instrs_ok2__seq.hyps(3) Instrs_ok2_empty
       by auto
       then show ?thesis using func_sub_app_single_l
         by (metis \<open>mk_instrtype (mk_list [])
@@ -591,10 +600,10 @@ next
 next
   case (Instrs_ok2__frame s C t_1_lst t_2_lst t_lst)
   then show ?case
-    by (metis Instrs_ok2__frame.hyps(2) Instrtype_sub_frame_rule Instrtype_sub_trans)
+    by (metis Instrtype_sub_frame_rule Instrtype_sub_trans)
 qed(fastforce)+
 
-lemma instr_ok2_inversion:
+lemma Instrs_ok2_inversion:
   assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
   shows
     inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
@@ -631,7 +640,7 @@ lemma instr_ok2_inversion:
       (\<exists> t_1_lst t_2_lst.
       ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))"
 
-  using instr_ok2_inversion_helper[OF assms]
+  using Instrs_ok2_inversion_helper[OF assms]
   apply auto
   apply (cases rule: Instrs_ok2.cases, auto)
   using assms Instrtype_sub_refl Instrtype_sub_sub_rule Instrtype_sub_frame_rule
@@ -885,7 +894,7 @@ next
 qed
 
 
-lemma inv_Instrs_ok2__seq:
+lemma inv_seq:
   assumes "Instrs_ok2 s C es (mk_functype t1 t3)"
           "es = (es1 @ es2)"
   shows "(\<exists> t1' t2' t3'.
@@ -1047,7 +1056,16 @@ lemma inv_Instrs_ok2__frame:
 sorry *)
 
 
-lemma instr_ok2_wf:
+
+lemma Instr_ok2_wf:
+  assumes "Instr_ok2 s C e ft"
+  shows   "(wf_context C)"
+          "wf_store s"
+  using assms
+proof(induction)
+qed(simp)+
+
+lemma Instrs_ok2_wf:
   assumes "Instrs_ok2 s C e ft"
   shows   "(wf_context C)"
           "wf_store s"
@@ -1083,7 +1101,625 @@ qed(simp_all add: wf_admininstr.intros admininstr_instr.domintros admininstr_ins
 
 
 
-lemma instr_ok2_wf_instr:
+lemma admininstr_instr_inj:
+  assumes "admininstr_instr e1 = admininstr_instr e2"
+  shows "e1 = e2"
+  using assms
+proof (cases e1 rule:admininstr_instr.cases)
+(* This next line can take many seconds *)
+ qed(cases e2 rule:admininstr_instr.cases, 
+     simp_all add:admininstr_instr.domintros admininstr_instr.psimps)+
+
+
+lemma wf_admininstr_instr_inv:
+  assumes "wf_admininstr (admininstr_instr e)"
+  shows "wf_instr e"
+  using assms
+proof (induction "admininstr_instr e" rule:wf_admininstr.induct)
+  case admininstr_case_0
+  then show ?case
+  proof (cases e rule:admininstr_instr.cases)
+    case 1 
+    then show ?thesis using wf_instr.intros(1) admininstr_instr.domintros 
+          admininstr_instr.psimps(1) by simp
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_1
+  then show ?case using admininstr_case_1
+  proof (cases e rule:admininstr_instr.cases)
+    case 2
+    then show ?thesis using wf_instr.intros(2) admininstr_instr.domintros 
+          admininstr_instr.psimps(2) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_2
+  then show ?case using admininstr_case_2 
+  proof (cases e rule:admininstr_instr.cases)
+    case 3
+    then show ?thesis using wf_instr.intros(3) admininstr_instr.domintros 
+          admininstr_instr.psimps(3) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_3 valtype_lst_opt)
+  then show ?case using admininstr_case_3 
+  proof (cases e rule:admininstr_instr.cases)
+    case 4 
+    then show ?thesis using wf_instr.intros(4) admininstr_instr.domintros 
+          admininstr_instr.psimps(4) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_4 v_blocktype instr_lst)
+  then show ?case using admininstr_case_4 
+  proof (cases e rule:admininstr_instr.cases)
+    case 5 
+    then show ?thesis using admininstr_case_4 wf_instr.intros(5) admininstr_instr.domintros(5)
+          admininstr_instr.psimps(5) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_5 v_blocktype instr_lst)
+  then show ?case using admininstr_case_5 
+  proof (cases e rule:admininstr_instr.cases)
+    case 6 
+    then show ?thesis using wf_instr.intros(6) admininstr_case_5 admininstr_instr.domintros 
+          admininstr_instr.psimps(6) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_6 v_blocktype instr_lst instr_lst_0_lst)
+  then show ?case using admininstr_case_6 
+  proof (cases e rule:admininstr_instr.cases)
+    case 7 
+    then show ?thesis using wf_instr.intros(7) admininstr_case_6 admininstr_instr.domintros 
+          admininstr_instr.psimps(7) by simp
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_7 v_labelidx)
+  then show ?case using admininstr_case_7 
+  proof (cases e rule:admininstr_instr.cases)
+    case 8 
+    then show ?thesis using wf_instr.intros(8) admininstr_instr.domintros admininstr_case_7
+          admininstr_instr.psimps(8) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_8 v_labelidx)
+  then show ?case using admininstr_case_8 
+  proof (cases e rule:admininstr_instr.cases)
+    case 9 
+    then show ?thesis using wf_instr.intros(9) admininstr_instr.domintros admininstr_case_8
+          admininstr_instr.psimps(9) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_9 labelidx_lst v_labelidx)
+  then show ?case using admininstr_case_9 
+  proof (cases e rule:admininstr_instr.cases)
+    case 10 
+    then show ?thesis using wf_instr.intros(10) admininstr_instr.domintros admininstr_case_9
+          admininstr_instr.psimps(10) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_10 v_funcidx)
+  then show ?case using admininstr_case_10 
+  proof (cases e rule:admininstr_instr.cases)
+    case 11
+    then show ?thesis using wf_instr.intros(11) admininstr_instr.domintros admininstr_case_10
+          admininstr_instr.psimps(11) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_11 v_tableidx v_typeidx)
+  then show ?case using admininstr_case_11
+  proof (cases e rule:admininstr_instr.cases)
+    case 12
+    then show ?thesis using wf_instr.intros(12) admininstr_instr.domintros admininstr_case_11
+          admininstr_instr.psimps(12) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_12
+  then show ?case using admininstr_case_12
+  proof (cases e rule:admininstr_instr.cases)
+    case 13
+    then show ?thesis using wf_instr.intros(13) admininstr_instr.domintros 
+          admininstr_instr.psimps(13) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_13 v_numtype var_0)
+  then show ?case using admininstr_case_13
+  proof (cases e rule:admininstr_instr.cases)
+    case 14
+    then show ?thesis using wf_instr.intros(14) admininstr_instr.domintros admininstr_case_13
+          admininstr_instr.psimps(14) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_14 v_numtype var_0)
+  then show ?case using admininstr_case_14
+  proof (cases e rule:admininstr_instr.cases)
+    case 15
+    then show ?thesis using wf_instr.intros(15) admininstr_instr.domintros admininstr_case_14
+          admininstr_instr.psimps(15) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_15 v_numtype var_0)
+  then show ?case using admininstr_case_15
+  proof (cases e rule:admininstr_instr.cases)
+    case 16
+    then show ?thesis using wf_instr.intros(16) admininstr_instr.domintros admininstr_case_15
+          admininstr_instr.psimps(16) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_16 v_numtype var_0)
+  then show ?case using admininstr_case_16
+  proof (cases e rule:admininstr_instr.cases)
+    case 17
+    then show ?thesis using wf_instr.intros(17) admininstr_instr.domintros admininstr_case_16
+          admininstr_instr.psimps(17) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_17 v_numtype var_0)
+  then show ?case using admininstr_case_17
+  proof (cases e rule:admininstr_instr.cases)
+    case 18
+    then show ?thesis using wf_instr.intros(18) admininstr_instr.domintros admininstr_case_17
+          admininstr_instr.psimps(18) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_18 numtype_1 numtype_2 v_cvtop)
+  then show ?case using admininstr_case_18
+  proof (cases e rule:admininstr_instr.cases)
+    case 19
+    then show ?thesis using wf_instr.intros(19) admininstr_instr.domintros admininstr_case_18
+          admininstr_instr.psimps(19) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_19 v_numtype v_n)
+  then show ?case using admininstr_case_19
+  proof (cases e rule:admininstr_instr.cases)
+    case 20
+    then show ?thesis using wf_instr.intros(20) admininstr_instr.domintros 
+          admininstr_instr.psimps(20) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_20 v_vectype var_0)
+  then show ?case using admininstr_case_20
+  proof (cases e rule:admininstr_instr.cases)
+    case 21
+    then show ?thesis using wf_instr.intros(21) admininstr_instr.domintros admininstr_case_20
+          admininstr_instr.psimps(21) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_21 v_vectype v_vvunop)
+  then show ?case using admininstr_case_21
+  proof (cases e rule:admininstr_instr.cases)
+    case 22
+    then show ?thesis using wf_instr.intros(22) admininstr_instr.domintros 
+          admininstr_instr.psimps(22) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_22 v_vectype v_vvbinop)
+  then show ?case using admininstr_case_22
+  proof (cases e rule:admininstr_instr.cases)
+    case 23
+    then show ?thesis using wf_instr.intros(23) admininstr_instr.domintros 
+          admininstr_instr.psimps(23) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_23 v_vectype v_vvternop)
+  then show ?case using admininstr_case_23
+  proof (cases e rule:admininstr_instr.cases)
+    case 24
+    then show ?thesis using wf_instr.intros(24) admininstr_instr.domintros 
+          admininstr_instr.psimps(24) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_24 v_vectype v_vvtestop)
+  then show ?case using admininstr_case_24
+  proof (cases e rule:admininstr_instr.cases)
+    case 25
+    then show ?thesis using wf_instr.intros(25) admininstr_instr.domintros 
+          admininstr_instr.psimps(25) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_25 v_shape var_0)
+  then show ?case using admininstr_case_25
+  proof (cases e rule:admininstr_instr.cases)
+    case 26
+    then show ?thesis using wf_instr.intros(26) admininstr_instr.domintros admininstr_case_25
+          admininstr_instr.psimps(26) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_26 v_shape var_0)
+  then show ?case using admininstr_case_26
+  proof (cases e rule:admininstr_instr.cases)
+    case 27
+    then show ?thesis using wf_instr.intros(27) admininstr_instr.domintros admininstr_case_26
+          admininstr_instr.psimps(27) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_27 v_shape var_0)
+  then show ?case using admininstr_case_27
+  proof (cases e rule:admininstr_instr.cases)
+    case 28
+    then show ?thesis using wf_instr.intros(28) admininstr_instr.domintros admininstr_case_27
+          admininstr_instr.psimps(28) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+  
+next
+  case (admininstr_case_28 v_shape var_0)
+  then show ?case using admininstr_case_28
+  proof (cases e rule:admininstr_instr.cases)
+    case 29
+    then show ?thesis using wf_instr.intros(29) admininstr_instr.domintros admininstr_case_28
+          admininstr_instr.psimps(29) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_29 v_ishape var_0)
+  then show ?case using admininstr_case_29
+  proof (cases e rule:admininstr_instr.cases)
+    case 30
+    then show ?thesis using wf_instr.intros(30) admininstr_instr.domintros admininstr_case_29
+          admininstr_instr.psimps(30) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_30 v_ishape)
+  then show ?case using admininstr_case_30
+  proof (cases e rule:admininstr_instr.cases)
+    case 31
+    then show ?thesis using wf_instr.intros(31) admininstr_instr.domintros admininstr_case_30
+          admininstr_instr.psimps(31) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_31 v_ishape)
+  then show ?case using admininstr_case_31
+  proof (cases e rule:admininstr_instr.cases)
+    case 32
+    then show ?thesis using wf_instr.intros(32) admininstr_instr.domintros admininstr_case_31
+          admininstr_instr.psimps(32) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_32 v_ishape laneidx_lst)
+  then show ?case using admininstr_case_32
+  proof (cases e rule:admininstr_instr.cases)
+    case 33
+    then show ?thesis using wf_instr.intros(33) admininstr_instr.domintros admininstr_case_32
+          admininstr_instr.psimps(33) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_33 v_shape)
+  then show ?case using admininstr_case_33
+  proof (cases e rule:admininstr_instr.cases)
+    case 34
+    then show ?thesis using wf_instr.intros(34) admininstr_instr.domintros admininstr_case_33
+          admininstr_instr.psimps(34) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_34 v_shape v_laneidx v_numtype sx_opt)
+  then show ?case using admininstr_case_34
+  proof (cases e rule:admininstr_instr.cases)
+    case 35
+    then show ?thesis using wf_instr.intros(35) admininstr_instr.domintros admininstr_case_34
+          admininstr_instr.psimps(35) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_35 v_shape v_laneidx)
+  then show ?case using admininstr_case_35
+  proof (cases e rule:admininstr_instr.cases)
+    case 36
+    then show ?thesis using wf_instr.intros(36) admininstr_instr.domintros admininstr_case_35
+          admininstr_instr.psimps(36) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_36 ishape_1 ishape_2 var_0)
+  then show ?case using admininstr_case_36
+  proof (cases e rule:admininstr_instr.cases)
+    case 37
+    then show ?thesis using wf_instr.intros(37) admininstr_instr.domintros admininstr_case_36
+          admininstr_instr.psimps(37) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_37 ishape_1 ishape_2 var_0)
+  then show ?case using admininstr_case_37
+  proof (cases e rule:admininstr_instr.cases)
+    case 38
+    then show ?thesis using wf_instr.intros(38) admininstr_instr.domintros admininstr_case_37
+          admininstr_instr.psimps(38) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_38 ishape_1 ishape_2 v_sx)
+  then show ?case using admininstr_case_38
+  proof (cases e rule:admininstr_instr.cases)
+    case 39
+    then show ?thesis using wf_instr.intros(39) admininstr_instr.domintros admininstr_case_38
+          admininstr_instr.psimps(39) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_39 v_shape shape_0 v_vcvtop)
+  then show ?case using admininstr_case_39
+  proof (cases e rule:admininstr_instr.cases)
+    case 40
+    then show ?thesis using wf_instr.intros(40) admininstr_instr.domintros admininstr_case_39
+          admininstr_instr.psimps(40) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_40 v_reftype)
+  then show ?case using admininstr_case_40
+  proof (cases e rule:admininstr_instr.cases)
+    case 41
+    then show ?thesis using wf_instr.intros(41) admininstr_instr.domintros 
+          admininstr_instr.psimps(41) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_41 v_funcidx)
+  then show ?case using admininstr_case_41
+  proof (cases e rule:admininstr_instr.cases)
+    case 42
+    then show ?thesis using wf_instr.intros(42) admininstr_instr.domintros admininstr_case_41
+          admininstr_instr.psimps(42) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_42
+  then show ?case using admininstr_case_42
+  proof (cases e rule:admininstr_instr.cases)
+    case 43
+    then show ?thesis using wf_instr.intros(43) admininstr_instr.domintros 
+          admininstr_instr.psimps(43) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_43 v_localidx)
+  then show ?case using admininstr_case_43
+  proof (cases e rule:admininstr_instr.cases)
+    case 44
+    then show ?thesis using wf_instr.intros(44) admininstr_instr.domintros admininstr_case_43
+          admininstr_instr.psimps(44) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_44 v_localidx)
+  then show ?case using admininstr_case_44
+  proof (cases e rule:admininstr_instr.cases)
+    case 45
+    then show ?thesis using wf_instr.intros(45) admininstr_instr.domintros admininstr_case_44
+          admininstr_instr.psimps(45) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_45 v_localidx)
+  then show ?case using admininstr_case_45
+  proof (cases e rule:admininstr_instr.cases)
+    case 46
+    then show ?thesis using wf_instr.intros(46) admininstr_instr.domintros admininstr_case_45
+          admininstr_instr.psimps(46) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_46 v_globalidx)
+  then show ?case using admininstr_case_46
+  proof (cases e rule:admininstr_instr.cases)
+    case 47
+    then show ?thesis using wf_instr.intros(47) admininstr_instr.domintros admininstr_case_46
+          admininstr_instr.psimps(47) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_47 v_globalidx)
+  then show ?case using admininstr_case_47
+  proof (cases e rule:admininstr_instr.cases)
+    case 48
+    then show ?thesis using wf_instr.intros(48) admininstr_instr.domintros admininstr_case_47
+          admininstr_instr.psimps(48) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_48 v_tableidx)
+  then show ?case using admininstr_case_48
+  proof (cases e rule:admininstr_instr.cases)
+    case 49
+    then show ?thesis using wf_instr.intros(49) admininstr_instr.domintros admininstr_case_48
+          admininstr_instr.psimps(49) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_49 v_tableidx)
+  then show ?case using admininstr_case_49 
+  proof (cases e rule:admininstr_instr.cases)
+    case 50
+    then show ?thesis using wf_instr.intros(50) admininstr_instr.domintros admininstr_case_49
+          admininstr_instr.psimps(50) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_50 v_tableidx)
+  then show ?case using admininstr_case_50
+  proof (cases e rule:admininstr_instr.cases)
+    case 51
+    then show ?thesis using wf_instr.intros(51) admininstr_instr.domintros admininstr_case_50
+          admininstr_instr.psimps(51) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_51 v_tableidx)
+  then show ?case using admininstr_case_51
+  proof (cases e rule:admininstr_instr.cases)
+    case 52
+    then show ?thesis using wf_instr.intros(52) admininstr_instr.domintros admininstr_case_51
+          admininstr_instr.psimps(52) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_52 v_tableidx)
+  then show ?case using admininstr_case_52
+  proof (cases e rule:admininstr_instr.cases)
+    case 53
+    then show ?thesis using wf_instr.intros(53) admininstr_instr.domintros admininstr_case_52
+          admininstr_instr.psimps(53) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_53 v_tableidx tableidx_0)
+  then show ?case using admininstr_case_53
+  proof (cases e rule:admininstr_instr.cases)
+    case 54
+    then show ?thesis using wf_instr.intros(54) admininstr_instr.domintros admininstr_case_53
+          admininstr_instr.psimps(54) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_54 v_tableidx v_elemidx)
+  then show ?case using admininstr_case_54
+  proof (cases e rule:admininstr_instr.cases)
+    case 55
+    then show ?thesis using wf_instr.intros(55) admininstr_instr.domintros admininstr_case_54
+          admininstr_instr.psimps(55) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_55 v_elemidx)
+  then show ?case using admininstr_case_55
+  proof (cases e rule:admininstr_instr.cases)
+    case 56 
+    then show ?thesis using wf_instr.intros(56) admininstr_instr.domintros admininstr_case_55 
+          admininstr_instr.psimps(56) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_56 v_numtype var_0_opt v_memarg)
+  then show ?case using admininstr_case_56
+  proof (cases e rule:admininstr_instr.cases)
+    case 57
+    then show ?thesis using wf_instr.intros(57) admininstr_instr.domintros admininstr_case_56
+          admininstr_instr.psimps(57) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_57 sz_opt v_memarg Inn_opt numtype_opt v_numtype)
+  then show ?case using admininstr_case_57
+  proof (cases e rule:admininstr_instr.cases)
+    case 58
+    then show ?thesis using wf_instr.intros(58) admininstr_instr.domintros admininstr_case_57
+          admininstr_instr.psimps(58) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_58 v_memarg v_vectype vloadop_opt)
+  then show ?case using admininstr_case_58
+  proof (cases e rule:admininstr_instr.cases)
+    case 59
+    then show ?thesis using wf_instr.intros(59) admininstr_instr.domintros admininstr_case_58
+          admininstr_instr.psimps(59) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_59 v_sz v_memarg v_laneidx v_vectype)
+  then show ?case using admininstr_case_59
+  proof (cases e rule:admininstr_instr.cases)
+    case 60
+    then show ?thesis using wf_instr.intros(60) admininstr_instr.domintros admininstr_case_59
+          admininstr_instr.psimps(60) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_60 v_memarg v_vectype)
+  then show ?case using admininstr_case_60
+  proof (cases e rule:admininstr_instr.cases)
+    case 61 
+    then show ?thesis using wf_instr.intros(61) admininstr_instr.domintros admininstr_case_60
+          admininstr_instr.psimps(61) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_61 v_sz v_memarg v_laneidx v_vectype)
+  then show ?case using admininstr_case_61
+  proof (cases e rule:admininstr_instr.cases)
+    case 62 
+    then show ?thesis using wf_instr.intros(62) admininstr_instr.domintros admininstr_case_61
+          admininstr_instr.psimps(62) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_62
+  then show ?case using admininstr_case_62
+  proof (cases e rule:admininstr_instr.cases)
+    case 63
+    then show ?thesis using wf_instr.intros(63) admininstr_instr.domintros 
+          admininstr_instr.psimps(63) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_63
+  then show ?case using admininstr_case_63
+  proof (cases e rule:admininstr_instr.cases)
+    case 64
+    then show ?thesis using wf_instr.intros(64) admininstr_instr.domintros 
+          admininstr_instr.psimps(64) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_64
+  then show ?case using admininstr_case_64
+  proof (cases e rule:admininstr_instr.cases)
+    case 65
+    then show ?thesis using wf_instr.intros(65) admininstr_instr.domintros 
+          admininstr_instr.psimps(65) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_65
+  then show ?case using admininstr_case_65
+  proof (cases e rule:admininstr_instr.cases)
+    case 66
+    then show ?thesis using wf_instr.intros(66) admininstr_instr.domintros 
+          admininstr_instr.psimps(66) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_66 v_dataidx)
+  then show ?case using admininstr_case_66
+  proof (cases e rule:admininstr_instr.cases)
+    case 67
+    then show ?thesis using wf_instr.intros(67) admininstr_instr.domintros admininstr_case_66
+          admininstr_instr.psimps(67) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_67 v_dataidx)
+  then show ?case using admininstr_case_67
+  proof (cases e rule:admininstr_instr.cases)
+    case 68
+    then show ?thesis using wf_instr.intros(68) admininstr_instr.domintros admininstr_case_67
+          admininstr_instr.psimps(68) by simp 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_68 v_funcaddr)
+  then show ?case using admininstr_case_68
+  proof (cases e rule:admininstr_instr.cases)
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_69 v_hostaddr)
+  then show ?case using admininstr_case_69
+  proof (cases e rule:admininstr_instr.cases)
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_70 v_funcaddr)
+  then show ?case using admininstr_case_70
+  proof (cases e rule:admininstr_instr.cases)
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case (admininstr_case_71 instr_lst admininstr_lst v_n)
+  then show ?case using admininstr_case_71
+  proof (cases e rule:admininstr_instr.cases) 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next 
+  case (admininstr_case_72 v_frame admininstr_lst v_n)
+  then show ?case using admininstr_case_72
+  proof (cases e rule:admininstr_instr.cases)
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+next
+  case admininstr_case_73
+  then show ?case using admininstr_case_73
+  proof (cases e rule:admininstr_instr.cases) 
+  qed(simp add:admininstr_instr.domintros admininstr_instr.psimps)+
+qed
+  
+
+lemma Instr_ok2_wf_instr:
+  assumes "Instr_ok2 s C e ft"
+  shows "wf_admininstr e"
+  using assms
+proof(induction s C e ft rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(1)[where ?P2.0 =
+    "\<lambda> s C e ft. list_all wf_admininstr e" and ?P3.0 = "\<lambda> s C e rt. True"])
+  case (plain C v_instr t_1_lst t_2_lst s)
+  then show ?case using wf_admininstr_instr by simp 
+next
+  case (Instr_ok2__ref s v_ref rt C)
+  then show ?case
+  proof (induction rule:Ref_ok.induct)
+    case (null s rt)
+    then show ?case
+      by (simp add: admininstr_case_40 admininstr_ref.domintros(1) admininstr_ref.psimps(1))
+  next
+    case (Ref_ok__func s a ext)
+    then show ?case 
+      using admininstr_case_68 admininstr_ref.domintros(2) admininstr_ref.psimps(2) by presburger
+  next
+    case (extern s a)
+    then show ?case
+      using admininstr_case_69 admininstr_ref.domintros(3) admininstr_ref.psimps(3) by presburger
+  qed
+qed(simp)+
+
+
+lemma Instrs_ok2_wf_instr:
   assumes "Instrs_ok2 s C e ft"
   shows "list_all wf_admininstr e"
   using assms
@@ -1109,6 +1745,86 @@ next
   qed
 qed(simp)+
 
+(*
+lemma Instr_ok2_const:
+  assumes "wf_context C" "wf_store s" "wf_admininstr (admininstr_val v)"
+  shows "Instr_ok2 s C (admininstr_val v) (mk_functype (mk_list []) (mk_list [typeofval v]))"
+proof (cases v)
+  case (val_CONST x11 x12)
+  then show ?thesis using plain const assms sledgehammer
+next
+  case (val_VCONST x21 x22)
+  then show ?thesis sorry
+next
+  case (val_REF_NULL x3)
+  then show ?thesis sorry
+next
+  case (val_REF_FUNC_ADDR x4)
+  then show ?thesis sorry
+next
+  case (val_REF_HOST_ADDR x5)
+  then show ?thesis sorry
+qed
+
+lemma Instrs_ok2_const:
+  assumes "wf_context C" "wf_store s" "list_all wf_admininstr (map admininstr_val vs)"
+  shows "Instrs_ok2 s C (map administr_val vs) 
+      (mk_functype (mk_list []) (mk_list (map typeofval vs)))"
+  using assms
+proof (induction vs)
+  case Nil
+  then show ?case using Instrs_ok2__empty by simp 
+next
+  case (Cons a vs)
+  then show ?case using Instrs_ok2__seq Instrs_ok2__instr 
+qed
+
+*)
+ 
+lemma Instr_ok2_const_replace:
+  assumes "Instr_ok2 s C (admininstr_val v) tf" 
+  shows "Instr_ok2 s C (admininstr_val v) (mk_functype (mk_list []) (mk_list [typeofval v]))"
+proof (cases v)
+  case (val_CONST x11 x12)
+  then show ?thesis using Instr_ok2_wf Instr_ok2_wf_instr assms 
+    plain wf_admininstr_instr_inv const
+    by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14) admininstr_val.domintros(1)
+        admininstr_val.psimps(1) typeofval.domintros(1) typeofval.psimps(1))
+next
+  case (val_VCONST x21 x22)
+  then show ?thesis
+  proof (cases x21)
+    case V128
+    then have "wf_instr (instr_sc1 (VCONST V128 x22))" using 
+        val_VCONST Instr_ok2_wf_instr wf_admininstr_instr_inv
+      using admininstr_instr.domintros(21) admininstr_instr.psimps(21) admininstr_val.domintros(2)
+        admininstr_val.psimps(2) assms by auto
+      then show ?thesis using val_VCONST Instr_ok2_wf assms 
+          plain V128
+          vconst
+          admininstr_instr.domintros(21) admininstr_instr.psimps(21)
+          admininstr_val.domintros(2) admininstr_val.psimps(2) typeofval.domintros(2) 
+          typeofval.psimps(2)
+        by (metis valtype_vectype.domintros valtype_vectype.psimps)
+    qed
+next
+  case (val_REF_NULL x3)
+  then have "wf_instr (instr_sc4 (REF_NULL x3))" using 
+    Instr_ok2_wf_instr assms wf_admininstr_instr_inv
+    using instr_case_40 by presburger
+  then show ?thesis using Instr_ok2_wf assms 
+    plain ref_null
+    by (metis admininstr_instr.domintros(41) admininstr_instr.psimps(41) admininstr_val.domintros(3)
+        admininstr_val.psimps(3) typeofval.domintros(3) typeofval.psimps(3) val_REF_NULL)
+next
+  case (val_REF_FUNC_ADDR x4)
+  then show ?thesis using Instr_ok2__ref inv_Instr_ok2__ref assms Instr_ok2_wf sorry
+next
+  case (val_REF_HOST_ADDR x5)
+  then show ?thesis sorry
+qed
+
+ 
 
 
 end
