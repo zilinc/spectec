@@ -124,7 +124,7 @@ ocaml-build: exe
 ocaml-clean:
 	rm -rf src/backend-animation/interpreter-ocaml/build
 
-ocaml-run: ocaml-build
+ocaml-run: 
 	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
 
 ocaml-test: ocaml-build
