@@ -374,7 +374,8 @@ let rec create_exp (e : Il.Ast.exp) : term
 
         (match e2.it with
           | ListE _ -> create_upd_exp e1 p (fun existing_term -> concat_old_term_to_new_list_exp existing_term)
-          | _ -> failwith "ExtE must take a list as the new value")
+          | VarE _ -> create_upd_exp e1 p (fun existing_term -> concat_old_term_to_new_list_exp existing_term)
+          | _ -> failwith ("ExtE must take a list as the new value" ^ " (got: " ^ (Il.Print.string_of_exp e2) ^ ")"))
     | IfE (if_exp, then_exp, else_exp) -> IfThenElse {
         cond = create_exp if_exp;
         then_branch = create_exp then_exp;
@@ -1606,7 +1607,7 @@ let rec create_def (def : Il.Ast.def) : command list
 
     | RelD (
         id,     (* fun_sum *)
-        [],     (* undep should get rid of params, so this should be empty *)
+        quants,     (* undep should get rid of params, so this should be empty *)
         mixop,
         typ,    (* (TupT (typbind "_" (IterT nat List)) (typbind "_" nat)) *)
         rules   (* (RuleD "fun_sum_case_0" (Seq Arg Arg) (TupE (ListE) (NumE (Nat 0)))) *)
@@ -1622,21 +1623,38 @@ let rec create_def (def : Il.Ast.def) : command list
               fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
       *)
 
-      (* TODO: I'm pretty sure this is duplicated logic *)
+      let signature : _params list (* (f_ : N → iN → iN) *)
+        = List.map (
+          fun q -> match q.it with
+            | DefP (id, params, typ) -> BracketedBinder(ExplicitParam(
+              NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+              create_typ typ
+            ))
+            | TypP id -> BracketedBinder(ExplicitParam(
+              NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+              create_typ typ
+            ))
+            | _ -> failwith "only DefP and TypP should be here"
+        ) quants
+      in
+
+      (* TODO: This might be duplicated logic *)
       let create_relations_inductive_type (typ : Il.Ast.typ) : term
         (* List Nat → Nat → Prop *)
         = match typ.it with
-          | VarT (id, []) -> FunType (Ident id.it, Ident "Prop") (* functype → Prop *)
-          | VarT _ -> failwith "undep should ensure empty arg list" 
+          | VarT _ | BoolT | NumT _ | TextT | IterT _ -> FunType (create_typ typ, Ident "Prop")
+          | TupT [] -> failwith "TupT [] is not a valid type for an inductive relation"
           | TupT id_typ_list ->
             let types = List.map (fun (_, typ) -> create_typ typ) id_typ_list in
             let types_and_prop = types @ [Ident "Prop"] in
             create_curried_func types_and_prop
-          | IterT (t, iter) -> FunType (create_iter_typ iter t, Ident "Prop")
-          | _ -> failwith ("no other typ should be here -- " ^ (Il.Print.string_of_typ typ))
       in
 
-      let create_relations_inductive_case (rule : Il.Ast.rule) (rel_id : Il.Ast.id) : _inductive_case
+      let create_relations_inductive_case
+        (rule : Il.Ast.rule)
+        (rel_id : Il.Ast.id)
+        (quants_from_parent : Il.Ast.quant list)
+        : _inductive_case
         (*
           | fun_sum_case_1 (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) :
                 fun_sum n'_lst var_0 →
@@ -1660,15 +1678,22 @@ let rec create_def (def : Il.Ast.def) : command list
               prems   (* (RulePr "fun_sum" (Seq Arg Arg) (TupE (VarE "n'_lst") (VarE "var_0"))) *)
             )
             ->
+            (* let quants_not_in_parent : quant list (* (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) *)
+              = List.filter (fun q -> not (List.mem q quants_from_parent)) quants
+            in *)
             let params_from_args : _params list (* (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) *)
-              = List.map (
-                fun q -> match q.it with
-                  | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-                    NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* TODO: disambiguate Ident *)
-                    create_typ typ
-                  ))
+              =
+              
+              let param_from_arg (q : Il.Ast.quant) : _params option
+                = match q.it with
+                  | ExpP (id, typ) -> Some(BracketedBinder(ExplicitParam(
+                      NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* TODO: disambiguate Ident *)
+                      create_typ typ
+                    )))
+                  | DefP _ -> None
                   | _ -> failwith "only ExpP should be here"
-              ) quants
+              in
+              List.filter_map param_from_arg quants
             in
 
             let exp_with_rel_id_prepended : term (* fun_sum ([v_n] ++ n'_lst) (v_n + var_0) *)
@@ -1704,16 +1729,16 @@ let rec create_def (def : Il.Ast.def) : command list
 
       in
 
-      let () = Printf.eprintf "DEBUG create_relations_inductive_type: %s  typ=%s\n%!" id.it (Il.Print.string_of_typ typ) in
+      (* let () = Printf.eprintf "DEBUG create_relations_inductive_type: %s  typ=%s\n%!" id.it (Il.Print.string_of_typ typ) in *)
       [
         Inductive {
           modifier = empty_modifier;
           id = id.it;                       (* fun_sum *)
           signature = (
-            [],                             (* We don't need parameters for the inductive type itself *)
+            signature,
             Some (create_relations_inductive_type typ)   (* List Nat → Nat → Prop *)
           );
-          cases = List.map (fun rule -> create_relations_inductive_case rule id) rules;
+          cases = List.map (fun rule -> create_relations_inductive_case rule id quants) rules;
           deriving = None; (* TODO: look into deriving *)
         }
       ]
@@ -1786,7 +1811,7 @@ let rec create_def (def : Il.Ast.def) : command list
                 NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (v_state : state) *)
                 create_typ typ
               ))
-              | _ -> failwith "only ExpP or TypP should be here"
+              | _ -> error p.at ("only ExpP or TypP should be here 1, got: " ^ Il.Print.string_of_param p)
           ) params,
           create_typ typ
 
@@ -1896,9 +1921,7 @@ let rec create_def (def : Il.Ast.def) : command list
       let signature : opt_decl_sig (* (v_state : state) (v_localidx : localidx) : val *)
         =
           let params_as_binders : _params list
-            (* (X : Type) Explain to me all the different components of `LetPr`[BEq X] (var_0_lst : List X)
-               ^^^^^^^^^^^^^^^^^^^
-               TypP "X" emits two binders when "X" is in typp_names_needing_beq;
+            (* TypP "X" emits two binders when "X" is in typp_names_needing_beq;
                otherwise just one. ExpP always emits one. *)
             = List.concat_map (
               fun p -> match p.it with
@@ -1919,7 +1942,18 @@ let rec create_def (def : Il.Ast.def) : command list
                   NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (var_0_lst : List X) *)
                   create_typ typ
                 ))]
-                | _ -> failwith "only ExpP or TypP should be here"
+                | DefP (
+                    id,
+                    params,
+                    typ
+                  ) -> [
+                    (* (f_ : iN) *)
+                    BracketedBinder(ExplicitParam(
+                      NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+                      create_typ typ
+                    ))
+                  ]
+                | _ -> error p.at ("only ExpP or TypP should be here 2, got: " ^ Il.Print.string_of_param p)
             ) params
           in
 
@@ -1969,7 +2003,8 @@ let rec create_def (def : Il.Ast.def) : command list
           | ExpA _ -> true
           | TypA {it = VarT _; _} -> false
           | TypA _ -> true
-          | _ -> failwith "only ExpA or TypA should be here"
+          | DefA _ -> false
+          | _ -> failwith ("only ExpA or TypA should be here" ^ Il.Print.string_of_arg arg)
       in
 
       let clause_deconstruction_list (clause : Il.Ast.clause) : bool list =
@@ -2139,13 +2174,19 @@ let rec create_def (def : Il.Ast.def) : command list
 
           let renamed_exp = rename_il_vars subst_func exp in
 
+          (* TODO: refactor to avoid spamming transformers *)
+          let rename_transformer = { Il.Walk.base_transformer with
+            transform_var_id = fun id -> { id with it = subst_func id.it }
+          } in
+          let renamed_prems = List.map (Il.Walk.transform_prem rename_transformer) prems in
+
           List.map
             (fun arg ->
               let is_passthrough = List.mem arg args_deconstructed_in_other_clauses_but_not_here in
               arg_to_lhs_pattern ~is_passthrough arg
             )
             args_deconstructed_in_at_least_one_clause,
-            append_prems_to_term (create_exp renamed_exp) prems
+            append_prems_to_term (create_exp renamed_exp) renamed_prems
       in
 
 
@@ -2162,7 +2203,7 @@ let rec create_def (def : Il.Ast.def) : command list
           else Some (match p.it with
             | ExpP (id, _) -> (Ident id.it : term)
             | TypP id      -> (Ident id.it : term)
-            | _ -> failwith "only ExpP or TypP should be here"
+            | _ -> error p.at ("only ExpP or TypP should be here 3, got: " ^ Il.Print.string_of_param p)
           )
         ) (List.combine params_from_parent param_ever_deconstructed_list)
       in
@@ -2269,7 +2310,20 @@ let rec create_def (def : Il.Ast.def) : command list
             )
         )
     | HintD _ -> []
-    | RelD _ -> failwith "should have been handled by earlier case"
+    (* | RelD (
+        id,
+        quants,
+        mixop,
+        typ,
+        rules
+      ) -> failwith (
+          "should have been handled by earlier case" ^ "              ||||||||           "
+          ^ "id=" ^ id.it ^ "              ||||||||           "
+          ^ "quants=" ^ String.concat "   XXX   " (List.map Il.Print.string_of_quant quants) ^ "              ||||||||           "
+          ^ "mixop=" ^ Il.Print.string_of_mixop mixop ^ "              ||||||||           "
+          ^ "typ=" ^ Il.Print.string_of_typ typ ^ "              ||||||||           "
+          ^ "rules=" ^ String.concat "   XXX   " (List.map Il.Print.string_of_rule rules) ^ "              ||||||||           "
+        ) *)
     | TypD _ -> []
 
 
