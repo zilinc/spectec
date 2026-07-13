@@ -366,6 +366,27 @@ and collect_sym c s =
   | IterG (s1, iterexp) -> collect_sym c s1 $@ collect_iterexp c iterexp
   | AttrG (e, s1) -> collect_exp c e $@ collect_sym c s1
 
+and collect_clause c clause =
+  let ( $@ ) = c.compose in
+  match clause.it with
+  | DefD (quants, args, exp, prems) ->
+      compose_list c (collect_quant c) quants $@
+      compose_list c (collect_arg c) args     $@
+      collect_exp c exp                        $@
+      compose_list c (collect_prem c) prems
+
+and collect_def c d =
+  let ( $@ ) = c.compose in
+  match d.it with
+  | DecD (_, params, typ, clauses) ->
+      compose_list c (collect_param c) params   $@
+      collect_typ c typ                          $@
+      compose_list c (collect_clause c) clauses
+  | RecD defs -> compose_list c (collect_def c) defs
+  | _ -> c.default
+
+let collect_script c il = compose_list c (collect_def c) il
+
 (* Concrete base collectors for convenience *)
 
 let exists_base_checker = base_collector false (||)

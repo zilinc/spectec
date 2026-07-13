@@ -17,6 +17,27 @@
   (alias runtest)                        ; `dune runtest` triggers this
   (action (diff test_spectec_output.lean         ; diff: left = expected (golden file, committed to git)
                 test_spectec_output.lean.act))       ;       right = actual (just produced by the rule above)
+)
+
+; ---- BEq detection test ----
+
+(rule
+  (action (with-stdout-to test_beq_output.lean.act
+    (run ../src/exe-spectec/main.exe
+         test_beq.spectec
+         --lean
+    )
+  ))
+  (deps
+    (file ../src/exe-spectec/main.exe)
+    (glob_files *.spectec)
+  )
+)
+
+(rule
+  (alias runtest)
+  (action (diff test_beq_output.lean
+                test_beq_output.lean.act))
 )                                        ; test PASSES if files are identical, FAILS if different
 
 (rule
