@@ -25,7 +25,7 @@ lemma Instrs_ok_empty:
     by blast
   done
 
-lemma Instr_ok_inversion_helper:
+lemma Instrs_ok_inversion_helper:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
   shows "\<exists> tp1 tp2. ((Instr_ok C e (mk_functype tp1 tp2)) \<and>
         (mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2))"
@@ -116,7 +116,7 @@ proof -
      "Instr_ok C (instr_sc6 (STORE (numtype_Inn v_Inn)
       (Some (mk_sz v_M)) v_memarg)) (mk_functype tp1 tp2)" and
 		 "(mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)"
-  by (metis assms(1) assms(2) Instr_ok_inversion_helper)
+  by (metis assms(1) assms(2) Instrs_ok_inversion_helper)
   then show ?thesis using assms(1)
   proof (induction "C" "(instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))"
         "mk_functype tp1 tp2"
@@ -143,7 +143,7 @@ proof -
 obtain tp1 tp2 where
   "Instr_ok C (instr_sc4 (REF_FUNC x)) (mk_functype tp1 tp2)" and
   "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2" 
-  by (metis assms(2) assms(1) Instr_ok_inversion_helper)
+  by (metis assms(2) assms(1) Instrs_ok_inversion_helper)
   then show ?thesis
     by (cases rule: Instr_ok.cases, auto)
 qed
@@ -166,7 +166,7 @@ proof -
 obtain tp1 tp2 where
   a: "Instr_ok C (instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET)) (mk_functype tp1 tp2)" and
   b: "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2"
-  by (metis assms(2) assms(1) Instr_ok_inversion_helper)
+  by (metis assms(2) assms(1) Instrs_ok_inversion_helper)
   show ?thesis using a b
     apply (induction "C" "(instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET))" 
           "mk_functype tp1 tp2" arbitrary: nt_1 nt_2 rule: Instr_ok_Instrs_ok.inducts(1))
@@ -186,7 +186,7 @@ qed
 
 lemma Instrs_ok_inversion:
   assumes "Instrs_ok C [e] (mk_functype t1 t2)"
-  shows
+  shows 
     inv_store_pack: "e = (instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) \<Longrightarrow>
         (\<exists> mt.
         (0 < (length (context_MEMS C))) \<and>
@@ -207,8 +207,8 @@ lemma Instrs_ok_inversion:
     inv_nop: "e = instr_sc0 NOP \<Longrightarrow> (mk_instrtype (mk_list []) (mk_list [])) <ti: mk_instrtype t1 t2" and
     inv_unreachable: "e = instr_sc0 UNREACHABLE \<Longrightarrow> True" and
     inv_drop: "e = instr_sc0 DROP \<Longrightarrow> (\<exists> t. ((mk_instrtype (mk_list [t]) (mk_list [])) <ti: mk_instrtype t1 t2))" and
-    inv_select_expl: "e = instr_sc0 (SELECT (Some [t])) \<Longrightarrow> ((mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t])) <ti: mk_instrtype t1 t2)" and
-    inv_select_impl: "e = instr_sc0 (SELECT (None)) \<Longrightarrow> (\<exists> t v_numtype v_vectype t'. (Valtype_sub t t') \<and> ((t' = (valtype_numtype v_numtype)) \<or> (t' = (valtype_vectype v_vectype))) \<and> ((mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t])) <ti: mk_instrtype t1 t2))" and
+    inv_select_expl: "e = instr_sc0 (SELECT (Some ts)) \<Longrightarrow> \<exists> t. ts = [t] \<and> (mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: mk_instrtype t1 t2)" and
+     inv_select_impl: "e = instr_sc0 (SELECT (None)) \<Longrightarrow> (\<exists> t v_numtype v_vectype t'. (Valtype_sub t t') \<and> ((t' = (valtype_numtype v_numtype)) \<or> (t' = (valtype_vectype v_vectype))) \<and> ((mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t])) <ti: mk_instrtype t1 t2))" and
     inv_block: "e = (instr_sc7 (BLOCK bt instr_lst)) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
       (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t_2_lst)], context_RETURN = None \<rparr>) \<and>
@@ -271,10 +271,10 @@ lemma Instrs_ok_inversion:
     inv_ref_null: "e = (instr_sc4 (REF_NULL rt)) \<Longrightarrow> (mk_instrtype (mk_list []) (mk_list [(valtype_reftype rt)])) <ti: mk_instrtype t1 t2" and
     inv_ref_is_null: "e = (instr_sc4 REF_IS_NULL) \<Longrightarrow> (\<exists> rt. ((mk_instrtype (mk_list [(valtype_reftype rt)]) (mk_list [valtype_I32])) <ti: mk_instrtype t1 t2))" and
     inv_vconst: "e = (instr_sc1 (VCONST V128 c)) \<Longrightarrow> (mk_instrtype (mk_list []) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
-    inv_Instr_ok_vvunop: "e = (instr_sc2 (VVUNOP V128 v_vvunop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
-    inv_Instr_ok__vvbinop: "e = (instr_sc2 (VVBINOP V128 v_vvbinop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128, valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
-    inv_Instr_ok__vvternop: "e = (instr_sc2 (VVTERNOP V128 v_vvternop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128, valtype_V128, valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
-    inv_Instr_ok__vvtestop: "e = (instr_sc2 (VVTESTOP V128 v_vvtestop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_I32])) <ti: mk_instrtype t1 t2" and
+    inv_vvunop: "e = (instr_sc2 (VVUNOP V128 v_vvunop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
+    inv_vvbinop: "e = (instr_sc2 (VVBINOP V128 v_vvbinop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128, valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
+    inv_vvternop: "e = (instr_sc2 (VVTERNOP V128 v_vvternop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128, valtype_V128, valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
+    inv_vvtestop: "e = (instr_sc2 (VVTESTOP V128 v_vvtestop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_I32])) <ti: mk_instrtype t1 t2" and
     inv_vunop: "e = (instr_sc2 (VUNOP sh vunop_sh)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
     inv_vbinop: "e = (instr_sc2 (VBINOP sh vbinop_sh)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128, valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
     inv_vtestop: "e = (instr_sc2 (VTESTOP sh vtestop_sh)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_I32])) <ti: mk_instrtype t1 t2" and
@@ -299,7 +299,7 @@ lemma Instrs_ok_inversion:
     inv_vextunop: "e = (instr_sc3 (VEXTUNOP sh_1 sh_2 vextunop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_V128]) <ti: mk_instrtype t1 t2)" and
     inv_vextbinop: "e = (instr_sc3 (VEXTBINOP sh_1 sh_2 vextbinop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128, valtype_V128]) (mk_list [valtype_V128]) <ti: mk_instrtype t1 t2)" and
     inv_vnarrow: "e = (instr_sc3 (VNARROW sh_1 sh_2 v_sx)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128, valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
-    inv_Instr_ok__vcvtop: "e = (instr_sc4 (VCVTOP sh sh2 v_vcvtop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
+    inv_vcvtop: "e = (instr_sc4 (VCVTOP sh sh2 v_vcvtop)) \<Longrightarrow> (mk_instrtype (mk_list [valtype_V128]) (mk_list [valtype_V128])) <ti: mk_instrtype t1 t2" and
     inv_local_get: "e = (instr_sc4 (LOCAL_GET x)) \<Longrightarrow>
       (\<exists> t.
       ((proj_uN_0 x) < (length (context_LOCALS C))) \<and>
@@ -485,13 +485,15 @@ lemma Instrs_ok_inversion:
   using assms Instrs_ok_inv_ref_func apply blast
   using assms Instrs_ok_inv_cvtop_reinterpret apply blast
 
-  using Instr_ok_inversion_helper[OF assms]
+  using Instrs_ok_inversion_helper[OF assms]
 
 
   apply auto
 (* This next line takes a full two minutes *)
   apply (cases rule: Instr_ok.cases, auto)+
   done
+
+
 
 lemma Instr_ok_wf:
   assumes "Instr_ok C e ft"
@@ -617,28 +619,28 @@ lemma Instrs_ok2_inversion:
 		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<Longrightarrow>
 		  (v_n = (length t'_lst)) \<Longrightarrow>
       ((mk_instrtype (mk_list []) (mk_list t_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
+   (*  inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_Instr_ok2__frame: "a_e = (admininstr_sc8 (FRAME_underscore v_n f admininstr_lst)) \<Longrightarrow>
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and *)
+    inv_frame: "a_e = (admininstr_sc8 (FRAME_underscore v_n f admininstr_lst)) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst C' t_lst.
 		  (Frame_ok s f C') \<and>
 		  (Expr_ok2 s C' admininstr_lst (mk_list t_lst)) \<and>
 		  (wf_context C') \<and>
 		  (v_n = (length t_lst)) \<and>
       ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_Instr_ok2__call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
+    inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
       (Externaddr_ok s (externaddr_FUNC v_funcaddr) (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
 		  (wf_externtype (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
       ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_Instr_ok2__ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst rt.
+    inv_ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
+      (\<exists> rt.
       (Ref_ok s v_ref rt) \<and>
-      ((mk_instrtype (mk_list []) (mk_list [valtype_reftype rt])) <ti: mk_instrtype t1 t2))" and
-    inv_Instr_ok2__trap: "a_e = (admininstr_sc7 admininstr_st7_TRAP) \<Longrightarrow>
+      ((mk_instrtype (mk_list []) (mk_list [valtype_reftype rt])) <ti: mk_instrtype t1 t2))" (* and *)
+  (*  inv_trap: "a_e = (admininstr_sc7 admininstr_st7_TRAP) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))"
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" *)
 
   using Instrs_ok2_inversion_helper[OF assms]
   apply auto
@@ -1029,7 +1031,34 @@ next
           using Resulttype_sub_append Resulttype_sub_refl mk_list t1eq by blast
       qed qed qed
     qed (simp)+
- 
+
+(*
+lemma inv_cons:
+  assumes "Instrs_ok2 s C es (mk_functype t1 t4)"
+          "es = (e # es2)"
+  shows "(\<exists> t1' t2' t3' t4'.
+    (Instr_ok2 s C e (mk_functype t1' t2')) \<and>
+		(Instrs_ok2 s C es2 (mk_functype t3' t4')) \<and>
+    Resulttype_sub t1 t1' \<and> Resulttype_sub t2' t3' \<and> Resulttype_sub t4' t4)"
+proof -
+  obtain t1' t2' t3' where split:
+    "Instrs_ok2 s C [e] (mk_functype t1' t2')"
+    "Instrs_ok2 s C es2 (mk_functype t2' t3')"
+    "Resulttype_sub t1 t1'" "Resulttype_sub t3' t4"
+    using assms inv_seq[of s C es t1 t4 "[e]" es2] by auto
+  then obtain t1'' t2'' where one:
+    "Instr_ok2 s C e (mk_functype t1'' t2'')" 
+    "mk_instrtype t1'' t2'' <ti: mk_instrtype t1' t2'" 
+    using Instrs_ok2_inversion_helper by blast
+  show ?thesis using one(2)
+  proof (induction "mk_instrtype t1'' t2''" "mk_instrtype t1' t2'"
+        rule:Instrtype_sub.induct)
+    case (mk_Instrtype_sub t_21_lst t_lst t_11'_lst t_22_lst t'_lst t_12'_lst t_11_lst t_12_lst)
+    then show ?case using split one 
+  qed
+
+qed
+*)
 
 (* Not convinced these ones will ever be necessary: the sub and frame cases are
    an inconvenience that appears
@@ -1818,13 +1847,131 @@ next
         admininstr_val.psimps(3) typeofval.domintros(3) typeofval.psimps(3) val_REF_NULL)
 next
   case (val_REF_FUNC_ADDR x4)
-  then show ?thesis using Instr_ok2__ref inv_Instr_ok2__ref assms Instr_ok2_wf sorry
+  then have eq: "admininstr_val v = admininstr_ref (REF_FUNC_ADDR x4)"
+    by (simp add: admininstr_ref.domintros(2) admininstr_ref.psimps(2)
+        admininstr_val.domintros(4) admininstr_val.psimps(4))
+  then show ?thesis 
+  proof(cases tf)
+    case (mk_functype t1l t2l)
+    then have 
+      "Instrs_ok2 s C [admininstr_ref (REF_FUNC_ADDR x4)] (mk_functype t1l t2l)"
+      using assms val_REF_FUNC_ADDR 
+        Instrs_ok2__instr[of s C "admininstr_val v"]
+        Instr_ok2_wf_instr eq
+        Instr_ok2_wf
+      by (metis res_list.exhaust) 
+    then obtain rt where 
+      "Ref_ok s (REF_FUNC_ADDR x4) rt"
+      "mk_instrtype (mk_list [])
+          (mk_list [valtype_reftype rt]) <ti: mk_instrtype t1l t2l" 
+      using inv_ref
+        admininstr_val.psimps admininstr_val.domintros admininstr_ref.psimps
+        admininstr_ref.domintros Instrs_ok2.simps Instrs_ok2_wf_instr
+      by metis
+    then show ?thesis using Instr_ok2__ref assms Instr_ok2_wf 
+      val_REF_FUNC_ADDR admininstr_val.domintros admininstr_val.psimps 
+      valtype_reftype.domintros valtype_reftype.psimps
+      admininstr_ref.domintros admininstr_ref.psimps 
+      by (metis Ref_ok.simps ref.distinct(1,5) typeofval.domintros(4)
+          typeofval.psimps(4))
+  qed
 next
   case (val_REF_HOST_ADDR x5)
-  then show ?thesis sorry
+  then have eq: "admininstr_val v = admininstr_ref (REF_HOST_ADDR x5)"
+    by (simp add: admininstr_ref.domintros(3) admininstr_ref.psimps(3)
+        admininstr_val.domintros(5) admininstr_val.psimps(5))
+  then show ?thesis 
+  proof(cases tf)
+    case (mk_functype t1l t2l)
+    then have 
+      "Instrs_ok2 s C [admininstr_ref (REF_HOST_ADDR x5)] (mk_functype t1l t2l)"
+      using assms val_REF_HOST_ADDR 
+        Instrs_ok2__instr[of s C "admininstr_val v"]
+        Instr_ok2_wf_instr eq
+        Instr_ok2_wf
+      by (metis res_list.exhaust) 
+    then obtain rt where 
+      "Ref_ok s (REF_HOST_ADDR x5) rt"
+      "mk_instrtype (mk_list [])
+          (mk_list [valtype_reftype rt]) <ti: mk_instrtype t1l t2l" 
+      using inv_ref
+        admininstr_val.psimps admininstr_val.domintros admininstr_ref.psimps
+        admininstr_ref.domintros Instrs_ok2.simps Instrs_ok2_wf_instr
+      by metis
+    then show ?thesis using Instr_ok2__ref assms Instr_ok2_wf 
+      val_REF_HOST_ADDR admininstr_val.domintros admininstr_val.psimps 
+      valtype_reftype.domintros valtype_reftype.psimps
+      admininstr_ref.domintros admininstr_ref.psimps 
+      by (metis Ref_ok.simps typeofval.domintros(5)
+          typeofval.psimps(5))
+  qed
 qed
 
- 
+(*
+lemma Instrs_ok2_one_const_replace:
+  assumes "Instrs_ok2 s C [admininstr_val v] tf" 
+  shows "Instrs_ok2 s C [admininstr_val v] (mk_functype (mk_list []) (mk_list [typeofval v]))"
+  using assms
+proof (induction s C "[admininstr_val v]" tf
+    rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where
+      ?P1.0 = "\<lambda> s C e tf. True" and ?P3.0 = "\<lambda> s C e tf. True"])
+  case (Instrs_ok2__instr s C t_1_lst t_2_lst)
+  then show ?case 
+    using Instr_ok2_const_replace isabelle_reference_output_wasm2.Instrs_ok2__instr
+    by simp
+next
+  case (Instrs_ok2__seq s C admininstr_1_lst t_1_lst t_2_lst admininstr_2_lst t_3_lst)
+  then show ?case sorry
+next
+  case (Instrs_ok2__sub s C t_1_lst t_2_lst t'_1_lst t'_2_lst)
+  then show ?case sorry
+next
+  case (Instrs_ok2__frame s C t_1_lst t_2_lst t_lst)
+  then show ?case sorry
+qed(auto)*)
+
+lemma Instrs_ok2_const_replace:
+  assumes "Instrs_ok2 s C (map admininstr_val vs) tf" 
+  shows "Instrs_ok2 s C (map admininstr_val vs) 
+          (mk_functype (mk_list []) (mk_list (map typeofval vs)))"
+  using assms
+proof (induction vs arbitrary:tf)
+  case Nil
+  then show ?case using Instrs_ok2__empty Instrs_ok2_wf by simp
+next
+  case (Cons a vs)
+  then show ?case
+  proof (cases tf)
+    case (mk_functype t1 t2)
+    then obtain t1' t2' t3' where split:
+       "Instrs_ok2 s C [admininstr_val a] (mk_functype t1' t2')"
+       "Instrs_ok2 s C (map admininstr_val vs) (mk_functype t2' t3')"
+       "Resulttype_sub t1 t1'" "Resulttype_sub t3' t2" 
+      using Cons inv_seq[of s C "map admininstr_val (a # vs)" t1 t2 
+                          "[admininstr_val a]" "map admininstr_val vs"]
+      by auto
+    then obtain t1'' t2'' where 
+      "Instr_ok2 s C (admininstr_val a) (mk_functype t1'' t2'')" 
+      using Instrs_ok2_inversion_helper by fast
+    then have "Instr_ok2 s C (admininstr_val a) (mk_functype (mk_list [])
+                (mk_list [typeofval a]))" using Instr_ok2_const_replace by fast
+    then have a: "Instrs_ok2 s C [admininstr_val a] (mk_functype (mk_list [])
+                (mk_list [typeofval a]))" using Instrs_ok2__instr 
+                Instr_ok2_wf Instr_ok2_wf_instr by simp
+    have "Instrs_ok2 s C (map admininstr_val vs) 
+               (mk_functype (mk_list []) (mk_list (map typeofval vs)))" 
+      using Cons split by fast
+    then have "Instrs_ok2 s C (map admininstr_val vs) 
+              (mk_functype (mk_list [typeofval a]) (mk_list (map typeofval (a # vs))))"
+      using Instrs_ok2__frame[of s C "map admininstr_val vs" "[]" "map typeofval vs"
+              "[typeofval a]"] Instrs_ok2_wf Instrs_ok2_wf_instr by auto
+    then show ?thesis using a 
+      Instrs_ok2__seq[of s C "[admininstr_val a]" "[]" "[typeofval a]" 
+            "map admininstr_val vs" "map typeofval (a # vs)"]
+      Instrs_ok2_wf Instrs_ok2_wf_instr by fastforce
+  qed
+
+qed
 
 
 end

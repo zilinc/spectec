@@ -539,30 +539,163 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
               "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
               "[t,t,valtype_I32]" "[t]" t3']
               Instrtype_sub_trans by force
-        
+      then have 
+        subs: "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3')"
+            "Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
+                    (mk_list [t,t,valtype_I32])" by auto
+      have "Valtype_sub (typeofval val_1) t" 
+        using subs(2) 
+      proof(induction "mk_list [typeofval val_1, typeofval val_2, valtype_I32]" 
+              "mk_list [t,t,valtype_I32]" rule: Resulttype_sub.induct)
+        case mk_Resulttype_sub
+        then show ?case by simp 
+      qed
+      then have "Resulttype_sub (mk_list [typeofval val_1]) (mk_list [t])" 
+        using mk_Resulttype_sub by simp
+      then have "mk_instrtype (mk_list []) (mk_list [typeofval val_1]) <ti:
+              mk_instrtype t1 t2" 
+        using subs splitih(3,4)
+        by (meson Instrtype_sub_sub_rule Instrtype_sub_trans Resulttype_sub_refl)
       then show ?thesis 
-        using pure.prems(8,9) splitih(3,4)
-        sorry
+        using pure.prems(9) splitval1(1) 
+            Instrs_ok2_const_replace[of s C' "[val_1]"] subtype_typing by auto
     next
-      case (Some a)
-      then show ?thesis sorry
+      case (Some ts)
+       then obtain t where "ts = [t]"
+       "mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: 
+        mk_instrtype (mk_list t2'') (mk_list t3'')"
+        using td inv_select_expl
+        by (metis Instrs_ok__instr assms(9) instr_case_3 Instrs_ok2_wf(1))
+      then have "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3') \<and>
+            Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
+                    (mk_list [t,t,valtype_I32])"
+        using td(1) tv splitih (3,4) produce_consume[of 
+              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
+              "[t,t,valtype_I32]" "[t]" t3']
+              Instrtype_sub_trans by force
+      then have 
+        subs: "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3')"
+            "Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
+                    (mk_list [t,t,valtype_I32])" by auto
+      have "Valtype_sub (typeofval val_1) t" 
+        using subs(2) 
+      proof(induction "mk_list [typeofval val_1, typeofval val_2, valtype_I32]" 
+              "mk_list [t,t,valtype_I32]" rule: Resulttype_sub.induct)
+        case mk_Resulttype_sub
+        then show ?case by simp 
+      qed
+      then have "Resulttype_sub (mk_list [typeofval val_1]) (mk_list [t])" 
+        using mk_Resulttype_sub by simp
+      then have "mk_instrtype (mk_list []) (mk_list [typeofval val_1]) <ti:
+              mk_instrtype t1 t2" 
+        using subs splitih(3,4)
+        by (meson Instrtype_sub_sub_rule Instrtype_sub_trans Resulttype_sub_refl)
+      then show ?thesis 
+        using pure.prems(9) splitval1(1) 
+            Instrs_ok2_const_replace[of s C' "[val_1]"] subtype_typing by auto
     qed
-   (* then obtain t where 
-      "mk_instrtype (mk_list [t]) (mk_list []) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
-      using inv_select Instrs_ok__instr
-      using instr_case_2 instr_ok2_wf(1) splitih(2) by blast
-    then have "Resulttype_sub t1' t3'" 
-      using td tv Instrtype_sub_trans produce_consume by fastforce
-    then have "Resulttype_sub t1 t2" using splitih(3,4) Resulttype_sub_trans by blast
-    then have "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1 t2" 
-      using empty_sub by blast
-    then show ?case 
-      using subtype_typing 
-            Instrs_ok2__empty instr_ok2_wf(1,2) pure.prems(8,9) 
-      by fast *)
   next
     case (select_false c val_1 val_2 t_lst_opt)
-    then show ?case sorry
+    then obtain t1' t2' t3' where splitih:
+      "Instrs_ok2 s C' [admininstr_val val_1, admininstr_val val_2, 
+                        admininstr_sc1 (admininstr_st1_CONST I32 c)] (mk_functype t1' t2')"
+      "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_SELECT t_lst_opt)] (mk_functype t2' t3')"
+      "Resulttype_sub t1 t1'"
+      "Resulttype_sub t3' t2" 
+      using inv_seq[of s C' "[_,_,_, admininstr_sc0 _]"
+              t1 t2 "[admininstr_val _,_,_]" "[admininstr_sc0 _]"] by fastforce
+    obtain t1v t2v t3v where splitval1:
+      "Instrs_ok2 s C' [admininstr_val val_1] (mk_functype t1v t2v)"
+      "Instrs_ok2 s C' [admininstr_val val_2, admininstr_sc1 (admininstr_st1_CONST I32 c)] 
+              (mk_functype t2v t3v)" 
+      "Resulttype_sub t1' t1v" "Resulttype_sub t3v t2'" 
+      using inv_seq[OF splitih(1), of "[_]" "[_,_]"] by fastforce
+    then obtain t1v' t2v' where splitval2:
+      "Instrs_ok2 s C' [admininstr_val val_2] (mk_functype t1v' t2v')"
+      using inv_seq[OF splitval1(2), of "[_]" "[_]"] by fastforce
+    have tv: "mk_instrtype (mk_list []) 
+              (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) <ti: mk_instrtype t1' t2'" 
+      using inv_const_list[OF splitih(1), of "[val_1,val_2,val_CONST I32 c]"] 
+        admininstr_val.domintros admininstr_val.psimps typeofval.domintros typeofval.psimps 
+       by simp
+    obtain t2'' t3'' where 
+      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
+       "Instr_ok C' (instr_sc0 (SELECT t_lst_opt)) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      using inv_plain[where ?v_instr = "instr_sc0 _"]
+            select_false(9) splitih(2)
+      using admininstr_instr.domintros admininstr_instr.psimps by metis
+    then show ?case 
+    proof (cases t_lst_opt)
+      case None
+      then obtain t v_numtype v_vectype t' where
+       "Valtype_sub t t'"
+       "(t' = valtype_numtype v_numtype \<or> t' = valtype_vectype v_vectype)"
+       "mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: 
+        mk_instrtype (mk_list t2'') (mk_list t3'')"
+        using td inv_select_impl
+        by (metis Instrs_ok__instr assms(9) instr_case_3 Instrs_ok2_wf(1))
+      then have "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3') \<and>
+            Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
+                    (mk_list [t,t,valtype_I32])"
+        using td(1) tv splitih (3,4) produce_consume[of 
+              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
+              "[t,t,valtype_I32]" "[t]" t3']
+              Instrtype_sub_trans by force
+      then have 
+        subs: "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3')"
+            "Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
+                    (mk_list [t,t,valtype_I32])" by auto
+      have "Valtype_sub (typeofval val_2) t" 
+        using subs(2) 
+      proof(induction "mk_list [typeofval val_1, typeofval val_2, valtype_I32]" 
+              "mk_list [t,t,valtype_I32]" rule: Resulttype_sub.induct)
+        case mk_Resulttype_sub
+        then show ?case by simp 
+      qed
+      then have "Resulttype_sub (mk_list [typeofval val_2]) (mk_list [t])" 
+        using mk_Resulttype_sub by simp
+      then have "mk_instrtype (mk_list []) (mk_list [typeofval val_2]) <ti:
+              mk_instrtype t1 t2" 
+        using subs splitih(3,4)
+        by (meson Instrtype_sub_sub_rule Instrtype_sub_trans Resulttype_sub_refl)
+      then show ?thesis 
+        using pure.prems(9) splitval2(1) 
+            Instrs_ok2_const_replace[of s C' "[val_2]"] subtype_typing by auto
+    next
+      case (Some ts)
+       then obtain t where "ts = [t]"
+       "mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: 
+        mk_instrtype (mk_list t2'') (mk_list t3'')"
+        using td inv_select_expl
+        by (metis Instrs_ok__instr assms(9) instr_case_3 Instrs_ok2_wf(1))
+      then have "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3') \<and>
+            Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
+                    (mk_list [t,t,valtype_I32])"
+        using td(1) tv splitih (3,4) produce_consume[of 
+              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
+              "[t,t,valtype_I32]" "[t]" t3']
+              Instrtype_sub_trans by force
+      then have 
+        subs: "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3')"
+            "Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
+                    (mk_list [t,t,valtype_I32])" by auto
+      have "Valtype_sub (typeofval val_2) t" 
+        using subs(2) 
+      proof(induction "mk_list [typeofval val_1, typeofval val_2, valtype_I32]" 
+              "mk_list [t,t,valtype_I32]" rule: Resulttype_sub.induct)
+        case mk_Resulttype_sub
+        then show ?case by simp 
+      qed
+      then have "Resulttype_sub (mk_list [typeofval val_2]) (mk_list [t])" 
+        using mk_Resulttype_sub by simp
+      then have "mk_instrtype (mk_list []) (mk_list [typeofval val_2]) <ti:
+              mk_instrtype t1 t2" 
+        using subs splitih(3,4)
+        by (meson Instrtype_sub_sub_rule Instrtype_sub_trans Resulttype_sub_refl)
+      then show ?thesis 
+        using pure.prems(9) splitval2(1) 
+            Instrs_ok2_const_replace[of s C' "[val_2]"] subtype_typing by auto
+    qed
   next
     case (if_true c bt instr_1_lst instr_2_lst)
     then show ?case sorry
