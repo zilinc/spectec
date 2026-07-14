@@ -605,6 +605,94 @@ next
     by (metis Instrtype_sub_frame_rule Instrtype_sub_trans)
 qed(fastforce)+
 
+lemma admininstr_instr_inj:
+  assumes "admininstr_instr e1 = admininstr_instr e2"
+  shows "e1 = e2"
+  using assms
+proof (cases e1 rule:admininstr_instr.cases)
+(* This next line can take many seconds *)
+ qed(cases e2 rule:admininstr_instr.cases, 
+     simp_all add:admininstr_instr.domintros admininstr_instr.psimps)+
+
+lemma Ref_ok_ref_NULL_unique:
+assumes "Ref_ok s v_ref rt"
+        "v_ref = ref_REF_NULL x0"
+shows "rt = x0"
+using assms
+apply (induction rule: Ref_ok.induct)
+apply auto
+done
+
+lemma Instr_ok2_REF_NULL_imp_Instr_ok:
+assumes "Instr_ok2 s C (admininstr_sc4 (admininstr_st4_REF_NULL x0)) (mk_functype (mk_list []) (mk_list [valtype_reftype rt]))"
+        "mk_instrtype (mk_list []) (mk_list [valtype_reftype rt]) <ti: mk_instrtype t1 t2"
+shows "\<exists>t_1_lst t_2_lst.
+         mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst) <ti: mk_instrtype t1 t2 \<and>
+         Instr_ok C (instr_sc4 (REF_NULL x0)) (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))"
+using assms(1,2)
+proof (induction "s" "C" "(admininstr_sc4 (admininstr_st4_REF_NULL x0))" "(mk_functype (mk_list []) (mk_list [valtype_reftype rt]))" rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(1))
+  case (plain C v_instr s)
+  then have "v_instr = instr_sc4 (REF_NULL x0)"
+    by (simp add: admininstr_instr.domintros(41) admininstr_instr.psimps(41) plain.hyps(5) admininstr_instr_inj)
+  then show ?case using assms(2) plain
+    by blast
+next
+  case (Instr_ok2__ref s v_ref rt C)
+  have "v_ref = ref_REF_NULL x0"
+    by (metis Instr_ok2__ref.hyps(4) admininstr.distinct(57) admininstr.inject(5)
+      admininstr_ref.cases admininstr_ref.domintros(1,2,3)
+      admininstr_ref.psimps(1,2,3) admininstr_st4.inject(4))
+  then have "rt = x0"
+    by (metis \<open>v_ref = ref_REF_NULL x0\<close> Instr_ok2__ref.hyps(1) Ref_ok_ref_NULL_unique)
+  then show ?case
+    by (metis Instr_ok2__ref.hyps(3,5) Instr_ok2__ref.prems instr_case_40 ref_null)
+qed (auto)+
+
+lemma Instrs_ok2_REF_imp_Instr_ok:
+"Instr_ok2 s C (admininstr_ref v_ref) (mk_functype (mk_list []) (mk_list [valtype_reftype rt])) \<Longrightarrow>
+ mk_instrtype (mk_list []) (mk_list [valtype_reftype rt]) <ti: mk_instrtype t1 t2 \<Longrightarrow>
+ admininstr_instr v_instr = admininstr_ref v_ref \<Longrightarrow>
+ \<exists>t_1_lst t_2_lst.
+    mk_instrtype (mk_list t_1_lst)
+     (mk_list t_2_lst) <ti: mk_instrtype t1 t2 \<and>
+    Instr_ok C v_instr
+     (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))"
+apply (cases v_ref)
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps  admininstr_ref.domintros admininstr_ref.psimps)
+using Instr_ok2__ref Instr_ok2_REF_NULL_imp_Instr_ok
+  apply blast
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps  admininstr_ref.domintros admininstr_ref.psimps)
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps  admininstr_ref.domintros admininstr_ref.psimps)
+done
+
+lemma instr_ok2_inversion_TEST:
+  assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
+  shows
+    inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst.
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2) \<and> 
+       Instr_ok C v_instr (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))"
+
+using Instrs_ok2_inversion_helper[OF assms]
+apply (auto)
+apply(cases rule: Instr_ok2.cases)
+apply auto
+using admininstr_instr_inj
+  apply blast
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+  using assms Instrs_ok2_REF_imp_Instr_ok apply blast
+apply (cases v_instr rule: admininstr_instr.cases)
+apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+done
+
 lemma Instrs_ok2_inversion:
   assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
   shows
@@ -1127,18 +1215,6 @@ next
   then show ?case  using admininstr_case_6 list_all_drop 
     by (metis admininstr_instr.domintros(7) admininstr_instr.psimps(7))
 qed(simp_all add: wf_admininstr.intros admininstr_instr.domintros admininstr_instr.psimps)+
-
-
-
-lemma admininstr_instr_inj:
-  assumes "admininstr_instr e1 = admininstr_instr e2"
-  shows "e1 = e2"
-  using assms
-proof (cases e1 rule:admininstr_instr.cases)
-(* This next line can take many seconds *)
- qed(cases e2 rule:admininstr_instr.cases, 
-     simp_all add:admininstr_instr.domintros admininstr_instr.psimps)+
-
 
 lemma wf_admininstr_instr_inv:
   assumes "wf_admininstr (admininstr_instr e)"
