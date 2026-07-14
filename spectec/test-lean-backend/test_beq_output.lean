@@ -28,7 +28,12 @@ def elem_ (X : Type) [BEq X] (X_0 : X) (var_0_lst : List X) : Bool :=
 def remove1_ (X : Type) [BEq X] (X_0 : X) (var_0_lst : List X) : List X :=
   match var_0_lst with
   | [] => []
-  | w_1 :: w'_lst => if X_0 == w_1 then w'_lst else [w_1] ++ (remove1_ X X_0 w'_lst)
+  | w_1 :: w'_lst => if 
+    X_0 == w_1
+  then
+    w'_lst
+  else
+    [w_1] ++ (remove1_ X X_0 w'_lst)
 
 def subset_ (X : Type) [BEq X] (var_0_lst : List X) (var_1_lst : List X) : Bool :=
   match var_0_lst with
@@ -53,7 +58,12 @@ end
 def has_dup_tl_ (X : Type) [BEq X] (X_0 : X) (var_0_lst : List X) : Bool :=
   match var_0_lst with
   | [] => false
-  | w_1 :: w'_lst => if X_0 == w_1 then true else has_dup_tl_ X X_0 w'_lst
+  | w_1 :: w'_lst => if 
+    X_0 == w_1
+  then
+    true
+  else
+    has_dup_tl_ X X_0 w'_lst
 
 def has_dup_ (X : Type) [BEq X] (var_0_lst : List X) : Bool :=
   match var_0_lst with
@@ -63,4 +73,9 @@ def has_dup_ (X : Type) [BEq X] (var_0_lst : List X) : Bool :=
 def lookup_ (K : Type) [BEq K] (V : Type) (var_0_lst : List K) (var_1_lst : List V) (K_0 : K) : Option V :=
   match var_0_lst, var_1_lst with
   | [], [] => none
-  | k_1 :: k'_lst, v_1 :: v'_lst => if K_0 == k_1 then some v_1 else lookup_ K V k'_lst v'_lst K_0
+  | k_1 :: k'_lst, v_1 :: v'_lst => if 
+    K_0 == k_1
+  then
+    some v_1
+  else
+    lookup_ K V k'_lst v'_lst K_0

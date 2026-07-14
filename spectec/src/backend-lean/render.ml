@@ -275,11 +275,11 @@ and render_term (term : term) : document =
       let then_branch_str = render_term then_branch in
       let else_branch_str = render_term else_branch in
       string "if "
-      ^^ cond_str
-      ^^ string " then "
-      ^^ then_branch_str
-      ^^ string " else "
-      ^^ else_branch_str
+      ^^ nest 2 (hardline ^^ cond_str)
+      ^^ hardline ^^ string "then"
+      ^^ nest 2 (hardline ^^ then_branch_str)
+      ^^ hardline ^^ string "else"
+      ^^ nest 2 (hardline ^^ else_branch_str)
 
   | Match {
     match_terms = match_terms;

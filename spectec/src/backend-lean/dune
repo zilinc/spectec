@@ -2,6 +2,6 @@
   (name backend_lean)
   (libraries il middlend xl pprint)
   (preprocess (pps ppx_deriving.show))
-  (modules backend lean_ast render lean_builder lean_utils)
+  (modules backend lean_ast render lean_builder lean_utils whole_file_analyses)
   (flags (:standard -warn-error -27))
 )

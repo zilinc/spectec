@@ -4,8 +4,9 @@ open Util.Source
 open Lean_ast
 open Lean_builder
 open Lean_utils
+open Whole_file_analyses
 
-let error at msg = Util.Error.error at "Lean4 translation" msg 
+let error at msg = Util.Error.error at "Lean4 translation" msg
 module NonEmptyList = Util.Lib.NonEmptyList
 
 
@@ -14,250 +15,7 @@ module NonEmptyList = Util.Lib.NonEmptyList
 
 
 
-let gather_types_that_need_append_instances (il : script) : string list =
-  let collected = ref [] in
-    let module Visitor = Il.Iter.Make(
-      struct
-        include Il.Iter.Skip
-        let visit_exp e =
-          match e.it with
-          | CompE (e1, e2) ->
-            if e1.note.it <> e2.note.it then
-                failwith "CompE types don't match!" (* CompE homogeneity should be enforced by valid.ml *)
-              else
-                (
-                  match e1.note.it with
-                    | VarT (id, []) -> collected := id.it :: !collected
-                    | _ -> ()
-                )
-          | _ -> ()
-      end
-    )
-    in
-  List.iter Visitor.def il;
-  List.sort_uniq String.compare !collected
-let gather_variant_type_names (il : script) : string list =
-  (* Collect names of types defined as VariantT — these become Lean inductives
-     and have proper namespaced constructors like externtype.GLOBAL.
-     Aliases (AliasT) and structs (StructT) do NOT get their own namespace.
-     Recurse into RecD to find mutual recursive types like instr/admininstr. *)
-  let rec collect_from_def def =
-    match def.it with
-    | TypD (id, _, [{it = InstD (_, _, {it = VariantT _; _}); _}]) -> [id.it]
-    | RecD defs -> List.concat_map collect_from_def defs
-    | _ -> []
-  in
-  List.concat_map collect_from_def il
 
-(* Iterate over every DecD in the script (including inside RecD groups), applying f
-   to each and returning one (name, result) pair per function.
-   Example: map_over_decs il (fun _id params _ _ -> params)
-     → [("setminus1_", [TypP "X"; ExpP "X_0" (VarT X); ...]);
-        ("setminus_",  [TypP "X"; ExpP "var_0_lst" ...; ...]); ...] *)
-let map_over_decs (il : script) (f : Il.Ast.id -> Il.Ast.param list -> Il.Ast.typ -> Il.Ast.clause list -> 'a) : (string * 'a) list =
-  let rec process def =
-    match def.it with
-    | DecD (id, params, typ, clauses) -> [(id.it, f id params typ clauses)]
-    | RecD defs -> List.concat_map process defs (* descend into mutual-recursion groups *)
-    | _ -> []
-  in
-  List.concat_map process il
-
-(* Compute, for every DecD, which of its TypP names require a [BEq X] instance.
-   Uses two phases:
-     Phase 1 — direct:    MemE / CmpE(EqOp/NeOp) where the element has type VarT "Xi" ∈ TypPs.
-     Phase 2 — fixpoint:  CallE propagation: if callee needs [BEq X] for its k-th type param
-                          and caller passes its own VarT "Yi" there, caller also needs [BEq Yi].
-
-   Running example throughout: setminus1_ and setminus_.
-     setminus1_ IL params: [TypP "X"; ExpP "X_0" (VarT X); ExpP "var_0_lst" (IterT (VarT X) List)]
-     setminus_  IL params: [TypP "X"; ExpP "var_0_lst" (IterT (VarT X) List); ...]
-     setminus1_'s 2nd clause body:
-       IfE (CmpE EqOp bool (VarE "w" : VarT X) (VarE "w_1")) [] (CallE "setminus1_" (TypA (VarT X)) ...)
-     setminus_'s 2nd clause body:
-       CatE (CallE "setminus1_" (TypA (VarT X)) ...) (CallE "setminus_" (TypA (VarT X)) ...) *)
-let gather_defs_needing_beq (il : script) : (string * string list) list =
-
-  (* Extract the TypP names (type parameters) from a param list.
-     [TypP "X"; ExpP "X_0" (VarT X); ...] → ["X"] *)
-  let typp_names_of params =
-    List.filter_map (fun p -> match p.it with
-      | TypP id -> Some id.it
-      | _ -> None) params
-  in
-
-  (* Phase 0: build callee-name → param-list map for positional type-arg matching in phase 2.
-     Needed so that when we see CallE "setminus1_" (TypA (VarT X)) ..., we can look up
-     setminus1_'s params and determine that its 1st TypP is "X" (matching position 0).
-     Result: [("setminus1_", [TypP "X"; ...]); ("setminus_", [TypP "X"; ...]); ...] *)
-  let dec_params_map : (string * Il.Ast.param list) list =
-    map_over_decs il (fun _id params _typ _clauses -> params)
-  in
-
-  (* Phase 1: direct detection.
-     Collector fires on:
-       MemE (e1, _)           — e.g. w ∈ w'_lst where w : VarT "X"
-       CmpE (EqOp/NeOp, _, e1, _) — e.g. (VarE "w" : VarT "X") == w_1
-     If e1's type annotation is VarT "Xi" and "Xi" ∈ typp_names, collect "Xi".
-     The bool return value `true` means: always continue recursing into sub-expressions.
-
-     For setminus1_'s 2nd clause body = IfE (CmpE EqOp _ (VarE "w" : VarT X) _) _ _:
-       collect_exp fires on CmpE → e1 = VarE "w", e1.note = VarT "X", "X" ∈ ["X"] → ["X"] *)
-  let make_direct_collector typp_names : string list Il.Walk.collector =
-    { (Il.Walk.base_collector [] (@)) with
-      collect_exp = fun e ->
-        let found = match e.it with
-          | MemE (e1, _)
-          | CmpE (`EqOp, _, e1, _)
-          | CmpE (`NeOp, _, e1, _) ->
-              (match e1.note.it with
-              | VarT (id, []) when List.mem id.it typp_names -> [id.it]
-              | _ -> [])
-          | _ -> []
-        in
-        (found, true)
-    }
-  in
-
-  (* Run phase-1 collector over every function's clauses.
-     setminus1_: clause 1 body = ListE (VarE "w")            → []
-                 clause 2 body = IfE (CmpE EqOp ...) _ _      → ["X"]
-                 result = ["X"]
-     setminus_:  clause 1 body = ListE                        → []
-                 clause 2 body = CatE (CallE ...) (CallE ...) → no MemE/CmpE → []
-                 result = []  (filtered out below)
-     initial_beq_map = [("setminus1_", ["X"])] *)
-  let initial_beq_map : (string * string list) list =
-    map_over_decs il (fun _id params _typ clauses ->
-      let typp_names = typp_names_of params in
-      if typp_names = [] then []
-      else
-        let c = make_direct_collector typp_names in
-        List.concat_map (Il.Walk.collect_clause c) clauses
-        |> List.sort_uniq String.compare
-    )
-    |> List.filter (fun (_, needs) -> needs <> [])
-  in
-
-  (* Phase 2: fixpoint propagation through CallE.
-     Collector fires on CallE nodes. For each call:
-       1. Look up the callee's params from dec_params_map to get its TypP names in order.
-       2. Extract TypA arguments from the call's arg list, in the same order.
-       3. Zip: pair each callee TypP name with the corresponding type argument.
-       4. If callee needs [BEq] for TypP_k AND the caller passes its own VarT "Yi" there
-          AND "Yi" ∈ caller's typp_names → collect "Yi".
-
-     For setminus_'s 2nd clause body (iteration 1, beq_map = [("setminus1_", ["X"])]):
-       CallE "setminus1_" (TypA (VarT "X")) (ExpA "w_1") (ExpA "w_lst")
-         callee_typps = ["X"]         (setminus1_'s TypP list)
-         type_args    = [VarT "X"]    (TypA entries from args, in order)
-         zip          → [("X", VarT "X")]
-         callee_needs = ["X"]         (from beq_map["setminus1_"])
-         "X" ∈ callee_needs ∧ xi="X" ∈ typp_names ["X"] → Some "X"
-       found = ["X"]   →  setminus_ will gain [BEq X] *)
-  let make_callE_collector typp_names (beq_map : (string * string list) list) : string list Il.Walk.collector =
-    { (Il.Walk.base_collector [] (@)) with
-      collect_exp = fun e ->
-        let found = match e.it with
-          | CallE (callee_id, args) ->
-              (match List.assoc_opt callee_id.it dec_params_map with
-              | None -> []
-              | Some callee_params ->
-                  let callee_typps = typp_names_of callee_params in
-                  (* keep only TypA entries, preserving order to match callee_typps positionally *)
-                  let type_args = List.filter_map (fun a -> match a.it with
-                    | TypA t -> Some t | _ -> None) args in
-                  let callee_needs =
-                    List.assoc_opt callee_id.it beq_map |> Option.value ~default:[] in
-                  let rec zip a b = match a, b with
-                    | [], _ | _, [] -> []
-                    | x :: xs, y :: ys -> (x, y) :: zip xs ys
-                  in
-                  List.filter_map (fun (callee_typp, type_arg) ->
-                    if not (List.mem callee_typp callee_needs) then None
-                    else match type_arg.it with
-                      | VarT (xi, []) when List.mem xi.it typp_names -> Some xi.it
-                      | _ -> None
-                  ) (zip callee_typps type_args))
-          | _ -> []
-        in
-        (found, true)
-    }
-  in
-
-  (* Pre-collect (name, params, clauses) triples once to avoid re-walking the script
-     on every fixpoint iteration. *)
-  let decs : (string * (Il.Ast.param list * Il.Ast.clause list)) list =
-    map_over_decs il (fun _id params _typ clauses -> (params, clauses))
-  in
-
-  (* One fixpoint step: walk every function, propagate CallE-based BEq needs into acc.
-     Uses fold_left so earlier updates within the same pass are visible to later functions
-     (Gauss-Seidel style — converges in fewer passes than a parallel/Jacobi approach).
-
-     Iteration 1 (acc starts as initial_beq_map = [("setminus1_", ["X"])]):
-       "setminus1_": CallE "setminus1_" in body → callee_needs=["X"], type arg VarT X
-                     current=["X"] already → additions=[] → no change
-       "setminus_":  CallE "setminus1_" → new_needs=["X"], current=[] → additions=["X"]
-                     acc updated to [...; ("setminus_", ["X"])], any_changed=true
-     Iteration 2 (acc = [("setminus1_", ["X"]); ("setminus_", ["X"])]):
-       "setminus_":  CallE "setminus_" → callee_needs=["X"], type arg VarT X
-                     current=["X"] → additions=[] → no change
-       any_changed=false → fixpoint done *)
-  let one_step (beq_map : (string * string list) list) : (string * string list) list * bool =
-    List.fold_left (fun (acc, any_changed) (name, (params, clauses)) ->
-      let typp_names = typp_names_of params in
-      if typp_names = [] then (acc, any_changed)
-      else
-        let c = make_callE_collector typp_names acc in
-        let new_needs =
-          List.concat_map (Il.Walk.collect_clause c) clauses
-          |> List.sort_uniq String.compare
-        in
-        let current = List.assoc_opt name acc |> Option.value ~default:[] in
-        let additions = List.filter (fun x -> not (List.mem x current)) new_needs in
-        if additions = [] then (acc, any_changed)
-        else
-          let merged = List.sort_uniq String.compare (current @ additions) in
-          let updated =
-            if List.mem_assoc name acc then
-              List.map (fun (n, ns) -> if n = name then (n, merged) else (n, ns)) acc
-            else
-              (name, merged) :: acc
-          in
-          (updated, true)
-    ) (beq_map, false) decs
-  in
-
-  (* Repeat one_step until no function gains new BEq needs.
-     Terminates because each step either adds entries (finite domain) or returns false. *)
-  let rec fixpoint beq_map =
-    match one_step beq_map with
-    | (map', true)  -> fixpoint map'
-    | (map', false) -> map'
-  in
-
-  fixpoint initial_beq_map
-
-type whole_script_analysis =
-  {
-    types_needing_append_instances : string list;
-    variant_type_names : string list;
-    defs_needing_beq : (string * string list) list;
-  }
-
-let analyze_whole_script (il : script) : whole_script_analysis =
-  {
-    types_needing_append_instances = gather_types_that_need_append_instances il;
-    variant_type_names = gather_variant_type_names il;
-    defs_needing_beq = gather_defs_needing_beq il;
-  }
-
-let analysis : whole_script_analysis ref = ref {
-  types_needing_append_instances = [];
-  variant_type_names = [];
-  defs_needing_beq = [];
-}
 
 
 
@@ -514,12 +272,21 @@ let rec create_exp (e : Il.Ast.exp) : term
         in
 
         (* Qualify with the variant type name from the IL note: .GLOBAL → externtype.GLOBAL.
-           Only do this for proper VariantT inductives — they have namespaced constructors.
-           Aliases (abbrev) and structs do NOT get their own Lean namespace, so fall back
-           to leading-dot notation for those (e.g. u32 is abbrev u32 := uN, no u32.mk_uN). *)
-        let namespaced_mixop = match e.note.it with
+           Case 1: direct VariantT — use the type name as-is.
+             VarT("addrtype",[]) + "I32" → addrtype.I32
+           Case 2: alias that resolves to a VariantT — use the underlying name.
+             VarT("Inn",[]) + "I32" → addrtype.I32  (Inn = abbrev addrtype)
+             Without this, List.length [.I32, .I64] emits .I32 which is ambiguous
+             when Lean has no element-type context from List.length alone.
+           Case 3: everything else (struct, u32, …) — leading-dot notation.
+             VarT("u32",[]) + "mk_uN" → .mk_uN  (u32 is abbrev uN, no namespace) *)
+        let namespaced_mixop : term = match e.note.it with
           | VarT (id, _) when List.mem id.it !analysis.variant_type_names ->
               Ident (id.it ^ "." ^ mixop_to_id mixop)
+          | VarT (id, _) ->
+              (match List.assoc_opt id.it !analysis.alias_to_variant_map with
+               | Some variant_name -> Ident (variant_name ^ "." ^ mixop_to_id mixop)
+               | None -> LeadingDot (Ident (mixop_to_id mixop)))
           | _ -> LeadingDot (Ident (mixop_to_id mixop))
         in
         
@@ -1863,10 +1630,16 @@ let rec create_def (def : Il.Ast.def) : command list
       let signature : _params list (* (f_ : N → iN → iN) *)
         = List.map (
           fun q -> match q.it with
-            | DefP (id, params, typ) -> BracketedBinder(ExplicitParam(
-              NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
-              create_typ typ
-            ))
+            | DefP (id, params, typ) ->
+              let param_types = List.map (fun p -> match p.it with
+                | ExpP (_, typ) -> create_typ typ
+                | _ -> failwith "only ExpP should be here"
+              ) params in
+              BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+                (* create_typ typ *)
+                create_curried_func (param_types @ [create_typ typ])
+              ))
             | TypP id -> BracketedBinder(ExplicitParam(
               NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
               create_typ typ
@@ -1939,10 +1712,18 @@ let rec create_def (def : Il.Ast.def) : command list
                     | TupE exps -> List.map create_exp exps
                     | _ -> [create_exp exp]
                 in
+                (* Lean 4 parametric inductives require parameters to appear explicitly in
+                   constructor conclusions: `Foo a b` not just `Foo b`. Prepend DefP ids. *)
+                let defp_args : term list
+                  = List.filter_map (fun (q : Il.Ast.quant) -> match q.it with
+                      | DefP (id, _, _) -> Some (Ident id.it : term)
+                      | _ -> None
+                    ) quants_from_parent
+                in
                 let id_as_term = (Ident rel_id.it : term) in
                 FunApp (
                   id_as_term,
-                  NonEmptyList.from_list_unsafe (List.map (fun arg -> Term arg) mixop_args)
+                  NonEmptyList.from_list_unsafe (List.map (fun arg -> Term arg) (defp_args @ mixop_args))
                 )
             in
             
@@ -2119,39 +1900,48 @@ let rec create_def (def : Il.Ast.def) : command list
       *)
 
 
-      (* Collect the names of type parameters (TypP) that require a [BEq X] instance.
-         A TypP "X" needs [BEq X] when any clause body contains MemE (e1, e2)
-         where e1's type is VarT "X" -- i.e. the element being looked up has type X.
-         Example: disjoint_ has MemE (VarE "w", VarE "w'_lst") where w : X,
-         so "X" is collected and [BEq X] is inserted after (X : Type) in the signature. *)
-      (* Which of this function's TypP names need a [BEq X] instance.
-         Computed globally by gather_defs_needing_beq (direct + transitive via CallE).
-         e.g. for setminus1_: ["X"]   for setminus_: ["X"]   for most functions: [] *)
+      (* Which of this function's TypP names need [BEq X] / [Inhabited X] instance binders.
+         Both are computed globally by whole_file_analyses before code generation starts.
+         e.g. setminus1_: typp_names_needing_beq=["X"], typp_names_needing_inhabited=[]
+              fun_relaxed2: typp_names_needing_beq=[], typp_names_needing_inhabited=["r_X"] *)
       let typp_names_needing_beq : string list =
         List.assoc_opt id.it (!analysis).defs_needing_beq
+        |> Option.value ~default:[]
+      in
+      let typp_names_needing_inhabited : string list =
+        List.assoc_opt id.it (!analysis).defs_needing_inhabited
         |> Option.value ~default:[]
       in
 
       let signature : opt_decl_sig (* (v_state : state) (v_localidx : localidx) : val *)
         =
           let params_as_binders : _params list
-            (* TypP "X" emits two binders when "X" is in typp_names_needing_beq;
-               otherwise just one. ExpP always emits one. *)
+            (* Each TypP emits (X : Type) always, then [BEq X] and/or [Inhabited X] as needed.
+               e.g. setminus1_'s TypP "X" → [(X : Type); [BEq X]]
+                    fun_relaxed2's TypP "r_X" → [(r_X : Type); [Inhabited r_X]]
+               ExpP and DefP each emit exactly one binder. *)
             = List.concat_map (
               fun p -> match p.it with
                 | TypP t ->
-                  (* (X : Type) -- always emitted *)
-                  let explicit = BracketedBinder(ExplicitParam(
+                  let explicit : _params = BracketedBinder(ExplicitParam(
                     NonEmptyList.from_list_unsafe [Ident_IOH t.it],
-                    Type None
+                    Type None                                                (* (X : Type) -- always emitted *)
                   )) in
-                  if List.mem t.it typp_names_needing_beq then
-                    (* [BEq X] -- appended right after (X : Type) *)
-                    [explicit; BracketedBinder(InstanceParam(
-                      FunApp(Ident "BEq", NonEmptyList.from_list_unsafe [Term (Ident t.it)])
-                    ))]
-                  else
-                    [explicit]
+                  let beq : _params list =
+                    if List.mem t.it typp_names_needing_beq then
+                      [BracketedBinder(InstanceParam(                        (* [BEq X] -- e.g. for setminus1_ *)
+                        FunApp(Ident "BEq", NonEmptyList.from_list_unsafe [Term (Ident t.it)])
+                      ))]
+                    else []
+                  in
+                  let inhabited : _params list =
+                    if List.mem t.it typp_names_needing_inhabited then
+                      [BracketedBinder(InstanceParam(                        (* [Inhabited X] -- e.g. for fun_relaxed2 *)
+                        FunApp(Ident "Inhabited", NonEmptyList.from_list_unsafe [Term (Ident t.it)])
+                      ))]
+                    else []
+                  in
+                  [explicit] @ beq @ inhabited
                 | ExpP (id, typ) -> [BracketedBinder(ExplicitParam(
                   NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (var_0_lst : List X) *)
                   create_typ typ
@@ -2160,11 +1950,16 @@ let rec create_def (def : Il.Ast.def) : command list
                     id,
                     params,
                     typ
-                  ) -> [
-                    (* (f_ : iN) *)
+                  ) ->
+                  let param_types = List.map (fun p -> match p.it with
+                    | ExpP (_, typ) -> create_typ typ
+                    | _ -> failwith "only ExpP should be here"
+                  ) params in
+                  [
+                    (* (f_ : N → iN → iN) *)
                     BracketedBinder(ExplicitParam(
                       NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
-                      create_typ typ
+                      create_curried_func (param_types @ [create_typ typ])
                     ))
                   ]
                 | _ -> error p.at ("only ExpP or TypP should be here 2, got: " ^ Il.Print.string_of_param p)
@@ -2459,7 +2254,8 @@ let rec create_def (def : Il.Ast.def) : command list
           } in
           (* if nat ≤ nat_0 then nat else nat_0  (after renaming i->nat, j->nat_0) *)
           let renamed = Il.Walk.transform_exp t clause_exp in
-          append_prems_to_term (create_exp renamed) clause_prems
+          let renamed_prems = List.map (Il.Walk.transform_prem t) clause_prems in
+          append_prems_to_term (create_exp renamed) renamed_prems
         else
           Match { match_terms; cases }
       in
