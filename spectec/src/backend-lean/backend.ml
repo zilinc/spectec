@@ -2220,6 +2220,26 @@ let rec create_def (def : Il.Ast.def) : command list
       let match_terms = create_match_term params param_ever_deconstructed_list in
       let cases = List.map (fun clause -> create_clause clause params param_ever_deconstructed_list) clauses in
 
+      (* TODO WORKAROUND ---------------- REMOVE ONCE TYPEFAMILYREMOVAL MECHANISM IS FIXED *)
+      (* Append `| _ => Inhabited.default` when any matched param has a type that was
+         originally a type family. After type-family flattening, cross-product constructor
+         combinations exist syntactically but are semantically impossible, making the
+         pattern match incomplete in Lean. The catch-all makes it exhaustive again.
+         Mirrors the Rocq backend's `| _ => default_val` approach. *)
+      let needs_catchall = List.mem id.it (!analysis).defs_needing_catchall in
+      let cases_with_catchall_temp_workaround =
+        if needs_catchall then
+          let wildcards =
+            List.init
+              (List.length match_terms)
+              (fun _ -> (Hole Hole : term))
+          in
+          cases @ [(wildcards, DotProj (Ident "Inhabited", Ident "default"))]
+        else
+          cases
+      in
+      (* TODO WORKAROUND ---------------- REMOVE ONCE TYPEFAMILYREMOVAL MECHANISM IS FIXED *)
+
       let body =
         if match_terms = [] then
           (*
@@ -2257,7 +2277,7 @@ let rec create_def (def : Il.Ast.def) : command list
           let renamed_prems = List.map (Il.Walk.transform_prem t) clause_prems in
           append_prems_to_term (create_exp renamed) renamed_prems
         else
-          Match { match_terms; cases }
+          Match { match_terms; cases = cases_with_catchall_temp_workaround }
       in
 
       [

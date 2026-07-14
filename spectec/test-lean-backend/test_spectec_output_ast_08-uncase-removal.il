@@ -46786,7 +46786,7 @@ HintD
     (IterT (VarT "fN") List)
   )
   (ExpP "vec_" (VarT "vec_"))
-  (IterT (VarT "vec_") List)
+  (IterT (IterT (VarT "vec_") List) Opt)
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
     (ExpP "M" nat)
@@ -46808,22 +46808,24 @@ HintD
     )
     (DefA "f_")
     (ExpA (VarE "v_1"))
-    (IterE
-      (CallE
-        "inv_lanes_"
-        (ExpA
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE
-              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-              (CaseE Arg (TupE (VarE "M")))
+    (OptE
+      (IterE
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
             )
           )
+          (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
         )
-        (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+        List
+        (iterexp "c*" (VarE "c**"))
       )
-      List
-      (iterexp "c*" (VarE "c**"))
     )
     (LetPr
       (IterE (VarE "c_1") List (iterexp "c_1" (VarE "c_1*")))
@@ -46936,6 +46938,15 @@ HintD
       (iterexp "c_1" (VarE "c_1*"))
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x2" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (DefA "f_")
+    (ExpA (VarE "x2"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -46972,7 +46983,14 @@ HintD
         EqOp
         bool
         (VarE "ret_val*")
-        (CallE "fvunop_" (ExpA (VarE "shape")) (DefA "f_") (ExpA (VarE "vec_")))
+        (TheE
+          (CallE
+            "fvunop_"
+            (ExpA (VarE "shape"))
+            (DefA "f_")
+            (ExpA (VarE "vec_"))
+          )
+        )
       )
     )
     (IterPr
@@ -46982,6 +47000,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "ivbinop_"
   (ExpP "shape" (VarT "shape"))
@@ -47387,7 +47406,7 @@ HintD
   (ExpP "sx" (VarT "sx"))
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
-  (IterT (VarT "vec_") List)
+  (IterT (IterT (VarT "vec_") List) Opt)
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
     (ExpP "M" nat)
@@ -47415,22 +47434,24 @@ HintD
     (ExpA (VarE "sx"))
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (IterE
-      (CallE
-        "inv_lanes_"
-        (ExpA
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE
-              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-              (CaseE Arg (TupE (VarE "M")))
+    (OptE
+      (IterE
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
             )
           )
+          (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
         )
-        (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+        List
+        (iterexp "c*" (VarE "c**"))
       )
-      List
-      (iterexp "c*" (VarE "c**"))
     )
     (LetPr
       (IterE (VarE "c_1") List (iterexp "c_1" (VarE "c_1*")))
@@ -47539,6 +47560,19 @@ HintD
       (iterexp "c_2" (VarE "c_2*"))
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x2" (VarT "sx"))
+    (ExpP "x3" (VarT "vec_"))
+    (ExpP "x4" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (DefA "f_")
+    (ExpA (VarE "x2"))
+    (ExpA (VarE "x3"))
+    (ExpA (VarE "x4"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -47590,13 +47624,15 @@ HintD
         EqOp
         bool
         (VarE "ret_val*")
-        (CallE
-          "ivbinopsxnd_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
+        (TheE
+          (CallE
+            "ivbinopsxnd_"
+            (ExpA (VarE "shape"))
+            (DefA "f_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "vec_"))
+            (ExpA (VarE "vec__0"))
+          )
         )
       )
     )
@@ -47607,6 +47643,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "fvbinop_"
   (ExpP "shape" (VarT "shape"))
@@ -47619,7 +47656,7 @@ HintD
   )
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
-  (IterT (VarT "vec_") List)
+  (IterT (IterT (VarT "vec_") List) Opt)
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
     (ExpP "M" nat)
@@ -47644,22 +47681,24 @@ HintD
     (DefA "f_")
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (IterE
-      (CallE
-        "inv_lanes_"
-        (ExpA
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE
-              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-              (CaseE Arg (TupE (VarE "M")))
+    (OptE
+      (IterE
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
             )
           )
+          (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
         )
-        (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+        List
+        (iterexp "c*" (VarE "c**"))
       )
-      List
-      (iterexp "c*" (VarE "c**"))
     )
     (LetPr
       (IterE (VarE "c_1") List (iterexp "c_1" (VarE "c_1*")))
@@ -47806,6 +47845,17 @@ HintD
       (iterexp "c_2" (VarE "c_2*"))
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x2" (VarT "vec_"))
+    (ExpP "x3" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (DefA "f_")
+    (ExpA (VarE "x2"))
+    (ExpA (VarE "x3"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -47847,12 +47897,14 @@ HintD
         EqOp
         bool
         (VarE "ret_val*")
-        (CallE
-          "fvbinop_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
+        (TheE
+          (CallE
+            "fvbinop_"
+            (ExpA (VarE "shape"))
+            (DefA "f_")
+            (ExpA (VarE "vec_"))
+            (ExpA (VarE "vec__0"))
+          )
         )
       )
     )
@@ -47863,6 +47915,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "ivternopnd_"
   (ExpP "shape" (VarT "shape"))
@@ -47877,7 +47930,7 @@ HintD
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
-  (IterT (VarT "vec_") List)
+  (IterT (IterT (VarT "vec_") List) Opt)
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
     (ExpP "M" nat)
@@ -47905,22 +47958,24 @@ HintD
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
     (ExpA (VarE "v_3"))
-    (IterE
-      (CallE
-        "inv_lanes_"
-        (ExpA
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE
-              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-              (CaseE Arg (TupE (VarE "M")))
+    (OptE
+      (IterE
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
             )
           )
+          (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
         )
-        (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+        List
+        (iterexp "c*" (VarE "c**"))
       )
-      List
-      (iterexp "c*" (VarE "c**"))
     )
     (LetPr
       (IterE (VarE "c_1") List (iterexp "c_1" (VarE "c_1*")))
@@ -48047,6 +48102,19 @@ HintD
       (iterexp "c_3" (VarE "c_3*"))
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x2" (VarT "vec_"))
+    (ExpP "x3" (VarT "vec_"))
+    (ExpP "x4" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (DefA "f_")
+    (ExpA (VarE "x2"))
+    (ExpA (VarE "x3"))
+    (ExpA (VarE "x4"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -48099,13 +48167,15 @@ HintD
         EqOp
         bool
         (VarE "ret_val*")
-        (CallE
-          "ivternopnd_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-          (ExpA (VarE "vec__1"))
+        (TheE
+          (CallE
+            "ivternopnd_"
+            (ExpA (VarE "shape"))
+            (DefA "f_")
+            (ExpA (VarE "vec_"))
+            (ExpA (VarE "vec__0"))
+            (ExpA (VarE "vec__1"))
+          )
         )
       )
     )
@@ -48116,6 +48186,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "fvternop_"
   (ExpP "shape" (VarT "shape"))
@@ -48130,7 +48201,7 @@ HintD
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
-  (IterT (VarT "vec_") List)
+  (IterT (IterT (VarT "vec_") List) Opt)
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
     (ExpP "M" nat)
@@ -48158,22 +48229,24 @@ HintD
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
     (ExpA (VarE "v_3"))
-    (IterE
-      (CallE
-        "inv_lanes_"
-        (ExpA
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE
-              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-              (CaseE Arg (TupE (VarE "M")))
+    (OptE
+      (IterE
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
             )
           )
+          (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
         )
-        (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+        List
+        (iterexp "c*" (VarE "c**"))
       )
-      List
-      (iterexp "c*" (VarE "c**"))
     )
     (LetPr
       (IterE (VarE "c_1") List (iterexp "c_1" (VarE "c_1*")))
@@ -48354,6 +48427,19 @@ HintD
       (iterexp "c_3" (VarE "c_3*"))
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x2" (VarT "vec_"))
+    (ExpP "x3" (VarT "vec_"))
+    (ExpP "x4" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (DefA "f_")
+    (ExpA (VarE "x2"))
+    (ExpA (VarE "x3"))
+    (ExpA (VarE "x4"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -48406,13 +48492,15 @@ HintD
         EqOp
         bool
         (VarE "ret_val*")
-        (CallE
-          "fvternop_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-          (ExpA (VarE "vec__1"))
+        (TheE
+          (CallE
+            "fvternop_"
+            (ExpA (VarE "shape"))
+            (DefA "f_")
+            (ExpA (VarE "vec_"))
+            (ExpA (VarE "vec__0"))
+            (ExpA (VarE "vec__1"))
+          )
         )
       )
     )
@@ -48423,6 +48511,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "ivrelop_"
   (ExpP "shape" (VarT "shape"))
@@ -48435,7 +48524,7 @@ HintD
   )
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
-  (VarT "vec_")
+  (IterT (VarT "vec_") Opt)
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
     (ExpP "M" nat)
@@ -48460,22 +48549,27 @@ HintD
     (DefA "f_")
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "inv_lanes_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (OptE
+      (CallE
+        "inv_lanes_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
-      )
-      (ExpA
-        (IterE
-          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
-          List
-          (iterexp "c" (VarE "c*"))
+        (ExpA
+          (IterE
+            (CaseE
+              (Seq (Atom mk_lane__2) Arg Arg)
+              (TupE (VarE "Jnn") (VarE "c"))
+            )
+            List
+            (iterexp "c" (VarE "c*"))
+          )
         )
       )
     )
@@ -48597,6 +48691,17 @@ HintD
       (iterexp "c_2" (VarE "c_2*"))
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x2" (VarT "vec_"))
+    (ExpP "x3" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (DefA "f_")
+    (ExpA (VarE "x2"))
+    (ExpA (VarE "x3"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -48638,18 +48743,21 @@ HintD
         EqOp
         bool
         (VarE "ret_val")
-        (CallE
-          "ivrelop_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
+        (TheE
+          (CallE
+            "ivrelop_"
+            (ExpA (VarE "shape"))
+            (DefA "f_")
+            (ExpA (VarE "vec_"))
+            (ExpA (VarE "vec__0"))
+          )
         )
       )
     )
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
+HintD
 (DecD
   "ivrelopsx_"
   (ExpP "shape" (VarT "shape"))
@@ -48664,7 +48772,7 @@ HintD
   (ExpP "sx" (VarT "sx"))
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
-  (VarT "vec_")
+  (IterT (VarT "vec_") Opt)
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
     (ExpP "M" nat)
@@ -48692,22 +48800,27 @@ HintD
     (ExpA (VarE "sx"))
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "inv_lanes_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (OptE
+      (CallE
+        "inv_lanes_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
-      )
-      (ExpA
-        (IterE
-          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
-          List
-          (iterexp "c" (VarE "c*"))
+        (ExpA
+          (IterE
+            (CaseE
+              (Seq (Atom mk_lane__2) Arg Arg)
+              (TupE (VarE "Jnn") (VarE "c"))
+            )
+            List
+            (iterexp "c" (VarE "c*"))
+          )
         )
       )
     )
@@ -48831,6 +48944,19 @@ HintD
       (iterexp "c_2" (VarE "c_2*"))
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x2" (VarT "sx"))
+    (ExpP "x3" (VarT "vec_"))
+    (ExpP "x4" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (DefA "f_")
+    (ExpA (VarE "x2"))
+    (ExpA (VarE "x3"))
+    (ExpA (VarE "x4"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -48882,19 +49008,22 @@ HintD
         EqOp
         bool
         (VarE "ret_val")
-        (CallE
-          "ivrelopsx_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
+        (TheE
+          (CallE
+            "ivrelopsx_"
+            (ExpA (VarE "shape"))
+            (DefA "f_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "vec_"))
+            (ExpA (VarE "vec__0"))
+          )
         )
       )
     )
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
+HintD
 (DecD
   "fvrelop_"
   (ExpP "shape" (VarT "shape"))
@@ -48907,7 +49036,7 @@ HintD
   )
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
-  (VarT "vec_")
+  (IterT (VarT "vec_") Opt)
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
     (ExpP "M" nat)
@@ -48933,37 +49062,39 @@ HintD
     (DefA "f_")
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "inv_lanes_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (OptE
+      (CallE
+        "inv_lanes_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
-      )
-      (ExpA
-        (IterE
-          (CaseE
-            (Seq (Atom mk_lane__0) Arg Arg)
-            (TupE
-              (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn")
-                  (CaseE
-                    Arg
-                    (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "c"))) 0))
+        (ExpA
+          (IterE
+            (CaseE
+              (Seq (Atom mk_lane__0) Arg Arg)
+              (TupE
+                (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+                (CaseE
+                  (Seq (Atom mk_num__0) Arg Arg)
+                  (TupE
+                    (VarE "Inn")
+                    (CaseE
+                      Arg
+                      (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "c"))) 0))
+                    )
                   )
                 )
               )
             )
+            List
+            (iterexp "c" (VarE "c*"))
           )
-          List
-          (iterexp "c" (VarE "c*"))
         )
       )
     )
@@ -49146,6 +49277,17 @@ HintD
       (iterexp "c_2" (VarE "c_2*"))
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x2" (VarT "vec_"))
+    (ExpP "x3" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (DefA "f_")
+    (ExpA (VarE "x2"))
+    (ExpA (VarE "x3"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -49187,18 +49329,21 @@ HintD
         EqOp
         bool
         (VarE "ret_val")
-        (CallE
-          "fvrelop_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
+        (TheE
+          (CallE
+            "fvrelop_"
+            (ExpA (VarE "shape"))
+            (DefA "f_")
+            (ExpA (VarE "vec_"))
+            (ExpA (VarE "vec__0"))
+          )
         )
       )
     )
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
+HintD
 (DecD
   "ivshiftop_"
   (ExpP "shape" (VarT "shape"))
@@ -50390,19 +50535,21 @@ HintD
       )
     )
     (ExpA (VarE "v"))
-    (CallE
-      "fvunop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvunop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fabs_")
+        (ExpA (VarE "v"))
       )
-      (DefA "fabs_")
-      (ExpA (VarE "v"))
     )
   )
   (DefD
@@ -50425,19 +50572,21 @@ HintD
       )
     )
     (ExpA (VarE "v"))
-    (CallE
-      "fvunop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvunop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fneg_")
+        (ExpA (VarE "v"))
       )
-      (DefA "fneg_")
-      (ExpA (VarE "v"))
     )
   )
   (DefD
@@ -50460,19 +50609,21 @@ HintD
       )
     )
     (ExpA (VarE "v"))
-    (CallE
-      "fvunop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvunop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fsqrt_")
+        (ExpA (VarE "v"))
       )
-      (DefA "fsqrt_")
-      (ExpA (VarE "v"))
     )
   )
   (DefD
@@ -50495,19 +50646,21 @@ HintD
       )
     )
     (ExpA (VarE "v"))
-    (CallE
-      "fvunop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvunop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fceil_")
+        (ExpA (VarE "v"))
       )
-      (DefA "fceil_")
-      (ExpA (VarE "v"))
     )
   )
   (DefD
@@ -50530,19 +50683,21 @@ HintD
       )
     )
     (ExpA (VarE "v"))
-    (CallE
-      "fvunop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvunop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "ffloor_")
+        (ExpA (VarE "v"))
       )
-      (DefA "ffloor_")
-      (ExpA (VarE "v"))
     )
   )
   (DefD
@@ -50565,19 +50720,21 @@ HintD
       )
     )
     (ExpA (VarE "v"))
-    (CallE
-      "fvunop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvunop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "ftrunc_")
+        (ExpA (VarE "v"))
       )
-      (DefA "ftrunc_")
-      (ExpA (VarE "v"))
     )
   )
   (DefD
@@ -50600,19 +50757,21 @@ HintD
       )
     )
     (ExpA (VarE "v"))
-    (CallE
-      "fvunop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvunop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fnearest_")
+        (ExpA (VarE "v"))
       )
-      (DefA "fnearest_")
-      (ExpA (VarE "v"))
     )
   )
   (DefD
@@ -51192,21 +51351,23 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivbinopsxnd_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "ivbinopsxnd_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "irelaxed_q15mulr_")
+        (ExpA (CaseE (Atom S) (TupE)))
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "irelaxed_q15mulr_")
-      (ExpA (CaseE (Atom S) (TupE)))
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51231,20 +51392,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fadd_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fadd_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51269,20 +51432,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fsub_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fsub_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51307,20 +51472,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fmul_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fmul_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51345,20 +51512,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fdiv_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fdiv_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51383,20 +51552,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fmin_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fmin_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51421,20 +51592,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fmax_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fmax_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51459,20 +51632,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fpmin_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fpmin_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51497,20 +51672,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fpmax_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fpmax_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51535,20 +51712,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "frelaxed_min_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "frelaxed_min_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51573,20 +51752,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvbinop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvbinop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "frelaxed_max_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "frelaxed_max_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
 )
@@ -51674,21 +51855,23 @@ HintD
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
     (ExpA (VarE "v_3"))
-    (CallE
-      "ivternopnd_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "ivternopnd_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "irelaxed_laneselect_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
+        (ExpA (VarE "v_3"))
       )
-      (DefA "irelaxed_laneselect_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
-      (ExpA (VarE "v_3"))
     )
   )
   (DefD
@@ -51715,21 +51898,23 @@ HintD
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
     (ExpA (VarE "v_3"))
-    (CallE
-      "fvternop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvternop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "frelaxed_madd_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
+        (ExpA (VarE "v_3"))
       )
-      (DefA "frelaxed_madd_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
-      (ExpA (VarE "v_3"))
     )
   )
   (DefD
@@ -51756,21 +51941,23 @@ HintD
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
     (ExpA (VarE "v_3"))
-    (CallE
-      "fvternop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvternop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "frelaxed_nmadd_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
+        (ExpA (VarE "v_3"))
       )
-      (DefA "frelaxed_nmadd_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
-      (ExpA (VarE "v_3"))
     )
   )
 )
@@ -51860,20 +52047,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivrelop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "ivrelop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "ieq_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "ieq_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51898,20 +52087,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivrelop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "ivrelop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "ine_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "ine_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51941,21 +52132,23 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivrelopsx_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "ivrelopsx_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "ilt_")
+        (ExpA (VarE "sx"))
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "ilt_")
-      (ExpA (VarE "sx"))
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -51985,21 +52178,23 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivrelopsx_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "ivrelopsx_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "igt_")
+        (ExpA (VarE "sx"))
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "igt_")
-      (ExpA (VarE "sx"))
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -52029,21 +52224,23 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivrelopsx_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "ivrelopsx_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "ile_")
+        (ExpA (VarE "sx"))
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "ile_")
-      (ExpA (VarE "sx"))
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -52073,21 +52270,23 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivrelopsx_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "ivrelopsx_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "ige_")
+        (ExpA (VarE "sx"))
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "ige_")
-      (ExpA (VarE "sx"))
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -52112,20 +52311,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvrelop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvrelop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "feq_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "feq_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -52150,20 +52351,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvrelop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvrelop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fne_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fne_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -52188,20 +52391,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvrelop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvrelop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "flt_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "flt_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -52226,20 +52431,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvrelop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvrelop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fgt_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fgt_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -52264,20 +52471,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvrelop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvrelop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fle_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fle_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -52302,20 +52511,22 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "fvrelop_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
-            (CaseE Arg (TupE (VarE "M")))
+    (TheE
+      (CallE
+        "fvrelop_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
           )
         )
+        (DefA "fge_")
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "fge_")
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
 )
@@ -54281,7 +54492,7 @@ HintD
   )
   (ExpP "sx" (VarT "sx"))
   (ExpP "vec_" (VarT "vec_"))
-  (VarT "vec_")
+  (IterT (VarT "vec_") Opt)
   (DefD
     (ExpP "Jnn_1" (VarT "Jnn"))
     (ExpP "M_1" nat)
@@ -54316,25 +54527,27 @@ HintD
     (DefA "f_")
     (ExpA (VarE "sx"))
     (ExpA (VarE "v_1"))
-    (CallE
-      "inv_lanes_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
+    (OptE
+      (CallE
+        "inv_lanes_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
           )
         )
-      )
-      (ExpA
-        (IterE
-          (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
-            (TupE (VarE "Jnn_2") (VarE "c"))
+        (ExpA
+          (IterE
+            (CaseE
+              (Seq (Atom mk_lane__2) Arg Arg)
+              (TupE (VarE "Jnn_2") (VarE "c"))
+            )
+            List
+            (iterexp "c" (VarE "c*"))
           )
-          List
-          (iterexp "c" (VarE "c*"))
         )
       )
     )
@@ -54405,6 +54618,19 @@ HintD
       )
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x1" (VarT "shape"))
+    (ExpP "x3" (VarT "sx"))
+    (ExpP "x4" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (ExpA (VarE "x1"))
+    (DefA "f_")
+    (ExpA (VarE "x3"))
+    (ExpA (VarE "x4"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -54452,13 +54678,15 @@ HintD
         EqOp
         bool
         (VarE "ret_val")
-        (CallE
-          "ivextunop__"
-          (ExpA (VarE "shape_1"))
-          (ExpA (VarE "shape_2"))
-          (DefA "f_")
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "vec_"))
+        (TheE
+          (CallE
+            "ivextunop__"
+            (ExpA (VarE "shape_1"))
+            (ExpA (VarE "shape_2"))
+            (DefA "f_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "vec_"))
+          )
         )
       )
     )
@@ -54520,29 +54748,31 @@ HintD
       )
     )
     (ExpA (VarE "v_1"))
-    (CallE
-      "ivextunop__"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
-            (CaseE Arg (TupE (VarE "M_1")))
+    (TheE
+      (CallE
+        "ivextunop__"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
+            )
           )
         )
-      )
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
           )
         )
+        (DefA "ivadd_pairwise_")
+        (ExpA (VarE "sx"))
+        (ExpA (VarE "v_1"))
       )
-      (DefA "ivadd_pairwise_")
-      (ExpA (VarE "sx"))
-      (ExpA (VarE "v_1"))
     )
   )
 )
@@ -54821,7 +55051,7 @@ HintD
   (ExpP "laneidx" (VarT "laneidx"))
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
-  (VarT "vec_")
+  (IterT (VarT "vec_") Opt)
   (DefD
     (ExpP "Jnn_1" (VarT "Jnn"))
     (ExpP "M_1" nat)
@@ -54865,25 +55095,27 @@ HintD
     (ExpA (VarE "k"))
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "inv_lanes_"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
+    (OptE
+      (CallE
+        "inv_lanes_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
           )
         )
-      )
-      (ExpA
-        (IterE
-          (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
-            (TupE (VarE "Jnn_2") (VarE "c"))
+        (ExpA
+          (IterE
+            (CaseE
+              (Seq (Atom mk_lane__2) Arg Arg)
+              (TupE (VarE "Jnn_2") (VarE "c"))
+            )
+            List
+            (iterexp "c" (VarE "c*"))
           )
-          List
-          (iterexp "c" (VarE "c*"))
         )
       )
     )
@@ -55003,6 +55235,27 @@ HintD
       )
     )
   )
+  (DefD
+    (ExpP "x0" (VarT "shape"))
+    (ExpP "x1" (VarT "shape"))
+    (ExpP "x3" (VarT "sx"))
+    (ExpP "x4" (VarT "sx"))
+    (ExpP "x5" (VarT "laneidx"))
+    (ExpP "x6" (VarT "laneidx"))
+    (ExpP "x7" (VarT "vec_"))
+    (ExpP "x8" (VarT "vec_"))
+    (ExpA (VarE "x0"))
+    (ExpA (VarE "x1"))
+    (DefA "f_")
+    (ExpA (VarE "x3"))
+    (ExpA (VarE "x4"))
+    (ExpA (VarE "x5"))
+    (ExpA (VarE "x6"))
+    (ExpA (VarE "x7"))
+    (ExpA (VarE "x8"))
+    (OptE)
+    ElsePr
+  )
 )
 HintD
 (RelD
@@ -55067,17 +55320,19 @@ HintD
         EqOp
         bool
         (VarE "ret_val")
-        (CallE
-          "ivextbinop__"
-          (ExpA (VarE "shape_1"))
-          (ExpA (VarE "shape_2"))
-          (DefA "f_")
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "sx_0"))
-          (ExpA (VarE "laneidx"))
-          (ExpA (VarE "laneidx_0"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
+        (TheE
+          (CallE
+            "ivextbinop__"
+            (ExpA (VarE "shape_1"))
+            (ExpA (VarE "shape_2"))
+            (DefA "f_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "sx_0"))
+            (ExpA (VarE "laneidx"))
+            (ExpA (VarE "laneidx_0"))
+            (ExpA (VarE "vec_"))
+            (ExpA (VarE "vec__0"))
+          )
         )
       )
     )
@@ -55212,45 +55467,47 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivextbinop__"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
-            (CaseE Arg (TupE (VarE "M_1")))
-          )
-        )
-      )
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
-          )
-        )
-      )
-      (DefA "ivmul_")
-      (ExpA (VarE "sx"))
-      (ExpA (VarE "sx"))
-      (ExpA
-        (CaseE
-          Arg
-          (TupE
-            (CallE
-              "half"
-              (ExpA (VarE "half"))
-              (ExpA (NumE (Nat 0)))
-              (ExpA (VarE "M_2"))
+    (TheE
+      (CallE
+        "ivextbinop__"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
             )
           )
         )
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
+          )
+        )
+        (DefA "ivmul_")
+        (ExpA (VarE "sx"))
+        (ExpA (VarE "sx"))
+        (ExpA
+          (CaseE
+            Arg
+            (TupE
+              (CallE
+                "half"
+                (ExpA (VarE "half"))
+                (ExpA (NumE (Nat 0)))
+                (ExpA (VarE "M_2"))
+              )
+            )
+          )
+        )
+        (ExpA (CaseE Arg (TupE (VarE "M_2"))))
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (ExpA (CaseE Arg (TupE (VarE "M_2"))))
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -55302,33 +55559,35 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivextbinop__"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
-            (CaseE Arg (TupE (VarE "M_1")))
+    (TheE
+      (CallE
+        "ivextbinop__"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
+            )
           )
         )
-      )
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
           )
         )
+        (DefA "ivdot_")
+        (ExpA (CaseE (Atom S) (TupE)))
+        (ExpA (CaseE (Atom S) (TupE)))
+        (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
+        (ExpA (CaseE Arg (TupE (VarE "M_1"))))
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (DefA "ivdot_")
-      (ExpA (CaseE (Atom S) (TupE)))
-      (ExpA (CaseE (Atom S) (TupE)))
-      (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
-      (ExpA (CaseE Arg (TupE (VarE "M_1"))))
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
   (DefD
@@ -55380,41 +55639,43 @@ HintD
     )
     (ExpA (VarE "v_1"))
     (ExpA (VarE "v_2"))
-    (CallE
-      "ivextbinop__"
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
-            (CaseE Arg (TupE (VarE "M_1")))
+    (TheE
+      (CallE
+        "ivextbinop__"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
+            )
           )
         )
-      )
-      (ExpA
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
           )
         )
-      )
-      (DefA "ivdot_sat_")
-      (ExpA (CaseE (Atom S) (TupE)))
-      (ExpA
-        (CallE
-          "relaxed2"
-          (ExpA (CallE "R_idot"))
-          (TypA (VarT "sx"))
-          (ExpA (CaseE (Atom S) (TupE)))
-          (ExpA (CaseE (Atom U) (TupE)))
+        (DefA "ivdot_sat_")
+        (ExpA (CaseE (Atom S) (TupE)))
+        (ExpA
+          (CallE
+            "relaxed2"
+            (ExpA (CallE "R_idot"))
+            (TypA (VarT "sx"))
+            (ExpA (CaseE (Atom S) (TupE)))
+            (ExpA (CaseE (Atom U) (TupE)))
+          )
         )
+        (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
+        (ExpA (CaseE Arg (TupE (VarE "M_1"))))
+        (ExpA (VarE "v_1"))
+        (ExpA (VarE "v_2"))
       )
-      (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
-      (ExpA (CaseE Arg (TupE (VarE "M_1"))))
-      (ExpA (VarE "v_1"))
-      (ExpA (VarE "v_2"))
     )
   )
 )
@@ -55908,6 +56169,8 @@ HintD
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
+HintD
+HintD
 HintD
 HintD
 HintD

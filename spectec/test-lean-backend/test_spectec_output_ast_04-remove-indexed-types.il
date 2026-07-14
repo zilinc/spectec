@@ -46628,6 +46628,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "ivbinop_"
   (ExpP "shape" (VarT "shape"))
@@ -47221,6 +47222,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "fvbinop_"
   (ExpP "shape" (VarT "shape"))
@@ -47477,6 +47479,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "ivternopnd_"
   (ExpP "shape" (VarT "shape"))
@@ -47730,6 +47733,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "fvternop_"
   (ExpP "shape" (VarT "shape"))
@@ -48037,6 +48041,7 @@ HintD
     )
   )
 )
+HintD
 (DecD
   "ivrelop_"
   (ExpP "shape" (VarT "shape"))
@@ -48260,6 +48265,7 @@ HintD
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
+HintD
 (DecD
   "ivrelopsx_"
   (ExpP "shape" (VarT "shape"))
@@ -48501,6 +48507,7 @@ HintD
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
+HintD
 (DecD
   "fvrelop_"
   (ExpP "shape" (VarT "shape"))
@@ -48792,6 +48799,7 @@ HintD
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
+HintD
 (DecD
   "ivshiftop_"
   (ExpP "shape" (VarT "shape"))
@@ -55379,6 +55387,8 @@ HintD
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
+HintD
+HintD
 HintD
 HintD
 HintD

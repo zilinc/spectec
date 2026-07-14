@@ -60,12 +60,12 @@ and string_of_numtyp = Num.string_of_typ
 
 and string_of_typ t =
   match t.it with
-  | VarT (x, as1) -> "fuck1" ^ string_of_id x ^ string_of_args as1
-  | BoolT -> "fuck2" ^ "bool"
-  | NumT t -> "fuck3" ^ string_of_numtyp t
-  | TextT -> "fuck4" ^ "text"
-  | TupT xts -> "fuck5" ^ "(" ^ concat ", " (List.map string_of_typbind xts) ^ ")"
-  | IterT (t1, iter) -> "fuck6" ^ string_of_typ t1 ^ string_of_iter iter
+  | VarT (x, as1) -> string_of_id x ^ string_of_args as1
+  | BoolT -> "bool"
+  | NumT t -> string_of_numtyp t
+  | TextT -> "text"
+  | TupT xts -> "(" ^ concat ", " (List.map string_of_typbind xts) ^ ")"
+  | IterT (t1, iter) -> string_of_typ t1 ^ string_of_iter iter
 
 and string_of_typ_name t =
   match t.it with
