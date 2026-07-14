@@ -252,44 +252,60 @@ proof (induction "mk_instrtype (mk_list []) (mk_list l)" "mk_instrtype t1 t2"
   qed
 qed
 
+
+
 lemma produce_consume:
   assumes "mk_instrtype (mk_list []) (mk_list l) <ti: mk_instrtype t1 t2" 
-          "mk_instrtype (mk_list l') (mk_list res) <ti: mk_instrtype t2 t3" 
+          "mk_instrtype (mk_list (args @ l')) (mk_list res) <ti: mk_instrtype t2 t3" 
           "length l = length l'" 
         shows (* "Resulttype_sub t1 t3" *)
- "(mk_instrtype (mk_list []) (mk_list res) <ti: mk_instrtype t1 t3) \<and> 
+ "(mk_instrtype (mk_list args) (mk_list res) <ti: mk_instrtype t1 t3) \<and> 
   Resulttype_sub (mk_list l) (mk_list l')"
   using assms
-proof(induction "mk_instrtype (mk_list []) (mk_list l)" "mk_instrtype t1 t2"
+proof(induction "mk_instrtype (mk_list []) (mk_list ( l))" "mk_instrtype t1 t2"
       rule: Instrtype_sub.induct)
   case (mk_Instrtype_sub t1l t1fst t1snd t2l t2fst t2snd)
   note outer = mk_Instrtype_sub
   show ?thesis using outer(8) outer
-  proof (induction "mk_instrtype (mk_list l') (mk_list res)" "mk_instrtype t2 t3" 
+  proof (induction "mk_instrtype (mk_list (args @ l')) (mk_list res)" 
+          "mk_instrtype t2 t3" 
          rule: Instrtype_sub.induct)
     case (mk_Instrtype_sub t2l' t2fst' t2snd' t3l t3fst t3snd)
-    then have "Resulttype_sub (mk_list t1l) (mk_list t3fst)"
-      by (metis Resulttype_sub.simps Resulttype_sub_trans append.right_neutral 
-          append_eq_append_conv res_list.inject)
-    then show ?thesis 
-      using isabelle_reference_output_wasm2.mk_Instrtype_sub[of t1l t1l "[]" t3l 
-                t3fst t3snd "[]" res] mk_Instrtype_sub Resulttype_sub_empty 
-      by (metis Resulttype_sub.simps Resulttype_sub_trans append.right_neutral 
-          append_eq_append_conv res_list.inject)
-      
-
-
-     (* by (smt (verit, ccfv_threshold) Instrtype_sub.mk_Instrtype_sub Resulttype_sub.simps Resulttype_sub_trans
-          append_eq_append_conv res_list.inject) *)
-    (* then have "Resulttype_sub t1 t3" 
-      by (m etis (no_types, lifting) Resulttype_sub.simps Resulttype_sub_append Resulttype_sub_trans
-          append_eq_append_conv res_list.inject)
-    then show ?thesis 
-      by (m etis Instrtype_sub_trans append.right_neutral Instrtype_sub_frame_rule 
-      Instrtype_sub_sub_rule res_list.exhaust Resulttype_sub_refl) *)
+    then obtain t2sndfst t2sndsnd where t2fstsnd:
+        "t2snd' = t2sndfst @ t2sndsnd" 
+        "Resulttype_sub (mk_list t2sndfst) (mk_list args)"
+        "Resulttype_sub (mk_list t2sndsnd) (mk_list l')" 
+      by (meson Resulttype_sub_split_left)
+    then have lens: "length t2sndsnd = length t2snd" using mk_Instrtype_sub
+      by (simp add: Resulttype_sub.simps)
+    have "t2l = t2l'" using mk_Instrtype_sub by auto
+    then have "t2fst = t2fst' @ t2sndfst" using t2fstsnd(1) lens mk_Instrtype_sub(1,9)
+      by (metis append.assoc append_eq_append_conv)
+    then have "Resulttype_sub (mk_list t1l) (mk_list (t2fst' @ t2sndfst))"
+      using mk_Instrtype_sub 
+      by (metis Resulttype_sub_append append.right_neutral)
+    then obtain t1fst' t1snd' where t1fstsnd:
+      "t1l = t1fst' @ t1snd'" 
+      "Resulttype_sub (mk_list t1fst') (mk_list t2fst')"
+      "Resulttype_sub (mk_list t1snd') (mk_list t2sndfst)"
+      by (meson Resulttype_sub_split_left)
+    then have sub1: "Resulttype_sub (mk_list t1fst') (mk_list t3fst)"
+      using mk_Instrtype_sub Resulttype_sub_trans by fast
+    have sub2: "Resulttype_sub (mk_list t1snd') (mk_list args)"
+      using mk_Instrtype_sub t1fstsnd Resulttype_sub_trans 
+      using t2fstsnd(2) by blast
+    have "Resulttype_sub (mk_list l) (mk_list l')" using t2fstsnd mk_Instrtype_sub
+      by (metis Resulttype_sub_trans \<open>t2fst = t2fst' @ t2sndfst\<close> \<open>t2l = t2l'\<close> 
+          append.assoc
+          append_eq_append_conv)
+    then show ?thesis using mk_Instrtype_sub t2fstsnd t1fstsnd sub1 sub2
+        isabelle_reference_output_wasm2.mk_Instrtype_sub[
+           of t1l t1fst' t1snd' t3l t3fst t3snd args res, OF t1fstsnd(1)]
+      by fast
   qed
 qed
 
+(* Is this lemma still useful? *)
 (*
 lemma empty_sub:
   assumes "Resulttype_sub t1 t2"

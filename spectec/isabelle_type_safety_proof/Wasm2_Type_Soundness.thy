@@ -485,7 +485,8 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
       using inv_drop Instrs_ok__instr
       using instr_case_2 Instrs_ok2_wf(1) splitih(2) by blast
     then have "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1' t3'" 
-      using td tv Instrtype_sub_trans produce_consume[of "[typeofval v_val]" t1' t2' "[t]" "[]"] 
+      using td tv Instrtype_sub_trans produce_consume[of 
+           "[typeofval v_val]" t1' t2' "[]" "[t]" "[]"] 
       by fastforce
     then have "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1 t2" 
       using splitih(3,4) 
@@ -536,7 +537,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
             Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
                     (mk_list [t,t,valtype_I32])"
         using td(1) tv splitih (3,4) produce_consume[of 
-              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
+              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' "[]"  
               "[t,t,valtype_I32]" "[t]" t3']
               Instrtype_sub_trans by force
       then have 
@@ -570,7 +571,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
             Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
                     (mk_list [t,t,valtype_I32])"
         using td(1) tv splitih (3,4) produce_consume[of 
-              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
+              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2'  "[]" 
               "[t,t,valtype_I32]" "[t]" t3']
               Instrtype_sub_trans by force
       then have 
@@ -638,7 +639,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
             Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
                     (mk_list [t,t,valtype_I32])"
         using td(1) tv splitih (3,4) produce_consume[of 
-              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
+              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' "[]" 
               "[t,t,valtype_I32]" "[t]" t3']
               Instrtype_sub_trans by force
       then have 
@@ -672,7 +673,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
             Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
                     (mk_list [t,t,valtype_I32])"
         using td(1) tv splitih (3,4) produce_consume[of 
-              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' 
+              "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' "[]" 
               "[t,t,valtype_I32]" "[t]" t3']
               Instrtype_sub_trans by force
       then have 
@@ -697,11 +698,129 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
             Instrs_ok2_const_replace[of s C' "[val_2]"] subtype_typing by auto
     qed
   next
-    case (if_true c bt instr_1_lst instr_2_lst)
-    then show ?case sorry
+    case (if_true c bt es1 es2)
+    then obtain t1' t2' t3' where splitih:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST I32 c)] (mk_functype t1' t2')"
+      "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_IFELSE bt es1 es2)] (mk_functype t2' t3')"
+      "Resulttype_sub t1 t1'"
+      "Resulttype_sub t3' t2" 
+      using inv_seq[of s C' "[_,_]"
+              t1 t2 "[_]" "[_]"] by fastforce
+    have tv: "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: 
+          mk_instrtype t1' t2'" 
+      using inv_const_list[OF splitih(1), of "[val_CONST I32 c]"] typeofval.domintros
+          typeofval.psimps admininstr_val.domintros admininstr_val.psimps 
+         by simp
+    obtain t2'' t3'' where 
+      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
+      and "Instr_ok C' (instr_sc7 (IFELSE bt es1 es2)) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      using inv_plain[where ?v_instr = "instr_sc7 (IFELSE bt es1 es2)"]
+            if_true(9) splitih(2)
+      using admininstr_instr.domintros admininstr_instr.psimps by metis
+    then obtain t1l t2l where blockhyps:
+      "wf_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [],
+           context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [],
+           context_LOCALS = [], LABELS = [mk_list t2l], context_RETURN = None\<rparr>"
+       "Blocktype_ok C' bt (mk_functype (mk_list t1l) (mk_list t2l))"
+       "Instrs_ok
+        (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [],
+             context_TABLES = [], context_MEMS = [], context_ELEMS = [],
+             context_DATAS = [], context_LOCALS = [], LABELS = [mk_list t2l],
+             context_RETURN = None\<rparr>
+          C')
+        es1 (mk_functype (mk_list t1l) (mk_list t2l))"
+       "Instrs_ok
+        (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [],
+             context_TABLES = [], context_MEMS = [], context_ELEMS = [],
+             context_DATAS = [], context_LOCALS = [], LABELS = [mk_list t2l],
+             context_RETURN = None\<rparr>
+          C')
+        es2 (mk_functype (mk_list t1l) (mk_list t2l))"
+       "mk_instrtype (mk_list (t1l @ [valtype_I32]))
+        (mk_list t2l) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
+      using inv_res_if Instrs_ok__instr
+      using Instr_ok_wf by metis
+    have sub: "mk_instrtype (mk_list t1l) (mk_list t2l) <ti: mk_instrtype t1 t2"
+      using tv td blockhyps(5) splitih(3,4) 
+        produce_consume[of "[valtype_I32]" t1' t2' t1l "[valtype_I32]" t2l t3']
+      using Instrtype_sub_sub_rule Instrtype_sub_trans by blast
+    have "Instr_ok C' (instr_sc7 (BLOCK bt es1)) 
+      (mk_functype (mk_list t1l) (mk_list t2l))" 
+      using blockhyps block[OF blockhyps(2) blockhyps(3)] pure.prems(8)
+          Instrs_ok2_wf Instrs_ok_wf instr_case_4
+      by (metis Blocktype_ok.simps)
+    then have "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_BLOCK bt es1)]
+          (mk_functype (mk_list t1l) (mk_list t2l))"
+      using Instrs_ok2__instr plain admininstr_instr.domintros admininstr_instr.psimps
+        pure.prems(8) Instrs_ok2_wf
+      by (metis Blocktype_ok.simps Instr_ok_wf(2) Instrs_ok_wf(2) admininstr_case_4
+          blockhyps(2,3))
+    then show ?case using sub subtype_typing pure.prems(9) by auto
   next
-    case (if_false c bt instr_1_lst instr_2_lst)
-    then show ?case sorry
+    case (if_false c bt es1 es2)
+    then obtain t1' t2' t3' where splitih:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST I32 c)] (mk_functype t1' t2')"
+      "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_IFELSE bt es1 es2)] (mk_functype t2' t3')"
+      "Resulttype_sub t1 t1'"
+      "Resulttype_sub t3' t2" 
+      using inv_seq[of s C' "[_,_]"
+              t1 t2 "[_]" "[_]"] by fastforce
+    have tv: "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: 
+          mk_instrtype t1' t2'" 
+      using inv_const_list[OF splitih(1), of "[val_CONST I32 c]"] typeofval.domintros
+          typeofval.psimps admininstr_val.domintros admininstr_val.psimps 
+         by simp
+    obtain t2'' t3'' where 
+      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
+      and "Instr_ok C' (instr_sc7 (IFELSE bt es1 es2)) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      using inv_plain[where ?v_instr = "instr_sc7 (IFELSE bt es1 es2)"]
+            if_false(9) splitih(2)
+      using admininstr_instr.domintros admininstr_instr.psimps by metis
+    then obtain t1l t2l where blockhyps:
+      "wf_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [],
+           context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [],
+           context_LOCALS = [], LABELS = [mk_list t2l], context_RETURN = None\<rparr>"
+       "Blocktype_ok C' bt (mk_functype (mk_list t1l) (mk_list t2l))"
+       "Instrs_ok
+        (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [],
+             context_TABLES = [], context_MEMS = [], context_ELEMS = [],
+             context_DATAS = [], context_LOCALS = [], LABELS = [mk_list t2l],
+             context_RETURN = None\<rparr>
+          C')
+        es1 (mk_functype (mk_list t1l) (mk_list t2l))"
+       "Instrs_ok
+        (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [],
+             context_TABLES = [], context_MEMS = [], context_ELEMS = [],
+             context_DATAS = [], context_LOCALS = [], LABELS = [mk_list t2l],
+             context_RETURN = None\<rparr>
+          C')
+        es2 (mk_functype (mk_list t1l) (mk_list t2l))"
+       "mk_instrtype (mk_list (t1l @ [valtype_I32]))
+        (mk_list t2l) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
+      using inv_res_if Instrs_ok__instr
+      using Instr_ok_wf by metis
+    have sub: "mk_instrtype (mk_list t1l) (mk_list t2l) <ti: mk_instrtype t1 t2"
+      using tv td blockhyps(5) splitih(3,4) 
+        produce_consume[of "[valtype_I32]" t1' t2' t1l "[valtype_I32]" t2l t3']
+      using Instrtype_sub_sub_rule Instrtype_sub_trans by blast
+    have "Instr_ok C' (instr_sc7 (BLOCK bt es2)) 
+      (mk_functype (mk_list t1l) (mk_list t2l))" 
+      using blockhyps block[OF blockhyps(2) blockhyps(4)] pure.prems(8)
+          Instrs_ok2_wf Instrs_ok_wf instr_case_4
+      by (metis Blocktype_ok.simps)
+    then have "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_BLOCK bt es2)]
+          (mk_functype (mk_list t1l) (mk_list t2l))"
+      using Instrs_ok2__instr plain admininstr_instr.domintros admininstr_instr.psimps
+        pure.prems(8) Instrs_ok2_wf
+      by (metis Blocktype_ok.simps Instr_ok_wf(2) Instrs_ok_wf(2) admininstr_case_4
+          blockhyps(2,4))
+    then show ?case using sub subtype_typing pure.prems(9) by auto
   next
     case (label_vals v_n instr_lst val_lst)
     then show ?case sorry
