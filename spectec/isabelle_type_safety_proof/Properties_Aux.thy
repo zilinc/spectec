@@ -685,17 +685,15 @@ apply (cases v_instr rule: admininstr_instr.cases)
 apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps  admininstr_ref.domintros admininstr_ref.psimps)
 done
 
-lemma instr_ok2_inversion_TEST:
+lemma Instrs_ok2_inv_plain:
   assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
-  shows
-    inv_plain_TEST: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
+  shows "a_e = (admininstr_instr v_instr) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
       ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2) \<and> 
        Instr_ok C v_instr (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))"
-
 using Instrs_ok2_inversion_helper[OF assms]
 apply (auto)
-apply(cases rule: Instr_ok2.cases)
+apply (cases rule: Instr_ok2.cases)
 apply auto
 using admininstr_instr_inj
   apply blast
@@ -708,6 +706,110 @@ apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
   using assms Instrs_ok2_REF_imp_Instr_ok apply blast
 apply (cases v_instr rule: admininstr_instr.cases)
 apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+done
+
+lemma Instrs_ok2_inv_label:
+  assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
+  shows "a_e = (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
+      (\<exists> t'_lst t_lst.
+      (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
+      (Instrs_ok2 s (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr> C) admininstr_lst (mk_functype (mk_list []) (mk_list t_lst))) \<and>
+		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<and>
+		  (v_n = (length t'_lst)) \<and>
+      ((mk_instrtype (mk_list []) (mk_list t_lst)) <ti: mk_instrtype t1 t2))"
+using Instrs_ok2_inversion_helper[OF assms]
+apply (auto)
+apply (cases rule: Instr_ok2.cases)
+apply auto
+subgoal for v_instr t_1_lst t_2_lst
+  apply (cases v_instr rule: admininstr_instr.cases)
+  by (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+subgoal for v_ref rt
+  apply (cases v_ref rule: admininstr_ref.cases)
+  by (auto simp add: admininstr_ref.domintros admininstr_ref.psimps)
+done
+
+lemma Instrs_ok2_inv_frame:
+assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
+shows "a_e = (admininstr_sc8 (FRAME_underscore v_n f admininstr_lst)) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst C' t_lst.
+		  (Frame_ok s f C') \<and>
+		  (Expr_ok2 s C' admininstr_lst (mk_list t_lst)) \<and>
+		  (wf_context C') \<and>
+		  (v_n = (length t_lst)) \<and>
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))"
+using Instrs_ok2_inversion_helper[OF assms]
+apply (auto)
+apply (cases rule: Instr_ok2.cases)
+apply auto
+subgoal for v_instr t_1_lst t_2_lst
+  apply (cases v_instr rule: admininstr_instr.cases)
+  by (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+subgoal for v_ref rt
+  apply (cases v_ref rule: admininstr_ref.cases)
+  by (auto simp add: admininstr_ref.domintros admininstr_ref.psimps)
+done
+
+lemma Instrs_ok2_inv_call_addr:
+assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
+shows "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
+      (\<exists> t_1_lst t_2_lst.
+      (Externaddr_ok s (externaddr_FUNC v_funcaddr) (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
+		  (wf_externtype (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
+      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))"
+using Instrs_ok2_inversion_helper[OF assms]
+apply (auto)
+apply (cases rule: Instr_ok2.cases)
+apply auto
+subgoal for v_instr t_1_lst t_2_lst
+  apply (cases v_instr rule: admininstr_instr.cases)
+  by (auto simp add: admininstr_instr.domintros admininstr_instr.psimps)
+subgoal for v_ref rt
+  apply (cases v_ref rule: admininstr_ref.cases)
+  by (auto simp add: admininstr_ref.domintros admininstr_ref.psimps)
+done
+
+lemma Instrs_ok2_inv_ref:
+assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
+shows "a_e = (admininstr_ref v_ref) \<Longrightarrow>
+      (\<exists> rt.
+      (Ref_ok s v_ref rt) \<and>
+      ((mk_instrtype (mk_list []) (mk_list [valtype_reftype rt])) <ti: mk_instrtype t1 t2))"
+using Instrs_ok2_inversion_helper[OF assms]
+apply (auto)
+apply (cases rule: Instr_ok2.cases)
+apply auto
+subgoal for v_instr t_1_lst t_2_lst
+  apply (case_tac v_instr rule: admininstr_instr.cases; case_tac v_ref rule: admininstr_ref.cases)
+  apply (auto simp add: admininstr_instr.domintros admininstr_instr.psimps admininstr_ref.domintros admininstr_ref.psimps)
+subgoal for x0
+  proof -
+  assume assms: "Instr_ok2 s C (admininstr_sc4 (admininstr_st4_REF_NULL x0)) (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))"
+      "mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst) <ti: mk_instrtype t1 t2"
+      "Instr_ok C (instr_sc4 (REF_NULL x0)) (mk_functype (mk_list t_1_lst)(mk_list t_2_lst))"
+      "wf_instr (instr_sc4 (REF_NULL x0))"
+  show ?thesis
+  using assms
+  apply (induction "s" "C" "(admininstr_sc4 (admininstr_st4_REF_NULL x0))" "(mk_functype (mk_list t_1_lst) (mk_list t_2_lst))" rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(1))
+  apply auto
+  apply (meson Instrs_ok__instr Instrtype_sub_trans inv_ref_null null)
+  using Instrs_ok__instr Instrtype_sub_trans inv_ref_null null
+    by blast
+  qed
+done
+apply (cases v_ref rule: admininstr_ref.cases)
+apply (auto simp add: admininstr_ref.domintros admininstr_ref.psimps)
+apply (cases v_ref rule: admininstr_ref.cases)
+apply (auto simp add: admininstr_ref.domintros admininstr_ref.psimps)
+apply (cases v_ref rule: admininstr_ref.cases)
+apply (auto simp add: admininstr_ref.domintros admininstr_ref.psimps)
+subgoal for v_refa rt
+  apply (case_tac v_ref rule: admininstr_ref.cases; case_tac v_refa rule: admininstr_ref.cases)
+  apply (simp_all add: admininstr_ref.psimps admininstr_ref.domintros)
+  apply blast+
+done
+apply (cases v_ref rule: admininstr_ref.cases)
+apply (auto simp add: admininstr_ref.domintros admininstr_ref.psimps)
 done
 
 lemma Instrs_ok2_inversion:
