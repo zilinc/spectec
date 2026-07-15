@@ -418,7 +418,12 @@ next
   }
 qed
 
-
+lemma mk_uN_proj_uN_0:
+  shows "mk_uN (proj_uN_0 k) = k" 
+proof (cases k)
+  case (mk_uN x)
+  then show ?thesis using proj_uN_0.domintros proj_uN_0.psimps by simp
+qed
 
 
 
@@ -958,8 +963,124 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     then show ?case using typevs splitih0(1,5) pure(10) Instrs_ok2__seq subtype_typing
       by (meson Instrs_ok2__sub Instrs_ok2_wf(1,2) Instrs_ok2_wf_instr Resulttype_sub_empty)
   next
-    case (br_succ v_n instr'_lst val_lst l instr_lst)
-    then show ?case sorry
+    case (br_succ n es' vs l es)
+    then obtain ts ts' where splitih0: 
+        "Instrs_ok2 s C' (map admininstr_instr es')
+        (mk_functype (mk_list ts') (mk_list ts))"
+       "Instrs_ok2 s
+        (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C')
+         (((map admininstr_val vs) @
+           [admininstr_sc0 (admininstr_st0_BR (mk_uN (proj_uN_0 l + 1)))]) @
+          map admininstr_instr es) (mk_functype (mk_list []) (mk_list ts))"
+       "wf_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>"
+       "n = length ts'" 
+       "mk_instrtype (mk_list []) (mk_list ts) <ti: mk_instrtype t1 t2" 
+      using inv_label by blast
+    then obtain ts1 ts2 ts3 where splitih:
+       "Instrs_ok2 s (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') ((map admininstr_val vs) @ 
+              [admininstr_sc0 (admininstr_st0_BR (mk_uN (proj_uN_0 l + 1)))]) (mk_functype ts1 ts2)"
+      "Instrs_ok2 s (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') (map admininstr_instr es) (mk_functype ts2 ts3)"
+      "Resulttype_sub (mk_list []) ts1" "Resulttype_sub ts3 (mk_list ts)" 
+      using inv_seq by blast 
+    then obtain ts1' ts2' ts3' where splitih': 
+      "Instrs_ok2 s (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') (map admininstr_val vs) (mk_functype ts1' ts2')"
+      "Instrs_ok2 s (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') [admininstr_sc0 (admininstr_st0_BR (mk_uN (proj_uN_0 l + 1)))] (mk_functype ts2' ts3')" 
+      "Resulttype_sub ts1 ts1'" "Resulttype_sub ts3' ts2" 
+      using inv_seq by blast
+    then obtain ts2'' ts3'' where splitih'': 
+       "Instr_ok (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') (instr_sc0 (BR (mk_uN (proj_uN_0 l + 1)))) (mk_functype ts2'' ts3'')" 
+        "mk_instrtype ts2'' ts3'' <ti: mk_instrtype ts2' ts3'"
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
+    then have  "Instrs_ok (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') [instr_sc0 (BR (mk_uN (proj_uN_0 l + 1)))] (mk_functype ts2'' ts3'')" 
+      using instr_ok_instrs_ok by auto
+    then obtain tsbr ts1br ts2br where splitihbr:
+      "proj_uN_0 (mk_uN (proj_uN_0 l + 1)) < length (LABELS (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C'))"
+      "proj_list_0 (LABELS (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') ! proj_uN_0 (mk_uN (proj_uN_0 l + 1))) = tsbr"
+      "mk_instrtype (mk_list (ts1br @ tsbr)) (mk_list ts2br) <ti: mk_instrtype ts2'' ts3''" 
+      using inv_br by presburger
+    then have proj1: "proj_uN_0 l < length (LABELS C')" 
+    proof (cases C')
+      case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+            context_ELEMS context_DATAS context_LOCALS context_LABELS context_RETURN)
+      then have "LABELS (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') = (mk_list ts') # context_LABELS" using append_res_context_def by simp
+      then show ?thesis using splitihbr proj_uN_0.domintros proj_uN_0.psimps fields by force
+    qed
+    have proj2: "proj_list_0 (LABELS C' ! proj_uN_0 l) = tsbr" 
+    proof (cases C')
+      case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+            context_ELEMS context_DATAS context_LOCALS context_LABELS context_RETURN)
+      then have "LABELS (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') = (mk_list ts') # context_LABELS" using append_res_context_def by simp
+      then show ?thesis using splitihbr proj_uN_0.domintros proj_uN_0.psimps fields by force
+    qed
+    have wfbr: "wf_instr (instr_sc0 (BR l))" 
+      using Instr_ok_wf(2)[OF splitih''(1)]
+    proof (induction "instr_sc0 (BR (mk_uN (proj_uN_0 l + 1)))" rule:wf_instr.induct)
+      case instr_case_7
+      then show ?case
+      proof(induction "mk_uN (proj_uN_0 l + 1)" rule:wf_uN.induct)
+        case (uN_case_0 v_N)
+        then show ?case using isabelle_reference_output_wasm2.instr_case_7[of l]
+          isabelle_reference_output_wasm2.uN_case_0[of "proj_uN_0 l" "32"]
+          mk_uN_proj_uN_0[of l]
+          by (metis bot_nat_0.extremum le_add1 le_trans local.instr_case_7 uN.inject wf_uN.cases)
+      qed
+    qed
+    have subvs: "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: 
+          mk_instrtype ts1' ts2'" using splitih' inv_const_list by blast
+    have "Instrs_ok2 s C' (map admininstr_val vs) 
+          (mk_functype (mk_list []) (mk_list (map typeofval vs)))" 
+      using splitih' Instrs_ok2_const_replace splitih0 Instrs_ok2_wf by blast
+    then show ?case
+      using br[OF proj1 proj2 Instrs_ok2_wf(1)[OF splitih0(1)] wfbr]
+        splitihbr(3) splitih''(2) splitih'(3,4) splitih(3,4) subvs br_succ(9) splitih0(5)
+      sorry
   next
     case (br_if_true c l)
     then show ?case sorry
