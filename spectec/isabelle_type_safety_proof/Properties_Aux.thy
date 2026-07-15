@@ -671,7 +671,7 @@ done
 lemma instr_ok2_inversion_TEST:
   assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
   shows
-    inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
+    inv_plain_TEST: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
       ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2) \<and> 
        Instr_ok C v_instr (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))"
