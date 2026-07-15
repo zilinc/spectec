@@ -305,6 +305,46 @@ proof(induction "mk_instrtype (mk_list []) (mk_list ( l))" "mk_instrtype t1 t2"
   qed
 qed
 
+lemma produce_consume_waste: 
+  assumes "mk_instrtype (mk_list []) (mk_list (junk @ l)) <ti: mk_instrtype t1 t2" 
+          "mk_instrtype (mk_list (args @ l')) (mk_list res) <ti: mk_instrtype t2 t3" 
+          "length l = length l'" 
+        shows 
+  (* "(mk_instrtype (mk_list args) (mk_list res) <ti: mk_instrtype t1 t3) \<and>  *)
+  "Resulttype_sub (mk_list l) (mk_list l')"
+  using assms
+proof(induction "mk_instrtype (mk_list []) (mk_list (junk @ l))" "mk_instrtype t1 t2"
+      rule: Instrtype_sub.induct)
+  case (mk_Instrtype_sub t1l t1fst t1snd t2l t2fst t2snd)
+  note outer = mk_Instrtype_sub
+  show ?thesis using outer(8) outer
+  proof (induction "mk_instrtype (mk_list (args @ l')) (mk_list res)" 
+          "mk_instrtype t2 t3" 
+         rule: Instrtype_sub.induct)
+    case (mk_Instrtype_sub t2l' t2fst' t2snd' t3l t3fst t3snd)
+    then obtain t2sndfst' t2sndsnd' where t2fstsnd':
+        "t2snd' = t2sndfst' @ t2sndsnd'" 
+        "Resulttype_sub (mk_list t2sndfst') (mk_list args)"
+        "Resulttype_sub (mk_list t2sndsnd') (mk_list l')" 
+      by (meson Resulttype_sub_split_left)
+    obtain t2sndfst t2sndsnd where t2fstsnd:
+       "t2snd = t2sndfst @ t2sndsnd" 
+       "Resulttype_sub (mk_list junk) (mk_list t2sndfst)"
+       "Resulttype_sub (mk_list l) (mk_list t2sndsnd)" 
+      using Resulttype_sub_split_right mk_Instrtype_sub by meson
+    then have lens: "length t2sndsnd = length t2sndsnd'" using mk_Instrtype_sub t2fstsnd'
+      by (simp add: Resulttype_sub.simps)
+    have teq: "t2l = t2l'" using mk_Instrtype_sub by auto
+    then have "t2fst @ t2sndfst = t2fst' @ t2sndfst'" using 
+        t2fstsnd(1) lens mk_Instrtype_sub(1,9) t2fstsnd'(1)
+      by (metis append.assoc append_eq_append_conv)
+    then show ?thesis 
+      using t2fstsnd t2fstsnd' mk_Instrtype_sub teq 
+      by (metis Resulttype_sub_trans append.assoc append_eq_append_conv)
+  qed
+qed
+    
+
 (* Is this lemma still useful? *)
 (*
 lemma empty_sub:

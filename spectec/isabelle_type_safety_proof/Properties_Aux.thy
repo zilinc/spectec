@@ -229,17 +229,17 @@ lemma Instrs_ok_inversion:
 		  (Instrs_ok (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t_2_lst)], context_RETURN = None \<rparr> C) instr_2_lst (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
 		  ((mk_instrtype (mk_list (t_1_lst @ [valtype_I32])) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
 	  inv_br: "e = (instr_sc0 (BR l)) \<Longrightarrow>
-      (\<exists> l t_lst t_1_lst t_2_lst.
+      (\<exists> t_lst t_1_lst t_2_lst.
 		  ((proj_uN_0 l) < (length (LABELS C))) \<and>
 		  ((proj_list_0  ((LABELS C) ! (proj_uN_0 l))) = t_lst) \<and>
 		  ((mk_instrtype (mk_list (t_1_lst @ t_lst)) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
     inv_br_if: "e = (instr_sc0 (BR_IF l)) \<Longrightarrow>
-      (\<exists> l t_lst t_1_lst.
+      (\<exists> t_lst t_1_lst.
 		  ((proj_uN_0 l) < (length (LABELS C))) \<and>
 		  ((proj_list_0  ((LABELS C) ! (proj_uN_0 l))) = t_lst) \<and>
 		  ((mk_instrtype (mk_list (t_1_lst @ [valtype_I32])) (mk_list t_lst)) <ti: mk_instrtype t1 t2))" and
     inv_br_table:  "e = (instr_sc0 (BR_TABLE l_lst l')) \<Longrightarrow>
-      (\<exists> l t_lst t_1_lst t_2_lst.
+      (\<exists> t_lst t_1_lst t_2_lst.
       (list_all (\<lambda> (l :: labelidx). ((proj_uN_0 l) < (length (LABELS C)))) l_lst) \<and>
 		  (list_all (\<lambda> (l :: labelidx). (Resulttype_sub (mk_list t_lst) ((LABELS C) ! (proj_uN_0 l)))) l_lst) \<and>
 		  ((proj_uN_0 l') < (length (LABELS C))) \<and>
@@ -511,6 +511,23 @@ lemma Instrs_ok_wf:
 proof (induction)
 qed(simp)+
 
+lemma instr_ok_instrs_ok:
+  assumes "Instr_ok C e tf"
+  shows "Instrs_ok C [e] tf" 
+proof(cases tf)
+  case (mk_functype x1 x2)
+  then show ?thesis 
+  proof (cases x1)
+    case (mk_list x)
+    note outer = mk_list
+    then show ?thesis
+    proof (cases x2)
+      case (mk_list x)
+      then show ?thesis 
+        using assms Instr_ok_wf Instrs_ok__instr mk_functype outer mk_list by blast
+    qed
+  qed
+qed
 
 (*Instrs_ok2*)
 lemma Instrs_ok2_empty:
