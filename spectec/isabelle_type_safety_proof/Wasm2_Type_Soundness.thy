@@ -675,7 +675,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
         using td(1) tv splitih (3,4) produce_consume[of 
               "[typeofval val_1 , typeofval val_2 , valtype_I32]" t1' t2' "[]" 
               "[t,t,valtype_I32]" "[t]" t3']
-              Instrtype_sub_trans by force
+              Instrtype_sub_trans by fastforce
       then have 
         subs: "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3')"
             "Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
