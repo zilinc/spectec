@@ -704,8 +704,8 @@ lemma Instrs_ok2_inversion:
       (\<exists> t'_lst t_lst.
       (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
       (Instrs_ok2 s (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr> C) admininstr_lst (mk_functype (mk_list []) (mk_list t_lst))) \<and>
-		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<Longrightarrow>
-		  (v_n = (length t'_lst)) \<Longrightarrow>
+		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<and>
+		  (v_n = (length t'_lst)) \<and>
       ((mk_instrtype (mk_list []) (mk_list t_lst)) <ti: mk_instrtype t1 t2))" and
    (*  inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
       (\<exists> t_1_lst t_2_lst.
@@ -1319,8 +1319,8 @@ qed
 *)
  
 lemma Instr_ok2_const_replace:
-  assumes "Instr_ok2 s C (admininstr_val v) tf" 
-  shows "Instr_ok2 s C (admininstr_val v) (mk_functype (mk_list []) (mk_list [typeofval v]))"
+  assumes "Instr_ok2 s C (admininstr_val v) tf" "wf_context C'" 
+  shows "Instr_ok2 s C' (admininstr_val v) (mk_functype (mk_list []) (mk_list [typeofval v]))"
 proof (cases v)
   case (val_CONST x11 x12)
   then show ?thesis using Instr_ok2_wf Instr_ok2_wf_instr assms 
@@ -1439,8 +1439,8 @@ next
 qed(auto)*)
 
 lemma Instrs_ok2_const_replace:
-  assumes "Instrs_ok2 s C (map admininstr_val vs) tf" 
-  shows "Instrs_ok2 s C (map admininstr_val vs) 
+  assumes "Instrs_ok2 s C (map admininstr_val vs) tf" "wf_context C'"
+  shows "Instrs_ok2 s C' (map admininstr_val vs) 
           (mk_functype (mk_list []) (mk_list (map typeofval vs)))"
   using assms
 proof (induction vs arbitrary:tf)
@@ -1461,25 +1461,26 @@ next
     then obtain t1'' t2'' where 
       "Instr_ok2 s C (admininstr_val a) (mk_functype t1'' t2'')" 
       using Instrs_ok2_inversion_helper by fast
-    then have "Instr_ok2 s C (admininstr_val a) (mk_functype (mk_list [])
-                (mk_list [typeofval a]))" using Instr_ok2_const_replace by fast
-    then have a: "Instrs_ok2 s C [admininstr_val a] (mk_functype (mk_list [])
+    then have "Instr_ok2 s C' (admininstr_val a) (mk_functype (mk_list [])
+                (mk_list [typeofval a]))" using Instr_ok2_const_replace
+      by (metis \<open>Instr_ok2 s C (admininstr_val a) (mk_functype t1'' t2'')\<close> 
+            Instr_ok2_const_replace assms(2))
+    then have a: "Instrs_ok2 s C' [admininstr_val a] (mk_functype (mk_list [])
                 (mk_list [typeofval a]))" using Instrs_ok2__instr 
                 Instr_ok2_wf Instr_ok2_wf_instr by simp
-    have "Instrs_ok2 s C (map admininstr_val vs) 
+    have "Instrs_ok2 s C' (map admininstr_val vs) 
                (mk_functype (mk_list []) (mk_list (map typeofval vs)))" 
-      using Cons split by fast
-    then have "Instrs_ok2 s C (map admininstr_val vs) 
+      using Cons split by (simp add: Instr_ok2_wf(1))
+    then have "Instrs_ok2 s C' (map admininstr_val vs) 
               (mk_functype (mk_list [typeofval a]) (mk_list (map typeofval (a # vs))))"
-      using Instrs_ok2__frame[of s C "map admininstr_val vs" "[]" "map typeofval vs"
+      using Instrs_ok2__frame[of s C' "map admininstr_val vs" "[]" "map typeofval vs"
               "[typeofval a]"] Instrs_ok2_wf Instrs_ok2_wf_instr by auto
     then show ?thesis using a 
-      Instrs_ok2__seq[of s C "[admininstr_val a]" "[]" "[typeofval a]" 
+      Instrs_ok2__seq[of s C' "[admininstr_val a]" "[]" "[typeofval a]" 
             "map admininstr_val vs" "map typeofval (a # vs)"]
       Instrs_ok2_wf Instrs_ok2_wf_instr by fastforce
   qed
 
 qed
-
 
 end

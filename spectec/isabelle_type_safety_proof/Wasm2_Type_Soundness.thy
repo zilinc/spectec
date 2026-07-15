@@ -559,7 +559,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
         by (meson Instrtype_sub_sub_rule Instrtype_sub_trans Resulttype_sub_refl)
       then show ?thesis 
         using pure.prems(9) splitval1(1) 
-            Instrs_ok2_const_replace[of s C' "[val_1]"] subtype_typing by auto
+            Instrs_ok2_const_replace[of s C' "[val_1]" _ C'] subtype_typing Instrs_ok2_wf by auto
     next
       case (Some ts)
        then obtain t where "ts = [t]"
@@ -593,7 +593,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
         by (meson Instrtype_sub_sub_rule Instrtype_sub_trans Resulttype_sub_refl)
       then show ?thesis 
         using pure.prems(9) splitval1(1) 
-            Instrs_ok2_const_replace[of s C' "[val_1]"] subtype_typing by auto
+            Instrs_ok2_const_replace[of s C' "[val_1]" _ C'] subtype_typing Instrs_ok2_wf by auto
     qed
   next
     case (select_false c val_1 val_2 t_lst_opt)
@@ -661,7 +661,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
         by (meson Instrtype_sub_sub_rule Instrtype_sub_trans Resulttype_sub_refl)
       then show ?thesis 
         using pure.prems(9) splitval2(1) 
-            Instrs_ok2_const_replace[of s C' "[val_2]"] subtype_typing by auto
+            Instrs_ok2_const_replace[of s C' "[val_2]" _ C'] subtype_typing Instrs_ok2_wf by auto
     next
       case (Some ts)
        then obtain t where "ts = [t]"
@@ -695,7 +695,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
         by (meson Instrtype_sub_sub_rule Instrtype_sub_trans Resulttype_sub_refl)
       then show ?thesis 
         using pure.prems(9) splitval2(1) 
-            Instrs_ok2_const_replace[of s C' "[val_2]"] subtype_typing by auto
+            Instrs_ok2_const_replace[of s C' "[val_2]" _ C'] subtype_typing Instrs_ok2_wf by auto
     qed
   next
     case (if_true c bt es1 es2)
@@ -822,8 +822,26 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
           blockhyps(2,4))
     then show ?case using sub subtype_typing pure.prems(9) by auto
   next
-    case (label_vals v_n instr_lst val_lst)
-    then show ?case sorry
+    case (label_vals n es vs)
+    then obtain ts ts' where splitih: 
+        "Instrs_ok2 s C' (map admininstr_instr es)
+        (mk_functype (mk_list ts') (mk_list ts))"
+       "Instrs_ok2 s
+        (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C')
+        (map admininstr_val vs) (mk_functype (mk_list []) (mk_list ts))"
+       "wf_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>"
+       "n = length ts'" 
+       "mk_instrtype (mk_list []) (mk_list ts) <ti: mk_instrtype t1 t2" 
+      using inv_label by blast
+    then show ?case using Instrs_ok2_const_replace
+      by (metis Instrs_ok2_wf(1) inv_const_list pure.prems(9) subtype_typing)
   next
     case (br_zero v_n val_lst instr'_lst val'_lst instr_lst)
     then show ?case sorry
