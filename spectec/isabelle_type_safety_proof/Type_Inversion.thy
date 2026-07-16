@@ -1,5 +1,6 @@
-theory Properties_Aux
+theory Type_Inversion
 	imports Main isabelle_reference_output_wasm2 Subtyping Subtyping_Properties
+          Typing_Simplified
 begin
 
  
@@ -495,40 +496,6 @@ lemma Instrs_ok_inversion:
 
 
 
-lemma Instr_ok_wf:
-  assumes "Instr_ok C e ft"
-  shows   "(wf_context C)"
-		      "(wf_instr e)"
-	using assms
-proof (induction)
-qed(simp)+
-
-lemma Instrs_ok_wf:
-  assumes "Instrs_ok C e ft"
-  shows   "(wf_context C)"
-		      "(list_all wf_instr e)"
-	using assms
-proof (induction)
-qed(simp)+
-
-lemma instr_ok_instrs_ok:
-  assumes "Instr_ok C e tf"
-  shows "Instrs_ok C [e] tf" 
-proof(cases tf)
-  case (mk_functype x1 x2)
-  then show ?thesis 
-  proof (cases x1)
-    case (mk_list x)
-    note outer = mk_list
-    then show ?thesis
-    proof (cases x2)
-      case (mk_list x)
-      then show ?thesis 
-        using assms Instr_ok_wf Instrs_ok__instr mk_functype outer mk_list by blast
-    qed
-  qed
-qed
-
 (*Instrs_ok2*)
 lemma Instrs_ok2_empty:
   assumes "Instrs_ok2 s C [] ft"
@@ -556,7 +523,7 @@ proof (induction s C "[a_e]" "mk_functype t1 t2" arbitrary:  t1 t2
         \<exists> tp1 tp2. Instr_ok2 s C e (mk_functype tp1 tp2) \<and>
           (mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2))" and ?P3.0 = "\<lambda> s C e rt. True"])
   case (plain C v_instr t_1_lst t_2_lst s)
-  then show ?case using Instr_ok2_Instrs_ok2_Expr_ok2.plain Instrtype_sub_refl
+  then show ?case using instr_ok_instr_ok2 Instrtype_sub_refl
     by fastforce
 next
   case (label s C instr'_lst t'_lst t_lst admininstr_lst v_n)
@@ -1293,113 +1260,7 @@ sorry *)
 
 
 
-lemma Instr_ok2_wf:
-  assumes "Instr_ok2 s C e ft"
-  shows   "(wf_context C)"
-          "wf_store s"
-  using assms
-proof(induction)
-qed(simp)+
 
-lemma Instrs_ok2_wf:
-  assumes "Instrs_ok2 s C e ft"
-  shows   "(wf_context C)"
-          "wf_store s"
-  using assms
-proof(induction)
-qed(simp)+
-
-lemma list_all_drop:
-  assumes "list_all (\<lambda> x. P x \<and> Q x) l"
-  shows "list_all P l"
-  using assms
-proof(induction l)
-qed(auto)
-
-
-lemma wf_admininstr_instr:
-  assumes "wf_instr e"
-  shows "wf_admininstr (admininstr_instr e)"
-  using assms
-proof(induction e rule:wf_instr.induct)
-  case (instr_case_4 v_blocktype instr_lst)
-  then show ?case using admininstr_case_4 list_all_drop 
-    by (metis admininstr_instr.domintros(5) admininstr_instr.psimps(5))
-next
-  case (instr_case_5 v_blocktype instr_lst)
-  then show ?case  using admininstr_case_5 list_all_drop 
-    by (metis admininstr_instr.domintros(6) admininstr_instr.psimps(6))
-next
-  case (instr_case_6 v_blocktype instr_lst instr_lst_0_lst)
-  then show ?case  using admininstr_case_6 list_all_drop 
-    by (metis admininstr_instr.domintros(7) admininstr_instr.psimps(7))
-qed(simp_all add: wf_admininstr.intros admininstr_instr.domintros admininstr_instr.psimps)+
-
-lemma wf_admininstr_instr_inv:
-  assumes "wf_admininstr (admininstr_instr e)"
-  shows "wf_instr e"
-  using assms
-
-   apply(induction "admininstr_instr e" rule:wf_admininstr.induct;
-                      cases e rule:admininstr_instr.cases)
-(* This next line can take a little while *)
-  apply(simp_all add:admininstr_instr.domintros admininstr_instr.psimps wf_instr.intros)
-  done
-
-  
-
-lemma Instr_ok2_wf_instr:
-  assumes "Instr_ok2 s C e ft"
-  shows "wf_admininstr e"
-  using assms
-proof(induction s C e ft rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(1)[where ?P2.0 =
-    "\<lambda> s C e ft. list_all wf_admininstr e" and ?P3.0 = "\<lambda> s C e rt. True"])
-  case (plain C v_instr t_1_lst t_2_lst s)
-  then show ?case using wf_admininstr_instr by simp 
-next
-  case (Instr_ok2__ref s v_ref rt C)
-  then show ?case
-  proof (induction rule:Ref_ok.induct)
-    case (null s rt)
-    then show ?case
-      by (simp add: admininstr_case_40 admininstr_ref.domintros(1) admininstr_ref.psimps(1))
-  next
-    case (Ref_ok__func s a ext)
-    then show ?case 
-      using admininstr_case_68 admininstr_ref.domintros(2) admininstr_ref.psimps(2) by presburger
-  next
-    case (extern s a)
-    then show ?case
-      using admininstr_case_69 admininstr_ref.domintros(3) admininstr_ref.psimps(3) by presburger
-  qed
-qed(simp)+
-
-
-lemma Instrs_ok2_wf_instr:
-  assumes "Instrs_ok2 s C e ft"
-  shows "list_all wf_admininstr e"
-  using assms
-proof(induction s C e ft rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 =
-    "\<lambda> s C e ft. wf_admininstr e" and ?P3.0 = "\<lambda> s C e rt. True"])
-  case (plain C v_instr t_1_lst t_2_lst s)
-  then show ?case using wf_admininstr_instr by simp 
-next
-  case (Instr_ok2__ref s v_ref rt C)
-  then show ?case
-  proof (induction rule:Ref_ok.induct)
-    case (null s rt)
-    then show ?case
-      by (simp add: admininstr_case_40 admininstr_ref.domintros(1) admininstr_ref.psimps(1))
-  next
-    case (Ref_ok__func s a ext)
-    then show ?case 
-      using admininstr_case_68 admininstr_ref.domintros(2) admininstr_ref.psimps(2) by presburger
-  next
-    case (extern s a)
-    then show ?case
-      using admininstr_case_69 admininstr_ref.domintros(3) admininstr_ref.psimps(3) by presburger
-  qed
-qed(simp)+
 
 (*
 lemma Instr_ok2_const:
@@ -1443,7 +1304,7 @@ lemma Instr_ok2_const_replace:
 proof (cases v)
   case (val_CONST x11 x12)
   then show ?thesis using Instr_ok2_wf Instr_ok2_wf_instr assms 
-    plain wf_admininstr_instr_inv const
+    instr_ok_instr_ok2 wf_admininstr_instr_inv const
     by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14) admininstr_val.domintros(1)
         admininstr_val.psimps(1) typeofval.domintros(1) typeofval.psimps(1))
 next
@@ -1456,7 +1317,7 @@ next
       using admininstr_instr.domintros(21) admininstr_instr.psimps(21) admininstr_val.domintros(2)
         admininstr_val.psimps(2) assms by auto
       then show ?thesis using val_VCONST Instr_ok2_wf assms 
-          plain V128
+          instr_ok_instr_ok2 V128
           vconst
           admininstr_instr.domintros(21) admininstr_instr.psimps(21)
           admininstr_val.domintros(2) admininstr_val.psimps(2) typeofval.domintros(2) 
@@ -1469,7 +1330,7 @@ next
     Instr_ok2_wf_instr assms wf_admininstr_instr_inv
     using instr_case_40 by presburger
   then show ?thesis using Instr_ok2_wf assms 
-    plain ref_null
+    instr_ok_instr_ok2 ref_null
     by (metis admininstr_instr.domintros(41) admininstr_instr.psimps(41) admininstr_val.domintros(3)
         admininstr_val.psimps(3) typeofval.domintros(3) typeofval.psimps(3) val_REF_NULL)
 next
@@ -1601,5 +1462,7 @@ next
   qed
 
 qed
+
+
 
 end
