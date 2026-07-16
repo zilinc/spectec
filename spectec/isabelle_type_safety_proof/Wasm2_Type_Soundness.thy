@@ -122,7 +122,6 @@ next
   {
     case 1 
   then have ok: "Instrs_ok2 s C' es0 tf" 
-    using Instrs_ok_inversion
     sorry (* inversion lemma on labels *) 
     then show ?case using ok ctxt_label 1 by simp
   next
@@ -465,17 +464,19 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
              res_list.exhaust pure.prems(9))
   next
     case Step_pure__nop
-    obtain t1' t2' where
-      "mk_instrtype (mk_list t1') (mk_list t2') <ti: mk_instrtype t1 t2"
-      "Instr_ok C' (instr_sc0 NOP) (mk_functype (mk_list t1') (mk_list t2'))" 
+    obtain t1' t2' where 
+      "Instr_ok2 s C' (admininstr_sc0 admininstr_st0_NOP) (mk_functype t1' t2')" 
+      and sub: "mk_instrtype t1' t2' <ti: mk_instrtype t1 t2"
+      using Step_pure__nop(8,9) inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc0 NOP) (mk_functype t1' t2')"            
       using inv_plain[where ?v_instr = "instr_sc0 NOP"]
-            Step_pure__nop(8,9)
-      using admininstr_instr.domintros(1) admininstr_instr.psimps(1) by fastforce
+      using admininstr_instr.domintros(1) admininstr_instr.psimps(1) 
+      by simp
     then show ?case 
       using Instrs_ok2_subtyping
             Instrs_ok2__empty Instrs_ok2_wf(1,2) pure.prems(8,9)
             inv_nop instr_ok_instrs_ok instr_case_0
-      by (metis (no_types, lifting))
+            sub by blast
   next
     case (Step_pure__drop v_val)
     then obtain t1' t2' t3' where splitih:
@@ -488,14 +489,17 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     have tv: "mk_instrtype (mk_list []) (mk_list [typeofval v_val]) <ti: mk_instrtype t1' t2'" 
       using inv_const_list[OF splitih(1), of "[v_val]"] by simp
     obtain t2'' t3'' where 
-      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
-      and "Instr_ok C' (instr_sc0 DROP) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      td: "mk_instrtype t2'' t3'' <ti: mk_instrtype t2' t3'"
+      and "Instr_ok2 s C' (admininstr_sc0 admininstr_st0_DROP) (mk_functype t2'' t3'')" 
+      using Step_pure__drop(9) splitih(2)
+         inv_one_admininstr 
+      by blast
+    then have "Instr_ok C' (instr_sc0 DROP) (mk_functype t2'' t3'')" 
       using inv_plain[where ?v_instr = "instr_sc0 DROP"]
-            Step_pure__drop(9) splitih(2)
       using admininstr_instr.domintros admininstr_instr.psimps by metis
     then obtain t where 
-      "mk_instrtype (mk_list [t]) (mk_list []) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
-      using inv_drop instr_ok_instrs_ok by blast
+      "mk_functype (mk_list [t]) (mk_list []) = mk_functype t2'' t3''"
+      using inv_drop by blast
     then have "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1' t3'" 
       using td tv Instrtype_sub_trans produce_consume[of 
            "[typeofval v_val]" t1' t2' "[]" "[t]" "[]"] 
@@ -530,10 +534,13 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
         admininstr_val.domintros admininstr_val.psimps typeofval.domintros typeofval.psimps 
        by simp
     obtain t2'' t3'' where 
-      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
-       "Instr_ok C' (instr_sc0 (SELECT t_lst_opt)) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      td: "mk_instrtype t2'' t3'' <ti: mk_instrtype t2' t3'"
+        "Instr_ok2 s C' (admininstr_sc0 (admininstr_st0_SELECT t_lst_opt)) 
+              (mk_functype t2'' t3'')"
+      using select_true(9) splitih(2) inv_one_admininstr by blast
+    then have
+       td': "Instr_ok C' (instr_sc0 (SELECT t_lst_opt)) (mk_functype t2'' t3'')" 
       using inv_plain[where ?v_instr = "instr_sc0 _"]
-            select_true(9) splitih(2)
       using admininstr_instr.domintros admininstr_instr.psimps by metis
     then show ?case 
     proof (cases t_lst_opt)
@@ -541,10 +548,9 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
       then obtain t v_numtype v_vectype t' where
        "Valtype_sub t t'"
        "(t' = valtype_numtype v_numtype \<or> t' = valtype_vectype v_vectype)"
-       "mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: 
-        mk_instrtype (mk_list t2'') (mk_list t3'')"
-        using td inv_select_impl
-        by (metis instr_ok_instrs_ok)
+       "mk_functype (mk_list [t, t, valtype_I32]) (mk_list [t]) = 
+        mk_functype t2'' t3''"
+        using td' inv_select_impl by blast
       then have "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3') \<and>
             Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
                     (mk_list [t,t,valtype_I32])"
@@ -575,10 +581,9 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     next
       case (Some ts)
        then obtain t where "ts = [t]"
-       "mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: 
-        mk_instrtype (mk_list t2'') (mk_list t3'')"
-        using td inv_select_expl
-        by (metis instr_ok_instrs_ok)
+       "mk_functype (mk_list [t, t, valtype_I32]) (mk_list [t]) = 
+        mk_functype t2'' t3''"
+        using td' inv_select_expl by blast
       then have "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3') \<and>
             Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
                     (mk_list [t,t,valtype_I32])"
@@ -632,10 +637,12 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
         admininstr_val.domintros admininstr_val.psimps typeofval.domintros typeofval.psimps 
        by simp
     obtain t2'' t3'' where 
-      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
-       "Instr_ok C' (instr_sc0 (SELECT t_lst_opt)) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      td: "mk_instrtype t2'' t3'' <ti: mk_instrtype t2' t3'"
+       "Instr_ok2 s C' (admininstr_sc0 (admininstr_st0_SELECT t_lst_opt)) (mk_functype t2'' t3'')" 
+      using inv_one_admininstr select_false(9) splitih(2) by blast
+    then have
+      td': "Instr_ok C' (instr_sc0 (SELECT t_lst_opt)) (mk_functype t2'' t3'')" 
       using inv_plain[where ?v_instr = "instr_sc0 _"]
-            select_false(9) splitih(2)
       using admininstr_instr.domintros admininstr_instr.psimps by metis
     then show ?case 
     proof (cases t_lst_opt)
@@ -643,10 +650,10 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
       then obtain t v_numtype v_vectype t' where
        "Valtype_sub t t'"
        "(t' = valtype_numtype v_numtype \<or> t' = valtype_vectype v_vectype)"
-       "mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: 
-        mk_instrtype (mk_list t2'') (mk_list t3'')"
-        using td inv_select_impl
-        by (metis instr_ok_instrs_ok)
+       "mk_functype (mk_list [t, t, valtype_I32]) (mk_list [t]) =
+        mk_functype t2'' t3''"
+        using td' inv_select_impl
+        by blast
       then have "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3') \<and>
             Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
                     (mk_list [t,t,valtype_I32])"
@@ -677,10 +684,10 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     next
       case (Some ts)
        then obtain t where "ts = [t]"
-       "mk_instrtype (mk_list [t, t, valtype_I32]) (mk_list [t]) <ti: 
-        mk_instrtype (mk_list t2'') (mk_list t3'')"
-        using td inv_select_expl
-        by (metis instr_ok_instrs_ok)
+       "mk_functype (mk_list [t, t, valtype_I32]) (mk_list [t]) =
+        mk_functype t2'' t3''"
+        using td' inv_select_expl
+        by blast
       then have "(mk_instrtype (mk_list []) (mk_list [t]) <ti: mk_instrtype t1' t3') \<and>
             Resulttype_sub (mk_list [typeofval val_1, typeofval val_2, valtype_I32]) 
                     (mk_list [t,t,valtype_I32])"
@@ -724,10 +731,12 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
           typeofval.psimps admininstr_val.domintros admininstr_val.psimps 
          by simp
     obtain t2'' t3'' where 
-      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
-      and "Instr_ok C' (instr_sc7 (IFELSE bt es1 es2)) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      td: "mk_instrtype t2'' t3'' <ti: mk_instrtype t2' t3'"
+      and "Instr_ok2 s C' (admininstr_sc0 (admininstr_st0_IFELSE bt es1 es2)) (mk_functype t2'' t3'')"
+      using if_true(9) splitih(2) inv_one_admininstr by blast
+    then have
+      td': "Instr_ok C' (instr_sc7 (IFELSE bt es1 es2)) (mk_functype t2'' t3'')" 
       using inv_plain[where ?v_instr = "instr_sc7 (IFELSE bt es1 es2)"]
-            if_true(9) splitih(2)
       using admininstr_instr.domintros admininstr_instr.psimps by metis
     then obtain t1l t2l where blockhyps:
       "wf_context
@@ -751,8 +760,8 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
              context_RETURN = None\<rparr>
           C')
         es2 (mk_functype (mk_list t1l) (mk_list t2l))"
-       "mk_instrtype (mk_list (t1l @ [valtype_I32]))
-        (mk_list t2l) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
+       "mk_functype (mk_list (t1l @ [valtype_I32]))
+        (mk_list t2l) = mk_functype  t2'' t3''"
       using inv_res_if instr_ok_instrs_ok by metis
     have sub: "mk_instrtype (mk_list t1l) (mk_list t2l) <ti: mk_instrtype t1 t2"
       using tv td blockhyps(5) splitih(3,4) 
@@ -784,10 +793,11 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
           typeofval.psimps admininstr_val.domintros admininstr_val.psimps 
          by simp
     obtain t2'' t3'' where 
-      td: "mk_instrtype (mk_list t2'') (mk_list t3'') <ti: mk_instrtype t2' t3'"
-      and "Instr_ok C' (instr_sc7 (IFELSE bt es1 es2)) (mk_functype (mk_list t2'') (mk_list t3''))" 
+      td: "mk_instrtype t2'' t3'' <ti: mk_instrtype t2' t3'"
+      and "Instr_ok2 s C' (admininstr_sc0 (admininstr_st0_IFELSE bt es1 es2)) (mk_functype t2'' t3'')" 
+      using if_false(9) splitih(2) inv_one_admininstr by blast
+      then have "Instr_ok C' (instr_sc7 (IFELSE bt es1 es2)) (mk_functype t2'' t3'')"
       using inv_plain[where ?v_instr = "instr_sc7 (IFELSE bt es1 es2)"]
-            if_false(9) splitih(2)
       using admininstr_instr.domintros admininstr_instr.psimps by metis
     then obtain t1l t2l where blockhyps:
       "wf_context
@@ -811,8 +821,8 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
              context_RETURN = None\<rparr>
           C')
         es2 (mk_functype (mk_list t1l) (mk_list t2l))"
-       "mk_instrtype (mk_list (t1l @ [valtype_I32]))
-        (mk_list t2l) <ti: mk_instrtype (mk_list t2'') (mk_list t3'')"
+       "mk_functype (mk_list (t1l @ [valtype_I32]))
+        (mk_list t2l) = mk_functype t2'' t3''"
       using inv_res_if instr_ok_instrs_ok by metis
     have sub: "mk_instrtype (mk_list t1l) (mk_list t2l) <ti: mk_instrtype t1 t2"
       using tv td blockhyps(5) splitih(3,4) 
@@ -832,6 +842,11 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     then show ?case using sub Instrs_ok2_subtyping pure.prems(9) by auto
   next
     case (label_vals n es vs)
+    then obtain t1' t2' where 
+      td: "Instr_ok2 s C' (admininstr_sc8 (LABEL_underscore n es (map admininstr_val vs)))
+        (mk_functype t1' t2')"
+      "mk_instrtype t1' t2' <ti: mk_instrtype t1 t2"
+      using inv_one_admininstr by blast
     then obtain ts ts' where splitih: 
         "Instrs_ok2 s C' (map admininstr_instr es)
         (mk_functype (mk_list ts') (mk_list ts))"
@@ -847,12 +862,21 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>"
        "n = length ts'" 
-       "mk_instrtype (mk_list []) (mk_list ts) <ti: mk_instrtype t1 t2" 
+       "mk_functype (mk_list []) (mk_list ts) = mk_functype t1' t2'" 
       using inv_label by blast
-    then show ?case using Instrs_ok2_const_replace
-      by (metis Instrs_ok2_wf(1) inv_const_list pure.prems(9) Instrs_ok2_subtyping)
+    then show ?case using Instrs_ok2_const_replace td 
+      by (metis Instrs_ok2_subtyping Instrs_ok2_wf(1) inv_const_list pure.prems(9))
   next
     case (br_zero n vs es' vs' es)
+    then obtain t1' t2' where td:
+      "Instr_ok2 s C'
+     (admininstr_sc8
+       (LABEL_underscore n es'
+         (((map admininstr_val vs' @ map admininstr_val vs) @
+           [admininstr_sc0 (admininstr_st0_BR (mk_uN 0))]) @
+          map admininstr_instr es))) (mk_functype t1' t2')"
+     "mk_instrtype t1' t2' <ti: mk_instrtype t1 t2"
+      using inv_one_admininstr by blast
     then obtain ts ts' where splitih0: 
         "Instrs_ok2 s C' (map admininstr_instr es')
         (mk_functype (mk_list ts') (mk_list ts))"
@@ -900,19 +924,19 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
       "Resulttype_sub ts1 ts1'" "Resulttype_sub ts3' ts2" 
       using inv_seq by blast
     then obtain ts2'' ts3'' where splitih'': 
-       "Instr_ok (append_res_context
+       "Instr_ok2 s (append_res_context
           \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
              context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
              LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-          C') (instr_sc0 (BR (mk_uN 0))) (mk_functype ts2'' ts3'')" 
+          C') (admininstr_sc0 (admininstr_st0_BR (mk_uN 0))) (mk_functype ts2'' ts3'')" 
         "mk_instrtype ts2'' ts3'' <ti: mk_instrtype ts2' ts3'"
-      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
-    then have  "Instrs_ok (append_res_context
+      using inv_one_admininstr by blast
+      then have "Instr_ok (append_res_context
           \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
              context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
              LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-          C') [instr_sc0 (BR (mk_uN 0))] (mk_functype ts2'' ts3'')" 
-      using instr_ok_instrs_ok by auto
+          C') (instr_sc0 (BR (mk_uN 0))) (mk_functype ts2'' ts3'')"
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
     then obtain tsbr ts1br ts2br where splitihbr:
       "proj_uN_0 (mk_uN 0) < length (LABELS (append_res_context
           \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
@@ -924,7 +948,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
              context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
              LABELS = [mk_list ts'], context_RETURN = None\<rparr>
           C') ! proj_uN_0 (mk_uN 0)) = tsbr"
-      "mk_instrtype (mk_list (ts1br @ tsbr)) (mk_list ts2br) <ti: mk_instrtype ts2'' ts3''" 
+      "mk_functype (mk_list (ts1br @ tsbr)) (mk_list ts2br) = mk_functype ts2'' ts3''" 
       using inv_br by presburger
     obtain t1v t2v t3v where splitihv:
       "Instrs_ok2 s (append_res_context
@@ -964,13 +988,22 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     then have "Resulttype_sub (mk_list (map typeofval vs)) (mk_list ts')"
       using splitihbr(3) splitih''(2) splitihv(3,4)
         Instrtype_sub_emptyl[OF subvs' subvs] 
-        produce_consume_waste[of "map typeofval vs'" "map typeofval vs" _ _ ts1br tsbr] 
-        br_zero(1) splitih0(4)
-      by (metis Instrtype_sub_trans inv_const_list length_map map_append splitih'(1))
+        produce_consume_waste[of "map typeofval vs'" "map typeofval vs" ts1' ts2' ts1br tsbr 
+            ts2br ts3'] 
+        br_zero(1) splitih0(4) Instrtype_sub_trans length_map map_append 
+      by (metis functype.inject inv_const_list splitih'(1)) 
     then show ?case using typevs splitih0(1,5) pure(10) Instrs_ok2__seq Instrs_ok2_subtyping
       by (meson Instrs_ok2__sub Instrs_ok2_wf(1,2) Instrs_ok2_wf_instr Resulttype_sub_empty)
   next
     case (br_succ n es' vs l es)
+    then obtain t1' t2' where td:
+      "Instr_ok2 s C'
+     (admininstr_sc8
+       (LABEL_underscore n es'
+         ((map admininstr_val vs @ [admininstr_sc0 (admininstr_st0_BR (mk_uN (proj_uN_0 l + 1)))]) @
+          map admininstr_instr es))) (mk_functype t1' t2')"
+      "mk_instrtype t1' t2' <ti: mk_instrtype t1 t2"
+      using inv_one_admininstr by blast
     then obtain ts ts' where splitih0: 
         "Instrs_ok2 s C' (map admininstr_instr es')
         (mk_functype (mk_list ts') (mk_list ts))"
@@ -988,7 +1021,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>"
        "n = length ts'" 
-       "mk_instrtype (mk_list []) (mk_list ts) <ti: mk_instrtype t1 t2" 
+       "mk_functype (mk_list []) (mk_list ts) = mk_functype t1' t2'" 
       using inv_label by blast
     then obtain ts1 ts2 ts3 where splitih:
        "Instrs_ok2 s (append_res_context
@@ -1018,19 +1051,19 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
       "Resulttype_sub ts1 ts1'" "Resulttype_sub ts3' ts2" 
       using inv_seq by blast
     then obtain ts2'' ts3'' where splitih'': 
-       "Instr_ok (append_res_context
+       "Instr_ok2 s (append_res_context
+          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+          C') (admininstr_sc0 (admininstr_st0_BR (mk_uN (proj_uN_0 l + 1)))) (mk_functype ts2'' ts3'')" 
+        "mk_instrtype ts2'' ts3'' <ti: mk_instrtype ts2' ts3'"
+      using inv_one_admininstr by blast
+    then have brok: "Instr_ok (append_res_context
           \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
              context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
              LABELS = [mk_list ts'], context_RETURN = None\<rparr>
           C') (instr_sc0 (BR (mk_uN (proj_uN_0 l + 1)))) (mk_functype ts2'' ts3'')" 
-        "mk_instrtype ts2'' ts3'' <ti: mk_instrtype ts2' ts3'"
-      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
-    then have  "Instrs_ok (append_res_context
-          \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
-             context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
-             LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-          C') [instr_sc0 (BR (mk_uN (proj_uN_0 l + 1)))] (mk_functype ts2'' ts3'')" 
-      using instr_ok_instrs_ok by auto
+using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
     then obtain tsbr ts1br ts2br where splitihbr:
       "proj_uN_0 (mk_uN (proj_uN_0 l + 1)) < length (LABELS (append_res_context
           \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
@@ -1042,7 +1075,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
              context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
              LABELS = [mk_list ts'], context_RETURN = None\<rparr>
           C') ! proj_uN_0 (mk_uN (proj_uN_0 l + 1))) = tsbr"
-      "mk_instrtype (mk_list (ts1br @ tsbr)) (mk_list ts2br) <ti: mk_instrtype ts2'' ts3''" 
+      "mk_functype (mk_list (ts1br @ tsbr)) (mk_list ts2br) = mk_functype ts2'' ts3''" 
       using inv_br by presburger
     then have proj1: "proj_uN_0 l < length (LABELS C')" 
     proof (cases C')
@@ -1067,7 +1100,7 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
       then show ?thesis using splitihbr proj_uN_0.domintros proj_uN_0.psimps fields by force
     qed
     have wfbr: "wf_instr (instr_sc0 (BR l))" 
-      using Instr_ok_wf(2)[OF splitih''(1)]
+      using Instr_ok_wf(2)[OF brok]
     proof (induction "instr_sc0 (BR (mk_uN (proj_uN_0 l + 1)))" rule:wf_instr.induct)
       case instr_case_7
       then show ?case
@@ -1084,14 +1117,23 @@ proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'"
     have "Instrs_ok2 s C' (map admininstr_val vs) 
           (mk_functype (mk_list []) (mk_list (map typeofval vs)))" 
       using splitih' Instrs_ok2_const_replace splitih0 Instrs_ok2_wf by blast
+    then have "Instrs_ok2 s C' (map admininstr_val vs @ 
+              [admininstr_sc0 (admininstr_st0_BR l)])
+              (mk_functype ts1' ts3') " 
+      using 
+        instr_ok2_instrs_ok2[OF
+        instr_ok_instr_ok2[OF 
+          br[OF proj1 proj2 Instrs_ok2_wf(1)[OF splitih0(1)] wfbr, of ts1br ts2br]
+           Instrs_ok2_wf(2)[OF splitih0(1)]]]
+        splitihbr(3) splitih''(2) subvs 
+        instrs_ok2_seq[of s C' "map admininstr_val vs" ts1' ts2' "[_]" ts3']
+        Instrs_ok2_subtyping 
+      by (simp add: admininstr_instr.domintros(8) admininstr_instr.psimps(8))
+    (* have "mk_instrtype ts1' ts3' <ti: mk_instrtype t1 t2"  *)
     then show ?case
-      using br[OF proj1 proj2 Instrs_ok2_wf(1)[OF splitih0(1)] wfbr]
-        splitihbr(3) splitih''(2) splitih'(3,4) splitih(3,4) subvs 
-        br_succ(9) splitih0(5)
-        instrs_ok2_seq[of s C' "map admininstr_val vs" ts1' ts2' _ ts3']
-        instr_ok_instr_ok2 Instrs_ok2_wf Instrs_ok2_subtyping 
-      
+      using splitih'(3,4) splitih(3,4) br_succ(9) splitih0(5) td(2)
       sorry
+      
   next
     case (br_if_true c l)
     then show ?case sorry
