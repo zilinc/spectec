@@ -424,6 +424,13 @@ proof (cases k)
   then show ?thesis using proj_uN_0.domintros proj_uN_0.psimps by simp
 qed
 
+lemma mk_list_proj_list_0:
+  shows "mk_list (proj_list_0 l) = l"
+proof (cases l)
+  case (mk_list x)
+  then show ?thesis using proj_list_0.domintros proj_list_0.psimps by blast
+qed
+
 (*
 lemma Instrs_ok2_seq_sub:
   assumes 
@@ -1215,11 +1222,122 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
     then show ?case using Instrs_ok2__empty Instrs_ok2_wf[OF split(1)] 
       br_if_false(11) sub Instrs_ok2_subtyping Instrtype_sub_sub_rule[OF split(3,4)] by auto
   next
-    case (br_table_lt i l_lst l')
-    then show ?case sorry
+    case (br_table_lt c ls l)
+    then obtain ts1 ts2 ts3 where split:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST I32 c)] (mk_functype ts1 ts2)" 
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_BR_TABLE ls l)] (mk_functype ts2 ts3)"
+      "Resulttype_sub t1 ts1" "Resulttype_sub ts3 t2" 
+      using inv_seq[of s C' "[_,_]" t1 t2 "[_]" "[_]"] by fastforce 
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: mk_instrtype ts1 ts2"
+      using inv_const_list[OF split(1), of "[val_CONST I32 c]"]
+        admininstr_val.domintros admininstr_val.psimps typeofval.domintros typeofval.psimps
+      by simp
+    obtain ts2' ts3' where 
+      "Instr_ok2 s C' (admininstr_sc1 (admininstr_st1_BR_TABLE ls l)) (mk_functype ts2' ts3')" 
+      and subt: "mk_instrtype ts2' ts3' <ti: mk_instrtype ts2 ts3" 
+      using split inv_one_admininstr by blast
+    then have brifok: "Instr_ok C' (instr_sc0 (BR_TABLE ls l)) (mk_functype ts2' ts3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by simp
+    then obtain ts tbef taft where brhyps:
+      "list_all (\<lambda>l. proj_uN_0 l < length (LABELS C')) ls"
+      "list_all (\<lambda>l. Resulttype_sub (mk_list ts) (LABELS C' ! proj_uN_0 l)) ls"
+      "proj_uN_0 l < length (LABELS C')"
+      "Resulttype_sub (mk_list ts) (LABELS C' ! proj_uN_0 l)"
+      "mk_functype (mk_list (tbef @ ts @ [valtype_I32])) (mk_list taft) = mk_functype ts2' ts3'"
+      using inv_br_table by blast  
+    then have sub: "mk_instrtype (mk_list (tbef @ ts)) (mk_list taft) <ti: mk_instrtype ts1 ts3"
+      using produce_consume[of "[valtype_I32]" ts1 ts2 "tbef @ ts" "[valtype_I32]" taft ts3]
+        subv subt by fastforce
+    have wfbr: "wf_instr (instr_sc0 (BR (ls ! proj_uN_0 (the (proj_num__0 c)))))" 
+      using Instr_ok_wf(2)[OF brifok]
+    proof (induction "instr_sc0 (BR_TABLE ls l)" rule:wf_instr.induct)
+      case instr_case_9
+      then show ?case using instr_case_7 
+        by (simp add: br_table_lt.hyps(1) list_all_length) 
+    qed
+    then have brok: "Instr_ok C' (instr_sc0 (BR (ls ! proj_uN_0 (the (proj_num__0 c))))) 
+                (mk_functype (mk_list (tbef @  
+                  proj_list_0 (LABELS C' ! proj_uN_0 (ls ! proj_uN_0 (the (proj_num__0 c)))))) 
+              (mk_list taft))" 
+      using br brhyps br_table_lt(1) list_all_length Instrs_ok2_wf(1)[OF split(1)]
+      by meson
+    have "mk_instrtype (mk_list (tbef @  
+                  proj_list_0 (LABELS C' ! proj_uN_0 (ls ! proj_uN_0 (the (proj_num__0 c)))))) 
+              (mk_list taft) <ti: mk_instrtype (mk_list (tbef @ ts)) (mk_list taft)" 
+      using 
+        Instrtype_sub_sub_rule[of "mk_list (tbef @ ts)" "mk_list (tbef @ proj_list_0 
+            (LABELS C' ! proj_uN_0 (ls ! proj_uN_0 (the (proj_num__0 c)))))" "mk_list taft" 
+            "mk_list taft"]
+        Resulttype_sub_append[OF Resulttype_sub_refl[of "mk_list tbef"], of ts 
+            "proj_list_0 (LABELS C' ! proj_uN_0 (ls ! proj_uN_0 (the (proj_num__0 c))))"] 
+        brhyps(2) br_table_lt(1) list_all_length Resulttype_sub_refl[of "mk_list taft"]
+        mk_list_proj_list_0 by metis
+    then have "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_BR 
+              (ls ! proj_uN_0 (the (proj_num__0 c))))]
+                (mk_functype (mk_list (tbef @ ts)) (mk_list taft))"
+      using instr_ok_instr_ok2 instr_ok2_instrs_ok2 Instrs_ok2_subtyping brok 
+        Instrs_ok2_wf(2)[OF split(1)]
+      by (metis admininstr_instr.domintros(8) admininstr_instr.psimps(8))
+    then show ?case using sub Instrs_ok2_subtyping br_table_lt(11) split(3,4)
+      Instrtype_sub_sub_rule by meson
   next
-    case (br_table_ge i l_lst l')
-    then show ?case sorry
+    case (br_table_ge c ls l)
+    then obtain ts1 ts2 ts3 where split:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST I32 c)] (mk_functype ts1 ts2)" 
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_BR_TABLE ls l)] (mk_functype ts2 ts3)"
+      "Resulttype_sub t1 ts1" "Resulttype_sub ts3 t2" 
+      using inv_seq[of s C' "[_,_]" t1 t2 "[_]" "[_]"] by fastforce 
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: mk_instrtype ts1 ts2"
+      using inv_const_list[OF split(1), of "[val_CONST I32 c]"]
+        admininstr_val.domintros admininstr_val.psimps typeofval.domintros typeofval.psimps
+      by simp
+    obtain ts2' ts3' where 
+      "Instr_ok2 s C' (admininstr_sc1 (admininstr_st1_BR_TABLE ls l)) (mk_functype ts2' ts3')" 
+      and subt: "mk_instrtype ts2' ts3' <ti: mk_instrtype ts2 ts3" 
+      using split inv_one_admininstr by blast
+    then have brifok: "Instr_ok C' (instr_sc0 (BR_TABLE ls l)) (mk_functype ts2' ts3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by simp
+    then obtain ts tbef taft where brhyps:
+      "list_all (\<lambda>l. proj_uN_0 l < length (LABELS C')) ls"
+      "list_all (\<lambda>l. Resulttype_sub (mk_list ts) (LABELS C' ! proj_uN_0 l)) ls"
+      "proj_uN_0 l < length (LABELS C')"
+      "Resulttype_sub (mk_list ts) (LABELS C' ! proj_uN_0 l)"
+      "mk_functype (mk_list (tbef @ ts @ [valtype_I32])) (mk_list taft) = mk_functype ts2' ts3'"
+      using inv_br_table by blast  
+    then have sub: "mk_instrtype (mk_list (tbef @ ts)) (mk_list taft) <ti: mk_instrtype ts1 ts3"
+      using produce_consume[of "[valtype_I32]" ts1 ts2 "tbef @ ts" "[valtype_I32]" taft ts3]
+        subv subt by fastforce
+    have wfbr: "wf_instr (instr_sc0 (BR l))" 
+      using Instr_ok_wf(2)[OF brifok]
+    proof (induction "instr_sc0 (BR_TABLE ls l)" rule:wf_instr.induct)
+      case instr_case_9
+      then show ?case using instr_case_7 by simp
+    qed
+    then have brok: "Instr_ok C' (instr_sc0 (BR l)) 
+                (mk_functype (mk_list (tbef @  
+                  proj_list_0 (LABELS C' ! proj_uN_0 l))) 
+              (mk_list taft))" 
+      using br brhyps Instrs_ok2_wf(1)[OF split(1)]
+      by meson
+    have "mk_instrtype (mk_list (tbef @  
+                  proj_list_0 (LABELS C' ! proj_uN_0 l))) 
+              (mk_list taft) <ti: mk_instrtype (mk_list (tbef @ ts)) (mk_list taft)" 
+      using 
+        Instrtype_sub_sub_rule[of "mk_list (tbef @ ts)" "mk_list (tbef @ proj_list_0 
+            (LABELS C' ! proj_uN_0 l))" "mk_list taft" 
+            "mk_list taft"]
+        Resulttype_sub_append[OF Resulttype_sub_refl[of "mk_list tbef"], of ts 
+            "proj_list_0 (LABELS C' ! proj_uN_0 l)"] 
+        brhyps(4) Resulttype_sub_refl[of "mk_list taft"]
+        mk_list_proj_list_0 by metis
+    then have "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_BR 
+              l)]
+                (mk_functype (mk_list (tbef @ ts)) (mk_list taft))"
+      using instr_ok_instr_ok2 instr_ok2_instrs_ok2 Instrs_ok2_subtyping brok 
+        Instrs_ok2_wf(2)[OF split(1)]
+      by (metis admininstr_instr.domintros(8) admininstr_instr.psimps(8))
+    then show ?case using sub Instrs_ok2_subtyping br_table_ge(11) split(3,4)
+      Instrtype_sub_sub_rule by meson
   next
     case (frame_vals v_n val_lst f)
     then show ?case sorry
