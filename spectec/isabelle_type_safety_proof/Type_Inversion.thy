@@ -690,12 +690,12 @@ done
 lemma inv_frame:
 assumes "Instr_ok2 s C a_e tf"
 shows "a_e = (admininstr_sc8 (FRAME_underscore v_n f admininstr_lst)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst C' t_lst.
+      (\<exists> C' t_lst.
 		  (Frame_ok s f C') \<and>
 		  (Expr_ok2 s C' admininstr_lst (mk_list t_lst)) \<and>
 		  (wf_context C') \<and>
 		  (v_n = (length t_lst)) \<and>
-      ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) = tf))"
+      ((mk_functype (mk_list []) (mk_list t_lst)) = tf))"
 using assms
 apply (auto)
 apply (cases rule: Instr_ok2.cases)
@@ -1313,6 +1313,29 @@ proof -
 qed
 
 
+lemma inv_expr:
+  assumes "Expr_ok2 s C es ts"
+  shows "Instrs_ok2 s C es (mk_functype (mk_list []) ts)"
+        "wf_store s" "wf_context C" "list_all wf_admininstr es"
+  using assms
+proof(induction s C es ts rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(3)[where ?P1.0 = 
+  "\<lambda> s C e tf. True" and ?P2.0 = "\<lambda> s C es tf. True"])
+  case (mk_Expr_ok2 s C es ts)
+ {
+    case 1
+    then show ?case using mk_Expr_ok2 by simp
+  next
+    case 2
+    then show ?case using mk_Expr_ok2 by simp
+  next
+    case 3
+    then show ?case using mk_Expr_ok2 by simp
+  next
+    case 4
+    then show ?case using mk_Expr_ok2 by simp
+  }
+qed(simp_all)
+  
 
 (*
 lemma inv_cons:

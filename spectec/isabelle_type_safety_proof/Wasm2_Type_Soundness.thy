@@ -1339,8 +1339,24 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
     then show ?case using sub Instrs_ok2_subtyping br_table_ge(11) split(3,4)
       Instrtype_sub_sub_rule by meson
   next
-    case (frame_vals v_n val_lst f)
-    then show ?case sorry
+    case (frame_vals n vs f)
+    then obtain ts1 ts2 where 
+      "Instr_ok2 s C' (admininstr_sc8 (FRAME_underscore n f (map admininstr_val vs)))
+          (mk_functype ts1 ts2)" 
+      and sub: "mk_instrtype ts1 ts2 <ti: mk_instrtype t1 t2" 
+      using inv_one_admininstr by blast
+    then obtain Cf ts where invframe:
+        "Frame_ok s f Cf" 
+        "Expr_ok2 s Cf (map admininstr_val vs) (mk_list ts)"
+        "wf_context Cf" "n = length ts" 
+        "mk_functype (mk_list []) (mk_list ts) = mk_functype ts1 ts2"
+      using inv_frame by blast
+    then have inv:
+        "Instrs_ok2 s Cf (map admininstr_val vs) (mk_functype (mk_list []) (mk_list ts))"
+      using inv_expr by blast
+    then show ?case using sub frame_vals(10) invframe(5) Instrs_ok2_subtyping
+      by (metis Instrs_ok2_subtyping invframe(5) pure.prems(9) inv local.sub 
+          inv_const_list pure.prems(8) Instrs_ok2_wf(1) Instrs_ok2_const_replace)
   next
     case (return_frame v_n val_lst f val'_lst instr_lst)
     then show ?case sorry
