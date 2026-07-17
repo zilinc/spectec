@@ -343,14 +343,41 @@ proof(induction "mk_instrtype (mk_list []) (mk_list (junk @ l))" "mk_instrtype t
       by (metis Resulttype_sub_trans append.assoc append_eq_append_conv)
   qed
 qed
-    
 
-(* Is this lemma still useful? *)
-(*
-lemma empty_sub:
-  assumes "Resulttype_sub t1 t2"
-  shows "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1 t2"
-  by (metis assms Instrtype_sub_trans append.right_neutral Instrtype_sub_frame_rule 
-      Instrtype_sub_sub_rule res_list.exhaust Resulttype_sub_refl) *)
+lemma subtyping_length_l:
+  assumes "mk_instrtype (mk_list l1) (mk_list l2) <ti: mk_instrtype (mk_list l3) (mk_list l4)"
+  shows "length l1 \<le> length l3"
+  using assms
+proof (induction "mk_instrtype (mk_list l1) (mk_list l2)" "mk_instrtype (mk_list l3) (mk_list l4)"
+        rule:Instrtype_sub.induct)
+  case (mk_Instrtype_sub t_lst t_11'_lst t'_lst t_12'_lst) then show ?case 
+    by (simp add: Resulttype_sub.simps)
+qed
+
+
+lemma subtyping_length_r:
+  assumes "mk_instrtype (mk_list l1) (mk_list l2) <ti: mk_instrtype (mk_list l3) (mk_list l4)"
+  shows "length l2 \<le> length l4"
+  using assms
+proof (induction "mk_instrtype (mk_list l1) (mk_list l2)" "mk_instrtype (mk_list l3) (mk_list l4)"
+        rule:Instrtype_sub.induct)
+  case (mk_Instrtype_sub t_lst t_11'_lst t'_lst t_12'_lst) then show ?case 
+    by (simp add: Resulttype_sub.simps)
+qed
+
+lemma produce_consume_arbitrary:
+  assumes "mk_instrtype (mk_list []) (mk_list l) <ti: mk_instrtype t1 t2" 
+          "mk_instrtype (mk_list (args @ l')) (mk_list res) <ti: mk_instrtype t2 t3"
+          "length l \<ge> length l'" 
+        shows "\<exists> l1 l2. l = l1 @ l2 \<and> Resulttype_sub (mk_list l2) (mk_list l')"
+  using assms
+proof - 
+  have 
+      "l = take (length l - length l') l @ drop (length l - length l') l" 
+      "length ((drop (length l - length l') l)) = length l'" 
+    using assms(3) by auto
+  then show ?thesis using produce_consume_waste assms by metis
+qed
+
 
 end

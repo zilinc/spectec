@@ -1114,26 +1114,40 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
     qed
     have subvs: "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: 
           mk_instrtype ts1' ts2'" using splitih' inv_const_list by blast
-    have "Instrs_ok2 s C' (map admininstr_val vs) 
+    have vsok: "Instrs_ok2 s C' (map admininstr_val vs) 
           (mk_functype (mk_list []) (mk_list (map typeofval vs)))" 
       using splitih' Instrs_ok2_const_replace splitih0 Instrs_ok2_wf by blast
+    have sucl: "proj_uN_0 l + 1 = Suc (proj_uN_0 l)" by auto
+    have "LABELS C' ! proj_uN_0 l = mk_list tsbr"
+      proof (cases "LABELS C' ! proj_uN_0 l")
+      case (mk_list x)
+      then show ?thesis using proj2 proj_list_0.domintros proj_list_0.psimps by metis
+    qed
+    then obtain vs1 vs2 where 
+      "vs = vs1 @ vs2" 
+      "Resulttype_sub (mk_list (map typeofval vs2)) (mk_list tsbr)"
+      using inv_label_const_list_br td(1) sucl
+      by metis 
+    then have "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti:
+                 mk_instrtype (mk_list []) (mk_list (map typeofval vs1 @ tsbr))" 
+      using mk_Instrtype_sub Resulttype_sub_refl 
+      using Instrtype_sub_sub_rule Resulttype_sub_append by simp
     then have "Instrs_ok2 s C' (map admininstr_val vs @ 
               [admininstr_sc0 (admininstr_st0_BR l)])
-              (mk_functype ts1' ts3') " 
+              (mk_functype (mk_list []) (mk_list ts)) "  
       using 
+        vsok
         instr_ok2_instrs_ok2[OF
         instr_ok_instr_ok2[OF 
-          br[OF proj1 proj2 Instrs_ok2_wf(1)[OF splitih0(1)] wfbr, of ts1br ts2br]
+          br[OF proj1 proj2 Instrs_ok2_wf(1)[OF splitih0(1)] wfbr, of "map typeofval vs1" ts]
            Instrs_ok2_wf(2)[OF splitih0(1)]]]
-        splitihbr(3) splitih''(2) subvs 
-        instrs_ok2_seq[of s C' "map admininstr_val vs" ts1' ts2' "[_]" ts3']
-        Instrs_ok2_subtyping 
+        instrs_ok2_seq[of s C' "map admininstr_val vs" "mk_list []" 
+              "mk_list (map typeofval vs1 @ tsbr)" "[_]" "mk_list ts"]
+        Instrs_ok2_subtyping
       by (simp add: admininstr_instr.domintros(8) admininstr_instr.psimps(8))
-    (* have "mk_instrtype ts1' ts3' <ti: mk_instrtype t1 t2"  *)
-    then show ?case
-      using splitih'(3,4) splitih(3,4) br_succ(9) splitih0(5) td(2)
-      sorry
-      
+    then show ?case using splitihbr(3) splitih''(2) subvs 
+        splitih'(3,4) splitih(3,4) br_succ(9) splitih0(5) td(2)
+      using Instrs_ok2_subtyping by blast
   next
     case (br_if_true c l)
     then show ?case sorry

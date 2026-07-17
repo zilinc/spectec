@@ -1198,6 +1198,122 @@ next
       qed qed qed
     qed (simp)+
 
+
+lemma inv_label_const_list_br:
+  assumes "Instr_ok2 s C (admininstr_sc8 (LABEL_underscore n es 
+            ((map admininstr_val vs @ [admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))]) @ es'))) 
+        (mk_functype t1 t2)" 
+        "LABELS C ! l = tsb" 
+      shows "\<exists> vs1 vs2. vs = vs1 @ vs2 \<and> Resulttype_sub (mk_list (map typeofval vs2)) tsb"
+proof -
+  obtain ts' ts where splitassms:
+    "Instrs_ok2 s C (map admininstr_instr es) (mk_functype (mk_list ts') (mk_list ts))"
+    "Instrs_ok2 s
+      (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C)
+      ((map admininstr_val vs @ [admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))]) @ es') 
+(mk_functype (mk_list []) (mk_list ts))"
+     "wf_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>"
+     "n = length ts'"  "mk_functype (mk_list []) (mk_list ts) = mk_functype t1 t2" 
+    using inv_label[OF assms(1)] by blast
+  then obtain t0s1 t0s2 t0s3 where topsplit:
+     "Instrs_ok2 s (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) (map admininstr_val vs @ [admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))]) 
+        (mk_functype t0s1 t0s2)" 
+      "Instrs_ok2 s (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) es' (mk_functype t0s2 t0s3)" 
+      "Resulttype_sub (mk_list []) t0s1" "Resulttype_sub t0s3 (mk_list ts)"
+    using inv_seq by blast
+  then obtain ts1 ts2 ts3 where splitvsbr:
+      "Instrs_ok2 s  (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) (map admininstr_val vs) (mk_functype ts1 ts2)" 
+      "Instrs_ok2 s  (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) [admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))] (mk_functype ts2 ts3)" 
+      "Resulttype_sub (mk_list []) ts1" "Resulttype_sub ts3 t0s2"
+    using inv_seq Resulttype_sub_trans by blast
+  then have "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: mk_instrtype ts1 ts2"
+    using inv_const_list by blast
+  then have vssub: "Resulttype_sub (mk_list (map typeofval vs)) ts2"
+    using splitvsbr(3) 
+    by (simp add: Instrtype_sub.simps Resulttype_sub.simps)
+  obtain ts2' ts3' where 
+     "Instr_ok2 s  (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) (admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))) (mk_functype ts2' ts3')"
+      and subts: "mk_instrtype ts2' ts3' <ti: mk_instrtype ts2 ts3" 
+    using splitvsbr(2) inv_one_admininstr by blast
+  then have "Instr_ok (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) (instr_sc0 (BR (mk_uN (Suc l)))) (mk_functype ts2' ts3')"
+    using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
+  then obtain t1b t2b tb where ihbr:
+    "proj_uN_0 (mk_uN (Suc l)) < length (LABELS (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) )"
+   "proj_list_0 (LABELS (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) ! proj_uN_0 (mk_uN (Suc l))) = tb"
+   "mk_functype (mk_list (t1b @ tb)) (mk_list t2b) = mk_functype ts2' ts3'"
+    using inv_br by blast
+  have "LABELS (append_res_context
+        \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+           context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+           LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+        C) = mk_list ts' # LABELS C" using append_res_context_def by simp
+  then have tbtsb: "tb = proj_list_0 tsb" 
+    using ihbr(2) proj_uN_0.domintros proj_uN_0.psimps
+      assms(2) by simp
+  then have tbtsb: "mk_list tb = tsb"
+    by (metis proj_list_0.cases proj_list_0.domintros proj_list_0.psimps)
+  show ?thesis using subts vssub ihbr(3) splitvsbr(4) tbtsb 
+  proof(induction "mk_instrtype ts2' ts3'" "mk_instrtype ts2 ts3" rule:Instrtype_sub.induct)
+    case (mk_Instrtype_sub ts2l t2fst t2lst ts3l t3fst t3lst t1btb t2bl)
+    then obtain vsa vsb where vsab:
+      "vs = vsa @ vsb" 
+      "Resulttype_sub (mk_list (map typeofval vsa)) (mk_list t2fst)"
+      "Resulttype_sub (mk_list (map typeofval vsb)) (mk_list t2lst)"
+      using Resulttype_sub_split_left map_is_app by metis
+    then obtain vsc vsd where vscd:
+      "map typeofval vsb = vsc @ vsd" 
+      "Resulttype_sub (mk_list (vsc)) (mk_list t1b)"
+      "Resulttype_sub (mk_list (vsd)) (mk_list tb)" 
+      using Resulttype_sub_split_left[of "map typeofval vsb" t1b tb] mk_Instrtype_sub 
+      using Resulttype_sub_trans by blast
+    then obtain vsc' vsd' where 
+      "vsb = vsc' @ vsd'" "map typeofval vsc' = vsc" "map typeofval vsd' = vsd"
+      using map_is_app by blast
+    then show ?case using mk_Instrtype_sub vsab vscd map_is_app by fastforce
+  qed
+qed
+
+
+
 (*
 lemma inv_cons:
   assumes "Instrs_ok2 s C es (mk_functype t1 t4)"
