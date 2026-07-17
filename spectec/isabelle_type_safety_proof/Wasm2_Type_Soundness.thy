@@ -1358,32 +1358,91 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
       by (metis Instrs_ok2_subtyping invframe(5) pure.prems(9) inv local.sub 
           inv_const_list pure.prems(8) Instrs_ok2_wf(1) Instrs_ok2_const_replace)
   next
-    case (return_frame v_n val_lst f val'_lst instr_lst)
+    case (return_frame n vs f vs' es)
+    then obtain t1' t2' where
+      "Instr_ok2 s C' (admininstr_sc8
+       (FRAME_underscore n f
+         (((map admininstr_val vs' @ map admininstr_val vs) @ [admininstr_sc1 admininstr_st1_RETURN]) @
+          map admininstr_instr es))) (mk_functype t1' t2')"
+      and subt: "mk_instrtype t1' t2' <ti: mk_instrtype t1 t2" 
+      using inv_one_admininstr by blast
+    then obtain Cf ts where framehyps:
+      "Frame_ok s f Cf"
+      "Expr_ok2 s Cf (((map admininstr_val vs' @ map admininstr_val vs) @ [admininstr_sc1 admininstr_st1_RETURN]) @
+          map admininstr_instr es) (mk_list ts)"
+      "wf_context Cf" "n = length ts" 
+      "mk_functype (mk_list []) (mk_list ts) = mk_functype t1' t2'"
+      using inv_frame by blast
+    then have "Instrs_ok2 s Cf (((map admininstr_val vs' @ map admininstr_val vs) @ 
+            [admininstr_sc1 admininstr_st1_RETURN]) @
+          map admininstr_instr es) (mk_functype (mk_list []) (mk_list ts))" 
+      using inv_expr by blast
+    then obtain ts1 ts2 ts3 where splites:
+      "Instrs_ok2 s Cf ((map admininstr_val vs' @ map admininstr_val vs) @ 
+            [admininstr_sc1 admininstr_st1_RETURN]) (mk_functype ts1 ts2)"
+      "Instrs_ok2 s Cf (map admininstr_instr es) (mk_functype ts2 ts3)" 
+      "Resulttype_sub (mk_list []) ts1" "Resulttype_sub ts3 (mk_list ts)" 
+      using inv_seq by blast
+    then obtain ts1' ts2' ts3' where splitret:
+      "Instrs_ok2 s Cf (map admininstr_val vs' @ map admininstr_val vs) (mk_functype ts1' ts2')"
+      "Instrs_ok2 s Cf [admininstr_sc1 admininstr_st1_RETURN] (mk_functype ts2' ts3')" 
+      "Resulttype_sub ts1 ts1'" "Resulttype_sub ts3' ts2" 
+      using inv_seq by blast
+    then obtain ts2'' ts3'' where 
+      "Instr_ok2 s Cf (admininstr_sc1 admininstr_st1_RETURN) (mk_functype ts2'' ts3'')"
+      and subt': "mk_instrtype ts2'' ts3'' <ti: mk_instrtype ts2' ts3'"
+      using inv_one_admininstr by blast
+    then have "Instr_ok Cf (instr_sc1 RETURN) (mk_functype ts2'' ts3'')"
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
+    then obtain tret tbef taft where rethyps:
+      "context_RETURN Cf = Some (mk_list tret)"
+      "mk_functype (mk_list (tbef @ tret)) (mk_list taft) = mk_functype ts2'' ts3''"
+      using inv_return by blast
+    then obtain tv1 tv2 tv3 where splitvs:
+      "Instrs_ok2 s Cf (map admininstr_val vs') (mk_functype tv1 tv2)"
+      "Instrs_ok2 s Cf (map admininstr_val vs) (mk_functype tv2 tv3)" 
+      "Resulttype_sub ts1' tv1" "Resulttype_sub tv3 ts2'" 
+      using splitret inv_seq by blast
+    then have subv1: "mk_instrtype (mk_list []) (mk_list (map typeofval vs')) <ti: mk_instrtype tv1 tv2"
+      using inv_const_list by blast
+    have subv2: "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: mk_instrtype tv2 tv3"
+      using splitvs inv_const_list by blast
+    have subv: "mk_instrtype (mk_list []) (mk_list (map typeofval vs' @ map typeofval vs)) <ti:
+      mk_instrtype ts1' ts2'" using splitret(1) inv_const_list
+      by (metis inv_const_list splitret(1) map_append)
+    have "Resulttype_sub (mk_list (map typeofval vs)) (mk_list tret)"
+      using produce_consume_waste[OF subv] rethyps(2) subt' return_frame(1) framehyps(4)
+      sorry
     then show ?case sorry
   next
     case (return_label v_n instr'_lst val_lst instr_lst)
     then show ?case sorry
   next
     case (trap_vals val_lst instr_lst)
-    then show ?case sorry
+    then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (trap_label v_n instr'_lst)
-    then show ?case sorry
+    then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (trap_frame v_n f)
-    then show ?case sorry
+    then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (unop_val nt unop c_1 c)
     then show ?case sorry
   next
     case (unop_trap nt unop c_1)
-    then show ?case sorry
+    then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (binop_val nt binop c_1 c_2 var_0 c)
     then show ?case sorry
   next
     case (binop_trap nt binop c_1 c_2 var_0)
-    then show ?case sorry
+    then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (Step_pure__testop c nt testop c_1)
     then show ?case sorry
@@ -1395,7 +1454,8 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
     then show ?case sorry
   next
     case (cvtop_trap nt_1 nt_2 v_cvtop c_1 var_0)
-    then show ?case sorry
+    then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (ref_is_null_true v_ref rt)
     then show ?case sorry
@@ -1425,7 +1485,8 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
     then show ?case sorry
   next
     case (vbinop_trap sh vbinop c_1 c_2 var_0)
-    then show ?case sorry
+    then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (vtestop_true ci_1_lst v_Jnn v_N c)
     then show ?case sorry
@@ -1502,7 +1563,8 @@ next
   then show ?case sorry
 next
   case (table_set_trap i x v_ref)
-  then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
 next
   case (table_set_val i x v_ref)
   then show ?case sorry
@@ -1517,13 +1579,15 @@ next
   then show ?case sorry
 next
   case (store_num_trap i nt ao c)
-  then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
 next
   case (store_num_val i nt b_lst c ao)
   then show ?case sorry
 next
   case (store_pack_trap i ao v_n v_Inn c)
-  then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
 next
   case (store_pack_val i v_Inn c b_lst v_n ao)
   then show ?case sorry
@@ -1535,7 +1599,8 @@ next
   then show ?case sorry
 next
   case (vstore_lane_oob i ao v_N c j)
-  then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
 next
   case (vstore_lane_val i v_N v_Jnn v_M c j b_lst ao)
   then show ?case sorry
