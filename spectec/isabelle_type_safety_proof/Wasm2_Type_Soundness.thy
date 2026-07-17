@@ -1150,10 +1150,70 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
       using Instrs_ok2_subtyping by blast
   next
     case (br_if_true c l)
-    then show ?case sorry
+    then obtain ts1 ts2 ts3 where split:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST I32 c)] (mk_functype ts1 ts2)" 
+      "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_BR_IF l)] (mk_functype ts2 ts3)"
+      "Resulttype_sub t1 ts1" "Resulttype_sub ts3 t2" 
+      using inv_seq[of s C' "[_,_]" t1 t2 "[_]" "[_]"] by fastforce 
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: mk_instrtype ts1 ts2"
+      using inv_const_list[OF split(1), of "[val_CONST I32 c]"]
+        admininstr_val.domintros admininstr_val.psimps typeofval.domintros typeofval.psimps
+      by simp
+    obtain ts2' ts3' where 
+      "Instr_ok2 s C' (admininstr_sc0 (admininstr_st0_BR_IF l)) (mk_functype ts2' ts3')" 
+      and subt: "mk_instrtype ts2' ts3' <ti: mk_instrtype ts2 ts3" 
+      using split inv_one_admininstr by blast
+    then have brifok: "Instr_ok C' (instr_sc0 (BR_IF l)) (mk_functype ts2' ts3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by simp
+    then obtain ts where brhyps:
+      "proj_uN_0 l < length (LABELS C')"
+      "proj_list_0 (LABELS C' ! proj_uN_0 l) = ts"
+      "mk_functype (mk_list (ts @ [valtype_I32])) (mk_list ts) = mk_functype ts2' ts3'"
+      using inv_br_if by blast
+    then have sub: "mk_instrtype (mk_list ts) (mk_list ts) <ti: mk_instrtype ts1 ts3"
+      using produce_consume[of "[valtype_I32]" ts1 ts2 ts "[valtype_I32]" ts ts3]
+        subv subt by fastforce
+    have wfbr: "wf_instr (instr_sc0 (BR l))" 
+      using Instr_ok_wf(2)[OF brifok]
+    proof (induction "instr_sc0 (BR_IF l)" rule:wf_instr.induct)
+      case instr_case_8
+      then show ?case using instr_case_7 by simp
+    qed
+    show ?case using subv 
+        br[OF brhyps(1) brhyps(2) Instrs_ok2_wf(1)[OF split(1)] wfbr, of "[]" ts] 
+        instr_ok_instr_ok2 instr_ok2_instrs_ok2 
+        Instrs_ok2_wf(2)[OF split(1)] br_if_true(11)
+        Instrs_ok2_subtyping sub Instrtype_sub_sub_rule[OF split(3) split(4)]
+      by (metis admininstr_instr.domintros(8) admininstr_instr.psimps(8) append_Nil)
   next
     case (br_if_false c l)
-    then show ?case sorry
+ then obtain ts1 ts2 ts3 where split:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST I32 c)] (mk_functype ts1 ts2)" 
+      "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_BR_IF l)] (mk_functype ts2 ts3)"
+      "Resulttype_sub t1 ts1" "Resulttype_sub ts3 t2" 
+      using inv_seq[of s C' "[_,_]" t1 t2 "[_]" "[_]"] by fastforce 
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: mk_instrtype ts1 ts2"
+      using inv_const_list[OF split(1), of "[val_CONST I32 c]"]
+        admininstr_val.domintros admininstr_val.psimps typeofval.domintros typeofval.psimps
+      by simp
+    obtain ts2' ts3' where 
+      "Instr_ok2 s C' (admininstr_sc0 (admininstr_st0_BR_IF l)) (mk_functype ts2' ts3')" 
+      and subt: "mk_instrtype ts2' ts3' <ti: mk_instrtype ts2 ts3" 
+      using split inv_one_admininstr by blast
+    then have brifok: "Instr_ok C' (instr_sc0 (BR_IF l)) (mk_functype ts2' ts3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by simp
+    then obtain ts where brhyps:
+      "proj_uN_0 l < length (LABELS C')"
+      "proj_list_0 (LABELS C' ! proj_uN_0 l) = ts"
+      "mk_functype (mk_list (ts @ [valtype_I32])) (mk_list ts) = mk_functype ts2' ts3'"
+      using inv_br_if by blast
+    then have sub: "mk_instrtype (mk_list ts) (mk_list ts) <ti: mk_instrtype ts1 ts3"
+      using produce_consume[of "[valtype_I32]" ts1 ts2 ts "[valtype_I32]" ts ts3]
+        subv subt by fastforce
+    have "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype (mk_list ts) (mk_list ts)" 
+      by (metis Instrtype_sub_frame_rule append.right_neutral)
+    then show ?case using Instrs_ok2__empty Instrs_ok2_wf[OF split(1)] 
+      br_if_false(11) sub Instrs_ok2_subtyping Instrtype_sub_sub_rule[OF split(3,4)] by auto
   next
     case (br_table_lt i l_lst l')
     then show ?case sorry

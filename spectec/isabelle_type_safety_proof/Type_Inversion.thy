@@ -238,10 +238,10 @@ lemma Instr_ok_inversion:
 		  ((proj_list_0  ((LABELS C) ! (proj_uN_0 l))) = t_lst) \<and>
 		  ((mk_functype (mk_list (t_1_lst @ t_lst)) (mk_list t_2_lst)) = tf))" and
     inv_br_if: "e = (instr_sc0 (BR_IF l)) \<Longrightarrow>
-      (\<exists> t_lst t_1_lst.
+      (\<exists> t_lst.
 		  ((proj_uN_0 l) < (length (LABELS C))) \<and>
 		  ((proj_list_0  ((LABELS C) ! (proj_uN_0 l))) = t_lst) \<and>
-		  ((mk_functype (mk_list (t_1_lst @ [valtype_I32])) (mk_list t_lst)) = tf))" and
+		  ((mk_functype (mk_list (t_lst @ [valtype_I32])) (mk_list t_lst)) = tf))" and
     inv_br_table:  "e = (instr_sc0 (BR_TABLE l_lst l')) \<Longrightarrow>
       (\<exists> t_lst t_1_lst t_2_lst.
       (list_all (\<lambda> (l :: labelidx). ((proj_uN_0 l) < (length (LABELS C)))) l_lst) \<and>
