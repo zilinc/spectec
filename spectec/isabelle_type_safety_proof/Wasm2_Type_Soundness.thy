@@ -1526,11 +1526,32 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
       res_list.exhaust by metis
   next
     case (unop_val nt unop c_1 c)
-    then obtain t2 where 
+    then obtain t2 where splitunop:
       "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST nt c_1)] (mk_functype t1 t2)"
       "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_UNOP nt unop)] (mk_functype t2 t3)"
       using inv_seq[of s C' "[_,_]" t1 t3 "[_]" "[_]"] by fastforce
-    then show ?case sorry
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_numtype nt]) <ti:
+                mk_instrtype t1 t2" 
+      using inv_const_list[OF splitunop(1), of "[val_CONST _ _]"] admininstr_val.domintros
+        admininstr_val.psimps typeofval.domintros typeofval.psimps by simp
+    obtain t2' t3' where 
+      "Instr_ok2 s C' (admininstr_sc1 (admininstr_st1_UNOP nt unop)) (mk_functype t2' t3')" 
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3" 
+      using splitunop(2) inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc1 (UNOP nt unop)) (mk_functype t2' t3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
+    then have "mk_functype (mk_list [valtype_numtype nt]) (mk_list [valtype_numtype nt]) =
+        mk_functype t2' t3'" using inv_unop by blast
+    then have subt: "mk_instrtype (mk_list []) (mk_list [valtype_numtype nt]) <ti: 
+                mk_instrtype t1 t3" using subv subt produce_consume by auto
+    have "wf_instr (instr_sc1 (res_CONST nt c))" 
+      using unop__is_wf unop_val(2) Instrs_ok2_wf_instr[OF unop_val(10)]
+      by (metis Step_pure.unop_val Step_pure_is_wf admininstr_instr.domintros(14) 
+          admininstr_instr.psimps(14)
+          list.pred_inject(2) unop_val.hyps(1) wf_admininstr_instr_inv)
+    then show ?case using unop_val(11) const instr_ok_instr_ok2 instr_ok2_instrs_ok2
+      Instrs_ok2_subtyping Instrs_ok2_wf[OF unop_val(10)] subt
+      by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14))
   next
     case (unop_trap nt unop c_1)
     then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
