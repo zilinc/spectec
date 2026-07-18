@@ -113,11 +113,9 @@ lemma inv_store_pack:
         ((mk_functype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) =
         tf))"
  proof -
-(*  obtain tp1 tp2 where *) have 
+ have 
      "Instr_ok C (instr_sc6 (STORE (numtype_Inn v_Inn)
-      (Some (mk_sz v_M)) v_memarg)) tf" (* and
-		 "(mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2)"
-  by (metis assms(1) assms(2) inv_one_instr) *) using assms by simp
+      (Some (mk_sz v_M)) v_memarg)) tf" using assms by simp
   then show ?thesis using assms(1) 
   proof (induction "C" "(instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg))"
         tf
@@ -125,9 +123,6 @@ lemma inv_store_pack:
       case (store_pack C mt v_Innsa)
       have "v_Inn = v_Innsa"
         by (metis store_pack.hyps(7) numtype_Inn.elims numtype.distinct(1))
-      (* then have "mk_instrtype (mk_list [valtype_I32, valtype_Inn v_Inn]) (mk_list []) <ti:
-                mk_instrtype t1 t2" using store_pack(8,9,10)
-        by simp *)
       then show ?case
         using store_pack.hyps
         by presburger  
@@ -143,10 +138,7 @@ lemma inv_ref_func:
         ((mk_functype (mk_list []) (mk_list [valtype_FUNCREF])) = tf))"
 proof -
   have
-(* obtain tp1 tp2 where *)
-  "Instr_ok C (instr_sc4 (REF_FUNC x)) tf" (* and
-  "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2" 
-  by (metis assms(2) assms(1) inv_one_instr) *) using assms by simp
+  "Instr_ok C (instr_sc4 (REF_FUNC x)) tf" using assms by simp
   then show ?thesis
     by (cases rule: Instr_ok.cases, auto)
 qed
@@ -167,10 +159,8 @@ lemma inv_cvtop_reinterpret:
       ((mk_functype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)])) =
          tf)"
 proof -
-have (* obtain tp1 tp2 where *)
-  a: "Instr_ok C (instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET)) tf" (* and
-  b: "mk_instrtype tp1 tp2 <ti: mk_instrtype t1 t2"
-  by (metis assms(2) assms(1) inv_one_instr) *) using assms by simp
+have 
+  a: "Instr_ok C (instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET)) tf" using assms by simp
   show ?thesis using a 
     apply (induction "C" "(instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET))" 
           tf arbitrary: nt_1 nt_2 rule: Instr_ok_Instrs_ok.inducts(1))
@@ -191,24 +181,7 @@ qed
 lemma Instr_ok_inversion:
   assumes "Instr_ok C e tf"
   shows 
-  (*  inv_store_pack: "e = (instr_sc6 (STORE (numtype_Inn v_Inn) (Some (mk_sz v_M)) v_memarg)) \<Longrightarrow>
-        (\<exists> mt.
-        (0 < (length (context_MEMS C))) \<and>
-        (((context_MEMS C) ! 0) = mt) \<and>
-        (((2 ^ (proj_uN_0 (ALIGN v_memarg))) :: nat) \<le> ((v_M :: nat) div (8 :: nat))) \<and>
-        (wf_memtype mt) \<and>
-        ((mk_functype (mk_list [valtype_I32, (valtype_Inn v_Inn)]) (mk_list [])) = tf))" and 
-    inv_ref_func: "e = (instr_sc4 (REF_FUNC x)) \<Longrightarrow>
-        (\<exists> fta.
-        ((proj_uN_0 x) < (length (context_FUNCS C))) \<and>
-        (((context_FUNCS C) ! (proj_uN_0 x)) = fta) \<and>
-        ((mk_functype (mk_list []) (mk_list [valtype_FUNCREF])) = tf))" and
-    inv_cvtop_reinterpret: "e = (instr_sc1 (CVTOP nt_1 nt_2 REINTERPRET)) \<Longrightarrow>
-        ((size (valtype_numtype nt_1)) \<noteq> None) \<and>
-        ((size (valtype_numtype nt_2)) \<noteq> None) \<and>
-        ((the ((size (valtype_numtype nt_1)))) = (the ((size (valtype_numtype nt_2))))) \<and> 
-        ((mk_functype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)])) = tf)" and *)
-    inv_nop: "e = instr_sc0 NOP \<Longrightarrow> (mk_functype (mk_list []) (mk_list [])) = tf" and
+  inv_nop: "e = instr_sc0 NOP \<Longrightarrow> (mk_functype (mk_list []) (mk_list [])) = tf" and
     inv_unreachable: "e = instr_sc0 UNREACHABLE \<Longrightarrow> True" and
     inv_drop: "e = instr_sc0 DROP \<Longrightarrow> (\<exists> t. ((mk_functype (mk_list [t]) (mk_list [])) = tf))" and
     inv_select_expl: "e = instr_sc0 (SELECT (Some ts)) \<Longrightarrow> \<exists> t. ts = [t] \<and> (mk_functype (mk_list [t, t, valtype_I32]) (mk_list [t]) = tf)" and
@@ -649,7 +622,7 @@ lemma inv_plain:
   shows "a_e = (admininstr_instr v_instr) \<Longrightarrow>
     (
        Instr_ok C v_instr tf)"
-using assms (* Instrs_ok2_inversion_helper[OF assms] *)
+using assms 
 apply (auto)
 apply (cases rule: Instr_ok2.cases)
 apply auto
@@ -770,52 +743,6 @@ apply (cases v_ref rule: admininstr_ref.cases)
 apply (auto simp add: admininstr_ref.domintros admininstr_ref.psimps)
 done
 
-(* 
-lemma Instrs_ok2_inversion:
-  assumes "Instrs_ok2 s C [a_e] (mk_functype t1 t2)"
-  shows
-    inv_plain: "a_e = (admininstr_instr v_instr) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2) \<and> 
-       Instr_ok C v_instr (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))" and
-    inv_label: "a_e = (admininstr_sc8 (LABEL_underscore v_n instr'_lst admininstr_lst)) \<Longrightarrow>
-      (\<exists> t'_lst t_lst.
-      (Instrs_ok2 s C (map (\<lambda> (instr' :: instr). (admininstr_instr instr')) instr'_lst) (mk_functype (mk_list t'_lst) (mk_list t_lst))) \<and>
-      (Instrs_ok2 s (append_res_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr> C) admininstr_lst (mk_functype (mk_list []) (mk_list t_lst))) \<and>
-		  (wf_context \<lparr> context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [(mk_list t'_lst)], context_RETURN = None \<rparr>) \<and>
-		  (v_n = (length t'_lst)) \<and>
-      ((mk_instrtype (mk_list []) (mk_list t_lst)) <ti: mk_instrtype t1 t2))" and
-   (*  inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and *)
-    inv_frame: "a_e = (admininstr_sc8 (FRAME_underscore v_n f admininstr_lst)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst C' t_lst.
-		  (Frame_ok s f C') \<and>
-		  (Expr_ok2 s C' admininstr_lst (mk_list t_lst)) \<and>
-		  (wf_context C') \<and>
-		  (v_n = (length t_lst)) \<and>
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_call_addr: "a_e = (admininstr_sc7 (CALL_ADDR v_funcaddr)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      (Externaddr_ok s (externaddr_FUNC v_funcaddr) (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
-		  (wf_externtype (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))) \<and>
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" and
-    inv_ref: "a_e = (admininstr_ref v_ref) \<Longrightarrow>
-      (\<exists> rt.
-      (Ref_ok s v_ref rt) \<and>
-      ((mk_instrtype (mk_list []) (mk_list [valtype_reftype rt])) <ti: mk_instrtype t1 t2))" (* and *)
-  (*  inv_trap: "a_e = (admininstr_sc7 admininstr_st7_TRAP) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
-      ((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst)) <ti: mk_instrtype t1 t2))" *)
-
-  using Instrs_ok2_inversion_helper[OF assms]
-  apply auto
-  apply (cases rule: Instrs_ok2.cases, auto)
-  using assms Instrtype_sub_refl Instrtype_sub_sub_rule Instrtype_sub_frame_rule
-(*  apply blast+
-  apply (metis instrtype.exhaust res_list.exhaust) *)
-
-  sorry *)
 
 lemma map_is_app :
   assumes "map f l = res1 @ res2"
@@ -830,13 +757,7 @@ next
     by (metis map_eq_append_conv)
 qed
 
-(*
-fun is_const :: "instr \<Rightarrow> bool" where
-"is_const (instr_sc1 (res_CONST _ _)) = True"
-| "is_const (instr_sc1 (VCONST _ _)) = True"
-| "is_const (instr_sc4 (REF_NULL _)) = True"
-| "is_const _ = False" 
-*)
+
 
 lemma inv_const_list :
   assumes "Instrs_ok2 s C e (mk_functype t1 t2)"
@@ -1065,10 +986,9 @@ qed
 lemma inv_seq:
   assumes "Instrs_ok2 s C es (mk_functype t1 t3)"
           "es = (es1 @ es2)"
-  shows "(\<exists> t1' t2' t3'.
-    (Instrs_ok2 s C es1 (mk_functype t1' t2')) \<and>
-		(Instrs_ok2 s C es2 (mk_functype t2' t3')) \<and>
-    Resulttype_sub t1 t1' \<and> Resulttype_sub t3' t3)"
+  shows "(\<exists> t2.
+    (Instrs_ok2 s C es1 (mk_functype t1 t2)) \<and>
+		(Instrs_ok2 s C es2 (mk_functype t2 t3)))"
   using assms
 proof(induction s C es "mk_functype t1 t3" arbitrary: t1 t3 es1 es2
 rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where ?P1.0 =
@@ -1110,93 +1030,49 @@ next
   then show ?case 
   proof
     assume els: "l1 = es1' \<and> l2 @ l3 = es2' \<and> l1 @ l2 = es1 \<and> l3 = es2"
-    then obtain t1' t2' t3' where
-      ih: "Instrs_ok2 s C l2 (mk_functype t1' t2')"
-      "Instrs_ok2 s C l3 (mk_functype t2' t3')"
-      "Resulttype_sub (mk_list t2l) t1'" "Resulttype_sub t3' (mk_list t3l)"
+    then obtain t2 where
+      ih: "Instrs_ok2 s C l2 (mk_functype (mk_list t2l) t2)"
+      "Instrs_ok2 s C l3 (mk_functype t2 (mk_list t3l))"
       using Instrs_ok2__seq(4) by blast
-    then show "\<exists>t1' t2' t3'.
-       Instrs_ok2 s C es1 (mk_functype t1' t2') \<and>
-       Instrs_ok2 s C es2 (mk_functype t2' t3') \<and> Resulttype_sub (mk_list t1l) t1' \<and> 
-       Resulttype_sub t3' (mk_list t3l)"
-    proof (cases t1')
-      case (mk_list t1l')
-      then have okes1': "Instrs_ok2 s C es1' (mk_functype (mk_list t1l) t1')"
-        using Instrs_ok2__sub[OF Instrs_ok2__seq(1) Resulttype_sub_refl[of "mk_list t1l"]] 
-            ih(3) Instrs_ok2__seq by blast
-      then show ?thesis
-      proof (cases t2')
-        case (mk_list t2l')
-        then have "Instrs_ok2 s C es1 (mk_functype (mk_list t1l) t2')" 
-        using ih(1) els Instrs_ok2__seq Resulttype_sub.simps okes1'
-        using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__seq ih(3) by auto
-      then show ?thesis using ih els
-        using Resulttype_sub_refl by blast
-    qed
-  qed
+    then show "\<exists>t2.
+       Instrs_ok2 s C es1 (mk_functype (mk_list t1l) t2) \<and>
+       Instrs_ok2 s C es2 (mk_functype t2 (mk_list t3l))"
+      using Instrs_ok2__seq.hyps(1) els instrs_ok2_seq by blast
 next
     assume els: "l1 @ l2 = es1' \<and> l3 = es2' \<and> l1 = es1 \<and> l2 @ l3 = es2"
-    then obtain t1' t2' t3' where
-      ih: "Instrs_ok2 s C l1 (mk_functype t1' t2')"
-      "Instrs_ok2 s C l2 (mk_functype t2' t3')"
-      "Resulttype_sub (mk_list t1l) t1'" "Resulttype_sub t3' (mk_list t2l)"
+    then obtain t2 where
+      ih: "Instrs_ok2 s C l1 (mk_functype (mk_list t1l) t2)"
+      "Instrs_ok2 s C l2 (mk_functype t2 (mk_list t2l))"
       using Instrs_ok2__seq(2) by blast
-    then show "\<exists>t1' t2' t3'.
-       Instrs_ok2 s C es1 (mk_functype t1' t2') \<and>
-       Instrs_ok2 s C es2 (mk_functype t2' t3') \<and> Resulttype_sub (mk_list t1l) t1' \<and> 
-       Resulttype_sub t3' (mk_list t3l)"
-    proof (cases t3')
-      case (mk_list t3l')
-      then have okes1': "Instrs_ok2 s C es2' (mk_functype t3' (mk_list t3l))"
-        using Instrs_ok2__sub[OF Instrs_ok2__seq(3)]
-            Resulttype_sub_refl[of "mk_list t3l"]
-            ih(4) Instrs_ok2__seq by blast
-      then show ?thesis
-      proof (cases t2')
-        case (mk_list t2l')
-        then have "Instrs_ok2 s C es2 (mk_functype t2' (mk_list t3l))" 
-        using ih(2) els Instrs_ok2__seq Resulttype_sub.simps okes1'
-        using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__seq ih(4) by auto
-      then show ?thesis using ih els
-        using Resulttype_sub_refl by blast
-    qed
-  qed
+    then show "\<exists>t2.
+       Instrs_ok2 s C es1 (mk_functype (mk_list t1l) t2) \<and>
+       Instrs_ok2 s C es2 (mk_functype t2 (mk_list t3l))"
+      using Instrs_ok2__seq.hyps els instrs_ok2_seq by fast
 qed
 next
   case (Instrs_ok2__sub s C es t1l t2l t1l' t2l')
-  then show ?case
-    by (metis Resulttype_sub_trans)
+  then obtain t2 where ih:
+     "Instrs_ok2 s C es1 (mk_functype (mk_list t1l) t2)"
+     "Instrs_ok2 s C es2 (mk_functype t2 (mk_list t2l))" by blast
+  then show ?case 
+  proof (cases t2)
+    case (mk_list t2l)
+    then show ?thesis using Instrs_ok2__sub ih Resulttype_sub_refl[of t2] 
+      isabelle_reference_output_wasm2.Instrs_ok2__sub by fastforce
+  qed
 next
   case (Instrs_ok2__frame s C es t1l t2l tl)
-  then obtain t1' t2' t3' where ih:
-    "Instrs_ok2 s C es1 (mk_functype t1' t2')"
-    "Instrs_ok2 s C es2 (mk_functype t2' t3')"
-    "Resulttype_sub (mk_list t1l) t1'"
-    "Resulttype_sub t3' (mk_list t2l)" 
+  then obtain t2 where ih:
+    "Instrs_ok2 s C es1 (mk_functype (mk_list t1l) t2)"
+    "Instrs_ok2 s C es2 (mk_functype t2 (mk_list t2l))"
     by blast
   then show ?case
-  proof (cases t1')
-    case (mk_list t1l')
-    note t1eq = mk_list
-    then show ?thesis
-    proof (cases t2')
-      case (mk_list t2l')
-      note t2eq = mk_list
-      then show ?thesis 
-      proof (cases t3')
-        case (mk_list t3l')
-        then have ok1: "Instrs_ok2 s C es1 (mk_functype (mk_list (tl @ t1l')) (mk_list (tl @ t2l')))"
-          using ih(1) t1eq t2eq
-          using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__frame Instrs_ok2__frame.hyps(3,4,5)
-            Instrs_ok2__frame.prems list_all_append by blast
-        have "Instrs_ok2 s C es2 (mk_functype (mk_list (tl @ t2l')) (mk_list (tl @ t3l')))"
-          using ih(2) t2eq mk_list
-          using Instr_ok2_Instrs_ok2_Expr_ok2.Instrs_ok2__frame Instrs_ok2__frame.hyps(3,4,5)
-            Instrs_ok2__frame.prems list_all_append by blast
-        then show ?thesis using ok1 ih(3,4)
-          using Resulttype_sub_append Resulttype_sub_refl mk_list t1eq by blast
-      qed qed qed
-    qed (simp)+
+  proof (cases t2)
+    case (mk_list t2l)
+    then show ?thesis using ih Instrs_ok2__frame 
+      isabelle_reference_output_wasm2.Instrs_ok2__frame by fastforce 
+  qed
+      qed (simp)+
 
 
 lemma inv_label_const_list_br:
@@ -1222,37 +1098,35 @@ proof -
          LABELS = [mk_list ts'], context_RETURN = None\<rparr>"
      "n = length ts'"  "mk_functype (mk_list []) (mk_list ts) = mk_functype t1 t2" 
     using inv_label[OF assms(1)] by blast
-  then obtain t0s1 t0s2 t0s3 where topsplit:
+  then obtain tmid where topsplit:
      "Instrs_ok2 s (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
         C) (map admininstr_val vs @ [admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))]) 
-        (mk_functype t0s1 t0s2)" 
+        (mk_functype (mk_list []) tmid)" 
       "Instrs_ok2 s (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-        C) es' (mk_functype t0s2 t0s3)" 
-      "Resulttype_sub (mk_list []) t0s1" "Resulttype_sub t0s3 (mk_list ts)"
+        C) es' (mk_functype tmid (mk_list ts))" 
     using inv_seq by blast
-  then obtain ts1 ts2 ts3 where splitvsbr:
+  then obtain tmid' where splitvsbr:
       "Instrs_ok2 s  (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-        C) (map admininstr_val vs) (mk_functype ts1 ts2)" 
+        C) (map admininstr_val vs) (mk_functype (mk_list []) tmid')" 
       "Instrs_ok2 s  (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-        C) [admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))] (mk_functype ts2 ts3)" 
-      "Resulttype_sub (mk_list []) ts1" "Resulttype_sub ts3 t0s2"
+        C) [admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))] (mk_functype tmid' tmid)" 
     using inv_seq Resulttype_sub_trans by blast
-  then have "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: mk_instrtype ts1 ts2"
+  then have "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: 
+      mk_instrtype (mk_list []) tmid'"
     using inv_const_list by blast
-  then have vssub: "Resulttype_sub (mk_list (map typeofval vs)) ts2"
-    using splitvsbr(3) 
+  then have vssub: "Resulttype_sub (mk_list (map typeofval vs)) tmid'" 
     by (simp add: Instrtype_sub.simps Resulttype_sub.simps)
   obtain ts2' ts3' where 
      "Instr_ok2 s  (append_res_context
@@ -1260,7 +1134,7 @@ proof -
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
         C) (admininstr_sc0 (admininstr_st0_BR (mk_uN (Suc l)))) (mk_functype ts2' ts3')"
-      and subts: "mk_instrtype ts2' ts3' <ti: mk_instrtype ts2 ts3" 
+      and subts: "mk_instrtype ts2' ts3' <ti: mk_instrtype tmid' tmid" 
     using splitvsbr(2) inv_one_admininstr by blast
   then have "Instr_ok (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
@@ -1291,8 +1165,8 @@ proof -
       assms(2) by simp
   then have tbtsb: "mk_list tb = tsb"
     by (metis proj_list_0.cases proj_list_0.domintros proj_list_0.psimps)
-  show ?thesis using subts vssub ihbr(3) splitvsbr(4) tbtsb 
-  proof(induction "mk_instrtype ts2' ts3'" "mk_instrtype ts2 ts3" rule:Instrtype_sub.induct)
+  show ?thesis using subts vssub ihbr(3) tbtsb 
+  proof(induction "mk_instrtype ts2' ts3'" "mk_instrtype tmid' tmid" rule:Instrtype_sub.induct)
     case (mk_Instrtype_sub ts2l t2fst t2lst ts3l t3fst t3lst t1btb t2bl)
     then obtain vsa vsb where vsab:
       "vs = vsa @ vsb" 
@@ -1336,37 +1210,35 @@ proof -
          LABELS = [mk_list ts'], context_RETURN = None\<rparr>"
      "n = length ts'"  "mk_functype (mk_list []) (mk_list ts) = mk_functype t1 t2" 
     using inv_label[OF assms(1)] by blast
-  then obtain t0s1 t0s2 t0s3 where topsplit:
+  then obtain tmid where topsplit:
      "Instrs_ok2 s (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
         C) (map admininstr_val vs @ [admininstr_sc1 (admininstr_st1_RETURN)]) 
-        (mk_functype t0s1 t0s2)" 
+        (mk_functype (mk_list []) tmid)" 
       "Instrs_ok2 s (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-        C) es' (mk_functype t0s2 t0s3)" 
-      "Resulttype_sub (mk_list []) t0s1" "Resulttype_sub t0s3 (mk_list ts)"
+        C) es' (mk_functype tmid (mk_list ts))" 
     using inv_seq by blast
-  then obtain ts1 ts2 ts3 where splitvsbr:
+  then obtain tmid' where splitvsbr:
       "Instrs_ok2 s  (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-        C) (map admininstr_val vs) (mk_functype ts1 ts2)" 
+        C) (map admininstr_val vs) (mk_functype (mk_list []) tmid')" 
       "Instrs_ok2 s  (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
-        C) [admininstr_sc1 (admininstr_st1_RETURN)] (mk_functype ts2 ts3)" 
-      "Resulttype_sub (mk_list []) ts1" "Resulttype_sub ts3 t0s2"
+        C) [admininstr_sc1 (admininstr_st1_RETURN)] (mk_functype tmid' tmid)" 
     using inv_seq Resulttype_sub_trans by blast
-  then have "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: mk_instrtype ts1 ts2"
+  then have "mk_instrtype (mk_list []) (mk_list (map typeofval vs)) <ti: 
+            mk_instrtype (mk_list []) tmid'"
     using inv_const_list by blast
-  then have vssub: "Resulttype_sub (mk_list (map typeofval vs)) ts2"
-    using splitvsbr(3) 
+  then have vssub: "Resulttype_sub (mk_list (map typeofval vs)) tmid'" 
     by (simp add: Instrtype_sub.simps Resulttype_sub.simps)
   obtain ts2' ts3' where 
      "Instr_ok2 s  (append_res_context
@@ -1374,7 +1246,7 @@ proof -
            context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
            LABELS = [mk_list ts'], context_RETURN = None\<rparr>
         C) (admininstr_sc1 (admininstr_st1_RETURN)) (mk_functype ts2' ts3')"
-      and subts: "mk_instrtype ts2' ts3' <ti: mk_instrtype ts2 ts3" 
+      and subts: "mk_instrtype ts2' ts3' <ti: mk_instrtype tmid' tmid" 
     using splitvsbr(2) inv_one_admininstr by blast
   then have "Instr_ok (append_res_context
         \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
@@ -1398,8 +1270,8 @@ proof -
   then have tbtsb: "mk_list tb = tsb" 
     using ihbr(1) proj_uN_0.domintros proj_uN_0.psimps
       assms(2) by simp
-  show ?thesis using subts vssub ihbr(2) splitvsbr(4) tbtsb 
-  proof(induction "mk_instrtype ts2' ts3'" "mk_instrtype ts2 ts3" rule:Instrtype_sub.induct)
+  show ?thesis using subts vssub ihbr(2) tbtsb 
+  proof(induction "mk_instrtype ts2' ts3'" "mk_instrtype tmid' tmid" rule:Instrtype_sub.induct)
     case (mk_Instrtype_sub ts2l t2fst t2lst ts3l t3fst t3lst t1btb t2bl)
     then obtain vsa vsb where vsab:
       "vs = vsa @ vsb" 
@@ -1444,97 +1316,7 @@ proof(induction s C es ts rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(3)[where ?P
 qed(simp_all)
   
 
-(*
-lemma inv_cons:
-  assumes "Instrs_ok2 s C es (mk_functype t1 t4)"
-          "es = (e # es2)"
-  shows "(\<exists> t1' t2' t3' t4'.
-    (Instr_ok2 s C e (mk_functype t1' t2')) \<and>
-		(Instrs_ok2 s C es2 (mk_functype t3' t4')) \<and>
-    Resulttype_sub t1 t1' \<and> Resulttype_sub t2' t3' \<and> Resulttype_sub t4' t4)"
-proof -
-  obtain t1' t2' t3' where split:
-    "Instrs_ok2 s C [e] (mk_functype t1' t2')"
-    "Instrs_ok2 s C es2 (mk_functype t2' t3')"
-    "Resulttype_sub t1 t1'" "Resulttype_sub t3' t4"
-    using assms inv_seq[of s C es t1 t4 "[e]" es2] by auto
-  then obtain t1'' t2'' where one:
-    "Instr_ok2 s C e (mk_functype t1'' t2'')" 
-    "mk_instrtype t1'' t2'' <ti: mk_instrtype t1' t2'" 
-    using Instrs_ok2_inversion_helper by blast
-  show ?thesis using one(2)
-  proof (induction "mk_instrtype t1'' t2''" "mk_instrtype t1' t2'"
-        rule:Instrtype_sub.induct)
-    case (mk_Instrtype_sub t_21_lst t_lst t_11'_lst t_22_lst t'_lst t_12'_lst t_11_lst t_12_lst)
-    then show ?case using split one 
-  qed
 
-qed
-*)
-
-(* Not convinced these ones will ever be necessary: the sub and frame cases are
-   an inconvenience that appears
-   in every other case, not cases we want to specifically invert on *)
-(*
-lemma inv_Instrs_ok2__sub:
-  assumes "Instrs_ok2 s C admininstr_lst (mk_functype t1 t2)"
-  shows "(\<exists> t_1_lst t_2_lst t2.
-		(Instrs_ok2 s C admininstr_lst (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
-		(Resulttype_sub t1 (mk_list t_1_lst)) \<and>
-		(Resulttype_sub (mk_list t_2_lst) t2) \<and>
-		(list_all (\<lambda> (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst) \<and>
-		((mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst) <ti: mk_instrtype t1 t2)))"
-
-sorry 
-
-lemma inv_Instrs_ok2__frame:
-  assumes "Instrs_ok2 s C admininstr_lst (mk_functype t1 t2)"
-  shows "(\<exists> t_lst t_1_lst t_2_lst.
-		(Instrs_ok2 s C admininstr_lst (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
-		(list_all (\<lambda> (v_admininstr :: admininstr). (wf_admininstr v_admininstr)) admininstr_lst) \<and>
-		((mk_instrtype (mk_list (t_lst @ t_1_lst)) (mk_list (t_lst @ t_2_lst)) <ti: mk_instrtype t1 t2)))"
-
-sorry *)
-
-
-
-
-
-(*
-lemma Instr_ok2_const:
-  assumes "wf_context C" "wf_store s" "wf_admininstr (admininstr_val v)"
-  shows "Instr_ok2 s C (admininstr_val v) (mk_functype (mk_list []) (mk_list [typeofval v]))"
-proof (cases v)
-  case (val_CONST x11 x12)
-  then show ?thesis using plain const assms sledgehammer
-next
-  case (val_VCONST x21 x22)
-  then show ?thesis sorry
-next
-  case (val_REF_NULL x3)
-  then show ?thesis sorry
-next
-  case (val_REF_FUNC_ADDR x4)
-  then show ?thesis sorry
-next
-  case (val_REF_HOST_ADDR x5)
-  then show ?thesis sorry
-qed
-
-lemma Instrs_ok2_const:
-  assumes "wf_context C" "wf_store s" "list_all wf_admininstr (map admininstr_val vs)"
-  shows "Instrs_ok2 s C (map administr_val vs) 
-      (mk_functype (mk_list []) (mk_list (map typeofval vs)))"
-  using assms
-proof (induction vs)
-  case Nil
-  then show ?case using Instrs_ok2__empty by simp 
-next
-  case (Cons a vs)
-  then show ?case using Instrs_ok2__seq Instrs_ok2__instr 
-qed
-
-*)
  
 lemma Instr_ok2_const_replace:
   assumes "Instr_ok2 s C (admininstr_val v) tf" "wf_context C'" 
@@ -1633,28 +1415,6 @@ next
   qed
 qed
 
-(*
-lemma Instrs_ok2_one_const_replace:
-  assumes "Instrs_ok2 s C [admininstr_val v] tf" 
-  shows "Instrs_ok2 s C [admininstr_val v] (mk_functype (mk_list []) (mk_list [typeofval v]))"
-  using assms
-proof (induction s C "[admininstr_val v]" tf
-    rule: Instr_ok2_Instrs_ok2_Expr_ok2.inducts(2)[where
-      ?P1.0 = "\<lambda> s C e tf. True" and ?P3.0 = "\<lambda> s C e tf. True"])
-  case (Instrs_ok2__instr s C t_1_lst t_2_lst)
-  then show ?case 
-    using Instr_ok2_const_replace isabelle_reference_output_wasm2.Instrs_ok2__instr
-    by simp
-next
-  case (Instrs_ok2__seq s C admininstr_1_lst t_1_lst t_2_lst admininstr_2_lst t_3_lst)
-  then show ?case sorry
-next
-  case (Instrs_ok2__sub s C t_1_lst t_2_lst t'_1_lst t'_2_lst)
-  then show ?case sorry
-next
-  case (Instrs_ok2__frame s C t_1_lst t_2_lst t_lst)
-  then show ?case sorry
-qed(auto)*)
 
 lemma Instrs_ok2_const_replace:
   assumes "Instrs_ok2 s C (map admininstr_val vs) tf" "wf_context C'"
@@ -1668,12 +1428,11 @@ next
   case (Cons a vs)
   then show ?case
   proof (cases tf)
-    case (mk_functype t1 t2)
-    then obtain t1' t2' t3' where split:
-       "Instrs_ok2 s C [admininstr_val a] (mk_functype t1' t2')"
-       "Instrs_ok2 s C (map admininstr_val vs) (mk_functype t2' t3')"
-       "Resulttype_sub t1 t1'" "Resulttype_sub t3' t2" 
-      using Cons inv_seq[of s C "map admininstr_val (a # vs)" t1 t2 
+    case (mk_functype t1 t3)
+    then obtain t2 where split:
+       "Instrs_ok2 s C [admininstr_val a] (mk_functype t1 t2)"
+       "Instrs_ok2 s C (map admininstr_val vs) (mk_functype t2 t3)"
+      using Cons inv_seq[of s C "map admininstr_val (a # vs)" t1 t3 
                           "[admininstr_val a]" "map admininstr_val vs"]
       by auto
     then obtain t1'' t2'' where 
