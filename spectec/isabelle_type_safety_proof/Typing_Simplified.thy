@@ -4,7 +4,7 @@ begin
 
 (* simplified typing rules that abstract away hypotheses that are superfluous and do
    not force user to case disjunct on exact form of functype, see last few lemmas *)
-
+ 
 
 lemma Instr_ok_wf:
   assumes "Instr_ok C e ft"
