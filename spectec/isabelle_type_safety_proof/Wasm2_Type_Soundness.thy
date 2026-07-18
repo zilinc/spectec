@@ -1558,20 +1558,124 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
       res_list.exhaust by metis
   next
     case (binop_val nt binop c_1 c_2 var_0 c)
-    then show ?case sorry
+    then obtain t2 where splitunop:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST nt c_1),
+                        admininstr_sc1 (admininstr_st1_CONST nt c_2)] (mk_functype t1 t2)"
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_BINOP nt binop)] (mk_functype t2 t3)"
+      using inv_seq[of s C' "[_,_,_]" t1 t3 "[_,_]" "[_]"] by fastforce
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_numtype nt, valtype_numtype nt]) <ti:
+                mk_instrtype t1 t2" 
+      using inv_const_list[OF splitunop(1), of "[val_CONST _ _, val_CONST _ _]"] admininstr_val.domintros
+        admininstr_val.psimps typeofval.domintros typeofval.psimps by simp
+    obtain t2' t3' where 
+      "Instr_ok2 s C' (admininstr_sc1 (admininstr_st1_BINOP nt binop)) (mk_functype t2' t3')" 
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3" 
+      using splitunop(2) inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc1 (BINOP nt binop)) (mk_functype t2' t3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
+    then have "mk_functype (mk_list [valtype_numtype nt, valtype_numtype nt]) (mk_list [valtype_numtype nt]) =
+        mk_functype t2' t3'" using inv_binop by blast
+    then have subt: "mk_instrtype (mk_list []) (mk_list [valtype_numtype nt]) <ti: 
+                mk_instrtype t1 t3" using subv subt produce_consume by auto
+    have "wf_instr (instr_sc1 (res_CONST nt c))" 
+      using binop__is_wf binop_val(2) Instrs_ok2_wf_instr[OF binop_val(11)]
+      by (metis Step_pure.binop_val Step_pure_is_wf admininstr_instr.domintros(14) 
+          admininstr_instr.psimps(14)
+          binop_val.hyps(1,3) list.pred_inject(2) wf_admininstr_instr_inv)
+    then show ?case using binop_val(12) const instr_ok_instr_ok2 instr_ok2_instrs_ok2
+      Instrs_ok2_subtyping Instrs_ok2_wf[OF binop_val(11)] subt
+      by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14))
   next
     case (binop_trap nt binop c_1 c_2 var_0)
     then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
       res_list.exhaust by metis
   next
     case (Step_pure__testop c nt testop c_1)
-    then show ?case sorry
+     then obtain t2 where splitunop:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST nt c_1)] (mk_functype t1 t2)"
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_TESTOP nt testop)] (mk_functype t2 t3)"
+      using inv_seq[of s C' "[_,_]" t1 t3 "[_]" "[_]"] by fastforce
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_numtype nt]) <ti:
+                mk_instrtype t1 t2" 
+      using inv_const_list[OF splitunop(1), of "[val_CONST _ _]"] admininstr_val.domintros
+        admininstr_val.psimps typeofval.domintros typeofval.psimps by simp
+    obtain t2' t3' where 
+      "Instr_ok2 s C' (admininstr_sc1 (admininstr_st1_TESTOP nt testop)) (mk_functype t2' t3')" 
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3" 
+      using splitunop(2) inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc1 (TESTOP nt testop)) (mk_functype t2' t3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
+    then have "mk_functype (mk_list [valtype_numtype nt]) (mk_list [valtype_I32]) =
+        mk_functype t2' t3'" using inv_testop by blast
+    then have subt: "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: 
+                mk_instrtype t1 t3" using subv subt produce_consume by auto
+    have "wf_instr (instr_sc1 (res_CONST I32 c))" 
+      using testop__is_wf Step_pure__testop(2) Instrs_ok2_wf_instr[OF Step_pure__testop(9)]
+      by (metis Step_pure.Step_pure__testop Step_pure__testop.hyps Step_pure_is_wf
+          admininstr_instr.domintros(14) admininstr_instr.psimps(14) list.pred_inject(2)
+          wf_admininstr_instr_inv)
+    then show ?case using Step_pure__testop(10) const instr_ok_instr_ok2 instr_ok2_instrs_ok2
+      Instrs_ok2_subtyping Instrs_ok2_wf[OF Step_pure__testop(9)] subt valtype_numtype.domintros
+      valtype_numtype.psimps
+      by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14))
   next
     case (Step_pure__relop nt relop c_1 c_2 var_0 c)
-    then show ?case sorry
+    then obtain t2 where splitunop:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST nt c_1),
+                        admininstr_sc1 (admininstr_st1_CONST nt c_2)] (mk_functype t1 t2)"
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_RELOP nt relop)] (mk_functype t2 t3)"
+      using inv_seq[of s C' "[_,_,_]" t1 t3 "[_,_]" "[_]"] by fastforce
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_numtype nt, valtype_numtype nt]) <ti:
+                mk_instrtype t1 t2" 
+      using inv_const_list[OF splitunop(1), of "[val_CONST _ _, val_CONST _ _]"] admininstr_val.domintros
+        admininstr_val.psimps typeofval.domintros typeofval.psimps by simp
+    obtain t2' t3' where 
+      "Instr_ok2 s C' (admininstr_sc1 (admininstr_st1_RELOP nt relop)) (mk_functype t2' t3')" 
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3" 
+      using splitunop(2) inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc1 (RELOP nt relop)) (mk_functype t2' t3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
+    then have "mk_functype (mk_list [valtype_numtype nt, valtype_numtype nt]) (mk_list [valtype_I32]) =
+        mk_functype t2' t3'" using inv_relop by blast
+    then have subt: "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: 
+                mk_instrtype t1 t3" using subv subt produce_consume by auto
+    have "wf_instr (instr_sc1 (res_CONST I32 c))" 
+      using relop__is_wf Step_pure__relop(2) Instrs_ok2_wf_instr[OF Step_pure__relop(10)]
+      by (metis Step_pure.Step_pure__relop Step_pure__relop.hyps(1) Step_pure_is_wf
+          admininstr_instr.domintros(14) admininstr_instr.psimps(14) list.pred_inject(2)
+          wf_admininstr_instr_inv)
+    then show ?case using Step_pure__relop(11) const instr_ok_instr_ok2 instr_ok2_instrs_ok2
+      Instrs_ok2_subtyping Instrs_ok2_wf[OF Step_pure__relop(10)] subt valtype_numtype.domintros
+      valtype_numtype.psimps
+      by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14))
   next
     case (cvtop_val nt_1 nt_2 v_cvtop c_1 var_0 c)
-    then show ?case sorry
+      then obtain t2 where splitunop:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST nt_1 c_1)] (mk_functype t1 t2)"
+      "Instrs_ok2 s C' [admininstr_sc2 (admininstr_st2_CVTOP nt_2 nt_1 v_cvtop)] (mk_functype t2 t3)"
+      using inv_seq[of s C' "[_,_]" t1 t3 "[_]" "[_]"] by fastforce
+    have subv: "mk_instrtype (mk_list []) (mk_list [valtype_numtype nt_1]) <ti:
+                mk_instrtype t1 t2" 
+      using inv_const_list[OF splitunop(1), of "[val_CONST _ _]"] admininstr_val.domintros
+        admininstr_val.psimps typeofval.domintros typeofval.psimps by simp
+    obtain t2' t3' where 
+      "Instr_ok2 s C' (admininstr_sc2 (admininstr_st2_CVTOP nt_2 nt_1 v_cvtop)) (mk_functype t2' t3')" 
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3" 
+      using splitunop(2) inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc1 (CVTOP nt_2 nt_1 v_cvtop)) (mk_functype t2' t3')" 
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
+    then have "mk_functype (mk_list [valtype_numtype nt_1]) (mk_list [valtype_numtype nt_2]) =
+        mk_functype t2' t3'" using inv_cvtop_convert by blast
+    then have subt: "mk_instrtype (mk_list []) (mk_list [valtype_numtype nt_2]) <ti: 
+                mk_instrtype t1 t3" using subv subt produce_consume by auto
+    have "wf_instr (instr_sc1 (res_CONST nt_2 c))" 
+      using cvtop___is_wf cvtop_val(1,2,3) Instrs_ok2_wf_instr[OF cvtop_val(11)] 
+      by (metis Step_pure.cvtop_val Step_pure_is_wf admininstr_instr.domintros(14) 
+          admininstr_instr.psimps(14)
+          list.pred_inject(2) wf_admininstr_instr_inv)
+    then show ?case using cvtop_val(12) const instr_ok_instr_ok2 instr_ok2_instrs_ok2
+      Instrs_ok2_subtyping Instrs_ok2_wf[OF cvtop_val(11)] subt
+      by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14))
   next
     case (cvtop_trap nt_1 nt_2 v_cvtop c_1 var_0)
     then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
