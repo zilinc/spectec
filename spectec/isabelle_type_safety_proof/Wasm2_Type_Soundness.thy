@@ -76,6 +76,46 @@ next
 qed
 
 
+lemma val_ok_sub:
+  assumes "Val_ok s v t"
+  "Valtype_sub t t'"
+shows "Val_ok s v t'"
+  using assms proof(induction s v t rule:Val_ok.induct)
+  case (Val_ok__numtype s nt c_t)
+  show ?case using Val_ok__numtype(3,1,2) 
+  proof (induction "valtype_numtype nt" t' rule:Valtype_sub.induct)
+    case refl
+    then show ?case
+      using Val_ok.Val_ok__numtype by force
+  next
+    case (bot t)
+    then show ?case proof(cases nt) qed(simp_all)
+  qed
+next
+  case (Val_ok__vectype s vt c_t)
+   show ?case using Val_ok__vectype(3,1,2) 
+  proof (induction "valtype_vectype vt" t' rule:Valtype_sub.induct)
+    case refl
+    then show ?case
+      using Val_ok.Val_ok__vectype by force
+  next
+    case (bot t)
+    then show ?case proof(cases vt) qed(simp_all add:valtype_vectype.psimps valtype_vectype.domintros)
+  qed
+next
+  case (Val_ok__reftype s r rt)
+   show ?case using Val_ok__reftype(3,1,2) 
+  proof (induction "valtype_reftype rt" t' rule:Valtype_sub.induct)
+    case refl
+    then show ?case
+      using Val_ok.Val_ok__reftype by force
+  next
+    case (bot t)
+    then show ?case proof(cases rt) qed(simp_all add:valtype_reftype.psimps valtype_reftype.domintros)
+  qed
+qed
+
+
 lemma e_preservation_locals:
   assumes "Step (mk_config (mk_state s f) es) (mk_config (mk_state s' f') es')"
           "Store_ok s"
@@ -93,7 +133,7 @@ shows
           "list_all2 (\<lambda>(t :: valtype) (v :: val). (Val_ok s' v t)) (context_LOCALS C') (LOCALS f')"
   using assms
 proof (induction "mk_config (mk_state s f) es" "mk_config (mk_state s' f') es'" 
-       arbitrary: es es' s s' f f' tf rule: Step.induct)
+       arbitrary: es es' s s' f f' tf C' rule: Step.induct)
   case pure 
   {
     case 1
@@ -118,24 +158,163 @@ next
     then show ?case using read by simp
   }
 next
-  case (ctxt_label es0 es1 v_n instr_0_lst)
+  case (ctxt_label es0 es1 v_n es')
   {
     case 1 
-  then have ok: "Instrs_ok2 s C' es0 tf" 
-    sorry (* inversion lemma on labels *) 
-    then show ?case using ok ctxt_label 1 by simp
+    show ?case 
+    proof (cases tf)
+      case (mk_functype t1 t2)
+      then obtain t1' t2' where 
+        "Instr_ok2 s C' (admininstr_sc8 (LABEL_underscore v_n es' es0)) (mk_functype t1' t2')"
+        "mk_instrtype t1' t2' <ti: mk_instrtype t1 t2"
+        using inv_one_admininstr 1 by blast
+    then obtain ts' ts where ih:
+      "Instrs_ok2 s C' (map admininstr_instr es') (mk_functype (mk_list ts') (mk_list ts))"
+      "Instrs_ok2 s
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')
+    es0 (mk_functype (mk_list []) (mk_list ts))"
+   "wf_context
+    \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [],
+       context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [mk_list ts'],
+       context_RETURN = None\<rparr>"
+   "v_n = length ts'" "mk_functype (mk_list []) (mk_list ts) = mk_functype t1' t2'"
+      using inv_label by blast
+    have c1: "t_inst_match C (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')" 
+      proof (cases C')
+        case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+              context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+        note outer = fields
+        then show ?thesis 
+        proof (cases C)
+          case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+                context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+          then show ?thesis using 1(6) outer append_res_context_def t_inst_match_def
+            by auto
+        qed
+      qed
+      have c2: "context_LOCALS C' = context_LOCALS (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')" proof(cases C')
+        case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+              context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+        then show ?thesis using append_res_context_def by auto
+      qed
+      then show ?thesis using ctxt_label 1 c1 c2 ih by simp
+    qed
   next
     case 2
-  have ok: "Instrs_ok2 s C' es0 tf" 
-    using assms(9)
-    sorry (* inversion lemma on labels *) 
-    then show ?case using ok ctxt_label 2 by simp
+    show ?case 
+    proof (cases tf)
+      case (mk_functype t1 t2)
+      then obtain t1' t2' where 
+        "Instr_ok2 s C' (admininstr_sc8 (LABEL_underscore v_n es' es0)) (mk_functype t1' t2')"
+        "mk_instrtype t1' t2' <ti: mk_instrtype t1 t2"
+        using inv_one_admininstr 2 by blast
+    then obtain ts' ts where ih:
+      "Instrs_ok2 s C' (map admininstr_instr es') (mk_functype (mk_list ts') (mk_list ts))"
+      "Instrs_ok2 s
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')
+    es0 (mk_functype (mk_list []) (mk_list ts))"
+   "wf_context
+    \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [],
+       context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [mk_list ts'],
+       context_RETURN = None\<rparr>"
+   "v_n = length ts'" "mk_functype (mk_list []) (mk_list ts) = mk_functype t1' t2'"
+      using inv_label by blast
+    have c1: "t_inst_match C (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')" 
+      proof (cases C')
+        case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+              context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+        note outer = fields
+        then show ?thesis 
+        proof (cases C)
+          case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+                context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+          then show ?thesis using 2(6) outer append_res_context_def t_inst_match_def
+            by auto
+        qed
+      qed
+      have c2: "context_LOCALS C' = context_LOCALS (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')" proof(cases C')
+        case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+              context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+        then show ?thesis using append_res_context_def by auto
+      qed
+      then show ?thesis using ctxt_label 2 c1 c2 ih by simp
+    qed
   next
     case 3
-  have ok: "Instrs_ok2 s C' es0 tf" 
-    using assms(9)
-    sorry (* inversion lemma on labels *) 
-    then show ?case using ok ctxt_label 3 by simp
+    show ?case 
+    proof (cases tf)
+      case (mk_functype t1 t2)
+      then obtain t1' t2' where 
+        "Instr_ok2 s C' (admininstr_sc8 (LABEL_underscore v_n es' es0)) (mk_functype t1' t2')"
+        "mk_instrtype t1' t2' <ti: mk_instrtype t1 t2"
+        using inv_one_admininstr 3 by blast
+    then obtain ts' ts where ih:
+      "Instrs_ok2 s C' (map admininstr_instr es') (mk_functype (mk_list ts') (mk_list ts))"
+      "Instrs_ok2 s
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')
+    es0 (mk_functype (mk_list []) (mk_list ts))"
+   "wf_context
+    \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [],
+       context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [mk_list ts'],
+       context_RETURN = None\<rparr>"
+   "v_n = length ts'" "mk_functype (mk_list []) (mk_list ts) = mk_functype t1' t2'"
+      using inv_label by blast
+    have c1: "t_inst_match C (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')" 
+      proof (cases C')
+        case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+              context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+        note outer = fields
+        then show ?thesis 
+        proof (cases C)
+          case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+                context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+          then show ?thesis using 3(6) outer append_res_context_def t_inst_match_def
+            by auto
+        qed
+      qed
+      have c2: "context_LOCALS C' = context_LOCALS (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list ts'], context_RETURN = None\<rparr>
+      C')" proof(cases C')
+        case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+              context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+        then show ?thesis using append_res_context_def by auto
+      qed
+      then show ?thesis using ctxt_label 3 c1 c2 ih by simp
+    qed
   }
 next
   case (ctxt_frame f' es0 f'' es1 v_n)
@@ -151,17 +330,49 @@ next
       by (metis (mono_tags, lifting) Extend_store.simps)
   }
 next
-  case (ctxt_instrs es0 es1 es2)
-  then have ok: "Instrs_ok2 s C' es0 tf" sorry (* inversion lemma on concatenation *)
+  case (ctxt_instrs es0 es1 vs aft)
   {
     case 1
-    then show ?case using ok ctxt_instrs by simp
+    then show ?case proof(cases tf)
+      case (mk_functype t1 t4)
+      then obtain t2 where 
+        "Instrs_ok2 s C' (map admininstr_val vs) (mk_functype t1 t2)" 
+        "Instrs_ok2 s C' (es0 @ aft) (mk_functype t2 t4)"
+        using 1 inv_seq by blast
+      then obtain t3 where 
+        "Instrs_ok2 s C' es0 (mk_functype t2 t3)"
+        "Instrs_ok2 s C' aft (mk_functype t3 t4)"
+        using inv_seq by blast
+      then show ?thesis using 1 ctxt_instrs by simp
+    qed
   next
     case 2
-    then show ?case using ok ctxt_instrs by simp
+    then show ?case proof(cases tf)
+      case (mk_functype t1 t4)
+      then obtain t2 where 
+        "Instrs_ok2 s C' (map admininstr_val vs) (mk_functype t1 t2)" 
+        "Instrs_ok2 s C' (es0 @ aft) (mk_functype t2 t4)"
+        using 2 inv_seq by blast
+      then obtain t3 where 
+        "Instrs_ok2 s C' es0 (mk_functype t2 t3)"
+        "Instrs_ok2 s C' aft (mk_functype t3 t4)"
+        using inv_seq by blast
+      then show ?thesis using 2 ctxt_instrs by simp
+    qed
   next
     case 3
-    then show ?case using ok ctxt_instrs by simp
+    then show ?case proof(cases tf)
+      case (mk_functype t1 t4)
+      then obtain t2 where 
+        "Instrs_ok2 s C' (map admininstr_val vs) (mk_functype t1 t2)" 
+        "Instrs_ok2 s C' (es0 @ aft) (mk_functype t2 t4)"
+        using 3 inv_seq by blast
+      then obtain t3 where 
+        "Instrs_ok2 s C' es0 (mk_functype t2 t3)"
+        "Instrs_ok2 s C' aft (mk_functype t3 t4)"
+        using inv_seq by blast
+      then show ?thesis using 3 ctxt_instrs by simp
+    qed
   }
 next
   case (Step__local_set v_val x)
@@ -178,6 +389,38 @@ next
     then show ?case using Step__local_set using with_local.domintros with_local.psimps by auto 
   next
     case 3
+    then show ?case proof (cases tf)
+      case (mk_functype t1 t3)
+      then obtain t2 where splitval:
+         "Instrs_ok2 s C'  [admininstr_val v_val] (mk_functype t1 t2)"
+         "Instrs_ok2 s C' [admininstr_sc4 (admininstr_st4_LOCAL_SET x)] (mk_functype t2 t3)" 
+        using 3 inv_seq[of s C' "[_,_]" t1 t3 "[_]" "[_]"] by fastforce
+      then have subv: "mk_instrtype (mk_list []) (mk_list [typeofval v_val]) <ti: mk_instrtype t1 t2"
+        using inv_const_list[of s C' "[_]" t1 t2 "[_]"] by fastforce
+      have valok: "Val_ok s v_val (typeofval v_val)" 
+        using splitval(1) Instrs_ok2_const_replace[of s C' "[_]" _ C'] Instrs_ok2_wf
+        by force
+      obtain t2' t3' where
+        "Instr_ok2 s C' (admininstr_sc4 (admininstr_st4_LOCAL_SET x)) (mk_functype t2' t3')" 
+        and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3"
+        using splitval inv_one_admininstr by blast
+      then have "Instr_ok C' (instr_sc4 (LOCAL_SET x)) (mk_functype t2' t3')"
+        using inv_plain admininstr_instr.domintros admininstr_instr.psimps by fastforce
+      then obtain t where hyps:
+          "proj_uN_0 x < length (context_LOCALS C')"
+          "context_LOCALS C' ! proj_uN_0 x = t" 
+          "mk_functype (mk_list [t]) (mk_list []) = mk_functype t2' t3'"
+        using inv_local_set by blast
+      then have 
+         subt: "mk_instrtype (mk_list []) (mk_list []) <ti: mk_instrtype t1 t3" 
+            "Resulttype_sub (mk_list [typeofval v_val]) (mk_list [t])" 
+        using subv subt produce_consume[of "[_]" t1 t2 "[]" "[_]" "[]" t3] by auto
+      have "Valtype_sub (typeofval v_val) t" using subt(2)
+      proof (induction "mk_list [typeofval v_val]" "mk_list [t]" rule:Resulttype_sub.induct)
+        case mk_Resulttype_sub
+        then show ?case by blast
+      qed
+      then have valok: "Val_ok s v_val t" using valok val_ok_sub by blast
     have localsupd: "list_update_func (LOCALS f) (proj_uN_0 x) (\<lambda> _. v_val) = LOCALS f'" 
       using Step__local_set 
       by (metis local.Step__local_set with_local.psimps state.inject 
@@ -186,10 +429,11 @@ next
       using 3 store_extension_valok list_all2_mono
       by (metis (mono_tags, lifting) Extend_store.simps)
     have "Val_ok s' v_val (context_LOCALS C' ! proj_uN_0 x)" 
-      using 3(8)
-      sorry (* figure out t, use inversion for concat, inversion for value v_val, for local_set *) 
-    then show ?case using localsupd types' list_all2_list_update_func_r
+      using hyps subt valok store_extension_valok 3 
+      using store_extension_wf by blast
+    then show ?thesis using localsupd types' list_all2_list_update_func_r
       by blast
+  qed
   }
 next
   case (Step__global_set v_val x)

@@ -957,6 +957,29 @@ next
   then show ?case by simp
 qed 
 
+(*
+lemma Instr_ok2_const_ok: 
+  assumes "Instr_ok2 s C (admininstr_val v) (mk_functype (mk_list []) (mk_list [t]))" 
+  shows "Val_ok s v t"
+proof(cases v)
+  case (val_CONST nt val)
+  then have "Instr_ok C (instr_sc0 (res_CONST nt val)) (mk_functype (mk_list []) (mk_list [t]))"
+  then show ?thesis using Instrs_ok2_wf Instrs_ok2_wf_instr assms 
+next
+  case (val_VCONST x21 x22)
+  then show ?thesis sorry
+next
+  case (val_REF_NULL x3)
+  then show ?thesis sorry
+next
+  case (val_REF_FUNC_ADDR x4)
+  then show ?thesis sorry
+next
+  case (val_REF_HOST_ADDR x5)
+  then show ?thesis sorry
+qed
+*)
+
 lemma app_app:
   assumes "l1 @ l2 = m1 @ m2"
   shows "\<exists> n1 n2 n3. (n1 = l1 \<and> n2 @ n3 = l2 \<and> n1 @ n2 = m1 \<and> n3 = m2) \<or>
@@ -1315,18 +1338,72 @@ proof(induction s C es ts rule:Instr_ok2_Instrs_ok2_Expr_ok2.inducts(3)[where ?P
   }
 qed(simp_all)
   
-
+lemma wf_admininstr_val_inv:
+  assumes "wf_admininstr (admininstr_val v)"
+  shows "wf_val v"
+proof(cases v)
+  case (val_CONST nt val)
+  then have "wf_admininstr (admininstr_sc1 (admininstr_st1_CONST nt val))" 
+    using admininstr_val.domintros admininstr_val.psimps assms by simp
+  then show ?thesis proof (induction "admininstr_sc1 (admininstr_st1_CONST nt val)" 
+  rule: wf_admininstr.induct)
+    case admininstr_case_13
+    then show ?case
+      using val_CONST val_case_0 by blast
+  qed
+next
+  case (val_VCONST vt val)
+  then have "wf_admininstr (admininstr_sc2 (admininstr_st2_VCONST vt val))" 
+    using admininstr_val.domintros admininstr_val.psimps assms by simp
+  then show ?thesis proof (induction "admininstr_sc2 (admininstr_st2_VCONST vt val)" 
+  rule: wf_admininstr.induct)
+    case admininstr_case_20
+    then show ?case 
+      using val_VCONST val_case_1 by presburger
+  qed
+next
+  case (val_REF_NULL rt)
+  then have "wf_admininstr (admininstr_sc4 (admininstr_st4_REF_NULL rt))"
+    using admininstr_val.domintros admininstr_val.psimps assms by simp
+  then show ?thesis proof (induction "admininstr_sc4 (admininstr_st4_REF_NULL rt)" 
+  rule: wf_admininstr.induct)
+    case admininstr_case_40
+    then show ?case 
+      by (simp add: val_REF_NULL val_case_2)
+  qed
+next
+  case (val_REF_FUNC_ADDR addr)
+  then have "wf_admininstr (admininstr_sc7 (admininstr_st7_REF_FUNC_ADDR addr))"
+    using admininstr_val.domintros admininstr_val.psimps assms by simp
+  then show ?thesis proof (induction "admininstr_sc7 (admininstr_st7_REF_FUNC_ADDR addr)" 
+  rule: wf_admininstr.induct)
+    case admininstr_case_68
+    then show ?case 
+      by (simp add: val_REF_FUNC_ADDR val_case_3)
+  qed
+next
+  case (val_REF_HOST_ADDR addr)
+  then have "wf_admininstr (admininstr_sc7 (admininstr_st7_REF_HOST_ADDR addr))"
+    using admininstr_val.domintros admininstr_val.psimps assms by simp
+  then show ?thesis proof (induction "admininstr_sc7 (admininstr_st7_REF_HOST_ADDR addr)" 
+  rule: wf_admininstr.induct)
+    case admininstr_case_69
+    then show ?case 
+      by (simp add: val_REF_HOST_ADDR val_case_4)
+  qed
+qed
 
  
 lemma Instr_ok2_const_replace:
   assumes "Instr_ok2 s C (admininstr_val v) tf" "wf_context C'" 
-  shows "Instr_ok2 s C' (admininstr_val v) (mk_functype (mk_list []) (mk_list [typeofval v]))"
+  shows "Instr_ok2 s C' (admininstr_val v) (mk_functype (mk_list []) (mk_list [typeofval v]))
+      \<and> Val_ok s v (typeofval v)"
 proof (cases v)
   case (val_CONST x11 x12)
   then show ?thesis using Instr_ok2_wf Instr_ok2_wf_instr assms 
     instr_ok_instr_ok2 wf_admininstr_instr_inv const
-    by (metis admininstr_instr.domintros(14) admininstr_instr.psimps(14) admininstr_val.domintros(1)
-        admininstr_val.psimps(1) typeofval.domintros(1) typeofval.psimps(1))
+    admininstr_instr.domintros admininstr_instr.psimps admininstr_val.domintros admininstr_val.psimps
+    typeofval.domintros typeofval.psimps Val_ok__numtype wf_admininstr_val_inv by metis
 next
   case (val_VCONST x21 x22)
   then show ?thesis
@@ -1337,12 +1414,13 @@ next
       using admininstr_instr.domintros(21) admininstr_instr.psimps(21) admininstr_val.domintros(2)
         admininstr_val.psimps(2) assms by auto
       then show ?thesis using val_VCONST Instr_ok2_wf assms 
-          instr_ok_instr_ok2 V128
+          instr_ok_instr_ok2 V128 Instr_ok2_wf_instr 
           vconst
           admininstr_instr.domintros(21) admininstr_instr.psimps(21)
           admininstr_val.domintros(2) admininstr_val.psimps(2) typeofval.domintros(2) 
-          typeofval.psimps(2)
-        by (metis valtype_vectype.domintros valtype_vectype.psimps)
+          typeofval.psimps(2) wf_admininstr_val_inv Val_ok__vectype
+          valtype_vectype.domintros valtype_vectype.psimps
+        by metis
     qed
 next
   case (val_REF_NULL x3)
@@ -1350,9 +1428,10 @@ next
     Instr_ok2_wf_instr assms wf_admininstr_instr_inv
     using instr_case_40 by presburger
   then show ?thesis using Instr_ok2_wf assms 
-    instr_ok_instr_ok2 ref_null
-    by (metis admininstr_instr.domintros(41) admininstr_instr.psimps(41) admininstr_val.domintros(3)
-        admininstr_val.psimps(3) typeofval.domintros(3) typeofval.psimps(3) val_REF_NULL)
+    instr_ok_instr_ok2 ref_null Instr_ok2_wf_instr wf_admininstr_val_inv Val_ok__reftype null
+    admininstr_instr.domintros admininstr_instr.psimps admininstr_val.domintros admininstr_val.psimps
+    typeofval.domintros typeofval.psimps val_REF_NULL valtype_reftype.domintros valtype_reftype.psimps
+    val_ref.domintros val_ref.psimps by metis
 next
   case (val_REF_FUNC_ADDR x4)
   then have eq: "admininstr_val v = admininstr_ref (REF_FUNC_ADDR x4)"
@@ -1379,9 +1458,10 @@ next
     then show ?thesis using Instr_ok2__ref assms Instr_ok2_wf 
       val_REF_FUNC_ADDR admininstr_val.domintros admininstr_val.psimps 
       valtype_reftype.domintros valtype_reftype.psimps
-      admininstr_ref.domintros admininstr_ref.psimps 
-      by (metis Ref_ok.simps ref.distinct(1,5) typeofval.domintros(4)
-          typeofval.psimps(4))
+      admininstr_ref.domintros admininstr_ref.psimps
+      Val_ok__reftype Ref_ok.simps ref.distinct(1,5) typeofval.domintros typeofval.psimps
+      val_ref.psimps val_ref.domintros 
+      by metis
   qed
 next
   case (val_REF_HOST_ADDR x5)
@@ -1409,7 +1489,7 @@ next
     then show ?thesis using Instr_ok2__ref assms Instr_ok2_wf 
       val_REF_HOST_ADDR admininstr_val.domintros admininstr_val.psimps 
       valtype_reftype.domintros valtype_reftype.psimps
-      admininstr_ref.domintros admininstr_ref.psimps 
+      admininstr_ref.domintros admininstr_ref.psimps Val_ok__reftype val_ref.domintros val_ref.psimps
       by (metis Ref_ok.simps typeofval.domintros(5)
           typeofval.psimps(5))
   qed
@@ -1419,7 +1499,8 @@ qed
 lemma Instrs_ok2_const_replace:
   assumes "Instrs_ok2 s C (map admininstr_val vs) tf" "wf_context C'"
   shows "Instrs_ok2 s C' (map admininstr_val vs) 
-          (mk_functype (mk_list []) (mk_list (map typeofval vs)))"
+          (mk_functype (mk_list []) (mk_list (map typeofval vs)))
+    \<and> list_all (\<lambda> v. Val_ok s v (typeofval v)) vs"
   using assms
 proof (induction vs arbitrary:tf)
   case Nil
@@ -1455,7 +1536,11 @@ next
     then show ?thesis using a 
       Instrs_ok2__seq[of s C' "[admininstr_val a]" "[]" "[typeofval a]" 
             "map admininstr_val vs" "map typeofval (a # vs)"]
-      Instrs_ok2_wf Instrs_ok2_wf_instr by fastforce
+      Instrs_ok2_wf Instrs_ok2_wf_instr
+      by (metis (no_types, lifting) Cons.IH Instr_ok2_const_replace
+          \<open>Instr_ok2 s C' (admininstr_val a) (mk_functype (mk_list []) (mk_list [typeofval a]))\<close>
+          \<open>\<And>thesis. (\<And>t2. Instrs_ok2 s C [admininstr_val a] (mk_functype t1 t2) \<Longrightarrow> Instrs_ok2 s C (map admininstr_val vs) (mk_functype t2 t3) \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close>
+          append_Cons list.pred_inject(2) list.simps(9) self_append_conv2)
   qed
 
 qed
