@@ -260,7 +260,7 @@ lemma Instr_ok_inversion:
     inv_vbitmask: "e = (instr_sc3 (VBITMASK ish)) \<Longrightarrow> (mk_functype (mk_list [valtype_V128]) (mk_list [valtype_I32])) = tf" and
     inv_vswizzle: "e = (instr_sc3 (VSWIZZLE ish)) \<Longrightarrow> (mk_functype (mk_list [valtype_V128, valtype_V128]) (mk_list [valtype_V128])) = tf" and
     inv_vshuffle: "e = (instr_sc3 (VSHUFFLE ish i_lst)) \<Longrightarrow>
-      (\<exists> i.
+      (
       (list_all (\<lambda> (i :: laneidx). ((proj_uN_0 i) < (2 * (proj_dim_0 (fun_dim (shape_ishape ish)))))) i_lst) \<and>
 		  ((wf_dim (fun_dim (shape_ishape ish)))) \<and>
       ((mk_functype (mk_list [valtype_V128, valtype_V128]) (mk_list [valtype_V128])) = tf))" and
