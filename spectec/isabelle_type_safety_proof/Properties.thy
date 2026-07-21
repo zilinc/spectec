@@ -1,5 +1,5 @@
 theory Properties
-	imports Main isabelle_reference_output_wasm2
+	imports Main isabelle_reference_output_wasm2 Type_inversion
 
 begin
 
@@ -80,27 +80,53 @@ lemma store_extension_refl:
   apply simp+
   by (metis list_all_length)
 
-(*Store extension reduction*)
+(*Store extension reduction*)                
+lemma e_type_comp_conc2:
+  assumes "\<S>\<bullet>\<C> \<turnstile> es@es'@es'' : (t1s _> t2s)"
+  shows "\<exists>ts' ts''. (\<S>\<bullet>\<C> \<turnstile> es : (t1s _> ts'))
+                     \<and> (\<S>\<bullet>\<C> \<turnstile> es' : (ts' _> ts''))
+                     \<and> (\<S>\<bullet>\<C> \<turnstile> es'' : (ts'' _> t2s))"
+sorry
+
+
+lemma e_type_label:
+  assumes "\<S>\<bullet>\<C> \<turnstile> [Label n es0 es] : (ts _> ts')"
+  shows "\<exists>tls t2s. instr_subtyping ([] _> t2s) (ts _> ts')
+                \<and> length tls = n
+                \<and> (\<S>\<bullet>\<C> \<turnstile> es0 : (tls _> t2s))
+                \<and> (\<S>\<bullet>\<C>\<lparr>label := [tls] @ (label \<C>)\<rparr> \<turnstile> es : ([] _> t2s))"
+sorry
+
+lemma types_exist_lfilled:
+assumes "Step (mk_config (mk_state s f) [(admininstr_sc8 (LABEL_underscore v_n instr_0_lst admininstr_lst))]) (mk_config (mk_state s' f') [(admininstr_sc8 (LABEL_underscore v_n instr_0_lst admininstr'_lst))])"
+        "Instr_ok2 s C (admininstr_sc8 (LABEL_underscore v_n instr_0_lst admininstr_lst)) (mk_functype ts ts')"
+shows "\<exists>t1s t2s arb_label. Instrs_ok2 s (C \<lparr> LABELS := arb_label @ (LABELS C) \<rparr>) admininstr_lst (mk_functype t1s t2s)"
+proof -
+have "Step (mk_config (mk_state s f) admininstr_lst) (mk_config (mk_state s' f') admininstr'_lst)" sorry
+then show ?thesis 
+apply (induction rule: Step.induct)
+
+sorry
+
+lemma types_exist_lfilled_weak:
+assumes "Step (mk_config (mk_state s f) [(admininstr_sc8 (LABEL_underscore v_n instr_0_lst admininstr_lst))]) (mk_config (mk_state s' f') [(admininstr_sc8 (LABEL_underscore v_n instr_0_lst admininstr'_lst))])"
+        "Instr_ok2 s C (admininstr_sc8 (LABEL_underscore v_n instr_0_lst admininstr_lst)) (mk_functype ts ts')"
+  shows "\<exists>t1s t2s \<C>' arb_label arb_return. Instrs_ok2 s (C \<lparr> LABELS := arb_label, context_RETURN := arb_return \<rparr>) admininstr_lst (mk_functype t1s t2s)"
+
+sorry
+
 lemma reduce_store_extension:
   assumes "Step (mk_config (mk_state s f) admininstr_lst) (mk_config (mk_state s' f') admininstr'_lst)"
           "Store_ok s"
-          "Moduleinst_ok s module_inst C"
+          "Moduleinst_ok s (frame_MODULE f) Ci"
           "Instrs_ok2 s C admininstr_lst (mk_functype t_1_lst t_2_lst)"
           "C = Ci\<lparr>context_LOCALS := (map typeofval (LOCALS f)), LABELS := lbl, context_RETURN := rtn\<rparr>"
   shows "Extend_store s s' \<and> Store_ok s'"
   using assms
-  proof (induction "(mk_config (mk_state s f) admininstr_lst)" "(mk_config (mk_state s' f') admininstr'_lst)" arbitrary: admininstr_lst admininstr'_lst rule: Step.induct)
-  case (pure admininstr_lst admininstr'_lst)
-    have "wf_store s"
-      using Instrs_ok2.simps pure.prems(3) by blast
-    then show ?case using store_extension_refl pure(2,4)
-      by blast
-  next
-    case (read admininstr_lst admininstr'_lst)
-    then show ?case sorry
-  next
+  proof (induction "(mk_config (mk_state s f) admininstr_lst)" "(mk_config (mk_state s' f') admininstr'_lst)" arbitrary: C Ci lbl rtn rule: Step.induct)
     case (ctxt_label admininstr_lst admininstr'_lst v_n instr_0_lst)
-    then show ?case sorry
+    then show ?case using types_exist_lfilled_weak
+    sorry
   next
     case (ctxt_frame f' admininstr_lst f'' admininstr'_lst v_n)
     then show ?case sorry

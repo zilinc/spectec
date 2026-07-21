@@ -7618,6 +7618,7 @@ and Instrs_ok :: "res_context ⇒ (instr list) ⇒ functype ⇒ bool" where
 	| cvtop_convert :
 		"(wf_context C) ⟹
 		 (wf_instr (instr_sc1 (CVTOP nt_1 nt_2 v_cvtop))) ⟹
+v_cvtop \<noteq> REINTERPRET \<Longrightarrow>
 		 Instr_ok C (instr_sc1 (CVTOP nt_1 nt_2 v_cvtop)) (mk_functype (mk_list [(valtype_numtype nt_2)]) (mk_list [(valtype_numtype nt_1)]))"
 	| ref_null :
 		"(wf_context C) ⟹
