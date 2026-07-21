@@ -1,30 +1,9 @@
 theory Wasm2_Type_Soundness
 (* Imported Code *)
-	imports isabelle_reference_output_wasm2 store_extension_typing Properties Type_Inversion Subtyping_Theorem
+	imports isabelle_reference_output_wasm2 store_extension_typing Properties 
+	        Type_Inversion Subtyping_Theorem Context_Store_Agreement
 begin
 
-definition t_inst_match :: "res_context \<Rightarrow> res_context \<Rightarrow> bool" where
-  "t_inst_match C C' \<equiv> context_TYPES C = context_TYPES C' \<and>
-                       context_FUNCS C = context_FUNCS C' \<and>
-                       context_GLOBALS C = context_GLOBALS C' \<and>
-                       context_TABLES C = context_TABLES C' \<and>
-                       context_MEMS C = context_MEMS C' \<and>
-                       context_ELEMS C = context_ELEMS C' \<and>
-                       context_DATAS C = context_DATAS C'"
-
-lemma t_inst_match_is:
-  assumes "t_inst_match C1 C2"
-  shows "\<exists>a b c. C2 = \<lparr> context_TYPES = context_TYPES C1,
-                       context_FUNCS = context_FUNCS C1,
-                       context_GLOBALS = context_GLOBALS C1,
-                       context_TABLES = context_TABLES C1,
-                       context_MEMS = context_MEMS C1,
-                       context_ELEMS = context_ELEMS C1,
-                       context_DATAS = context_DATAS C1,
-                       context_LOCALS = a,
-                       LABELS = b,
-                       context_RETURN = c \<rparr>"
-  by (metis (full_types) assms unit.exhaust res_context.surjective t_inst_match_def)
 
 lemma step_wf: "(wf_config var_0) \<Longrightarrow>
 		 (Step var_0 var_1) \<Longrightarrow>
@@ -675,59 +654,8 @@ proof (cases l)
   then show ?thesis using proj_list_0.domintros proj_list_0.psimps by blast
 qed
 
-(*
-lemma Instrs_ok2_seq_sub:
-  assumes 
-      "Instrs_ok2 s C es1 (mk_functype t1a t1b)" 
-      "Instrs_ok2 s C es2 (mk_functype t2a t2b)" 
-      "mk_instrtype t1a t1b <ti: mk_instrtype tstart tmid" 
-      "mk_instrtype t2a t2b <ti: mk_instrtype tmid tend" 
-    shows "Instrs_ok2 s C (es1 @ es2) (mk_functype tstart tend)"
-*)
 
-lemma blocktype_ok_agree:
-  assumes "Blocktype_ok C' bt tf"
-    "fun_blocktype (mk_state s f) bt = tf'"
-    "Moduleinst_ok s (frame_MODULE f) C"
-    "t_inst_match C C'"
-  shows "tf = tf'"
-  using assms
-proof(induction C' bt tf rule:Blocktype_ok.induct)
-  case (Blocktype_ok__valtype C valtype_opt)
-  then show ?case 
-  proof (cases valtype_opt)
-    case None
-    then show ?thesis using Blocktype_ok__valtype fun_blocktype.domintros 
-       fun_blocktype.psimps by auto
-  next
-    case (Some a)
-    then show ?thesis using Blocktype_ok__valtype fun_blocktype.domintros
-fun_blocktype.psimps by auto
-  qed
-next
-  case (Blocktype_ok__typeidx v_typeidx C' t_1_lst t_2_lst)
-  then have sametypes: "context_TYPES C' = context_TYPES C" 
-  proof (cases C')
-    case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
-            context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
-    note outer = fields
-    then show ?thesis 
-    proof (cases C)
-      case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
-      then show ?thesis using outer Blocktype_ok__typeidx t_inst_match_def by simp
-    qed
-  qed
-  show ?case using Blocktype_ok__typeidx(6,1,2,3,4,5,7) fun_blocktype.domintros(3) fun_blocktype.psimps(3)
-      fun_type.domintros fun_type.psimps sametypes
-  proof (induction s "frame_MODULE f" C rule:Moduleinst_ok.induct)
-    case (mk_Moduleinst_ok functype_lst globaladdr_lst globaltype_lst s funcaddr_lst 
-          functype_F_lst memaddr_lst memtype_lst tableaddr_lst tabletype_lst exportinst_lst 
-          dataaddr_lst datatype_lst elemaddr_lst elemtype_lst)
-    then have "TYPES (frame_MODULE f) ! proj_uN_0 v_typeidx = context_TYPES C' ! proj_uN_0 v_typeidx"
-      by (metis moduleinst.select_convs(1) res_context.select_convs(1))
-    then show ?case using mk_Moduleinst_ok by metis
-  qed
-qed
+
 
 
 lemma e_preservation:
@@ -2772,7 +2700,7 @@ next
       using inv_block by blast
     have eqt: "mk_functype (mk_list t1s) (mk_list t2s) = mk_functype (mk_list t_1_lst) 
           (mk_list t_2_lst)" using blockhyps(2) Step_read__block(1,10,11)
-      using blocktype_ok_agree by blast
+      using blocktype_ok_agree by auto
     then have subt: "mk_instrtype (mk_list []) (mk_list t2s) <ti: mk_instrtype t1 t3" 
         "Resulttype_sub (mk_list (map typeofval val_lst)) (mk_list t1s)"
       using blockhyps Step_read__block subv subt 
@@ -2845,8 +2773,8 @@ next
    "mk_functype (mk_list t1s) (mk_list t2s) = mk_functype t2' t3'"
       using inv_loop by blast
     have eqt: "mk_functype (mk_list t1s) (mk_list t2s) = mk_functype (mk_list t_1_lst) 
-          (mk_list t_2_lst)" using blockhyps(2) Step_read__loop(1,10,11)
-      using blocktype_ok_agree by blast
+          (mk_list t_2_lst)" using blockhyps(2) Step_read__loop(1)
+      using blocktype_ok_agree[OF blockhyps(2) Step_read__loop(10,11)] by auto
     then have subt: "mk_instrtype (mk_list []) (mk_list t2s) <ti: mk_instrtype t1 t3" 
         "Resulttype_sub (mk_list (map typeofval val_lst)) (mk_list t1s)"
       using blockhyps Step_read__loop subv subt 
@@ -2878,7 +2806,8 @@ next
       using okvs instrs_ok_instrs_ok2 instrs_ok2_seq 
       using Instrs_ok2_wf(2) by blast
     then have wffinal: "wf_admininstr (admininstr_sc8
-       (LABEL_underscore k [instr_sc7 (LOOP bt instr_lst)] (map admininstr_val val_lst @ map admininstr_instr instr_lst)))"
+       (LABEL_underscore k [instr_sc7 (LOOP bt instr_lst)] 
+        (map admininstr_val val_lst @ map admininstr_instr instr_lst)))"
       using admininstr_case_71 Instrs_ok2_wf_instr okloop Instr_ok_wf(2) by fastforce
     have "Instrs_ok2 s C' (map admininstr_instr [instr_sc7 (LOOP bt instr_lst)])
      (mk_functype (mk_list t1s) (mk_list t2s))"
@@ -2897,7 +2826,24 @@ next
       by auto
   next
     case (Step_read__call x)
-    then show ?case sorry
+    then obtain t1' t3' where 
+      ok': "Instr_ok2 s C' (admininstr_sc1 (admininstr_st1_CALL x)) (mk_functype t1' t3')" 
+      and subt: "mk_instrtype t1' t3' <ti: mk_instrtype t1 t3" 
+      using inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc0 (CALL x)) (mk_functype t1' t3')"
+      using inv_plain admininstr_instr.domintros admininstr_instr.psimps by fastforce
+    then have callhyps:
+      "proj_uN_0 x < length (context_FUNCS C')" 
+      "context_FUNCS C' ! proj_uN_0 x = mk_functype t1' t3'"
+      using inv_call by auto
+    then have "Instr_ok2 s C' (admininstr_sc7 (CALL_ADDR 
+          (fun_funcaddr (mk_state s f) ! proj_uN_0 x))) (mk_functype t1' t3')"
+      using Instr_ok2__call_addr[OF _ Instrs_ok2_wf(2,1)[OF Step_read__call(10)]] 
+        context_funcs_agree Step_read__call externtype_case_0 admininstr_case_70 
+      using Instr_ok2.simps ok'
+      by auto
+    then show ?case using 
+        subt instr_ok2_instrs_ok2 Instrs_ok2_subtyping Step_read__call by fast
   next
     case (call_indirect_call i x a y)
     then show ?case sorry

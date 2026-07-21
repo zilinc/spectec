@@ -223,10 +223,9 @@ lemma Instr_ok_inversion:
 		  (Resulttype_sub (mk_list t_lst) ((LABELS C) ! (proj_uN_0 l'))) \<and>
       ((mk_functype (mk_list (t_1_lst @ (t_lst @ [valtype_I32]))) (mk_list t_2_lst)) = tf))" and
     inv_call: "e = (instr_sc0 (CALL x)) \<Longrightarrow>
-      (\<exists> t_1_lst t_2_lst.
+      (
 		  ((proj_uN_0 x) < (length (context_FUNCS C))) \<and>
-		  (((context_FUNCS C) ! (proj_uN_0 x)) = (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))) \<and>
-		  ((mk_functype (mk_list t_1_lst) (mk_list t_2_lst)) = tf))" and
+		  (((context_FUNCS C) ! (proj_uN_0 x)) = tf))" and
     inv_call_indirect: "e = (instr_sc0 (CALL_INDIRECT x y)) \<Longrightarrow>
       (\<exists> lim t_1_lst t_2_lst.
 		  ((proj_uN_0 x) < (length (context_TABLES C))) \<and>
