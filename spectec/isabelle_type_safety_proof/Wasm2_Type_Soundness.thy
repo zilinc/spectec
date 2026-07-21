@@ -2817,7 +2817,84 @@ next
       by auto
   next
     case (Step_read__loop bt t_1_lst t_2_lst k val_lst v_n instr_lst)
-    then show ?case sorry
+    then obtain t2 where splitvs: 
+      "Instrs_ok2 s C' (map admininstr_val val_lst) (mk_functype t1 t2)"
+      "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_LOOP bt instr_lst)] (mk_functype t2 t3)"
+      using inv_seq by blast
+    then have subv: "mk_instrtype (mk_list []) (mk_list (map typeofval val_lst)) <ti:
+               mk_instrtype t1 t2" using inv_const_list by blast
+    obtain t2' t3' where 
+      "Instr_ok2 s C' (admininstr_sc0 (admininstr_st0_LOOP bt instr_lst)) (mk_functype t2' t3')"
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3"
+      using splitvs(2) inv_one_admininstr by blast
+    then have okloop: "Instr_ok C' (instr_sc7 (LOOP bt instr_lst)) (mk_functype t2' t3')" 
+      using inv_plain admininstr_instr.psimps admininstr_instr.domintros by fastforce
+    then obtain t1s t2s where blockhyps:
+      "wf_context
+    \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [],
+       context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [mk_list t1s],
+       context_RETURN = None\<rparr>"
+   "Blocktype_ok C' bt (mk_functype (mk_list t1s) (mk_list t2s))"
+   "Instrs_ok
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list t1s], context_RETURN = None\<rparr>
+      C')
+    instr_lst (mk_functype (mk_list t1s) (mk_list t2s))"
+   "mk_functype (mk_list t1s) (mk_list t2s) = mk_functype t2' t3'"
+      using inv_loop by blast
+    have eqt: "mk_functype (mk_list t1s) (mk_list t2s) = mk_functype (mk_list t_1_lst) 
+          (mk_list t_2_lst)" using blockhyps(2) Step_read__loop(1,10,11)
+      using blocktype_ok_agree by blast
+    then have subt: "mk_instrtype (mk_list []) (mk_list t2s) <ti: mk_instrtype t1 t3" 
+        "Resulttype_sub (mk_list (map typeofval val_lst)) (mk_list t1s)"
+      using blockhyps Step_read__loop subv subt 
+          produce_consume[of "map typeofval val_lst" t1 t2 "[]" t1s t2s t3] 
+      by auto
+    then have okvs: "Instrs_ok2 s (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list t1s], context_RETURN = None\<rparr>
+      C') (map admininstr_val val_lst) (mk_functype (mk_list []) (mk_list (map typeofval val_lst)))"
+      using splitvs Instrs_ok2_const_replace blockhyps(3) Instrs_ok_wf(1) by blast
+    have "Instrs_ok
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list t1s], context_RETURN = None\<rparr>
+      C')
+    instr_lst (mk_functype (mk_list (map typeofval val_lst)) (mk_list t2s))"
+      using blockhyps subt
+      using Instrs_ok_wf(1,2) Resulttype_sub_refl sub by blast
+    then have ok_inside: "Instrs_ok2 s
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list t1s], context_RETURN = None\<rparr>
+      C')
+    (map admininstr_val val_lst @ map admininstr_instr instr_lst) 
+    (mk_functype (mk_list []) (mk_list t2s))"
+      using okvs instrs_ok_instrs_ok2 instrs_ok2_seq 
+      using Instrs_ok2_wf(2) by blast
+    then have wffinal: "wf_admininstr (admininstr_sc8
+       (LABEL_underscore k [instr_sc7 (LOOP bt instr_lst)] (map admininstr_val val_lst @ map admininstr_instr instr_lst)))"
+      using admininstr_case_71 Instrs_ok2_wf_instr okloop Instr_ok_wf(2) by fastforce
+    have "Instrs_ok2 s C' (map admininstr_instr [instr_sc7 (LOOP bt instr_lst)])
+     (mk_functype (mk_list t1s) (mk_list t2s))"
+      using splitvs(2) admininstr_instr.domintros 
+        admininstr_instr.psimps blockhyps subt Instrs_ok2_subtyping 
+      by (metis Instrs_ok2_wf(2) instr_ok_instrs_ok instrs_ok_instrs_ok2 okloop) 
+    then have "Instr_ok2 s C'
+     (admininstr_sc8
+       (LABEL_underscore k [instr_sc7 (LOOP bt instr_lst)] (map admininstr_val val_lst @ map admininstr_instr instr_lst)))
+        (mk_functype (mk_list []) (mk_list t2s))"
+      using label[OF _ ok_inside Instrs_ok2_wf(2,1)[OF splitvs(1)] wffinal] 
+        blockhyps Step_read__block eqt 
+      using Instrs_ok2_frame_sub Resulttype_sub_refl
+      using Step_read__loop.hyps(3) by blast
+    then show ?case using instr_ok2_instrs_ok2 Instrs_ok2_subtyping subt Step_read__loop(14)
+      by auto
   next
     case (Step_read__call x)
     then show ?case sorry
