@@ -685,6 +685,51 @@ lemma Instrs_ok2_seq_sub:
     shows "Instrs_ok2 s C (es1 @ es2) (mk_functype tstart tend)"
 *)
 
+lemma blocktype_ok_agree:
+  assumes "Blocktype_ok C' bt tf"
+    "fun_blocktype (mk_state s f) bt = tf'"
+    "Moduleinst_ok s (frame_MODULE f) C"
+    "t_inst_match C C'"
+  shows "tf = tf'"
+  using assms
+proof(induction C' bt tf rule:Blocktype_ok.induct)
+  case (Blocktype_ok__valtype C valtype_opt)
+  then show ?case 
+  proof (cases valtype_opt)
+    case None
+    then show ?thesis using Blocktype_ok__valtype fun_blocktype.domintros 
+       fun_blocktype.psimps by auto
+  next
+    case (Some a)
+    then show ?thesis using Blocktype_ok__valtype fun_blocktype.domintros
+fun_blocktype.psimps by auto
+  qed
+next
+  case (Blocktype_ok__typeidx v_typeidx C' t_1_lst t_2_lst)
+  then have sametypes: "context_TYPES C' = context_TYPES C" 
+  proof (cases C')
+    case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS 
+            context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+    note outer = fields
+    then show ?thesis 
+    proof (cases C)
+      case (fields context_TYPES context_FUNCS context_GLOBALS context_TABLES context_MEMS context_ELEMS context_DATAS context_LOCALS LABELS context_RETURN)
+      then show ?thesis using outer Blocktype_ok__typeidx t_inst_match_def by simp
+    qed
+  qed
+  show ?case using Blocktype_ok__typeidx(6,1,2,3,4,5,7) fun_blocktype.domintros(3) fun_blocktype.psimps(3)
+      fun_type.domintros fun_type.psimps sametypes
+  proof (induction s "frame_MODULE f" C rule:Moduleinst_ok.induct)
+    case (mk_Moduleinst_ok functype_lst globaladdr_lst globaltype_lst s funcaddr_lst 
+          functype_F_lst memaddr_lst memtype_lst tableaddr_lst tabletype_lst exportinst_lst 
+          dataaddr_lst datatype_lst elemaddr_lst elemtype_lst)
+    then have "TYPES (frame_MODULE f) ! proj_uN_0 v_typeidx = context_TYPES C' ! proj_uN_0 v_typeidx"
+      by (metis moduleinst.select_convs(1) res_context.select_convs(1))
+    then show ?case using mk_Moduleinst_ok by metis
+  qed
+qed
+
+
 lemma e_preservation:
   assumes "Step (mk_config (mk_state s f) es) (mk_config (mk_state s' f') es')"
           "Store_ok s"
@@ -2694,8 +2739,221 @@ using inv_plain admininstr_instr.domintros admininstr_instr.psimps by metis
   qed
 
 next
-  case (read admininstr_lst admininstr'_lst)
-  then show ?case sorry
+  case (read es es')
+  then show ?case
+  proof (induction "mk_config (mk_state s f) es" es' rule:Step_read.induct)
+    case (Step_read__block bt t_1_lst t_2_lst k val_lst v_n instr_lst)
+    then obtain t2 where splitvs: 
+      "Instrs_ok2 s C' (map admininstr_val val_lst) (mk_functype t1 t2)"
+      "Instrs_ok2 s C' [admininstr_sc0 (admininstr_st0_BLOCK bt instr_lst)] (mk_functype t2 t3)"
+      using inv_seq by blast
+    then have subv: "mk_instrtype (mk_list []) (mk_list (map typeofval val_lst)) <ti:
+               mk_instrtype t1 t2" using inv_const_list by blast
+    obtain t2' t3' where 
+      "Instr_ok2 s C' (admininstr_sc0 (admininstr_st0_BLOCK bt instr_lst)) (mk_functype t2' t3')"
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3"
+      using splitvs(2) inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc7 (BLOCK bt instr_lst)) (mk_functype t2' t3')" 
+      using inv_plain admininstr_instr.psimps admininstr_instr.domintros by fastforce
+    then obtain t1s t2s where blockhyps:
+      "wf_context
+    \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [], context_MEMS = [],
+       context_ELEMS = [], context_DATAS = [], context_LOCALS = [], LABELS = [mk_list t2s],
+       context_RETURN = None\<rparr>"
+   "Blocktype_ok C' bt (mk_functype (mk_list t1s) (mk_list t2s))"
+   "Instrs_ok
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list t2s], context_RETURN = None\<rparr>
+      C')
+    instr_lst (mk_functype (mk_list t1s) (mk_list t2s))"
+   "mk_functype (mk_list t1s) (mk_list t2s) = mk_functype t2' t3'"
+      using inv_block by blast
+    have eqt: "mk_functype (mk_list t1s) (mk_list t2s) = mk_functype (mk_list t_1_lst) 
+          (mk_list t_2_lst)" using blockhyps(2) Step_read__block(1,10,11)
+      using blocktype_ok_agree by blast
+    then have subt: "mk_instrtype (mk_list []) (mk_list t2s) <ti: mk_instrtype t1 t3" 
+        "Resulttype_sub (mk_list (map typeofval val_lst)) (mk_list t1s)"
+      using blockhyps Step_read__block subv subt 
+          produce_consume[of "map typeofval val_lst" t1 t2 "[]" t1s t2s t3] 
+      by auto
+    then have okvs: "Instrs_ok2 s (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list t2s], context_RETURN = None\<rparr>
+      C') (map admininstr_val val_lst) (mk_functype (mk_list []) (mk_list (map typeofval val_lst)))"
+      using splitvs Instrs_ok2_const_replace blockhyps(3) Instrs_ok_wf(1) by blast
+    have "Instrs_ok
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list t2s], context_RETURN = None\<rparr>
+      C')
+    instr_lst (mk_functype (mk_list (map typeofval val_lst)) (mk_list t2s))"
+      using blockhyps subt
+      using Instrs_ok_wf(1,2) Resulttype_sub_refl sub by blast
+    then have ok_inside: "Instrs_ok2 s
+    (append_res_context
+      \<lparr>context_TYPES = [], context_FUNCS = [], context_GLOBALS = [], context_TABLES = [],
+         context_MEMS = [], context_ELEMS = [], context_DATAS = [], context_LOCALS = [],
+         LABELS = [mk_list t2s], context_RETURN = None\<rparr>
+      C')
+    (map admininstr_val val_lst @ map admininstr_instr instr_lst) 
+    (mk_functype (mk_list []) (mk_list t2s))"
+      using okvs instrs_ok_instrs_ok2 instrs_ok2_seq 
+      using Instrs_ok2_wf(2) by blast
+    then have wffinal: "wf_admininstr (admininstr_sc8
+       (LABEL_underscore v_n [] (map admininstr_val val_lst @ map admininstr_instr instr_lst)))"
+      using admininstr_case_71 Instrs_ok2_wf_instr by fastforce
+    have "Instr_ok2 s C'
+     (admininstr_sc8
+       (LABEL_underscore v_n [] (map admininstr_val val_lst @ map admininstr_instr instr_lst)))
+        (mk_functype (mk_list []) (mk_list t2s))"
+      using label[OF _ ok_inside Instrs_ok2_wf(2,1)[OF splitvs(1)] wffinal] 
+        blockhyps Step_read__block eqt Instrs_ok2__empty[OF Instrs_ok2_wf(2,1)[OF splitvs(1)]]
+      using Instrs_ok2_frame_sub Resulttype_sub_refl by fastforce
+    then show ?case using instr_ok2_instrs_ok2 Instrs_ok2_subtyping subt Step_read__block(14)
+      by auto
+  next
+    case (Step_read__loop bt t_1_lst t_2_lst k val_lst v_n instr_lst)
+    then show ?case sorry
+  next
+    case (Step_read__call x)
+    then show ?case sorry
+  next
+    case (call_indirect_call i x a y)
+    then show ?case sorry
+  next
+    case (call_indirect_trap i x y)
+    then show ?case sorry
+  next
+    case (call_addr a t_1_lst t_2_lst mm v_func x t_lst instr_lst f val_lst k v_n)
+    then show ?case sorry
+  next
+    case (Step_read__ref_func x)
+    then show ?case sorry
+  next
+    case (Step_read__local_get x)
+    then show ?case sorry
+  next
+    case (Step_read__global_get x)
+    then show ?case sorry
+  next
+    case (table_get_trap i x)
+    then show ?case sorry
+  next
+    case (table_get_val i x)
+    then show ?case sorry
+  next
+    case (Step_read__table_size x v_n)
+    then show ?case sorry
+  next
+    case (table_fill_trap i v_n x v_val)
+    then show ?case sorry
+  next
+    case (table_fill_zero i v_n x v_val)
+    then show ?case sorry
+  next
+    case (table_fill_succ i v_n x v_val)
+    then show ?case sorry
+  next
+    case (table_copy_trap i j v_n y x)
+    then show ?case sorry
+  next
+    case (table_copy_zero i j v_n y x)
+    then show ?case sorry
+  next
+    case (table_copy_le j i v_n y x)
+    then show ?case sorry
+  next
+    case (table_copy_gt j i v_n y x)
+    then show ?case sorry
+  next
+    case (table_init_trap i j v_n y x)
+    then show ?case sorry
+  next
+    case (table_init_zero i j v_n y x)
+    then show ?case sorry
+  next
+    case (table_init_succ i y j v_n x)
+    then show ?case sorry
+  next
+    case (load_num_trap i nt ao)
+    then show ?case sorry
+  next
+    case (load_num_val i nt c ao)
+    then show ?case sorry
+  next
+    case (load_pack_trap i ao v_n v_Inn v_sx)
+    then show ?case sorry
+  next
+    case (load_pack_val v_Inn i v_n c ao v_sx)
+    then show ?case sorry
+  next
+    case (vload_oob i ao)
+    then show ?case sorry
+  next
+    case (vload_val i c ao)
+    then show ?case sorry
+  next
+    case (vload_shape_oob i ao v_M v_N v_sx)
+    then show ?case sorry
+  next
+    case (vload_shape_val i v_N v_M ao j_lst v_Jnn c v_sx)
+    then show ?case sorry
+  next
+    case (vload_splat_oob i ao v_N)
+    then show ?case sorry
+  next
+    case (vload_splat_val i v_N j ao v_Jnn v_M c)
+    then show ?case sorry
+  next
+    case (vload_zero_oob i ao v_N)
+    then show ?case sorry
+  next
+    case (vload_zero_val i v_N j ao c)
+    then show ?case sorry
+  next
+    case (vload_lane_oob i ao v_N c_1 j)
+    then show ?case sorry
+  next
+    case (vload_lane_val i v_N k ao v_Jnn v_M c c_1 j)
+    then show ?case sorry
+  next
+    case (Step_read__memory_size v_n)
+    then show ?case sorry
+  next
+    case (memory_fill_trap i v_n v_val)
+    then show ?case sorry
+  next
+    case (memory_fill_zero i v_n v_val)
+    then show ?case sorry
+  next
+    case (memory_fill_succ i v_n v_val)
+    then show ?case sorry
+  next
+    case (memory_copy_trap i j v_n)
+    then show ?case sorry
+  next
+    case (memory_copy_zero i j v_n)
+    then show ?case sorry
+  next
+    case (memory_copy_le j i v_n)
+    then show ?case sorry
+  next
+    case (memory_copy_gt j i v_n)
+    then show ?case sorry
+  next
+    case (memory_init_trap i j v_n x)
+    then show ?case sorry
+  next
+    case (memory_init_zero i j v_n x)
+    then show ?case sorry
+  next
+    case (memory_init_succ i x j v_n)
+    then show ?case sorry
+  qed
 next
   case (ctxt_label admininstr_lst admininstr'_lst v_n instr_0_lst)
   then show ?case sorry

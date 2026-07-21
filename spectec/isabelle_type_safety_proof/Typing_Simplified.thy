@@ -236,4 +236,27 @@ proof (cases t1)
   qed
 qed
 
+lemma instrs_ok_instrs_ok2:
+  assumes "Instrs_ok C es tf"
+          "wf_store s"
+        shows "Instrs_ok2 s C (map admininstr_instr es) tf"
+  using assms
+proof(induction C es tf rule:Instr_ok_Instrs_ok.inducts(2)[where ?P1.0 = "\<lambda> C e tf. True"])
+  case (empty C)
+  then show ?case using Instrs_ok2__empty by simp
+next
+  case (Instrs_ok__instr C v_instr t_1_lst t_2_lst)
+  then show ?case using instr_ok_instr_ok2 instr_ok2_instrs_ok2 by simp
+next
+  case (seq C instr_1_lst t_1_lst t_2_lst instr_2_lst t_3_lst)
+  then show ?case using instrs_ok2_seq by simp
+next
+  case (sub C instr_lst t_1_lst t_2_lst t'_1_lst t'_2_lst)
+  then show ?case using Instrs_ok2__sub Instrs_ok2_wf_instr by simp
+next
+  case (Instrs_ok__frame C instr_lst t_1_lst t_2_lst t_lst)
+  then show ?case using Instrs_ok2__frame Instrs_ok2_wf_instr by simp
+qed(simp_all)
+
+
 end
