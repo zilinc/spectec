@@ -2893,7 +2893,65 @@ next
   then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
       res_list.exhaust by metis
   next
-    case (call_addr a t_1_lst t_2_lst mm v_func x t_lst instr_lst f val_lst k v_n)
+    case (call_addr a t_1_lst t_2_lst mm v_func x t_lst instr_lst f' val_lst k v_n)
+    then obtain t2 where splitvs:
+      "Instrs_ok2 s C' (map admininstr_val val_lst) (mk_functype t1 t2)"
+      "Instrs_ok2 s C' [admininstr_sc7 (CALL_ADDR a)] (mk_functype t2 t3)"
+      using inv_seq by blast
+    then have subv: "mk_instrtype (mk_list []) (mk_list (map typeofval val_lst)) <ti:
+          mk_instrtype t1 t2" using inv_const_list by blast
+    obtain t2' t3' where 
+      "Instr_ok2 s C' (admininstr_sc7 (CALL_ADDR a)) (mk_functype t2' t3')" 
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3" 
+      using splitvs inv_one_admininstr by blast
+    then have 
+      "Externaddr_ok s (externaddr_FUNC a) (FUNC (mk_functype t2' t3'))" 
+     (* "wf_externtype (FUNC (mk_functype t2' t3'))" *)
+      using inv_call_addr by auto
+    then have eqt: "mk_functype t2' t3' = mk_functype (mk_list t_1_lst) (mk_list t_2_lst)"
+      using call_addr(2)
+    proof(induction s "externaddr_FUNC a" "FUNC (mk_functype t2' t3')" rule:Externaddr_ok.induct)
+      case (Externaddr_ok__func s v_funcinst)
+      then show ?case using fun_funcinst.domintros fun_funcinst.psimps by force
+    next
+      case (Externaddr_ok__sub s xt')
+      show ?case using Externaddr_ok__sub(3) Externaddr_ok__sub
+      proof (induction xt' "FUNC (mk_functype t2' t3')" rule:Externtype_sub.induct)
+       case (Externtype_sub__func ft_1)
+       then show ?case 
+       proof (induction ft_1 "mk_functype t2' t3'" rule:Functype_sub.induct)
+         case mk_Functype_sub
+         then show ?case by fast
+       qed
+     qed    
+   qed
+   have "Expr_ok (append_res_context C \<lparr> context_TYPES = [], context_FUNCS = [], 
+            context_GLOBALS = [], context_TABLES = [], context_MEMS = [], context_ELEMS = [], 
+            context_DATAS = [], context_LOCALS = (t_1_lst @ t_lst), 
+            LABELS = [(mk_list t_2_lst)], context_RETURN = (Some (mk_list t_2_lst)) \<rparr>) 
+            instr_lst (mk_list t_2_lst)"
+     using call_addr(14) call_addr
+   proof (induction s rule: Store_ok.induct)
+     case (mk_Store_ok globalinst_lst globaltype_lst s meminst_lst memtype_lst tableinst_lst 
+              tabletype_lst funcinst_lst functype_lst datainst_lst datatype_lst eleminst_lst 
+              elemtype_lst)
+     then have
+      "Funcinst_ok s \<lparr>funcinst_TYPE = mk_functype (mk_list t_1_lst) (mk_list t_2_lst), 
+                      funcinst_MODULE = mm, CODE = v_func\<rparr> (functype_lst ! a)"
+       using list_all2_nth[OF mk_Store_ok(8)] fun_funcinst.domintros fun_funcinst.psimps
+       by simp
+     then show ?case using mk_Store_ok
+     proof (induction s "\<lparr> funcinst_TYPE = mk_functype (mk_list t_1_lst) (mk_list t_2_lst), 
+                      funcinst_MODULE = mm, CODE = v_func\<rparr>" "functype_lst ! a" 
+            rule: Funcinst_ok.induct)
+       case (mk_Funcinst_ok s v_moduleinst C v_func')
+       show ?case using mk_Funcinst_ok(3) mk_Funcinst_ok  
+       proof (induction C v_func' "functype_lst ! a" rule:Func_ok.induct)
+         case (mk_Func_ok x' C' t_1_lst' t_2_lst' t_lst' v_expr)
+         then show ?case sorry
+       qed
+     qed
+   qed
     then show ?case sorry
   next
     case (Step_read__ref_func x)
