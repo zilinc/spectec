@@ -3509,6 +3509,11 @@ HintD
       )
     )
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 64)) (VarE "v_u64")))
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 64)) (VarE "v_u64")))
+      Opt
+      (iterexp "v_u64" (VarE "u64_opt"))
+    )
   )
 )
 HintD

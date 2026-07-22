@@ -1126,10 +1126,13 @@ let rec create_prem (p : Il.Ast.prem) : term = match p.it with
         | TupE exps -> List.map create_exp exps
         | _ -> [create_exp exp]
     in
-    FunApp (
-      Ident id.it,
-      NonEmptyList.from_list_unsafe (List.map (fun arg -> Term arg) flattened_mixop_args)
-    )
+    (match flattened_mixop_args with
+      | [] -> Ident id.it
+      | args ->
+        FunApp (
+          Ident id.it,
+          NonEmptyList.from_list_unsafe (List.map (fun arg -> Term arg) args)
+        ))
   | IfPr (
     (exp : Il.Ast.exp)
   ) ->
@@ -1653,7 +1656,7 @@ let rec create_def (def : Il.Ast.def) : command list
         (* List Nat → Nat → Prop *)
         = match typ.it with
           | VarT _ | BoolT | NumT _ | TextT | IterT _ -> FunType (create_typ typ, Ident "Prop")
-          | TupT [] -> failwith "TupT [] is not a valid type for an inductive relation"
+          | TupT [] -> Ident "Prop"
           | TupT id_typ_list ->
             let types = List.map (fun (_, typ) -> create_typ typ) id_typ_list in
             let types_and_prop = types @ [Ident "Prop"] in

@@ -1582,6 +1582,7 @@ relation wf_limits: `%`(limits)
   rule limits_case_0{v_u64 : u64, u64_opt : u64?}:
     `%`(mk_limits_limits(v_u64, u64_opt))
     -- wf_uN: `%%`(64, v_u64)
+    -- (wf_uN: `%%`(64, v_u64))?{v_u64 <- u64_opt}
 
 ;; test.spectec:466.1-466.47
 syntax tagtype = typeuse

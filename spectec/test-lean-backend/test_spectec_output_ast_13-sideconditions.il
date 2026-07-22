@@ -3680,6 +3680,11 @@ HintD
       (CaseE (Brack [ (Infix Arg .. Arg) ]) (TupE (VarE "u64") (VarE "u64?")))
     )
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 64)) (VarE "u64")))
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 64)) (VarE "u64")))
+      Opt
+      (iterexp "u64" (VarE "u64?"))
+    )
   )
 )
 HintD

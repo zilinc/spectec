@@ -1,17 +1,40 @@
 import «wasm2.0»
+import «custom_notation»
 open functype list
 
-notation tf1 ":->" tf2 => functype.mk_functype (list.mk_list tf1) (list.mk_list tf2)
-
 def ai_principal_typing
-    (store      : store)
-    (context    : context)
-    (admininstr : admininstr)
-    (functype   : functype)
+    (p_store      : store)
+    (p_context    : context)
+    (p_admininstr : admininstr)
+    (p_functype   : functype)
     : Prop :=
-    match admininstr with
-        | admininstr.NOP => functype = ([] :-> [])
-        | admininstr.UNREACHABLE => true
+    match p_admininstr with
+        | admininstr.NOP            => p_functype = ([] f-> [])
+        | admininstr.UNREACHABLE    => true -- this is equivalent to the spec, which has no effective additonal constraints
+        | admininstr.DROP           => ∃ (t : valtype),
+                                           p_functype = ([t] f-> [])
+        | admininstr.SELECT
+            (some [(t : valtype)])  => p_functype = ([t, t, valtype.I32] f-> [t])
+        | admininstr.SELECT
+            none                    => ∃ (t t' : valtype),
+                                           p_functype = ([t, t, valtype.I32] f-> [t])
+                                         ∧ t sub< t'
+                                         ∧ (
+                                              ∃ (nt : numtype), t' = valtype_numtype nt
+                                            ∨ ∃ (vt : vectype), t' = valtype_vectype vt
+                                           )
+        | admininstr.SELECT
+            _                       => false
+        | admininstr.BLOCK
+            (bt : blocktype)
+            (instrs : List instr)   => ∃ (t1s t2s : List valtype),
+                                           p_functype = (t1s f-> t2s)
+                                         ∧ Blocktype_ok p_context bt (t1s f-> t2s)
+                                         ∧ Instrs_ok
+                                               {p_context with LABELS := (list.mk_list t2s) :: p_context.LABELS}
+                                               instrs
+                                               (t1s f-> t2s)
+
 
 def instr_principal_typing
     (context : context) (instruction : instr) (functype : functype) : Prop :=
