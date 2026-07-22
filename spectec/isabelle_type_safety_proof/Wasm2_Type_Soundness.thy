@@ -2846,10 +2846,52 @@ next
         subt instr_ok2_instrs_ok2 Instrs_ok2_subtyping Step_read__call by fast
   next
     case (call_indirect_call i x a y)
-    then show ?case sorry
+    then obtain t2 where splitv:
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CONST I32 i)] (mk_functype t1 t2)"
+      "Instrs_ok2 s C' [admininstr_sc1 (admininstr_st1_CALL_INDIRECT x y)] (mk_functype t2 t3)" 
+      using inv_seq[of s C' "[_,_]" t1 t3 "[_]" "[_]"] by fastforce
+    then have subv:
+      "mk_instrtype (mk_list []) (mk_list [valtype_I32]) <ti: mk_instrtype t1 t2" 
+      using inv_const_list[of s C' "[_]" t1 t2 "[val_CONST I32 i]"] admininstr_val.domintros
+        admininstr_val.psimps valtype_numtype.domintros valtype_numtype.psimps
+      typeofval.domintros typeofval.psimps by fastforce
+    obtain t2' t3' where
+      ok': "Instr_ok2 s C' (admininstr_sc1 (admininstr_st1_CALL_INDIRECT x y)) (mk_functype t2' t3')"
+      and subt: "mk_instrtype t2' t3' <ti: mk_instrtype t2 t3"
+      using splitv(2) inv_one_admininstr by blast
+    then have "Instr_ok C' (instr_sc0 (CALL_INDIRECT x y)) (mk_functype t2' t3')"
+      using inv_plain admininstr_instr.psimps admininstr_instr.domintros by fastforce
+    then obtain lim t_1_lst t_2_lst where callhyps:
+      "proj_uN_0 x < length (context_TABLES C')"
+      "context_TABLES C' ! proj_uN_0 x = mk_tabletype lim FUNCREF"
+      "proj_uN_0 y < length (context_TYPES C')"
+      "context_TYPES C' ! proj_uN_0 y = mk_functype (mk_list t_1_lst) (mk_list t_2_lst)"
+      "wf_tabletype (mk_tabletype lim FUNCREF)"
+      "mk_functype (mk_list (t_1_lst @ [valtype_I32])) (mk_list t_2_lst) = mk_functype t2' t3'" 
+      using inv_call_indirect by blast
+    then have subt: "mk_instrtype (mk_list t_1_lst) (mk_list t_2_lst) <ti: mk_instrtype t1 t3" 
+      using subv subt produce_consume by fastforce
+    have typeeq: "funcinst_TYPE (fun_funcinst (mk_state s f) ! a) = 
+                  mk_functype (mk_list t_1_lst) (mk_list t_2_lst)"
+      using callhyps(3,4) call_indirect_call context_types_agree by metis
+    have "Externaddr_ok s (externaddr_FUNC a)
+     (FUNC (mk_functype (mk_list t_1_lst) (mk_list t_2_lst)))"
+      using Externaddr_ok__func[of a s "store_FUNCS s ! a"]
+        Instrs_ok2_wf(2)[OF splitv(1)]
+        externtype_case_0 call_indirect_call
+        typeeq fun_funcinst.domintros fun_funcinst.psimps
+      by auto
+    then have "Instr_ok2 s C' (admininstr_sc7 (CALL_ADDR 
+          a)) (mk_functype (mk_list t_1_lst) (mk_list t_2_lst))"
+      using Instr_ok2__call_addr[OF _ Instrs_ok2_wf(2,1)[OF call_indirect_call(14)]] 
+         externtype_case_0 admininstr_case_70 
+      by auto
+    then show ?case using 
+        subt instr_ok2_instrs_ok2 Instrs_ok2_subtyping call_indirect_call by fast
   next
     case (call_indirect_trap i x y)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (call_addr a t_1_lst t_2_lst mm v_func x t_lst instr_lst f val_lst k v_n)
     then show ?case sorry
@@ -2864,7 +2906,8 @@ next
     then show ?case sorry
   next
     case (table_get_trap i x)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (table_get_val i x)
     then show ?case sorry
@@ -2873,7 +2916,8 @@ next
     then show ?case sorry
   next
     case (table_fill_trap i v_n x v_val)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (table_fill_zero i v_n x v_val)
     then show ?case sorry
@@ -2882,7 +2926,8 @@ next
     then show ?case sorry
   next
     case (table_copy_trap i j v_n y x)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (table_copy_zero i j v_n y x)
     then show ?case sorry
@@ -2894,7 +2939,8 @@ next
     then show ?case sorry
   next
     case (table_init_trap i j v_n y x)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (table_init_zero i j v_n y x)
     then show ?case sorry
@@ -2903,43 +2949,50 @@ next
     then show ?case sorry
   next
     case (load_num_trap i nt ao)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (load_num_val i nt c ao)
     then show ?case sorry
   next
     case (load_pack_trap i ao v_n v_Inn v_sx)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (load_pack_val v_Inn i v_n c ao v_sx)
     then show ?case sorry
   next
     case (vload_oob i ao)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (vload_val i c ao)
     then show ?case sorry
   next
     case (vload_shape_oob i ao v_M v_N v_sx)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (vload_shape_val i v_N v_M ao j_lst v_Jnn c v_sx)
     then show ?case sorry
   next
     case (vload_splat_oob i ao v_N)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (vload_splat_val i v_N j ao v_Jnn v_M c)
     then show ?case sorry
   next
     case (vload_zero_oob i ao v_N)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (vload_zero_val i v_N j ao c)
     then show ?case sorry
   next
     case (vload_lane_oob i ao v_N c_1 j)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (vload_lane_val i v_N k ao v_Jnn v_M c c_1 j)
     then show ?case sorry
@@ -2948,7 +3001,8 @@ next
     then show ?case sorry
   next
     case (memory_fill_trap i v_n v_val)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (memory_fill_zero i v_n v_val)
     then show ?case sorry
@@ -2957,7 +3011,8 @@ next
     then show ?case sorry
   next
     case (memory_copy_trap i j v_n)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (memory_copy_zero i j v_n)
     then show ?case sorry
@@ -2969,7 +3024,8 @@ next
     then show ?case sorry
   next
     case (memory_init_trap i j v_n x)
-    then show ?case sorry
+  then show ?case using Instr_ok2__trap Instrs_ok2_wf admininstr_case_73 instr_ok2_instrs_ok2
+      res_list.exhaust by metis
   next
     case (memory_init_zero i j v_n x)
     then show ?case sorry

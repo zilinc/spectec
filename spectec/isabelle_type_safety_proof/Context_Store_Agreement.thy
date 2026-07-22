@@ -89,6 +89,18 @@ next
   qed
 qed
 
+lemma context_types_agree:
+  assumes "Moduleinst_ok s (frame_MODULE f) C" 
+          "t_inst_match C C'"
+        shows "context_TYPES C' ! proj_uN_0 x = fun_type (mk_state s f) x"
+  using assms proof(induction s "frame_MODULE f" C rule:Moduleinst_ok.induct)
+  case (mk_Moduleinst_ok functype_lst globaladdr_lst globaltype_lst s funcaddr_lst 
+          functype_F_lst memaddr_lst memtype_lst tableaddr_lst tabletype_lst exportinst_lst 
+          dataaddr_lst datatype_lst elemaddr_lst elemtype_lst)
+  then show ?case using t_inst_match_def fun_type.psimps fun_type.domintros 
+    by (metis moduleinst.select_convs(1) res_context.select_convs(1))
+qed
+
 lemma context_funcs_agree:
   assumes "context_FUNCS C' ! x = tf" 
           "x < length (context_FUNCS C')"
