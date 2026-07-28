@@ -972,8 +972,8 @@ and hostcall : Value.arg list -> value OptMonad.m = function
 and call_hostfunc_ocaml name s vs =
   (* ty ∈ {"I32", "I64", "F32", "F64"} *)
   let as_const ty = function
-  | CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]) when ty = ty' -> n
-  | OptV (Some (CaseV ([["CONST"];[];[]], [CaseV ([[ty']], []); n]))) when ty = ty' -> n
+  | CaseV ([["CONST"];[];[]], TupV [CaseV ([[ty']], TupV []); n]) when ty = ty' -> n
+  | OptV (Some (CaseV ([["CONST"];[];[]], TupV [CaseV ([[ty']], TupV []); n]))) when ty = ty' -> n
   | v -> error no ("Host function call: Not " ^ ty ^ ".CONST: " ^ string_of_value v)
   in
   let argc = List.length vs in
@@ -1051,7 +1051,7 @@ and call_hostfunc_ocaml name s vs =
 and hostcall_ocaml : Value.arg list -> value OptMonad.m = function
   | [ ValA name; ValA s; ValA val_ ] ->
     let name' = (match name with
-    | CaseV ([["_HOSTFUNC"];[]], [hf]) -> as_text_value hf
+    | CaseV ([["_HOSTFUNC"];[]], TupV [hf]) -> as_text_value hf
     | _ -> error no ("Not a hostfunc")
     )
     in

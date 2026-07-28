@@ -127,7 +127,7 @@ let module_ok module_ : (value * value, string) Stdlib.result =
   let module' = C.vl_of_module module_ in
   let r = (match Interpreter_v.module_ok [ valA module' ] with
   | None -> Stdlib.Error ("Module validation failed.")
-  | Some (CaseV (_, [ets1; ets2])) -> Ok (ets1, ets2)
+  | Some (CaseV (_, TupV [ets1; ets2])) -> Ok (ets1, ets2)
   | Some v -> raise (Failure ("`module_ok` returned unexpected value: " ^ string_of_value v))
   ) in
   let t2 = Sys.time () in
