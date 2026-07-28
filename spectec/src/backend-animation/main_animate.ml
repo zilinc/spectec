@@ -3,6 +3,7 @@ open Il2al.Il2al_util
 open Def
 open Util
 open Source
+open Middlend
 module H = State_v.Hints
 
 
@@ -111,6 +112,8 @@ let rec remove_or def =
 let run il print_dl inline =
   H.init_animation_hints ();
   build_animation_hints il;
+  (* temporary fix *)
+  H.add_anim_inv "proj_num__0" "inv_proj_num__0";
   let (env, dl) = il
                   |> List.filter_map is_anim_target
                   |> List.map remove_or

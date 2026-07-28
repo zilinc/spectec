@@ -98,6 +98,7 @@ module PS = Set.Make(struct type t = pass let compare = compare; end)
 let selected_passes = ref (PS.empty)
 let enable_pass pass = selected_passes := PS.add pass !selected_passes
 
+let sideconditions_on_defs = ref false
 
 let print_il il =
   Printf.printf "%s\n%!" (Il.Print.string_of_script ~suppress_pos:(!print_no_pos) il)
@@ -152,7 +153,7 @@ let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
   | Sub -> Middlend.Sub.transform
   | Totalize -> Middlend.Totalize.transform
   | Unthe -> Middlend.Unthe.transform
-  | Sideconditions -> Middlend.Sideconditions.transform
+  | Sideconditions -> Middlend.Sideconditions.transform ~on_defs:!sideconditions_on_defs
   | TypeFamilyRemoval -> Middlend.Typefamilyremoval.transform
   | Else -> Middlend.Else.transform
   | Undep -> Middlend.Undep.transform
@@ -209,6 +210,7 @@ let argspec = Arg.align (
 
   "--check", Arg.Unit (fun () -> target := Check), " Check only (default)";
   "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
+  "--run-through", Arg.Unit (fun () -> target := RunThrough), " Run the compiler all the way but don't produce anything";
   "--ast", Arg.Unit (fun () -> target := Ast), " Generate AST";
   "--latex", Arg.Unit (fun () -> target := Latex), " Generate Latex";
   "--splice-latex", Arg.Unit (fun () -> target := Splice Backend_splice.Config.latex),
@@ -246,6 +248,8 @@ let argspec = Arg.align (
   "--print-no-pos", Arg.Set print_no_pos, " Suppress position info in output";
   "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
     " Generate OCaml code for DL types and functions";
+  "--generate-ocaml", Arg.String (fun s -> generate_ocaml := Some s),
+    " Generate OCaml code for DL types and functions";
 ] @ List.map pass_argspec all_passes @ [
   "--all-passes", Arg.Unit (fun () -> List.iter enable_pass all_passes)," Run all passes";
 
@@ -278,10 +282,16 @@ let () =
     Il.Valid.valid il;
 
     (match !target with
-    | Prose _ | Splice _ | Interpreter _ | Animate ->
-      enable_pass Sideconditions;
+    | Prose _ | Splice _ | Interpreter _ ->
+      enable_pass Sideconditions
+    | Animate ->
+      ()
+      (*
+      sideconditions_on_defs := true;
+      enable_pass Sideconditions
+      *)
     | _ when !print_al || !print_al_o <> "" ->
-      enable_pass Sideconditions;
+      enable_pass Sideconditions
     | _ -> ()
     );
 
@@ -423,6 +433,12 @@ let () =
       let (env, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
       log "DL Validating... ";
       Backend_animation.Valid.valid dl;
+      (match !generate_ocaml with
+      | Some ocamlfile -> 
+          log "Generating OCaml..."; 
+          Backend_animation.Main_interpreter_ocaml.generate_ocaml dl (Some ocamlfile)
+      | None -> ()
+      );
       (match !new_interpreter_args with
       | Some args ->
         log "Interpreting...";

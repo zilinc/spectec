@@ -318,7 +318,8 @@ let rec is_known_length knowns exp : bool =
   else
     match exp.it with
     | ListE _ -> true
-    | IterE (exp1, (ListN(n, _), xes)) when is_known knowns n -> true
+    | IterE (_, (ListN(n, _), xes)) when is_known knowns n -> true
+    | IterE (_, ((List | List1 | Opt), xes)) when List.exists (fun (_, e) -> is_known_length knowns e) xes -> true
     | CatE (exp1, exp2) | CompE (exp1, exp2) ->
       let k1 = is_known_length knowns exp1 in
       let k2 = is_known_length knowns exp2 in
@@ -791,7 +792,6 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
         (* Base case for iterators: [len] is known. *)
         let t = reduce_typ !envr lhs'.note in
         let rhs' = IdxE (rhs, VarE i $$ i.at % (natT ~at:i.at ())) $$ rhs.at % lhs'.note in
-        (* FIXME(zilinc): Is this [prem_len] premise really needed? *)
         let prem_len = IfPr (eqE ~at len (LenE rhs $$ rhs.at % (natT ~at:at ()))) $ at in
         let prem_body = IfPr (eqE ~at lhs' rhs') $ at in
         let* prems_body' = bracket (add_knowns (Set.singleton i.it))
@@ -1276,6 +1276,9 @@ and animate_prem envr prem : prem list E.m =
        But the entries in them generate different premises.
        We also collect the knowns [x] that will become unknowns outside of the iteration.
     *)
+    (* We can assume that [xes_static] is empty, so that we don't need to handle the very awkward
+       case in which there's static outflow variable.
+     *)
     let blob1 = List.map (fun (x, e) ->
       begin match e.it with
       | VarE v -> ([v.it], [x.it], [], (x, e))

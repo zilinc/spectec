@@ -3,7 +3,8 @@
 NAME = spectec
 EXT = $(NAME)
 LOG = _log
-
+PRINT_DL ?= 0
+UNDEP ?= 0
 
 # Main targets
 
@@ -12,26 +13,6 @@ LOG = _log
 default: exe
 all: exe latex test
 ci: all
-
-# Build some OCaml functions from spec  
-
-.PHONY: build_ocamlprog
-
-build_ocamlprog: exe
-	./spectec ../specification/wasm-3.0/* --animate --generate-ocaml "dl_codegen" --print-dl > dl.log
-	@echo "#### spectec finished, generating code in dl-interpreter"
-	dune build src/backend-animation/dl-interpreter
-	@echo "#### dl-interpreter code compiled successfully"
-
-# Build Interpreter
-
-.PHONY: build_interpreter
-
-build_interpreter: exe
-	./spectec ../specification/wasm-3.0/* --animate --print-dl > dl.log
-	@echo "#### spectec finished, generating code in dl-interpreter"
-	dune build src/backend-animation/dl-interpreter
-	@echo "#### dl-interpreter code compiled successfully"
 
 
 # Executable
@@ -43,6 +24,7 @@ ROOTDIR = ..
 INTERPRETERDIR = $(ROOTDIR)/interpreter
 CLONEDIR = src/backend-interpreter/reference-interpreter
 CLONERM = dune-project jslib
+RUNNER = $(ROOTDIR)/src/backend-animation/interpreter-ocaml
 OPAMPACKAGES = zarith menhir mdx tsort
 
 
@@ -62,6 +44,106 @@ $(CLONEDIR): $(shell find $(INTERPRETERDIR) -type f)
 	rm -r $(CLONERM:%=$@/%)
 	cp $@/../dune-ref-interp $@/dune
 
+
+# IL Meta-interpreter
+
+TEST ?= test-interpreter/sample.wast
+
+ifeq ($(TEST),CORE)
+TEST_PATHS := test-interpreter/spec-test-3/
+else ifeq ($(TEST),FEATURES)
+TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory
+else ifeq ($(TEST),OCAML_OLD)
+TEST_PATHS := test-interpreter/spec-test-3/ \
+              test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory
+else ifeq ($(TEST),NON_SLOW)
+TEST_PATHS := test-interpreter/spec-test-3/ \
+              test-interpreter/spec-test-3/bulk-memory \
+              test-interpreter/spec-test-3/exceptions \
+              test-interpreter/spec-test-3/gc \
+              test-interpreter/spec-test-3/memory64 \
+              test-interpreter/spec-test-3/multi-memory \
+              test-interpreter/spec-test-3/relaxed-simd \
+              test-interpreter/spec-test-3/simd
+else
+TEST_PATHS := $(TEST)
+endif
+
+
+.PHONY = animate anim-test anim-test-all anim-test-bench
+
+animate: SPECTEC_EXTRA_FLAGS ?= -l
+animate: SPECTEC_FLAGS ?= --animate --inline
+animate: exe
+	./spectec $(SPECTEC_EXTRA_FLAGS) $(SPEC) $(SPECTEC_FLAGS)
+
+anim-test: SPECTEC_EXTRA_FLAGS ?= -l
+anim-test: SPECTEC_FLAGS ?= --animate --inline --new-interpreter-v
+anim-test: exe
+	./spectec $(SPECTEC_EXTRA_FLAGS) $(SPEC) $(SPECTEC_FLAGS) $(TEST_PATHS)
+
+anim-test-all: exe
+	$(MAKE) anim-test 'TEST=NON_SLOW'
+
+anim-test-bench: anim-test-all
+
+
+# Wasm interpreter in OCaml
+
+.PHONY = ocaml-build ocaml-clean ocaml-run ocaml-test ocaml-test-all ocaml-test-bench
+
+
+SPEC ?= ../specification/wasm-3.0/* src/backend-animation/meta.spectec
+
+ifeq ($(PRINT_DL),1)
+  ifeq ($(UNDEP),1)
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --remove-indexed-types --sideconditions --generate-ocaml "dl_codegen"
+  else
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --sideconditions --generate-ocaml "dl_codegen"
+  endif
+else
+  ifeq ($(UNDEP),1)
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --remove-indexed-types --sideconditions --generate-ocaml "dl_codegen"
+  else
+    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --sideconditions --generate-ocaml "dl_codegen"
+  endif
+endif
+
+
+ocaml-build: exe
+	mkdir -p src/backend-animation/interpreter-ocaml/build
+	cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
+	cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
+	@echo "#### Generating OCaml interpreter."
+	./spectec $(SPEC) $(SPECTEC_FLAGS)
+	@echo "#### Compiling generated OCaml interpreter."
+#	dune build --instrument-with landmarks src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+	dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+
+ocaml-clean:
+	rm -rf src/backend-animation/interpreter-ocaml/build
+
+ocaml-run: ocaml-build
+	dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe $(SPEC) $(TEST_PATHS)
+
+ocaml-test: ocaml-build
+	@echo "#### Running OCaml interpreter test."
+	$(MAKE) ocaml-run
+
+ocaml-test-all: ocaml-build
+	@echo "#### Running OCaml interpreter test."
+	$(MAKE) ocaml-run 'TEST=NON_SLOW'
+
+ocaml-test-bench: ocaml-test-all
 
 # Latex
 
@@ -152,3 +234,4 @@ distclean: clean spec-clean
 	rm -f ./$(NAME)
 	rm -rf $(CLONEDIR)
 	for dir in $(TESTDIRS); do (cd $$dir && make distclean); done
+	rm -rf src/backend-animation/interpreter-ocaml/build

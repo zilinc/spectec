@@ -121,13 +121,26 @@ let get_global_value module_name globalname : value (* val *) =
 
 (** Main functions **)
 
-and instantiate module_ : value * value =
+let module_ok module_ : (value * value, string) Stdlib.result =
+  log "[Validating module...]\n";
+  let t1 = Sys.time () in
+  let module' = C.vl_of_module module_ in
+  let r = (match Interpreter_v.module_ok [ valA module' ] with
+  | None -> Stdlib.Error ("Module validation failed.")
+  | Some (CaseV (_, [ets1; ets2])) -> Ok (ets1, ets2)
+  | Some v -> raise (Failure ("`module_ok` returned unexpected value: " ^ string_of_value v))
+  ) in
+  let t2 = Sys.time () in
+  log "  ... %dms\n" ((t2 -. t1) *. 1000. |> int_of_float);
+  r
+
+let instantiate module_ : value * value =
   log "[Instantiating module...]\n";
   let t1 = Sys.time () in
-  let il_module = C.vl_of_module module_ in
+  let module' = C.vl_of_module module_ in
   let externaddrs = List.map get_externaddr module_.it.imports in
   let store = Store.get () in
-  let CaseV (_, TupV [state'; instrs']) = Interpreter_v.instantiate [ valA store ; valA il_module; listV_of_list externaddrs |> valA ] in
+  let CaseV (_, TupV [state'; instrs']) = Interpreter_v.instantiate [ valA store ; valA module'; listV_of_list externaddrs |> valA ] in
   let CaseV (_, TupV [store'; frame']) = state' in
   let StrV [_; (fname, moduleinst)] = frame' in
   assert ("MODULE" = fname);
@@ -166,6 +179,9 @@ let print_fail at failtype expected actual =
 let print_fail' at msg =
   print_endline (R.Source.string_of_region at ^ ": " ^ msg); fail
 
+let fail_exn (e: exn) =
+  print_endline (Printexc.to_string e); fail
+
 let run_action action : value =
   match action.it with
   | Invoke (var_opt, funcname, args) ->
@@ -181,19 +197,25 @@ let test_assertion assertion =
   let open R in
   match assertion.it with
   | AssertReturn (action, expected) ->
-    let result = run_action action |> as_list_value' |> List.map C.vl_to_value in
-    Run.assert_results no_region result expected;
-    success
+    (try
+      let result = run_action action |> as_list_value' |> List.map C.vl_to_value in
+      Run.assert_results no_region result expected;
+      success
+    with
+    | e -> fail_exn e
+    )
   | AssertTrap (action, re) ->
     let result = run_action action |> as_list_value' in
     (match result with
     | [ CaseV ([["TRAP"]], TupV []) ] -> success
+    | exception e -> fail_exn e
     | _ -> print_fail assertion.at "runtime" re (string_of_values ", " result)
     )
   | AssertException action ->
     let result = run_action action |> as_list_value' in
     (match result with
     | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], TupV []) ] -> success
+    | exception e -> fail_exn e
     | _ -> print_fail assertion.at "expected exception" "" (string_of_values ", " result)
     )
   | AssertUninstantiable (var_opt, re) ->
@@ -202,18 +224,20 @@ let test_assertion assertion =
     (match result with
     | [ CaseV ([["TRAP"]], TupV []) ]
     | [ CaseV ([["REF.EXN_ADDR"];[]], _); CaseV ([["THROW_REF"]], TupV []) ] -> success
+    | exception e -> fail_exn e
     | _ -> print_fail assertion.at "instantiation" re (string_of_values ", " result)
     )
   | AssertInvalid (def, re)
   | AssertInvalidCustom (def, re) ->
-    (match def |> module_of_def |> fun m -> Fun.const m (RI.Valid.check_module m) |> instantiate |> ignore with
-    | exception RI.Valid.Invalid _ -> success
-    | exception I.Exception.Invalid _ -> success
+    (match def |> module_of_def |> module_ok with
+    | Error _ -> success
+    | exception e -> fail_exn e
     | _ -> print_fail assertion.at "validation" re "module instance"
     )
   | AssertExhaustion (action, re) ->
     (match run_action action |> as_list_value' with
     | exception I.Exception.OutOfMemory -> success
+    | exception e -> fail_exn e
     | vs -> print_fail assertion.at "runtime" re ("Got result " ^ string_of_values ", " vs)
     )
   (* ignore other kinds of assertions *)
@@ -225,28 +249,35 @@ let run_command' command =
   | Module (var_opt, def) ->
     log "[Defining module %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var_opt);
     let module_ = module_of_def def in
-    (match RI.Valid.check_module module_ with
-    | exception RI.Valid.Invalid(at, msg) -> print_fail' at msg
-    | _ -> Modules.add_with_var var_opt module_; success
+    (match module_ok module_ with
+    | Ok _ -> Modules.add_with_var var_opt module_; success
+    | Error e -> log "%s\n" e; fail
+    | exception e -> fail_exn e
     )
   | Instance (var1_opt, var2_opt) ->
     log "[Adding moduleinst %s...]\n" (Option.fold ~none:"[_]" ~some:(fun var -> var.it) var1_opt);
-    Modules.find (Modules.get_module_name var2_opt)
-    |> instantiate |> fst
-    |> Register.add_with_var var1_opt;
-    success
+    (try
+      Modules.find (Modules.get_module_name var2_opt)
+      |> instantiate |> fst
+      |> Register.add_with_var var1_opt;
+      success
+    with
+    | e -> fail_exn e
+    )
   | Register (modulename, var_opt) ->
     let moduleinst = Register.find (Register.get_module_name var_opt) in
     Register.add (Utf8.encode modulename) moduleinst;
     pass
   | Action a ->
-    ignore (run_action a); success
+    (try
+      ignore (run_action a); success
+    with
+    | e -> fail_exn e
+    )
   | Assertion a -> test_assertion a
   | Meta _ -> pass
   in
   res
-
-
 
 let run_command command =
   let start_time = Sys.time () in

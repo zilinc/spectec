@@ -38,7 +38,6 @@ type iter =
 let vl_of_mixop : 'a Xl.Mixop.mixop -> mixop = function
   | mss -> Xl.Mixop.flatten mss |> List.map (fun ms -> List.map Atom.to_string ms)
 
-
 let rec string_of_mixop =
   let rec go = function
            | []  -> ""
@@ -149,6 +148,16 @@ let as_case_values = function
 let as_str_value = function
   | StrV str -> str
   | v -> error no ("as_str_value: " ^ string_of_value v)
+
+let is_some_value = function
+  | OptV (Some _) -> true
+  | OptV None     -> false
+  | v -> error no ("is_some_value: " ^ string_of_value v)
+
+let is_none_value = function
+  | OptV None     -> true
+  | OptV (Some _) -> false
+  | v -> error no ("is_none_value: " ^ string_of_value v)
 
 let has_str_field atom str : bool =
   match str with

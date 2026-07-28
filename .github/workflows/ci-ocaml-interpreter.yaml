@@ -1,0 +1,27 @@
+name: CI for OCaml Interpreter
+
+on:
+  push:
+    branches: [ il-interpreter, il-animate** ]
+    paths:
+      - spectec/**
+      - .github/workflows/ci-ocaml-interpreter.yaml
+
+  workflow_dispatch:
+
+jobs:
+  spec-tec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.4.x
+      - name: Setup Dune
+        run: opam install --yes dune menhir mdx zarith && eval $(opam env)
+      - name: Build and Test wasm-3.0
+        run: |
+          cd spectec
+          opam exec make ocaml-test-all
