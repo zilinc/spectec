@@ -6,6 +6,293 @@ open functype list
 set_option pp.parens true
 set_option pp.numericTypes true
 
+theorem zip_self_both_sides_equal
+  {α : Type} (l : List α)
+  : ∀ e_e ∈ l.zip l, e_e.1 = e_e.2 := by
+
+  intro e_e h
+  simp [List.zip] at *
+  obtain ⟨a, a_in_l, h_eq⟩ := h
+  subst h_eq
+  rfl
+  -- induction l with
+  -- | nil => simp at h
+  -- | cons head tail ih =>
+  --   simp at h
+  --   cases h
+
+  --   sorry
+
+
+theorem valtype_sub_refl (t1 : valtype) : t1 sub< t1 := by
+  constructor
+
+theorem resulttype_sub_refl (t1s : List valtype) : t1s subs< t1s := by
+  unfold resulttypeSub
+  apply Resulttype_sub.mk_Resulttype_sub
+  · rfl
+  · simp [List.zip, Forall₂] at *
+    intro a h
+    exact valtype_sub_refl a
+
+  -- · unfold Forall₂
+  --   induction t1s with
+  --   | nil => simp
+  --   | cons head tail ih =>
+  --     simp [List.zip] at *
+  --     apply And.intro
+  --     · exact valtype_sub_refl head
+  --     · exact ih
+
+theorem zip_trans2 (l1 l2 l3 : List α)
+  : ∀ r : α → α → Prop,
+      (∀ a b, (a, b) ∈ l1.zip l2 → r a b) →
+      (∀ b c, (b, c) ∈ l2.zip l3 → r b c) →
+      (l1.length = l2.length) →
+      (l2.length = l3.length) →
+      (∀ a b c, r a b → r b c → r a c)
+
+      → ∀ a c, (a, c) ∈ l1.zip l3 → r a c
+
+  := by
+
+  intro
+    r forall_ab_trans forall_bc_trans
+    length_same_l1_l2 length_same_l2_l3
+    forall_ac_trans a c ac_from_l1_l3
+
+  -- intro r h a c ac_from_l1_l3
+  -- obtain ⟨
+  --   forall_ab_trans,
+  --   forall_bc_trans,
+  --   length_same_l1_l2,
+  --   length_same_l2_l3,
+  --   forall_ac_trans
+  -- ⟩ := h
+  obtain ⟨i, i_in_bounds_l1_l3, hia_c⟩ := List.mem_iff_getElem.mp ac_from_l1_l3
+  rw [List.getElem_zip] at hia_c
+  -- set a := l1[i]'(
+  --   by
+  --     rw [List.length_zip] at i_in_bounds_l1_l3
+  --     omega
+  -- ) with ha
+  obtain ⟨h_a, h_c⟩ := Prod.mk.injEq .. ▸ hia_c
+  rw [List.length_zip] at i_in_bounds_l1_l3
+  have i_in_bounds_l1 : i < l1.length := by omega
+  have i_in_bounds_l2 : i < l2.length := by omega
+  have i_in_bounds_l3 : i < l3.length := by omega
+  set ab := (l1.zip l2)[i]'(
+    by
+      rw [List.length_zip]
+      omega
+  ) with hab
+  set a' := ab.1 with ha'
+  set b' := ab.2 with hb'
+  have ab_of_l1_l2 : ab ∈ l1.zip l2 := by
+    apply List.getElem_mem
+  set bc := (l2.zip l3)[i]'(
+    by
+      rw [List.length_zip]
+      omega
+  ) with hbc
+  set b'' := bc.1 with hb''
+  set c' := bc.2 with hc'
+  have bc_of_l2_l3 : bc ∈ l2.zip l3 := by
+    apply List.getElem_mem
+  have trans_ab := forall_ab_trans a' b' ab_of_l1_l2
+  have trans_bc := forall_bc_trans b'' c' bc_of_l2_l3
+  rw [List.getElem_zip] at *
+
+  have a'_is_a : a' = a := by
+    rw [ha', h_a.symm, hab]
+  have b'_is_b'' : b' = b'' := by
+    rw [hb', hb'', hab, hbc]
+  have c'_is_c : c' = c := by
+    rw [hc', h_c.symm, hbc]
+
+  rw [b'_is_b''] at trans_ab
+  have trans_ac := forall_ac_trans a' b'' c' trans_ab trans_bc
+  rw [a'_is_a, c'_is_c] at trans_ac
+  exact trans_ac
+
+
+theorem valtype_sub_trans
+  (t1 t2 t3 : valtype)
+  (h1 : t1 sub< t2)
+  (h2 : t2 sub< t3)
+  :
+  t1 sub< t3 := by
+  cases h1
+  · cases h2
+    · constructor
+    · constructor
+  · cases h2
+    · constructor
+    · constructor
+
+
+theorem resulttype_sub_trans
+  (t1s t2s t3s : List valtype)
+  (h1 : t1s subs< t2s)
+  (h2 : t2s subs< t3s)
+  :
+  t1s subs< t3s := by
+  unfold resulttypeSub at *
+  obtain ⟨_, _, h1_eq, h1_forall⟩ := h1
+  obtain ⟨_, _, h2_eq, h2_forall⟩ := h2
+  apply Resulttype_sub.mk_Resulttype_sub
+  · exact Eq.trans h1_eq h2_eq
+  · simp [Forall₂] at *
+    intro a b h
+    have t := zip_trans2 t1s t2s t3s Valtype_sub
+
+    have t' := t h1_forall h2_forall h1_eq h2_eq valtype_sub_trans a b h
+
+    exact t'
+
+
+theorem resulttype_sub_app
+  (ts1_sub ts2_sub ts1 ts2 : List valtype)
+  (h1 : ts1_sub subs< ts1)
+  (h2 : ts2_sub subs< ts2)
+  :
+  (ts1_sub ++ ts2_sub) subs< (ts1 ++ ts2) := by
+
+  sorry
+
+
+
+
+
+
+theorem instrs_empty_typing
+    (p_context : context)
+    (t1s t2s : List valtype)
+    :
+    Instrs_ok p_context [] (t1s f-> t2s) ↔
+    (wf_context p_context ∧ (t1s subs< t2s))
+    := by
+    apply Iff.intro
+    · intro h
+      apply And.intro
+      · generalize gen_instrs_ok_list : ([] : List instr) = l at h
+        generalize gen_instrs_ok_functype : (t1s f-> t2s) = ft at h
+        induction h using Instrs_ok.rec (motive_1 := fun _ _ _ _ => True)
+        all_goals trivial
+      · generalize gen_instrs_ok_list : ([] : List instr) = l at h
+        generalize gen_instrs_ok_functype : (t1s f-> t2s) = ft at h
+        induction h
+          using Instrs_ok.rec (motive_1 := fun _ _ _ _ => True)
+          generalizing t1s t2s
+        all_goals try trivial
+        · have all_empty : (t1s = []) ∧ (t2s = []) := by
+            unfold mkFunctype at gen_instrs_ok_functype
+            simp at gen_instrs_ok_functype
+            exact gen_instrs_ok_functype
+          have t1s_empty : t1s = [] := all_empty.left
+          have t2s_empty : t2s = [] := all_empty.right
+          rw [t1s_empty, t2s_empty]
+          exact resulttype_sub_refl []
+        case mp.right.seq
+          c i1s i2s t3s t5s t4s instrs_ok1 instrs_ok2
+          wf_c wf_i1s wf_i2s what1 what2 =>
+          have both_empty : i1s = [] ∧ i2s = [] := by
+            exact List.append_eq_nil_iff.mp gen_instrs_ok_list.symm
+          -- simp [both_empty] at what1 what2 instrs_ok1 instrs_ok2 wf_i1s wf_i2s
+          simp [both_empty] at *
+          unfold mkFunctype at what1 what2
+          simp at *
+          have t3s_subs_t5s : t3s subs< t5s := by
+            exact resulttype_sub_trans
+              t3s t4s t5s
+              what1
+              what2
+          unfold mkFunctype at gen_instrs_ok_functype
+          simp at gen_instrs_ok_functype
+          obtain ⟨t1s_is_t3s, t2s_is_t5s⟩ := gen_instrs_ok_functype
+          rw [t1s_is_t3s, t2s_is_t5s]
+          exact t3s_subs_t5s
+        case mp.right.sub
+          c instrs
+          t'1s t'2s t''1s t''2s
+          instrs_ok
+          res_sub_t'1s_t1s
+          res_sub_t2s_t'2s
+          wf_c
+          wf_all_instr_in_instrs
+          ih =>
+          unfold mkFunctype at *
+          simp at *
+          have h := ih t''1s t''2s gen_instrs_ok_list rfl rfl
+          unfold resulttypeSub at *
+          have t'1s_sub_t''2s: Resulttype_sub (mk_list t'1s) (mk_list t''2s) := by
+            exact resulttype_sub_trans t'1s t''1s t''2s res_sub_t'1s_t1s h
+          have t'1s_sub_t'2s: Resulttype_sub (mk_list t'1s) (mk_list t'2s) := by
+            exact resulttype_sub_trans t'1s t''2s t'2s t'1s_sub_t''2s res_sub_t2s_t'2s
+          obtain ⟨t1s_is_t'1s, t2s_is_t'2s⟩ := gen_instrs_ok_functype
+          rw [t1s_is_t'1s, t2s_is_t'2s]
+          exact t'1s_sub_t'2s
+
+        case mp.right.frame
+          c instrs ts t'1s t'2s instrs_ok wf_c wf_all_instr_in_c ih =>
+          unfold mkFunctype at *
+          simp at *
+          have t'1s_sub_t'2s : t'1s subs< t'2s := by
+            exact ih t'1s t'2s gen_instrs_ok_list rfl rfl
+          have ts_sub_ts : ts subs< ts := by
+            exact resulttype_sub_refl ts
+          have t'1s_sub_t'2s_app : (ts ++ t'1s) subs< (ts ++ t'2s) := by
+            exact resulttype_sub_app ts t'1s ts t'2s ts_sub_ts t'1s_sub_t'2s
+          obtain ⟨t1s_is_ts_t'1s, t2s_is_ts_t'2s⟩ := gen_instrs_ok_functype
+          rw [t1s_is_ts_t'1s, t2s_is_ts_t'2s]
+          exact t'1s_sub_t'2s_app
+    · intro h
+      obtain ⟨wf_c, t1s_sub_t2s⟩ := h
+      apply Instrs_ok.sub (t_1_lst := t2s ++ []) (t_2_lst := t2s ++ [])
+
+      case mpr.a =>
+        apply Instrs_ok.frame
+        case a =>
+          apply Instrs_ok.empty
+          exact wf_c
+        case a =>
+          exact wf_c
+        case a =>
+          simp [Forall]
+
+      case mpr.a =>
+        simp
+        unfold resulttypeSub at *
+        exact t1s_sub_t2s
+
+      case mpr.a =>
+        simp
+        exact resulttype_sub_refl t2s
+
+      case mpr.a =>
+        exact wf_c
+
+      case mpr.a =>
+        simp [Forall]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def ai_principal_typing
     -- p_* for params to keep track of which variables come from parameters in
     -- this huge definition
@@ -606,6 +893,20 @@ theorem instr_typing_inversion
                 exact_mod_cast size_constraint
               )
               exact applied_bridge
+
+def ai_typing_inversion
+  (s          : store)
+  (c          : context)
+  (ai         : admininstr)
+  (t1s t2s    : List valtype)
+  :
+  Instr_ok2 s c [ai] (t1s f-> t2s) →
+  ∃ t1s' t2s',
+    ai_principal_typing s c ai (t1s' f-> t2s')
+    ∧ ((t1s' f-> t2s') subs< (t1s f-> t2s))
+  := by
+
+
 
 
 
