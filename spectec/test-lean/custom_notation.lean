@@ -8,7 +8,7 @@ def resulttypeSub (t1s t2s : List valtype) : Prop :=
 infix:67 "f->" => mkFunctype
 infix:50 "sub<" => Valtype_sub
 infix:40 "subs<" => resulttypeSub
-
+infix:30 "ftsub<" => Functype_sub
 
 def prepend_label (C : context) (t : resulttype) : context :=
     { C with LABELS := t :: C.LABELS }
