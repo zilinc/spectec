@@ -1023,7 +1023,64 @@ def instrtype_sub (original_ft contextualized_ft : functype) : Prop :=
       ∧ (supplied_in subs< original_input_type)
       ∧ (original_output_type subs< needed_out)
 
-def ai_typing_inversion
+theorem principal_typing_conversion (i : instr) :
+  ∀ (s : store) (c : context) (t1s t2s : List valtype),
+    instr_principal_typing c i (t1s f-> t2s)
+    ↔ ai_principal_typing s c (admininstr_instr i) (t1s f-> t2s) := by
+  intro s c t1s t2s
+  unfold instr_principal_typing
+  cases i <;> try rfl
+  case SELECT op_ts
+    =>
+    cases op_ts
+    case none =>
+      rfl
+    case some t =>
+      cases t
+      case nil => rfl
+      case cons head tail =>
+        cases tail
+        case nil => rfl
+        case cons head' tail' =>
+          rfl
+
+  case LOAD nt o_loadop marg =>
+    cases o_loadop
+    case none => rfl
+    case some loadop =>
+      cases loadop
+      case mk_loadop__0 inn l_inn =>
+        rfl
+
+  case STORE nt o_sz marg =>
+    cases o_sz
+    case none => rfl
+    case some sz =>
+      rfl
+
+  -- TODO: find out why this other approach was so slow
+
+  -- apply Iff.intro
+  -- case mp =>
+  --   intro i_principal
+  --   unfold instr_principal_typing at *
+  --   cases i
+  --   <;> try rfl
+
+  --   case NOP =>
+  --     unfold ai_principal_typing at *
+  --     unfold admininstr_instr at *
+  --     simp_all
+  --   case DROP =>
+  --     unfold ai_principal_typing at *
+  --     unfold admininstr_instr at *
+  --     simp_all
+
+
+
+  -- case mpr => sorry
+
+theorem ai_typing_inversion
   (s          : store)
   (c          : context)
   (ainstr     : admininstr)
@@ -1034,5 +1091,140 @@ def ai_typing_inversion
     ai_principal_typing s c ainstr (t1s' f-> t2s')
     ∧ ((t1s' f-> t2s') ftsub< (t1s f-> t2s))
   := by
+  intros instr_ok2
+  generalize gen_ft : (t1s f-> t2s) = ft at instr_ok2
+  cases instr_ok2 using Instr_ok2.casesOn
+  case plain
+    i t1s' t2s' wf_s wf_i instr_ok wf_c
+    =>
+    refine ⟨t1s', t2s', ?_, ?_⟩
+    case refine_1 =>
+      apply (principal_typing_conversion i s c t1s' t2s').mp
+      apply instr_typing_inversion
+      exact instr_ok
 
-  sorry
+    case refine_2 =>
+      unfold mkFunctype at *
+      simp_all
+      apply Functype_sub.mk_Functype_sub
+
+  case frame
+    return_length f ais ts c' frame_ok expr_ok2 wf_s wf_c' wf_ai length wf_c
+    =>
+    refine ⟨t1s, t2s, ?_, ?_⟩
+    unfold mkFunctype at *
+    simp_all
+    unfold ai_principal_typing
+    simp_all
+    refine ⟨ts, ?_⟩
+    unfold mkFunctype at *
+    simp_all
+    refine ⟨c', ?_, ?_⟩
+    exact frame_ok
+    exact expr_ok2
+    unfold mkFunctype at *
+    simp_all
+    constructor
+
+  case label
+    arity is ais ts ts' wf_s wf_ai wf_context_with_LABELS length instrs_ok_is instrs_ok_ais wf_c
+    =>
+    refine ⟨t1s, t2s, ?_, ?_⟩
+    case refine_1 =>
+      unfold mkFunctype at *
+      unfold ai_principal_typing
+      simp_all
+      refine ⟨ts, ?_, ?_⟩
+      case refine_1 => rfl
+      case refine_2 =>
+        refine ⟨ts', ?_, ?_, ?_⟩
+        case refine_1 => rfl
+        case refine_2 =>
+          unfold mkFunctype at *
+          exact instrs_ok_is
+        case refine_3 =>
+          exact instrs_ok_ais
+    case refine_2 =>
+      unfold mkFunctype at *
+      simp_all
+      constructor
+  case call_addr
+    faddr t1s' t2s' externaddr_ok wf_s wf_ais wf_ext wf_c
+    =>
+    unfold mkFunctype at *
+    simp_all
+    refine ⟨t1s, t2s, ?_, ?_⟩
+    case refine_1 =>
+      unfold ai_principal_typing
+      simp_all
+      refine ⟨t1s', t2s', ?_, ?_⟩
+      case refine_1 => rfl
+      case refine_2 => exact externaddr_ok
+    case refine_2 =>
+      obtain ⟨t1s_eq, t2s_eq⟩ := gen_ft
+      rw [t1s_eq, t2s_eq]
+      constructor
+  case ref
+    r rt ref_ok wf_s wf_c
+    =>
+    refine ⟨t1s, t2s, ?_, ?_⟩
+    case refine_1 =>
+      unfold ai_principal_typing admininstr_ref
+      simp_all
+      unfold mkFunctype at *
+      cases r <;> simp_all
+      case REF_NULL rt'=>
+        unfold valtype_reftype at *
+        cases rt <;> cases rt' <;> simp_all
+        case FUNCREF.EXTERNREF => cases ref_ok
+        case EXTERNREF.FUNCREF => cases ref_ok
+      case REF_FUNC_ADDR faddr' =>
+        cases ref_ok
+        case func ext wf_s' wf_ext externaddr_ok =>
+          apply And.intro
+          case left => rfl
+          case right => exists ext
+    case refine_2 =>
+      unfold mkFunctype at *
+      simp_all
+      constructor
+  case trap
+    t1s' t2s' wf_s wf_ai wf_c
+    =>
+    obtain ⟨t1s_eq, t2s_eq⟩ := gen_ft
+    refine ⟨t1s, t2s, ?_, ?_⟩
+    case refine_1 =>
+      unfold ai_principal_typing
+      simp
+    case refine_2 =>
+      unfold mkFunctype at *
+      constructor
+  -- obtain ⟨⟨t1s', t2s'⟩, ai_princ_typing, t1s't2s'_ftsub_t1st2s⟩ := ai_typing_inversion_helper s c ainstr t1s t2s instr_ok2
+  -- all_goals unfold ai_principal_typing mkFunctype admininstr_instr
+  -- all_goals simp_all
+  -- case plain wf_s wf_i wf_c instr_ok =>
+
+  --   sorry
+  -- case label => sorry
+  -- case frame => sorry
+  -- case call_addr => sorry
+  -- case ref => sorry
+  -- case trap => sorry
+
+mutual
+inductive StepOk : Nat → Prop where
+  | step : ∀ n, n ≠ 0 → StepOk n              -- like Instr_ok2: about one item
+
+inductive SeqOk : List Nat → Prop where        -- like Instrs_ok2: a sequence
+  | nil  : SeqOk []
+  | cons : ∀ n ns, StepOk n → SeqOk ns → SeqOk (n :: ns)
+
+inductive ProgOk : List Nat → Prop where       -- like Expr_ok2: wraps a sequence
+  | prog : ∀ ns, SeqOk ns → ProgOk ns
+end
+set_option pp.proofs true
+#check StepOk.rec
+theorem prog_all_nonzero (ns : List Nat) (h : ProgOk ns) : ∀ x ∈ ns, x ≠ 0 := by
+  induction h using ProgOk.rec
+    (motive_1 := fun n _ => n ≠ 0)
+    (motive_2 := fun ns _ => ∀ x ∈ ns, x ≠ 0)
