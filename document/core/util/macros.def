@@ -762,7 +762,9 @@
 .. |instr| mathdef:: \xref{syntax/instructions}{syntax-instr}{\X{instr}}
 .. |catch| mathdef:: \xref{syntax/instructions}{syntax-catch}{\X{catch}}
 .. |expr| mathdef:: \xref{syntax/instructions}{syntax-expr}{\X{expr}}
+.. |cexpr| mathdef:: \xref{syntax/instructions}{syntax-cexpr}{\X{cexpr}}
 
+.. |ctx| mathdef:: \xref{syntax/instructions}{syntax-E}{\mathcal{E}}
 
 
 .. Binary Format
