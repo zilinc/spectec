@@ -1211,20 +1211,185 @@ theorem ai_typing_inversion
   -- case ref => sorry
   -- case trap => sorry
 
-mutual
-inductive StepOk : Nat → Prop where
-  | step : ∀ n, n ≠ 0 → StepOk n              -- like Instr_ok2: about one item
 
-inductive SeqOk : List Nat → Prop where        -- like Instrs_ok2: a sequence
-  | nil  : SeqOk []
-  | cons : ∀ n ns, StepOk n → SeqOk ns → SeqOk (n :: ns)
+-- mutual
+-- inductive StepOk : Nat → Prop where
+--   | step : ∀ n, n ≠ 0 → StepOk n              -- like Instr_ok2: about one item
 
-inductive ProgOk : List Nat → Prop where       -- like Expr_ok2: wraps a sequence
-  | prog : ∀ ns, SeqOk ns → ProgOk ns
-end
-set_option pp.proofs true
-#check StepOk.rec
-theorem prog_all_nonzero (ns : List Nat) (h : ProgOk ns) : ∀ x ∈ ns, x ≠ 0 := by
-  induction h using ProgOk.rec
-    (motive_1 := fun n _ => n ≠ 0)
-    (motive_2 := fun ns _ => ∀ x ∈ ns, x ≠ 0)
+-- inductive SeqOk : List Nat → Prop where        -- like Instrs_ok2: a sequence
+--   | nil  : SeqOk []
+--   | cons : ∀ n ns, StepOk n → SeqOk ns → SeqOk (n :: ns)
+
+-- inductive ProgOk : List Nat → Prop where       -- like Expr_ok2: wraps a sequence
+--   | prog : ∀ ns, SeqOk ns → ProgOk ns
+-- end
+-- set_option pp.proofs true
+-- #check StepOk.rec
+-- theorem prog_all_nonzero (ns : List Nat) (h : ProgOk ns) : ∀ x ∈ ns, x ≠ 0 := by
+--   induction h using ProgOk.rec
+--     (motive_1 := fun n _ => n ≠ 0)
+--     (motive_2 := fun ns _ => ∀ x ∈ ns, x ≠ 0)
+
+theorem ainstr_ok_context_store_wf
+  (s : store)
+  (c : context)
+  (ai : admininstr)
+  (ft : functype)
+  :
+  Instr_ok2 s c ai ft
+  → wf_context c
+    ∧ wf_store s
+    ∧ wf_admininstr ai
+
+  := by
+  intro instr_ok
+  refine ⟨?_, ?_, ?_⟩
+  case refine_1 =>
+    cases instr_ok using Instr_ok2.casesOn
+    <;> try aesop
+  case refine_2 =>
+    cases instr_ok using Instr_ok2.casesOn
+    <;> try aesop
+  case refine_3 =>
+    cases instr_ok using Instr_ok2.casesOn
+    <;> try aesop
+    case plain i t1s t2s wf_s wf_i instr_ok wf_c =>
+      cases wf_i <;> constructor <;> assumption
+    case ref r rt ref_ok wf_s wf_c =>
+      cases ref_ok <;> constructor
+
+theorem construct_ais_typing_single
+  (s : store)
+  (c : context)
+  (ai : admininstr)
+  (t1s t2s : List valtype)
+  :
+  Instr_ok2 s c ai (t1s f-> t2s) →
+  Instrs_ok2 s c [ai] (t1s f-> t2s) := by
+
+  intro instr_ok
+  have wf_c_s_a := ainstr_ok_context_store_wf s c ai (t1s f-> t2s) instr_ok
+  obtain ⟨wf_c, wf_s, wf_ai⟩ := wf_c_s_a
+  constructor
+  case a => assumption
+  case a => assumption
+  case a => assumption
+  case a => assumption
+
+theorem construct_ai_const_I32
+  (s : store)
+  (c : context)
+  (n : num_)
+  :
+  wf_num_ numtype.I32 n
+  → wf_context c
+  → wf_store s
+  → Instr_ok2 s c (admininstr.CONST numtype.I32 n) ([] f-> [valtype.I32])
+
+  := by
+  intro wf_n wf_c wf_s
+
+  unfold mkFunctype at *
+  apply Instr_ok2.plain s c (instr.CONST numtype.I32 n) [] [valtype.I32]
+
+  case a =>
+    constructor
+    case a => assumption
+    case a =>
+      constructor
+      assumption
+  case a =>
+    assumption
+  case a => assumption
+  case a =>
+    constructor
+    assumption
+
+
+theorem construct_ais_subtyping
+  (s : store)
+  (c : context)
+  (ais : List admininstr)
+  (t1s t2s t1s' t2s' : List valtype)
+  :
+  Instrs_ok2 s c ais (t1s f-> t2s)
+  → (t1s f-> t2s) ftsub< (t1s' f-> t2s')
+  → Instrs_ok2 s c ais (t1s' f-> t2s')
+
+  := by
+
+  intro instrs_ok2 ft_sub_rel
+  cases ft_sub_rel
+  assumption
+
+def inst_match (c1 c2 : context) : Prop :=
+  c1.TYPES = c2.TYPES
+  ∧ c1.FUNCS = c2.FUNCS
+  ∧ c1.GLOBALS = c2.GLOBALS
+  ∧ c1.TABLES = c2.TABLES
+  ∧ c1.MEMS = c2.MEMS
+  ∧ c1.ELEMS = c2.ELEMS
+  ∧ c1.DATAS = c2.DATAS
+
+theorem ainstrs_ok_context_store_wf
+  (s : store)
+  (c : context)
+  (ais : List admininstr)
+  (ft : functype)
+  :
+  Instrs_ok2 s c ais ft
+  → wf_context c
+    ∧ wf_store s
+    ∧ ∀ ai ∈ ais, wf_admininstr ai
+
+  := by
+  intro instrs_ok
+  refine ⟨?_, ?_, ?_⟩
+  case refine_1 =>
+    cases instrs_ok using Instrs_ok2.casesOn
+    <;> try assumption
+  case refine_2 =>
+    cases instrs_ok using Instrs_ok2.casesOn
+    <;> try assumption
+  case refine_3 =>
+    cases instrs_ok using Instrs_ok2.casesOn
+    <;> try aesop
+
+theorem construct_ais_compose
+  (s : store)
+  (c : context)
+  (ais1 ais2 : List admininstr)
+  (t1s t2s t3s : List valtype)
+  :
+  Instrs_ok2 s c ais1 (t1s f-> t2s)
+  → Instrs_ok2 s c ais2 (t2s f-> t3s)
+  → Instrs_ok2 s c (ais1 ++ ais2) (t1s f-> t3s)
+
+  := by
+
+  intro seq1 seq2
+  apply Instrs_ok2.seq s c ais1 ais2 t1s t3s t2s
+  case a => assumption
+  case a => assumption
+  case a => cases seq1 <;> assumption
+  case a => cases seq1 <;> assumption
+  case a =>
+    have h := ainstrs_ok_context_store_wf s c ais1 (t1s f-> t2s) seq1
+    obtain ⟨wf_c, wf_s, wf_ais1⟩ := h
+    simp [Forall]
+    assumption
+    -- This works as well if we want to remove ainstrs_ok_context_store_wf
+    -- simp [Forall]
+    -- intro ai ai_from_ais1
+    -- cases seq1 <;> try aesop
+  case a =>
+    have h := ainstrs_ok_context_store_wf s c ais2 (t2s f-> t3s) seq2
+    obtain ⟨wf_c, wf_s, wf_ais2⟩ := h
+    simp [Forall]
+    assumption
+
+def Vals_ok (s : store) (vals : List val) (ts : List valtype) : Prop :=
+  -- TODO: should we fix the generated Forall₂ to match the mathlib one
+  Forall₂ (fun (t : valtype) (v : val) => Val_ok s v t) ts vals
+
+
