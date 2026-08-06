@@ -1392,4 +1392,125 @@ def Vals_ok (s : store) (vals : List val) (ts : List valtype) : Prop :=
   -- TODO: should we fix the generated Forall₂ to match the mathlib one
   Forall₂ (fun (t : valtype) (v : val) => Val_ok s v t) ts vals
 
+theorem Val_ok_non_bot (s : store) (v : val) (vt : valtype) :
+  Val_ok s v vt → vt ≠ valtype.BOT := by
+  intro h
+  cases h
+  case numtype nt n wf_s wf_v =>
+    cases nt
+    <;> unfold valtype_numtype at *
+    <;> simp_all
+  case vectype vt v wf_s wf_v  =>
+    cases vt
+    unfold valtype_vectype at *
+    simp_all
+  case reftype r rt ref_ok wf_s =>
+    cases r
+    <;> cases rt
+    <;> unfold valtype_reftype at *
+    <;> simp_all
 
+theorem construct_ai_val
+  (s : store)
+  (c : context)
+  (v : val)
+  (vt : valtype)
+  :
+  Val_ok s v vt
+  → wf_context c
+  → wf_store s
+  → Instr_ok2 s c (admininstr_val v) ([] f-> [vt])
+
+  := by
+
+  intro val_ok wf_c wf_s
+  cases val_ok
+  case numtype nt n wf_s' wf_v =>
+    unfold mkFunctype at *
+    simp_all
+    apply Instr_ok2.plain s c (instr.CONST nt n) [] [valtype_numtype nt]
+    case a =>
+      constructor
+      case a => assumption
+      case a =>
+        constructor
+        cases wf_v
+        case val_case_0 => assumption
+    case a => assumption
+    case a => assumption
+    case a =>
+      cases wf_v
+      case val_case_0 wf_n =>
+        constructor
+        assumption
+
+  case vectype vt v wf_s' wf_v =>
+    unfold mkFunctype at *
+    simp_all
+    apply Instr_ok2.plain s c (instr.VCONST vt v) [] [valtype_vectype vt]
+    case a =>
+      constructor
+      case a => assumption
+      case a =>
+        constructor
+        case a =>
+          unfold valtype_vectype at *
+          unfold size at *
+          simp_all
+        case a =>
+          cases v
+          case mk_uN i =>
+            cases wf_v
+            case val_case_1 size_vt_not_none wf_un =>
+              simp_all
+    case a => assumption
+    case a => assumption
+    case a =>
+      constructor
+      case a =>
+        unfold valtype_vectype at *
+        unfold size at *
+        simp_all
+      case a =>
+        cases v
+        case mk_uN i =>
+          cases wf_v
+          case val_case_1 size_vt_not_none wf_un =>
+            simp_all
+
+  case reftype r rt ref_ok wf_s' =>
+    unfold mkFunctype at *
+    simp_all
+    cases r
+    case REF_NULL rt' =>
+      simp [val_ref, admininstr_val]
+      apply Instr_ok2.ref s c (ref.REF_NULL rt') rt
+      <;> assumption
+    case REF_FUNC_ADDR faddr' =>
+      simp [val_ref, admininstr_val]
+      apply Instr_ok2.ref s c (ref.REF_FUNC_ADDR faddr') rt
+      <;> assumption
+    case REF_HOST_ADDR haddr' =>
+      simp [val_ref, admininstr_val]
+      apply Instr_ok2.ref s c (ref.REF_HOST_ADDR haddr') rt
+      <;> assumption
+
+theorem instrs_single_typing_inversion
+  (c : context)
+  (i : instr)
+  (t1s t2s : List valtype)
+  :
+  Instrs_ok c [i] (t1s f-> t2s)
+  → ∃ t1s_sup t2s_sub,
+      Instr_ok c i (t1s_sup f-> t2s_sub)
+      ∧ ((t1s_sup f-> t2s_sub) ftsub< (t1s f-> t2s))
+
+  := by
+
+  intros instrs_ok
+  refine ⟨t1s, t2s, ?_, ?_⟩
+  case refine_1 =>
+    
+    sorry
+
+  case refine_2 => sorry
