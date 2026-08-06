@@ -1023,6 +1023,8 @@ def instrtype_sub (original_ft contextualized_ft : functype) : Prop :=
       ∧ (supplied_in subs< original_input_type)
       ∧ (original_output_type subs< needed_out)
 
+infix:20 "instrsub<" => instrtype_sub -- TODO: move to notation
+
 theorem principal_typing_conversion (i : instr) :
   ∀ (s : store) (c : context) (t1s t2s : List valtype),
     instr_principal_typing c i (t1s f-> t2s)
@@ -1495,6 +1497,22 @@ theorem construct_ai_val
       apply Instr_ok2.ref s c (ref.REF_HOST_ADDR haddr') rt
       <;> assumption
 
+theorem instrtype_sub_refl
+  (ft : functype)
+  :
+  ft instrsub< ft
+  := by
+  sorry
+
+theorem instr_subtyping_weaken2
+  (tx1 tx2 ty1 ty2 ty2_sup : List valtype)
+  :
+  ((tx1 f-> ty1) instrsub< (tx2 f-> ty2))
+  → (ty2 subs< ty2_sup)
+  → ((tx1 f-> ty1) instrsub< (tx2 f-> ty2_sup))
+  := by
+  sorry
+
 theorem instrs_single_typing_inversion
   (c : context)
   (i : instr)
@@ -1503,14 +1521,72 @@ theorem instrs_single_typing_inversion
   Instrs_ok c [i] (t1s f-> t2s)
   → ∃ t1s_sup t2s_sub,
       Instr_ok c i (t1s_sup f-> t2s_sub)
-      ∧ ((t1s_sup f-> t2s_sub) ftsub< (t1s f-> t2s))
+      ∧ ((t1s_sup f-> t2s_sub) instrsub< (t1s f-> t2s))
 
   := by
 
   intros instrs_ok
-  refine ⟨t1s, t2s, ?_, ?_⟩
-  case refine_1 =>
-    
-    sorry
+  generalize l : [i] = instrs at instrs_ok
+  generalize ft' : (t1s f-> t2s) = ft at instrs_ok
+  induction instrs_ok
+    using Instrs_ok.rec
+    (motive_1 := fun _ _ _ _ => true)
+    generalizing t1s t2s i
+  <;> try simp_all
 
-  case refine_2 => sorry
+  case instr c' i' t1s' t2s' instr_ok wf_c' wf_i' =>
+
+    refine ⟨t1s', t2s', ?_, ?_⟩
+    case refine_1 =>
+      exact instr_ok
+    case refine_2 =>
+      apply instrtype_sub_refl
+
+
+
+
+
+  -- refine ⟨t1s, t2s, ?_, ?_⟩
+  -- case refine_1 =>
+  --   generalize is : [i] = instrs at instrs_ok
+  --   cases instrs_ok
+  --   case empty =>
+  --     have h: False := by simp at is
+  --     contradiction
+  --   case instr i' wf_i'  i_is_i' instr_ok =>
+  --     simp_all
+  --     exact instr_ok
+  --   case seq is1 is2 t3s wf_all_is1 wf_all_is2 wf_c instrs_ok_is1 instrs_ok_is2 =>
+  --     have h : (is1 = [] ∧ is2 = [i]) ∨ (is1 = [i] ∧ is2 = []) := by
+  --       exact (List.append_eq_singleton_iff.mp (id (Eq.symm is)))
+  --     cases h
+  --     case inl h_is1_is2 =>
+  --       obtain ⟨is1_eq, is2_eq⟩ := h_is1_is2
+
+  case seq
+    c' is1 is2 t1s' t2s' t3s'
+    instrs_ok_1 instrs_ok_2
+    wf_c' wf_all_i1s wf_all_i2s
+    ih1 ih2
+    =>
+
+    -- refine ⟨t1s', t2s', ?_, ?_⟩
+    unfold mkFunctype at *
+      -- simp_all
+    have h : is1 = [] ∧ is2 = [i] ∨ is1 = [i] ∧ is2 = [] := by
+      exact (List.append_eq_singleton_iff.mp (id (Eq.symm l)))
+    cases h
+    case inl h_is1_is2 =>
+      obtain ⟨is1_eq, is2_eq⟩ := h_is1_is2
+      rw [is1_eq] at instrs_ok_1
+      have h := (instrs_empty_typing c' t1s' t3s').mp instrs_ok_1
+      obtain ⟨wf_c'_2, t1s'_subs_t3s'⟩ := h
+      have hh := ih2 i t3s' t2s' is2_eq.symm rfl
+      obtain ⟨t1s_sup, t2s_sub, instr_ok, ft_sub_rel⟩ := hh
+      exists t1s_sup, t2s_sub
+      refine ⟨?_, ?_⟩
+      case refine_1 =>
+        exact instr_ok
+      case refine_2 =>
+        
+    sorry
