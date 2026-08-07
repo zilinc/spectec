@@ -1513,6 +1513,15 @@ theorem instr_subtyping_weaken2
   := by
   sorry
 
+theorem instr_subtyping_strengthen2
+  (tx1 tx2 ty1 ty2 tx2_sub : List valtype)
+  :
+  ((tx1 f-> ty1) instrsub< (tx2 f-> ty2))
+  → (tx2_sub subs< tx2)
+  → ((tx1 f-> ty1) instrsub< (tx2_sub f-> ty2))
+  := by
+  sorry
+
 theorem instrs_single_typing_inversion
   (c : context)
   (i : instr)
@@ -1588,5 +1597,25 @@ theorem instrs_single_typing_inversion
       case refine_1 =>
         exact instr_ok
       case refine_2 =>
-        
-    sorry
+        have strengthen := instr_subtyping_strengthen2 t1s_sup t3s' t2s_sub t2s' t1s'
+        have strengthen_applied := strengthen ft_sub_rel t1s'_subs_t3s'
+        exact strengthen_applied
+
+    case inr h_is1_is2 =>
+      obtain ⟨is1_eq, is2_eq⟩ := h_is1_is2
+      rw [is2_eq] at instrs_ok_2
+      have h := (instrs_empty_typing c' t3s' t2s').mp instrs_ok_2
+      obtain ⟨wf_c'_2, t3s'_subs_t2s'⟩ := h
+      have hh := ih1 i t1s' t3s' is1_eq.symm rfl
+      obtain ⟨t1s_sup, t2s_sub, instr_ok, ft_sub_rel⟩ := hh
+      exists t1s_sup, t2s_sub
+      refine ⟨?_, ?_⟩
+      case refine_1 =>
+        exact instr_ok
+      case refine_2 =>
+        have weaken := instr_subtyping_weaken2 t1s' t1s_sup t3s' t2s_sub t2s'
+        have weaken_applied := weaken ft_sub_rel t3s'_subs_t2s'
+        exact weaken_applied
+
+  sorry
+  sorry
