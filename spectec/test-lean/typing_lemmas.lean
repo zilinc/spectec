@@ -1513,6 +1513,15 @@ theorem instr_subtyping_weaken2
   := by
   sorry
 
+theorem instrtype_sub_trans
+  (ft1 ft2 ft3 : functype)
+  :
+  (ft1 instrsub< ft2)
+  → (ft2 instrsub< ft3)
+  → (ft1 instrsub< ft3)
+  := by
+  sorry
+
 theorem instr_subtyping_strengthen2
   (tx1 tx2 ty1 ty2 tx2_sub : List valtype)
   :
@@ -1613,9 +1622,157 @@ theorem instrs_single_typing_inversion
       case refine_1 =>
         exact instr_ok
       case refine_2 =>
-        have weaken := instr_subtyping_weaken2 t1s' t1s_sup t3s' t2s_sub t2s'
+        have weaken := instr_subtyping_weaken2 t1s_sup t1s' t2s_sub t3s' t2s'
         have weaken_applied := weaken ft_sub_rel t3s'_subs_t2s'
         exact weaken_applied
 
-  sorry
-  sorry
+  case sub
+    c' is t1s' t2s' t1s'' t2s'' instrs_ok
+    t1s'_sub_t1s'' t2s''_sub_t2s'
+    wf_c' wf_all_is ih
+    =>
+    unfold mkFunctype at *
+    simp_all
+    have h := ih i t1s'' t2s'' l rfl rfl
+    obtain ⟨t1s_sup, t2s_sub, instr_ok, ft_sub_rel⟩ := h
+    exists t1s_sup, t2s_sub
+    refine ⟨?_, ?_⟩
+    case refine_1 =>
+      exact instr_ok
+    case refine_2 =>
+      apply instrtype_sub_trans
+      apply ft_sub_rel
+      unfold instrtype_sub
+      unfold resulttypeSub at *
+      simp_all
+      exists [], [], t1s'
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      rfl
+      exact t2s'
+      rfl
+      apply resulttype_sub_refl
+      exact t1s'_sub_t1s''
+      exact t2s''_sub_t2s'
+
+  case frame
+    c' is ts t1s' t2s' instrs_ok wf_c' wf_all_is ih
+    =>
+    unfold mkFunctype at *
+    simp_all
+    have h := ih i t1s' t2s' l rfl rfl
+    obtain ⟨t1s_sup, t2s_sub, instr_ok, ft_sub_rel⟩ := h
+    exists t1s_sup, t2s_sub
+    refine ⟨?_, ?_⟩
+    case refine_1 =>
+      exact instr_ok
+    case refine_2 =>
+      apply instrtype_sub_trans
+      refine ft_sub_rel
+      unfold instrtype_sub
+      simp_all
+      exists ts, ts, t1s'
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      rfl
+      exact t2s'
+      rfl
+      exact resulttype_sub_refl ts
+      exact resulttype_sub_refl t1s'
+      exact resulttype_sub_refl t2s'
+
+theorem ais_single_typing_inversion
+  (s : store)
+  (c : context)
+  (ai : admininstr)
+  (ts1 ts2 : List valtype)
+  :
+  Instrs_ok2 s c [ai] (ts1 f-> ts2)
+  → ∃ ts1_sup ts2_sub,
+      Instr_ok2 s c ai (ts1_sup f-> ts2_sub)
+      ∧ ((ts1_sup f-> ts2_sub) instrsub< (ts1 f-> ts2))
+  := by
+
+  intro instrs_ok2
+  generalize ais_contents : [ai] = ais at instrs_ok2
+  generalize ft_contents : (ts1 f-> ts2) = ft at instrs_ok2
+  #check Instrs_ok2.rec
+  induction instrs_ok2
+    using Instrs_ok2.rec
+    (motive_1 := fun _ _ _ _ => true)
+    (motive_3 := fun _ _ _ _ => true)
+    generalizing ts1 ts2 ai
+  <;> try simp_all
+  case instr
+    c' ai' ts1' ts2' instr_ok2 wf_s wf_c' wf_ai'
+    =>
+    refine ⟨ts1', ts2', ?_, ?_⟩
+    case refine_1 =>
+      exact instr_ok2
+    case refine_2 =>
+      unfold mkFunctype at *
+      simp_all
+      apply instrtype_sub_refl
+  case seq
+    c'
+    ais1 ais2
+    ts1' ts3' ts2'
+    instrs_ok2_1 instrs_ok2_2
+    wf_s wf_c
+    wf_all_ais1 wf_all_ais2
+    ih1 ih2
+
+    =>
+
+    have empty_and_filled_ais1_ais2 : ais1 = [] ∧ ais2 = [ai] ∨ ais1 = [ai] ∧ ais2 = [] := by
+      exact (List.append_eq_singleton_iff.mp (id (Eq.symm ais_contents)))
+
+    cases empty_and_filled_ais1_ais2
+    case inl ais1_ais2 =>
+      obtain ⟨ais1_empty, ais2_populated⟩ := ais1_ais2
+      have ih2_applied := ih2 ai ts2' ts3' ais2_populated.symm rfl
+      obtain ⟨ts1_sup, ts2_sub, instr_ok2, ft_sub_rel⟩ := ih2_applied
+      exists ts1_sup, ts2_sub
+      refine ⟨?_, ?_⟩
+      case refine_1 =>
+        exact instr_ok2
+      case refine_2 =>
+        unfold mkFunctype at *
+        apply instrtype_sub_trans
+        refine ft_sub_rel
+        unfold instrtype_sub
+        simp
+        exists [], [], ts1'
+        refine ⟨?_, ?_⟩
+        case refine_1 => rfl
+        case refine_2 =>
+          exists ts3'
+          refine ⟨?_, ?_, ?_, ?_⟩
+          case refine_1 => rfl
+          case refine_2 => apply resulttype_sub_refl
+          case refine_3 =>
+            rw [ais1_empty] at instrs_ok2_1
+            have ⟨wf_c', wf_s_2, subsrel⟩ := (ais_empty_typing s c' ts1' ts2').mp instrs_ok2_1
+            exact subsrel
+          case refine_4 => apply resulttype_sub_refl
+
+    case inr ais1_ais2 =>
+
+      sorry
+  case sub
+    c' ais' ts1' ts2' ts1'' ts2'' instrs_ok2
+    ts1'_subs_ts1'' ts2''_subs_ts2'
+    wf_s wf_c wf_all_ais' ih
+    =>
+    unfold mkFunctype at *
+    simp_all
+    have ih_applied := ih ai ts1'' ts2'' ais_contents rfl rfl
+    obtain ⟨ts1_sup, ts2_sub, instr_ok2, ft_sub_rel⟩ := ih_applied
+    exists ts1_sup, ts2_sub
+    refine ⟨?_, ?_⟩
+    case refine_1 =>
+      exact instr_ok2
+    case refine_2 =>
+      apply instrtype_sub_trans
+      refine ft_sub_rel
+    sorry
+
+  case admin_frame => sorry

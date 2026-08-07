@@ -9581,7 +9581,7 @@ inductive Instrs_ok2 : store → context → List admininstr → functype → Pr
     wf_context C →
     Forall (fun v_admininstr_elem => wf_admininstr v_admininstr_elem) admininstr_lst →
     Instrs_ok2 s C admininstr_lst (functype.mk_functype (.mk_list t'_1_lst) (.mk_list t'_2_lst))
-  | frame (s : store) (C : context) (admininstr_lst : List admininstr) (t_lst : List valtype) (t_1_lst : List valtype) (t_2_lst : List valtype) :
+  | admin_frame (s : store) (C : context) (admininstr_lst : List admininstr) (t_lst : List valtype) (t_1_lst : List valtype) (t_2_lst : List valtype) :
     Instrs_ok2 s C admininstr_lst (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst)) →
     wf_store s →
     wf_context C →
