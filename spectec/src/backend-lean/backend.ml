@@ -1732,7 +1732,24 @@ let rec create_def (def : Il.Ast.def) : command list
             
             {
               modifier = empty_modifier;
-              id = id.it;                 (* fun_sum_case_1 *)
+              (* Prepend the relation's own name only to cases whose bare id
+                 actually collides with a same-named case in a sibling
+                 relation of the same `mutual` block (see
+                 Whole_file_analyses.gather_colliding_relation_case_names):
+                 Lean's `induction ... using` resolves alternative field
+                 counts by a bare, unqualified constructor-name lookup across
+                 the *whole* mutual group, so a same-named constructor in
+                 another type silently shadows this one (test-lean/bug.lean).
+                 Leaving non-colliding cases untouched avoids renaming the
+                 vast majority of cases that are already unique. *)
+              id =
+                (let this_rel_collisions =
+                   List.assoc_opt rel_id.it (!analysis).colliding_relation_case_names
+                   |> Option.value ~default:[]
+                 in
+                 if List.mem id.it this_rel_collisions
+                 then rel_id.it ^ "_" ^ id.it  (* Instrs_ok_frame *)
+                 else id.it);
               signature = (
                 params_from_args,         (* (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) *)
 

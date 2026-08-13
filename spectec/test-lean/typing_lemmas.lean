@@ -368,7 +368,7 @@ theorem ais_empty_typing
             exact resulttype_sub_trans t'1s t1s t2s t'1s_subs_t1s ih
           exact resulttype_sub_trans t'1s t2s t'2s t'1s_subs_t2s t2s_subs_t'2s
 
-        case frame
+        case Instrs_ok2_frame
           c' ainstrs ts t1s t2s
           instrs_ok2 wf_s wf_c'
           wf_all_ainstrs ih
@@ -389,7 +389,7 @@ theorem ais_empty_typing
       Instrs_ok2.empty s c wf_s wf_c
     have frame_ok :
         Instrs_ok2 s c [] ((t1s ++ ([] : List valtype)) f-> (t1s ++ ([] : List valtype))) :=
-      Instrs_ok2.frame s c [] t1s [] [] empty_ok wf_s wf_c (by simp [Forall])
+      Instrs_ok2.Instrs_ok2_frame s c [] t1s [] [] empty_ok wf_s wf_c (by simp [Forall])
     have base : Instrs_ok2 s c [] (t1s f-> t1s) := by simpa using frame_ok
     exact Instrs_ok2.sub s c [] t1s t2s t1s t1s
       base (resulttype_sub_refl t1s) t1s_sub_t2s wf_s wf_c (by simp [Forall])
@@ -1755,8 +1755,32 @@ theorem ais_single_typing_inversion
           case refine_4 => apply resulttype_sub_refl
 
     case inr ais1_ais2 =>
-
-      sorry
+      obtain ⟨ais1_populated, ais2_empty⟩ := ais1_ais2
+      have ih1_applied := ih1 ai ts1' ts2' ais1_populated.symm rfl
+      obtain ⟨ts1_sup, ts2_sub, instr_ok2, ft_sub_rel⟩ := ih1_applied
+      exists ts1_sup, ts2_sub
+      refine ⟨?_, ?_⟩
+      case refine_1 =>
+        exact instr_ok2
+      case refine_2 =>
+        unfold mkFunctype at *
+        apply instrtype_sub_trans
+        refine ft_sub_rel
+        unfold instrtype_sub
+        simp
+        exists [], [], ts1'
+        refine ⟨?_, ?_⟩
+        case refine_1 => rfl
+        case refine_2 =>
+          exists ts3'
+          refine ⟨?_, ?_, ?_, ?_⟩
+          case refine_1 => simp
+          case refine_2 => apply resulttype_sub_refl
+          case refine_3 => apply resulttype_sub_refl
+          case refine_4 =>
+            rw [ais2_empty] at instrs_ok2_2
+            have ⟨wf_c', wf_s_2, subsrel⟩ := (ais_empty_typing s c' ts2' ts3').mp instrs_ok2_2
+            exact subsrel
   case sub
     c' ais' ts1' ts2' ts1'' ts2'' instrs_ok2
     ts1'_subs_ts1'' ts2''_subs_ts2'
@@ -1771,8 +1795,71 @@ theorem ais_single_typing_inversion
     case refine_1 =>
       exact instr_ok2
     case refine_2 =>
+      obtain ⟨ts1_eq, ts2_eq⟩ := ft_contents
+      rw [ts1_eq, ts2_eq] at *
+      simp_all
       apply instrtype_sub_trans
       refine ft_sub_rel
-    sorry
+      unfold instrtype_sub
+      simp_all
+      exists [], [], ts1'
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      case a.refine_2 => exact ts2'
+      case a.refine_1 => rfl
+      case a.refine_3 => rfl
+      case a.refine_4 => apply resulttype_sub_refl
+      case a.refine_5 => exact ts1'_subs_ts1''
+      case a.refine_6 => exact ts2''_subs_ts2'
+      -- refine
+      --   (instrtype_sub_trans (mk_functype (mk_list ts1'') (mk_list ts2'')) ?_
+      --     (mk_functype (mk_list ts1') (mk_list ts2')) ?_ ?_)
 
-  case admin_frame => sorry
+  case Instrs_ok2_frame
+    c' ais' ts ts1' ts2' instrs_ok2 wf_s wf_c' wf_forall_ais' ih
+    =>
+
+    unfold mkFunctype at *
+    simp at ft_contents
+    have ih_applied := ih ai ts1' ts2' ais_contents rfl
+    obtain ⟨ts1_sup, ts2_sub, instr_ok2, ft_sub_rel⟩ := ih_applied
+    exists ts1_sup, ts2_sub
+    refine ⟨?_, ?_⟩
+    case refine_1 =>
+      exact instr_ok2
+    case refine_2 =>
+      apply instrtype_sub_trans
+      refine ft_sub_rel
+      unfold instrtype_sub
+      simp
+      refine ⟨
+        ts,
+        ts,
+        ts1',
+        rfl,
+        ⟨
+          ts2',
+          ⟨
+            rfl,
+            by apply resulttype_sub_refl,
+            by apply resulttype_sub_refl,
+            by apply resulttype_sub_refl
+          ⟩
+        ⟩
+      ⟩
+
+      -- unfold instrtype_sub
+      -- simp_all
+      -- exists ts, ts, ts1'
+      -- refine ⟨?_, ⟨ts2', ?_, ?_, ?_, ?_⟩⟩
+      -- case refine_1 => rfl
+      -- case refine_2 => rfl
+      -- case refine_3 => apply resulttype_sub_refl
+      -- case refine_4 =>
+      --   unfold instrtype_sub at ft_sub_rel
+      --   simp at ft_sub_rel
+      --   obtain ⟨rest_in, rest_out, supplied_in, a1,x,a3, a4, a5, a6⟩ := ft_sub_rel
+
+
+      --   sorry
+
+    sorry

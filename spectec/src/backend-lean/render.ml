@@ -632,3 +632,41 @@ just for convenience *)
 and render__script (script : command list) : document =
   let commands_str = separate (hardline ^^ hardline) (List.map render_command script) in
   commands_str
+
+(* PPrint never trims whitespace on its own: a few render_term branches (e.g.
+   By's "by ", opt_decl_sig's " : " before a Premises node) put a literal
+   space right before a hardline, which comes straight through as trailing
+   whitespace on that line. Rather than track down every such call site,
+   strip trailing whitespace from every line once, here, at the single point
+   where the document becomes a string. *)
+let strip_trailing_whitespace_per_line (s : string) : string =
+  String.split_on_char '\n' s
+  |> List.map (fun line ->
+      let len = String.length line in
+      let rec last_non_blank i =
+        if i <= 0 then 0
+        else match line.[i - 1] with
+          | ' ' | '\t' -> last_non_blank (i - 1)
+          | _ -> i
+      in
+      String.sub line 0 (last_non_blank len))
+  |> String.concat "\n"
+
+(* Collapse any run of trailing newlines (PPrint's last command can leave a
+   blank line dangling at the very end) down to exactly one, matching normal
+   POSIX text-file convention. *)
+let normalize_trailing_newline (s : string) : string =
+  let len = String.length s in
+  let rec last_non_newline i =
+    if i <= 0 then 0
+    else if s.[i - 1] = '\n' then last_non_newline (i - 1)
+    else i
+  in
+  String.sub s 0 (last_non_newline len) ^ "\n"
+
+let render_script_to_string (script : command list) : string =
+  let buf = Buffer.create 4096 in
+  PPrint.ToBuffer.pretty 1.0 80 buf (render__script script);
+  Buffer.contents buf
+  |> strip_trailing_whitespace_per_line
+  |> normalize_trailing_newline

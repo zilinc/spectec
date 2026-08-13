@@ -495,6 +495,77 @@ let gather_types_that_need_append_instances (il : script) : string list =
   List.iter Visitor.def il;
   List.sort_uniq String.compare !collected
 
+(* Collect, for each `mutual` block (RecD group) in the script, the case/rule
+   id of every RelD relation bundled inside it. Standalone RelDs (not inside a
+   RecD) form their own singleton group, since they can never collide with
+   anything else in the same Lean `mutual` block.
+   e.g. `mutual Instr_ok ... Instrs_ok ... end` with Instr_ok's rules named
+   [...; "frame"; ...] and Instrs_ok's rules named [...; "frame"; ...]
+     → one group: [("Instr_ok", [...; "frame"; ...]); ("Instrs_ok", [...; "frame"; ...])] *)
+let gather_relation_case_groups (il : script) : (string * string list) list list =
+  let relation_cases (id : id) (rules : rule list) : string * string list =
+    (id.it, List.map (fun (r : rule) -> let RuleD (rid, _, _, _, _) = r.it in rid.it) rules)
+  in
+  let collect def : (string * string list) list list =
+    match def.it with
+    | RelD (id, _, _, _, rules) -> [[relation_cases id rules]]
+    | RecD defs ->
+        let group = List.concat_map (fun d -> match d.it with
+          | RelD (id, _, _, _, rules) -> [relation_cases id rules]
+          | _ -> []
+        ) defs in
+        (* Non-RelD members of this RecD (types, defs, ...) contribute no
+           relation cases here but may still share the block; their own
+           constructor names are not covered by this analysis (see NOTE
+           on the field below). *)
+        if group = [] then [] else [group]
+    | _ -> []
+  in
+  List.concat_map collect il
+
+(* For each RelD relation, the subset of its own rule-case ids that collide
+   with a same-named case in ANOTHER RelD bundled in the same `mutual` block
+   (RecD group). Keyed by relation id -- NOT a flat name set -- because
+   collision is a per-group property: "frame" colliding inside the
+   Instr_ok2/Instrs_ok2 group must not cause Instrs_ok's unrelated "frame"
+   case (a different, non-overlapping mutual group with no internal "frame"
+   collision) to be renamed too. A flat set would conflate the two groups and
+   make Instrs_ok's naming depend on an edit to Instr_ok2/Instrs_ok2 elsewhere
+   in the script -- exactly the kind of action-at-a-distance fragility this
+   analysis exists to avoid.
+
+   These are exactly the names that trigger the Lean `induction ... using`
+   bug documented in test-lean/bug.lean: `getAltNumFields` resolves
+   alternative names by an unqualified, first-match linear search over every
+   constructor in the whole mutual group, so a same-named case in a sibling
+   relation silently shadows this one and `introN` is asked for the wrong
+   number of binders.
+   e.g. Instr_ok2 and Instrs_ok2 both have a rule case named "frame"
+     → [("Instr_ok2", ["frame"]); ("Instrs_ok2", ["frame"])] is in the result,
+       so backend.ml prepends each relation's own name to that one case only,
+       leaving every non-colliding case (the vast majority, including
+       already-prefixed auto-derived ones like "fun_sum_case_1") untouched.
+   NOTE: this only tracks RelD rule-case names. A VariantT datatype's plain
+   constructors (built in create_typcase) bundled in the same mutual block are
+   not included, so a clash between a rule case and a datatype constructor --
+   or between two datatype constructors -- would not be caught here. Extending
+   coverage to those would mean gathering their names the same way inside
+   gather_relation_case_groups and merging them into the same per-group name
+   list before the collision count below. *)
+let gather_colliding_relation_case_names (il : script) : (string * string list) list =
+  let groups = gather_relation_case_groups il in
+  List.concat_map (fun (group : (string * string list) list) ->
+    let all_case_names = List.concat_map snd group in
+    let counts = Hashtbl.create 16 in
+    List.iter (fun n ->
+      Hashtbl.replace counts n (1 + (try Hashtbl.find counts n with Not_found -> 0))
+    ) all_case_names;
+    List.filter_map (fun (rel_id, case_names) ->
+      let colliding = List.filter (fun n -> Hashtbl.find counts n > 1) case_names in
+      if colliding = [] then None else Some (rel_id, colliding)
+    ) group
+  ) groups
+
 (* The result of the whole-script pre-pass, consumed by code generation in backend.ml.
    Computed once before code emission and stored in the `analysis` ref below. *)
 type whole_script_analysis =
@@ -519,6 +590,18 @@ type whole_script_analysis =
        Projection functions and functions that already have a wildcard last arm are excluded.
        e.g. ["lpacknum_"; "const"; "cvtop_"] *)
     defs_needing_catchall : string list;
+    (* Maps a RelD relation's own id to the subset of its rule-case ids that
+       collide with a same-named case in a sibling RelD bundled in the same
+       `mutual` block (see gather_colliding_relation_case_names above).
+       e.g. [("Instr_ok2", ["frame"]); ("Instrs_ok2", ["frame"])] when those
+       two -- and only those two -- share a "frame" case in one mutual block.
+       backend.ml looks up its own relation id here and prepends the
+       relation's own name only to a case whose id appears in that relation's
+       own entry, to work around the Lean `induction ... using` bug in
+       test-lean/bug.lean without renaming every already-unique case, and
+       without letting a collision in one mutual block affect naming in an
+       unrelated one. *)
+    colliding_relation_case_names : (string * string list) list;
   }
 
 (* Run all whole-script analyses and bundle the results. *)
@@ -531,8 +614,9 @@ let analyze_whole_script (il : script) : whole_script_analysis =
     defs_needing_beq = gather_defs_needing_beq il;
     defs_needing_inhabited = gather_defs_needing_inhabited il;
     defs_needing_catchall =
-      let proj_names = gather_projection_func_names il in
-      gather_defs_needing_catchall il ~proj_names;
+      (let proj_names = gather_projection_func_names il in
+       gather_defs_needing_catchall il ~proj_names);
+    colliding_relation_case_names = gather_colliding_relation_case_names il;
   }
 
 (* Mutable cell holding the current script's analysis results.
@@ -545,4 +629,5 @@ let analysis : whole_script_analysis ref = ref {
   defs_needing_beq = [];
   defs_needing_inhabited = [];
   defs_needing_catchall = [];
+  colliding_relation_case_names = [];
 }
