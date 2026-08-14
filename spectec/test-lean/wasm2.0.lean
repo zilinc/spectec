@@ -904,16 +904,109 @@ def proj_relop__1 (var_x : relop_) : Option relop_Fnn :=
   | relop_.mk_relop__1 v_Fnn var_x => some var_x
   | _ => none
 
-inductive cvtop : Type where
-  | EXTEND (v_sx : sx) : cvtop
-  | WRAP : cvtop
-  | CONVERT (v_sx : sx) : cvtop
-  | TRUNC (v_sx : sx) : cvtop
-  | TRUNC_SAT (v_sx : sx) : cvtop
-  | PROMOTE : cvtop
-  | DEMOTE : cvtop
-  | REINTERPRET : cvtop
+inductive cvtop__Inn_1_Inn_2 : Type where
+  | EXTEND (v_sx : sx) : cvtop__Inn_1_Inn_2
+  | WRAP : cvtop__Inn_1_Inn_2
 deriving Inhabited, BEq
+
+inductive wf_cvtop__Inn_1_Inn_2 : Inn → Inn → cvtop__Inn_1_Inn_2 → Prop where
+  | cvtop__Inn_1_Inn_2_case_0 (Inn_1 : Inn) (Inn_2 : Inn) (v_sx : sx) :
+    (sizenn1 (numtype_Inn Inn_1)) < (sizenn2 (numtype_Inn Inn_2)) →
+    wf_cvtop__Inn_1_Inn_2 Inn_1 Inn_2 (cvtop__Inn_1_Inn_2.EXTEND v_sx)
+  | cvtop__Inn_1_Inn_2_case_1 (Inn_1 : Inn) (Inn_2 : Inn) :
+    (sizenn1 (numtype_Inn Inn_1)) > (sizenn2 (numtype_Inn Inn_2)) →
+    wf_cvtop__Inn_1_Inn_2 Inn_1 Inn_2 cvtop__Inn_1_Inn_2.WRAP
+
+
+inductive cvtop__Inn_1_Fnn_2 : Type where
+  | CONVERT (v_sx : sx) : cvtop__Inn_1_Fnn_2
+  | REINTERPRET : cvtop__Inn_1_Fnn_2
+deriving Inhabited, BEq
+
+inductive wf_cvtop__Inn_1_Fnn_2 : Inn → Fnn → cvtop__Inn_1_Fnn_2 → Prop where
+  | cvtop__Inn_1_Fnn_2_case_0 (Inn_1 : Inn) (Fnn_2 : Fnn) (v_sx : sx) : wf_cvtop__Inn_1_Fnn_2 Inn_1 Fnn_2 (cvtop__Inn_1_Fnn_2.CONVERT v_sx)
+  | cvtop__Inn_1_Fnn_2_case_1 (Inn_1 : Inn) (Fnn_2 : Fnn) :
+    (sizenn1 (numtype_Inn Inn_1)) = (sizenn2 (numtype_Fnn Fnn_2)) →
+    wf_cvtop__Inn_1_Fnn_2 Inn_1 Fnn_2 cvtop__Inn_1_Fnn_2.REINTERPRET
+
+
+inductive cvtop__Fnn_1_Inn_2 : Type where
+  | TRUNC (v_sx : sx) : cvtop__Fnn_1_Inn_2
+  | TRUNC_SAT (v_sx : sx) : cvtop__Fnn_1_Inn_2
+  | REINTERPRET : cvtop__Fnn_1_Inn_2
+deriving Inhabited, BEq
+
+inductive wf_cvtop__Fnn_1_Inn_2 : Fnn → Inn → cvtop__Fnn_1_Inn_2 → Prop where
+  | cvtop__Fnn_1_Inn_2_case_0 (Fnn_1 : Fnn) (Inn_2 : Inn) (v_sx : sx) : wf_cvtop__Fnn_1_Inn_2 Fnn_1 Inn_2 (cvtop__Fnn_1_Inn_2.TRUNC v_sx)
+  | cvtop__Fnn_1_Inn_2_case_1 (Fnn_1 : Fnn) (Inn_2 : Inn) (v_sx : sx) : wf_cvtop__Fnn_1_Inn_2 Fnn_1 Inn_2 (cvtop__Fnn_1_Inn_2.TRUNC_SAT v_sx)
+  | cvtop__Fnn_1_Inn_2_case_2 (Fnn_1 : Fnn) (Inn_2 : Inn) :
+    (sizenn1 (numtype_Fnn Fnn_1)) = (sizenn2 (numtype_Inn Inn_2)) →
+    wf_cvtop__Fnn_1_Inn_2 Fnn_1 Inn_2 cvtop__Fnn_1_Inn_2.REINTERPRET
+
+
+inductive cvtop__Fnn_1_Fnn_2 : Type where
+  | PROMOTE : cvtop__Fnn_1_Fnn_2
+  | DEMOTE : cvtop__Fnn_1_Fnn_2
+deriving Inhabited, BEq
+
+inductive wf_cvtop__Fnn_1_Fnn_2 : Fnn → Fnn → cvtop__Fnn_1_Fnn_2 → Prop where
+  | cvtop__Fnn_1_Fnn_2_case_0 (Fnn_1 : Fnn) (Fnn_2 : Fnn) :
+    (sizenn1 (numtype_Fnn Fnn_1)) < (sizenn2 (numtype_Fnn Fnn_2)) →
+    wf_cvtop__Fnn_1_Fnn_2 Fnn_1 Fnn_2 cvtop__Fnn_1_Fnn_2.PROMOTE
+  | cvtop__Fnn_1_Fnn_2_case_1 (Fnn_1 : Fnn) (Fnn_2 : Fnn) :
+    (sizenn1 (numtype_Fnn Fnn_1)) > (sizenn2 (numtype_Fnn Fnn_2)) →
+    wf_cvtop__Fnn_1_Fnn_2 Fnn_1 Fnn_2 cvtop__Fnn_1_Fnn_2.DEMOTE
+
+
+inductive cvtop__ : Type where
+  | mk_cvtop___0 (Inn_1 : Inn) (Inn_2 : Inn) (var_x : cvtop__Inn_1_Inn_2) : cvtop__
+  | mk_cvtop___1 (Inn_1 : Inn) (Fnn_2 : Fnn) (var_x : cvtop__Inn_1_Fnn_2) : cvtop__
+  | mk_cvtop___2 (Fnn_1 : Fnn) (Inn_2 : Inn) (var_x : cvtop__Fnn_1_Inn_2) : cvtop__
+  | mk_cvtop___3 (Fnn_1 : Fnn) (Fnn_2 : Fnn) (var_x : cvtop__Fnn_1_Fnn_2) : cvtop__
+deriving Inhabited, BEq
+
+inductive wf_cvtop__ : numtype → numtype → cvtop__ → Prop where
+  | cvtop___case_0 (numtype_1 : numtype) (numtype_2 : numtype) (Inn_1 : Inn) (Inn_2 : Inn) (var_x : cvtop__Inn_1_Inn_2) :
+    wf_cvtop__Inn_1_Inn_2 Inn_1 Inn_2 var_x →
+    numtype_1 = (numtype_Inn Inn_1) →
+    numtype_2 = (numtype_Inn Inn_2) →
+    wf_cvtop__ numtype_1 numtype_2 (cvtop__.mk_cvtop___0 Inn_1 Inn_2 var_x)
+  | cvtop___case_1 (numtype_1 : numtype) (numtype_2 : numtype) (Inn_1 : Inn) (Fnn_2 : Fnn) (var_x : cvtop__Inn_1_Fnn_2) :
+    wf_cvtop__Inn_1_Fnn_2 Inn_1 Fnn_2 var_x →
+    numtype_1 = (numtype_Inn Inn_1) →
+    numtype_2 = (numtype_Fnn Fnn_2) →
+    wf_cvtop__ numtype_1 numtype_2 (cvtop__.mk_cvtop___1 Inn_1 Fnn_2 var_x)
+  | cvtop___case_2 (numtype_1 : numtype) (numtype_2 : numtype) (Fnn_1 : Fnn) (Inn_2 : Inn) (var_x : cvtop__Fnn_1_Inn_2) :
+    wf_cvtop__Fnn_1_Inn_2 Fnn_1 Inn_2 var_x →
+    numtype_1 = (numtype_Fnn Fnn_1) →
+    numtype_2 = (numtype_Inn Inn_2) →
+    wf_cvtop__ numtype_1 numtype_2 (cvtop__.mk_cvtop___2 Fnn_1 Inn_2 var_x)
+  | cvtop___case_3 (numtype_1 : numtype) (numtype_2 : numtype) (Fnn_1 : Fnn) (Fnn_2 : Fnn) (var_x : cvtop__Fnn_1_Fnn_2) :
+    wf_cvtop__Fnn_1_Fnn_2 Fnn_1 Fnn_2 var_x →
+    numtype_1 = (numtype_Fnn Fnn_1) →
+    numtype_2 = (numtype_Fnn Fnn_2) →
+    wf_cvtop__ numtype_1 numtype_2 (cvtop__.mk_cvtop___3 Fnn_1 Fnn_2 var_x)
+
+
+def proj_cvtop___0 (var_x : cvtop__) : Option cvtop__Inn_1_Inn_2 :=
+  match var_x with
+  | cvtop__.mk_cvtop___0 Inn_1 Inn_2 var_x => some var_x
+  | _ => none
+
+def proj_cvtop___1 (var_x : cvtop__) : Option cvtop__Inn_1_Fnn_2 :=
+  match var_x with
+  | cvtop__.mk_cvtop___1 Inn_1 Fnn_2 var_x => some var_x
+  | _ => none
+
+def proj_cvtop___2 (var_x : cvtop__) : Option cvtop__Fnn_1_Inn_2 :=
+  match var_x with
+  | cvtop__.mk_cvtop___2 Fnn_1 Inn_2 var_x => some var_x
+  | _ => none
+
+def proj_cvtop___3 (var_x : cvtop__) : Option cvtop__Fnn_1_Fnn_2 :=
+  match var_x with
+  | cvtop__.mk_cvtop___3 Fnn_1 Fnn_2 var_x => some var_x
+  | _ => none
 
 inductive ishape : Type where
   | X (v_Jnn : Jnn) (v_dim : dim) : ishape
@@ -1352,7 +1445,7 @@ inductive instr : Type where
   | BINOP (v_numtype : numtype) (_ : binop_) : instr
   | TESTOP (v_numtype : numtype) (_ : testop_) : instr
   | RELOP (v_numtype : numtype) (_ : relop_) : instr
-  | CVTOP (numtype_1 : numtype) (numtype_2 : numtype) (v_cvtop : cvtop) : instr
+  | CVTOP (numtype_1 : numtype) (numtype_2 : numtype) (_ : cvtop__) : instr
   | EXTEND (v_numtype : numtype) (v_n : n) : instr
   | VCONST (v_vectype : vectype) (_ : vec_) : instr
   | VVUNOP (v_vectype : vectype) (v_vvunop : vvunop) : instr
@@ -1455,9 +1548,10 @@ inductive wf_instr : instr → Prop where
   | instr_case_17 (v_numtype : numtype) (var_0 : relop_) :
     wf_relop_ v_numtype var_0 →
     wf_instr (instr.RELOP v_numtype var_0)
-  | instr_case_18 (numtype_1 : numtype) (numtype_2 : numtype) (v_cvtop : cvtop) :
+  | instr_case_18 (numtype_1 : numtype) (numtype_2 : numtype) (var_0 : cvtop__) :
+    wf_cvtop__ numtype_2 numtype_1 var_0 →
     numtype_1 ≠ numtype_2 →
-    wf_instr (instr.CVTOP numtype_1 numtype_2 v_cvtop)
+    wf_instr (instr.CVTOP numtype_1 numtype_2 var_0)
   | instr_case_19 (v_numtype : numtype) (v_n : n) : wf_instr (instr.EXTEND v_numtype v_n)
   | instr_case_20 (v_vectype : vectype) (var_0 : vec_) :
     (size (valtype_vectype v_vectype)) ≠ none →
@@ -2944,84 +3038,85 @@ inductive trunc_sat___is_wf : M → N → sx → fN → Option iN → Prop where
     trunc_sat___is_wf v_M v_N v_sx v_fN ret_val_opt
 
 
-inductive fun_cvtop__ : numtype → numtype → cvtop → num_ → List num_ → Prop where
-  | fun_cvtop___case_0 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.I32 (cvtop.EXTEND v_sx) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__0 Inn.I32 (extend__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Inn Inn.I32)) v_sx iN_1)]
-  | fun_cvtop___case_1 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.I32 (cvtop.EXTEND v_sx) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__0 Inn.I32 (extend__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Inn Inn.I32)) v_sx iN_1)]
-  | fun_cvtop___case_2 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.I64 (cvtop.EXTEND v_sx) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__0 Inn.I64 (extend__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Inn Inn.I64)) v_sx iN_1)]
-  | fun_cvtop___case_3 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.I64 (cvtop.EXTEND v_sx) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__0 Inn.I64 (extend__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Inn Inn.I64)) v_sx iN_1)]
-  | fun_cvtop___case_4 (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.I32 cvtop.WRAP (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__0 Inn.I32 (wrap__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Inn Inn.I32)) iN_1)]
-  | fun_cvtop___case_5 (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.I32 cvtop.WRAP (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__0 Inn.I32 (wrap__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Inn Inn.I32)) iN_1)]
-  | fun_cvtop___case_6 (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.I64 cvtop.WRAP (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__0 Inn.I64 (wrap__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Inn Inn.I64)) iN_1)]
-  | fun_cvtop___case_7 (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.I64 cvtop.WRAP (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__0 Inn.I64 (wrap__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Inn Inn.I64)) iN_1)]
-  | fun_cvtop___case_8 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.I32 (cvtop.TRUNC v_sx) (num_.mk_num__1 Fnn.F32 fN_1) (list_ num_ (OMap (fun iter_0_33_elem => num_.mk_num__0 Inn.I32 iter_0_33_elem) (trunc__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Inn Inn.I32)) v_sx fN_1)))
-  | fun_cvtop___case_9 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.I32 (cvtop.TRUNC v_sx) (num_.mk_num__1 Fnn.F64 fN_1) (list_ num_ (OMap (fun iter_0_34_elem => num_.mk_num__0 Inn.I32 iter_0_34_elem) (trunc__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Inn Inn.I32)) v_sx fN_1)))
-  | fun_cvtop___case_10 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.I64 (cvtop.TRUNC v_sx) (num_.mk_num__1 Fnn.F32 fN_1) (list_ num_ (OMap (fun iter_0_35_elem => num_.mk_num__0 Inn.I64 iter_0_35_elem) (trunc__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Inn Inn.I64)) v_sx fN_1)))
-  | fun_cvtop___case_11 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.I64 (cvtop.TRUNC v_sx) (num_.mk_num__1 Fnn.F64 fN_1) (list_ num_ (OMap (fun iter_0_36_elem => num_.mk_num__0 Inn.I64 iter_0_36_elem) (trunc__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Inn Inn.I64)) v_sx fN_1)))
-  | fun_cvtop___case_12 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.I32 (cvtop.TRUNC_SAT v_sx) (num_.mk_num__1 Fnn.F32 fN_1) (list_ num_ (OMap (fun iter_0_37_elem => num_.mk_num__0 Inn.I32 iter_0_37_elem) (trunc_sat__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Inn Inn.I32)) v_sx fN_1)))
-  | fun_cvtop___case_13 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.I32 (cvtop.TRUNC_SAT v_sx) (num_.mk_num__1 Fnn.F64 fN_1) (list_ num_ (OMap (fun iter_0_38_elem => num_.mk_num__0 Inn.I32 iter_0_38_elem) (trunc_sat__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Inn Inn.I32)) v_sx fN_1)))
-  | fun_cvtop___case_14 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.I64 (cvtop.TRUNC_SAT v_sx) (num_.mk_num__1 Fnn.F32 fN_1) (list_ num_ (OMap (fun iter_0_39_elem => num_.mk_num__0 Inn.I64 iter_0_39_elem) (trunc_sat__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Inn Inn.I64)) v_sx fN_1)))
-  | fun_cvtop___case_15 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.I64 (cvtop.TRUNC_SAT v_sx) (num_.mk_num__1 Fnn.F64 fN_1) (list_ num_ (OMap (fun iter_0_40_elem => num_.mk_num__0 Inn.I64 iter_0_40_elem) (trunc_sat__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Inn Inn.I64)) v_sx fN_1)))
-  | fun_cvtop___case_16 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.F32 (cvtop.CONVERT v_sx) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__1 Fnn.F32 (convert__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Fnn Fnn.F32)) v_sx iN_1)]
-  | fun_cvtop___case_17 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.F32 (cvtop.CONVERT v_sx) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__1 Fnn.F32 (convert__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Fnn Fnn.F32)) v_sx iN_1)]
-  | fun_cvtop___case_18 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.F64 (cvtop.CONVERT v_sx) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__1 Fnn.F64 (convert__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Fnn Fnn.F64)) v_sx iN_1)]
-  | fun_cvtop___case_19 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.F64 (cvtop.CONVERT v_sx) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__1 Fnn.F64 (convert__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Fnn Fnn.F64)) v_sx iN_1)]
-  | fun_cvtop___case_20 (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.F32 cvtop.PROMOTE (num_.mk_num__1 Fnn.F32 fN_1) (Map (fun iter_0_41_elem => num_.mk_num__1 Fnn.F32 iter_0_41_elem) (promote__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Fnn Fnn.F32)) fN_1))
-  | fun_cvtop___case_21 (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.F32 cvtop.PROMOTE (num_.mk_num__1 Fnn.F64 fN_1) (Map (fun iter_0_42_elem => num_.mk_num__1 Fnn.F32 iter_0_42_elem) (promote__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Fnn Fnn.F32)) fN_1))
-  | fun_cvtop___case_22 (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.F64 cvtop.PROMOTE (num_.mk_num__1 Fnn.F32 fN_1) (Map (fun iter_0_43_elem => num_.mk_num__1 Fnn.F64 iter_0_43_elem) (promote__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Fnn Fnn.F64)) fN_1))
-  | fun_cvtop___case_23 (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.F64 cvtop.PROMOTE (num_.mk_num__1 Fnn.F64 fN_1) (Map (fun iter_0_44_elem => num_.mk_num__1 Fnn.F64 iter_0_44_elem) (promote__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Fnn Fnn.F64)) fN_1))
-  | fun_cvtop___case_24 (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.F32 cvtop.DEMOTE (num_.mk_num__1 Fnn.F32 fN_1) (Map (fun iter_0_45_elem => num_.mk_num__1 Fnn.F32 iter_0_45_elem) (demote__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Fnn Fnn.F32)) fN_1))
-  | fun_cvtop___case_25 (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.F32 cvtop.DEMOTE (num_.mk_num__1 Fnn.F64 fN_1) (Map (fun iter_0_46_elem => num_.mk_num__1 Fnn.F32 iter_0_46_elem) (demote__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Fnn Fnn.F32)) fN_1))
-  | fun_cvtop___case_26 (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.F64 cvtop.DEMOTE (num_.mk_num__1 Fnn.F32 fN_1) (Map (fun iter_0_47_elem => num_.mk_num__1 Fnn.F64 iter_0_47_elem) (demote__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Fnn Fnn.F64)) fN_1))
-  | fun_cvtop___case_27 (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.F64 cvtop.DEMOTE (num_.mk_num__1 Fnn.F64 fN_1) (Map (fun iter_0_48_elem => num_.mk_num__1 Fnn.F64 iter_0_48_elem) (demote__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Fnn Fnn.F64)) fN_1))
+inductive fun_cvtop__ : numtype → numtype → cvtop__ → num_ → List num_ → Prop where
+  | fun_cvtop___case_0 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.I32 (cvtop__.mk_cvtop___0 Inn.I32 Inn.I32 (cvtop__Inn_1_Inn_2.EXTEND v_sx)) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__0 Inn.I32 (extend__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Inn Inn.I32)) v_sx iN_1)]
+  | fun_cvtop___case_1 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.I32 (cvtop__.mk_cvtop___0 Inn.I64 Inn.I32 (cvtop__Inn_1_Inn_2.EXTEND v_sx)) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__0 Inn.I32 (extend__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Inn Inn.I32)) v_sx iN_1)]
+  | fun_cvtop___case_2 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.I64 (cvtop__.mk_cvtop___0 Inn.I32 Inn.I64 (cvtop__Inn_1_Inn_2.EXTEND v_sx)) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__0 Inn.I64 (extend__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Inn Inn.I64)) v_sx iN_1)]
+  | fun_cvtop___case_3 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.I64 (cvtop__.mk_cvtop___0 Inn.I64 Inn.I64 (cvtop__Inn_1_Inn_2.EXTEND v_sx)) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__0 Inn.I64 (extend__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Inn Inn.I64)) v_sx iN_1)]
+  | fun_cvtop___case_4 (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.I32 (cvtop__.mk_cvtop___0 Inn.I32 Inn.I32 cvtop__Inn_1_Inn_2.WRAP) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__0 Inn.I32 (wrap__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Inn Inn.I32)) iN_1)]
+  | fun_cvtop___case_5 (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.I32 (cvtop__.mk_cvtop___0 Inn.I64 Inn.I32 cvtop__Inn_1_Inn_2.WRAP) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__0 Inn.I32 (wrap__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Inn Inn.I32)) iN_1)]
+  | fun_cvtop___case_6 (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.I64 (cvtop__.mk_cvtop___0 Inn.I32 Inn.I64 cvtop__Inn_1_Inn_2.WRAP) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__0 Inn.I64 (wrap__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Inn Inn.I64)) iN_1)]
+  | fun_cvtop___case_7 (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.I64 (cvtop__.mk_cvtop___0 Inn.I64 Inn.I64 cvtop__Inn_1_Inn_2.WRAP) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__0 Inn.I64 (wrap__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Inn Inn.I64)) iN_1)]
+  | fun_cvtop___case_8 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.I32 (cvtop__.mk_cvtop___2 Fnn.F32 Inn.I32 (cvtop__Fnn_1_Inn_2.TRUNC v_sx)) (num_.mk_num__1 Fnn.F32 fN_1) (list_ num_ (OMap (fun iter_0_33_elem => num_.mk_num__0 Inn.I32 iter_0_33_elem) (trunc__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Inn Inn.I32)) v_sx fN_1)))
+  | fun_cvtop___case_9 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.I32 (cvtop__.mk_cvtop___2 Fnn.F64 Inn.I32 (cvtop__Fnn_1_Inn_2.TRUNC v_sx)) (num_.mk_num__1 Fnn.F64 fN_1) (list_ num_ (OMap (fun iter_0_34_elem => num_.mk_num__0 Inn.I32 iter_0_34_elem) (trunc__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Inn Inn.I32)) v_sx fN_1)))
+  | fun_cvtop___case_10 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.I64 (cvtop__.mk_cvtop___2 Fnn.F32 Inn.I64 (cvtop__Fnn_1_Inn_2.TRUNC v_sx)) (num_.mk_num__1 Fnn.F32 fN_1) (list_ num_ (OMap (fun iter_0_35_elem => num_.mk_num__0 Inn.I64 iter_0_35_elem) (trunc__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Inn Inn.I64)) v_sx fN_1)))
+  | fun_cvtop___case_11 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.I64 (cvtop__.mk_cvtop___2 Fnn.F64 Inn.I64 (cvtop__Fnn_1_Inn_2.TRUNC v_sx)) (num_.mk_num__1 Fnn.F64 fN_1) (list_ num_ (OMap (fun iter_0_36_elem => num_.mk_num__0 Inn.I64 iter_0_36_elem) (trunc__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Inn Inn.I64)) v_sx fN_1)))
+  | fun_cvtop___case_12 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.I32 (cvtop__.mk_cvtop___2 Fnn.F32 Inn.I32 (cvtop__Fnn_1_Inn_2.TRUNC_SAT v_sx)) (num_.mk_num__1 Fnn.F32 fN_1) (list_ num_ (OMap (fun iter_0_37_elem => num_.mk_num__0 Inn.I32 iter_0_37_elem) (trunc_sat__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Inn Inn.I32)) v_sx fN_1)))
+  | fun_cvtop___case_13 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.I32 (cvtop__.mk_cvtop___2 Fnn.F64 Inn.I32 (cvtop__Fnn_1_Inn_2.TRUNC_SAT v_sx)) (num_.mk_num__1 Fnn.F64 fN_1) (list_ num_ (OMap (fun iter_0_38_elem => num_.mk_num__0 Inn.I32 iter_0_38_elem) (trunc_sat__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Inn Inn.I32)) v_sx fN_1)))
+  | fun_cvtop___case_14 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.I64 (cvtop__.mk_cvtop___2 Fnn.F32 Inn.I64 (cvtop__Fnn_1_Inn_2.TRUNC_SAT v_sx)) (num_.mk_num__1 Fnn.F32 fN_1) (list_ num_ (OMap (fun iter_0_39_elem => num_.mk_num__0 Inn.I64 iter_0_39_elem) (trunc_sat__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Inn Inn.I64)) v_sx fN_1)))
+  | fun_cvtop___case_15 (v_sx : sx) (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.I64 (cvtop__.mk_cvtop___2 Fnn.F64 Inn.I64 (cvtop__Fnn_1_Inn_2.TRUNC_SAT v_sx)) (num_.mk_num__1 Fnn.F64 fN_1) (list_ num_ (OMap (fun iter_0_40_elem => num_.mk_num__0 Inn.I64 iter_0_40_elem) (trunc_sat__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Inn Inn.I64)) v_sx fN_1)))
+  | fun_cvtop___case_16 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.F32 (cvtop__.mk_cvtop___1 Inn.I32 Fnn.F32 (cvtop__Inn_1_Fnn_2.CONVERT v_sx)) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__1 Fnn.F32 (convert__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Fnn Fnn.F32)) v_sx iN_1)]
+  | fun_cvtop___case_17 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.F32 (cvtop__.mk_cvtop___1 Inn.I64 Fnn.F32 (cvtop__Inn_1_Fnn_2.CONVERT v_sx)) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__1 Fnn.F32 (convert__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Fnn Fnn.F32)) v_sx iN_1)]
+  | fun_cvtop___case_18 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I32 numtype.F64 (cvtop__.mk_cvtop___1 Inn.I32 Fnn.F64 (cvtop__Inn_1_Fnn_2.CONVERT v_sx)) (num_.mk_num__0 Inn.I32 iN_1) [num_.mk_num__1 Fnn.F64 (convert__ (sizenn1 (numtype_Inn Inn.I32)) (sizenn2 (numtype_Fnn Fnn.F64)) v_sx iN_1)]
+  | fun_cvtop___case_19 (v_sx : sx) (iN_1 : uN) : fun_cvtop__ numtype.I64 numtype.F64 (cvtop__.mk_cvtop___1 Inn.I64 Fnn.F64 (cvtop__Inn_1_Fnn_2.CONVERT v_sx)) (num_.mk_num__0 Inn.I64 iN_1) [num_.mk_num__1 Fnn.F64 (convert__ (sizenn1 (numtype_Inn Inn.I64)) (sizenn2 (numtype_Fnn Fnn.F64)) v_sx iN_1)]
+  | fun_cvtop___case_20 (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.F32 (cvtop__.mk_cvtop___3 Fnn.F32 Fnn.F32 cvtop__Fnn_1_Fnn_2.PROMOTE) (num_.mk_num__1 Fnn.F32 fN_1) (Map (fun iter_0_41_elem => num_.mk_num__1 Fnn.F32 iter_0_41_elem) (promote__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Fnn Fnn.F32)) fN_1))
+  | fun_cvtop___case_21 (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.F32 (cvtop__.mk_cvtop___3 Fnn.F64 Fnn.F32 cvtop__Fnn_1_Fnn_2.PROMOTE) (num_.mk_num__1 Fnn.F64 fN_1) (Map (fun iter_0_42_elem => num_.mk_num__1 Fnn.F32 iter_0_42_elem) (promote__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Fnn Fnn.F32)) fN_1))
+  | fun_cvtop___case_22 (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.F64 (cvtop__.mk_cvtop___3 Fnn.F32 Fnn.F64 cvtop__Fnn_1_Fnn_2.PROMOTE) (num_.mk_num__1 Fnn.F32 fN_1) (Map (fun iter_0_43_elem => num_.mk_num__1 Fnn.F64 iter_0_43_elem) (promote__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Fnn Fnn.F64)) fN_1))
+  | fun_cvtop___case_23 (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.F64 (cvtop__.mk_cvtop___3 Fnn.F64 Fnn.F64 cvtop__Fnn_1_Fnn_2.PROMOTE) (num_.mk_num__1 Fnn.F64 fN_1) (Map (fun iter_0_44_elem => num_.mk_num__1 Fnn.F64 iter_0_44_elem) (promote__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Fnn Fnn.F64)) fN_1))
+  | fun_cvtop___case_24 (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.F32 (cvtop__.mk_cvtop___3 Fnn.F32 Fnn.F32 cvtop__Fnn_1_Fnn_2.DEMOTE) (num_.mk_num__1 Fnn.F32 fN_1) (Map (fun iter_0_45_elem => num_.mk_num__1 Fnn.F32 iter_0_45_elem) (demote__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Fnn Fnn.F32)) fN_1))
+  | fun_cvtop___case_25 (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.F32 (cvtop__.mk_cvtop___3 Fnn.F64 Fnn.F32 cvtop__Fnn_1_Fnn_2.DEMOTE) (num_.mk_num__1 Fnn.F64 fN_1) (Map (fun iter_0_46_elem => num_.mk_num__1 Fnn.F32 iter_0_46_elem) (demote__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Fnn Fnn.F32)) fN_1))
+  | fun_cvtop___case_26 (fN_1 : fN) : fun_cvtop__ numtype.F32 numtype.F64 (cvtop__.mk_cvtop___3 Fnn.F32 Fnn.F64 cvtop__Fnn_1_Fnn_2.DEMOTE) (num_.mk_num__1 Fnn.F32 fN_1) (Map (fun iter_0_47_elem => num_.mk_num__1 Fnn.F64 iter_0_47_elem) (demote__ (sizenn1 (numtype_Fnn Fnn.F32)) (sizenn2 (numtype_Fnn Fnn.F64)) fN_1))
+  | fun_cvtop___case_27 (fN_1 : fN) : fun_cvtop__ numtype.F64 numtype.F64 (cvtop__.mk_cvtop___3 Fnn.F64 Fnn.F64 cvtop__Fnn_1_Fnn_2.DEMOTE) (num_.mk_num__1 Fnn.F64 fN_1) (Map (fun iter_0_48_elem => num_.mk_num__1 Fnn.F64 iter_0_48_elem) (demote__ (sizenn1 (numtype_Fnn Fnn.F64)) (sizenn2 (numtype_Fnn Fnn.F64)) fN_1))
   | fun_cvtop___case_28 (iN_1 : uN) :
     (size (valtype_Inn Inn.I32)) ≠ none →
     (size (valtype_Fnn Fnn.F32)) ≠ none →
     (Option.get! (size (valtype_Inn Inn.I32))) = (Option.get! (size (valtype_Fnn Fnn.F32))) →
-    fun_cvtop__ numtype.I32 numtype.F32 cvtop.REINTERPRET (num_.mk_num__0 Inn.I32 iN_1) [reinterpret__ (numtype_Inn Inn.I32) (numtype_Fnn Fnn.F32) (num_.mk_num__0 Inn.I32 iN_1)]
+    fun_cvtop__ numtype.I32 numtype.F32 (cvtop__.mk_cvtop___1 Inn.I32 Fnn.F32 cvtop__Inn_1_Fnn_2.REINTERPRET) (num_.mk_num__0 Inn.I32 iN_1) [reinterpret__ (numtype_Inn Inn.I32) (numtype_Fnn Fnn.F32) (num_.mk_num__0 Inn.I32 iN_1)]
   | fun_cvtop___case_29 (iN_1 : uN) :
     (size (valtype_Inn Inn.I64)) ≠ none →
     (size (valtype_Fnn Fnn.F32)) ≠ none →
     (Option.get! (size (valtype_Inn Inn.I64))) = (Option.get! (size (valtype_Fnn Fnn.F32))) →
-    fun_cvtop__ numtype.I64 numtype.F32 cvtop.REINTERPRET (num_.mk_num__0 Inn.I64 iN_1) [reinterpret__ (numtype_Inn Inn.I64) (numtype_Fnn Fnn.F32) (num_.mk_num__0 Inn.I64 iN_1)]
+    fun_cvtop__ numtype.I64 numtype.F32 (cvtop__.mk_cvtop___1 Inn.I64 Fnn.F32 cvtop__Inn_1_Fnn_2.REINTERPRET) (num_.mk_num__0 Inn.I64 iN_1) [reinterpret__ (numtype_Inn Inn.I64) (numtype_Fnn Fnn.F32) (num_.mk_num__0 Inn.I64 iN_1)]
   | fun_cvtop___case_30 (iN_1 : uN) :
     (size (valtype_Inn Inn.I32)) ≠ none →
     (size (valtype_Fnn Fnn.F64)) ≠ none →
     (Option.get! (size (valtype_Inn Inn.I32))) = (Option.get! (size (valtype_Fnn Fnn.F64))) →
-    fun_cvtop__ numtype.I32 numtype.F64 cvtop.REINTERPRET (num_.mk_num__0 Inn.I32 iN_1) [reinterpret__ (numtype_Inn Inn.I32) (numtype_Fnn Fnn.F64) (num_.mk_num__0 Inn.I32 iN_1)]
+    fun_cvtop__ numtype.I32 numtype.F64 (cvtop__.mk_cvtop___1 Inn.I32 Fnn.F64 cvtop__Inn_1_Fnn_2.REINTERPRET) (num_.mk_num__0 Inn.I32 iN_1) [reinterpret__ (numtype_Inn Inn.I32) (numtype_Fnn Fnn.F64) (num_.mk_num__0 Inn.I32 iN_1)]
   | fun_cvtop___case_31 (iN_1 : uN) :
     (size (valtype_Inn Inn.I64)) ≠ none →
     (size (valtype_Fnn Fnn.F64)) ≠ none →
     (Option.get! (size (valtype_Inn Inn.I64))) = (Option.get! (size (valtype_Fnn Fnn.F64))) →
-    fun_cvtop__ numtype.I64 numtype.F64 cvtop.REINTERPRET (num_.mk_num__0 Inn.I64 iN_1) [reinterpret__ (numtype_Inn Inn.I64) (numtype_Fnn Fnn.F64) (num_.mk_num__0 Inn.I64 iN_1)]
+    fun_cvtop__ numtype.I64 numtype.F64 (cvtop__.mk_cvtop___1 Inn.I64 Fnn.F64 cvtop__Inn_1_Fnn_2.REINTERPRET) (num_.mk_num__0 Inn.I64 iN_1) [reinterpret__ (numtype_Inn Inn.I64) (numtype_Fnn Fnn.F64) (num_.mk_num__0 Inn.I64 iN_1)]
   | fun_cvtop___case_32 (fN_1 : fN) :
     (size (valtype_Fnn Fnn.F32)) ≠ none →
     (size (valtype_Inn Inn.I32)) ≠ none →
     (Option.get! (size (valtype_Fnn Fnn.F32))) = (Option.get! (size (valtype_Inn Inn.I32))) →
-    fun_cvtop__ numtype.F32 numtype.I32 cvtop.REINTERPRET (num_.mk_num__1 Fnn.F32 fN_1) [reinterpret__ (numtype_Fnn Fnn.F32) (numtype_Inn Inn.I32) (num_.mk_num__1 Fnn.F32 fN_1)]
+    fun_cvtop__ numtype.F32 numtype.I32 (cvtop__.mk_cvtop___2 Fnn.F32 Inn.I32 cvtop__Fnn_1_Inn_2.REINTERPRET) (num_.mk_num__1 Fnn.F32 fN_1) [reinterpret__ (numtype_Fnn Fnn.F32) (numtype_Inn Inn.I32) (num_.mk_num__1 Fnn.F32 fN_1)]
   | fun_cvtop___case_33 (fN_1 : fN) :
     (size (valtype_Fnn Fnn.F64)) ≠ none →
     (size (valtype_Inn Inn.I32)) ≠ none →
     (Option.get! (size (valtype_Fnn Fnn.F64))) = (Option.get! (size (valtype_Inn Inn.I32))) →
-    fun_cvtop__ numtype.F64 numtype.I32 cvtop.REINTERPRET (num_.mk_num__1 Fnn.F64 fN_1) [reinterpret__ (numtype_Fnn Fnn.F64) (numtype_Inn Inn.I32) (num_.mk_num__1 Fnn.F64 fN_1)]
+    fun_cvtop__ numtype.F64 numtype.I32 (cvtop__.mk_cvtop___2 Fnn.F64 Inn.I32 cvtop__Fnn_1_Inn_2.REINTERPRET) (num_.mk_num__1 Fnn.F64 fN_1) [reinterpret__ (numtype_Fnn Fnn.F64) (numtype_Inn Inn.I32) (num_.mk_num__1 Fnn.F64 fN_1)]
   | fun_cvtop___case_34 (fN_1 : fN) :
     (size (valtype_Fnn Fnn.F32)) ≠ none →
     (size (valtype_Inn Inn.I64)) ≠ none →
     (Option.get! (size (valtype_Fnn Fnn.F32))) = (Option.get! (size (valtype_Inn Inn.I64))) →
-    fun_cvtop__ numtype.F32 numtype.I64 cvtop.REINTERPRET (num_.mk_num__1 Fnn.F32 fN_1) [reinterpret__ (numtype_Fnn Fnn.F32) (numtype_Inn Inn.I64) (num_.mk_num__1 Fnn.F32 fN_1)]
+    fun_cvtop__ numtype.F32 numtype.I64 (cvtop__.mk_cvtop___2 Fnn.F32 Inn.I64 cvtop__Fnn_1_Inn_2.REINTERPRET) (num_.mk_num__1 Fnn.F32 fN_1) [reinterpret__ (numtype_Fnn Fnn.F32) (numtype_Inn Inn.I64) (num_.mk_num__1 Fnn.F32 fN_1)]
   | fun_cvtop___case_35 (fN_1 : fN) :
     (size (valtype_Fnn Fnn.F64)) ≠ none →
     (size (valtype_Inn Inn.I64)) ≠ none →
     (Option.get! (size (valtype_Fnn Fnn.F64))) = (Option.get! (size (valtype_Inn Inn.I64))) →
-    fun_cvtop__ numtype.F64 numtype.I64 cvtop.REINTERPRET (num_.mk_num__1 Fnn.F64 fN_1) [reinterpret__ (numtype_Fnn Fnn.F64) (numtype_Inn Inn.I64) (num_.mk_num__1 Fnn.F64 fN_1)]
+    fun_cvtop__ numtype.F64 numtype.I64 (cvtop__.mk_cvtop___2 Fnn.F64 Inn.I64 cvtop__Fnn_1_Inn_2.REINTERPRET) (num_.mk_num__1 Fnn.F64 fN_1) [reinterpret__ (numtype_Fnn Fnn.F64) (numtype_Inn Inn.I64) (num_.mk_num__1 Fnn.F64 fN_1)]
 
 
-inductive cvtop___is_wf : numtype → numtype → cvtop → num_ → List num_ → Prop where
-  | cvtop___is_wf_0 (numtype_1 : numtype) (numtype_2 : numtype) (v_cvtop : cvtop) (v_num_ : num_) (ret_val_lst : List num_) (var_0 : List num_) :
-    fun_cvtop__ numtype_1 numtype_2 v_cvtop v_num_ var_0 →
+inductive cvtop___is_wf : numtype → numtype → cvtop__ → num_ → List num_ → Prop where
+  | cvtop___is_wf_0 (numtype_1 : numtype) (numtype_2 : numtype) (v_cvtop__ : cvtop__) (v_num_ : num_) (ret_val_lst : List num_) (var_0 : List num_) :
+    fun_cvtop__ numtype_1 numtype_2 v_cvtop__ v_num_ var_0 →
+    wf_cvtop__ numtype_1 numtype_2 v_cvtop__ →
     wf_num_ numtype_1 v_num_ →
     ret_val_lst = var_0 →
     Forall (fun ret_val_elem => wf_num_ numtype_2 ret_val_elem) ret_val_lst →
-    cvtop___is_wf numtype_1 numtype_2 v_cvtop v_num_ ret_val_lst
+    cvtop___is_wf numtype_1 numtype_2 v_cvtop__ v_num_ ret_val_lst
 
 
 opaque narrow__ (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) : iN := by
@@ -5896,7 +5991,7 @@ inductive admininstr : Type where
   | BINOP (v_numtype : numtype) (_ : binop_) : admininstr
   | TESTOP (v_numtype : numtype) (_ : testop_) : admininstr
   | RELOP (v_numtype : numtype) (_ : relop_) : admininstr
-  | CVTOP (numtype_1 : numtype) (numtype_2 : numtype) (v_cvtop : cvtop) : admininstr
+  | CVTOP (numtype_1 : numtype) (numtype_2 : numtype) (_ : cvtop__) : admininstr
   | EXTEND (v_numtype : numtype) (v_n : n) : admininstr
   | VCONST (v_vectype : vectype) (_ : vec_) : admininstr
   | VVUNOP (v_vectype : vectype) (v_vvunop : vvunop) : admininstr
@@ -6090,9 +6185,10 @@ inductive wf_admininstr : admininstr → Prop where
   | admininstr_case_17 (v_numtype : numtype) (var_0 : relop_) :
     wf_relop_ v_numtype var_0 →
     wf_admininstr (admininstr.RELOP v_numtype var_0)
-  | admininstr_case_18 (numtype_1 : numtype) (numtype_2 : numtype) (v_cvtop : cvtop) :
+  | admininstr_case_18 (numtype_1 : numtype) (numtype_2 : numtype) (var_0 : cvtop__) :
+    wf_cvtop__ numtype_2 numtype_1 var_0 →
     numtype_1 ≠ numtype_2 →
-    wf_admininstr (admininstr.CVTOP numtype_1 numtype_2 v_cvtop)
+    wf_admininstr (admininstr.CVTOP numtype_1 numtype_2 var_0)
   | admininstr_case_19 (v_numtype : numtype) (v_n : n) : wf_admininstr (admininstr.EXTEND v_numtype v_n)
   | admininstr_case_20 (v_vectype : vectype) (var_0 : vec_) :
     (size (valtype_vectype v_vectype)) ≠ none →
@@ -6900,12 +6996,17 @@ inductive Resulttype_sub : resulttype → resulttype → Prop where
 
 
 inductive Limits_sub : limits → limits → Prop where
-  | mk_Limits_sub (n_11 : n) (n_12 : n) (n_21 : n) (n_22 : n) :
-    n_11 ≥ n_21 →
-    n_12 ≤ n_22 →
-    wf_limits (limits.mk_limits (uN.mk_uN n_11) (some (uN.mk_uN n_12))) →
-    wf_limits (limits.mk_limits (uN.mk_uN n_21) (some (uN.mk_uN n_22))) →
-    Limits_sub (limits.mk_limits (uN.mk_uN n_11) (some (uN.mk_uN n_12))) (limits.mk_limits (uN.mk_uN n_21) (some (uN.mk_uN n_22)))
+  | max (n_1 : n) (m_1 : m) (n_2 : n) (m_2_opt : Option m) :
+    n_1 ≥ n_2 →
+    Forall (fun m_2_elem => m_1 ≤ m_2_elem) (Option.toList m_2_opt) →
+    wf_limits (limits.mk_limits (uN.mk_uN n_1) (some (uN.mk_uN m_1))) →
+    wf_limits (limits.mk_limits (uN.mk_uN n_2) (OMap (fun m_2_elem => uN.mk_uN m_2_elem) m_2_opt)) →
+    Limits_sub (limits.mk_limits (uN.mk_uN n_1) (some (uN.mk_uN m_1))) (limits.mk_limits (uN.mk_uN n_2) (OMap (fun m_2_elem => uN.mk_uN m_2_elem) m_2_opt))
+  | eps (n_1 : n) (n_2 : n) :
+    n_1 ≥ n_2 →
+    wf_limits (limits.mk_limits (uN.mk_uN n_1) none) →
+    wf_limits (limits.mk_limits (uN.mk_uN n_2) none) →
+    Limits_sub (limits.mk_limits (uN.mk_uN n_1) none) (limits.mk_limits (uN.mk_uN n_2) none)
 
 
 inductive Functype_sub : functype → functype → Prop where
@@ -7151,17 +7252,10 @@ inductive Instr_ok : context → instr → functype → Prop where
     wf_context C →
     wf_instr (instr.RELOP nt relop_nt) →
     Instr_ok C (instr.RELOP nt relop_nt) (functype.mk_functype (.mk_list [valtype_numtype nt, valtype_numtype nt]) (.mk_list [valtype.I32]))
-  | cvtop_reinterpret (C : context) (nt_1 : numtype) (nt_2 : numtype) :
-    (size (valtype_numtype nt_1)) ≠ none →
-    (size (valtype_numtype nt_2)) ≠ none →
-    (Option.get! (size (valtype_numtype nt_1))) = (Option.get! (size (valtype_numtype nt_2))) →
+  | cvtop (C : context) (nt_1 : numtype) (nt_2 : numtype) (cvtop : cvtop__) :
     wf_context C →
-    wf_instr (instr.CVTOP nt_1 nt_2 cvtop.REINTERPRET) →
-    Instr_ok C (instr.CVTOP nt_1 nt_2 cvtop.REINTERPRET) (functype.mk_functype (.mk_list [valtype_numtype nt_2]) (.mk_list [valtype_numtype nt_1]))
-  | cvtop_convert (C : context) (nt_1 : numtype) (nt_2 : numtype) (v_cvtop : cvtop) :
-    wf_context C →
-    wf_instr (instr.CVTOP nt_1 nt_2 v_cvtop) →
-    Instr_ok C (instr.CVTOP nt_1 nt_2 v_cvtop) (functype.mk_functype (.mk_list [valtype_numtype nt_2]) (.mk_list [valtype_numtype nt_1]))
+    wf_instr (instr.CVTOP nt_1 nt_2 cvtop) →
+    Instr_ok C (instr.CVTOP nt_1 nt_2 cvtop) (functype.mk_functype (.mk_list [valtype_numtype nt_2]) (.mk_list [valtype_numtype nt_1]))
   | ref_null (C : context) (rt : reftype) :
     wf_context C →
     wf_instr (instr.REF_NULL rt) →
@@ -7940,15 +8034,15 @@ inductive Step_pure : List admininstr → List admininstr → Prop where
     fun_relop_ nt relop c_1 c_2 var_0 →
     c = var_0 →
     Step_pure [admininstr.CONST nt c_1, admininstr.CONST nt c_2, admininstr.RELOP nt relop] [admininstr.CONST numtype.I32 c]
-  | cvtop_val (nt_1 : numtype) (c_1 : num_) (nt_2 : numtype) (v_cvtop : cvtop) (c : num_) (var_0 : List num_) :
-    fun_cvtop__ nt_1 nt_2 v_cvtop c_1 var_0 →
+  | cvtop_val (nt_1 : numtype) (c_1 : num_) (nt_2 : numtype) (cvtop : cvtop__) (c : num_) (var_0 : List num_) :
+    fun_cvtop__ nt_1 nt_2 cvtop c_1 var_0 →
     (List.length var_0) > 0 →
     List.contains var_0 c →
-    Step_pure [admininstr.CONST nt_1 c_1, admininstr.CVTOP nt_2 nt_1 v_cvtop] [admininstr.CONST nt_2 c]
-  | cvtop_trap (nt_1 : numtype) (c_1 : num_) (nt_2 : numtype) (v_cvtop : cvtop) (var_0 : List num_) :
-    fun_cvtop__ nt_1 nt_2 v_cvtop c_1 var_0 →
+    Step_pure [admininstr.CONST nt_1 c_1, admininstr.CVTOP nt_2 nt_1 cvtop] [admininstr.CONST nt_2 c]
+  | cvtop_trap (nt_1 : numtype) (c_1 : num_) (nt_2 : numtype) (cvtop : cvtop__) (var_0 : List num_) :
+    fun_cvtop__ nt_1 nt_2 cvtop c_1 var_0 →
     var_0 = [] →
-    Step_pure [admininstr.CONST nt_1 c_1, admininstr.CVTOP nt_2 nt_1 v_cvtop] [admininstr.TRAP]
+    Step_pure [admininstr.CONST nt_1 c_1, admininstr.CVTOP nt_2 nt_1 cvtop] [admininstr.TRAP]
   | ref_is_null_true (v_ref : ref) (rt : reftype) :
     v_ref = (ref.REF_NULL rt) →
     Step_pure [admininstr_ref v_ref, admininstr.REF_IS_NULL] [admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN 1))]
@@ -9130,8 +9224,8 @@ inductive fun_instantiate : store → module → List externaddr → config → 
       LOCALS := []
       MODULE := v_moduleinst : frame
     }) →
-    i_71285 < (List.length elem_lst) →
-    instr_E_lst = (concat_ instr (List.range n_E |>.map (fun i_71285 => runelem ((elem_lst)[i_71285]!) (uN.mk_uN i_71285)))) →
+    i_71346 < (List.length elem_lst) →
+    instr_E_lst = (concat_ instr (List.range n_E |>.map (fun i_71346 => runelem ((elem_lst)[i_71346]!) (uN.mk_uN i_71346)))) →
     (rundata ((data_lst)[j_17]!) (uN.mk_uN j_17)) ≠ none →
     j_17 < (List.length data_lst) →
     instr_D_lst = (concat_ instr (List.range n_D |>.map (fun j_17 => Option.get! (rundata ((data_lst)[j_17]!) (uN.mk_uN j_17))))) →
@@ -9162,7 +9256,7 @@ inductive fun_instantiate : store → module → List externaddr → config → 
       LOCALS := []
       MODULE := v_moduleinst : frame
     }) →
-    wf_uN 32 (uN.mk_uN i_71288) →
+    wf_uN 32 (uN.mk_uN i_71349) →
     wf_uN 32 (uN.mk_uN j_18) →
     fun_instantiate s v_module externaddr_lst (config.mk_config (state.mk_state s' f) ((Map (fun instr_E_elem => admininstr_instr instr_E_elem) instr_E_lst) ++ ((Map (fun instr_D_elem => admininstr_instr instr_D_elem) instr_D_lst) ++ (Option.toList (OMap (fun x_elem => admininstr.CALL x_elem) x_opt)))))
 
@@ -9529,7 +9623,10 @@ inductive Instr_ok2 : store → context → admininstr → functype → Prop whe
     Instr_ok2 s C (admininstr.LABEL_ v_n instr'_lst admininstr_lst) (functype.mk_functype (.mk_list []) (.mk_list t_lst))
   | Instr_ok2_frame (s : store) (C : context) (v_n : n) (f : frame) (admininstr_lst : List admininstr) (t_lst : List valtype) (C' : context) :
     Frame_ok s f C' →
-    Expr_ok2 s C' admininstr_lst (.mk_list t_lst) →
+    Expr_ok2 s ({
+      C' with
+      RETURN := some (.mk_list t_lst)
+    }) admininstr_lst (.mk_list t_lst) →
     wf_store s →
     wf_context C →
     wf_context C' →
