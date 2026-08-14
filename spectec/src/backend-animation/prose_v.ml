@@ -160,13 +160,14 @@ let text_prose_clause (params: param list) (fc: func_clause) : text =
 
 let text_prose_func : func_def -> text = fun fdef ->
   let fid, osubid, params, _ty, clauses, _ = fdef.it in
-  if List.exists (fun step_id -> step_id = fid.it) Common.step_relids then
-    let subid = (match osubid with None -> "" | Some subid -> "/" ^ subid.it) in
-    let heading = "### " ^ fid.it ^ subid in
+  let fid' = match osubid with None -> fid.it | Some subid -> fid.it ^ "/" ^ subid.it in
+  let rule_id = String.split_on_char '/' fid.it |> List.hd in
+  if List.exists (fun step_id -> rule_id = step_id) Common.step_relids then
+    let heading = "### " ^ fid' in
     let body = vcat_f (text_prose_clause params) clauses in
     heading :: body @ [""]
   else
-    []
+    ["### No prose for function " ^ fid']
 
 let rec text_prose_def : dl_def -> text = function
   | TypeDef tdef -> []

@@ -19,6 +19,7 @@
     main_animate
     ; main_interpret
     animate
+    antiunify
     common
     ; construct
     def

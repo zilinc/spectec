@@ -122,6 +122,10 @@ let run il print_dl inline =
                   |> Animate.animate
                   |> fun (il_env, dl) -> (il_env, if inline then List.map Inline.inline_dl_def dl else dl)
   in
+  (* FIXME(zilinc): During the following step we lose the distinction between a relation
+     name and a rule name in function definitions, because in IL there's only a single
+     function Id position to store the info, while in DL we have the optional subid field.
+  *)
   let il' = Dl2il.dl2il dl in
   let il'' = Il.Dep.recursify_defs il' in
   let dl' = Il2dl.il2dl il'' in

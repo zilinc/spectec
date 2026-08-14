@@ -1644,7 +1644,7 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
     in
     let fs_same, fs_diff =
       List.partition (fun f -> rel_id f = Some id0) fs in
-    let fs =
+    let fs_same' =
       if Option.is_some osubid0 then
         let mk_clause = function
         | FuncDef {it = (id, osubid, ps, t, _, _); at; _} ->
@@ -1659,20 +1659,28 @@ let rec merge_defs (defs: dl_def list) : dl_def list =
           ) ps |> Lib.List.unzip in
           let fid = string_of_funcname id osubid $> id in
           let e = CallE (fid, args) $$ at % t in
-          None, DefD (binds, args, e, []) $ at
+          osubid, DefD (binds, args, e, []) $ at
         in
         let clauses = f :: fs_same |> List.map mk_clause in
         let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
-        let f' = FuncDef ((id0, None, params, typ, clauses, opartial) $ at) in
-        f :: fs_same @ [f']
-    else
+        let f_merged = FuncDef ((id0, None, params, typ, clauses, opartial) $ at) in
+        f :: fs_same @ [f_merged]
+    else (
+        (* If no subid in the first definition, then there should not be any [fs_same], and no merging
+           should be needed.
+        *)
+        assert (List.is_empty fs_same);
+        [f]
+        (*
         let func_clauses (FuncDef {it = (_, _, _, _, cls, _); _}) = cls in
         let clauses = f :: fs_same |> List.concat_map func_clauses in
         let at = (f :: fs_same) |> List.map (fun (FuncDef fdef) -> fdef) |> List.map at |> over_region in
         let f' = FuncDef ((id0, None, params, typ, clauses, opartial) $ at) in
         [f']
+        *)
+    )
     in
-    fs @ merge_defs fs_diff
+    fs_same' @ merge_defs fs_diff
   | ((RecDef defs') as f) :: fs ->
     RecDef (merge_defs defs') :: merge_defs fs
   | f :: fs -> f :: merge_defs fs

@@ -100,17 +100,17 @@ let rec group_rules : (id * typ * rule) list -> func_def list = function
   | h::t ->
     let (rel_id, typ, rule) = h in
     let rule_name = name_of_rule rule in
-    let t1, t2 =
+    let rule_same, rule_diff =
       List.partition (fun (_, _, rule) -> name_of_rule rule = rule_name) t in
     let rules = rule :: List.map (fun (rel_id', typ', rule') ->
       if rel_id = rel_id' then rule' else
         error rule'.at
         "this reduction rule uses a different relation compared to the previous rules"
-    ) t1 in
+    ) rule_same in
     let at = rules |> List.map at |> over_region in
     let func_def = il2dl_rule_def rule_name rel_id typ rules at in
 
-    func_def :: group_rules t2
+    func_def :: group_rules rule_diff
 
 
 (* Helper Definitions *)
