@@ -850,7 +850,7 @@ let rec make_proj (i : int) (n : int) (base : term) : term =
   ──────────────────────────────────────────────────────────────────────────────
 *)
 
-let forall_name_of_arity (n : int) : string =
+let forall_with_arity (n : int) : string =
   if n = 1 then "Forall"
   else "Forall" ^ subscript_of_int n
 
@@ -925,7 +925,7 @@ let make_forall_def (n : int) : command =
 
   Def (DefAsgn {
     modifier  = empty_modifier;
-    id        = forall_name_of_arity n;
+    id        = forall_with_arity n;
     signature = ([type_binder; p_binder] @ coll_binders, Some Prop);
     body;
   })
@@ -1176,27 +1176,51 @@ and create_iter_prem
     id_exp_list
   ) = iterexp in
 
-  (* Wrap a collection term in Option.toList if this is an Opt iteration.
-     e.g. for IterPr(p, (Opt, [("x", opt_exp)])):
-       opt_exp : Option α  →  Option.toList opt_exp : List α *)
-  let to_list_if_opt (coll : term) : term =
+  let preprocess_for_iter_type
+    (iter : Il.Ast.iter)
+    (id_exp_list : (Il.Ast.id * Il.Ast.exp) list)
+    :
+    (string * term) list
+    =
+
+    (* Wrap a collection term in Option.toList if this is an Opt iteration.
+    e.g. for IterPr(p, (Opt, [("x", opt_exp)])):
+      opt_exp : Option α  →  Option.toList opt_exp : List α *)
+    let to_list_if_opt (t : term) : term =
+      match iter with
+      | Opt ->
+          FunApp (
+            DotProj (Ident "Option", Ident "toList"),
+            NonEmptyList.from_list_unsafe [Term t]
+          )
+      | _ -> t
+    in
+    
+    let terms : (string * term) list =
+      List.map
+        (fun (id, e) -> (id.it, to_list_if_opt (create_exp e)))
+        id_exp_list
+    in
+    
     match iter with
-    | Opt ->
-        FunApp (
-          DotProj (Ident "Option", Ident "toList"),
-          NonEmptyList.from_list_unsafe [Term coll]
-        )
-    | _ -> coll
+    | ListN (n_exp, Some idx) ->
+        (idx.it, FunApp (
+          DotProj (Ident "List", Ident "range"),
+          NonEmptyList.from_list_unsafe [Term (create_exp n_exp)]
+        )) :: terms
+    | _ -> terms
   in
 
-  match id_exp_list with
+  let preprocessed_id_exp_list = preprocess_for_iter_type iter id_exp_list in
+
+  match preprocessed_id_exp_list with
 
   (* ── Arity 0: degenerate — no iteration, emit premise directly ───────── *)
   | [] ->
       create_prem prem
 
   (* ── Arity 1 ─────────────────────────────────────────────────────────── *)
-  | [(id, coll_exp)] ->
+  | [(id, coll_term)] ->
       (*
         Always rename the bound element variable to id.it ^ "_elem" to avoid
         shadowing when the element var and collection var share the same IL name
@@ -1204,18 +1228,17 @@ and create_iter_prem
 
         Emit:  Forall (fun id_elem => body) collection
       *)
-      let collection : term = to_list_if_opt (create_exp coll_exp) in
-      let elem_var = id.it ^ "_elem" in
-      let body = subst_lean_term [(id.it, Ident elem_var)] (create_prem prem) in
+      let elem_var = id ^ "_elem" in
+      let body = subst_lean_term [(id, Ident elem_var)] (create_prem prem) in
       used_prem_arities := 1 :: !used_prem_arities;
       FunApp (
-        Ident (forall_name_of_arity 1),
+        Ident (forall_with_arity 1),
         NonEmptyList.from_list_unsafe [
           Term (Lambda {
             params = NonEmptyList.from_list_unsafe [Ident_FB elem_var];
             body;
           });
-          Term collection;
+          Term coll_term;
         ]
       )
 
@@ -1225,22 +1248,20 @@ and create_iter_prem
         Emit:  ForallN (fun id₁_elem … idN_elem => body) xs₁ … xsN
         where each idᵢ_elem is id_exp_list[i].it ^ "_elem".
       *)
-      let n : int = List.length id_exp_list in
-      let collections : term list =
-        List.map (fun (_, e) -> to_list_if_opt (create_exp e)) id_exp_list in
+      let n : int = List.length preprocessed_id_exp_list in
       let prem_term : term = create_prem prem in
       used_prem_arities := n :: !used_prem_arities;
       (* Rename each original id to id_elem; build a multi-param lambda. *)
-      let elem_vars = List.map (fun (id, _) -> id.it ^ "_elem") id_exp_list in
-      let substs = List.map2 (fun (id, _) ev -> (id.it, Ident ev)) id_exp_list elem_vars in
+      let elem_vars = List.map (fun (id, _) -> id ^ "_elem") preprocessed_id_exp_list in
+      let substs = List.map2 (fun (id, _) ev -> (id, Ident ev)) preprocessed_id_exp_list elem_vars in
       let body = subst_lean_term substs prem_term in
       let lambda = Lambda {
         params = NonEmptyList.from_list_unsafe (List.map (fun ev -> Ident_FB ev) elem_vars);
         body;
       } in
       FunApp (
-        Ident (forall_name_of_arity n),
-        NonEmptyList.from_list_unsafe (Term lambda :: List.map (fun c -> Term c) collections)
+        Ident (forall_with_arity n),
+        NonEmptyList.from_list_unsafe (Term lambda :: List.map (fun (_, c) -> Term c) preprocessed_id_exp_list)
       )
 
 
@@ -1414,6 +1435,49 @@ let create_typcase
       Some inductive_type_with_params_applied
     );
   }
+
+(*
+  il_env holds an Il.Env.t built from the whole script (see create_script),
+  used only by remove_overlapping_clauses below to evaluate closed function
+  calls when deciding whether two DecD clauses are duplicates.
+*)
+let il_env : Il.Env.t ref = ref Il.Env.empty
+
+(*
+  same algorithm as in backend-rocq/disamb.ml
+
+  For something like:
+
+  def $cunpack(storagetype) : consttype hint(show $unpack(%)) hint(partial)
+  def $cunpack(consttype) = consttype
+  def $cunpack(packtype) = I32
+  def $cunpack(lanetype) = $lunpack(lanetype)  ;; HACK
+
+  the subexpansion pass causes `def cunpack` to have both
+  `| storagetype.I32 => some consttype.I32`
+  and
+  `| storagetype.I32 => some (consttype_numtype (lunpack lanetype.I32))`
+
+  We check if both the LHS and RHS of the match are the same. In order to
+  to this, we also need to evaluate the RHS, to show that, for instance,
+
+  `some consttype.I32`
+  is the same as
+  `some (consttype_numtype (lunpack lanetype.I32))`
+
+*)
+let remove_overlapping_clauses (clauses : Il.Ast.clause list) : Il.Ast.clause list =
+  let same_clause (c1 : Il.Ast.clause) (c2 : Il.Ast.clause) : bool =
+    let DefD (_, args1, exp1, _) = c1.it in
+    let DefD (_, args2, exp2, _) = c2.it in
+    let lhs_same = Il.Eq.eq_list Il.Eq.eq_arg args1 args2 in
+    let rhs_same = Il.Eq.eq_exp
+                     (Il.Eval.reduce_exp !il_env exp1)
+                     (Il.Eval.reduce_exp !il_env exp2)
+    in
+    lhs_same && rhs_same
+  in
+  Util.Lib.List.nub same_clause clauses
 
 let rec create_def (def : Il.Ast.def) : command list
   = match def.it with
@@ -1703,6 +1767,10 @@ let rec create_def (def : Il.Ast.def) : command list
                       NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* TODO: disambiguate Ident *)
                       create_typ typ
                     )))
+                  | TypP id -> Some(BracketedBinder(ExplicitParam(
+                      NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+                      Type None
+                    )))
                   | DefP _ -> None
                   | _ -> failwith "only ExpP should be here"
               in
@@ -1989,6 +2057,37 @@ let rec create_def (def : Il.Ast.def) : command list
           params_as_binders,
           Some (create_typ typ) (* val *)
       in
+
+      (* TODO WORKAROUND ---------------- REMOVE ONCE DEFTOREL IS FIXED
+         (see whole_file_analyses.ml: "Temporary axioms" section / temporarily_axioms)
+
+         deftorel could not convert this DecD to a relation even though its clauses
+         carry genuine premises (either it has a TypP/DefP parameter, or it's passed
+         by name to a higher-order function elsewhere in the script). The def-body
+         renderer below (append_prems_to_term, reached via create_clause) has no way
+         to turn a leftover genuine premise into an actual guard: it chains premises
+         into the body as `prem_1 -> prem_2 -> ... -> body`, which only type-checks
+         when the declared return type happens itself to be a function type. For
+         every other return type (e.g. concatn_ : List X) this produces Lean that
+         doesn't compile. Render it as an opaque axiom instead. *)
+      if List.mem_assoc id.it (!analysis).temporarily_axioms then
+        [
+          Opaque {
+            modifier = empty_modifier;
+            id = id.it;
+            signature = (fst signature, Option.get (snd signature));
+            rhs = Some opaque_def;
+          }
+        ]
+      else
+      (* TODO WORKAROUND ---------------- REMOVE ONCE DEFTOREL IS FIXED *)
+
+      (* Drop clauses that middlend/subexpansion.ml's per-clause type-family
+         expansion left overlapping with an earlier clause (see
+         remove_overlapping_clauses above) before any match-arm generation
+         below sees them, so e.g. cunpack never gets a duplicate
+         `storagetype.I32` arm. *)
+      let clauses = remove_overlapping_clauses clauses in
 
       (* type param_match_arm_binding_state =
         | NeverDeconstructed
@@ -2390,6 +2489,7 @@ let prologue : command list =
 
 let create_script (il : script) : command list =
   analysis := analyze_whole_script il;
+  il_env := Il.Env.env_of_script il;
   (* Generate all commands.  Side effects record used arities for each family. *)
   used_prem_arities := [];
   used_exp_arities  := [];

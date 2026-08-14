@@ -210,6 +210,17 @@ let prod prod =
   | ProdD (ps, g, e, prs) ->
     Node ("ProdD", List.map param ps @ [sym g; exp e] @ List.map prem prs)
 
+let hint h =
+  Node ("hint", [id h.hintid; text (El.Print.string_of_exp h.hintexp)])
+
+let hintdef h =
+  match h.it with
+  | TypH (x, hs) -> Node ("TypH", [id x] @ List.map hint hs)
+  | RelH (x, hs) -> Node ("RelH", [id x] @ List.map hint hs)
+  | DecH (x, hs) -> Node ("DecH", [id x] @ List.map hint hs)
+  | GramH (x, hs) -> Node ("GramH", [id x] @ List.map hint hs)
+  | RuleH (x, x2, hs) -> Node ("RuleH", [id x; id x2] @ List.map hint hs)
+
 let rec def d =
   match d.it with
   | TypD (x, ps, insts) ->
@@ -222,8 +233,8 @@ let rec def d =
     Node ("GramD", [id x] @ List.map param ps @ [typ t] @ List.map prod prods)
   | RecD ds ->
     Node ("RecD", List.map def ds)
-  | HintD _ ->
-    Atom "HintD"
+  | HintD h ->
+    Node ("HintD", [hintdef h])
 
 
 (* Scripts *)

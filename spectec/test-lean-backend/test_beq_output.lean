@@ -4,7 +4,7 @@ def List.ap (fs : List (α → β)) (xs : List α) : List β :=
 def Option.ap (f : Option (α → β)) (x : Option α) : Option β :=
   f.bind (fun f => x.map f)
 
-opaque rat_to_nat (r : Rat) : Nat := by 
+opaque rat_to_nat (r : Rat) : Nat := by
   first
      | exact Inhabited.default
      | intros ; assumption
@@ -28,7 +28,7 @@ def elem_ (X : Type) [BEq X] (X_0 : X) (var_0_lst : List X) : Bool :=
 def remove1_ (X : Type) [BEq X] (X_0 : X) (var_0_lst : List X) : List X :=
   match var_0_lst with
   | [] => []
-  | w_1 :: w'_lst => if 
+  | w_1 :: w'_lst => if
     X_0 == w_1
   then
     w'_lst
@@ -58,7 +58,7 @@ end
 def has_dup_tl_ (X : Type) [BEq X] (X_0 : X) (var_0_lst : List X) : Bool :=
   match var_0_lst with
   | [] => false
-  | w_1 :: w'_lst => if 
+  | w_1 :: w'_lst => if
     X_0 == w_1
   then
     true
@@ -73,9 +73,10 @@ def has_dup_ (X : Type) [BEq X] (var_0_lst : List X) : Bool :=
 def lookup_ (K : Type) [BEq K] (V : Type) (var_0_lst : List K) (var_1_lst : List V) (K_0 : K) : Option V :=
   match var_0_lst, var_1_lst with
   | [], [] => none
-  | k_1 :: k'_lst, v_1 :: v'_lst => if 
+  | k_1 :: k'_lst, v_1 :: v'_lst => if
     K_0 == k_1
   then
     some v_1
   else
     lookup_ K V k'_lst v'_lst K_0
+

@@ -25,6 +25,19 @@ let rec render_command (cmd : command) : document =
   | Opaque o -> render_opaque o
   | Mutual m -> render_mutual m
   | Instance i -> render_instance i
+  | Theorem t -> render_theorem t
+
+and render_theorem (theorem : _theorem) : document =
+  let modifier_str = render_decl_modifier theorem.modifier in
+  let id_str = render_id theorem.id in
+  let decl_sig_str = render_decl_sig theorem.signature in
+  let proof_str = render_term theorem.proof in
+  modifier_str
+  ^^ string "theorem "
+  ^^ id_str
+  ^^ decl_sig_str
+  ^^ string " :="
+  ^^ nest 2 (hardline ^^ proof_str)
 
 and render_instance (inst : instance) : document =
   let modifier_str = render_decl_modifier inst.modifier in

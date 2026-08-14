@@ -478,6 +478,14 @@ type instance = {
 }
 [@@deriving show]
 
+type _theorem = {
+  modifier: decl_modifier;
+  id: decl_id;
+  signature: decl_sig;
+  proof: term;
+}
+[@@deriving show]
+
 type command =
   | Def of _def
   | Inductive of _inductive
@@ -486,4 +494,5 @@ type command =
   | Opaque of opaque
   | Mutual of mutual
   | Instance of instance
+  | Theorem of _theorem
 [@@deriving show]

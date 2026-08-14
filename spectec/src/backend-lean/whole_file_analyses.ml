@@ -566,6 +566,125 @@ let gather_colliding_relation_case_names (il : script) : (string * string list) 
     ) group
   ) groups
 
+(* ---- Temporary axioms: DecD's that deftorel could not convert to a relation ----
+
+   middlend/deftorel.ml converts a DecD to a RelD whenever its clauses carry a genuine
+   premise (anything beyond a bare `otherwise` or a run of `let`s) -- *provided* two
+   extra conditions both hold (see deftorel.ml's `must_be_relation`):
+     1. every parameter is a plain ExpP -- no TypP (type parameter) and no DefP
+        (higher-order function parameter);
+     2. the DecD's own name is never passed as a `DefA` argument anywhere in the
+        script, i.e. it is never handed to another function as a callback.
+   When either condition fails, deftorel leaves the DecD as a DecD, genuine premises
+   and all.
+
+   backend.ml's def-body renderer (append_prems_to_term) has no way to turn a leftover
+   genuine premise into an actual guard: it chains premises into the body as
+   `prem_1 -> prem_2 -> ... -> body`, which only type-checks when the DecD's declared
+   return type happens itself to be a function type. For every other return type this
+   produces Lean that doesn't compile (e.g. concatn_ : List X ends up with a bare `->`
+   where a List X was expected).
+
+   Rather than emit that broken code, we detect the same two disqualifying conditions
+   deftorel itself uses, and backend.ml renders any DecD found here as
+     opaque ... := by
+       first
+          | exact Inhabited.default
+          | intros ; assumption
+   instead of its (currently ill-typed) def body -- see `temporarily_axioms` below and
+   its use in backend.ml.
+
+   Temporary: once deftorel is extended to cover these two cases, every function
+   collected here becomes convertible again and this whole section -- plus the
+   short-circuit in backend.ml that consults `temporarily_axioms` -- should be deleted. *)
+
+(* True when at least one clause carries a premise that isn't just `otherwise` or a run
+   of `let`s -- i.e. a premise deftorel would require an actual relation case to check.
+   Mirrors deftorel.ml's `only_otherwise_or_let` / `must_be_relation` premise check.
+   e.g. concatn_'s recursive clause has [IfPr (CmpE `EqOp ...); IfPr (RulePr "Forall" ...)]
+     → true    |    min's single clause has [] → false *)
+let has_genuine_premises (clauses : Il.Ast.clause list) : bool =
+  let is_let (p : Il.Ast.prem) = match p.it with LetPr _ -> true | _ -> false in
+  let only_otherwise_or_let (prems : Il.Ast.prem list) = match prems with
+    | [{it = ElsePr; _}] -> true
+    | prems -> List.for_all is_let prems
+  in
+  List.exists (fun (c : Il.Ast.clause) ->
+    let DefD (_, _, _, prems) = c.it in
+    prems <> [] && not (only_otherwise_or_let prems)
+  ) clauses
+
+(* Mirrors deftorel.ml's `is_exp_param`: true only for a plain ExpP -- TypP and DefP
+   both disqualify a DecD from relation conversion (see deftorel's comment:
+   "Current limitation of relations - can only have standard types. No type parameters
+   or higher order functions"). *)
+let is_exp_param (p : Il.Ast.param) = match p.it with ExpP _ -> true | _ -> false
+
+(* Issue 1 (as reported): DecD's with genuine premises whose parameter list includes a
+   TypP or DefP, disqualifying them from relation conversion regardless of how they're
+   used elsewhere.
+   e.g. concatn_ has TypP "X"; fvunop_ has DefP "f_" : N → fN → List fN
+     → ["concatn_"; "fvunop_"; "ivbinopsxnd_"; "fvbinop_"; "ivternopnd_"; "fvternop_";
+        "ivrelop_"; "ivrelopsx_"; "fvrelop_"; "ivextunop__"; "ivextbinop__"] *)
+let gather_defs_with_unconvertible_params (il : script) : string list =
+  map_over_decs il (fun _id params _typ clauses ->
+    has_genuine_premises clauses && not (List.for_all is_exp_param params))
+  |> List.filter_map (fun (name, needs) -> if needs then Some name else None)
+
+(* Names passed as a bare `DefA id` argument anywhere in the script -- i.e. handed to
+   another function as a callback (a higher-order argument) rather than applied
+   directly. Mirrors deftorel.ml's collect_def_args / env.def_arg_set.
+   e.g. `ivunop_ (shape.X ...) iabs_ v` passes iabs_ as `DefA "iabs_"` → "iabs_" ∈ result *)
+let gather_names_passed_as_higher_order_args (il : script) : string list =
+  let collected = ref [] in
+  let module Visitor = Il.Iter.Make(
+    struct
+      include Il.Iter.Skip
+      let visit_arg (a : Il.Ast.arg) =
+        match a.it with
+        | DefA id -> collected := id.it :: !collected
+        | _ -> ()
+    end
+  )
+  in
+  List.iter Visitor.def il;
+  List.sort_uniq String.compare !collected
+
+(* Issue 2 (as reported): DecD's with genuine premises and all-ExpP params (so they
+   would otherwise qualify for relation conversion) that are excluded only because
+   they're passed by name to a higher-order function elsewhere in the script.
+   e.g. iabs_ : N → iN → iN is passed bare to ivunop_
+     → ["iabs_"; "imin_"; "imax_"; "iadd_sat_"; "isub_sat_"; "ilt_"; "igt_"; "ile_";
+        "ige_"; "irelaxed_swizzle_lane_"; "ivadd_pairwise_"; "ivdot_"; "ivdot_sat_"] *)
+let gather_defs_passed_as_higher_order_args (il : script) : string list =
+  let hof_arg_names = gather_names_passed_as_higher_order_args il in
+  map_over_decs il (fun id params _typ clauses ->
+    has_genuine_premises clauses
+    && List.for_all is_exp_param params
+    && List.mem id.it hof_arg_names)
+  |> List.filter_map (fun (name, needs) -> if needs then Some name else None)
+
+(* Consolidated map from a DecD's name to a short description of which of the two
+   deftorel-limitation issues above applies to it. backend.ml looks a function's name
+   up here; a hit short-circuits its normal def-body rendering and emits the opaque
+   axiom form instead (see the section comment above).
+   e.g. [("concatn_", "Issue 1: ..."); ("iabs_", "Issue 2: ...")] *)
+let temporarily_axioms (il : script) : (string * string) list =
+  let issue1 = gather_defs_with_unconvertible_params il in
+  let issue2 = gather_defs_passed_as_higher_order_args il in
+  List.map (fun name ->
+    (name, "Issue 1: has a TypP or DefP parameter, so deftorel cannot convert it to a \
+            relation despite genuine premises in its clauses (deftorel.ml: \
+            must_be_relation's `List.for_all is_exp_param params` check).")
+  ) issue1
+  @
+  List.map (fun name ->
+    (name, "Issue 2: passed by name to a higher-order function elsewhere in the \
+            script, so deftorel excludes it from relation conversion despite genuine \
+            premises and all-ExpP params (deftorel.ml: must_be_relation's \
+            `env.def_arg_set` check). Diego intends to extend deftorel to cover this.")
+  ) issue2
+
 (* The result of the whole-script pre-pass, consumed by code generation in backend.ml.
    Computed once before code emission and stored in the `analysis` ref below. *)
 type whole_script_analysis =
@@ -602,6 +721,14 @@ type whole_script_analysis =
        without letting a collision in one mutual block affect naming in an
        unrelated one. *)
     colliding_relation_case_names : (string * string list) list;
+    (* Maps a DecD's name to a short description of why deftorel could not convert it
+       to a relation despite genuine premises in its clauses (see the "Temporary
+       axioms" section above). backend.ml renders any function found here as
+       `opaque ... := by first | exact Inhabited.default | intros ; assumption`
+       instead of its (currently ill-typed) def body.
+       e.g. [("concatn_", "Issue 1: ..."); ("iabs_", "Issue 2: ...")]
+       Temporary: delete once deftorel covers both cases. *)
+    temporarily_axioms : (string * string) list;
   }
 
 (* Run all whole-script analyses and bundle the results. *)
@@ -617,6 +744,7 @@ let analyze_whole_script (il : script) : whole_script_analysis =
       (let proj_names = gather_projection_func_names il in
        gather_defs_needing_catchall il ~proj_names);
     colliding_relation_case_names = gather_colliding_relation_case_names il;
+    temporarily_axioms = temporarily_axioms il;
   }
 
 (* Mutable cell holding the current script's analysis results.
@@ -630,4 +758,5 @@ let analysis : whole_script_analysis ref = ref {
   defs_needing_inhabited = [];
   defs_needing_catchall = [];
   colliding_relation_case_names = [];
+  temporarily_axioms = [];
 }
