@@ -474,22 +474,14 @@ let () =
         prerr_endline "too many output file names";
         exit 2
       )
-    | Lean -> 
+    | Lean ->
       log "Lean Generation...";
       let lean_ast = Backend_lean.Backend.create_script il in
-      let lean_doc = Backend_lean.Render.render__script lean_ast in
+      let lean_str = Backend_lean.Render.render_script_to_string lean_ast in
       (match !odsts with
       | [] ->
-        (* TODO: consider whether this PPrint document -> normal string conversion should be part of the backend itself *)
-        let buf = Buffer.create 4096 in
-        PPrint.ToBuffer.pretty 1.0 80 buf lean_doc;
-        let lean_str = Buffer.contents buf in
         print_endline lean_str
       | [odst] ->
-        (* TODO: consider whether this PPrint document -> normal string conversion should be part of the backend itself *)
-        let buf = Buffer.create 4096 in
-        PPrint.ToBuffer.pretty 1.0 80 buf lean_doc;
-        let lean_str = Buffer.contents buf in
         let oc = Out_channel.open_text odst in
         Fun.protect (fun () -> Out_channel.output_string oc lean_str)
           ~finally:(fun () -> Out_channel.close oc)
