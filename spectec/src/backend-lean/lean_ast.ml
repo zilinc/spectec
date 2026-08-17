@@ -143,6 +143,8 @@ type term =
 
   | Not of term
 
+  | Sorry
+
   (*
     Premises is NOT an official Lean 4 grammar production. It exists here purely
     for rendering convenience: it represents the premises-then-conclusion shape of

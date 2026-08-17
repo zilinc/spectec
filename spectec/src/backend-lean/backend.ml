@@ -1693,6 +1693,61 @@ let rec create_def (def : Il.Ast.def) : command list
               fun_sum n'_lst var_0 →
               fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
       *)
+      
+      (* TODO: refactor for mainatinability *)
+      if Hint_index.has_hint (!analysis.hints) ~hint_id:id.it "wf-lemma-rel" then
+        
+        (*
+
+        This code supports the hack from undep where a lemma is smuggled in as
+        an inductive type in IL
+
+        Creates something like:
+
+        theorem fzero_is_wf (v_N : N) (ret_val : fN) :
+          ret_val = (fzero v_N) →
+          wf_fN v_N ret_val
+          
+          := by sorry
+
+        *)
+
+        let rule = match rules with
+          | [rule] -> rule
+          | _ -> failwith "wf-lemma relation should have exactly one rule"
+        in
+
+        let RuleD (
+          rule_id,      (* fzero_is_wf_0 *)
+          rule_quants,  (*
+                          (ExpP "v_N" (VarT "N"))
+                          (ExpP "ret_val" (VarT "fN"))
+                        *)
+          rule_mixop,   (* (Seq Arg Arg) *)
+          rule_exp,     (* (TupE (VarE "v_N") (VarE "ret_val")) *)
+          rule_prems    (*
+                          (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "fzero" (ExpA (VarE "v_N")))))
+                          (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "v_N") (VarE "ret_val")))
+                        *)
+        ) = rule.it
+        in
+
+        
+
+        [
+          Theorem {
+            modifier = empty_modifier;
+            id = id.it;
+            signature = (
+              [
+
+              ],
+              
+            );
+            proof = failwith "";
+          }
+        ]
+      else
 
       let signature : _params list (* (f_ : N → iN → iN) *)
         = List.map (

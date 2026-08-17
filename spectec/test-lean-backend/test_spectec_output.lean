@@ -271,11 +271,17 @@ abbrev f64 : Type := fN
 def fzero (v_N : N) : fN :=
   fN.POS (fNmag.SUBNORM 0)
 
-inductive fzero_is_wf : N → fN → Prop where
-  | fzero_is_wf_0 (v_N : N) (ret_val : fN) :
-    ret_val = (fzero v_N) →
-    wf_fN v_N ret_val →
-    fzero_is_wf v_N ret_val
+theorem fzero_is_wf (v_N : N) (ret_val : fN) :
+  ret_val = (fzero v_N) →
+  wf_fN v_N ret_val
+  := by
+  sorry
+
+-- inductive fzero_is_wf : N → fN → Prop where
+--   | fzero_is_wf_0 (v_N : N) (ret_val : fN) :
+--     ret_val = (fzero v_N) →
+--     wf_fN v_N ret_val →
+--     fzero_is_wf v_N ret_val
 
 
 def fnat (v_N : N) (nat : Nat) : fN :=
@@ -19155,4 +19161,3 @@ inductive allocXs_is_wf (r_X : store × List r_X × List Y × store × List addr
     ret_val = (allocXs r_X Y v_store var_0_lst var_1_lst) →
     wf_store (ret_val.1) →
     allocXs_is_wf v_store var_0_lst var_1_lst ret_val
-
