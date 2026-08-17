@@ -148,7 +148,9 @@ type term =
   (*
     Premises is NOT an official Lean 4 grammar production. It exists here purely
     for rendering convenience: it represents the premises-then-conclusion shape of
-    an inductive constructor type, where each premise should appear on its own line:
+    an inductive constructor type (or a theorem statement -- see the Theorem
+    signature construction in backend.ml, which builds one of these too), where
+    each premise should appear on its own line:
 
       | case_name (params...) :
           premise_1 →
@@ -160,11 +162,20 @@ type term =
     Using a dedicated node lets the renderer apply the multi-line layout without
     any heuristics, and keeps backend.ml in control of which arrow chains are
     logical sequents vs. function types.
+
+    Non-empty, by convention: the LAST element is the conclusion (the only one
+    with no trailing/leading arrow), everything before it is a premise. Not
+    modelled as a separate `conclusion` field -- both of backend.ml's builders
+    either already have a flat list on hand (rule_prems for a theorem, where
+    the last premise just *is* the conclusion) or would immediately glue
+    premises and conclusion back into one list to render them (the old
+    two-field version did exactly that, right after backend.ml's other
+    builder had done the opposite split to construct it) -- so a plain list
+    avoids that round trip on both ends. render_term uses
+    Util.Lib.List.split_last to pull the conclusion off when it needs to
+    render it without a trailing arrow.
   *)
-  | Premises of {
-      premises   : term list;
-      conclusion : term;
-    }
+  | Premises of term list
 
   (* | UpdateList of {
     name_of_list_to_update: term;

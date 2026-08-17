@@ -273,36 +273,24 @@ def fzero (v_N : N) : fN :=
 
 theorem fzero_is_wf (v_N : N) (ret_val : fN) :
   ret_val = (fzero v_N) →
-  wf_fN v_N ret_val
-  := by
+  wf_fN v_N ret_val :=
   sorry
-
--- inductive fzero_is_wf : N → fN → Prop where
---   | fzero_is_wf_0 (v_N : N) (ret_val : fN) :
---     ret_val = (fzero v_N) →
---     wf_fN v_N ret_val →
---     fzero_is_wf v_N ret_val
-
 
 def fnat (v_N : N) (nat : Nat) : fN :=
   fN.POS (fNmag.NORM nat (0 : Int))
 
-inductive fnat_is_wf : N → Nat → fN → Prop where
-  | fnat_is_wf_0 (v_N : N) (nat : Nat) (ret_val : fN) :
-    ret_val = (fnat v_N nat) →
-    wf_fN v_N ret_val →
-    fnat_is_wf v_N nat ret_val
-
+theorem fnat_is_wf (v_N : N) (nat : Nat) (ret_val : fN) :
+  ret_val = (fnat v_N nat) →
+  wf_fN v_N ret_val :=
+  sorry
 
 def fone (v_N : N) : fN :=
   fN.POS (fNmag.NORM 1 (0 : Int))
 
-inductive fone_is_wf : N → fN → Prop where
-  | fone_is_wf_0 (v_N : N) (ret_val : fN) :
-    ret_val = (fone v_N) →
-    wf_fN v_N ret_val →
-    fone_is_wf v_N ret_val
-
+theorem fone_is_wf (v_N : N) (ret_val : fN) :
+  ret_val = (fone v_N) →
+  wf_fN v_N ret_val :=
+  sorry
 
 def canon_ (v_N : N) : Nat :=
   2 ^ (Int.toNat (((Option.get! (signif v_N)) : Int) - (1 : Int)))
@@ -369,14 +357,12 @@ inductive fun_utf8 : List char → List byte → Prop where
     fun_utf8 [ch] [b_1, b_2, b_3, b_4]
 
 
-inductive utf8_is_wf : List char → List byte → Prop where
-  | utf8_is_wf_0 (var_0_lst : List char) (ret_val_lst : List byte) (var_0 : List byte) :
-    fun_utf8 var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_char var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst →
-    utf8_is_wf var_0_lst ret_val_lst
-
+theorem utf8_is_wf (var_0_lst : List char) (ret_val_lst : List byte) (var_0 : List byte) :
+  fun_utf8 var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_char var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive name : Type where
   | mk_name (char_lst : List char) : name
@@ -456,14 +442,12 @@ inductive fun_funcsxx : List externidx → List typeidx → Prop where
     fun_funcsxx ([v_externidx] ++ xx_lst) var_0
 
 
-inductive funcsxx_is_wf : List externidx → List typeidx → Prop where
-  | funcsxx_is_wf_0 (var_0_lst : List externidx) (ret_val_lst : List typeidx) (var_0 : List typeidx) :
-    fun_funcsxx var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    funcsxx_is_wf var_0_lst ret_val_lst
-
+theorem funcsxx_is_wf (var_0_lst : List externidx) (ret_val_lst : List typeidx) (var_0 : List typeidx) :
+  fun_funcsxx var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_globalsxx : List externidx → List globalidx → Prop where
   | fun_globalsxx_case_0 : fun_globalsxx [] []
@@ -475,14 +459,12 @@ inductive fun_globalsxx : List externidx → List globalidx → Prop where
     fun_globalsxx ([v_externidx] ++ xx_lst) var_0
 
 
-inductive globalsxx_is_wf : List externidx → List globalidx → Prop where
-  | globalsxx_is_wf_0 (var_0_lst : List externidx) (ret_val_lst : List globalidx) (var_0 : List globalidx) :
-    fun_globalsxx var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    globalsxx_is_wf var_0_lst ret_val_lst
-
+theorem globalsxx_is_wf (var_0_lst : List externidx) (ret_val_lst : List globalidx) (var_0 : List globalidx) :
+  fun_globalsxx var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_tablesxx : List externidx → List tableidx → Prop where
   | fun_tablesxx_case_0 : fun_tablesxx [] []
@@ -494,14 +476,12 @@ inductive fun_tablesxx : List externidx → List tableidx → Prop where
     fun_tablesxx ([v_externidx] ++ xx_lst) var_0
 
 
-inductive tablesxx_is_wf : List externidx → List tableidx → Prop where
-  | tablesxx_is_wf_0 (var_0_lst : List externidx) (ret_val_lst : List tableidx) (var_0 : List tableidx) :
-    fun_tablesxx var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    tablesxx_is_wf var_0_lst ret_val_lst
-
+theorem tablesxx_is_wf (var_0_lst : List externidx) (ret_val_lst : List tableidx) (var_0 : List tableidx) :
+  fun_tablesxx var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_memsxx : List externidx → List memidx → Prop where
   | fun_memsxx_case_0 : fun_memsxx [] []
@@ -513,14 +493,12 @@ inductive fun_memsxx : List externidx → List memidx → Prop where
     fun_memsxx ([v_externidx] ++ xx_lst) var_0
 
 
-inductive memsxx_is_wf : List externidx → List memidx → Prop where
-  | memsxx_is_wf_0 (var_0_lst : List externidx) (ret_val_lst : List memidx) (var_0 : List memidx) :
-    fun_memsxx var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    memsxx_is_wf var_0_lst ret_val_lst
-
+theorem memsxx_is_wf (var_0_lst : List externidx) (ret_val_lst : List memidx) (var_0 : List memidx) :
+  fun_memsxx var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_tagsxx : List externidx → List tagidx → Prop where
   | fun_tagsxx_case_0 : fun_tagsxx [] []
@@ -532,14 +510,12 @@ inductive fun_tagsxx : List externidx → List tagidx → Prop where
     fun_tagsxx ([v_externidx] ++ xx_lst) var_0
 
 
-inductive tagsxx_is_wf : List externidx → List tagidx → Prop where
-  | tagsxx_is_wf_0 (var_0_lst : List externidx) (ret_val_lst : List tagidx) (var_0 : List tagidx) :
-    fun_tagsxx var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    tagsxx_is_wf var_0_lst ret_val_lst
-
+theorem tagsxx_is_wf (var_0_lst : List externidx) (ret_val_lst : List tagidx) (var_0 : List tagidx) :
+  fun_tagsxx var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externidx var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 structure free where
   MKfree ::
@@ -612,13 +588,11 @@ def free_opt (var_0_opt : Option free) : free :=
   }
   | some v_free => v_free
 
-inductive free_opt_is_wf : Option free → free → Prop where
-  | free_opt_is_wf_0 (var_0_opt : Option free) (ret_val : free) :
-    Forall (fun var_0_elem => wf_free var_0_elem) (Option.toList var_0_opt) →
-    ret_val = (free_opt var_0_opt) →
-    wf_free ret_val →
-    free_opt_is_wf var_0_opt ret_val
-
+theorem free_opt_is_wf (var_0_opt : Option free) (ret_val : free) :
+  Forall (fun var_0_elem => wf_free var_0_elem) (Option.toList var_0_opt) →
+  ret_val = (free_opt var_0_opt) →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_list : List free → free → Prop where
   | fun_free_list_case_0 : fun_free_list [] ({
@@ -638,14 +612,12 @@ inductive fun_free_list : List free → free → Prop where
     fun_free_list ([v_free] ++ free'_lst) (v_free ++ var_0)
 
 
-inductive free_list_is_wf : List free → free → Prop where
-  | free_list_is_wf_0 (var_0_lst : List free) (ret_val : free) (var_0 : free) :
-    fun_free_list var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_free var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_list_is_wf var_0_lst ret_val
-
+theorem free_list_is_wf (var_0_lst : List free) (ret_val : free) (var_0 : free) :
+  fun_free_list var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_free var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 def free_typeidx (v_typeidx : typeidx) : free :=
   {
@@ -661,13 +633,11 @@ def free_typeidx (v_typeidx : typeidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_typeidx_is_wf : typeidx → free → Prop where
-  | free_typeidx_is_wf_0 (v_typeidx : typeidx) (ret_val : free) :
-    wf_uN 32 v_typeidx →
-    ret_val = (free_typeidx v_typeidx) →
-    wf_free ret_val →
-    free_typeidx_is_wf v_typeidx ret_val
-
+theorem free_typeidx_is_wf (v_typeidx : typeidx) (ret_val : free) :
+  wf_uN 32 v_typeidx →
+  ret_val = (free_typeidx v_typeidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_funcidx (v_funcidx : funcidx) : free :=
   {
@@ -683,13 +653,11 @@ def free_funcidx (v_funcidx : funcidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_funcidx_is_wf : funcidx → free → Prop where
-  | free_funcidx_is_wf_0 (v_funcidx : funcidx) (ret_val : free) :
-    wf_uN 32 v_funcidx →
-    ret_val = (free_funcidx v_funcidx) →
-    wf_free ret_val →
-    free_funcidx_is_wf v_funcidx ret_val
-
+theorem free_funcidx_is_wf (v_funcidx : funcidx) (ret_val : free) :
+  wf_uN 32 v_funcidx →
+  ret_val = (free_funcidx v_funcidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_globalidx (v_globalidx : globalidx) : free :=
   {
@@ -705,13 +673,11 @@ def free_globalidx (v_globalidx : globalidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_globalidx_is_wf : globalidx → free → Prop where
-  | free_globalidx_is_wf_0 (v_globalidx : globalidx) (ret_val : free) :
-    wf_uN 32 v_globalidx →
-    ret_val = (free_globalidx v_globalidx) →
-    wf_free ret_val →
-    free_globalidx_is_wf v_globalidx ret_val
-
+theorem free_globalidx_is_wf (v_globalidx : globalidx) (ret_val : free) :
+  wf_uN 32 v_globalidx →
+  ret_val = (free_globalidx v_globalidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_tableidx (v_tableidx : tableidx) : free :=
   {
@@ -727,13 +693,11 @@ def free_tableidx (v_tableidx : tableidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_tableidx_is_wf : tableidx → free → Prop where
-  | free_tableidx_is_wf_0 (v_tableidx : tableidx) (ret_val : free) :
-    wf_uN 32 v_tableidx →
-    ret_val = (free_tableidx v_tableidx) →
-    wf_free ret_val →
-    free_tableidx_is_wf v_tableidx ret_val
-
+theorem free_tableidx_is_wf (v_tableidx : tableidx) (ret_val : free) :
+  wf_uN 32 v_tableidx →
+  ret_val = (free_tableidx v_tableidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_memidx (v_memidx : memidx) : free :=
   {
@@ -749,13 +713,11 @@ def free_memidx (v_memidx : memidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_memidx_is_wf : memidx → free → Prop where
-  | free_memidx_is_wf_0 (v_memidx : memidx) (ret_val : free) :
-    wf_uN 32 v_memidx →
-    ret_val = (free_memidx v_memidx) →
-    wf_free ret_val →
-    free_memidx_is_wf v_memidx ret_val
-
+theorem free_memidx_is_wf (v_memidx : memidx) (ret_val : free) :
+  wf_uN 32 v_memidx →
+  ret_val = (free_memidx v_memidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_elemidx (v_elemidx : elemidx) : free :=
   {
@@ -771,13 +733,11 @@ def free_elemidx (v_elemidx : elemidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_elemidx_is_wf : elemidx → free → Prop where
-  | free_elemidx_is_wf_0 (v_elemidx : elemidx) (ret_val : free) :
-    wf_uN 32 v_elemidx →
-    ret_val = (free_elemidx v_elemidx) →
-    wf_free ret_val →
-    free_elemidx_is_wf v_elemidx ret_val
-
+theorem free_elemidx_is_wf (v_elemidx : elemidx) (ret_val : free) :
+  wf_uN 32 v_elemidx →
+  ret_val = (free_elemidx v_elemidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_dataidx (v_dataidx : dataidx) : free :=
   {
@@ -793,13 +753,11 @@ def free_dataidx (v_dataidx : dataidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_dataidx_is_wf : dataidx → free → Prop where
-  | free_dataidx_is_wf_0 (v_dataidx : dataidx) (ret_val : free) :
-    wf_uN 32 v_dataidx →
-    ret_val = (free_dataidx v_dataidx) →
-    wf_free ret_val →
-    free_dataidx_is_wf v_dataidx ret_val
-
+theorem free_dataidx_is_wf (v_dataidx : dataidx) (ret_val : free) :
+  wf_uN 32 v_dataidx →
+  ret_val = (free_dataidx v_dataidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_localidx (v_localidx : localidx) : free :=
   {
@@ -815,13 +773,11 @@ def free_localidx (v_localidx : localidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_localidx_is_wf : localidx → free → Prop where
-  | free_localidx_is_wf_0 (v_localidx : localidx) (ret_val : free) :
-    wf_uN 32 v_localidx →
-    ret_val = (free_localidx v_localidx) →
-    wf_free ret_val →
-    free_localidx_is_wf v_localidx ret_val
-
+theorem free_localidx_is_wf (v_localidx : localidx) (ret_val : free) :
+  wf_uN 32 v_localidx →
+  ret_val = (free_localidx v_localidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_labelidx (v_labelidx : labelidx) : free :=
   {
@@ -837,13 +793,11 @@ def free_labelidx (v_labelidx : labelidx) : free :=
     TAGS := [] : free
   }
 
-inductive free_labelidx_is_wf : labelidx → free → Prop where
-  | free_labelidx_is_wf_0 (v_labelidx : labelidx) (ret_val : free) :
-    wf_uN 32 v_labelidx →
-    ret_val = (free_labelidx v_labelidx) →
-    wf_free ret_val →
-    free_labelidx_is_wf v_labelidx ret_val
-
+theorem free_labelidx_is_wf (v_labelidx : labelidx) (ret_val : free) :
+  wf_uN 32 v_labelidx →
+  ret_val = (free_labelidx v_labelidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_tagidx (v_tagidx : tagidx) : free :=
   {
@@ -859,13 +813,11 @@ def free_tagidx (v_tagidx : tagidx) : free :=
     TAGS := [v_tagidx] : free
   }
 
-inductive free_tagidx_is_wf : tagidx → free → Prop where
-  | free_tagidx_is_wf_0 (v_tagidx : tagidx) (ret_val : free) :
-    wf_uN 32 v_tagidx →
-    ret_val = (free_tagidx v_tagidx) →
-    wf_free ret_val →
-    free_tagidx_is_wf v_tagidx ret_val
-
+theorem free_tagidx_is_wf (v_tagidx : tagidx) (ret_val : free) :
+  wf_uN 32 v_tagidx →
+  ret_val = (free_tagidx v_tagidx) →
+  wf_free ret_val :=
+  sorry
 
 def free_externidx (v_externidx : externidx) : free :=
   match v_externidx with
@@ -875,13 +827,11 @@ def free_externidx (v_externidx : externidx) : free :=
   | externidx.MEM v_memidx => free_memidx v_memidx
   | externidx.TAG v_tagidx => free_tagidx v_tagidx
 
-inductive free_externidx_is_wf : externidx → free → Prop where
-  | free_externidx_is_wf_0 (v_externidx : externidx) (ret_val : free) :
-    wf_externidx v_externidx →
-    ret_val = (free_externidx v_externidx) →
-    wf_free ret_val →
-    free_externidx_is_wf v_externidx ret_val
-
+theorem free_externidx_is_wf (v_externidx : externidx) (ret_val : free) :
+  wf_externidx v_externidx →
+  ret_val = (free_externidx v_externidx) →
+  wf_free ret_val :=
+  sorry
 
 inductive null : Type where
   | NULL : null
@@ -1230,122 +1180,98 @@ def storagetype_Cnn (var_0 : Cnn) : storagetype :=
 def ANYREF : reftype :=
   reftype.REF (some null.NULL) heaptype.ANY
 
-inductive ANYREF_is_wf : reftype → Prop where
-  | ANYREF_is_wf_0 (ret_val : reftype) :
-    ret_val = ANYREF →
-    wf_reftype ret_val →
-    ANYREF_is_wf ret_val
-
+theorem ANYREF_is_wf (ret_val : reftype) :
+  ret_val = ANYREF →
+  wf_reftype ret_val :=
+  sorry
 
 def EQREF : reftype :=
   reftype.REF (some null.NULL) heaptype.EQ
 
-inductive EQREF_is_wf : reftype → Prop where
-  | EQREF_is_wf_0 (ret_val : reftype) :
-    ret_val = EQREF →
-    wf_reftype ret_val →
-    EQREF_is_wf ret_val
-
+theorem EQREF_is_wf (ret_val : reftype) :
+  ret_val = EQREF →
+  wf_reftype ret_val :=
+  sorry
 
 def I31REF : reftype :=
   reftype.REF (some null.NULL) heaptype.I31
 
-inductive I31REF_is_wf : reftype → Prop where
-  | I31REF_is_wf_0 (ret_val : reftype) :
-    ret_val = I31REF →
-    wf_reftype ret_val →
-    I31REF_is_wf ret_val
-
+theorem I31REF_is_wf (ret_val : reftype) :
+  ret_val = I31REF →
+  wf_reftype ret_val :=
+  sorry
 
 def STRUCTREF : reftype :=
   reftype.REF (some null.NULL) heaptype.STRUCT
 
-inductive STRUCTREF_is_wf : reftype → Prop where
-  | STRUCTREF_is_wf_0 (ret_val : reftype) :
-    ret_val = STRUCTREF →
-    wf_reftype ret_val →
-    STRUCTREF_is_wf ret_val
-
+theorem STRUCTREF_is_wf (ret_val : reftype) :
+  ret_val = STRUCTREF →
+  wf_reftype ret_val :=
+  sorry
 
 def ARRAYREF : reftype :=
   reftype.REF (some null.NULL) heaptype.ARRAY
 
-inductive ARRAYREF_is_wf : reftype → Prop where
-  | ARRAYREF_is_wf_0 (ret_val : reftype) :
-    ret_val = ARRAYREF →
-    wf_reftype ret_val →
-    ARRAYREF_is_wf ret_val
-
+theorem ARRAYREF_is_wf (ret_val : reftype) :
+  ret_val = ARRAYREF →
+  wf_reftype ret_val :=
+  sorry
 
 def FUNCREF : reftype :=
   reftype.REF (some null.NULL) heaptype.FUNC
 
-inductive FUNCREF_is_wf : reftype → Prop where
-  | FUNCREF_is_wf_0 (ret_val : reftype) :
-    ret_val = FUNCREF →
-    wf_reftype ret_val →
-    FUNCREF_is_wf ret_val
-
+theorem FUNCREF_is_wf (ret_val : reftype) :
+  ret_val = FUNCREF →
+  wf_reftype ret_val :=
+  sorry
 
 def EXNREF : reftype :=
   reftype.REF (some null.NULL) heaptype.EXN
 
-inductive EXNREF_is_wf : reftype → Prop where
-  | EXNREF_is_wf_0 (ret_val : reftype) :
-    ret_val = EXNREF →
-    wf_reftype ret_val →
-    EXNREF_is_wf ret_val
-
+theorem EXNREF_is_wf (ret_val : reftype) :
+  ret_val = EXNREF →
+  wf_reftype ret_val :=
+  sorry
 
 def EXTERNREF : reftype :=
   reftype.REF (some null.NULL) heaptype.EXTERN
 
-inductive EXTERNREF_is_wf : reftype → Prop where
-  | EXTERNREF_is_wf_0 (ret_val : reftype) :
-    ret_val = EXTERNREF →
-    wf_reftype ret_val →
-    EXTERNREF_is_wf ret_val
-
+theorem EXTERNREF_is_wf (ret_val : reftype) :
+  ret_val = EXTERNREF →
+  wf_reftype ret_val :=
+  sorry
 
 def NULLREF : reftype :=
   reftype.REF (some null.NULL) heaptype.NONE
 
-inductive NULLREF_is_wf : reftype → Prop where
-  | NULLREF_is_wf_0 (ret_val : reftype) :
-    ret_val = NULLREF →
-    wf_reftype ret_val →
-    NULLREF_is_wf ret_val
-
+theorem NULLREF_is_wf (ret_val : reftype) :
+  ret_val = NULLREF →
+  wf_reftype ret_val :=
+  sorry
 
 def NULLFUNCREF : reftype :=
   reftype.REF (some null.NULL) heaptype.NOFUNC
 
-inductive NULLFUNCREF_is_wf : reftype → Prop where
-  | NULLFUNCREF_is_wf_0 (ret_val : reftype) :
-    ret_val = NULLFUNCREF →
-    wf_reftype ret_val →
-    NULLFUNCREF_is_wf ret_val
-
+theorem NULLFUNCREF_is_wf (ret_val : reftype) :
+  ret_val = NULLFUNCREF →
+  wf_reftype ret_val :=
+  sorry
 
 def NULLEXNREF : reftype :=
   reftype.REF (some null.NULL) heaptype.NOEXN
 
-inductive NULLEXNREF_is_wf : reftype → Prop where
-  | NULLEXNREF_is_wf_0 (ret_val : reftype) :
-    ret_val = NULLEXNREF →
-    wf_reftype ret_val →
-    NULLEXNREF_is_wf ret_val
-
+theorem NULLEXNREF_is_wf (ret_val : reftype) :
+  ret_val = NULLEXNREF →
+  wf_reftype ret_val :=
+  sorry
 
 def NULLEXTERNREF : reftype :=
   reftype.REF (some null.NULL) heaptype.NOEXTERN
 
-inductive NULLEXTERNREF_is_wf : reftype → Prop where
-  | NULLEXTERNREF_is_wf_0 (ret_val : reftype) :
-    ret_val = NULLEXTERNREF →
-    wf_reftype ret_val →
-    NULLEXTERNREF_is_wf ret_val
-
+theorem NULLEXTERNREF_is_wf (ret_val : reftype) :
+  ret_val = NULLEXTERNREF →
+  wf_reftype ret_val :=
+  sorry
 
 inductive packtype : Type where
   | I8 : packtype
@@ -1632,13 +1558,11 @@ def unpack (v_storagetype : storagetype) : valtype :=
   | storagetype.I8 => valtype.I32
   | storagetype.I16 => valtype.I32
 
-inductive unpack_is_wf : storagetype → valtype → Prop where
-  | unpack_is_wf_0 (v_storagetype : storagetype) (ret_val : valtype) :
-    wf_storagetype v_storagetype →
-    ret_val = (unpack v_storagetype) →
-    wf_valtype ret_val →
-    unpack_is_wf v_storagetype ret_val
-
+theorem unpack_is_wf (v_storagetype : storagetype) (ret_val : valtype) :
+  wf_storagetype v_storagetype →
+  ret_val = (unpack v_storagetype) →
+  wf_valtype ret_val :=
+  sorry
 
 def nunpack (v_storagetype : storagetype) : Option numtype :=
   match v_storagetype with
@@ -1679,14 +1603,12 @@ def diffrt (v_reftype : reftype) (reftype_0 : reftype) : reftype :=
   | reftype.REF null_1_opt ht_1, reftype.REF (some null.NULL) ht_2 => reftype.REF none ht_1
   | reftype.REF null_1_opt ht_1, reftype.REF none ht_2 => reftype.REF null_1_opt ht_1
 
-inductive diffrt_is_wf : reftype → reftype → reftype → Prop where
-  | diffrt_is_wf_0 (v_reftype : reftype) (reftype_0 : reftype) (ret_val : reftype) :
-    wf_reftype v_reftype →
-    wf_reftype reftype_0 →
-    ret_val = (diffrt v_reftype reftype_0) →
-    wf_reftype ret_val →
-    diffrt_is_wf v_reftype reftype_0 ret_val
-
+theorem diffrt_is_wf (v_reftype : reftype) (reftype_0 : reftype) (ret_val : reftype) :
+  wf_reftype v_reftype →
+  wf_reftype reftype_0 →
+  ret_val = (diffrt v_reftype reftype_0) →
+  wf_reftype ret_val :=
+  sorry
 
 def as_deftype (v_typeuse : typeuse) : Option deftype :=
   match v_typeuse with
@@ -1703,14 +1625,12 @@ inductive fun_tagsxt : List externtype → List tagtype → Prop where
     fun_tagsxt ([v_externtype] ++ xt_lst) var_0
 
 
-inductive tagsxt_is_wf : List externtype → List tagtype → Prop where
-  | tagsxt_is_wf_0 (var_0_lst : List externtype) (ret_val_lst : List tagtype) (var_0 : List tagtype) :
-    fun_tagsxt var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externtype var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_typeuse ret_val_elem) ret_val_lst →
-    tagsxt_is_wf var_0_lst ret_val_lst
-
+theorem tagsxt_is_wf (var_0_lst : List externtype) (ret_val_lst : List tagtype) (var_0 : List tagtype) :
+  fun_tagsxt var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externtype var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_typeuse ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_globalsxt : List externtype → List globaltype → Prop where
   | fun_globalsxt_case_0 : fun_globalsxt [] []
@@ -1722,14 +1642,12 @@ inductive fun_globalsxt : List externtype → List globaltype → Prop where
     fun_globalsxt ([v_externtype] ++ xt_lst) var_0
 
 
-inductive globalsxt_is_wf : List externtype → List globaltype → Prop where
-  | globalsxt_is_wf_0 (var_0_lst : List externtype) (ret_val_lst : List globaltype) (var_0 : List globaltype) :
-    fun_globalsxt var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externtype var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_globaltype ret_val_elem) ret_val_lst →
-    globalsxt_is_wf var_0_lst ret_val_lst
-
+theorem globalsxt_is_wf (var_0_lst : List externtype) (ret_val_lst : List globaltype) (var_0 : List globaltype) :
+  fun_globalsxt var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externtype var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_globaltype ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_memsxt : List externtype → List memtype → Prop where
   | fun_memsxt_case_0 : fun_memsxt [] []
@@ -1741,14 +1659,12 @@ inductive fun_memsxt : List externtype → List memtype → Prop where
     fun_memsxt ([v_externtype] ++ xt_lst) var_0
 
 
-inductive memsxt_is_wf : List externtype → List memtype → Prop where
-  | memsxt_is_wf_0 (var_0_lst : List externtype) (ret_val_lst : List memtype) (var_0 : List memtype) :
-    fun_memsxt var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externtype var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_memtype ret_val_elem) ret_val_lst →
-    memsxt_is_wf var_0_lst ret_val_lst
-
+theorem memsxt_is_wf (var_0_lst : List externtype) (ret_val_lst : List memtype) (var_0 : List memtype) :
+  fun_memsxt var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externtype var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_memtype ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_tablesxt : List externtype → List tabletype → Prop where
   | fun_tablesxt_case_0 : fun_tablesxt [] []
@@ -1760,14 +1676,12 @@ inductive fun_tablesxt : List externtype → List tabletype → Prop where
     fun_tablesxt ([v_externtype] ++ xt_lst) var_0
 
 
-inductive tablesxt_is_wf : List externtype → List tabletype → Prop where
-  | tablesxt_is_wf_0 (var_0_lst : List externtype) (ret_val_lst : List tabletype) (var_0 : List tabletype) :
-    fun_tablesxt var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_externtype var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_tabletype ret_val_elem) ret_val_lst →
-    tablesxt_is_wf var_0_lst ret_val_lst
-
+theorem tablesxt_is_wf (var_0_lst : List externtype) (ret_val_lst : List tabletype) (var_0 : List tabletype) :
+  fun_tablesxt var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_externtype var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_tabletype ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_funcsxt : List externtype → List deftype → Prop where
   | fun_funcsxt_case_0 : fun_funcsxt [] []
@@ -1799,17 +1713,15 @@ inductive fun_subst_typevar : typevar → List typevar → List typeuse → Opti
     fun_subst_typevar x0 x1 x2 none
 
 
-inductive subst_typevar_is_wf : typevar → List typevar → List typeuse → typeuse → Prop where
-  | subst_typevar_is_wf_0 (v_typevar : typevar) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : typeuse) (var_0 : Option typeuse) :
-    fun_subst_typevar v_typevar var_0_lst var_1_lst var_0 →
-    wf_typevar v_typevar →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    var_0 ≠ none →
-    ret_val = (Option.get! var_0) →
-    wf_typeuse ret_val →
-    subst_typevar_is_wf v_typevar var_0_lst var_1_lst ret_val
-
+theorem subst_typevar_is_wf (v_typevar : typevar) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : typeuse) (var_0 : Option typeuse) :
+  fun_subst_typevar v_typevar var_0_lst var_1_lst var_0 →
+  wf_typevar v_typevar →
+  Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
+  var_0 ≠ none →
+  ret_val = (Option.get! var_0) →
+  wf_typeuse ret_val :=
+  sorry
 
 def minus_recs (var_0_lst : List typevar) (var_1_lst : List typeuse) : Option (List typevar × List typeuse) :=
   match var_0_lst, var_1_lst with
@@ -1819,16 +1731,14 @@ def minus_recs (var_0_lst : List typevar) (var_1_lst : List typeuse) : Option (L
   some (([typevar._IDX x] ++ tv'_lst, [tu_1] ++ tu'_lst))
   | _, _ => none
 
-inductive minus_recs_is_wf : List typevar → List typeuse → List typevar × List typeuse → Prop where
-  | minus_recs_is_wf_0 (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : List typevar × List typeuse) :
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    (minus_recs var_0_lst var_1_lst) ≠ none →
-    ret_val = (Option.get! (minus_recs var_0_lst var_1_lst)) →
-    Forall (fun iter_elem => wf_typevar iter_elem) (ret_val.1) →
-    Forall (fun iter_elem => wf_typeuse iter_elem) (ret_val.2) →
-    minus_recs_is_wf var_0_lst var_1_lst ret_val
-
+theorem minus_recs_is_wf (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : List typevar × List typeuse) :
+  Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
+  (minus_recs var_0_lst var_1_lst) ≠ none →
+  ret_val = (Option.get! (minus_recs var_0_lst var_1_lst)) →
+  Forall (fun iter_elem => wf_typevar iter_elem) (ret_val.1) →
+  Forall (fun iter_elem => wf_typeuse iter_elem) (ret_val.2) :=
+  sorry
 
 def subst_packtype (v_packtype : packtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) : packtype :=
   v_packtype
@@ -1952,85 +1862,6 @@ inductive fun_subst_deftype : deftype → List typevar → List typeuse → deft
 end
 
 mutual
-inductive subst_typeuse_is_wf : typeuse → List typevar → List typeuse → typeuse → Prop where
-  | subst_typeuse_is_wf_0 (v_typeuse : typeuse) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : typeuse) (var_0 : typeuse) :
-    fun_subst_typeuse v_typeuse var_0_lst var_1_lst var_0 →
-    wf_typeuse v_typeuse →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_typeuse ret_val →
-    subst_typeuse_is_wf v_typeuse var_0_lst var_1_lst ret_val
-
-inductive subst_heaptype_is_wf : heaptype → List typevar → List typeuse → heaptype → Prop where
-  | subst_heaptype_is_wf_0 (v_heaptype : heaptype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : heaptype) (var_0 : heaptype) :
-    fun_subst_heaptype v_heaptype var_0_lst var_1_lst var_0 →
-    wf_heaptype v_heaptype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_heaptype ret_val →
-    subst_heaptype_is_wf v_heaptype var_0_lst var_1_lst ret_val
-
-inductive subst_reftype_is_wf : reftype → List typevar → List typeuse → reftype → Prop where
-  | subst_reftype_is_wf_0 (v_reftype : reftype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : reftype) (var_0 : reftype) :
-    fun_subst_reftype v_reftype var_0_lst var_1_lst var_0 →
-    wf_reftype v_reftype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_reftype ret_val →
-    subst_reftype_is_wf v_reftype var_0_lst var_1_lst ret_val
-
-inductive subst_valtype_is_wf : valtype → List typevar → List typeuse → valtype → Prop where
-  | subst_valtype_is_wf_0 (v_valtype : valtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : valtype) (var_0 : valtype) :
-    fun_subst_valtype v_valtype var_0_lst var_1_lst var_0 →
-    wf_valtype v_valtype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_valtype ret_val →
-    subst_valtype_is_wf v_valtype var_0_lst var_1_lst ret_val
-
-inductive subst_storagetype_is_wf : storagetype → List typevar → List typeuse → storagetype → Prop where
-  | subst_storagetype_is_wf_0 (v_storagetype : storagetype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : storagetype) (var_0 : storagetype) :
-    fun_subst_storagetype v_storagetype var_0_lst var_1_lst var_0 →
-    wf_storagetype v_storagetype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_storagetype ret_val →
-    subst_storagetype_is_wf v_storagetype var_0_lst var_1_lst ret_val
-
-inductive subst_fieldtype_is_wf : fieldtype → List typevar → List typeuse → fieldtype → Prop where
-  | subst_fieldtype_is_wf_0 (v_fieldtype : fieldtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : fieldtype) (var_0 : fieldtype) :
-    fun_subst_fieldtype v_fieldtype var_0_lst var_1_lst var_0 →
-    wf_fieldtype v_fieldtype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_fieldtype ret_val →
-    subst_fieldtype_is_wf v_fieldtype var_0_lst var_1_lst ret_val
-
-inductive subst_comptype_is_wf : comptype → List typevar → List typeuse → comptype → Prop where
-  | subst_comptype_is_wf_0 (v_comptype : comptype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : comptype) (var_0 : comptype) :
-    fun_subst_comptype v_comptype var_0_lst var_1_lst var_0 →
-    wf_comptype v_comptype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_comptype ret_val →
-    subst_comptype_is_wf v_comptype var_0_lst var_1_lst ret_val
-
-inductive subst_subtype_is_wf : subtype → List typevar → List typeuse → subtype → Prop where
-  | subst_subtype_is_wf_0 (v_subtype : subtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : subtype) (var_0 : subtype) :
-    fun_subst_subtype v_subtype var_0_lst var_1_lst var_0 →
-    wf_subtype v_subtype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_subtype ret_val →
-    subst_subtype_is_wf v_subtype var_0_lst var_1_lst ret_val
 
 
 end
@@ -2044,16 +1875,14 @@ inductive fun_subst_tagtype : tagtype → List typevar → List typeuse → tagt
     fun_subst_tagtype tu' tv_lst tu_lst var_0
 
 
-inductive subst_tagtype_is_wf : tagtype → List typevar → List typeuse → tagtype → Prop where
-  | subst_tagtype_is_wf_0 (v_tagtype : tagtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : tagtype) (var_0 : tagtype) :
-    fun_subst_tagtype v_tagtype var_0_lst var_1_lst var_0 →
-    wf_typeuse v_tagtype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_typeuse ret_val →
-    subst_tagtype_is_wf v_tagtype var_0_lst var_1_lst ret_val
-
+theorem subst_tagtype_is_wf (v_tagtype : tagtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : tagtype) (var_0 : tagtype) :
+  fun_subst_tagtype v_tagtype var_0_lst var_1_lst var_0 →
+  wf_typeuse v_tagtype →
+  Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
+  ret_val = var_0 →
+  wf_typeuse ret_val :=
+  sorry
 
 inductive fun_subst_globaltype : globaltype → List typevar → List typeuse → globaltype → Prop where
   | fun_subst_globaltype_case_0 (mut_opt : Option «mut») (t : valtype) (tv_lst : List typevar) (tu_lst : List typeuse) (var_0 : valtype) :
@@ -2061,30 +1890,26 @@ inductive fun_subst_globaltype : globaltype → List typevar → List typeuse �
     fun_subst_globaltype (globaltype.mk_globaltype mut_opt t) tv_lst tu_lst (globaltype.mk_globaltype mut_opt var_0)
 
 
-inductive subst_globaltype_is_wf : globaltype → List typevar → List typeuse → globaltype → Prop where
-  | subst_globaltype_is_wf_0 (v_globaltype : globaltype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : globaltype) (var_0 : globaltype) :
-    fun_subst_globaltype v_globaltype var_0_lst var_1_lst var_0 →
-    wf_globaltype v_globaltype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_globaltype ret_val →
-    subst_globaltype_is_wf v_globaltype var_0_lst var_1_lst ret_val
-
+theorem subst_globaltype_is_wf (v_globaltype : globaltype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : globaltype) (var_0 : globaltype) :
+  fun_subst_globaltype v_globaltype var_0_lst var_1_lst var_0 →
+  wf_globaltype v_globaltype →
+  Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
+  ret_val = var_0 →
+  wf_globaltype ret_val :=
+  sorry
 
 def subst_memtype (v_memtype : memtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) : memtype :=
   match v_memtype with
   | memtype.PAGE «at» lim => memtype.PAGE «at» lim
 
-inductive subst_memtype_is_wf : memtype → List typevar → List typeuse → memtype → Prop where
-  | subst_memtype_is_wf_0 (v_memtype : memtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : memtype) :
-    wf_memtype v_memtype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = (subst_memtype v_memtype var_0_lst var_1_lst) →
-    wf_memtype ret_val →
-    subst_memtype_is_wf v_memtype var_0_lst var_1_lst ret_val
-
+theorem subst_memtype_is_wf (v_memtype : memtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : memtype) :
+  wf_memtype v_memtype →
+  Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
+  ret_val = (subst_memtype v_memtype var_0_lst var_1_lst) →
+  wf_memtype ret_val :=
+  sorry
 
 inductive fun_subst_tabletype : tabletype → List typevar → List typeuse → tabletype → Prop where
   | fun_subst_tabletype_case_0 («at» : addrtype) (lim : limits) (rt : reftype) (tv_lst : List typevar) (tu_lst : List typeuse) (var_0 : reftype) :
@@ -2092,16 +1917,14 @@ inductive fun_subst_tabletype : tabletype → List typevar → List typeuse → 
     fun_subst_tabletype (tabletype.mk_tabletype «at» lim rt) tv_lst tu_lst (tabletype.mk_tabletype «at» lim var_0)
 
 
-inductive subst_tabletype_is_wf : tabletype → List typevar → List typeuse → tabletype → Prop where
-  | subst_tabletype_is_wf_0 (v_tabletype : tabletype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : tabletype) (var_0 : tabletype) :
-    fun_subst_tabletype v_tabletype var_0_lst var_1_lst var_0 →
-    wf_tabletype v_tabletype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_tabletype ret_val →
-    subst_tabletype_is_wf v_tabletype var_0_lst var_1_lst ret_val
-
+theorem subst_tabletype_is_wf (v_tabletype : tabletype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : tabletype) (var_0 : tabletype) :
+  fun_subst_tabletype v_tabletype var_0_lst var_1_lst var_0 →
+  wf_tabletype v_tabletype →
+  Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
+  ret_val = var_0 →
+  wf_tabletype ret_val :=
+  sorry
 
 inductive fun_subst_externtype : externtype → List typevar → List typeuse → externtype → Prop where
   | fun_subst_externtype_case_0 (jt : typeuse) (tv_lst : List typevar) (tu_lst : List typeuse) (var_0 : tagtype) :
@@ -2119,16 +1942,14 @@ inductive fun_subst_externtype : externtype → List typevar → List typeuse �
     fun_subst_externtype (externtype.FUNC tu') tv_lst tu_lst (externtype.FUNC var_0)
 
 
-inductive subst_externtype_is_wf : externtype → List typevar → List typeuse → externtype → Prop where
-  | subst_externtype_is_wf_0 (v_externtype : externtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : externtype) (var_0 : externtype) :
-    fun_subst_externtype v_externtype var_0_lst var_1_lst var_0 →
-    wf_externtype v_externtype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_externtype ret_val →
-    subst_externtype_is_wf v_externtype var_0_lst var_1_lst ret_val
-
+theorem subst_externtype_is_wf (v_externtype : externtype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : externtype) (var_0 : externtype) :
+  fun_subst_externtype v_externtype var_0_lst var_1_lst var_0 →
+  wf_externtype v_externtype →
+  Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
+  ret_val = var_0 →
+  wf_externtype ret_val :=
+  sorry
 
 inductive fun_subst_moduletype : moduletype → List typevar → List typeuse → moduletype → Prop where
   | fun_subst_moduletype_case_0 (xt_1_lst : List externtype) (xt_2_lst : List externtype) (tv_lst : List typevar) (tu_lst : List typeuse) (var_1_lst : List externtype) (var_0_lst : List externtype) :
@@ -2139,16 +1960,14 @@ inductive fun_subst_moduletype : moduletype → List typevar → List typeuse �
     fun_subst_moduletype (moduletype.mk_moduletype xt_1_lst xt_2_lst) tv_lst tu_lst (moduletype.mk_moduletype var_0_lst var_1_lst)
 
 
-inductive subst_moduletype_is_wf : moduletype → List typevar → List typeuse → moduletype → Prop where
-  | subst_moduletype_is_wf_0 (v_moduletype : moduletype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : moduletype) (var_0 : moduletype) :
-    fun_subst_moduletype v_moduletype var_0_lst var_1_lst var_0 →
-    wf_moduletype v_moduletype →
-    Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_moduletype ret_val →
-    subst_moduletype_is_wf v_moduletype var_0_lst var_1_lst ret_val
-
+theorem subst_moduletype_is_wf (v_moduletype : moduletype) (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : moduletype) (var_0 : moduletype) :
+  fun_subst_moduletype v_moduletype var_0_lst var_1_lst var_0 →
+  wf_moduletype v_moduletype →
+  Forall (fun var_0_elem => wf_typevar var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_typeuse var_1_elem) var_1_lst →
+  ret_val = var_0 →
+  wf_moduletype ret_val :=
+  sorry
 
 inductive fun_subst_all_valtype : valtype → List typeuse → valtype → Prop where
   | fun_subst_all_valtype_case_0 (t : valtype) (v_n : Nat) (tu_lst : List typeuse) (i : Nat) (var_0 : valtype) :
@@ -2157,15 +1976,13 @@ inductive fun_subst_all_valtype : valtype → List typeuse → valtype → Prop 
     fun_subst_all_valtype t tu_lst var_0
 
 
-inductive subst_all_valtype_is_wf : valtype → List typeuse → valtype → Prop where
-  | subst_all_valtype_is_wf_0 (v_valtype : valtype) (var_0_lst : List typeuse) (ret_val : valtype) (var_0 : valtype) :
-    fun_subst_all_valtype v_valtype var_0_lst var_0 →
-    wf_valtype v_valtype →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_valtype ret_val →
-    subst_all_valtype_is_wf v_valtype var_0_lst ret_val
-
+theorem subst_all_valtype_is_wf (v_valtype : valtype) (var_0_lst : List typeuse) (ret_val : valtype) (var_0 : valtype) :
+  fun_subst_all_valtype v_valtype var_0_lst var_0 →
+  wf_valtype v_valtype →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_valtype ret_val :=
+  sorry
 
 inductive fun_subst_all_reftype : reftype → List typeuse → reftype → Prop where
   | fun_subst_all_reftype_case_0 (rt : reftype) (v_n : Nat) (tu_lst : List typeuse) (i : Nat) (var_0 : reftype) :
@@ -2174,15 +1991,13 @@ inductive fun_subst_all_reftype : reftype → List typeuse → reftype → Prop 
     fun_subst_all_reftype rt tu_lst var_0
 
 
-inductive subst_all_reftype_is_wf : reftype → List typeuse → reftype → Prop where
-  | subst_all_reftype_is_wf_0 (v_reftype : reftype) (var_0_lst : List typeuse) (ret_val : reftype) (var_0 : reftype) :
-    fun_subst_all_reftype v_reftype var_0_lst var_0 →
-    wf_reftype v_reftype →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_reftype ret_val →
-    subst_all_reftype_is_wf v_reftype var_0_lst ret_val
-
+theorem subst_all_reftype_is_wf (v_reftype : reftype) (var_0_lst : List typeuse) (ret_val : reftype) (var_0 : reftype) :
+  fun_subst_all_reftype v_reftype var_0_lst var_0 →
+  wf_reftype v_reftype →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_reftype ret_val :=
+  sorry
 
 inductive fun_subst_all_deftype : deftype → List typeuse → deftype → Prop where
   | fun_subst_all_deftype_case_0 (dt : deftype) (v_n : Nat) (tu_lst : List typeuse) (i : Nat) (var_0 : deftype) :
@@ -2198,15 +2013,13 @@ inductive fun_subst_all_tagtype : tagtype → List typeuse → tagtype → Prop 
     fun_subst_all_tagtype jt tu_lst var_0
 
 
-inductive subst_all_tagtype_is_wf : tagtype → List typeuse → tagtype → Prop where
-  | subst_all_tagtype_is_wf_0 (v_tagtype : tagtype) (var_0_lst : List typeuse) (ret_val : tagtype) (var_0 : tagtype) :
-    fun_subst_all_tagtype v_tagtype var_0_lst var_0 →
-    wf_typeuse v_tagtype →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_typeuse ret_val →
-    subst_all_tagtype_is_wf v_tagtype var_0_lst ret_val
-
+theorem subst_all_tagtype_is_wf (v_tagtype : tagtype) (var_0_lst : List typeuse) (ret_val : tagtype) (var_0 : tagtype) :
+  fun_subst_all_tagtype v_tagtype var_0_lst var_0 →
+  wf_typeuse v_tagtype →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_typeuse ret_val :=
+  sorry
 
 inductive fun_subst_all_globaltype : globaltype → List typeuse → globaltype → Prop where
   | fun_subst_all_globaltype_case_0 (gt : globaltype) (v_n : Nat) (tu_lst : List typeuse) (i : Nat) (var_0 : globaltype) :
@@ -2215,15 +2028,13 @@ inductive fun_subst_all_globaltype : globaltype → List typeuse → globaltype 
     fun_subst_all_globaltype gt tu_lst var_0
 
 
-inductive subst_all_globaltype_is_wf : globaltype → List typeuse → globaltype → Prop where
-  | subst_all_globaltype_is_wf_0 (v_globaltype : globaltype) (var_0_lst : List typeuse) (ret_val : globaltype) (var_0 : globaltype) :
-    fun_subst_all_globaltype v_globaltype var_0_lst var_0 →
-    wf_globaltype v_globaltype →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_globaltype ret_val →
-    subst_all_globaltype_is_wf v_globaltype var_0_lst ret_val
-
+theorem subst_all_globaltype_is_wf (v_globaltype : globaltype) (var_0_lst : List typeuse) (ret_val : globaltype) (var_0 : globaltype) :
+  fun_subst_all_globaltype v_globaltype var_0_lst var_0 →
+  wf_globaltype v_globaltype →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_globaltype ret_val :=
+  sorry
 
 inductive fun_subst_all_memtype : memtype → List typeuse → memtype → Prop where
   | fun_subst_all_memtype_case_0 (mt : memtype) (v_n : Nat) (tu_lst : List typeuse) (i : Nat) :
@@ -2231,15 +2042,13 @@ inductive fun_subst_all_memtype : memtype → List typeuse → memtype → Prop 
     fun_subst_all_memtype mt tu_lst (subst_memtype mt (List.range v_n |>.map (fun i => typevar._IDX (uN.mk_uN i))) tu_lst)
 
 
-inductive subst_all_memtype_is_wf : memtype → List typeuse → memtype → Prop where
-  | subst_all_memtype_is_wf_0 (v_memtype : memtype) (var_0_lst : List typeuse) (ret_val : memtype) (var_0 : memtype) :
-    fun_subst_all_memtype v_memtype var_0_lst var_0 →
-    wf_memtype v_memtype →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_memtype ret_val →
-    subst_all_memtype_is_wf v_memtype var_0_lst ret_val
-
+theorem subst_all_memtype_is_wf (v_memtype : memtype) (var_0_lst : List typeuse) (ret_val : memtype) (var_0 : memtype) :
+  fun_subst_all_memtype v_memtype var_0_lst var_0 →
+  wf_memtype v_memtype →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_memtype ret_val :=
+  sorry
 
 inductive fun_subst_all_tabletype : tabletype → List typeuse → tabletype → Prop where
   | fun_subst_all_tabletype_case_0 (tt : tabletype) (v_n : Nat) (tu_lst : List typeuse) (i : Nat) (var_0 : tabletype) :
@@ -2248,15 +2057,13 @@ inductive fun_subst_all_tabletype : tabletype → List typeuse → tabletype →
     fun_subst_all_tabletype tt tu_lst var_0
 
 
-inductive subst_all_tabletype_is_wf : tabletype → List typeuse → tabletype → Prop where
-  | subst_all_tabletype_is_wf_0 (v_tabletype : tabletype) (var_0_lst : List typeuse) (ret_val : tabletype) (var_0 : tabletype) :
-    fun_subst_all_tabletype v_tabletype var_0_lst var_0 →
-    wf_tabletype v_tabletype →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_tabletype ret_val →
-    subst_all_tabletype_is_wf v_tabletype var_0_lst ret_val
-
+theorem subst_all_tabletype_is_wf (v_tabletype : tabletype) (var_0_lst : List typeuse) (ret_val : tabletype) (var_0 : tabletype) :
+  fun_subst_all_tabletype v_tabletype var_0_lst var_0 →
+  wf_tabletype v_tabletype →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_tabletype ret_val :=
+  sorry
 
 inductive fun_subst_all_externtype : externtype → List typeuse → externtype → Prop where
   | fun_subst_all_externtype_case_0 (xt : externtype) (v_n : Nat) (tu_lst : List typeuse) (i : Nat) (var_0 : externtype) :
@@ -2265,15 +2072,13 @@ inductive fun_subst_all_externtype : externtype → List typeuse → externtype 
     fun_subst_all_externtype xt tu_lst var_0
 
 
-inductive subst_all_externtype_is_wf : externtype → List typeuse → externtype → Prop where
-  | subst_all_externtype_is_wf_0 (v_externtype : externtype) (var_0_lst : List typeuse) (ret_val : externtype) (var_0 : externtype) :
-    fun_subst_all_externtype v_externtype var_0_lst var_0 →
-    wf_externtype v_externtype →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_externtype ret_val →
-    subst_all_externtype_is_wf v_externtype var_0_lst ret_val
-
+theorem subst_all_externtype_is_wf (v_externtype : externtype) (var_0_lst : List typeuse) (ret_val : externtype) (var_0 : externtype) :
+  fun_subst_all_externtype v_externtype var_0_lst var_0 →
+  wf_externtype v_externtype →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_externtype ret_val :=
+  sorry
 
 inductive fun_subst_all_moduletype : moduletype → List typeuse → moduletype → Prop where
   | fun_subst_all_moduletype_case_0 (mmt : moduletype) (v_n : Nat) (tu_lst : List typeuse) (i : Nat) (var_0 : moduletype) :
@@ -2282,15 +2087,13 @@ inductive fun_subst_all_moduletype : moduletype → List typeuse → moduletype 
     fun_subst_all_moduletype mmt tu_lst var_0
 
 
-inductive subst_all_moduletype_is_wf : moduletype → List typeuse → moduletype → Prop where
-  | subst_all_moduletype_is_wf_0 (v_moduletype : moduletype) (var_0_lst : List typeuse) (ret_val : moduletype) (var_0 : moduletype) :
-    fun_subst_all_moduletype v_moduletype var_0_lst var_0 →
-    wf_moduletype v_moduletype →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_moduletype ret_val →
-    subst_all_moduletype_is_wf v_moduletype var_0_lst ret_val
-
+theorem subst_all_moduletype_is_wf (v_moduletype : moduletype) (var_0_lst : List typeuse) (ret_val : moduletype) (var_0 : moduletype) :
+  fun_subst_all_moduletype v_moduletype var_0_lst var_0 →
+  wf_moduletype v_moduletype →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_moduletype ret_val :=
+  sorry
 
 inductive fun_subst_all_deftypes : List deftype → List typeuse → List deftype → Prop where
   | fun_subst_all_deftypes_case_0 (tu_lst : List typeuse) : fun_subst_all_deftypes [] tu_lst []
@@ -2329,13 +2132,11 @@ inductive fun_unrolldt : deftype → subtype → Prop where
     fun_unrolldt (deftype._DEF v_rectype i) ((subtype_lst)[i]!)
 
 
-inductive unrolldt_is_wf : deftype → subtype → Prop where
-  | unrolldt_is_wf_0 (v_deftype : deftype) (ret_val : subtype) (var_0 : subtype) :
-    fun_unrolldt v_deftype var_0 →
-    ret_val = var_0 →
-    wf_subtype ret_val →
-    unrolldt_is_wf v_deftype ret_val
-
+theorem unrolldt_is_wf (v_deftype : deftype) (ret_val : subtype) (var_0 : subtype) :
+  fun_unrolldt v_deftype var_0 →
+  ret_val = var_0 →
+  wf_subtype ret_val :=
+  sorry
 
 def free_addrtype (v_addrtype : addrtype) : free :=
   {
@@ -2351,12 +2152,10 @@ def free_addrtype (v_addrtype : addrtype) : free :=
     TAGS := [] : free
   }
 
-inductive free_addrtype_is_wf : addrtype → free → Prop where
-  | free_addrtype_is_wf_0 (v_addrtype : addrtype) (ret_val : free) :
-    ret_val = (free_addrtype v_addrtype) →
-    wf_free ret_val →
-    free_addrtype_is_wf v_addrtype ret_val
-
+theorem free_addrtype_is_wf (v_addrtype : addrtype) (ret_val : free) :
+  ret_val = (free_addrtype v_addrtype) →
+  wf_free ret_val :=
+  sorry
 
 def free_numtype (v_numtype : numtype) : free :=
   {
@@ -2372,12 +2171,10 @@ def free_numtype (v_numtype : numtype) : free :=
     TAGS := [] : free
   }
 
-inductive free_numtype_is_wf : numtype → free → Prop where
-  | free_numtype_is_wf_0 (v_numtype : numtype) (ret_val : free) :
-    ret_val = (free_numtype v_numtype) →
-    wf_free ret_val →
-    free_numtype_is_wf v_numtype ret_val
-
+theorem free_numtype_is_wf (v_numtype : numtype) (ret_val : free) :
+  ret_val = (free_numtype v_numtype) →
+  wf_free ret_val :=
+  sorry
 
 def free_packtype (v_packtype : packtype) : free :=
   {
@@ -2393,12 +2190,10 @@ def free_packtype (v_packtype : packtype) : free :=
     TAGS := [] : free
   }
 
-inductive free_packtype_is_wf : packtype → free → Prop where
-  | free_packtype_is_wf_0 (v_packtype : packtype) (ret_val : free) :
-    ret_val = (free_packtype v_packtype) →
-    wf_free ret_val →
-    free_packtype_is_wf v_packtype ret_val
-
+theorem free_packtype_is_wf (v_packtype : packtype) (ret_val : free) :
+  ret_val = (free_packtype v_packtype) →
+  wf_free ret_val :=
+  sorry
 
 def free_lanetype (v_lanetype : lanetype) : free :=
   match v_lanetype with
@@ -2409,12 +2204,10 @@ def free_lanetype (v_lanetype : lanetype) : free :=
   | lanetype.I8 => free_packtype packtype.I8
   | lanetype.I16 => free_packtype packtype.I16
 
-inductive free_lanetype_is_wf : lanetype → free → Prop where
-  | free_lanetype_is_wf_0 (v_lanetype : lanetype) (ret_val : free) :
-    ret_val = (free_lanetype v_lanetype) →
-    wf_free ret_val →
-    free_lanetype_is_wf v_lanetype ret_val
-
+theorem free_lanetype_is_wf (v_lanetype : lanetype) (ret_val : free) :
+  ret_val = (free_lanetype v_lanetype) →
+  wf_free ret_val :=
+  sorry
 
 def free_vectype (v_vectype : vectype) : free :=
   {
@@ -2430,12 +2223,10 @@ def free_vectype (v_vectype : vectype) : free :=
     TAGS := [] : free
   }
 
-inductive free_vectype_is_wf : vectype → free → Prop where
-  | free_vectype_is_wf_0 (v_vectype : vectype) (ret_val : free) :
-    ret_val = (free_vectype v_vectype) →
-    wf_free ret_val →
-    free_vectype_is_wf v_vectype ret_val
-
+theorem free_vectype_is_wf (v_vectype : vectype) (ret_val : free) :
+  ret_val = (free_vectype v_vectype) →
+  wf_free ret_val :=
+  sorry
 
 def free_consttype (v_consttype : consttype) : free :=
   match v_consttype with
@@ -2445,12 +2236,10 @@ def free_consttype (v_consttype : consttype) : free :=
   | consttype.F64 => free_numtype numtype.F64
   | consttype.V128 => free_vectype vectype.V128
 
-inductive free_consttype_is_wf : consttype → free → Prop where
-  | free_consttype_is_wf_0 (v_consttype : consttype) (ret_val : free) :
-    ret_val = (free_consttype v_consttype) →
-    wf_free ret_val →
-    free_consttype_is_wf v_consttype ret_val
-
+theorem free_consttype_is_wf (v_consttype : consttype) (ret_val : free) :
+  ret_val = (free_consttype v_consttype) →
+  wf_free ret_val :=
+  sorry
 
 def free_absheaptype (v_absheaptype : absheaptype) : free :=
   {
@@ -2466,12 +2255,10 @@ def free_absheaptype (v_absheaptype : absheaptype) : free :=
     TAGS := [] : free
   }
 
-inductive free_absheaptype_is_wf : absheaptype → free → Prop where
-  | free_absheaptype_is_wf_0 (v_absheaptype : absheaptype) (ret_val : free) :
-    ret_val = (free_absheaptype v_absheaptype) →
-    wf_free ret_val →
-    free_absheaptype_is_wf v_absheaptype ret_val
-
+theorem free_absheaptype_is_wf (v_absheaptype : absheaptype) (ret_val : free) :
+  ret_val = (free_absheaptype v_absheaptype) →
+  wf_free ret_val :=
+  sorry
 
 def free_typevar (v_typevar : typevar) : free :=
   match v_typevar with
@@ -2489,13 +2276,11 @@ def free_typevar (v_typevar : typevar) : free :=
     TAGS := [] : free
   }
 
-inductive free_typevar_is_wf : typevar → free → Prop where
-  | free_typevar_is_wf_0 (v_typevar : typevar) (ret_val : free) :
-    wf_typevar v_typevar →
-    ret_val = (free_typevar v_typevar) →
-    wf_free ret_val →
-    free_typevar_is_wf v_typevar ret_val
-
+theorem free_typevar_is_wf (v_typevar : typevar) (ret_val : free) :
+  wf_typevar v_typevar →
+  ret_val = (free_typevar v_typevar) →
+  wf_free ret_val :=
+  sorry
 
 mutual
 inductive fun_free_heaptype : heaptype → free → Prop where
@@ -2631,90 +2416,6 @@ inductive fun_free_deftype : deftype → free → Prop where
 end
 
 mutual
-inductive free_heaptype_is_wf : heaptype → free → Prop where
-  | free_heaptype_is_wf_0 (v_heaptype : heaptype) (ret_val : free) (var_0 : free) :
-    fun_free_heaptype v_heaptype var_0 →
-    wf_heaptype v_heaptype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_heaptype_is_wf v_heaptype ret_val
-
-inductive free_reftype_is_wf : reftype → free → Prop where
-  | free_reftype_is_wf_0 (v_reftype : reftype) (ret_val : free) (var_0 : free) :
-    fun_free_reftype v_reftype var_0 →
-    wf_reftype v_reftype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_reftype_is_wf v_reftype ret_val
-
-inductive free_typeuse_is_wf : typeuse → free → Prop where
-  | free_typeuse_is_wf_0 (v_typeuse : typeuse) (ret_val : free) (var_0 : free) :
-    fun_free_typeuse v_typeuse var_0 →
-    wf_typeuse v_typeuse →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_typeuse_is_wf v_typeuse ret_val
-
-inductive free_valtype_is_wf : valtype → free → Prop where
-  | free_valtype_is_wf_0 (v_valtype : valtype) (ret_val : free) (var_0 : free) :
-    fun_free_valtype v_valtype var_0 →
-    wf_valtype v_valtype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_valtype_is_wf v_valtype ret_val
-
-inductive free_resulttype_is_wf : resulttype → free → Prop where
-  | free_resulttype_is_wf_0 (v_resulttype : resulttype) (ret_val : free) (var_0 : free) :
-    fun_free_resulttype v_resulttype var_0 →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_resulttype_is_wf v_resulttype ret_val
-
-inductive free_storagetype_is_wf : storagetype → free → Prop where
-  | free_storagetype_is_wf_0 (v_storagetype : storagetype) (ret_val : free) (var_0 : free) :
-    fun_free_storagetype v_storagetype var_0 →
-    wf_storagetype v_storagetype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_storagetype_is_wf v_storagetype ret_val
-
-inductive free_fieldtype_is_wf : fieldtype → free → Prop where
-  | free_fieldtype_is_wf_0 (v_fieldtype : fieldtype) (ret_val : free) (var_0 : free) :
-    fun_free_fieldtype v_fieldtype var_0 →
-    wf_fieldtype v_fieldtype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_fieldtype_is_wf v_fieldtype ret_val
-
-inductive free_comptype_is_wf : comptype → free → Prop where
-  | free_comptype_is_wf_0 (v_comptype : comptype) (ret_val : free) (var_0 : free) :
-    fun_free_comptype v_comptype var_0 →
-    wf_comptype v_comptype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_comptype_is_wf v_comptype ret_val
-
-inductive free_subtype_is_wf : subtype → free → Prop where
-  | free_subtype_is_wf_0 (v_subtype : subtype) (ret_val : free) (var_0 : free) :
-    fun_free_subtype v_subtype var_0 →
-    wf_subtype v_subtype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_subtype_is_wf v_subtype ret_val
-
-inductive free_rectype_is_wf : rectype → free → Prop where
-  | free_rectype_is_wf_0 (v_rectype : rectype) (ret_val : free) (var_0 : free) :
-    fun_free_rectype v_rectype var_0 →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_rectype_is_wf v_rectype ret_val
-
-inductive free_deftype_is_wf : deftype → free → Prop where
-  | free_deftype_is_wf_0 (v_deftype : deftype) (ret_val : free) (var_0 : free) :
-    fun_free_deftype v_deftype var_0 →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_deftype_is_wf v_deftype ret_val
 
 
 end
@@ -2725,14 +2426,12 @@ inductive fun_free_tagtype : tagtype → free → Prop where
     fun_free_tagtype (typeuse._DEF v_rectype v_n) var_0
 
 
-inductive free_tagtype_is_wf : tagtype → free → Prop where
-  | free_tagtype_is_wf_0 (v_tagtype : tagtype) (ret_val : free) (var_0 : free) :
-    fun_free_tagtype v_tagtype var_0 →
-    wf_typeuse v_tagtype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_tagtype_is_wf v_tagtype ret_val
-
+theorem free_tagtype_is_wf (v_tagtype : tagtype) (ret_val : free) (var_0 : free) :
+  fun_free_tagtype v_tagtype var_0 →
+  wf_typeuse v_tagtype →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_globaltype : globaltype → free → Prop where
   | fun_free_globaltype_case_0 (mut_opt : Option «mut») (v_valtype : valtype) (var_0 : free) :
@@ -2740,26 +2439,22 @@ inductive fun_free_globaltype : globaltype → free → Prop where
     fun_free_globaltype (globaltype.mk_globaltype mut_opt v_valtype) var_0
 
 
-inductive free_globaltype_is_wf : globaltype → free → Prop where
-  | free_globaltype_is_wf_0 (v_globaltype : globaltype) (ret_val : free) (var_0 : free) :
-    fun_free_globaltype v_globaltype var_0 →
-    wf_globaltype v_globaltype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_globaltype_is_wf v_globaltype ret_val
-
+theorem free_globaltype_is_wf (v_globaltype : globaltype) (ret_val : free) (var_0 : free) :
+  fun_free_globaltype v_globaltype var_0 →
+  wf_globaltype v_globaltype →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 def free_memtype (v_memtype : memtype) : free :=
   match v_memtype with
   | memtype.PAGE v_addrtype v_limits => free_addrtype v_addrtype
 
-inductive free_memtype_is_wf : memtype → free → Prop where
-  | free_memtype_is_wf_0 (v_memtype : memtype) (ret_val : free) :
-    wf_memtype v_memtype →
-    ret_val = (free_memtype v_memtype) →
-    wf_free ret_val →
-    free_memtype_is_wf v_memtype ret_val
-
+theorem free_memtype_is_wf (v_memtype : memtype) (ret_val : free) :
+  wf_memtype v_memtype →
+  ret_val = (free_memtype v_memtype) →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_tabletype : tabletype → free → Prop where
   | fun_free_tabletype_case_0 (v_addrtype : addrtype) (v_limits : limits) (v_reftype : reftype) (var_0 : free) :
@@ -2767,14 +2462,12 @@ inductive fun_free_tabletype : tabletype → free → Prop where
     fun_free_tabletype (tabletype.mk_tabletype v_addrtype v_limits v_reftype) ((free_addrtype v_addrtype) ++ var_0)
 
 
-inductive free_tabletype_is_wf : tabletype → free → Prop where
-  | free_tabletype_is_wf_0 (v_tabletype : tabletype) (ret_val : free) (var_0 : free) :
-    fun_free_tabletype v_tabletype var_0 →
-    wf_tabletype v_tabletype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_tabletype_is_wf v_tabletype ret_val
-
+theorem free_tabletype_is_wf (v_tabletype : tabletype) (ret_val : free) (var_0 : free) :
+  fun_free_tabletype v_tabletype var_0 →
+  wf_tabletype v_tabletype →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 def free_datatype (v_datatype : datatype) : free :=
   match v_datatype with
@@ -2791,12 +2484,10 @@ def free_datatype (v_datatype : datatype) : free :=
     TAGS := [] : free
   }
 
-inductive free_datatype_is_wf : datatype → free → Prop where
-  | free_datatype_is_wf_0 (v_datatype : datatype) (ret_val : free) :
-    ret_val = (free_datatype v_datatype) →
-    wf_free ret_val →
-    free_datatype_is_wf v_datatype ret_val
-
+theorem free_datatype_is_wf (v_datatype : datatype) (ret_val : free) :
+  ret_val = (free_datatype v_datatype) →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_elemtype : elemtype → free → Prop where
   | fun_free_elemtype_case_0 (v_reftype : reftype) (var_0 : free) :
@@ -2804,14 +2495,12 @@ inductive fun_free_elemtype : elemtype → free → Prop where
     fun_free_elemtype v_reftype var_0
 
 
-inductive free_elemtype_is_wf : elemtype → free → Prop where
-  | free_elemtype_is_wf_0 (v_elemtype : elemtype) (ret_val : free) (var_0 : free) :
-    fun_free_elemtype v_elemtype var_0 →
-    wf_reftype v_elemtype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_elemtype_is_wf v_elemtype ret_val
-
+theorem free_elemtype_is_wf (v_elemtype : elemtype) (ret_val : free) (var_0 : free) :
+  fun_free_elemtype v_elemtype var_0 →
+  wf_reftype v_elemtype →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_externtype : externtype → free → Prop where
   | fun_free_externtype_case_0 (v_tagtype : typeuse) (var_0 : free) :
@@ -2829,14 +2518,12 @@ inductive fun_free_externtype : externtype → free → Prop where
     fun_free_externtype (externtype.FUNC v_typeuse) var_0
 
 
-inductive free_externtype_is_wf : externtype → free → Prop where
-  | free_externtype_is_wf_0 (v_externtype : externtype) (ret_val : free) (var_0 : free) :
-    fun_free_externtype v_externtype var_0 →
-    wf_externtype v_externtype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_externtype_is_wf v_externtype ret_val
-
+theorem free_externtype_is_wf (v_externtype : externtype) (ret_val : free) (var_0 : free) :
+  fun_free_externtype v_externtype var_0 →
+  wf_externtype v_externtype →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_moduletype : moduletype → free → Prop where
   | fun_free_moduletype_case_0 (externtype_1_lst : List externtype) (externtype_2_lst : List externtype) (var_3_lst : List free) (var_2 : free) (var_1_lst : List free) (var_0 : free) :
@@ -2849,14 +2536,12 @@ inductive fun_free_moduletype : moduletype → free → Prop where
     fun_free_moduletype (moduletype.mk_moduletype externtype_1_lst externtype_2_lst) (var_0 ++ var_2)
 
 
-inductive free_moduletype_is_wf : moduletype → free → Prop where
-  | free_moduletype_is_wf_0 (v_moduletype : moduletype) (ret_val : free) (var_0 : free) :
-    fun_free_moduletype v_moduletype var_0 →
-    wf_moduletype v_moduletype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_moduletype_is_wf v_moduletype ret_val
-
+theorem free_moduletype_is_wf (v_moduletype : moduletype) (ret_val : free) (var_0 : free) :
+  fun_free_moduletype v_moduletype var_0 →
+  wf_moduletype v_moduletype →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive num_ : Type where
   | mk_num__0 (v_Inn : Inn) (var_x : iN) : num_
@@ -3273,13 +2958,11 @@ def fun_dim (v_shape : shape) : dim :=
   match v_shape with
   | shape.X v_Lnn (dim.mk_dim v_N) => dim.mk_dim v_N
 
-inductive dim_is_wf : shape → dim → Prop where
-  | dim_is_wf_0 (v_shape : shape) (ret_val : dim) :
-    wf_shape v_shape →
-    ret_val = (fun_dim v_shape) →
-    wf_dim ret_val →
-    dim_is_wf v_shape ret_val
-
+theorem dim_is_wf (v_shape : shape) (ret_val : dim) :
+  wf_shape v_shape →
+  ret_val = (fun_dim v_shape) →
+  wf_dim ret_val :=
+  sorry
 
 def fun_lanetype (v_shape : shape) : lanetype :=
   match v_shape with
@@ -4613,12 +4296,10 @@ def memarg0 : memarg :=
     OFFSET := uN.mk_uN 0 : memarg
   }
 
-inductive memarg0_is_wf : memarg → Prop where
-  | memarg0_is_wf_0 (ret_val : memarg) :
-    ret_val = memarg0 →
-    wf_memarg ret_val →
-    memarg0_is_wf ret_val
-
+theorem memarg0_is_wf (ret_val : memarg) :
+  ret_val = memarg0 →
+  wf_memarg ret_val :=
+  sorry
 
 def const (v_consttype : consttype) (v_lit_ : lit_) : instr :=
   match v_consttype, v_lit_ with
@@ -4629,25 +4310,21 @@ def const (v_consttype : consttype) (v_lit_ : lit_) : instr :=
   | consttype.V128, lit_.mk_lit__1 vectype.V128 c => instr.VCONST vectype.V128 c
   | _, _ => Inhabited.default
 
-inductive const_is_wf : consttype → lit_ → instr → Prop where
-  | const_is_wf_0 (v_consttype : consttype) (v_lit_ : lit_) (ret_val : instr) :
-    wf_lit_ (storagetype_consttype v_consttype) v_lit_ →
-    ret_val = (const v_consttype v_lit_) →
-    wf_instr ret_val →
-    const_is_wf v_consttype v_lit_ ret_val
-
+theorem const_is_wf (v_consttype : consttype) (v_lit_ : lit_) (ret_val : instr) :
+  wf_lit_ (storagetype_consttype v_consttype) v_lit_ →
+  ret_val = (const v_consttype v_lit_) →
+  wf_instr ret_val :=
+  sorry
 
 def free_shape (v_shape : shape) : free :=
   match v_shape with
   | shape.X v_lanetype v_dim => free_lanetype v_lanetype
 
-inductive free_shape_is_wf : shape → free → Prop where
-  | free_shape_is_wf_0 (v_shape : shape) (ret_val : free) :
-    wf_shape v_shape →
-    ret_val = (free_shape v_shape) →
-    wf_free ret_val →
-    free_shape_is_wf v_shape ret_val
-
+theorem free_shape_is_wf (v_shape : shape) (ret_val : free) :
+  wf_shape v_shape →
+  ret_val = (free_shape v_shape) →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_blocktype : blocktype → free → Prop where
   | fun_free_blocktype_case_0 (valtype_opt : Option valtype) (var_0_opt : Option free) :
@@ -4657,14 +4334,12 @@ inductive fun_free_blocktype : blocktype → free → Prop where
   | fun_free_blocktype_case_1 (v_typeidx : uN) : fun_free_blocktype (blocktype._IDX v_typeidx) (free_typeidx v_typeidx)
 
 
-inductive free_blocktype_is_wf : blocktype → free → Prop where
-  | free_blocktype_is_wf_0 (v_blocktype : blocktype) (ret_val : free) (var_0 : free) :
-    fun_free_blocktype v_blocktype var_0 →
-    wf_blocktype v_blocktype →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_blocktype_is_wf v_blocktype ret_val
-
+theorem free_blocktype_is_wf (v_blocktype : blocktype) (ret_val : free) (var_0 : free) :
+  fun_free_blocktype v_blocktype var_0 →
+  wf_blocktype v_blocktype →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 def free_catch (v_catch : «catch») : free :=
   match v_catch with
@@ -4673,13 +4348,11 @@ def free_catch (v_catch : «catch») : free :=
   | catch.CATCH_ALL v_labelidx => free_labelidx v_labelidx
   | catch.CATCH_ALL_REF v_labelidx => free_labelidx v_labelidx
 
-inductive free_catch_is_wf : «catch» → free → Prop where
-  | free_catch_is_wf_0 (v_catch : «catch») (ret_val : free) :
-    wf_catch v_catch →
-    ret_val = (free_catch v_catch) →
-    wf_free ret_val →
-    free_catch_is_wf v_catch ret_val
-
+theorem free_catch_is_wf (v_catch : «catch») (ret_val : free) :
+  wf_catch v_catch →
+  ret_val = (free_catch v_catch) →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_shift_labelidxs : List labelidx → List labelidx → Prop where
   | fun_shift_labelidxs_case_0 : fun_shift_labelidxs [] []
@@ -4691,14 +4364,12 @@ inductive fun_shift_labelidxs : List labelidx → List labelidx → Prop where
     fun_shift_labelidxs ([v_labelidx] ++ labelidx'_lst) ([uN.mk_uN (Int.toNat (((proj_uN_0 v_labelidx) : Int) - (1 : Int)))] ++ var_0)
 
 
-inductive shift_labelidxs_is_wf : List labelidx → List labelidx → Prop where
-  | shift_labelidxs_is_wf_0 (var_0_lst : List labelidx) (ret_val_lst : List labelidx) (var_0 : List labelidx) :
-    fun_shift_labelidxs var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_uN 32 var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    shift_labelidxs_is_wf var_0_lst ret_val_lst
-
+theorem shift_labelidxs_is_wf (var_0_lst : List labelidx) (ret_val_lst : List labelidx) (var_0 : List labelidx) :
+  fun_shift_labelidxs var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_uN 32 var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 mutual
 inductive fun_free_instr : instr → free → Prop where
@@ -5010,21 +4681,6 @@ inductive fun_free_block : List instr → free → Prop where
 end
 
 mutual
-inductive free_instr_is_wf : instr → free → Prop where
-  | free_instr_is_wf_0 (v_instr : instr) (ret_val : free) (var_0 : free) :
-    fun_free_instr v_instr var_0 →
-    wf_instr v_instr →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_instr_is_wf v_instr ret_val
-
-inductive free_block_is_wf : List instr → free → Prop where
-  | free_block_is_wf_0 (var_0_lst : List instr) (ret_val : free) (var_0 : free) :
-    fun_free_block var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_instr var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_block_is_wf var_0_lst ret_val
 
 
 end
@@ -5037,14 +4693,12 @@ inductive fun_free_expr : expr → free → Prop where
     fun_free_expr instr_lst var_0
 
 
-inductive free_expr_is_wf : expr → free → Prop where
-  | free_expr_is_wf_0 (v_expr : expr) (ret_val : free) (var_0 : free) :
-    fun_free_expr v_expr var_0 →
-    Forall (fun v_expr_elem => wf_instr v_expr_elem) v_expr →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_expr_is_wf v_expr ret_val
-
+theorem free_expr_is_wf (v_expr : expr) (ret_val : free) (var_0 : free) :
+  fun_free_expr v_expr var_0 →
+  Forall (fun v_expr_elem => wf_instr v_expr_elem) v_expr →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive elemmode : Type where
   | ACTIVE (v_tableidx : tableidx) (v_expr : expr) : elemmode
@@ -5214,13 +4868,11 @@ inductive fun_free_type : type → free → Prop where
     fun_free_type (type.TYPE v_rectype) var_0
 
 
-inductive free_type_is_wf : type → free → Prop where
-  | free_type_is_wf_0 (v_type : type) (ret_val : free) (var_0 : free) :
-    fun_free_type v_type var_0 →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_type_is_wf v_type ret_val
-
+theorem free_type_is_wf (v_type : type) (ret_val : free) (var_0 : free) :
+  fun_free_type v_type var_0 →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_tag : tag → free → Prop where
   | fun_free_tag_case_0 (v_tagtype : typeuse) (var_0 : free) :
@@ -5228,14 +4880,12 @@ inductive fun_free_tag : tag → free → Prop where
     fun_free_tag (tag.TAG v_tagtype) var_0
 
 
-inductive free_tag_is_wf : tag → free → Prop where
-  | free_tag_is_wf_0 (v_tag : tag) (ret_val : free) (var_0 : free) :
-    fun_free_tag v_tag var_0 →
-    wf_tag v_tag →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_tag_is_wf v_tag ret_val
-
+theorem free_tag_is_wf (v_tag : tag) (ret_val : free) (var_0 : free) :
+  fun_free_tag v_tag var_0 →
+  wf_tag v_tag →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_global : global → free → Prop where
   | fun_free_global_case_0 (v_globaltype : globaltype) (v_expr : List instr) (var_1 : free) (var_0 : free) :
@@ -5244,26 +4894,22 @@ inductive fun_free_global : global → free → Prop where
     fun_free_global (global.GLOBAL v_globaltype v_expr) (var_0 ++ var_1)
 
 
-inductive free_global_is_wf : global → free → Prop where
-  | free_global_is_wf_0 (v_global : global) (ret_val : free) (var_0 : free) :
-    fun_free_global v_global var_0 →
-    wf_global v_global →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_global_is_wf v_global ret_val
-
+theorem free_global_is_wf (v_global : global) (ret_val : free) (var_0 : free) :
+  fun_free_global v_global var_0 →
+  wf_global v_global →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 def free_mem (v_mem : mem) : free :=
   match v_mem with
   | mem.MEMORY v_memtype => free_memtype v_memtype
 
-inductive free_mem_is_wf : mem → free → Prop where
-  | free_mem_is_wf_0 (v_mem : mem) (ret_val : free) :
-    wf_mem v_mem →
-    ret_val = (free_mem v_mem) →
-    wf_free ret_val →
-    free_mem_is_wf v_mem ret_val
-
+theorem free_mem_is_wf (v_mem : mem) (ret_val : free) :
+  wf_mem v_mem →
+  ret_val = (free_mem v_mem) →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_table : table → free → Prop where
   | fun_free_table_case_0 (v_tabletype : tabletype) (v_expr : List instr) (var_1 : free) (var_0 : free) :
@@ -5272,14 +4918,12 @@ inductive fun_free_table : table → free → Prop where
     fun_free_table (table.TABLE v_tabletype v_expr) (var_0 ++ var_1)
 
 
-inductive free_table_is_wf : table → free → Prop where
-  | free_table_is_wf_0 (v_table : table) (ret_val : free) (var_0 : free) :
-    fun_free_table v_table var_0 →
-    wf_table v_table →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_table_is_wf v_table ret_val
-
+theorem free_table_is_wf (v_table : table) (ret_val : free) (var_0 : free) :
+  fun_free_table v_table var_0 →
+  wf_table v_table →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_local : «local» → free → Prop where
   | fun_free_local_case_0 (t : valtype) (var_0 : free) :
@@ -5287,14 +4931,12 @@ inductive fun_free_local : «local» → free → Prop where
     fun_free_local (local.LOCAL t) var_0
 
 
-inductive free_local_is_wf : «local» → free → Prop where
-  | free_local_is_wf_0 (v_local : «local») (ret_val : free) (var_0 : free) :
-    fun_free_local v_local var_0 →
-    wf_local v_local →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_local_is_wf v_local ret_val
-
+theorem free_local_is_wf (v_local : «local») (ret_val : free) (var_0 : free) :
+  fun_free_local v_local var_0 →
+  wf_local v_local →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_func : func → free → Prop where
   | fun_free_func_case_0 (v_typeidx : uN) (local_lst : List «local») (v_expr : List instr) (var_2 : free) (var_1_lst : List free) (var_0 : free) :
@@ -5308,14 +4950,12 @@ inductive fun_free_func : func → free → Prop where
     }))
 
 
-inductive free_func_is_wf : func → free → Prop where
-  | free_func_is_wf_0 (v_func : func) (ret_val : free) (var_0 : free) :
-    fun_free_func v_func var_0 →
-    wf_func v_func →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_func_is_wf v_func ret_val
-
+theorem free_func_is_wf (v_func : func) (ret_val : free) (var_0 : free) :
+  fun_free_func v_func var_0 →
+  wf_func v_func →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_datamode : datamode → free → Prop where
   | fun_free_datamode_case_0 (v_memidx : uN) (v_expr : List instr) (var_0 : free) :
@@ -5335,14 +4975,12 @@ inductive fun_free_datamode : datamode → free → Prop where
   })
 
 
-inductive free_datamode_is_wf : datamode → free → Prop where
-  | free_datamode_is_wf_0 (v_datamode : datamode) (ret_val : free) (var_0 : free) :
-    fun_free_datamode v_datamode var_0 →
-    wf_datamode v_datamode →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_datamode_is_wf v_datamode ret_val
-
+theorem free_datamode_is_wf (v_datamode : datamode) (ret_val : free) (var_0 : free) :
+  fun_free_datamode v_datamode var_0 →
+  wf_datamode v_datamode →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_data : data → free → Prop where
   | fun_free_data_case_0 (byte_lst : List byte) (v_datamode : datamode) (var_0 : free) :
@@ -5350,14 +4988,12 @@ inductive fun_free_data : data → free → Prop where
     fun_free_data (data.DATA byte_lst v_datamode) var_0
 
 
-inductive free_data_is_wf : data → free → Prop where
-  | free_data_is_wf_0 (v_data : data) (ret_val : free) (var_0 : free) :
-    fun_free_data v_data var_0 →
-    wf_data v_data →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_data_is_wf v_data ret_val
-
+theorem free_data_is_wf (v_data : data) (ret_val : free) (var_0 : free) :
+  fun_free_data v_data var_0 →
+  wf_data v_data →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_elemmode : elemmode → free → Prop where
   | fun_free_elemmode_case_0 (v_tableidx : uN) (v_expr : List instr) (var_0 : free) :
@@ -5389,14 +5025,12 @@ inductive fun_free_elemmode : elemmode → free → Prop where
   })
 
 
-inductive free_elemmode_is_wf : elemmode → free → Prop where
-  | free_elemmode_is_wf_0 (v_elemmode : elemmode) (ret_val : free) (var_0 : free) :
-    fun_free_elemmode v_elemmode var_0 →
-    wf_elemmode v_elemmode →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_elemmode_is_wf v_elemmode ret_val
-
+theorem free_elemmode_is_wf (v_elemmode : elemmode) (ret_val : free) (var_0 : free) :
+  fun_free_elemmode v_elemmode var_0 →
+  wf_elemmode v_elemmode →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_elem : elem → free → Prop where
   | fun_free_elem_case_0 (v_reftype : reftype) (expr_lst : List expr) (v_elemmode : elemmode) (var_3 : free) (var_2_lst : List free) (var_1 : free) (var_0 : free) :
@@ -5408,26 +5042,22 @@ inductive fun_free_elem : elem → free → Prop where
     fun_free_elem (elem.ELEM v_reftype expr_lst v_elemmode) ((var_0 ++ var_1) ++ var_3)
 
 
-inductive free_elem_is_wf : elem → free → Prop where
-  | free_elem_is_wf_0 (v_elem : elem) (ret_val : free) (var_0 : free) :
-    fun_free_elem v_elem var_0 →
-    wf_elem v_elem →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_elem_is_wf v_elem ret_val
-
+theorem free_elem_is_wf (v_elem : elem) (ret_val : free) (var_0 : free) :
+  fun_free_elem v_elem var_0 →
+  wf_elem v_elem →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 def free_start (v_start : start) : free :=
   match v_start with
   | start.START v_funcidx => free_funcidx v_funcidx
 
-inductive free_start_is_wf : start → free → Prop where
-  | free_start_is_wf_0 (v_start : start) (ret_val : free) :
-    wf_start v_start →
-    ret_val = (free_start v_start) →
-    wf_free ret_val →
-    free_start_is_wf v_start ret_val
-
+theorem free_start_is_wf (v_start : start) (ret_val : free) :
+  wf_start v_start →
+  ret_val = (free_start v_start) →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_import : «import» → free → Prop where
   | fun_free_import_case_0 (name_1 : name) (name_2 : name) (v_externtype : externtype) (var_0 : free) :
@@ -5435,26 +5065,22 @@ inductive fun_free_import : «import» → free → Prop where
     fun_free_import (import.IMPORT name_1 name_2 v_externtype) var_0
 
 
-inductive free_import_is_wf : «import» → free → Prop where
-  | free_import_is_wf_0 (v_import : «import») (ret_val : free) (var_0 : free) :
-    fun_free_import v_import var_0 →
-    wf_import v_import →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_import_is_wf v_import ret_val
-
+theorem free_import_is_wf (v_import : «import») (ret_val : free) (var_0 : free) :
+  fun_free_import v_import var_0 →
+  wf_import v_import →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 def free_export (v_export : «export») : free :=
   match v_export with
   | export.EXPORT v_name v_externidx => free_externidx v_externidx
 
-inductive free_export_is_wf : «export» → free → Prop where
-  | free_export_is_wf_0 (v_export : «export») (ret_val : free) :
-    wf_export v_export →
-    ret_val = (free_export v_export) →
-    wf_free ret_val →
-    free_export_is_wf v_export ret_val
-
+theorem free_export_is_wf (v_export : «export») (ret_val : free) :
+  wf_export v_export →
+  ret_val = (free_export v_export) →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_free_module : module → free → Prop where
   | fun_free_module_case_0 (type_lst : List type) (import_lst : List «import») (tag_lst : List tag) (global_lst : List global) (mem_lst : List mem) (table_lst : List table) (func_lst : List func) (data_lst : List data) (elem_lst : List elem) (start_opt : Option start) (export_lst : List «export») (var_17 : free) (var_16_lst : List free) (var_15 : free) (var_14_lst : List free) (var_13 : free) (var_12_lst : List free) (var_11 : free) (var_10_lst : List free) (var_9 : free) (var_8_lst : List free) (var_7 : free) (var_6 : free) (var_5_lst : List free) (var_4 : free) (var_3_lst : List free) (var_2 : free) (var_1_lst : List free) (var_0 : free) :
@@ -5487,14 +5113,12 @@ inductive fun_free_module : module → free → Prop where
     fun_free_module (module.MODULE (list.mk_list type_lst) (list.mk_list import_lst) (list.mk_list tag_lst) (list.mk_list global_lst) (list.mk_list mem_lst) (list.mk_list table_lst) (list.mk_list func_lst) (list.mk_list data_lst) (list.mk_list elem_lst) start_opt (list.mk_list export_lst)) ((((((((((var_0 ++ var_2) ++ var_4) ++ var_6) ++ var_7) ++ var_9) ++ var_11) ++ var_13) ++ (free_opt (OMap (fun v_start_elem => free_start v_start_elem) start_opt))) ++ var_15) ++ var_17)
 
 
-inductive free_module_is_wf : module → free → Prop where
-  | free_module_is_wf_0 (v_module : module) (ret_val : free) (var_0 : free) :
-    fun_free_module v_module var_0 →
-    wf_module v_module →
-    ret_val = var_0 →
-    wf_free ret_val →
-    free_module_is_wf v_module ret_val
-
+theorem free_module_is_wf (v_module : module) (ret_val : free) (var_0 : free) :
+  fun_free_module v_module var_0 →
+  wf_module v_module →
+  ret_val = var_0 →
+  wf_free ret_val :=
+  sorry
 
 inductive fun_funcidx_module : module → List funcidx → Prop where
   | fun_funcidx_module_case_0 (v_module : module) (var_0 : free) :
@@ -5502,14 +5126,12 @@ inductive fun_funcidx_module : module → List funcidx → Prop where
     fun_funcidx_module v_module (var_0.FUNCS)
 
 
-inductive funcidx_module_is_wf : module → List funcidx → Prop where
-  | funcidx_module_is_wf_0 (v_module : module) (ret_val_lst : List funcidx) (var_0 : List funcidx) :
-    fun_funcidx_module v_module var_0 →
-    wf_module v_module →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    funcidx_module_is_wf v_module ret_val_lst
-
+theorem funcidx_module_is_wf (v_module : module) (ret_val_lst : List funcidx) (var_0 : List funcidx) :
+  fun_funcidx_module v_module var_0 →
+  wf_module v_module →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_dataidx_funcs : List func → List dataidx → Prop where
   | fun_dataidx_funcs_case_0 (func_lst : List func) (var_1_lst : List free) (var_0 : free) :
@@ -5519,14 +5141,12 @@ inductive fun_dataidx_funcs : List func → List dataidx → Prop where
     fun_dataidx_funcs func_lst (var_0.DATAS)
 
 
-inductive dataidx_funcs_is_wf : List func → List dataidx → Prop where
-  | dataidx_funcs_is_wf_0 (var_0_lst : List func) (ret_val_lst : List dataidx) (var_0 : List dataidx) :
-    fun_dataidx_funcs var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_func var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    dataidx_funcs_is_wf var_0_lst ret_val_lst
-
+theorem dataidx_funcs_is_wf (var_0_lst : List func) (ret_val_lst : List dataidx) (var_0 : List dataidx) :
+  fun_dataidx_funcs var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_func var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive init : Type where
   | SET : init
@@ -5633,17 +5253,15 @@ inductive fun_with_locals : context → List localidx → List localtype → Opt
     fun_with_locals x0 x1 x2 none
 
 
-inductive with_locals_is_wf : context → List localidx → List localtype → context → Prop where
-  | with_locals_is_wf_0 (v_context : context) (var_0_lst : List localidx) (var_1_lst : List localtype) (ret_val : context) (var_0 : Option context) :
-    fun_with_locals v_context var_0_lst var_1_lst var_0 →
-    wf_context v_context →
-    Forall (fun var_0_elem => wf_uN 32 var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_localtype var_1_elem) var_1_lst →
-    var_0 ≠ none →
-    ret_val = (Option.get! var_0) →
-    wf_context ret_val →
-    with_locals_is_wf v_context var_0_lst var_1_lst ret_val
-
+theorem with_locals_is_wf (v_context : context) (var_0_lst : List localidx) (var_1_lst : List localtype) (ret_val : context) (var_0 : Option context) :
+  fun_with_locals v_context var_0_lst var_1_lst var_0 →
+  wf_context v_context →
+  Forall (fun var_0_elem => wf_uN 32 var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_localtype var_1_elem) var_1_lst →
+  var_0 ≠ none →
+  ret_val = (Option.get! var_0) →
+  wf_context ret_val :=
+  sorry
 
 inductive fun_clos_deftypes : List deftype → List deftype → Prop where
   | fun_clos_deftypes_case_0 : fun_clos_deftypes [] []
@@ -5662,15 +5280,13 @@ inductive fun_clos_valtype : context → valtype → valtype → Prop where
     fun_clos_valtype C t var_0
 
 
-inductive clos_valtype_is_wf : context → valtype → valtype → Prop where
-  | clos_valtype_is_wf_0 (v_context : context) (v_valtype : valtype) (ret_val : valtype) (var_0 : valtype) :
-    fun_clos_valtype v_context v_valtype var_0 →
-    wf_context v_context →
-    wf_valtype v_valtype →
-    ret_val = var_0 →
-    wf_valtype ret_val →
-    clos_valtype_is_wf v_context v_valtype ret_val
-
+theorem clos_valtype_is_wf (v_context : context) (v_valtype : valtype) (ret_val : valtype) (var_0 : valtype) :
+  fun_clos_valtype v_context v_valtype var_0 →
+  wf_context v_context →
+  wf_valtype v_valtype →
+  ret_val = var_0 →
+  wf_valtype ret_val :=
+  sorry
 
 inductive fun_clos_deftype : context → deftype → deftype → Prop where
   | fun_clos_deftype_case_0 (C : context) (dt : deftype) (dt'_lst : List deftype) (var_1 : List deftype) (var_0 : deftype) :
@@ -5688,15 +5304,13 @@ inductive fun_clos_tagtype : context → tagtype → tagtype → Prop where
     fun_clos_tagtype C jt var_0
 
 
-inductive clos_tagtype_is_wf : context → tagtype → tagtype → Prop where
-  | clos_tagtype_is_wf_0 (v_context : context) (v_tagtype : tagtype) (ret_val : tagtype) (var_0 : tagtype) :
-    fun_clos_tagtype v_context v_tagtype var_0 →
-    wf_context v_context →
-    wf_typeuse v_tagtype →
-    ret_val = var_0 →
-    wf_typeuse ret_val →
-    clos_tagtype_is_wf v_context v_tagtype ret_val
-
+theorem clos_tagtype_is_wf (v_context : context) (v_tagtype : tagtype) (ret_val : tagtype) (var_0 : tagtype) :
+  fun_clos_tagtype v_context v_tagtype var_0 →
+  wf_context v_context →
+  wf_typeuse v_tagtype →
+  ret_val = var_0 →
+  wf_typeuse ret_val :=
+  sorry
 
 inductive fun_clos_externtype : context → externtype → externtype → Prop where
   | fun_clos_externtype_case_0 (C : context) (xt : externtype) (dt_lst : List deftype) (var_1 : List deftype) (var_0 : externtype) :
@@ -5706,15 +5320,13 @@ inductive fun_clos_externtype : context → externtype → externtype → Prop w
     fun_clos_externtype C xt var_0
 
 
-inductive clos_externtype_is_wf : context → externtype → externtype → Prop where
-  | clos_externtype_is_wf_0 (v_context : context) (v_externtype : externtype) (ret_val : externtype) (var_0 : externtype) :
-    fun_clos_externtype v_context v_externtype var_0 →
-    wf_context v_context →
-    wf_externtype v_externtype →
-    ret_val = var_0 →
-    wf_externtype ret_val →
-    clos_externtype_is_wf v_context v_externtype ret_val
-
+theorem clos_externtype_is_wf (v_context : context) (v_externtype : externtype) (ret_val : externtype) (var_0 : externtype) :
+  fun_clos_externtype v_context v_externtype var_0 →
+  wf_context v_context →
+  wf_externtype v_externtype →
+  ret_val = var_0 →
+  wf_externtype ret_val :=
+  sorry
 
 inductive fun_clos_moduletype : context → moduletype → moduletype → Prop where
   | fun_clos_moduletype_case_0 (C : context) (mmt : moduletype) (dt_lst : List deftype) (var_1 : List deftype) (var_0 : moduletype) :
@@ -5724,15 +5336,13 @@ inductive fun_clos_moduletype : context → moduletype → moduletype → Prop w
     fun_clos_moduletype C mmt var_0
 
 
-inductive clos_moduletype_is_wf : context → moduletype → moduletype → Prop where
-  | clos_moduletype_is_wf_0 (v_context : context) (v_moduletype : moduletype) (ret_val : moduletype) (var_0 : moduletype) :
-    fun_clos_moduletype v_context v_moduletype var_0 →
-    wf_context v_context →
-    wf_moduletype v_moduletype →
-    ret_val = var_0 →
-    wf_moduletype ret_val →
-    clos_moduletype_is_wf v_context v_moduletype ret_val
-
+theorem clos_moduletype_is_wf (v_context : context) (v_moduletype : moduletype) (ret_val : moduletype) (var_0 : moduletype) :
+  fun_clos_moduletype v_context v_moduletype var_0 →
+  wf_context v_context →
+  wf_moduletype v_moduletype →
+  ret_val = var_0 →
+  wf_moduletype ret_val :=
+  sorry
 
 inductive Numtype_ok : context → numtype → Prop where
   | mk_Numtype_ok (C : context) (v_numtype : numtype) :
@@ -5801,15 +5411,13 @@ inductive fun_unrollht_ : context → heaptype → subtype → Prop where
     fun_unrollht_ C (heaptype.REC i) ((C.RECS)[i]!)
 
 
-inductive unrollht__is_wf : context → heaptype → subtype → Prop where
-  | unrollht__is_wf_0 (v_context : context) (v_heaptype : heaptype) (ret_val : subtype) (var_0 : subtype) :
-    fun_unrollht_ v_context v_heaptype var_0 →
-    wf_context v_context →
-    wf_heaptype v_heaptype →
-    ret_val = var_0 →
-    wf_subtype ret_val →
-    unrollht__is_wf v_context v_heaptype ret_val
-
+theorem unrollht__is_wf (v_context : context) (v_heaptype : heaptype) (ret_val : subtype) (var_0 : subtype) :
+  fun_unrollht_ v_context v_heaptype var_0 →
+  wf_context v_context →
+  wf_heaptype v_heaptype →
+  ret_val = var_0 →
+  wf_subtype ret_val :=
+  sorry
 
 mutual
 inductive Heaptype_ok : context → heaptype → Prop where
@@ -6570,14 +6178,12 @@ def default_ (v_valtype : valtype) : Option (Option val) :=
   | valtype.REF none ht => some none
   | _ => none
 
-inductive default__is_wf : valtype → Option val → Prop where
-  | default__is_wf_0 (v_valtype : valtype) (ret_val_opt : Option val) :
-    wf_valtype v_valtype →
-    (default_ v_valtype) ≠ none →
-    ret_val_opt = (Option.get! (default_ v_valtype)) →
-    Forall (fun ret_val_elem => wf_val ret_val_elem) (Option.toList ret_val_opt) →
-    default__is_wf v_valtype ret_val_opt
-
+theorem default__is_wf (v_valtype : valtype) (ret_val_opt : Option val) :
+  wf_valtype v_valtype →
+  (default_ v_valtype) ≠ none →
+  ret_val_opt = (Option.get! (default_ v_valtype)) →
+  Forall (fun ret_val_elem => wf_val ret_val_elem) (Option.toList ret_val_opt) :=
+  sorry
 
 inductive Defaultable : valtype → Prop where
   | mk_Defaultable (t : valtype) :
@@ -8125,14 +7731,12 @@ inductive fun_funcidx_nonfuncs : nonfuncs → List funcidx → Prop where
     fun_funcidx_nonfuncs (nonfuncs.mk_nonfuncs global_lst mem_lst table_lst elem_lst start_opt export_lst) var_0
 
 
-inductive funcidx_nonfuncs_is_wf : nonfuncs → List funcidx → Prop where
-  | funcidx_nonfuncs_is_wf_0 (v_nonfuncs : nonfuncs) (ret_val_lst : List funcidx) (var_0 : List funcidx) :
-    fun_funcidx_nonfuncs v_nonfuncs var_0 →
-    wf_nonfuncs v_nonfuncs →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst →
-    funcidx_nonfuncs_is_wf v_nonfuncs ret_val_lst
-
+theorem funcidx_nonfuncs_is_wf (v_nonfuncs : nonfuncs) (ret_val_lst : List funcidx) (var_0 : List funcidx) :
+  fun_funcidx_nonfuncs v_nonfuncs var_0 →
+  wf_nonfuncs v_nonfuncs →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 32 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive Module_ok : module → moduletype → Prop where
   | mk_Module_ok (type_lst : List type) (import_lst : List «import») (tag_lst : List tag) (global_lst : List global) (mem_lst : List mem) (table_lst : List table) (func_lst : List func) (data_lst : List data) (elem_lst : List elem) (start_opt : Option start) (export_lst : List «export») (C : context) (xt_I_lst : List externtype) (xt_E_lst : List externtype) (dt'_lst : List deftype) (C' : context) (jt_lst : List tagtype) (gt_lst : List globaltype) (mt_lst : List memtype) (tt_lst : List tabletype) (dt_lst : List deftype) (ok_lst : List datatype) (rt_lst : List reftype) (nm_lst : List name) (jt_I_lst : List tagtype) (mt_I_lst : List memtype) (tt_I_lst : List tabletype) (gt_I_lst : List globaltype) (dt_I_lst : List deftype) (x_lst : List idx) (var_6 : List deftype) (var_5 : List tabletype) (var_4 : List memtype) (var_3 : List globaltype) (var_2 : List tagtype) (var_1 : List funcidx) (var_0 : moduletype) :
@@ -8353,12 +7957,10 @@ opaque R_fmadd  : relaxed2 := by
      | intros ; assumption
 
 
-inductive R_fmadd_is_wf : relaxed2 → Prop where
-  | R_fmadd_is_wf_0 (ret_val : relaxed2) :
-    ret_val = R_fmadd →
-    wf_relaxed2 ret_val →
-    R_fmadd_is_wf ret_val
-
+theorem R_fmadd_is_wf (ret_val : relaxed2) :
+  ret_val = R_fmadd →
+  wf_relaxed2 ret_val :=
+  sorry
 
 opaque R_fmin  : relaxed4 := by
   first
@@ -8366,12 +7968,10 @@ opaque R_fmin  : relaxed4 := by
      | intros ; assumption
 
 
-inductive R_fmin_is_wf : relaxed4 → Prop where
-  | R_fmin_is_wf_0 (ret_val : relaxed4) :
-    ret_val = R_fmin →
-    wf_relaxed4 ret_val →
-    R_fmin_is_wf ret_val
-
+theorem R_fmin_is_wf (ret_val : relaxed4) :
+  ret_val = R_fmin →
+  wf_relaxed4 ret_val :=
+  sorry
 
 opaque R_fmax  : relaxed4 := by
   first
@@ -8379,12 +7979,10 @@ opaque R_fmax  : relaxed4 := by
      | intros ; assumption
 
 
-inductive R_fmax_is_wf : relaxed4 → Prop where
-  | R_fmax_is_wf_0 (ret_val : relaxed4) :
-    ret_val = R_fmax →
-    wf_relaxed4 ret_val →
-    R_fmax_is_wf ret_val
-
+theorem R_fmax_is_wf (ret_val : relaxed4) :
+  ret_val = R_fmax →
+  wf_relaxed4 ret_val :=
+  sorry
 
 opaque R_idot  : relaxed2 := by
   first
@@ -8392,12 +7990,10 @@ opaque R_idot  : relaxed2 := by
      | intros ; assumption
 
 
-inductive R_idot_is_wf : relaxed2 → Prop where
-  | R_idot_is_wf_0 (ret_val : relaxed2) :
-    ret_val = R_idot →
-    wf_relaxed2 ret_val →
-    R_idot_is_wf ret_val
-
+theorem R_idot_is_wf (ret_val : relaxed2) :
+  ret_val = R_idot →
+  wf_relaxed2 ret_val :=
+  sorry
 
 opaque R_iq15mulr  : relaxed2 := by
   first
@@ -8405,12 +8001,10 @@ opaque R_iq15mulr  : relaxed2 := by
      | intros ; assumption
 
 
-inductive R_iq15mulr_is_wf : relaxed2 → Prop where
-  | R_iq15mulr_is_wf_0 (ret_val : relaxed2) :
-    ret_val = R_iq15mulr →
-    wf_relaxed2 ret_val →
-    R_iq15mulr_is_wf ret_val
-
+theorem R_iq15mulr_is_wf (ret_val : relaxed2) :
+  ret_val = R_iq15mulr →
+  wf_relaxed2 ret_val :=
+  sorry
 
 opaque R_trunc_u  : relaxed4 := by
   first
@@ -8418,12 +8012,10 @@ opaque R_trunc_u  : relaxed4 := by
      | intros ; assumption
 
 
-inductive R_trunc_u_is_wf : relaxed4 → Prop where
-  | R_trunc_u_is_wf_0 (ret_val : relaxed4) :
-    ret_val = R_trunc_u →
-    wf_relaxed4 ret_val →
-    R_trunc_u_is_wf ret_val
-
+theorem R_trunc_u_is_wf (ret_val : relaxed4) :
+  ret_val = R_trunc_u →
+  wf_relaxed4 ret_val :=
+  sorry
 
 opaque R_trunc_s  : relaxed2 := by
   first
@@ -8431,12 +8023,10 @@ opaque R_trunc_s  : relaxed2 := by
      | intros ; assumption
 
 
-inductive R_trunc_s_is_wf : relaxed2 → Prop where
-  | R_trunc_s_is_wf_0 (ret_val : relaxed2) :
-    ret_val = R_trunc_s →
-    wf_relaxed2 ret_val →
-    R_trunc_s_is_wf ret_val
-
+theorem R_trunc_s_is_wf (ret_val : relaxed2) :
+  ret_val = R_trunc_s →
+  wf_relaxed2 ret_val :=
+  sorry
 
 opaque R_swizzle  : relaxed2 := by
   first
@@ -8444,12 +8034,10 @@ opaque R_swizzle  : relaxed2 := by
      | intros ; assumption
 
 
-inductive R_swizzle_is_wf : relaxed2 → Prop where
-  | R_swizzle_is_wf_0 (ret_val : relaxed2) :
-    ret_val = R_swizzle →
-    wf_relaxed2 ret_val →
-    R_swizzle_is_wf ret_val
-
+theorem R_swizzle_is_wf (ret_val : relaxed2) :
+  ret_val = R_swizzle →
+  wf_relaxed2 ret_val :=
+  sorry
 
 opaque R_laneselect  : relaxed2 := by
   first
@@ -8457,12 +8045,10 @@ opaque R_laneselect  : relaxed2 := by
      | intros ; assumption
 
 
-inductive R_laneselect_is_wf : relaxed2 → Prop where
-  | R_laneselect_is_wf_0 (ret_val : relaxed2) :
-    ret_val = R_laneselect →
-    wf_relaxed2 ret_val →
-    R_laneselect_is_wf ret_val
-
+theorem R_laneselect_is_wf (ret_val : relaxed2) :
+  ret_val = R_laneselect →
+  wf_relaxed2 ret_val :=
+  sorry
 
 opaque s33_to_u32 (v_s33 : s33) : u32 := by
   first
@@ -8470,13 +8056,11 @@ opaque s33_to_u32 (v_s33 : s33) : u32 := by
      | intros ; assumption
 
 
-inductive s33_to_u32_is_wf : s33 → u32 → Prop where
-  | s33_to_u32_is_wf_0 (v_s33 : s33) (ret_val : u32) :
-    wf_sN 33 v_s33 →
-    ret_val = (s33_to_u32 v_s33) →
-    wf_uN 32 ret_val →
-    s33_to_u32_is_wf v_s33 ret_val
-
+theorem s33_to_u32_is_wf (v_s33 : s33) (ret_val : u32) :
+  wf_sN 33 v_s33 →
+  ret_val = (s33_to_u32 v_s33) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque ibits_ (v_N : N) (v_iN : iN) : List bit := by
   first
@@ -8484,13 +8068,11 @@ opaque ibits_ (v_N : N) (v_iN : iN) : List bit := by
      | intros ; assumption
 
 
-inductive ibits__is_wf : N → iN → List bit → Prop where
-  | ibits__is_wf_0 (v_N : N) (v_iN : iN) (ret_val_lst : List bit) :
-    wf_uN v_N v_iN →
-    ret_val_lst = (ibits_ v_N v_iN) →
-    Forall (fun ret_val_elem => wf_bit ret_val_elem) ret_val_lst →
-    ibits__is_wf v_N v_iN ret_val_lst
-
+theorem ibits__is_wf (v_N : N) (v_iN : iN) (ret_val_lst : List bit) :
+  wf_uN v_N v_iN →
+  ret_val_lst = (ibits_ v_N v_iN) →
+  Forall (fun ret_val_elem => wf_bit ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fbits_ (v_N : N) (v_fN : fN) : List bit := by
   first
@@ -8498,13 +8080,11 @@ opaque fbits_ (v_N : N) (v_fN : fN) : List bit := by
      | intros ; assumption
 
 
-inductive fbits__is_wf : N → fN → List bit → Prop where
-  | fbits__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List bit) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (fbits_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_bit ret_val_elem) ret_val_lst →
-    fbits__is_wf v_N v_fN ret_val_lst
-
+theorem fbits__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List bit) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (fbits_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_bit ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ibytes_ (v_N : N) (v_iN : iN) : List byte := by
   first
@@ -8512,13 +8092,11 @@ opaque ibytes_ (v_N : N) (v_iN : iN) : List byte := by
      | intros ; assumption
 
 
-inductive ibytes__is_wf : N → iN → List byte → Prop where
-  | ibytes__is_wf_0 (v_N : N) (v_iN : iN) (ret_val_lst : List byte) :
-    wf_uN v_N v_iN →
-    ret_val_lst = (ibytes_ v_N v_iN) →
-    Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst →
-    ibytes__is_wf v_N v_iN ret_val_lst
-
+theorem ibytes__is_wf (v_N : N) (v_iN : iN) (ret_val_lst : List byte) :
+  wf_uN v_N v_iN →
+  ret_val_lst = (ibytes_ v_N v_iN) →
+  Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fbytes_ (v_N : N) (v_fN : fN) : List byte := by
   first
@@ -8526,13 +8104,11 @@ opaque fbytes_ (v_N : N) (v_fN : fN) : List byte := by
      | intros ; assumption
 
 
-inductive fbytes__is_wf : N → fN → List byte → Prop where
-  | fbytes__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List byte) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (fbytes_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst →
-    fbytes__is_wf v_N v_fN ret_val_lst
-
+theorem fbytes__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List byte) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (fbytes_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque nbytes_ (v_numtype : numtype) (v_num_ : num_) : List byte := by
   first
@@ -8540,13 +8116,11 @@ opaque nbytes_ (v_numtype : numtype) (v_num_ : num_) : List byte := by
      | intros ; assumption
 
 
-inductive nbytes__is_wf : numtype → num_ → List byte → Prop where
-  | nbytes__is_wf_0 (v_numtype : numtype) (v_num_ : num_) (ret_val_lst : List byte) :
-    wf_num_ v_numtype v_num_ →
-    ret_val_lst = (nbytes_ v_numtype v_num_) →
-    Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst →
-    nbytes__is_wf v_numtype v_num_ ret_val_lst
-
+theorem nbytes__is_wf (v_numtype : numtype) (v_num_ : num_) (ret_val_lst : List byte) :
+  wf_num_ v_numtype v_num_ →
+  ret_val_lst = (nbytes_ v_numtype v_num_) →
+  Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque vbytes_ (v_vectype : vectype) (v_vec_ : vec_) : List byte := by
   first
@@ -8554,13 +8128,11 @@ opaque vbytes_ (v_vectype : vectype) (v_vec_ : vec_) : List byte := by
      | intros ; assumption
 
 
-inductive vbytes__is_wf : vectype → vec_ → List byte → Prop where
-  | vbytes__is_wf_0 (v_vectype : vectype) (v_vec_ : vec_) (ret_val_lst : List byte) :
-    wf_uN (vsize v_vectype) v_vec_ →
-    ret_val_lst = (vbytes_ v_vectype v_vec_) →
-    Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst →
-    vbytes__is_wf v_vectype v_vec_ ret_val_lst
-
+theorem vbytes__is_wf (v_vectype : vectype) (v_vec_ : vec_) (ret_val_lst : List byte) :
+  wf_uN (vsize v_vectype) v_vec_ →
+  ret_val_lst = (vbytes_ v_vectype v_vec_) →
+  Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque zbytes_ (v_storagetype : storagetype) (v_lit_ : lit_) : List byte := by
   first
@@ -8568,14 +8140,12 @@ opaque zbytes_ (v_storagetype : storagetype) (v_lit_ : lit_) : List byte := by
      | intros ; assumption
 
 
-inductive zbytes__is_wf : storagetype → lit_ → List byte → Prop where
-  | zbytes__is_wf_0 (v_storagetype : storagetype) (v_lit_ : lit_) (ret_val_lst : List byte) :
-    wf_storagetype v_storagetype →
-    wf_lit_ v_storagetype v_lit_ →
-    ret_val_lst = (zbytes_ v_storagetype v_lit_) →
-    Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst →
-    zbytes__is_wf v_storagetype v_lit_ ret_val_lst
-
+theorem zbytes__is_wf (v_storagetype : storagetype) (v_lit_ : lit_) (ret_val_lst : List byte) :
+  wf_storagetype v_storagetype →
+  wf_lit_ v_storagetype v_lit_ →
+  ret_val_lst = (zbytes_ v_storagetype v_lit_) →
+  Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque cbytes_ (v_Cnn : Cnn) (v_lit_ : lit_) : List byte := by
   first
@@ -8583,13 +8153,11 @@ opaque cbytes_ (v_Cnn : Cnn) (v_lit_ : lit_) : List byte := by
      | intros ; assumption
 
 
-inductive cbytes__is_wf : Cnn → lit_ → List byte → Prop where
-  | cbytes__is_wf_0 (v_Cnn : Cnn) (v_lit_ : lit_) (ret_val_lst : List byte) :
-    wf_lit_ (storagetype_Cnn v_Cnn) v_lit_ →
-    ret_val_lst = (cbytes_ v_Cnn v_lit_) →
-    Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst →
-    cbytes__is_wf v_Cnn v_lit_ ret_val_lst
-
+theorem cbytes__is_wf (v_Cnn : Cnn) (v_lit_ : lit_) (ret_val_lst : List byte) :
+  wf_lit_ (storagetype_Cnn v_Cnn) v_lit_ →
+  ret_val_lst = (cbytes_ v_Cnn v_lit_) →
+  Forall (fun ret_val_elem => wf_byte ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque inv_ibits_ (v_N : N) (var_0_lst : List bit) : iN := by
   first
@@ -8597,13 +8165,11 @@ opaque inv_ibits_ (v_N : N) (var_0_lst : List bit) : iN := by
      | intros ; assumption
 
 
-inductive inv_ibits__is_wf : N → List bit → iN → Prop where
-  | inv_ibits__is_wf_0 (v_N : N) (var_0_lst : List bit) (ret_val : iN) :
-    Forall (fun var_0_elem => wf_bit var_0_elem) var_0_lst →
-    ret_val = (inv_ibits_ v_N var_0_lst) →
-    wf_uN v_N ret_val →
-    inv_ibits__is_wf v_N var_0_lst ret_val
-
+theorem inv_ibits__is_wf (v_N : N) (var_0_lst : List bit) (ret_val : iN) :
+  Forall (fun var_0_elem => wf_bit var_0_elem) var_0_lst →
+  ret_val = (inv_ibits_ v_N var_0_lst) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque inv_fbits_ (v_N : N) (var_0_lst : List bit) : fN := by
   first
@@ -8611,13 +8177,11 @@ opaque inv_fbits_ (v_N : N) (var_0_lst : List bit) : fN := by
      | intros ; assumption
 
 
-inductive inv_fbits__is_wf : N → List bit → fN → Prop where
-  | inv_fbits__is_wf_0 (v_N : N) (var_0_lst : List bit) (ret_val : fN) :
-    Forall (fun var_0_elem => wf_bit var_0_elem) var_0_lst →
-    ret_val = (inv_fbits_ v_N var_0_lst) →
-    wf_fN v_N ret_val →
-    inv_fbits__is_wf v_N var_0_lst ret_val
-
+theorem inv_fbits__is_wf (v_N : N) (var_0_lst : List bit) (ret_val : fN) :
+  Forall (fun var_0_elem => wf_bit var_0_elem) var_0_lst →
+  ret_val = (inv_fbits_ v_N var_0_lst) →
+  wf_fN v_N ret_val :=
+  sorry
 
 opaque inv_ibytes_ (v_N : N) (var_0_lst : List byte) : iN := by
   first
@@ -8625,13 +8189,11 @@ opaque inv_ibytes_ (v_N : N) (var_0_lst : List byte) : iN := by
      | intros ; assumption
 
 
-inductive inv_ibytes__is_wf : N → List byte → iN → Prop where
-  | inv_ibytes__is_wf_0 (v_N : N) (var_0_lst : List byte) (ret_val : iN) :
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = (inv_ibytes_ v_N var_0_lst) →
-    wf_uN v_N ret_val →
-    inv_ibytes__is_wf v_N var_0_lst ret_val
-
+theorem inv_ibytes__is_wf (v_N : N) (var_0_lst : List byte) (ret_val : iN) :
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = (inv_ibytes_ v_N var_0_lst) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque inv_fbytes_ (v_N : N) (var_0_lst : List byte) : fN := by
   first
@@ -8639,13 +8201,11 @@ opaque inv_fbytes_ (v_N : N) (var_0_lst : List byte) : fN := by
      | intros ; assumption
 
 
-inductive inv_fbytes__is_wf : N → List byte → fN → Prop where
-  | inv_fbytes__is_wf_0 (v_N : N) (var_0_lst : List byte) (ret_val : fN) :
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = (inv_fbytes_ v_N var_0_lst) →
-    wf_fN v_N ret_val →
-    inv_fbytes__is_wf v_N var_0_lst ret_val
-
+theorem inv_fbytes__is_wf (v_N : N) (var_0_lst : List byte) (ret_val : fN) :
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = (inv_fbytes_ v_N var_0_lst) →
+  wf_fN v_N ret_val :=
+  sorry
 
 opaque inv_nbytes_ (v_numtype : numtype) (var_0_lst : List byte) : num_ := by
   first
@@ -8653,13 +8213,11 @@ opaque inv_nbytes_ (v_numtype : numtype) (var_0_lst : List byte) : num_ := by
      | intros ; assumption
 
 
-inductive inv_nbytes__is_wf : numtype → List byte → num_ → Prop where
-  | inv_nbytes__is_wf_0 (v_numtype : numtype) (var_0_lst : List byte) (ret_val : num_) :
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = (inv_nbytes_ v_numtype var_0_lst) →
-    wf_num_ v_numtype ret_val →
-    inv_nbytes__is_wf v_numtype var_0_lst ret_val
-
+theorem inv_nbytes__is_wf (v_numtype : numtype) (var_0_lst : List byte) (ret_val : num_) :
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = (inv_nbytes_ v_numtype var_0_lst) →
+  wf_num_ v_numtype ret_val :=
+  sorry
 
 opaque inv_vbytes_ (v_vectype : vectype) (var_0_lst : List byte) : vec_ := by
   first
@@ -8667,13 +8225,11 @@ opaque inv_vbytes_ (v_vectype : vectype) (var_0_lst : List byte) : vec_ := by
      | intros ; assumption
 
 
-inductive inv_vbytes__is_wf : vectype → List byte → vec_ → Prop where
-  | inv_vbytes__is_wf_0 (v_vectype : vectype) (var_0_lst : List byte) (ret_val : vec_) :
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = (inv_vbytes_ v_vectype var_0_lst) →
-    wf_uN (vsize v_vectype) ret_val →
-    inv_vbytes__is_wf v_vectype var_0_lst ret_val
-
+theorem inv_vbytes__is_wf (v_vectype : vectype) (var_0_lst : List byte) (ret_val : vec_) :
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = (inv_vbytes_ v_vectype var_0_lst) →
+  wf_uN (vsize v_vectype) ret_val :=
+  sorry
 
 opaque inv_zbytes_ (v_storagetype : storagetype) (var_0_lst : List byte) : lit_ := by
   first
@@ -8681,14 +8237,12 @@ opaque inv_zbytes_ (v_storagetype : storagetype) (var_0_lst : List byte) : lit_ 
      | intros ; assumption
 
 
-inductive inv_zbytes__is_wf : storagetype → List byte → lit_ → Prop where
-  | inv_zbytes__is_wf_0 (v_storagetype : storagetype) (var_0_lst : List byte) (ret_val : lit_) :
-    wf_storagetype v_storagetype →
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = (inv_zbytes_ v_storagetype var_0_lst) →
-    wf_lit_ v_storagetype ret_val →
-    inv_zbytes__is_wf v_storagetype var_0_lst ret_val
-
+theorem inv_zbytes__is_wf (v_storagetype : storagetype) (var_0_lst : List byte) (ret_val : lit_) :
+  wf_storagetype v_storagetype →
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = (inv_zbytes_ v_storagetype var_0_lst) →
+  wf_lit_ v_storagetype ret_val :=
+  sorry
 
 opaque inv_cbytes_ (v_Cnn : Cnn) (var_0_lst : List byte) : lit_ := by
   first
@@ -8696,13 +8250,11 @@ opaque inv_cbytes_ (v_Cnn : Cnn) (var_0_lst : List byte) : lit_ := by
      | intros ; assumption
 
 
-inductive inv_cbytes__is_wf : Cnn → List byte → lit_ → Prop where
-  | inv_cbytes__is_wf_0 (v_Cnn : Cnn) (var_0_lst : List byte) (ret_val : lit_) :
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = (inv_cbytes_ v_Cnn var_0_lst) →
-    wf_lit_ (storagetype_Cnn v_Cnn) ret_val →
-    inv_cbytes__is_wf v_Cnn var_0_lst ret_val
-
+theorem inv_cbytes__is_wf (v_Cnn : Cnn) (var_0_lst : List byte) (ret_val : lit_) :
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = (inv_cbytes_ v_Cnn var_0_lst) →
+  wf_lit_ (storagetype_Cnn v_Cnn) ret_val :=
+  sorry
 
 inductive fun_signed_ : N → Nat → Int → Prop where
   | fun_signed__case_0 (v_N : Nat) (i : Nat) :
@@ -8742,12 +8294,10 @@ def fun_zero (v_lanetype : lanetype) : lane_ :=
   | lanetype.F32 => lane_.mk_lane__0 (numtype_Fnn Fnn.F32) (num_.mk_num__1 Fnn.F32 (fzero (size (numtype_Fnn Fnn.F32))))
   | lanetype.F64 => lane_.mk_lane__0 (numtype_Fnn Fnn.F64) (num_.mk_num__1 Fnn.F64 (fzero (size (numtype_Fnn Fnn.F64))))
 
-inductive zero_is_wf : lanetype → lane_ → Prop where
-  | zero_is_wf_0 (v_lanetype : lanetype) (ret_val : lane_) :
-    ret_val = (fun_zero v_lanetype) →
-    wf_lane_ v_lanetype ret_val →
-    zero_is_wf v_lanetype ret_val
-
+theorem zero_is_wf (v_lanetype : lanetype) (ret_val : lane_) :
+  ret_val = (fun_zero v_lanetype) →
+  wf_lane_ v_lanetype ret_val :=
+  sorry
 
 def nat_of_bool (v_bool : Bool) : Nat :=
   match v_bool with
@@ -8795,13 +8345,11 @@ def sat_s_ (v_N : N) (int : Int) : Int :=
 def ineg_ (v_N : N) (v_iN : iN) : iN :=
   uN.mk_uN (Int.toNat ((((2 ^ v_N) : Int) - ((proj_uN_0 v_iN) : Int)) % ((2 ^ v_N) : Int)))
 
-inductive ineg__is_wf : N → iN → iN → Prop where
-  | ineg__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    ret_val = (ineg_ v_N v_iN) →
-    wf_uN v_N ret_val →
-    ineg__is_wf v_N v_iN ret_val
-
+theorem ineg__is_wf (v_N : N) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  ret_val = (ineg_ v_N v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque iabs_ (v_N : N) (v_iN : iN) : iN := by
   first
@@ -8809,13 +8357,11 @@ opaque iabs_ (v_N : N) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive iabs__is_wf : N → iN → iN → Prop where
-  | iabs__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    ret_val = (iabs_ v_N v_iN) →
-    wf_uN v_N ret_val →
-    iabs__is_wf v_N v_iN ret_val
-
+theorem iabs__is_wf (v_N : N) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  ret_val = (iabs_ v_N v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque iclz_ (v_N : N) (v_iN : iN) : iN := by
   first
@@ -8823,13 +8369,11 @@ opaque iclz_ (v_N : N) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive iclz__is_wf : N → iN → iN → Prop where
-  | iclz__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    ret_val = (iclz_ v_N v_iN) →
-    wf_uN v_N ret_val →
-    iclz__is_wf v_N v_iN ret_val
-
+theorem iclz__is_wf (v_N : N) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  ret_val = (iclz_ v_N v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque ictz_ (v_N : N) (v_iN : iN) : iN := by
   first
@@ -8837,13 +8381,11 @@ opaque ictz_ (v_N : N) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive ictz__is_wf : N → iN → iN → Prop where
-  | ictz__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    ret_val = (ictz_ v_N v_iN) →
-    wf_uN v_N ret_val →
-    ictz__is_wf v_N v_iN ret_val
-
+theorem ictz__is_wf (v_N : N) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  ret_val = (ictz_ v_N v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque ipopcnt_ (v_N : N) (v_iN : iN) : iN := by
   first
@@ -8851,13 +8393,11 @@ opaque ipopcnt_ (v_N : N) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive ipopcnt__is_wf : N → iN → iN → Prop where
-  | ipopcnt__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    ret_val = (ipopcnt_ v_N v_iN) →
-    wf_uN v_N ret_val →
-    ipopcnt__is_wf v_N v_iN ret_val
-
+theorem ipopcnt__is_wf (v_N : N) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  ret_val = (ipopcnt_ v_N v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 inductive fun_iextend_ : N → M → sx → iN → iN → Prop where
   | fun_iextend__case_0 (v_N : Nat) (v_M : Nat) (i : uN) : fun_iextend_ v_N v_M sx.U i (uN.mk_uN ((proj_uN_0 i) % (2 ^ v_M)))
@@ -8867,50 +8407,42 @@ inductive fun_iextend_ : N → M → sx → iN → iN → Prop where
     fun_iextend_ v_N v_M sx.S i (uN.mk_uN var_0)
 
 
-inductive iextend__is_wf : N → M → sx → iN → iN → Prop where
-  | iextend__is_wf_0 (v_N : N) (v_M : M) (v_sx : sx) (v_iN : iN) (ret_val : iN) (var_0 : iN) :
-    fun_iextend_ v_N v_M v_sx v_iN var_0 →
-    wf_uN v_N v_iN →
-    ret_val = var_0 →
-    wf_uN v_N ret_val →
-    iextend__is_wf v_N v_M v_sx v_iN ret_val
-
+theorem iextend__is_wf (v_N : N) (v_M : M) (v_sx : sx) (v_iN : iN) (ret_val : iN) (var_0 : iN) :
+  fun_iextend_ v_N v_M v_sx v_iN var_0 →
+  wf_uN v_N v_iN →
+  ret_val = var_0 →
+  wf_uN v_N ret_val :=
+  sorry
 
 def iadd_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN :=
   uN.mk_uN (((proj_uN_0 v_iN) + (proj_uN_0 iN_0)) % (2 ^ v_N))
 
-inductive iadd__is_wf : N → iN → iN → iN → Prop where
-  | iadd__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (iadd_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    iadd__is_wf v_N v_iN iN_0 ret_val
-
+theorem iadd__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (iadd_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 def isub_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN :=
   uN.mk_uN (Int.toNat (((((2 ^ v_N) + (proj_uN_0 v_iN)) : Int) - ((proj_uN_0 iN_0) : Int)) % ((2 ^ v_N) : Int)))
 
-inductive isub__is_wf : N → iN → iN → iN → Prop where
-  | isub__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (isub_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    isub__is_wf v_N v_iN iN_0 ret_val
-
+theorem isub__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (isub_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 def imul_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN :=
   uN.mk_uN (((proj_uN_0 v_iN) * (proj_uN_0 iN_0)) % (2 ^ v_N))
 
-inductive imul__is_wf : N → iN → iN → iN → Prop where
-  | imul__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (imul_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    imul__is_wf v_N v_iN iN_0 ret_val
-
+theorem imul__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (imul_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 inductive fun_idiv_ : N → sx → iN → iN → Option iN → Prop where
   | fun_idiv__case_0 (v_N : Nat) (i_1 : uN) : fun_idiv_ v_N sx.U i_1 (uN.mk_uN 0) none
@@ -8928,15 +8460,13 @@ inductive fun_idiv_ : N → sx → iN → iN → Option iN → Prop where
     fun_idiv_ v_N sx.S i_1 i_2 (some (uN.mk_uN var_0))
 
 
-inductive idiv__is_wf : N → sx → iN → iN → Option iN → Prop where
-  | idiv__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val_opt : Option iN) (var_0 : Option iN) :
-    fun_idiv_ v_N v_sx v_iN iN_0 var_0 →
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val_opt = var_0 →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) →
-    idiv__is_wf v_N v_sx v_iN iN_0 ret_val_opt
-
+theorem idiv__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val_opt : Option iN) (var_0 : Option iN) :
+  fun_idiv_ v_N v_sx v_iN iN_0 var_0 →
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val_opt = var_0 →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) :=
+  sorry
 
 inductive fun_irem_ : N → sx → iN → iN → Option iN → Prop where
   | fun_irem__case_0 (v_N : Nat) (i_1 : uN) : fun_irem_ v_N sx.U i_1 (uN.mk_uN 0) none
@@ -8950,15 +8480,13 @@ inductive fun_irem_ : N → sx → iN → iN → Option iN → Prop where
     fun_irem_ v_N sx.S i_1 i_2 (some (uN.mk_uN var_0))
 
 
-inductive irem__is_wf : N → sx → iN → iN → Option iN → Prop where
-  | irem__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val_opt : Option iN) (var_0 : Option iN) :
-    fun_irem_ v_N v_sx v_iN iN_0 var_0 →
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val_opt = var_0 →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) →
-    irem__is_wf v_N v_sx v_iN iN_0 ret_val_opt
-
+theorem irem__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val_opt : Option iN) (var_0 : Option iN) :
+  fun_irem_ v_N v_sx v_iN iN_0 var_0 →
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val_opt = var_0 →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) :=
+  sorry
 
 opaque imin_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -8966,14 +8494,12 @@ opaque imin_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive imin__is_wf : N → sx → iN → iN → iN → Prop where
-  | imin__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (imin_ v_N v_sx v_iN iN_0) →
-    wf_uN v_N ret_val →
-    imin__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem imin__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (imin_ v_N v_sx v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque imax_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -8981,14 +8507,12 @@ opaque imax_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive imax__is_wf : N → sx → iN → iN → iN → Prop where
-  | imax__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (imax_ v_N v_sx v_iN iN_0) →
-    wf_uN v_N ret_val →
-    imax__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem imax__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (imax_ v_N v_sx v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque iadd_sat_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -8996,14 +8520,12 @@ opaque iadd_sat_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive iadd_sat__is_wf : N → sx → iN → iN → iN → Prop where
-  | iadd_sat__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (iadd_sat_ v_N v_sx v_iN iN_0) →
-    wf_uN v_N ret_val →
-    iadd_sat__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem iadd_sat__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (iadd_sat_ v_N v_sx v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque isub_sat_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9011,14 +8533,12 @@ opaque isub_sat_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive isub_sat__is_wf : N → sx → iN → iN → iN → Prop where
-  | isub_sat__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (isub_sat_ v_N v_sx v_iN iN_0) →
-    wf_uN v_N ret_val →
-    isub_sat__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem isub_sat__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (isub_sat_ v_N v_sx v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque iq15mulr_sat_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9026,14 +8546,12 @@ opaque iq15mulr_sat_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive iq15mulr_sat__is_wf : N → sx → iN → iN → iN → Prop where
-  | iq15mulr_sat__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (iq15mulr_sat_ v_N v_sx v_iN iN_0) →
-    wf_uN v_N ret_val →
-    iq15mulr_sat__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem iq15mulr_sat__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (iq15mulr_sat_ v_N v_sx v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque irelaxed_q15mulr_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : List iN := by
   first
@@ -9041,14 +8559,12 @@ opaque irelaxed_q15mulr_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : List iN
      | intros ; assumption
 
 
-inductive irelaxed_q15mulr__is_wf : N → sx → iN → iN → List iN → Prop where
-  | irelaxed_q15mulr__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val_lst : List iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val_lst = (irelaxed_q15mulr_ v_N v_sx v_iN iN_0) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst →
-    irelaxed_q15mulr__is_wf v_N v_sx v_iN iN_0 ret_val_lst
-
+theorem irelaxed_q15mulr__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val_lst : List iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val_lst = (irelaxed_q15mulr_ v_N v_sx v_iN iN_0) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque iavgr_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9056,14 +8572,12 @@ opaque iavgr_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive iavgr__is_wf : N → sx → iN → iN → iN → Prop where
-  | iavgr__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (iavgr_ v_N v_sx v_iN iN_0) →
-    wf_uN v_N ret_val →
-    iavgr__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem iavgr__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (iavgr_ v_N v_sx v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque inot_ (v_N : N) (v_iN : iN) : iN := by
   first
@@ -9071,13 +8585,11 @@ opaque inot_ (v_N : N) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive inot__is_wf : N → iN → iN → Prop where
-  | inot__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    ret_val = (inot_ v_N v_iN) →
-    wf_uN v_N ret_val →
-    inot__is_wf v_N v_iN ret_val
-
+theorem inot__is_wf (v_N : N) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  ret_val = (inot_ v_N v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque irev_ (v_N : N) (v_iN : iN) : iN := by
   first
@@ -9085,13 +8597,11 @@ opaque irev_ (v_N : N) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive irev__is_wf : N → iN → iN → Prop where
-  | irev__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    ret_val = (irev_ v_N v_iN) →
-    wf_uN v_N ret_val →
-    irev__is_wf v_N v_iN ret_val
-
+theorem irev__is_wf (v_N : N) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  ret_val = (irev_ v_N v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque iand_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9099,14 +8609,12 @@ opaque iand_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive iand__is_wf : N → iN → iN → iN → Prop where
-  | iand__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (iand_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    iand__is_wf v_N v_iN iN_0 ret_val
-
+theorem iand__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (iand_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque iandnot_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9114,14 +8622,12 @@ opaque iandnot_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive iandnot__is_wf : N → iN → iN → iN → Prop where
-  | iandnot__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (iandnot_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    iandnot__is_wf v_N v_iN iN_0 ret_val
-
+theorem iandnot__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (iandnot_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque ior_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9129,14 +8635,12 @@ opaque ior_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive ior__is_wf : N → iN → iN → iN → Prop where
-  | ior__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (ior_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    ior__is_wf v_N v_iN iN_0 ret_val
-
+theorem ior__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (ior_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque ixor_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9144,14 +8648,12 @@ opaque ixor_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive ixor__is_wf : N → iN → iN → iN → Prop where
-  | ixor__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (ixor_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    ixor__is_wf v_N v_iN iN_0 ret_val
-
+theorem ixor__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (ixor_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque ishl_ (v_N : N) (v_iN : iN) (v_u32 : u32) : iN := by
   first
@@ -9159,14 +8661,12 @@ opaque ishl_ (v_N : N) (v_iN : iN) (v_u32 : u32) : iN := by
      | intros ; assumption
 
 
-inductive ishl__is_wf : N → iN → u32 → iN → Prop where
-  | ishl__is_wf_0 (v_N : N) (v_iN : iN) (v_u32 : u32) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN 32 v_u32 →
-    ret_val = (ishl_ v_N v_iN v_u32) →
-    wf_uN v_N ret_val →
-    ishl__is_wf v_N v_iN v_u32 ret_val
-
+theorem ishl__is_wf (v_N : N) (v_iN : iN) (v_u32 : u32) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN 32 v_u32 →
+  ret_val = (ishl_ v_N v_iN v_u32) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque ishr_ (v_N : N) (v_sx : sx) (v_iN : iN) (v_u32 : u32) : iN := by
   first
@@ -9174,14 +8674,12 @@ opaque ishr_ (v_N : N) (v_sx : sx) (v_iN : iN) (v_u32 : u32) : iN := by
      | intros ; assumption
 
 
-inductive ishr__is_wf : N → sx → iN → u32 → iN → Prop where
-  | ishr__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (v_u32 : u32) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN 32 v_u32 →
-    ret_val = (ishr_ v_N v_sx v_iN v_u32) →
-    wf_uN v_N ret_val →
-    ishr__is_wf v_N v_sx v_iN v_u32 ret_val
-
+theorem ishr__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (v_u32 : u32) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN 32 v_u32 →
+  ret_val = (ishr_ v_N v_sx v_iN v_u32) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque irotl_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9189,14 +8687,12 @@ opaque irotl_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive irotl__is_wf : N → iN → iN → iN → Prop where
-  | irotl__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (irotl_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    irotl__is_wf v_N v_iN iN_0 ret_val
-
+theorem irotl__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (irotl_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque irotr_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
   first
@@ -9204,14 +8700,12 @@ opaque irotr_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
      | intros ; assumption
 
 
-inductive irotr__is_wf : N → iN → iN → iN → Prop where
-  | irotr__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (irotr_ v_N v_iN iN_0) →
-    wf_uN v_N ret_val →
-    irotr__is_wf v_N v_iN iN_0 ret_val
-
+theorem irotr__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (irotr_ v_N v_iN iN_0) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque ibitselect_ (v_N : N) (v_iN : iN) (iN_0 : iN) (iN_1 : iN) : iN := by
   first
@@ -9219,15 +8713,13 @@ opaque ibitselect_ (v_N : N) (v_iN : iN) (iN_0 : iN) (iN_1 : iN) : iN := by
      | intros ; assumption
 
 
-inductive ibitselect__is_wf : N → iN → iN → iN → iN → Prop where
-  | ibitselect__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (iN_1 : iN) (ret_val : iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    wf_uN v_N iN_1 →
-    ret_val = (ibitselect_ v_N v_iN iN_0 iN_1) →
-    wf_uN v_N ret_val →
-    ibitselect__is_wf v_N v_iN iN_0 iN_1 ret_val
-
+theorem ibitselect__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (iN_1 : iN) (ret_val : iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  wf_uN v_N iN_1 →
+  ret_val = (ibitselect_ v_N v_iN iN_0 iN_1) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque irelaxed_laneselect_ (v_N : N) (v_iN : iN) (iN_0 : iN) (iN_1 : iN) : List iN := by
   first
@@ -9235,61 +8727,51 @@ opaque irelaxed_laneselect_ (v_N : N) (v_iN : iN) (iN_0 : iN) (iN_1 : iN) : List
      | intros ; assumption
 
 
-inductive irelaxed_laneselect__is_wf : N → iN → iN → iN → List iN → Prop where
-  | irelaxed_laneselect__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (iN_1 : iN) (ret_val_lst : List iN) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    wf_uN v_N iN_1 →
-    ret_val_lst = (irelaxed_laneselect_ v_N v_iN iN_0 iN_1) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst →
-    irelaxed_laneselect__is_wf v_N v_iN iN_0 iN_1 ret_val_lst
-
+theorem irelaxed_laneselect__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (iN_1 : iN) (ret_val_lst : List iN) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  wf_uN v_N iN_1 →
+  ret_val_lst = (irelaxed_laneselect_ v_N v_iN iN_0 iN_1) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 def ieqz_ (v_N : N) (v_iN : iN) : u32 :=
   uN.mk_uN (nat_of_bool ((proj_uN_0 v_iN) == 0))
 
-inductive ieqz__is_wf : N → iN → u32 → Prop where
-  | ieqz__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : u32) :
-    wf_uN v_N v_iN →
-    ret_val = (ieqz_ v_N v_iN) →
-    wf_uN 32 ret_val →
-    ieqz__is_wf v_N v_iN ret_val
-
+theorem ieqz__is_wf (v_N : N) (v_iN : iN) (ret_val : u32) :
+  wf_uN v_N v_iN →
+  ret_val = (ieqz_ v_N v_iN) →
+  wf_uN 32 ret_val :=
+  sorry
 
 def inez_ (v_N : N) (v_iN : iN) : u32 :=
   uN.mk_uN (nat_of_bool ((proj_uN_0 v_iN) != 0))
 
-inductive inez__is_wf : N → iN → u32 → Prop where
-  | inez__is_wf_0 (v_N : N) (v_iN : iN) (ret_val : u32) :
-    wf_uN v_N v_iN →
-    ret_val = (inez_ v_N v_iN) →
-    wf_uN 32 ret_val →
-    inez__is_wf v_N v_iN ret_val
-
+theorem inez__is_wf (v_N : N) (v_iN : iN) (ret_val : u32) :
+  wf_uN v_N v_iN →
+  ret_val = (inez_ v_N v_iN) →
+  wf_uN 32 ret_val :=
+  sorry
 
 def ieq_ (v_N : N) (v_iN : iN) (iN_0 : iN) : u32 :=
   uN.mk_uN (nat_of_bool (v_iN == iN_0))
 
-inductive ieq__is_wf : N → iN → iN → u32 → Prop where
-  | ieq__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (ieq_ v_N v_iN iN_0) →
-    wf_uN 32 ret_val →
-    ieq__is_wf v_N v_iN iN_0 ret_val
-
+theorem ieq__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (ieq_ v_N v_iN iN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 def ine_ (v_N : N) (v_iN : iN) (iN_0 : iN) : u32 :=
   uN.mk_uN (nat_of_bool (v_iN != iN_0))
 
-inductive ine__is_wf : N → iN → iN → u32 → Prop where
-  | ine__is_wf_0 (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (ine_ v_N v_iN iN_0) →
-    wf_uN 32 ret_val →
-    ine__is_wf v_N v_iN iN_0 ret_val
-
+theorem ine__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (ine_ v_N v_iN iN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque ilt_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : u32 := by
   first
@@ -9297,14 +8779,12 @@ opaque ilt_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : u32 := by
      | intros ; assumption
 
 
-inductive ilt__is_wf : N → sx → iN → iN → u32 → Prop where
-  | ilt__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (ilt_ v_N v_sx v_iN iN_0) →
-    wf_uN 32 ret_val →
-    ilt__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem ilt__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (ilt_ v_N v_sx v_iN iN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque igt_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : u32 := by
   first
@@ -9312,14 +8792,12 @@ opaque igt_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : u32 := by
      | intros ; assumption
 
 
-inductive igt__is_wf : N → sx → iN → iN → u32 → Prop where
-  | igt__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (igt_ v_N v_sx v_iN iN_0) →
-    wf_uN 32 ret_val →
-    igt__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem igt__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (igt_ v_N v_sx v_iN iN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque ile_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : u32 := by
   first
@@ -9327,14 +8805,12 @@ opaque ile_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : u32 := by
      | intros ; assumption
 
 
-inductive ile__is_wf : N → sx → iN → iN → u32 → Prop where
-  | ile__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (ile_ v_N v_sx v_iN iN_0) →
-    wf_uN 32 ret_val →
-    ile__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem ile__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (ile_ v_N v_sx v_iN iN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque ige_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : u32 := by
   first
@@ -9342,14 +8818,12 @@ opaque ige_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : u32 := by
      | intros ; assumption
 
 
-inductive ige__is_wf : N → sx → iN → iN → u32 → Prop where
-  | ige__is_wf_0 (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
-    wf_uN v_N v_iN →
-    wf_uN v_N iN_0 →
-    ret_val = (ige_ v_N v_sx v_iN iN_0) →
-    wf_uN 32 ret_val →
-    ige__is_wf v_N v_sx v_iN iN_0 ret_val
-
+theorem ige__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : u32) :
+  wf_uN v_N v_iN →
+  wf_uN v_N iN_0 →
+  ret_val = (ige_ v_N v_sx v_iN iN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque fabs_ (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9357,13 +8831,11 @@ opaque fabs_ (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fabs__is_wf : N → fN → List fN → Prop where
-  | fabs__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (fabs_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fabs__is_wf v_N v_fN ret_val_lst
-
+theorem fabs__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (fabs_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fneg_ (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9371,13 +8843,11 @@ opaque fneg_ (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fneg__is_wf : N → fN → List fN → Prop where
-  | fneg__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (fneg_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fneg__is_wf v_N v_fN ret_val_lst
-
+theorem fneg__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (fneg_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fsqrt_ (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9385,13 +8855,11 @@ opaque fsqrt_ (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fsqrt__is_wf : N → fN → List fN → Prop where
-  | fsqrt__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (fsqrt_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fsqrt__is_wf v_N v_fN ret_val_lst
-
+theorem fsqrt__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (fsqrt_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fceil_ (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9399,13 +8867,11 @@ opaque fceil_ (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fceil__is_wf : N → fN → List fN → Prop where
-  | fceil__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (fceil_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fceil__is_wf v_N v_fN ret_val_lst
-
+theorem fceil__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (fceil_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ffloor_ (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9413,13 +8879,11 @@ opaque ffloor_ (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive ffloor__is_wf : N → fN → List fN → Prop where
-  | ffloor__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (ffloor_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    ffloor__is_wf v_N v_fN ret_val_lst
-
+theorem ffloor__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (ffloor_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ftrunc_ (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9427,13 +8891,11 @@ opaque ftrunc_ (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive ftrunc__is_wf : N → fN → List fN → Prop where
-  | ftrunc__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (ftrunc_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    ftrunc__is_wf v_N v_fN ret_val_lst
-
+theorem ftrunc__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (ftrunc_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fnearest_ (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9441,13 +8903,11 @@ opaque fnearest_ (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fnearest__is_wf : N → fN → List fN → Prop where
-  | fnearest__is_wf_0 (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    ret_val_lst = (fnearest_ v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fnearest__is_wf v_N v_fN ret_val_lst
-
+theorem fnearest__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  ret_val_lst = (fnearest_ v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fadd_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9455,14 +8915,12 @@ opaque fadd_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fadd__is_wf : N → fN → fN → List fN → Prop where
-  | fadd__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fadd_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fadd__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fadd__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fadd_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fsub_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9470,14 +8928,12 @@ opaque fsub_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fsub__is_wf : N → fN → fN → List fN → Prop where
-  | fsub__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fsub_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fsub__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fsub__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fsub_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fmul_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9485,14 +8941,12 @@ opaque fmul_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fmul__is_wf : N → fN → fN → List fN → Prop where
-  | fmul__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fmul_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fmul__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fmul__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fmul_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fdiv_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9500,14 +8954,12 @@ opaque fdiv_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fdiv__is_wf : N → fN → fN → List fN → Prop where
-  | fdiv__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fdiv_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fdiv__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fdiv__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fdiv_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fmin_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9515,14 +8967,12 @@ opaque fmin_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fmin__is_wf : N → fN → fN → List fN → Prop where
-  | fmin__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fmin_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fmin__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fmin__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fmin_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fmax_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9530,14 +8980,12 @@ opaque fmax_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fmax__is_wf : N → fN → fN → List fN → Prop where
-  | fmax__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fmax_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fmax__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fmax__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fmax_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fpmin_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9545,14 +8993,12 @@ opaque fpmin_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fpmin__is_wf : N → fN → fN → List fN → Prop where
-  | fpmin__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fpmin_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fpmin__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fpmin__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fpmin_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fpmax_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9560,14 +9006,12 @@ opaque fpmax_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fpmax__is_wf : N → fN → fN → List fN → Prop where
-  | fpmax__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fpmax_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fpmax__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fpmax__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fpmax_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque frelaxed_min_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9575,14 +9019,12 @@ opaque frelaxed_min_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive frelaxed_min__is_wf : N → fN → fN → List fN → Prop where
-  | frelaxed_min__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (frelaxed_min_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    frelaxed_min__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem frelaxed_min__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (frelaxed_min_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque frelaxed_max_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9590,14 +9032,12 @@ opaque frelaxed_max_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive frelaxed_max__is_wf : N → fN → fN → List fN → Prop where
-  | frelaxed_max__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (frelaxed_max_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    frelaxed_max__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem frelaxed_max__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (frelaxed_max_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fcopysign_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
   first
@@ -9605,14 +9045,12 @@ opaque fcopysign_ (v_N : N) (v_fN : fN) (fN_0 : fN) : List fN := by
      | intros ; assumption
 
 
-inductive fcopysign__is_wf : N → fN → fN → List fN → Prop where
-  | fcopysign__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val_lst = (fcopysign_ v_N v_fN fN_0) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    fcopysign__is_wf v_N v_fN fN_0 ret_val_lst
-
+theorem fcopysign__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val_lst = (fcopysign_ v_N v_fN fN_0) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque feq_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
   first
@@ -9620,14 +9058,12 @@ opaque feq_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
      | intros ; assumption
 
 
-inductive feq__is_wf : N → fN → fN → u32 → Prop where
-  | feq__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val = (feq_ v_N v_fN fN_0) →
-    wf_uN 32 ret_val →
-    feq__is_wf v_N v_fN fN_0 ret_val
-
+theorem feq__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val = (feq_ v_N v_fN fN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque fne_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
   first
@@ -9635,14 +9071,12 @@ opaque fne_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
      | intros ; assumption
 
 
-inductive fne__is_wf : N → fN → fN → u32 → Prop where
-  | fne__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val = (fne_ v_N v_fN fN_0) →
-    wf_uN 32 ret_val →
-    fne__is_wf v_N v_fN fN_0 ret_val
-
+theorem fne__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val = (fne_ v_N v_fN fN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque flt_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
   first
@@ -9650,14 +9084,12 @@ opaque flt_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
      | intros ; assumption
 
 
-inductive flt__is_wf : N → fN → fN → u32 → Prop where
-  | flt__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val = (flt_ v_N v_fN fN_0) →
-    wf_uN 32 ret_val →
-    flt__is_wf v_N v_fN fN_0 ret_val
-
+theorem flt__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val = (flt_ v_N v_fN fN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque fgt_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
   first
@@ -9665,14 +9097,12 @@ opaque fgt_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
      | intros ; assumption
 
 
-inductive fgt__is_wf : N → fN → fN → u32 → Prop where
-  | fgt__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val = (fgt_ v_N v_fN fN_0) →
-    wf_uN 32 ret_val →
-    fgt__is_wf v_N v_fN fN_0 ret_val
-
+theorem fgt__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val = (fgt_ v_N v_fN fN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque fle_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
   first
@@ -9680,14 +9110,12 @@ opaque fle_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
      | intros ; assumption
 
 
-inductive fle__is_wf : N → fN → fN → u32 → Prop where
-  | fle__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val = (fle_ v_N v_fN fN_0) →
-    wf_uN 32 ret_val →
-    fle__is_wf v_N v_fN fN_0 ret_val
-
+theorem fle__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val = (fle_ v_N v_fN fN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque fge_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
   first
@@ -9695,14 +9123,12 @@ opaque fge_ (v_N : N) (v_fN : fN) (fN_0 : fN) : u32 := by
      | intros ; assumption
 
 
-inductive fge__is_wf : N → fN → fN → u32 → Prop where
-  | fge__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    ret_val = (fge_ v_N v_fN fN_0) →
-    wf_uN 32 ret_val →
-    fge__is_wf v_N v_fN fN_0 ret_val
-
+theorem fge__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (ret_val : u32) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  ret_val = (fge_ v_N v_fN fN_0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 opaque frelaxed_madd_ (v_N : N) (v_fN : fN) (fN_0 : fN) (fN_1 : fN) : List fN := by
   first
@@ -9710,15 +9136,13 @@ opaque frelaxed_madd_ (v_N : N) (v_fN : fN) (fN_0 : fN) (fN_1 : fN) : List fN :=
      | intros ; assumption
 
 
-inductive frelaxed_madd__is_wf : N → fN → fN → fN → List fN → Prop where
-  | frelaxed_madd__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (fN_1 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    wf_fN v_N fN_1 →
-    ret_val_lst = (frelaxed_madd_ v_N v_fN fN_0 fN_1) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    frelaxed_madd__is_wf v_N v_fN fN_0 fN_1 ret_val_lst
-
+theorem frelaxed_madd__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (fN_1 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  wf_fN v_N fN_1 →
+  ret_val_lst = (frelaxed_madd_ v_N v_fN fN_0 fN_1) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque frelaxed_nmadd_ (v_N : N) (v_fN : fN) (fN_0 : fN) (fN_1 : fN) : List fN := by
   first
@@ -9726,15 +9150,13 @@ opaque frelaxed_nmadd_ (v_N : N) (v_fN : fN) (fN_0 : fN) (fN_1 : fN) : List fN :
      | intros ; assumption
 
 
-inductive frelaxed_nmadd__is_wf : N → fN → fN → fN → List fN → Prop where
-  | frelaxed_nmadd__is_wf_0 (v_N : N) (v_fN : fN) (fN_0 : fN) (fN_1 : fN) (ret_val_lst : List fN) :
-    wf_fN v_N v_fN →
-    wf_fN v_N fN_0 →
-    wf_fN v_N fN_1 →
-    ret_val_lst = (frelaxed_nmadd_ v_N v_fN fN_0 fN_1) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    frelaxed_nmadd__is_wf v_N v_fN fN_0 fN_1 ret_val_lst
-
+theorem frelaxed_nmadd__is_wf (v_N : N) (v_fN : fN) (fN_0 : fN) (fN_1 : fN) (ret_val_lst : List fN) :
+  wf_fN v_N v_fN →
+  wf_fN v_N fN_0 →
+  wf_fN v_N fN_1 →
+  ret_val_lst = (frelaxed_nmadd_ v_N v_fN fN_0 fN_1) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque wrap__ (v_M : M) (v_N : N) (v_iN : iN) : iN := by
   first
@@ -9742,13 +9164,11 @@ opaque wrap__ (v_M : M) (v_N : N) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive wrap___is_wf : M → N → iN → iN → Prop where
-  | wrap___is_wf_0 (v_M : M) (v_N : N) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_M v_iN →
-    ret_val = (wrap__ v_M v_N v_iN) →
-    wf_uN v_N ret_val →
-    wrap___is_wf v_M v_N v_iN ret_val
-
+theorem wrap___is_wf (v_M : M) (v_N : N) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_M v_iN →
+  ret_val = (wrap__ v_M v_N v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque extend__ (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) : iN := by
   first
@@ -9756,13 +9176,11 @@ opaque extend__ (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive extend___is_wf : M → N → sx → iN → iN → Prop where
-  | extend___is_wf_0 (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_M v_iN →
-    ret_val = (extend__ v_M v_N v_sx v_iN) →
-    wf_uN v_N ret_val →
-    extend___is_wf v_M v_N v_sx v_iN ret_val
-
+theorem extend___is_wf (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_M v_iN →
+  ret_val = (extend__ v_M v_N v_sx v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque trunc__ (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) : Option iN := by
   first
@@ -9770,13 +9188,11 @@ opaque trunc__ (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) : Option iN := by
      | intros ; assumption
 
 
-inductive trunc___is_wf : M → N → sx → fN → Option iN → Prop where
-  | trunc___is_wf_0 (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) (ret_val_opt : Option iN) :
-    wf_fN v_M v_fN →
-    ret_val_opt = (trunc__ v_M v_N v_sx v_fN) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) →
-    trunc___is_wf v_M v_N v_sx v_fN ret_val_opt
-
+theorem trunc___is_wf (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) (ret_val_opt : Option iN) :
+  wf_fN v_M v_fN →
+  ret_val_opt = (trunc__ v_M v_N v_sx v_fN) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) :=
+  sorry
 
 opaque trunc_sat__ (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) : Option iN := by
   first
@@ -9784,13 +9200,11 @@ opaque trunc_sat__ (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) : Option iN := by
      | intros ; assumption
 
 
-inductive trunc_sat___is_wf : M → N → sx → fN → Option iN → Prop where
-  | trunc_sat___is_wf_0 (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) (ret_val_opt : Option iN) :
-    wf_fN v_M v_fN →
-    ret_val_opt = (trunc_sat__ v_M v_N v_sx v_fN) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) →
-    trunc_sat___is_wf v_M v_N v_sx v_fN ret_val_opt
-
+theorem trunc_sat___is_wf (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) (ret_val_opt : Option iN) :
+  wf_fN v_M v_fN →
+  ret_val_opt = (trunc_sat__ v_M v_N v_sx v_fN) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) :=
+  sorry
 
 opaque relaxed_trunc__ (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) : Option iN := by
   first
@@ -9798,13 +9212,11 @@ opaque relaxed_trunc__ (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) : Option iN :
      | intros ; assumption
 
 
-inductive relaxed_trunc___is_wf : M → N → sx → fN → Option iN → Prop where
-  | relaxed_trunc___is_wf_0 (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) (ret_val_opt : Option iN) :
-    wf_fN v_M v_fN →
-    ret_val_opt = (relaxed_trunc__ v_M v_N v_sx v_fN) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) →
-    relaxed_trunc___is_wf v_M v_N v_sx v_fN ret_val_opt
-
+theorem relaxed_trunc___is_wf (v_M : M) (v_N : N) (v_sx : sx) (v_fN : fN) (ret_val_opt : Option iN) :
+  wf_fN v_M v_fN →
+  ret_val_opt = (relaxed_trunc__ v_M v_N v_sx v_fN) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) (Option.toList ret_val_opt) :=
+  sorry
 
 opaque demote__ (v_M : M) (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9812,13 +9224,11 @@ opaque demote__ (v_M : M) (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive demote___is_wf : M → N → fN → List fN → Prop where
-  | demote___is_wf_0 (v_M : M) (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_M v_fN →
-    ret_val_lst = (demote__ v_M v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    demote___is_wf v_M v_N v_fN ret_val_lst
-
+theorem demote___is_wf (v_M : M) (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_M v_fN →
+  ret_val_lst = (demote__ v_M v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque promote__ (v_M : M) (v_N : N) (v_fN : fN) : List fN := by
   first
@@ -9826,13 +9236,11 @@ opaque promote__ (v_M : M) (v_N : N) (v_fN : fN) : List fN := by
      | intros ; assumption
 
 
-inductive promote___is_wf : M → N → fN → List fN → Prop where
-  | promote___is_wf_0 (v_M : M) (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
-    wf_fN v_M v_fN →
-    ret_val_lst = (promote__ v_M v_N v_fN) →
-    Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst →
-    promote___is_wf v_M v_N v_fN ret_val_lst
-
+theorem promote___is_wf (v_M : M) (v_N : N) (v_fN : fN) (ret_val_lst : List fN) :
+  wf_fN v_M v_fN →
+  ret_val_lst = (promote__ v_M v_N v_fN) →
+  Forall (fun ret_val_elem => wf_fN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque convert__ (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) : fN := by
   first
@@ -9840,13 +9248,11 @@ opaque convert__ (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) : fN := by
      | intros ; assumption
 
 
-inductive convert___is_wf : M → N → sx → iN → fN → Prop where
-  | convert___is_wf_0 (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) (ret_val : fN) :
-    wf_uN v_M v_iN →
-    ret_val = (convert__ v_M v_N v_sx v_iN) →
-    wf_fN v_N ret_val →
-    convert___is_wf v_M v_N v_sx v_iN ret_val
-
+theorem convert___is_wf (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) (ret_val : fN) :
+  wf_uN v_M v_iN →
+  ret_val = (convert__ v_M v_N v_sx v_iN) →
+  wf_fN v_N ret_val :=
+  sorry
 
 opaque narrow__ (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) : iN := by
   first
@@ -9854,13 +9260,11 @@ opaque narrow__ (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) : iN := by
      | intros ; assumption
 
 
-inductive narrow___is_wf : M → N → sx → iN → iN → Prop where
-  | narrow___is_wf_0 (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) (ret_val : iN) :
-    wf_uN v_M v_iN →
-    ret_val = (narrow__ v_M v_N v_sx v_iN) →
-    wf_uN v_N ret_val →
-    narrow___is_wf v_M v_N v_sx v_iN ret_val
-
+theorem narrow___is_wf (v_M : M) (v_N : N) (v_sx : sx) (v_iN : iN) (ret_val : iN) :
+  wf_uN v_M v_iN →
+  ret_val = (narrow__ v_M v_N v_sx v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque reinterpret__ (numtype_1 : numtype) (numtype_2 : numtype) (v_num_ : num_) : num_ := by
   first
@@ -9868,13 +9272,11 @@ opaque reinterpret__ (numtype_1 : numtype) (numtype_2 : numtype) (v_num_ : num_)
      | intros ; assumption
 
 
-inductive reinterpret___is_wf : numtype → numtype → num_ → num_ → Prop where
-  | reinterpret___is_wf_0 (numtype_1 : numtype) (numtype_2 : numtype) (v_num_ : num_) (ret_val : num_) :
-    wf_num_ numtype_1 v_num_ →
-    ret_val = (reinterpret__ numtype_1 numtype_2 v_num_) →
-    wf_num_ numtype_2 ret_val →
-    reinterpret___is_wf numtype_1 numtype_2 v_num_ ret_val
-
+theorem reinterpret___is_wf (numtype_1 : numtype) (numtype_2 : numtype) (v_num_ : num_) (ret_val : num_) :
+  wf_num_ numtype_1 v_num_ →
+  ret_val = (reinterpret__ numtype_1 numtype_2 v_num_) →
+  wf_num_ numtype_2 ret_val :=
+  sorry
 
 def lpacknum_ (v_lanetype : lanetype) (v_num_ : num_) : lane_ :=
   match v_lanetype, v_num_ with
@@ -9886,13 +9288,11 @@ def lpacknum_ (v_lanetype : lanetype) (v_num_ : num_) : lane_ :=
   | lanetype.I16, num_.mk_num__0 addrtype.I32 c => lane_.mk_lane__1 packtype.I16 (wrap__ (size (lunpack (lanetype_packtype packtype.I16))) (psize packtype.I16) c)
   | _, _ => Inhabited.default
 
-inductive lpacknum__is_wf : lanetype → num_ → lane_ → Prop where
-  | lpacknum__is_wf_0 (v_lanetype : lanetype) (v_num_ : num_) (ret_val : lane_) :
-    wf_num_ (lunpack v_lanetype) v_num_ →
-    ret_val = (lpacknum_ v_lanetype v_num_) →
-    wf_lane_ v_lanetype ret_val →
-    lpacknum__is_wf v_lanetype v_num_ ret_val
-
+theorem lpacknum__is_wf (v_lanetype : lanetype) (v_num_ : num_) (ret_val : lane_) :
+  wf_num_ (lunpack v_lanetype) v_num_ →
+  ret_val = (lpacknum_ v_lanetype v_num_) →
+  wf_lane_ v_lanetype ret_val :=
+  sorry
 
 def cpacknum_ (v_storagetype : storagetype) (v_lit_ : lit_) : lit_ :=
   match v_storagetype, v_lit_ with
@@ -9905,15 +9305,13 @@ def cpacknum_ (v_storagetype : storagetype) (v_lit_ : lit_) : lit_ :=
   | storagetype.I16, lit_.mk_lit__0 numtype.I32 (num_.mk_num__0 addrtype.I32 c) => lit_.mk_lit__2 packtype.I16 (wrap__ (size (lunpack (lanetype_packtype packtype.I16))) (psize packtype.I16) c)
   | _, _ => Inhabited.default
 
-inductive cpacknum__is_wf : storagetype → lit_ → lit_ → Prop where
-  | cpacknum__is_wf_0 (v_storagetype : storagetype) (v_lit_ : lit_) (ret_val : lit_) :
-    wf_storagetype v_storagetype →
-    (cunpack v_storagetype) ≠ none →
-    wf_lit_ (storagetype_consttype (Option.get! (cunpack v_storagetype))) v_lit_ →
-    ret_val = (cpacknum_ v_storagetype v_lit_) →
-    wf_lit_ v_storagetype ret_val →
-    cpacknum__is_wf v_storagetype v_lit_ ret_val
-
+theorem cpacknum__is_wf (v_storagetype : storagetype) (v_lit_ : lit_) (ret_val : lit_) :
+  wf_storagetype v_storagetype →
+  (cunpack v_storagetype) ≠ none →
+  wf_lit_ (storagetype_consttype (Option.get! (cunpack v_storagetype))) v_lit_ →
+  ret_val = (cpacknum_ v_storagetype v_lit_) →
+  wf_lit_ v_storagetype ret_val :=
+  sorry
 
 def lunpacknum_ (v_lanetype : lanetype) (v_lane_ : lane_) : num_ :=
   match v_lanetype, v_lane_ with
@@ -9925,13 +9323,11 @@ def lunpacknum_ (v_lanetype : lanetype) (v_lane_ : lane_) : num_ :=
   | lanetype.I16, lane_.mk_lane__1 packtype.I16 c => num_.mk_num__0 addrtype.I32 (extend__ (psize packtype.I16) (size (lunpack (lanetype_packtype packtype.I16))) sx.U c)
   | _, _ => Inhabited.default
 
-inductive lunpacknum__is_wf : lanetype → lane_ → num_ → Prop where
-  | lunpacknum__is_wf_0 (v_lanetype : lanetype) (v_lane_ : lane_) (ret_val : num_) :
-    wf_lane_ v_lanetype v_lane_ →
-    ret_val = (lunpacknum_ v_lanetype v_lane_) →
-    wf_num_ (lunpack v_lanetype) ret_val →
-    lunpacknum__is_wf v_lanetype v_lane_ ret_val
-
+theorem lunpacknum__is_wf (v_lanetype : lanetype) (v_lane_ : lane_) (ret_val : num_) :
+  wf_lane_ v_lanetype v_lane_ →
+  ret_val = (lunpacknum_ v_lanetype v_lane_) →
+  wf_num_ (lunpack v_lanetype) ret_val :=
+  sorry
 
 def cunpacknum_ (v_storagetype : storagetype) (v_lit_ : lit_) : lit_ :=
   match v_storagetype, v_lit_ with
@@ -9944,15 +9340,13 @@ def cunpacknum_ (v_storagetype : storagetype) (v_lit_ : lit_) : lit_ :=
   | storagetype.I16, lit_.mk_lit__2 packtype.I16 c => lit_.mk_lit__0 numtype.I32 (num_.mk_num__0 addrtype.I32 (extend__ (psize packtype.I16) (size (lunpack (lanetype_packtype packtype.I16))) sx.U c))
   | _, _ => Inhabited.default
 
-inductive cunpacknum__is_wf : storagetype → lit_ → lit_ → Prop where
-  | cunpacknum__is_wf_0 (v_storagetype : storagetype) (v_lit_ : lit_) (ret_val : lit_) :
-    wf_storagetype v_storagetype →
-    wf_lit_ v_storagetype v_lit_ →
-    ret_val = (cunpacknum_ v_storagetype v_lit_) →
-    (cunpack v_storagetype) ≠ none →
-    wf_lit_ (storagetype_consttype (Option.get! (cunpack v_storagetype))) ret_val →
-    cunpacknum__is_wf v_storagetype v_lit_ ret_val
-
+theorem cunpacknum__is_wf (v_storagetype : storagetype) (v_lit_ : lit_) (ret_val : lit_) :
+  wf_storagetype v_storagetype →
+  wf_lit_ v_storagetype v_lit_ →
+  ret_val = (cunpacknum_ v_storagetype v_lit_) →
+  (cunpack v_storagetype) ≠ none →
+  wf_lit_ (storagetype_consttype (Option.get! (cunpack v_storagetype))) ret_val :=
+  sorry
 
 inductive fun_unop_ : numtype → unop_ → num_ → List num_ → Prop where
   | fun_unop__case_0 (i : uN) : fun_unop_ numtype.I32 (unop_.mk_unop__0 addrtype.I32 unop_Inn.CLZ) (num_.mk_num__0 addrtype.I32 i) [num_.mk_num__0 addrtype.I32 (iclz_ (sizenn (numtype_addrtype addrtype.I32)) i)]
@@ -9983,15 +9377,13 @@ inductive fun_unop_ : numtype → unop_ → num_ → List num_ → Prop where
   | fun_unop__case_21 (f : fN) : fun_unop_ numtype.F64 (unop_.mk_unop__1 Fnn.F64 unop_Fnn.NEAREST) (num_.mk_num__1 Fnn.F64 f) (Map (fun iter_0_14_elem => num_.mk_num__1 Fnn.F64 iter_0_14_elem) (fnearest_ (sizenn (numtype_Fnn Fnn.F64)) f))
 
 
-inductive unop__is_wf : numtype → unop_ → num_ → List num_ → Prop where
-  | unop__is_wf_0 (v_numtype : numtype) (v_unop_ : unop_) (v_num_ : num_) (ret_val_lst : List num_) (var_0 : List num_) :
-    fun_unop_ v_numtype v_unop_ v_num_ var_0 →
-    wf_unop_ v_numtype v_unop_ →
-    wf_num_ v_numtype v_num_ →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_num_ v_numtype ret_val_elem) ret_val_lst →
-    unop__is_wf v_numtype v_unop_ v_num_ ret_val_lst
-
+theorem unop__is_wf (v_numtype : numtype) (v_unop_ : unop_) (v_num_ : num_) (ret_val_lst : List num_) (var_0 : List num_) :
+  fun_unop_ v_numtype v_unop_ v_num_ var_0 →
+  wf_unop_ v_numtype v_unop_ →
+  wf_num_ v_numtype v_num_ →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_num_ v_numtype ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_binop_ : numtype → binop_ → num_ → num_ → List num_ → Prop where
   | fun_binop__case_0 (i_1 : uN) (i_2 : uN) : fun_binop_ numtype.I32 (binop_.mk_binop__0 addrtype.I32 binop_Inn.ADD) (num_.mk_num__0 addrtype.I32 i_1) (num_.mk_num__0 addrtype.I32 i_2) [num_.mk_num__0 addrtype.I32 (iadd_ (sizenn (numtype_addrtype addrtype.I32)) i_1 i_2)]
@@ -10042,16 +9434,14 @@ inductive fun_binop_ : numtype → binop_ → num_ → num_ → List num_ → Pr
   | fun_binop__case_37 (f_1 : fN) (f_2 : fN) : fun_binop_ numtype.F64 (binop_.mk_binop__1 Fnn.F64 binop_Fnn.COPYSIGN) (num_.mk_num__1 Fnn.F64 f_1) (num_.mk_num__1 Fnn.F64 f_2) (Map (fun iter_0_32_elem => num_.mk_num__1 Fnn.F64 iter_0_32_elem) (fcopysign_ (sizenn (numtype_Fnn Fnn.F64)) f_1 f_2))
 
 
-inductive binop__is_wf : numtype → binop_ → num_ → num_ → List num_ → Prop where
-  | binop__is_wf_0 (v_numtype : numtype) (v_binop_ : binop_) (v_num_ : num_) (num__0 : num_) (ret_val_lst : List num_) (var_0 : List num_) :
-    fun_binop_ v_numtype v_binop_ v_num_ num__0 var_0 →
-    wf_binop_ v_numtype v_binop_ →
-    wf_num_ v_numtype v_num_ →
-    wf_num_ v_numtype num__0 →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_num_ v_numtype ret_val_elem) ret_val_lst →
-    binop__is_wf v_numtype v_binop_ v_num_ num__0 ret_val_lst
-
+theorem binop__is_wf (v_numtype : numtype) (v_binop_ : binop_) (v_num_ : num_) (num__0 : num_) (ret_val_lst : List num_) (var_0 : List num_) :
+  fun_binop_ v_numtype v_binop_ v_num_ num__0 var_0 →
+  wf_binop_ v_numtype v_binop_ →
+  wf_num_ v_numtype v_num_ →
+  wf_num_ v_numtype num__0 →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_num_ v_numtype ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_testop_ (v_numtype : numtype) (v_testop_ : testop_) (v_num_ : num_) : u32 :=
   match v_numtype, v_testop_, v_num_ with
@@ -10059,14 +9449,12 @@ def fun_testop_ (v_numtype : numtype) (v_testop_ : testop_) (v_num_ : num_) : u3
   | numtype.I64, testop_.mk_testop__0 addrtype.I64 testop_Inn.EQZ, num_.mk_num__0 addrtype.I64 i => ieqz_ (sizenn (numtype_addrtype addrtype.I64)) i
   | _, _, _ => Inhabited.default
 
-inductive testop__is_wf : numtype → testop_ → num_ → u32 → Prop where
-  | testop__is_wf_0 (v_numtype : numtype) (v_testop_ : testop_) (v_num_ : num_) (ret_val : u32) :
-    wf_testop_ v_numtype v_testop_ →
-    wf_num_ v_numtype v_num_ →
-    ret_val = (fun_testop_ v_numtype v_testop_ v_num_) →
-    wf_uN 32 ret_val →
-    testop__is_wf v_numtype v_testop_ v_num_ ret_val
-
+theorem testop__is_wf (v_numtype : numtype) (v_testop_ : testop_) (v_num_ : num_) (ret_val : u32) :
+  wf_testop_ v_numtype v_testop_ →
+  wf_num_ v_numtype v_num_ →
+  ret_val = (fun_testop_ v_numtype v_testop_ v_num_) →
+  wf_uN 32 ret_val :=
+  sorry
 
 def fun_relop_ (v_numtype : numtype) (v_relop_ : relop_) (v_num_ : num_) (num__0 : num_) : u32 :=
   match v_numtype, v_relop_, v_num_, num__0 with
@@ -10096,15 +9484,13 @@ def fun_relop_ (v_numtype : numtype) (v_relop_ : relop_) (v_num_ : num_) (num__0
   | numtype.F64, relop_.mk_relop__1 Fnn.F64 relop_Fnn.GE, num_.mk_num__1 Fnn.F64 f_1, num_.mk_num__1 Fnn.F64 f_2 => fge_ (sizenn (numtype_Fnn Fnn.F64)) f_1 f_2
   | _, _, _, _ => Inhabited.default
 
-inductive relop__is_wf : numtype → relop_ → num_ → num_ → u32 → Prop where
-  | relop__is_wf_0 (v_numtype : numtype) (v_relop_ : relop_) (v_num_ : num_) (num__0 : num_) (ret_val : u32) :
-    wf_relop_ v_numtype v_relop_ →
-    wf_num_ v_numtype v_num_ →
-    wf_num_ v_numtype num__0 →
-    ret_val = (fun_relop_ v_numtype v_relop_ v_num_ num__0) →
-    wf_uN 32 ret_val →
-    relop__is_wf v_numtype v_relop_ v_num_ num__0 ret_val
-
+theorem relop__is_wf (v_numtype : numtype) (v_relop_ : relop_) (v_num_ : num_) (num__0 : num_) (ret_val : u32) :
+  wf_relop_ v_numtype v_relop_ →
+  wf_num_ v_numtype v_num_ →
+  wf_num_ v_numtype num__0 →
+  ret_val = (fun_relop_ v_numtype v_relop_ v_num_ num__0) →
+  wf_uN 32 ret_val :=
+  sorry
 
 inductive fun_cvtop__ : numtype → numtype → cvtop__ → num_ → List num_ → Prop where
   | fun_cvtop___case_0 (v_sx : sx) (i_1 : uN) : fun_cvtop__ numtype.I32 numtype.I32 (cvtop__.mk_cvtop___0 addrtype.I32 addrtype.I32 (cvtop__Inn_1_Inn_2.EXTEND v_sx)) (num_.mk_num__0 addrtype.I32 i_1) [num_.mk_num__0 addrtype.I32 (extend__ (sizenn1 (numtype_addrtype addrtype.I32)) (sizenn2 (numtype_addrtype addrtype.I32)) v_sx i_1)]
@@ -10161,15 +9547,13 @@ inductive fun_cvtop__ : numtype → numtype → cvtop__ → num_ → List num_ �
     fun_cvtop__ numtype.F64 numtype.I64 (cvtop__.mk_cvtop___2 Fnn.F64 addrtype.I64 cvtop__Fnn_1_Inn_2.REINTERPRET) (num_.mk_num__1 Fnn.F64 f_1) [reinterpret__ (numtype_Fnn Fnn.F64) (numtype_addrtype addrtype.I64) (num_.mk_num__1 Fnn.F64 f_1)]
 
 
-inductive cvtop___is_wf : numtype → numtype → cvtop__ → num_ → List num_ → Prop where
-  | cvtop___is_wf_0 (numtype_1 : numtype) (numtype_2 : numtype) (v_cvtop__ : cvtop__) (v_num_ : num_) (ret_val_lst : List num_) (var_0 : List num_) :
-    fun_cvtop__ numtype_1 numtype_2 v_cvtop__ v_num_ var_0 →
-    wf_cvtop__ numtype_1 numtype_2 v_cvtop__ →
-    wf_num_ numtype_1 v_num_ →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_num_ numtype_2 ret_val_elem) ret_val_lst →
-    cvtop___is_wf numtype_1 numtype_2 v_cvtop__ v_num_ ret_val_lst
-
+theorem cvtop___is_wf (numtype_1 : numtype) (numtype_2 : numtype) (v_cvtop__ : cvtop__) (v_num_ : num_) (ret_val_lst : List num_) (var_0 : List num_) :
+  fun_cvtop__ numtype_1 numtype_2 v_cvtop__ v_num_ var_0 →
+  wf_cvtop__ numtype_1 numtype_2 v_cvtop__ →
+  wf_num_ numtype_1 v_num_ →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_num_ numtype_2 ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque lanes_ (v_shape : shape) (v_vec_ : vec_) : List lane_ := by
   first
@@ -10177,14 +9561,12 @@ opaque lanes_ (v_shape : shape) (v_vec_ : vec_) : List lane_ := by
      | intros ; assumption
 
 
-inductive lanes__is_wf : shape → vec_ → List lane_ → Prop where
-  | lanes__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (ret_val_lst : List lane_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    ret_val_lst = (lanes_ v_shape v_vec_) →
-    Forall (fun ret_val_elem => wf_lane_ (fun_lanetype v_shape) ret_val_elem) ret_val_lst →
-    lanes__is_wf v_shape v_vec_ ret_val_lst
-
+theorem lanes__is_wf (v_shape : shape) (v_vec_ : vec_) (ret_val_lst : List lane_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  ret_val_lst = (lanes_ v_shape v_vec_) →
+  Forall (fun ret_val_elem => wf_lane_ (fun_lanetype v_shape) ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque inv_lanes_ (v_shape : shape) (var_0_lst : List lane_) : vec_ := by
   first
@@ -10192,14 +9574,12 @@ opaque inv_lanes_ (v_shape : shape) (var_0_lst : List lane_) : vec_ := by
      | intros ; assumption
 
 
-inductive inv_lanes__is_wf : shape → List lane_ → vec_ → Prop where
-  | inv_lanes__is_wf_0 (v_shape : shape) (var_0_lst : List lane_) (ret_val : vec_) :
-    wf_shape v_shape →
-    Forall (fun var_0_elem => wf_lane_ (fun_lanetype v_shape) var_0_elem) var_0_lst →
-    ret_val = (inv_lanes_ v_shape var_0_lst) →
-    wf_uN 128 ret_val →
-    inv_lanes__is_wf v_shape var_0_lst ret_val
-
+theorem inv_lanes__is_wf (v_shape : shape) (var_0_lst : List lane_) (ret_val : vec_) :
+  wf_shape v_shape →
+  Forall (fun var_0_elem => wf_lane_ (fun_lanetype v_shape) var_0_elem) var_0_lst →
+  ret_val = (inv_lanes_ v_shape var_0_lst) →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive fun_zeroop : shape → shape → vcvtop__ → Option zero → Prop where
   | fun_zeroop_case_0 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
@@ -10604,14 +9984,12 @@ def iswizzle_lane_ (v_N : N) (var_0_lst : List iN) (v_iN : iN) : iN :=
   else
     uN.mk_uN 0
 
-inductive iswizzle_lane__is_wf : N → List iN → iN → iN → Prop where
-  | iswizzle_lane__is_wf_0 (v_N : N) (var_0_lst : List iN) (v_iN : iN) (ret_val : iN) :
-    Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
-    wf_uN v_N v_iN →
-    ret_val = (iswizzle_lane_ v_N var_0_lst v_iN) →
-    wf_uN v_N ret_val →
-    iswizzle_lane__is_wf v_N var_0_lst v_iN ret_val
-
+theorem iswizzle_lane__is_wf (v_N : N) (var_0_lst : List iN) (v_iN : iN) (ret_val : iN) :
+  Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
+  wf_uN v_N v_iN →
+  ret_val = (iswizzle_lane_ v_N var_0_lst v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 opaque irelaxed_swizzle_lane_ (v_N : N) (var_0_lst : List iN) (v_iN : iN) : iN := by
   first
@@ -10619,14 +9997,12 @@ opaque irelaxed_swizzle_lane_ (v_N : N) (var_0_lst : List iN) (v_iN : iN) : iN :
      | intros ; assumption
 
 
-inductive irelaxed_swizzle_lane__is_wf : N → List iN → iN → iN → Prop where
-  | irelaxed_swizzle_lane__is_wf_0 (v_N : N) (var_0_lst : List iN) (v_iN : iN) (ret_val : iN) :
-    Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
-    wf_uN v_N v_iN →
-    ret_val = (irelaxed_swizzle_lane_ v_N var_0_lst v_iN) →
-    wf_uN v_N ret_val →
-    irelaxed_swizzle_lane__is_wf v_N var_0_lst v_iN ret_val
-
+theorem irelaxed_swizzle_lane__is_wf (v_N : N) (var_0_lst : List iN) (v_iN : iN) (ret_val : iN) :
+  Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
+  wf_uN v_N v_iN →
+  ret_val = (irelaxed_swizzle_lane_ v_N var_0_lst v_iN) →
+  wf_uN v_N ret_val :=
+  sorry
 
 def ivunop_ (v_shape : shape) (f_ : N → iN → iN) (v_vec_ : vec_) : Option (List vec_) :=
   match v_shape with
@@ -10644,15 +10020,13 @@ def ivunop_ (v_shape : shape) (f_ : N → iN → iN) (v_vec_ : vec_) : Option (L
   some [inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) (Map (fun c_10_elem => lane_.mk_lane__2 Jnn.I16 c_10_elem) c_lst)]
   | _ => none
 
-inductive ivunop__is_wf (f_ : N → iN → iN) : shape → vec_ → List vec_ → Prop where
-  | ivunop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (ret_val_lst : List vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    (ivunop_ v_shape f_ v_vec_) ≠ none →
-    ret_val_lst = (Option.get! (ivunop_ v_shape f_ v_vec_)) →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    ivunop__is_wf f_ v_shape v_vec_ ret_val_lst
-
+theorem ivunop__is_wf (v_shape : shape) (f_ : N → iN → iN) (v_vec_ : vec_) (ret_val_lst : List vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  (ivunop_ v_shape f_ v_vec_) ≠ none →
+  ret_val_lst = (Option.get! (ivunop_ v_shape f_ v_vec_)) →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fvunop_ (v_shape : shape) (f_ : N → fN → List fN) (v_vec_ : vec_) : List vec_ := by
   first
@@ -10660,14 +10034,12 @@ opaque fvunop_ (v_shape : shape) (f_ : N → fN → List fN) (v_vec_ : vec_) : L
      | intros ; assumption
 
 
-inductive fvunop__is_wf (f_ : N → fN → List fN) : shape → vec_ → List vec_ → Prop where
-  | fvunop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (ret_val_lst : List vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    ret_val_lst = (fvunop_ v_shape f_ v_vec_) →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    fvunop__is_wf f_ v_shape v_vec_ ret_val_lst
-
+theorem fvunop__is_wf (v_shape : shape) (f_ : N → fN → List fN) (v_vec_ : vec_) (ret_val_lst : List vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  ret_val_lst = (fvunop_ v_shape f_ v_vec_) →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 def ivbinop_ (v_shape : shape) (f_ : N → iN → iN → iN) (v_vec_ : vec_) (vec__0 : vec_) : Option (List vec_) :=
   match v_shape with
@@ -10689,16 +10061,14 @@ def ivbinop_ (v_shape : shape) (f_ : N → iN → iN → iN) (v_vec_ : vec_) (ve
   some [inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) (Map (fun c_22_elem => lane_.mk_lane__2 Jnn.I16 c_22_elem) c_lst)]
   | _ => none
 
-inductive ivbinop__is_wf (f_ : N → iN → iN → iN) : shape → vec_ → vec_ → List vec_ → Prop where
-  | ivbinop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    (ivbinop_ v_shape f_ v_vec_ vec__0) ≠ none →
-    ret_val_lst = (Option.get! (ivbinop_ v_shape f_ v_vec_ vec__0)) →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    ivbinop__is_wf f_ v_shape v_vec_ vec__0 ret_val_lst
-
+theorem ivbinop__is_wf (v_shape : shape) (f_ : N → iN → iN → iN) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  (ivbinop_ v_shape f_ v_vec_ vec__0) ≠ none →
+  ret_val_lst = (Option.get! (ivbinop_ v_shape f_ v_vec_ vec__0)) →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 def ivbinopsx_ (v_shape : shape) (f_ : N → sx → iN → iN → iN) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) : Option (List vec_) :=
   match v_shape with
@@ -10720,16 +10090,14 @@ def ivbinopsx_ (v_shape : shape) (f_ : N → sx → iN → iN → iN) (v_sx : sx
   some [inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) (Map (fun c_30_elem => lane_.mk_lane__2 Jnn.I16 c_30_elem) c_lst)]
   | _ => none
 
-inductive ivbinopsx__is_wf (f_ : N → sx → iN → iN → iN) : shape → sx → vec_ → vec_ → List vec_ → Prop where
-  | ivbinopsx__is_wf_0 (v_shape : shape) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    (ivbinopsx_ v_shape f_ v_sx v_vec_ vec__0) ≠ none →
-    ret_val_lst = (Option.get! (ivbinopsx_ v_shape f_ v_sx v_vec_ vec__0)) →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    ivbinopsx__is_wf f_ v_shape v_sx v_vec_ vec__0 ret_val_lst
-
+theorem ivbinopsx__is_wf (v_shape : shape) (f_ : N → sx → iN → iN → iN) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  (ivbinopsx_ v_shape f_ v_sx v_vec_ vec__0) ≠ none →
+  ret_val_lst = (Option.get! (ivbinopsx_ v_shape f_ v_sx v_vec_ vec__0)) →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ivbinopsxnd_ (v_shape : shape) (f_ : N → sx → iN → iN → List iN) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) : List vec_ := by
   first
@@ -10737,15 +10105,13 @@ opaque ivbinopsxnd_ (v_shape : shape) (f_ : N → sx → iN → iN → List iN) 
      | intros ; assumption
 
 
-inductive ivbinopsxnd__is_wf (f_ : N → sx → iN → iN → List iN) : shape → sx → vec_ → vec_ → List vec_ → Prop where
-  | ivbinopsxnd__is_wf_0 (v_shape : shape) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val_lst = (ivbinopsxnd_ v_shape f_ v_sx v_vec_ vec__0) →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    ivbinopsxnd__is_wf f_ v_shape v_sx v_vec_ vec__0 ret_val_lst
-
+theorem ivbinopsxnd__is_wf (v_shape : shape) (f_ : N → sx → iN → iN → List iN) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val_lst = (ivbinopsxnd_ v_shape f_ v_sx v_vec_ vec__0) →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fvbinop_ (v_shape : shape) (f_ : N → fN → fN → List fN) (v_vec_ : vec_) (vec__0 : vec_) : List vec_ := by
   first
@@ -10753,15 +10119,13 @@ opaque fvbinop_ (v_shape : shape) (f_ : N → fN → fN → List fN) (v_vec_ : v
      | intros ; assumption
 
 
-inductive fvbinop__is_wf (f_ : N → fN → fN → List fN) : shape → vec_ → vec_ → List vec_ → Prop where
-  | fvbinop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val_lst = (fvbinop_ v_shape f_ v_vec_ vec__0) →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    fvbinop__is_wf f_ v_shape v_vec_ vec__0 ret_val_lst
-
+theorem fvbinop__is_wf (v_shape : shape) (f_ : N → fN → fN → List fN) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val_lst = (fvbinop_ v_shape f_ v_vec_ vec__0) →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ivternopnd_ (v_shape : shape) (f_ : N → iN → iN → iN → List iN) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) : List vec_ := by
   first
@@ -10769,16 +10133,14 @@ opaque ivternopnd_ (v_shape : shape) (f_ : N → iN → iN → iN → List iN) (
      | intros ; assumption
 
 
-inductive ivternopnd__is_wf (f_ : N → iN → iN → iN → List iN) : shape → vec_ → vec_ → vec_ → List vec_ → Prop where
-  | ivternopnd__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val_lst : List vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    wf_uN 128 vec__1 →
-    ret_val_lst = (ivternopnd_ v_shape f_ v_vec_ vec__0 vec__1) →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    ivternopnd__is_wf f_ v_shape v_vec_ vec__0 vec__1 ret_val_lst
-
+theorem ivternopnd__is_wf (v_shape : shape) (f_ : N → iN → iN → iN → List iN) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val_lst : List vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  wf_uN 128 vec__1 →
+  ret_val_lst = (ivternopnd_ v_shape f_ v_vec_ vec__0 vec__1) →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque fvternop_ (v_shape : shape) (f_ : N → fN → fN → fN → List fN) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) : List vec_ := by
   first
@@ -10786,16 +10148,14 @@ opaque fvternop_ (v_shape : shape) (f_ : N → fN → fN → fN → List fN) (v_
      | intros ; assumption
 
 
-inductive fvternop__is_wf (f_ : N → fN → fN → fN → List fN) : shape → vec_ → vec_ → vec_ → List vec_ → Prop where
-  | fvternop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val_lst : List vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    wf_uN 128 vec__1 →
-    ret_val_lst = (fvternop_ v_shape f_ v_vec_ vec__0 vec__1) →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    fvternop__is_wf f_ v_shape v_vec_ vec__0 vec__1 ret_val_lst
-
+theorem fvternop__is_wf (v_shape : shape) (f_ : N → fN → fN → fN → List fN) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val_lst : List vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  wf_uN 128 vec__1 →
+  ret_val_lst = (fvternop_ v_shape f_ v_vec_ vec__0 vec__1) →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ivrelop_ (v_shape : shape) (f_ : N → iN → iN → u32) (v_vec_ : vec_) (vec__0 : vec_) : vec_ := by
   first
@@ -10803,15 +10163,13 @@ opaque ivrelop_ (v_shape : shape) (f_ : N → iN → iN → u32) (v_vec_ : vec_)
      | intros ; assumption
 
 
-inductive ivrelop__is_wf (f_ : N → iN → iN → u32) : shape → vec_ → vec_ → vec_ → Prop where
-  | ivrelop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val = (ivrelop_ v_shape f_ v_vec_ vec__0) →
-    wf_uN 128 ret_val →
-    ivrelop__is_wf f_ v_shape v_vec_ vec__0 ret_val
-
+theorem ivrelop__is_wf (v_shape : shape) (f_ : N → iN → iN → u32) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val = (ivrelop_ v_shape f_ v_vec_ vec__0) →
+  wf_uN 128 ret_val :=
+  sorry
 
 opaque ivrelopsx_ (v_shape : shape) (f_ : N → sx → iN → iN → u32) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) : vec_ := by
   first
@@ -10819,15 +10177,13 @@ opaque ivrelopsx_ (v_shape : shape) (f_ : N → sx → iN → iN → u32) (v_sx 
      | intros ; assumption
 
 
-inductive ivrelopsx__is_wf (f_ : N → sx → iN → iN → u32) : shape → sx → vec_ → vec_ → vec_ → Prop where
-  | ivrelopsx__is_wf_0 (v_shape : shape) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val = (ivrelopsx_ v_shape f_ v_sx v_vec_ vec__0) →
-    wf_uN 128 ret_val →
-    ivrelopsx__is_wf f_ v_shape v_sx v_vec_ vec__0 ret_val
-
+theorem ivrelopsx__is_wf (v_shape : shape) (f_ : N → sx → iN → iN → u32) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val = (ivrelopsx_ v_shape f_ v_sx v_vec_ vec__0) →
+  wf_uN 128 ret_val :=
+  sorry
 
 opaque fvrelop_ (v_shape : shape) (f_ : N → fN → fN → u32) (v_vec_ : vec_) (vec__0 : vec_) : vec_ := by
   first
@@ -10835,15 +10191,13 @@ opaque fvrelop_ (v_shape : shape) (f_ : N → fN → fN → u32) (v_vec_ : vec_)
      | intros ; assumption
 
 
-inductive fvrelop__is_wf (f_ : N → fN → fN → u32) : shape → vec_ → vec_ → vec_ → Prop where
-  | fvrelop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val = (fvrelop_ v_shape f_ v_vec_ vec__0) →
-    wf_uN 128 ret_val →
-    fvrelop__is_wf f_ v_shape v_vec_ vec__0 ret_val
-
+theorem fvrelop__is_wf (v_shape : shape) (f_ : N → fN → fN → u32) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val = (fvrelop_ v_shape f_ v_vec_ vec__0) →
+  wf_uN 128 ret_val :=
+  sorry
 
 def ivshiftop_ (v_shape : shape) (f_ : N → iN → u32 → iN) (v_vec_ : vec_) (v_u32 : u32) : Option vec_ :=
   match v_shape with
@@ -10861,16 +10215,14 @@ def ivshiftop_ (v_shape : shape) (f_ : N → iN → u32 → iN) (v_vec_ : vec_) 
   some (inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) (Map (fun c_82_elem => lane_.mk_lane__2 Jnn.I16 c_82_elem) c_lst))
   | _ => none
 
-inductive ivshiftop__is_wf (f_ : N → iN → u32 → iN) : shape → vec_ → u32 → vec_ → Prop where
-  | ivshiftop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (v_u32 : u32) (ret_val : vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 32 v_u32 →
-    (ivshiftop_ v_shape f_ v_vec_ v_u32) ≠ none →
-    ret_val = (Option.get! (ivshiftop_ v_shape f_ v_vec_ v_u32)) →
-    wf_uN 128 ret_val →
-    ivshiftop__is_wf f_ v_shape v_vec_ v_u32 ret_val
-
+theorem ivshiftop__is_wf (v_shape : shape) (f_ : N → iN → u32 → iN) (v_vec_ : vec_) (v_u32 : u32) (ret_val : vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 32 v_u32 →
+  (ivshiftop_ v_shape f_ v_vec_ v_u32) ≠ none →
+  ret_val = (Option.get! (ivshiftop_ v_shape f_ v_vec_ v_u32)) →
+  wf_uN 128 ret_val :=
+  sorry
 
 def ivshiftopsx_ (v_shape : shape) (f_ : N → sx → iN → u32 → iN) (v_sx : sx) (v_vec_ : vec_) (v_u32 : u32) : Option vec_ :=
   match v_shape with
@@ -10888,16 +10240,14 @@ def ivshiftopsx_ (v_shape : shape) (f_ : N → sx → iN → u32 → iN) (v_sx :
   some (inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) (Map (fun c_90_elem => lane_.mk_lane__2 Jnn.I16 c_90_elem) c_lst))
   | _ => none
 
-inductive ivshiftopsx__is_wf (f_ : N → sx → iN → u32 → iN) : shape → sx → vec_ → u32 → vec_ → Prop where
-  | ivshiftopsx__is_wf_0 (v_shape : shape) (v_sx : sx) (v_vec_ : vec_) (v_u32 : u32) (ret_val : vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 32 v_u32 →
-    (ivshiftopsx_ v_shape f_ v_sx v_vec_ v_u32) ≠ none →
-    ret_val = (Option.get! (ivshiftopsx_ v_shape f_ v_sx v_vec_ v_u32)) →
-    wf_uN 128 ret_val →
-    ivshiftopsx__is_wf f_ v_shape v_sx v_vec_ v_u32 ret_val
-
+theorem ivshiftopsx__is_wf (v_shape : shape) (f_ : N → sx → iN → u32 → iN) (v_sx : sx) (v_vec_ : vec_) (v_u32 : u32) (ret_val : vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 32 v_u32 →
+  (ivshiftopsx_ v_shape f_ v_sx v_vec_ v_u32) ≠ none →
+  ret_val = (Option.get! (ivshiftopsx_ v_shape f_ v_sx v_vec_ v_u32)) →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive fun_ivbitmaskop_ : shape → vec_ → u32 → Prop where
   | fun_ivbitmaskop__case_0 (v_M : Nat) (v_1 : uN) (c : uN) (c_1_lst : List lane_) :
@@ -10938,15 +10288,13 @@ inductive fun_ivbitmaskop_ : shape → vec_ → u32 → Prop where
     fun_ivbitmaskop_ (shape.X lanetype.I16 (dim.mk_dim v_M)) v_1 (irev_ 32 c)
 
 
-inductive ivbitmaskop__is_wf : shape → vec_ → u32 → Prop where
-  | ivbitmaskop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (ret_val : u32) (var_0 : u32) :
-    fun_ivbitmaskop_ v_shape v_vec_ var_0 →
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    ret_val = var_0 →
-    wf_uN 32 ret_val →
-    ivbitmaskop__is_wf v_shape v_vec_ ret_val
-
+theorem ivbitmaskop__is_wf (v_shape : shape) (v_vec_ : vec_) (ret_val : u32) (var_0 : u32) :
+  fun_ivbitmaskop_ v_shape v_vec_ var_0 →
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  ret_val = var_0 →
+  wf_uN 32 ret_val :=
+  sorry
 
 def ivswizzlop_ (v_shape : shape) (f_ : N → List iN → iN → iN) (v_vec_ : vec_) (vec__0 : vec_) : Option vec_ :=
   match v_shape with
@@ -10968,16 +10316,14 @@ def ivswizzlop_ (v_shape : shape) (f_ : N → List iN → iN → iN) (v_vec_ : v
   some (inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) (Map (fun c_98_elem => lane_.mk_lane__2 Jnn.I16 c_98_elem) c_lst))
   | _ => none
 
-inductive ivswizzlop__is_wf (f_ : N → List iN → iN → iN) : shape → vec_ → vec_ → vec_ → Prop where
-  | ivswizzlop__is_wf_0 (v_shape : shape) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
-    wf_shape v_shape →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    (ivswizzlop_ v_shape f_ v_vec_ vec__0) ≠ none →
-    ret_val = (Option.get! (ivswizzlop_ v_shape f_ v_vec_ vec__0)) →
-    wf_uN 128 ret_val →
-    ivswizzlop__is_wf f_ v_shape v_vec_ vec__0 ret_val
-
+theorem ivswizzlop__is_wf (v_shape : shape) (f_ : N → List iN → iN → iN) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
+  wf_shape v_shape →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  (ivswizzlop_ v_shape f_ v_vec_ vec__0) ≠ none →
+  ret_val = (Option.get! (ivswizzlop_ v_shape f_ v_vec_ vec__0)) →
+  wf_uN 128 ret_val :=
+  sorry
 
 def ivshufflop_ (v_shape : shape) (var_0_lst : List laneidx) (v_vec_ : vec_) (vec__0 : vec_) : Option vec_ :=
   match v_shape with
@@ -10999,29 +10345,25 @@ def ivshufflop_ (v_shape : shape) (var_0_lst : List laneidx) (v_vec_ : vec_) (ve
   some (inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) c_lst)
   | _ => none
 
-inductive ivshufflop__is_wf : shape → List laneidx → vec_ → vec_ → vec_ → Prop where
-  | ivshufflop__is_wf_0 (v_shape : shape) (var_0_lst : List laneidx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
-    wf_shape v_shape →
-    Forall (fun var_0_elem => wf_uN 8 var_0_elem) var_0_lst →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    (ivshufflop_ v_shape var_0_lst v_vec_ vec__0) ≠ none →
-    ret_val = (Option.get! (ivshufflop_ v_shape var_0_lst v_vec_ vec__0)) →
-    wf_uN 128 ret_val →
-    ivshufflop__is_wf v_shape var_0_lst v_vec_ vec__0 ret_val
-
+theorem ivshufflop__is_wf (v_shape : shape) (var_0_lst : List laneidx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
+  wf_shape v_shape →
+  Forall (fun var_0_elem => wf_uN 8 var_0_elem) var_0_lst →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  (ivshufflop_ v_shape var_0_lst v_vec_ vec__0) ≠ none →
+  ret_val = (Option.get! (ivshufflop_ v_shape var_0_lst v_vec_ vec__0)) →
+  wf_uN 128 ret_val :=
+  sorry
 
 def vvunop_ (v_vectype : vectype) (v_vvunop : vvunop) (v_vec_ : vec_) : List vec_ :=
   match v_vvunop with
   | vvunop.NOT => [inot_ (vsizenn v_vectype) v_vec_]
 
-inductive vvunop__is_wf : vectype → vvunop → vec_ → List vec_ → Prop where
-  | vvunop__is_wf_0 (v_vectype : vectype) (v_vvunop : vvunop) (v_vec_ : vec_) (ret_val_lst : List vec_) :
-    wf_uN (vsize v_vectype) v_vec_ →
-    ret_val_lst = (vvunop_ v_vectype v_vvunop v_vec_) →
-    Forall (fun ret_val_elem => wf_uN (vsize v_vectype) ret_val_elem) ret_val_lst →
-    vvunop__is_wf v_vectype v_vvunop v_vec_ ret_val_lst
-
+theorem vvunop__is_wf (v_vectype : vectype) (v_vvunop : vvunop) (v_vec_ : vec_) (ret_val_lst : List vec_) :
+  wf_uN (vsize v_vectype) v_vec_ →
+  ret_val_lst = (vvunop_ v_vectype v_vvunop v_vec_) →
+  Forall (fun ret_val_elem => wf_uN (vsize v_vectype) ret_val_elem) ret_val_lst :=
+  sorry
 
 def vvbinop_ (v_vectype : vectype) (v_vvbinop : vvbinop) (v_vec_ : vec_) (vec__0 : vec_) : List vec_ :=
   match v_vvbinop with
@@ -11030,28 +10372,24 @@ def vvbinop_ (v_vectype : vectype) (v_vvbinop : vvbinop) (v_vec_ : vec_) (vec__0
   | vvbinop.OR => [ior_ (vsizenn v_vectype) v_vec_ vec__0]
   | vvbinop.XOR => [ixor_ (vsizenn v_vectype) v_vec_ vec__0]
 
-inductive vvbinop__is_wf : vectype → vvbinop → vec_ → vec_ → List vec_ → Prop where
-  | vvbinop__is_wf_0 (v_vectype : vectype) (v_vvbinop : vvbinop) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
-    wf_uN (vsize v_vectype) v_vec_ →
-    wf_uN (vsize v_vectype) vec__0 →
-    ret_val_lst = (vvbinop_ v_vectype v_vvbinop v_vec_ vec__0) →
-    Forall (fun ret_val_elem => wf_uN (vsize v_vectype) ret_val_elem) ret_val_lst →
-    vvbinop__is_wf v_vectype v_vvbinop v_vec_ vec__0 ret_val_lst
-
+theorem vvbinop__is_wf (v_vectype : vectype) (v_vvbinop : vvbinop) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) :
+  wf_uN (vsize v_vectype) v_vec_ →
+  wf_uN (vsize v_vectype) vec__0 →
+  ret_val_lst = (vvbinop_ v_vectype v_vvbinop v_vec_ vec__0) →
+  Forall (fun ret_val_elem => wf_uN (vsize v_vectype) ret_val_elem) ret_val_lst :=
+  sorry
 
 def vvternop_ (v_vectype : vectype) (v_vvternop : vvternop) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) : List vec_ :=
   match v_vvternop with
   | vvternop.BITSELECT => [ibitselect_ (vsizenn v_vectype) v_vec_ vec__0 vec__1]
 
-inductive vvternop__is_wf : vectype → vvternop → vec_ → vec_ → vec_ → List vec_ → Prop where
-  | vvternop__is_wf_0 (v_vectype : vectype) (v_vvternop : vvternop) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val_lst : List vec_) :
-    wf_uN (vsize v_vectype) v_vec_ →
-    wf_uN (vsize v_vectype) vec__0 →
-    wf_uN (vsize v_vectype) vec__1 →
-    ret_val_lst = (vvternop_ v_vectype v_vvternop v_vec_ vec__0 vec__1) →
-    Forall (fun ret_val_elem => wf_uN (vsize v_vectype) ret_val_elem) ret_val_lst →
-    vvternop__is_wf v_vectype v_vvternop v_vec_ vec__0 vec__1 ret_val_lst
-
+theorem vvternop__is_wf (v_vectype : vectype) (v_vvternop : vvternop) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val_lst : List vec_) :
+  wf_uN (vsize v_vectype) v_vec_ →
+  wf_uN (vsize v_vectype) vec__0 →
+  wf_uN (vsize v_vectype) vec__1 →
+  ret_val_lst = (vvternop_ v_vectype v_vvternop v_vec_ vec__0 vec__1) →
+  Forall (fun ret_val_elem => wf_uN (vsize v_vectype) ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_vunop_ : shape → vunop_ → vec_ → List vec_ → Prop where
   | fun_vunop__case_0 (v_M : Nat) (v : uN) (M_0 : Nat) :
@@ -11146,16 +10484,14 @@ inductive fun_vunop_ : shape → vunop_ → vec_ → List vec_ → Prop where
     fun_vunop_ (shape.X lanetype.I16 (dim.mk_dim v_M)) (vunop_.mk_vunop__0 Jnn.I16 M_0 vunop_Jnn_M.POPCNT) v (Option.get! (ivunop_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) ipopcnt_ v))
 
 
-inductive vunop__is_wf : shape → vunop_ → vec_ → List vec_ → Prop where
-  | vunop__is_wf_0 (v_shape : shape) (v_vunop_ : vunop_) (v_vec_ : vec_) (ret_val_lst : List vec_) (var_0 : List vec_) :
-    fun_vunop_ v_shape v_vunop_ v_vec_ var_0 →
-    wf_shape v_shape →
-    wf_vunop_ v_shape v_vunop_ →
-    wf_uN 128 v_vec_ →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    vunop__is_wf v_shape v_vunop_ v_vec_ ret_val_lst
-
+theorem vunop__is_wf (v_shape : shape) (v_vunop_ : vunop_) (v_vec_ : vec_) (ret_val_lst : List vec_) (var_0 : List vec_) :
+  fun_vunop_ v_shape v_vunop_ v_vec_ var_0 →
+  wf_shape v_shape →
+  wf_vunop_ v_shape v_vunop_ →
+  wf_uN 128 v_vec_ →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_vbinop_ : shape → vbinop_ → vec_ → vec_ → List vec_ → Prop where
   | fun_vbinop__case_0 (v_M : Nat) (v_1 : uN) (v_2 : uN) (M_0 : Nat) :
@@ -11376,17 +10712,15 @@ inductive fun_vbinop_ : shape → vbinop_ → vec_ → vec_ → List vec_ → Pr
     fun_vbinop_ (shape.X lanetype.F64 (dim.mk_dim v_M)) (vbinop_.mk_vbinop__1 Fnn.F64 M_0 vbinop_Fnn_M.RELAXED_MAX) v_1 v_2 (fvbinop_ (shape.X (lanetype_Fnn Fnn.F64) (dim.mk_dim v_M)) frelaxed_max_ v_1 v_2)
 
 
-inductive vbinop__is_wf : shape → vbinop_ → vec_ → vec_ → List vec_ → Prop where
-  | vbinop__is_wf_0 (v_shape : shape) (v_vbinop_ : vbinop_) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) (var_0 : List vec_) :
-    fun_vbinop_ v_shape v_vbinop_ v_vec_ vec__0 var_0 →
-    wf_shape v_shape →
-    wf_vbinop_ v_shape v_vbinop_ →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    vbinop__is_wf v_shape v_vbinop_ v_vec_ vec__0 ret_val_lst
-
+theorem vbinop__is_wf (v_shape : shape) (v_vbinop_ : vbinop_) (v_vec_ : vec_) (vec__0 : vec_) (ret_val_lst : List vec_) (var_0 : List vec_) :
+  fun_vbinop_ v_shape v_vbinop_ v_vec_ vec__0 var_0 →
+  wf_shape v_shape →
+  wf_vbinop_ v_shape v_vbinop_ →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_vternop_ : shape → vternop_ → vec_ → vec_ → vec_ → List vec_ → Prop where
   | fun_vternop__case_0 (v_M : Nat) (v_1 : uN) (v_2 : uN) (v_3 : uN) (M_0 : Nat) :
@@ -11415,18 +10749,16 @@ inductive fun_vternop_ : shape → vternop_ → vec_ → vec_ → vec_ → List 
     fun_vternop_ (shape.X lanetype.F64 (dim.mk_dim v_M)) (vternop_.mk_vternop__1 Fnn.F64 M_0 vternop_Fnn_M.RELAXED_NMADD) v_1 v_2 v_3 (fvternop_ (shape.X (lanetype_Fnn Fnn.F64) (dim.mk_dim v_M)) frelaxed_nmadd_ v_1 v_2 v_3)
 
 
-inductive vternop__is_wf : shape → vternop_ → vec_ → vec_ → vec_ → List vec_ → Prop where
-  | vternop__is_wf_0 (v_shape : shape) (v_vternop_ : vternop_) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val_lst : List vec_) (var_0 : List vec_) :
-    fun_vternop_ v_shape v_vternop_ v_vec_ vec__0 vec__1 var_0 →
-    wf_shape v_shape →
-    wf_vternop_ v_shape v_vternop_ →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    wf_uN 128 vec__1 →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst →
-    vternop__is_wf v_shape v_vternop_ v_vec_ vec__0 vec__1 ret_val_lst
-
+theorem vternop__is_wf (v_shape : shape) (v_vternop_ : vternop_) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val_lst : List vec_) (var_0 : List vec_) :
+  fun_vternop_ v_shape v_vternop_ v_vec_ vec__0 vec__1 var_0 →
+  wf_shape v_shape →
+  wf_vternop_ v_shape v_vternop_ →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  wf_uN 128 vec__1 →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_uN 128 ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_vrelop_ : shape → vrelop_ → vec_ → vec_ → vec_ → Prop where
   | fun_vrelop__case_0 (v_M : Nat) (v_1 : uN) (v_2 : uN) (M_0 : Nat) :
@@ -11539,17 +10871,15 @@ inductive fun_vrelop_ : shape → vrelop_ → vec_ → vec_ → vec_ → Prop wh
     fun_vrelop_ (shape.X lanetype.F64 (dim.mk_dim v_M)) (vrelop_.mk_vrelop__1 Fnn.F64 M_0 vrelop_Fnn_M.GE) v_1 v_2 (fvrelop_ (shape.X (lanetype_Fnn Fnn.F64) (dim.mk_dim v_M)) fge_ v_1 v_2)
 
 
-inductive vrelop__is_wf : shape → vrelop_ → vec_ → vec_ → vec_ → Prop where
-  | vrelop__is_wf_0 (v_shape : shape) (v_vrelop_ : vrelop_) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) (var_0 : vec_) :
-    fun_vrelop_ v_shape v_vrelop_ v_vec_ vec__0 var_0 →
-    wf_shape v_shape →
-    wf_vrelop_ v_shape v_vrelop_ →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val = var_0 →
-    wf_uN 128 ret_val →
-    vrelop__is_wf v_shape v_vrelop_ v_vec_ vec__0 ret_val
-
+theorem vrelop__is_wf (v_shape : shape) (v_vrelop_ : vrelop_) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) (var_0 : vec_) :
+  fun_vrelop_ v_shape v_vrelop_ v_vec_ vec__0 var_0 →
+  wf_shape v_shape →
+  wf_vrelop_ v_shape v_vrelop_ →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val = var_0 →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive fun_lcvtop__ : shape → shape → vcvtop__ → lane_ → List lane_ → Prop where
   | fun_lcvtop___case_0 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (c_1 : uN) (M_1_0 : Nat) (M_2_0 : Nat) (c : iN) :
@@ -11754,17 +11084,15 @@ inductive fun_lcvtop__ : shape → shape → vcvtop__ → lane_ → List lane_ �
     fun_lcvtop__ (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (lane_.mk_lane__0 numtype.F64 (num_.mk_num__1 Fnn.F64 c_1)) (Map (fun c_138_elem => lane_.mk_lane__0 (numtype_Fnn Fnn.F64) (num_.mk_num__1 Fnn.F64 c_138_elem)) c_lst)
 
 
-inductive lcvtop___is_wf : shape → shape → vcvtop__ → lane_ → List lane_ → Prop where
-  | lcvtop___is_wf_0 (shape_1 : shape) (shape_2 : shape) (v_vcvtop__ : vcvtop__) (v_lane_ : lane_) (ret_val_lst : List lane_) (var_0 : List lane_) :
-    fun_lcvtop__ shape_1 shape_2 v_vcvtop__ v_lane_ var_0 →
-    wf_shape shape_1 →
-    wf_shape shape_2 →
-    wf_vcvtop__ shape_1 shape_2 v_vcvtop__ →
-    wf_lane_ (fun_lanetype shape_1) v_lane_ →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_lane_ (fun_lanetype shape_2) ret_val_elem) ret_val_lst →
-    lcvtop___is_wf shape_1 shape_2 v_vcvtop__ v_lane_ ret_val_lst
-
+theorem lcvtop___is_wf (shape_1 : shape) (shape_2 : shape) (v_vcvtop__ : vcvtop__) (v_lane_ : lane_) (ret_val_lst : List lane_) (var_0 : List lane_) :
+  fun_lcvtop__ shape_1 shape_2 v_vcvtop__ v_lane_ var_0 →
+  wf_shape shape_1 →
+  wf_shape shape_2 →
+  wf_vcvtop__ shape_1 shape_2 v_vcvtop__ →
+  wf_lane_ (fun_lanetype shape_1) v_lane_ →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_lane_ (fun_lanetype shape_2) ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_vcvtop__ : shape → shape → vcvtop__ → vec_ → vec_ → Prop where
   | fun_vcvtop___case_0 (Lnn_1 : lanetype) (v_M : Nat) (Lnn_2 : lanetype) (vcvtop : vcvtop__) (v_1 : uN) (v : uN) (M_0 : Nat) (c_1_lst : List lane_) (c_lst_lst : List (List lane_)) (var_2_lst : List (List lane_)) (var_1 : Option zero) (var_0 : Option half) :
@@ -11807,17 +11135,15 @@ inductive fun_vcvtop__ : shape → shape → vcvtop__ → vec_ → vec_ → Prop
     fun_vcvtop__ (shape.X Lnn_1 (dim.mk_dim M_1)) (shape.X Lnn_2 (dim.mk_dim M_2)) vcvtop v_1 v
 
 
-inductive vcvtop___is_wf : shape → shape → vcvtop__ → vec_ → vec_ → Prop where
-  | vcvtop___is_wf_0 (shape_1 : shape) (shape_2 : shape) (v_vcvtop__ : vcvtop__) (v_vec_ : vec_) (ret_val : vec_) (var_0 : vec_) :
-    fun_vcvtop__ shape_1 shape_2 v_vcvtop__ v_vec_ var_0 →
-    wf_shape shape_1 →
-    wf_shape shape_2 →
-    wf_vcvtop__ shape_1 shape_2 v_vcvtop__ →
-    wf_uN 128 v_vec_ →
-    ret_val = var_0 →
-    wf_uN 128 ret_val →
-    vcvtop___is_wf shape_1 shape_2 v_vcvtop__ v_vec_ ret_val
-
+theorem vcvtop___is_wf (shape_1 : shape) (shape_2 : shape) (v_vcvtop__ : vcvtop__) (v_vec_ : vec_) (ret_val : vec_) (var_0 : vec_) :
+  fun_vcvtop__ shape_1 shape_2 v_vcvtop__ v_vec_ var_0 →
+  wf_shape shape_1 →
+  wf_shape shape_2 →
+  wf_vcvtop__ shape_1 shape_2 v_vcvtop__ →
+  wf_uN 128 v_vec_ →
+  ret_val = var_0 →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive fun_vshiftop_ : ishape → vshiftop_ → vec_ → u32 → vec_ → Prop where
   | fun_vshiftop__case_0 (v_M : Nat) (v : uN) (i : uN) (M_0 : Nat) :
@@ -11854,17 +11180,15 @@ inductive fun_vshiftop_ : ishape → vshiftop_ → vec_ → u32 → vec_ → Pro
     fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I16 M_0 (vshiftop_Jnn_M.SHR v_sx)) v i (Option.get! (ivshiftopsx_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) ishr_ v_sx v i))
 
 
-inductive vshiftop__is_wf : ishape → vshiftop_ → vec_ → u32 → vec_ → Prop where
-  | vshiftop__is_wf_0 (v_ishape : ishape) (v_vshiftop_ : vshiftop_) (v_vec_ : vec_) (v_u32 : u32) (ret_val : vec_) (var_0 : vec_) :
-    fun_vshiftop_ v_ishape v_vshiftop_ v_vec_ v_u32 var_0 →
-    wf_ishape v_ishape →
-    wf_vshiftop_ v_ishape v_vshiftop_ →
-    wf_uN 128 v_vec_ →
-    wf_uN 32 v_u32 →
-    ret_val = var_0 →
-    wf_uN 128 ret_val →
-    vshiftop__is_wf v_ishape v_vshiftop_ v_vec_ v_u32 ret_val
-
+theorem vshiftop__is_wf (v_ishape : ishape) (v_vshiftop_ : vshiftop_) (v_vec_ : vec_) (v_u32 : u32) (ret_val : vec_) (var_0 : vec_) :
+  fun_vshiftop_ v_ishape v_vshiftop_ v_vec_ v_u32 var_0 →
+  wf_ishape v_ishape →
+  wf_vshiftop_ v_ishape v_vshiftop_ →
+  wf_uN 128 v_vec_ →
+  wf_uN 32 v_u32 →
+  ret_val = var_0 →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive fun_vbitmaskop_ : ishape → vec_ → u32 → Prop where
   | fun_vbitmaskop__case_0 (v_M : Nat) (v : uN) (var_0 : u32) :
@@ -11881,15 +11205,13 @@ inductive fun_vbitmaskop_ : ishape → vec_ → u32 → Prop where
     fun_vbitmaskop_ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim v_M))) v var_0
 
 
-inductive vbitmaskop__is_wf : ishape → vec_ → u32 → Prop where
-  | vbitmaskop__is_wf_0 (v_ishape : ishape) (v_vec_ : vec_) (ret_val : u32) (var_0 : u32) :
-    fun_vbitmaskop_ v_ishape v_vec_ var_0 →
-    wf_ishape v_ishape →
-    wf_uN 128 v_vec_ →
-    ret_val = var_0 →
-    wf_uN 32 ret_val →
-    vbitmaskop__is_wf v_ishape v_vec_ ret_val
-
+theorem vbitmaskop__is_wf (v_ishape : ishape) (v_vec_ : vec_) (ret_val : u32) (var_0 : u32) :
+  fun_vbitmaskop_ v_ishape v_vec_ var_0 →
+  wf_ishape v_ishape →
+  wf_uN 128 v_vec_ →
+  ret_val = var_0 →
+  wf_uN 32 ret_val :=
+  sorry
 
 inductive fun_vswizzlop_ : bshape → vswizzlop_ → vec_ → vec_ → vec_ → Prop where
   | fun_vswizzlop__case_0 (v_M : Nat) (v_1 : uN) (v_2 : uN) (M_0 : Nat) :
@@ -11902,34 +11224,30 @@ inductive fun_vswizzlop_ : bshape → vswizzlop_ → vec_ → vec_ → vec_ → 
     fun_vswizzlop_ (bshape.mk_bshape (shape.X lanetype.I8 (dim.mk_dim v_M))) (vswizzlop_.mk_vswizzlop__0 M_0 vswizzlop_M.RELAXED_SWIZZLE) v_1 v_2 (Option.get! (ivswizzlop_ (shape.X lanetype.I8 (dim.mk_dim v_M)) irelaxed_swizzle_lane_ v_1 v_2))
 
 
-inductive vswizzlop__is_wf : bshape → vswizzlop_ → vec_ → vec_ → vec_ → Prop where
-  | vswizzlop__is_wf_0 (v_bshape : bshape) (v_vswizzlop_ : vswizzlop_) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) (var_0 : vec_) :
-    fun_vswizzlop_ v_bshape v_vswizzlop_ v_vec_ vec__0 var_0 →
-    wf_bshape v_bshape →
-    wf_vswizzlop_ v_bshape v_vswizzlop_ →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val = var_0 →
-    wf_uN 128 ret_val →
-    vswizzlop__is_wf v_bshape v_vswizzlop_ v_vec_ vec__0 ret_val
-
+theorem vswizzlop__is_wf (v_bshape : bshape) (v_vswizzlop_ : vswizzlop_) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) (var_0 : vec_) :
+  fun_vswizzlop_ v_bshape v_vswizzlop_ v_vec_ vec__0 var_0 →
+  wf_bshape v_bshape →
+  wf_vswizzlop_ v_bshape v_vswizzlop_ →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val = var_0 →
+  wf_uN 128 ret_val :=
+  sorry
 
 def vshufflop_ (v_bshape : bshape) (var_0_lst : List laneidx) (v_vec_ : vec_) (vec__0 : vec_) : Option vec_ :=
   match v_bshape with
   | bshape.mk_bshape (shape.X lanetype.I8 (dim.mk_dim v_M)) => ivshufflop_ (shape.X lanetype.I8 (dim.mk_dim v_M)) var_0_lst v_vec_ vec__0
   | _ => none
 
-inductive vshufflop__is_wf : bshape → List laneidx → vec_ → vec_ → vec_ → Prop where
-  | vshufflop__is_wf_0 (v_bshape : bshape) (var_0_lst : List laneidx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
-    wf_bshape v_bshape →
-    Forall (fun var_0_elem => wf_uN 8 var_0_elem) var_0_lst →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    (vshufflop_ v_bshape var_0_lst v_vec_ vec__0) ≠ none →
-    ret_val = (Option.get! (vshufflop_ v_bshape var_0_lst v_vec_ vec__0)) →
-    wf_uN 128 ret_val →
-    vshufflop__is_wf v_bshape var_0_lst v_vec_ vec__0 ret_val
-
+theorem vshufflop__is_wf (v_bshape : bshape) (var_0_lst : List laneidx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
+  wf_bshape v_bshape →
+  Forall (fun var_0_elem => wf_uN 8 var_0_elem) var_0_lst →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  (vshufflop_ v_bshape var_0_lst v_vec_ vec__0) ≠ none →
+  ret_val = (Option.get! (vshufflop_ v_bshape var_0_lst v_vec_ vec__0)) →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive fun_vnarrowop__ : shape → shape → sx → vec_ → vec_ → vec_ → Prop where
   | fun_vnarrowop___case_0 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (v_1 : uN) (v_2 : uN) (c_1_lst : List lane_) (c_2_lst : List lane_) (c'_1_lst : List iN) (c'_2_lst : List iN) (v : vec_) :
@@ -12142,17 +11460,15 @@ inductive fun_vnarrowop__ : shape → shape → sx → vec_ → vec_ → vec_ �
     fun_vnarrowop__ (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) v_sx v_1 v_2 v
 
 
-inductive vnarrowop___is_wf : shape → shape → sx → vec_ → vec_ → vec_ → Prop where
-  | vnarrowop___is_wf_0 (shape_1 : shape) (shape_2 : shape) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) (var_0 : vec_) :
-    fun_vnarrowop__ shape_1 shape_2 v_sx v_vec_ vec__0 var_0 →
-    wf_shape shape_1 →
-    wf_shape shape_2 →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val = var_0 →
-    wf_uN 128 ret_val →
-    vnarrowop___is_wf shape_1 shape_2 v_sx v_vec_ vec__0 ret_val
-
+theorem vnarrowop___is_wf (shape_1 : shape) (shape_2 : shape) (v_sx : sx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) (var_0 : vec_) :
+  fun_vnarrowop__ shape_1 shape_2 v_sx v_vec_ vec__0 var_0 →
+  wf_shape shape_1 →
+  wf_shape shape_2 →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val = var_0 →
+  wf_uN 128 ret_val :=
+  sorry
 
 opaque ivadd_pairwise_ (v_N : N) (var_0_lst : List iN) : List iN := by
   first
@@ -12160,13 +11476,11 @@ opaque ivadd_pairwise_ (v_N : N) (var_0_lst : List iN) : List iN := by
      | intros ; assumption
 
 
-inductive ivadd_pairwise__is_wf : N → List iN → List iN → Prop where
-  | ivadd_pairwise__is_wf_0 (v_N : N) (var_0_lst : List iN) (ret_val_lst : List iN) :
-    Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
-    ret_val_lst = (ivadd_pairwise_ v_N var_0_lst) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst →
-    ivadd_pairwise__is_wf v_N var_0_lst ret_val_lst
-
+theorem ivadd_pairwise__is_wf (v_N : N) (var_0_lst : List iN) (ret_val_lst : List iN) :
+  Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
+  ret_val_lst = (ivadd_pairwise_ v_N var_0_lst) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ivextunop__ (shape_1 : shape) (shape_2 : shape) (f_ : N → List iN → List iN) (v_sx : sx) (v_vec_ : vec_) : vec_ := by
   first
@@ -12174,15 +11488,13 @@ opaque ivextunop__ (shape_1 : shape) (shape_2 : shape) (f_ : N → List iN → L
      | intros ; assumption
 
 
-inductive ivextunop___is_wf (f_ : N → List iN → List iN) : shape → shape → sx → vec_ → vec_ → Prop where
-  | ivextunop___is_wf_0 (shape_1 : shape) (shape_2 : shape) (v_sx : sx) (v_vec_ : vec_) (ret_val : vec_) :
-    wf_shape shape_1 →
-    wf_shape shape_2 →
-    wf_uN 128 v_vec_ →
-    ret_val = (ivextunop__ shape_1 shape_2 f_ v_sx v_vec_) →
-    wf_uN 128 ret_val →
-    ivextunop___is_wf f_ shape_1 shape_2 v_sx v_vec_ ret_val
-
+theorem ivextunop___is_wf (shape_1 : shape) (shape_2 : shape) (f_ : N → List iN → List iN) (v_sx : sx) (v_vec_ : vec_) (ret_val : vec_) :
+  wf_shape shape_1 →
+  wf_shape shape_2 →
+  wf_uN 128 v_vec_ →
+  ret_val = (ivextunop__ shape_1 shape_2 f_ v_sx v_vec_) →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive fun_vextunop__ : ishape → ishape → vextunop__ → vec_ → vec_ → Prop where
   | fun_vextunop___case_0 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (v_1 : uN) (M_1_0 : Nat) (M_2_0 : Nat) :
@@ -12251,17 +11563,15 @@ inductive fun_vextunop__ : ishape → ishape → vextunop__ → vec_ → vec_ �
     fun_vextunop__ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim M_1))) (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim M_2))) (vextunop__.mk_vextunop___0 Jnn.I16 M_1_0 Jnn.I16 M_2_0 (vextunop__Jnn_1_M_1_Jnn_2_M_2.EXTADD_PAIRWISE v_sx)) v_1 (ivextunop__ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim M_1)) (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim M_2)) ivadd_pairwise_ v_sx v_1)
 
 
-inductive vextunop___is_wf : ishape → ishape → vextunop__ → vec_ → vec_ → Prop where
-  | vextunop___is_wf_0 (ishape_1 : ishape) (ishape_2 : ishape) (v_vextunop__ : vextunop__) (v_vec_ : vec_) (ret_val : vec_) (var_0 : vec_) :
-    fun_vextunop__ ishape_1 ishape_2 v_vextunop__ v_vec_ var_0 →
-    wf_ishape ishape_1 →
-    wf_ishape ishape_2 →
-    wf_vextunop__ ishape_1 ishape_2 v_vextunop__ →
-    wf_uN 128 v_vec_ →
-    ret_val = var_0 →
-    wf_uN 128 ret_val →
-    vextunop___is_wf ishape_1 ishape_2 v_vextunop__ v_vec_ ret_val
-
+theorem vextunop___is_wf (ishape_1 : ishape) (ishape_2 : ishape) (v_vextunop__ : vextunop__) (v_vec_ : vec_) (ret_val : vec_) (var_0 : vec_) :
+  fun_vextunop__ ishape_1 ishape_2 v_vextunop__ v_vec_ var_0 →
+  wf_ishape ishape_1 →
+  wf_ishape ishape_2 →
+  wf_vextunop__ ishape_1 ishape_2 v_vextunop__ →
+  wf_uN 128 v_vec_ →
+  ret_val = var_0 →
+  wf_uN 128 ret_val :=
+  sorry
 
 opaque ivdot_ (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) : List iN := by
   first
@@ -12269,14 +11579,12 @@ opaque ivdot_ (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) : List iN :=
      | intros ; assumption
 
 
-inductive ivdot__is_wf : N → List iN → List iN → List iN → Prop where
-  | ivdot__is_wf_0 (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) (ret_val_lst : List iN) :
-    Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_uN v_N var_1_elem) var_1_lst →
-    ret_val_lst = (ivdot_ v_N var_0_lst var_1_lst) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst →
-    ivdot__is_wf v_N var_0_lst var_1_lst ret_val_lst
-
+theorem ivdot__is_wf (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) (ret_val_lst : List iN) :
+  Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_uN v_N var_1_elem) var_1_lst →
+  ret_val_lst = (ivdot_ v_N var_0_lst var_1_lst) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ivdot_sat_ (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) : List iN := by
   first
@@ -12284,14 +11592,12 @@ opaque ivdot_sat_ (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) : List i
      | intros ; assumption
 
 
-inductive ivdot_sat__is_wf : N → List iN → List iN → List iN → Prop where
-  | ivdot_sat__is_wf_0 (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) (ret_val_lst : List iN) :
-    Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_uN v_N var_1_elem) var_1_lst →
-    ret_val_lst = (ivdot_sat_ v_N var_0_lst var_1_lst) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst →
-    ivdot_sat__is_wf v_N var_0_lst var_1_lst ret_val_lst
-
+theorem ivdot_sat__is_wf (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) (ret_val_lst : List iN) :
+  Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_uN v_N var_1_elem) var_1_lst →
+  ret_val_lst = (ivdot_sat_ v_N var_0_lst var_1_lst) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 opaque ivextbinop__ (shape_1 : shape) (shape_2 : shape) (f_ : N → List iN → List iN → List iN) (v_sx : sx) (sx_0 : sx) (v_laneidx : laneidx) (laneidx_0 : laneidx) (v_vec_ : vec_) (vec__0 : vec_) : vec_ := by
   first
@@ -12299,30 +11605,26 @@ opaque ivextbinop__ (shape_1 : shape) (shape_2 : shape) (f_ : N → List iN → 
      | intros ; assumption
 
 
-inductive ivextbinop___is_wf (f_ : N → List iN → List iN → List iN) : shape → shape → sx → sx → laneidx → laneidx → vec_ → vec_ → vec_ → Prop where
-  | ivextbinop___is_wf_0 (shape_1 : shape) (shape_2 : shape) (v_sx : sx) (sx_0 : sx) (v_laneidx : laneidx) (laneidx_0 : laneidx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
-    wf_shape shape_1 →
-    wf_shape shape_2 →
-    wf_uN 8 v_laneidx →
-    wf_uN 8 laneidx_0 →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val = (ivextbinop__ shape_1 shape_2 f_ v_sx sx_0 v_laneidx laneidx_0 v_vec_ vec__0) →
-    wf_uN 128 ret_val →
-    ivextbinop___is_wf f_ shape_1 shape_2 v_sx sx_0 v_laneidx laneidx_0 v_vec_ vec__0 ret_val
-
+theorem ivextbinop___is_wf (shape_1 : shape) (shape_2 : shape) (f_ : N → List iN → List iN → List iN) (v_sx : sx) (sx_0 : sx) (v_laneidx : laneidx) (laneidx_0 : laneidx) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) :
+  wf_shape shape_1 →
+  wf_shape shape_2 →
+  wf_uN 8 v_laneidx →
+  wf_uN 8 laneidx_0 →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val = (ivextbinop__ shape_1 shape_2 f_ v_sx sx_0 v_laneidx laneidx_0 v_vec_ vec__0) →
+  wf_uN 128 ret_val :=
+  sorry
 
 def ivmul_ (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) : List iN :=
   Map₂ (fun i_1_elem i_2_elem => imul_ v_N i_1_elem i_2_elem) var_0_lst var_1_lst
 
-inductive ivmul__is_wf : N → List iN → List iN → List iN → Prop where
-  | ivmul__is_wf_0 (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) (ret_val_lst : List iN) :
-    Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_uN v_N var_1_elem) var_1_lst →
-    ret_val_lst = (ivmul_ v_N var_0_lst var_1_lst) →
-    Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst →
-    ivmul__is_wf v_N var_0_lst var_1_lst ret_val_lst
-
+theorem ivmul__is_wf (v_N : N) (var_0_lst : List iN) (var_1_lst : List iN) (ret_val_lst : List iN) :
+  Forall (fun var_0_elem => wf_uN v_N var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_uN v_N var_1_elem) var_1_lst →
+  ret_val_lst = (ivmul_ v_N var_0_lst var_1_lst) →
+  Forall (fun ret_val_elem => wf_uN v_N ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_vextbinop__ : ishape → ishape → vextbinop__ → vec_ → vec_ → vec_ → Prop where
   | fun_vextbinop___case_0 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (v_1 : uN) (v_2 : uN) (M_1_0 : Nat) (M_2_0 : Nat) :
@@ -12519,18 +11821,16 @@ inductive fun_vextbinop__ : ishape → ishape → vextbinop__ → vec_ → vec_ 
     fun_vextbinop__ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim M_1))) (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim M_2))) (vextbinop__.mk_vextbinop___0 Jnn.I16 M_1_0 Jnn.I16 M_2_0 vextbinop__Jnn_1_M_1_Jnn_2_M_2.RELAXED_DOTS) v_1 v_2 (ivextbinop__ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim M_1)) (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim M_2)) ivdot_sat_ sx.S (fun_relaxed2 R_idot sx sx.S sx.U) (uN.mk_uN 0) (uN.mk_uN M_1) v_1 v_2)
 
 
-inductive vextbinop___is_wf : ishape → ishape → vextbinop__ → vec_ → vec_ → vec_ → Prop where
-  | vextbinop___is_wf_0 (ishape_1 : ishape) (ishape_2 : ishape) (v_vextbinop__ : vextbinop__) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) (var_0 : vec_) :
-    fun_vextbinop__ ishape_1 ishape_2 v_vextbinop__ v_vec_ vec__0 var_0 →
-    wf_ishape ishape_1 →
-    wf_ishape ishape_2 →
-    wf_vextbinop__ ishape_1 ishape_2 v_vextbinop__ →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    ret_val = var_0 →
-    wf_uN 128 ret_val →
-    vextbinop___is_wf ishape_1 ishape_2 v_vextbinop__ v_vec_ vec__0 ret_val
-
+theorem vextbinop___is_wf (ishape_1 : ishape) (ishape_2 : ishape) (v_vextbinop__ : vextbinop__) (v_vec_ : vec_) (vec__0 : vec_) (ret_val : vec_) (var_0 : vec_) :
+  fun_vextbinop__ ishape_1 ishape_2 v_vextbinop__ v_vec_ vec__0 var_0 →
+  wf_ishape ishape_1 →
+  wf_ishape ishape_2 →
+  wf_vextbinop__ ishape_1 ishape_2 v_vextbinop__ →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  ret_val = var_0 →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive fun_vextternop__ : ishape → ishape → vextternop__ → vec_ → vec_ → vec_ → vec_ → Prop where
   | fun_vextternop___case_0 (M_1 : Nat) (M_2 : Nat) (c_1 : uN) (c_2 : uN) (c_3 : uN) (c : uN) (v_Jnn : Jnn) (M_1_0 : Nat) (M_2_0 : Nat) (v_M : M) (c' : vec_) (c'' : vec_) (var_2 : List vec_) (var_1 : vec_) (var_0 : vec_) :
@@ -12855,19 +12155,17 @@ inductive fun_vextternop__ : ishape → ishape → vextternop__ → vec_ → vec
     fun_vextternop__ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim M_1))) (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim M_2))) (vextternop__.mk_vextternop___0 Jnn.I16 M_1_0 Jnn.I16 M_2_0 vextternop__Jnn_1_M_1_Jnn_2_M_2.RELAXED_DOT_ADDS) c_1 c_2 c_3 c
 
 
-inductive vextternop___is_wf : ishape → ishape → vextternop__ → vec_ → vec_ → vec_ → vec_ → Prop where
-  | vextternop___is_wf_0 (ishape_1 : ishape) (ishape_2 : ishape) (v_vextternop__ : vextternop__) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val : vec_) (var_0 : vec_) :
-    fun_vextternop__ ishape_1 ishape_2 v_vextternop__ v_vec_ vec__0 vec__1 var_0 →
-    wf_ishape ishape_1 →
-    wf_ishape ishape_2 →
-    wf_vextternop__ ishape_1 ishape_2 v_vextternop__ →
-    wf_uN 128 v_vec_ →
-    wf_uN 128 vec__0 →
-    wf_uN 128 vec__1 →
-    ret_val = var_0 →
-    wf_uN 128 ret_val →
-    vextternop___is_wf ishape_1 ishape_2 v_vextternop__ v_vec_ vec__0 vec__1 ret_val
-
+theorem vextternop___is_wf (ishape_1 : ishape) (ishape_2 : ishape) (v_vextternop__ : vextternop__) (v_vec_ : vec_) (vec__0 : vec_) (vec__1 : vec_) (ret_val : vec_) (var_0 : vec_) :
+  fun_vextternop__ ishape_1 ishape_2 v_vextternop__ v_vec_ vec__0 vec__1 var_0 →
+  wf_ishape ishape_1 →
+  wf_ishape ishape_2 →
+  wf_vextternop__ ishape_1 ishape_2 v_vextternop__ →
+  wf_uN 128 v_vec_ →
+  wf_uN 128 vec__0 →
+  wf_uN 128 vec__1 →
+  ret_val = var_0 →
+  wf_uN 128 ret_val :=
+  sorry
 
 inductive num : Type where
   | CONST (v_numtype : numtype) (_ : num_) : num
@@ -13255,15 +12553,13 @@ def packfield_ (v_storagetype : storagetype) (v_val : val) : Option fieldval :=
   | storagetype.I16, val.CONST numtype.I32 (num_.mk_num__0 addrtype.I32 i) => some (fieldval.PACK packtype.I16 (wrap__ 32 (psize packtype.I16) i))
   | _, _ => none
 
-inductive packfield__is_wf : storagetype → val → fieldval → Prop where
-  | packfield__is_wf_0 (v_storagetype : storagetype) (v_val : val) (ret_val : fieldval) :
-    wf_storagetype v_storagetype →
-    wf_val v_val →
-    (packfield_ v_storagetype v_val) ≠ none →
-    ret_val = (Option.get! (packfield_ v_storagetype v_val)) →
-    wf_fieldval ret_val →
-    packfield__is_wf v_storagetype v_val ret_val
-
+theorem packfield__is_wf (v_storagetype : storagetype) (v_val : val) (ret_val : fieldval) :
+  wf_storagetype v_storagetype →
+  wf_val v_val →
+  (packfield_ v_storagetype v_val) ≠ none →
+  ret_val = (Option.get! (packfield_ v_storagetype v_val)) →
+  wf_fieldval ret_val :=
+  sorry
 
 def unpackfield_ (v_storagetype : storagetype) (var_0_opt : Option sx) (v_fieldval : fieldval) : Option val :=
   match v_storagetype, var_0_opt, v_fieldval with
@@ -13341,15 +12637,13 @@ def unpackfield_ (v_storagetype : storagetype) (var_0_opt : Option sx) (v_fieldv
   | storagetype.I16, some v_sx, fieldval.PACK packtype.I16 i => some (val.CONST numtype.I32 (num_.mk_num__0 addrtype.I32 (extend__ (psize packtype.I16) 32 v_sx i)))
   | _, _, _ => none
 
-inductive unpackfield__is_wf : storagetype → Option sx → fieldval → val → Prop where
-  | unpackfield__is_wf_0 (v_storagetype : storagetype) (var_0_opt : Option sx) (v_fieldval : fieldval) (ret_val : val) :
-    wf_storagetype v_storagetype →
-    wf_fieldval v_fieldval →
-    (unpackfield_ v_storagetype var_0_opt v_fieldval) ≠ none →
-    ret_val = (Option.get! (unpackfield_ v_storagetype var_0_opt v_fieldval)) →
-    wf_val ret_val →
-    unpackfield__is_wf v_storagetype var_0_opt v_fieldval ret_val
-
+theorem unpackfield__is_wf (v_storagetype : storagetype) (var_0_opt : Option sx) (v_fieldval : fieldval) (ret_val : val) :
+  wf_storagetype v_storagetype →
+  wf_fieldval v_fieldval →
+  (unpackfield_ v_storagetype var_0_opt v_fieldval) ≠ none →
+  ret_val = (Option.get! (unpackfield_ v_storagetype var_0_opt v_fieldval)) →
+  wf_val ret_val :=
+  sorry
 
 inductive fun_tagsxa : List externaddr → List tagaddr → Prop where
   | fun_tagsxa_case_0 : fun_tagsxa [] []
@@ -13405,25 +12699,21 @@ def fun_store (v_state : state) : store :=
   match v_state with
   | state.mk_state s f => s
 
-inductive store_is_wf : state → store → Prop where
-  | store_is_wf_0 (v_state : state) (ret_val : store) :
-    wf_state v_state →
-    ret_val = (fun_store v_state) →
-    wf_store ret_val →
-    store_is_wf v_state ret_val
-
+theorem store_is_wf (v_state : state) (ret_val : store) :
+  wf_state v_state →
+  ret_val = (fun_store v_state) →
+  wf_store ret_val :=
+  sorry
 
 def fun_frame (v_state : state) : frame :=
   match v_state with
   | state.mk_state s f => f
 
-inductive frame_is_wf : state → frame → Prop where
-  | frame_is_wf_0 (v_state : state) (ret_val : frame) :
-    wf_state v_state →
-    ret_val = (fun_frame v_state) →
-    wf_frame ret_val →
-    frame_is_wf v_state ret_val
-
+theorem frame_is_wf (v_state : state) (ret_val : frame) :
+  wf_state v_state →
+  ret_val = (fun_frame v_state) →
+  wf_frame ret_val :=
+  sorry
 
 def fun_tagaddr (v_state : state) : List tagaddr :=
   match v_state with
@@ -13433,144 +12723,120 @@ def fun_moduleinst (v_state : state) : moduleinst :=
   match v_state with
   | state.mk_state s f => f.MODULE
 
-inductive moduleinst_is_wf : state → moduleinst → Prop where
-  | moduleinst_is_wf_0 (v_state : state) (ret_val : moduleinst) :
-    wf_state v_state →
-    ret_val = (fun_moduleinst v_state) →
-    wf_moduleinst ret_val →
-    moduleinst_is_wf v_state ret_val
-
+theorem moduleinst_is_wf (v_state : state) (ret_val : moduleinst) :
+  wf_state v_state →
+  ret_val = (fun_moduleinst v_state) →
+  wf_moduleinst ret_val :=
+  sorry
 
 def fun_taginst (v_state : state) : List taginst :=
   match v_state with
   | state.mk_state s f => s.TAGS
 
-inductive taginst_is_wf : state → List taginst → Prop where
-  | taginst_is_wf_0 (v_state : state) (ret_val_lst : List taginst) :
-    wf_state v_state →
-    ret_val_lst = (fun_taginst v_state) →
-    Forall (fun ret_val_elem => wf_taginst ret_val_elem) ret_val_lst →
-    taginst_is_wf v_state ret_val_lst
-
+theorem taginst_is_wf (v_state : state) (ret_val_lst : List taginst) :
+  wf_state v_state →
+  ret_val_lst = (fun_taginst v_state) →
+  Forall (fun ret_val_elem => wf_taginst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_globalinst (v_state : state) : List globalinst :=
   match v_state with
   | state.mk_state s f => s.GLOBALS
 
-inductive globalinst_is_wf : state → List globalinst → Prop where
-  | globalinst_is_wf_0 (v_state : state) (ret_val_lst : List globalinst) :
-    wf_state v_state →
-    ret_val_lst = (fun_globalinst v_state) →
-    Forall (fun ret_val_elem => wf_globalinst ret_val_elem) ret_val_lst →
-    globalinst_is_wf v_state ret_val_lst
-
+theorem globalinst_is_wf (v_state : state) (ret_val_lst : List globalinst) :
+  wf_state v_state →
+  ret_val_lst = (fun_globalinst v_state) →
+  Forall (fun ret_val_elem => wf_globalinst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_meminst (v_state : state) : List meminst :=
   match v_state with
   | state.mk_state s f => s.MEMS
 
-inductive meminst_is_wf : state → List meminst → Prop where
-  | meminst_is_wf_0 (v_state : state) (ret_val_lst : List meminst) :
-    wf_state v_state →
-    ret_val_lst = (fun_meminst v_state) →
-    Forall (fun ret_val_elem => wf_meminst ret_val_elem) ret_val_lst →
-    meminst_is_wf v_state ret_val_lst
-
+theorem meminst_is_wf (v_state : state) (ret_val_lst : List meminst) :
+  wf_state v_state →
+  ret_val_lst = (fun_meminst v_state) →
+  Forall (fun ret_val_elem => wf_meminst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_tableinst (v_state : state) : List tableinst :=
   match v_state with
   | state.mk_state s f => s.TABLES
 
-inductive tableinst_is_wf : state → List tableinst → Prop where
-  | tableinst_is_wf_0 (v_state : state) (ret_val_lst : List tableinst) :
-    wf_state v_state →
-    ret_val_lst = (fun_tableinst v_state) →
-    Forall (fun ret_val_elem => wf_tableinst ret_val_elem) ret_val_lst →
-    tableinst_is_wf v_state ret_val_lst
-
+theorem tableinst_is_wf (v_state : state) (ret_val_lst : List tableinst) :
+  wf_state v_state →
+  ret_val_lst = (fun_tableinst v_state) →
+  Forall (fun ret_val_elem => wf_tableinst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_funcinst (v_state : state) : List funcinst :=
   match v_state with
   | state.mk_state s f => s.FUNCS
 
-inductive funcinst_is_wf : state → List funcinst → Prop where
-  | funcinst_is_wf_0 (v_state : state) (ret_val_lst : List funcinst) :
-    wf_state v_state →
-    ret_val_lst = (fun_funcinst v_state) →
-    Forall (fun ret_val_elem => wf_funcinst ret_val_elem) ret_val_lst →
-    funcinst_is_wf v_state ret_val_lst
-
+theorem funcinst_is_wf (v_state : state) (ret_val_lst : List funcinst) :
+  wf_state v_state →
+  ret_val_lst = (fun_funcinst v_state) →
+  Forall (fun ret_val_elem => wf_funcinst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_datainst (v_state : state) : List datainst :=
   match v_state with
   | state.mk_state s f => s.DATAS
 
-inductive datainst_is_wf : state → List datainst → Prop where
-  | datainst_is_wf_0 (v_state : state) (ret_val_lst : List datainst) :
-    wf_state v_state →
-    ret_val_lst = (fun_datainst v_state) →
-    Forall (fun ret_val_elem => wf_datainst ret_val_elem) ret_val_lst →
-    datainst_is_wf v_state ret_val_lst
-
+theorem datainst_is_wf (v_state : state) (ret_val_lst : List datainst) :
+  wf_state v_state →
+  ret_val_lst = (fun_datainst v_state) →
+  Forall (fun ret_val_elem => wf_datainst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_eleminst (v_state : state) : List eleminst :=
   match v_state with
   | state.mk_state s f => s.ELEMS
 
-inductive eleminst_is_wf : state → List eleminst → Prop where
-  | eleminst_is_wf_0 (v_state : state) (ret_val_lst : List eleminst) :
-    wf_state v_state →
-    ret_val_lst = (fun_eleminst v_state) →
-    Forall (fun ret_val_elem => wf_eleminst ret_val_elem) ret_val_lst →
-    eleminst_is_wf v_state ret_val_lst
-
+theorem eleminst_is_wf (v_state : state) (ret_val_lst : List eleminst) :
+  wf_state v_state →
+  ret_val_lst = (fun_eleminst v_state) →
+  Forall (fun ret_val_elem => wf_eleminst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_structinst (v_state : state) : List structinst :=
   match v_state with
   | state.mk_state s f => s.STRUCTS
 
-inductive structinst_is_wf : state → List structinst → Prop where
-  | structinst_is_wf_0 (v_state : state) (ret_val_lst : List structinst) :
-    wf_state v_state →
-    ret_val_lst = (fun_structinst v_state) →
-    Forall (fun ret_val_elem => wf_structinst ret_val_elem) ret_val_lst →
-    structinst_is_wf v_state ret_val_lst
-
+theorem structinst_is_wf (v_state : state) (ret_val_lst : List structinst) :
+  wf_state v_state →
+  ret_val_lst = (fun_structinst v_state) →
+  Forall (fun ret_val_elem => wf_structinst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_arrayinst (v_state : state) : List arrayinst :=
   match v_state with
   | state.mk_state s f => s.ARRAYS
 
-inductive arrayinst_is_wf : state → List arrayinst → Prop where
-  | arrayinst_is_wf_0 (v_state : state) (ret_val_lst : List arrayinst) :
-    wf_state v_state →
-    ret_val_lst = (fun_arrayinst v_state) →
-    Forall (fun ret_val_elem => wf_arrayinst ret_val_elem) ret_val_lst →
-    arrayinst_is_wf v_state ret_val_lst
-
+theorem arrayinst_is_wf (v_state : state) (ret_val_lst : List arrayinst) :
+  wf_state v_state →
+  ret_val_lst = (fun_arrayinst v_state) →
+  Forall (fun ret_val_elem => wf_arrayinst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fun_exninst (v_state : state) : List exninst :=
   match v_state with
   | state.mk_state s f => s.EXNS
 
-inductive exninst_is_wf : state → List exninst → Prop where
-  | exninst_is_wf_0 (v_state : state) (ret_val_lst : List exninst) :
-    wf_state v_state →
-    ret_val_lst = (fun_exninst v_state) →
-    Forall (fun ret_val_elem => wf_exninst ret_val_elem) ret_val_lst →
-    exninst_is_wf v_state ret_val_lst
-
+theorem exninst_is_wf (v_state : state) (ret_val_lst : List exninst) :
+  wf_state v_state →
+  ret_val_lst = (fun_exninst v_state) →
+  Forall (fun ret_val_elem => wf_exninst ret_val_elem) ret_val_lst :=
+  sorry
 
 def fof (v_state : state) : frame :=
   fun_frame v_state
 
-inductive fof_is_wf : state → frame → Prop where
-  | fof_is_wf_0 (v_state : state) (ret_val : frame) :
-    wf_state v_state →
-    ret_val = (fof v_state) →
-    wf_frame ret_val →
-    fof_is_wf v_state ret_val
-
+theorem fof_is_wf (v_state : state) (ret_val : frame) :
+  wf_state v_state →
+  ret_val = (fof v_state) →
+  wf_frame ret_val :=
+  sorry
 
 def fun_type (v_state : state) (v_typeidx : typeidx) : deftype :=
   ((fof v_state).MODULE.TYPES)[proj_uN_0 v_typeidx]!
@@ -13578,109 +12844,91 @@ def fun_type (v_state : state) (v_typeidx : typeidx) : deftype :=
 def sof (v_state : state) : store :=
   fun_store v_state
 
-inductive sof_is_wf : state → store → Prop where
-  | sof_is_wf_0 (v_state : state) (ret_val : store) :
-    wf_state v_state →
-    ret_val = (sof v_state) →
-    wf_store ret_val →
-    sof_is_wf v_state ret_val
-
+theorem sof_is_wf (v_state : state) (ret_val : store) :
+  wf_state v_state →
+  ret_val = (sof v_state) →
+  wf_store ret_val :=
+  sorry
 
 def fun_tag (v_state : state) (v_tagidx : tagidx) : taginst :=
   ((sof v_state).TAGS)[((fof v_state).MODULE.TAGS)[proj_uN_0 v_tagidx]!]!
 
-inductive tag_is_wf : state → tagidx → taginst → Prop where
-  | tag_is_wf_0 (v_state : state) (v_tagidx : tagidx) (ret_val : taginst) :
-    wf_state v_state →
-    wf_uN 32 v_tagidx →
-    ret_val = (fun_tag v_state v_tagidx) →
-    wf_taginst ret_val →
-    tag_is_wf v_state v_tagidx ret_val
-
+theorem tag_is_wf (v_state : state) (v_tagidx : tagidx) (ret_val : taginst) :
+  wf_state v_state →
+  wf_uN 32 v_tagidx →
+  ret_val = (fun_tag v_state v_tagidx) →
+  wf_taginst ret_val :=
+  sorry
 
 def fun_global (v_state : state) (v_globalidx : globalidx) : globalinst :=
   ((sof v_state).GLOBALS)[((fof v_state).MODULE.GLOBALS)[proj_uN_0 v_globalidx]!]!
 
-inductive global_is_wf : state → globalidx → globalinst → Prop where
-  | global_is_wf_0 (v_state : state) (v_globalidx : globalidx) (ret_val : globalinst) :
-    wf_state v_state →
-    wf_uN 32 v_globalidx →
-    ret_val = (fun_global v_state v_globalidx) →
-    wf_globalinst ret_val →
-    global_is_wf v_state v_globalidx ret_val
-
+theorem global_is_wf (v_state : state) (v_globalidx : globalidx) (ret_val : globalinst) :
+  wf_state v_state →
+  wf_uN 32 v_globalidx →
+  ret_val = (fun_global v_state v_globalidx) →
+  wf_globalinst ret_val :=
+  sorry
 
 def fun_mem (v_state : state) (v_memidx : memidx) : meminst :=
   ((sof v_state).MEMS)[((fof v_state).MODULE.MEMS)[proj_uN_0 v_memidx]!]!
 
-inductive mem_is_wf : state → memidx → meminst → Prop where
-  | mem_is_wf_0 (v_state : state) (v_memidx : memidx) (ret_val : meminst) :
-    wf_state v_state →
-    wf_uN 32 v_memidx →
-    ret_val = (fun_mem v_state v_memidx) →
-    wf_meminst ret_val →
-    mem_is_wf v_state v_memidx ret_val
-
+theorem mem_is_wf (v_state : state) (v_memidx : memidx) (ret_val : meminst) :
+  wf_state v_state →
+  wf_uN 32 v_memidx →
+  ret_val = (fun_mem v_state v_memidx) →
+  wf_meminst ret_val :=
+  sorry
 
 def fun_table (v_state : state) (v_tableidx : tableidx) : tableinst :=
   ((sof v_state).TABLES)[((fof v_state).MODULE.TABLES)[proj_uN_0 v_tableidx]!]!
 
-inductive table_is_wf : state → tableidx → tableinst → Prop where
-  | table_is_wf_0 (v_state : state) (v_tableidx : tableidx) (ret_val : tableinst) :
-    wf_state v_state →
-    wf_uN 32 v_tableidx →
-    ret_val = (fun_table v_state v_tableidx) →
-    wf_tableinst ret_val →
-    table_is_wf v_state v_tableidx ret_val
-
+theorem table_is_wf (v_state : state) (v_tableidx : tableidx) (ret_val : tableinst) :
+  wf_state v_state →
+  wf_uN 32 v_tableidx →
+  ret_val = (fun_table v_state v_tableidx) →
+  wf_tableinst ret_val :=
+  sorry
 
 def fun_func (v_state : state) (v_funcidx : funcidx) : funcinst :=
   ((sof v_state).FUNCS)[((fof v_state).MODULE.FUNCS)[proj_uN_0 v_funcidx]!]!
 
-inductive func_is_wf : state → funcidx → funcinst → Prop where
-  | func_is_wf_0 (v_state : state) (v_funcidx : funcidx) (ret_val : funcinst) :
-    wf_state v_state →
-    wf_uN 32 v_funcidx →
-    ret_val = (fun_func v_state v_funcidx) →
-    wf_funcinst ret_val →
-    func_is_wf v_state v_funcidx ret_val
-
+theorem func_is_wf (v_state : state) (v_funcidx : funcidx) (ret_val : funcinst) :
+  wf_state v_state →
+  wf_uN 32 v_funcidx →
+  ret_val = (fun_func v_state v_funcidx) →
+  wf_funcinst ret_val :=
+  sorry
 
 def fun_data (v_state : state) (v_dataidx : dataidx) : datainst :=
   ((sof v_state).DATAS)[((fof v_state).MODULE.DATAS)[proj_uN_0 v_dataidx]!]!
 
-inductive data_is_wf : state → dataidx → datainst → Prop where
-  | data_is_wf_0 (v_state : state) (v_dataidx : dataidx) (ret_val : datainst) :
-    wf_state v_state →
-    wf_uN 32 v_dataidx →
-    ret_val = (fun_data v_state v_dataidx) →
-    wf_datainst ret_val →
-    data_is_wf v_state v_dataidx ret_val
-
+theorem data_is_wf (v_state : state) (v_dataidx : dataidx) (ret_val : datainst) :
+  wf_state v_state →
+  wf_uN 32 v_dataidx →
+  ret_val = (fun_data v_state v_dataidx) →
+  wf_datainst ret_val :=
+  sorry
 
 def fun_elem (v_state : state) (v_tableidx : tableidx) : eleminst :=
   ((sof v_state).ELEMS)[((fof v_state).MODULE.ELEMS)[proj_uN_0 v_tableidx]!]!
 
-inductive elem_is_wf : state → tableidx → eleminst → Prop where
-  | elem_is_wf_0 (v_state : state) (v_tableidx : tableidx) (ret_val : eleminst) :
-    wf_state v_state →
-    wf_uN 32 v_tableidx →
-    ret_val = (fun_elem v_state v_tableidx) →
-    wf_eleminst ret_val →
-    elem_is_wf v_state v_tableidx ret_val
-
+theorem elem_is_wf (v_state : state) (v_tableidx : tableidx) (ret_val : eleminst) :
+  wf_state v_state →
+  wf_uN 32 v_tableidx →
+  ret_val = (fun_elem v_state v_tableidx) →
+  wf_eleminst ret_val :=
+  sorry
 
 def fun_local (v_state : state) (v_localidx : localidx) : Option val :=
   ((fof v_state).LOCALS)[proj_uN_0 v_localidx]!
 
-inductive local_is_wf : state → localidx → Option val → Prop where
-  | local_is_wf_0 (v_state : state) (v_localidx : localidx) (ret_val_opt : Option val) :
-    wf_state v_state →
-    wf_uN 32 v_localidx →
-    ret_val_opt = (fun_local v_state v_localidx) →
-    Forall (fun ret_val_elem => wf_val ret_val_elem) (Option.toList ret_val_opt) →
-    local_is_wf v_state v_localidx ret_val_opt
-
+theorem local_is_wf (v_state : state) (v_localidx : localidx) (ret_val_opt : Option val) :
+  wf_state v_state →
+  wf_uN 32 v_localidx →
+  ret_val_opt = (fun_local v_state v_localidx) →
+  Forall (fun ret_val_elem => wf_val ret_val_elem) (Option.toList ret_val_opt) :=
+  sorry
 
 def with_local (v_state : state) (v_localidx : localidx) (v_val : val) : state :=
   state.mk_state (sof v_state) ({
@@ -13688,15 +12936,13 @@ def with_local (v_state : state) (v_localidx : localidx) (v_val : val) : state :
     LOCALS := List.modify ((fof v_state).LOCALS) (proj_uN_0 v_localidx) (fun elem_1 => some v_val)
   })
 
-inductive with_local_is_wf : state → localidx → val → state → Prop where
-  | with_local_is_wf_0 (v_state : state) (v_localidx : localidx) (v_val : val) (ret_val : state) :
-    wf_state v_state →
-    wf_uN 32 v_localidx →
-    wf_val v_val →
-    ret_val = (with_local v_state v_localidx v_val) →
-    wf_state ret_val →
-    with_local_is_wf v_state v_localidx v_val ret_val
-
+theorem with_local_is_wf (v_state : state) (v_localidx : localidx) (v_val : val) (ret_val : state) :
+  wf_state v_state →
+  wf_uN 32 v_localidx →
+  wf_val v_val →
+  ret_val = (with_local v_state v_localidx v_val) →
+  wf_state ret_val :=
+  sorry
 
 def with_global (v_state : state) (v_globalidx : globalidx) (v_val : val) : state :=
   state.mk_state ({
@@ -13707,15 +12953,13 @@ def with_global (v_state : state) (v_globalidx : globalidx) (v_val : val) : stat
     })
   }) (fof v_state)
 
-inductive with_global_is_wf : state → globalidx → val → state → Prop where
-  | with_global_is_wf_0 (v_state : state) (v_globalidx : globalidx) (v_val : val) (ret_val : state) :
-    wf_state v_state →
-    wf_uN 32 v_globalidx →
-    wf_val v_val →
-    ret_val = (with_global v_state v_globalidx v_val) →
-    wf_state ret_val →
-    with_global_is_wf v_state v_globalidx v_val ret_val
-
+theorem with_global_is_wf (v_state : state) (v_globalidx : globalidx) (v_val : val) (ret_val : state) :
+  wf_state v_state →
+  wf_uN 32 v_globalidx →
+  wf_val v_val →
+  ret_val = (with_global v_state v_globalidx v_val) →
+  wf_state ret_val :=
+  sorry
 
 def with_table (v_state : state) (v_tableidx : tableidx) (nat : Nat) (v_ref : ref) : state :=
   state.mk_state ({
@@ -13726,15 +12970,13 @@ def with_table (v_state : state) (v_tableidx : tableidx) (nat : Nat) (v_ref : re
     })
   }) (fof v_state)
 
-inductive with_table_is_wf : state → tableidx → Nat → ref → state → Prop where
-  | with_table_is_wf_0 (v_state : state) (v_tableidx : tableidx) (nat : Nat) (v_ref : ref) (ret_val : state) :
-    wf_state v_state →
-    wf_uN 32 v_tableidx →
-    wf_ref v_ref →
-    ret_val = (with_table v_state v_tableidx nat v_ref) →
-    wf_state ret_val →
-    with_table_is_wf v_state v_tableidx nat v_ref ret_val
-
+theorem with_table_is_wf (v_state : state) (v_tableidx : tableidx) (nat : Nat) (v_ref : ref) (ret_val : state) :
+  wf_state v_state →
+  wf_uN 32 v_tableidx →
+  wf_ref v_ref →
+  ret_val = (with_table v_state v_tableidx nat v_ref) →
+  wf_state ret_val :=
+  sorry
 
 def with_tableinst (v_state : state) (v_tableidx : tableidx) (v_tableinst : tableinst) : state :=
   state.mk_state ({
@@ -13742,15 +12984,13 @@ def with_tableinst (v_state : state) (v_tableidx : tableidx) (v_tableinst : tabl
     TABLES := List.modify ((sof v_state).TABLES) (((fof v_state).MODULE.TABLES)[proj_uN_0 v_tableidx]!) (fun elem_1 => v_tableinst)
   }) (fof v_state)
 
-inductive with_tableinst_is_wf : state → tableidx → tableinst → state → Prop where
-  | with_tableinst_is_wf_0 (v_state : state) (v_tableidx : tableidx) (v_tableinst : tableinst) (ret_val : state) :
-    wf_state v_state →
-    wf_uN 32 v_tableidx →
-    wf_tableinst v_tableinst →
-    ret_val = (with_tableinst v_state v_tableidx v_tableinst) →
-    wf_state ret_val →
-    with_tableinst_is_wf v_state v_tableidx v_tableinst ret_val
-
+theorem with_tableinst_is_wf (v_state : state) (v_tableidx : tableidx) (v_tableinst : tableinst) (ret_val : state) :
+  wf_state v_state →
+  wf_uN 32 v_tableidx →
+  wf_tableinst v_tableinst →
+  ret_val = (with_tableinst v_state v_tableidx v_tableinst) →
+  wf_state ret_val :=
+  sorry
 
 def with_mem (v_state : state) (v_memidx : memidx) (nat : Nat) (nat_0 : Nat) (var_0_lst : List byte) : state :=
   state.mk_state ({
@@ -13761,15 +13001,13 @@ def with_mem (v_state : state) (v_memidx : memidx) (nat : Nat) (nat_0 : Nat) (va
     })
   }) (fof v_state)
 
-inductive with_mem_is_wf : state → memidx → Nat → Nat → List byte → state → Prop where
-  | with_mem_is_wf_0 (v_state : state) (v_memidx : memidx) (nat : Nat) (nat_0 : Nat) (var_0_lst : List byte) (ret_val : state) :
-    wf_state v_state →
-    wf_uN 32 v_memidx →
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = (with_mem v_state v_memidx nat nat_0 var_0_lst) →
-    wf_state ret_val →
-    with_mem_is_wf v_state v_memidx nat nat_0 var_0_lst ret_val
-
+theorem with_mem_is_wf (v_state : state) (v_memidx : memidx) (nat : Nat) (nat_0 : Nat) (var_0_lst : List byte) (ret_val : state) :
+  wf_state v_state →
+  wf_uN 32 v_memidx →
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = (with_mem v_state v_memidx nat nat_0 var_0_lst) →
+  wf_state ret_val :=
+  sorry
 
 def with_meminst (v_state : state) (v_memidx : memidx) (v_meminst : meminst) : state :=
   state.mk_state ({
@@ -13777,15 +13015,13 @@ def with_meminst (v_state : state) (v_memidx : memidx) (v_meminst : meminst) : s
     MEMS := List.modify ((sof v_state).MEMS) (((fof v_state).MODULE.MEMS)[proj_uN_0 v_memidx]!) (fun elem_1 => v_meminst)
   }) (fof v_state)
 
-inductive with_meminst_is_wf : state → memidx → meminst → state → Prop where
-  | with_meminst_is_wf_0 (v_state : state) (v_memidx : memidx) (v_meminst : meminst) (ret_val : state) :
-    wf_state v_state →
-    wf_uN 32 v_memidx →
-    wf_meminst v_meminst →
-    ret_val = (with_meminst v_state v_memidx v_meminst) →
-    wf_state ret_val →
-    with_meminst_is_wf v_state v_memidx v_meminst ret_val
-
+theorem with_meminst_is_wf (v_state : state) (v_memidx : memidx) (v_meminst : meminst) (ret_val : state) :
+  wf_state v_state →
+  wf_uN 32 v_memidx →
+  wf_meminst v_meminst →
+  ret_val = (with_meminst v_state v_memidx v_meminst) →
+  wf_state ret_val :=
+  sorry
 
 def with_elem (v_state : state) (v_elemidx : elemidx) (var_0_lst : List ref) : state :=
   state.mk_state ({
@@ -13796,15 +13032,13 @@ def with_elem (v_state : state) (v_elemidx : elemidx) (var_0_lst : List ref) : s
     })
   }) (fof v_state)
 
-inductive with_elem_is_wf : state → elemidx → List ref → state → Prop where
-  | with_elem_is_wf_0 (v_state : state) (v_elemidx : elemidx) (var_0_lst : List ref) (ret_val : state) :
-    wf_state v_state →
-    wf_uN 32 v_elemidx →
-    Forall (fun var_0_elem => wf_ref var_0_elem) var_0_lst →
-    ret_val = (with_elem v_state v_elemidx var_0_lst) →
-    wf_state ret_val →
-    with_elem_is_wf v_state v_elemidx var_0_lst ret_val
-
+theorem with_elem_is_wf (v_state : state) (v_elemidx : elemidx) (var_0_lst : List ref) (ret_val : state) :
+  wf_state v_state →
+  wf_uN 32 v_elemidx →
+  Forall (fun var_0_elem => wf_ref var_0_elem) var_0_lst →
+  ret_val = (with_elem v_state v_elemidx var_0_lst) →
+  wf_state ret_val :=
+  sorry
 
 def with_data (v_state : state) (v_dataidx : dataidx) (var_0_lst : List byte) : state :=
   state.mk_state ({
@@ -13815,15 +13049,13 @@ def with_data (v_state : state) (v_dataidx : dataidx) (var_0_lst : List byte) : 
     })
   }) (fof v_state)
 
-inductive with_data_is_wf : state → dataidx → List byte → state → Prop where
-  | with_data_is_wf_0 (v_state : state) (v_dataidx : dataidx) (var_0_lst : List byte) (ret_val : state) :
-    wf_state v_state →
-    wf_uN 32 v_dataidx →
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = (with_data v_state v_dataidx var_0_lst) →
-    wf_state ret_val →
-    with_data_is_wf v_state v_dataidx var_0_lst ret_val
-
+theorem with_data_is_wf (v_state : state) (v_dataidx : dataidx) (var_0_lst : List byte) (ret_val : state) :
+  wf_state v_state →
+  wf_uN 32 v_dataidx →
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = (with_data v_state v_dataidx var_0_lst) →
+  wf_state ret_val :=
+  sorry
 
 def with_struct (v_state : state) (v_structaddr : structaddr) (nat : Nat) (v_fieldval : fieldval) : state :=
   state.mk_state ({
@@ -13834,14 +13066,12 @@ def with_struct (v_state : state) (v_structaddr : structaddr) (nat : Nat) (v_fie
     })
   }) (fof v_state)
 
-inductive with_struct_is_wf : state → structaddr → Nat → fieldval → state → Prop where
-  | with_struct_is_wf_0 (v_state : state) (v_structaddr : structaddr) (nat : Nat) (v_fieldval : fieldval) (ret_val : state) :
-    wf_state v_state →
-    wf_fieldval v_fieldval →
-    ret_val = (with_struct v_state v_structaddr nat v_fieldval) →
-    wf_state ret_val →
-    with_struct_is_wf v_state v_structaddr nat v_fieldval ret_val
-
+theorem with_struct_is_wf (v_state : state) (v_structaddr : structaddr) (nat : Nat) (v_fieldval : fieldval) (ret_val : state) :
+  wf_state v_state →
+  wf_fieldval v_fieldval →
+  ret_val = (with_struct v_state v_structaddr nat v_fieldval) →
+  wf_state ret_val :=
+  sorry
 
 def with_array (v_state : state) (v_arrayaddr : arrayaddr) (nat : Nat) (v_fieldval : fieldval) : state :=
   state.mk_state ({
@@ -13852,14 +13082,12 @@ def with_array (v_state : state) (v_arrayaddr : arrayaddr) (nat : Nat) (v_fieldv
     })
   }) (fof v_state)
 
-inductive with_array_is_wf : state → arrayaddr → Nat → fieldval → state → Prop where
-  | with_array_is_wf_0 (v_state : state) (v_arrayaddr : arrayaddr) (nat : Nat) (v_fieldval : fieldval) (ret_val : state) :
-    wf_state v_state →
-    wf_fieldval v_fieldval →
-    ret_val = (with_array v_state v_arrayaddr nat v_fieldval) →
-    wf_state ret_val →
-    with_array_is_wf v_state v_arrayaddr nat v_fieldval ret_val
-
+theorem with_array_is_wf (v_state : state) (v_arrayaddr : arrayaddr) (nat : Nat) (v_fieldval : fieldval) (ret_val : state) :
+  wf_state v_state →
+  wf_fieldval v_fieldval →
+  ret_val = (with_array v_state v_arrayaddr nat v_fieldval) →
+  wf_state ret_val :=
+  sorry
 
 def add_structinst (v_state : state) (var_0_lst : List structinst) : state :=
   state.mk_state ({
@@ -13867,14 +13095,12 @@ def add_structinst (v_state : state) (var_0_lst : List structinst) : state :=
     STRUCTS := ((sof v_state).STRUCTS) ++ var_0_lst
   }) (fof v_state)
 
-inductive add_structinst_is_wf : state → List structinst → state → Prop where
-  | add_structinst_is_wf_0 (v_state : state) (var_0_lst : List structinst) (ret_val : state) :
-    wf_state v_state →
-    Forall (fun var_0_elem => wf_structinst var_0_elem) var_0_lst →
-    ret_val = (add_structinst v_state var_0_lst) →
-    wf_state ret_val →
-    add_structinst_is_wf v_state var_0_lst ret_val
-
+theorem add_structinst_is_wf (v_state : state) (var_0_lst : List structinst) (ret_val : state) :
+  wf_state v_state →
+  Forall (fun var_0_elem => wf_structinst var_0_elem) var_0_lst →
+  ret_val = (add_structinst v_state var_0_lst) →
+  wf_state ret_val :=
+  sorry
 
 def add_arrayinst (v_state : state) (var_0_lst : List arrayinst) : state :=
   state.mk_state ({
@@ -13882,14 +13108,12 @@ def add_arrayinst (v_state : state) (var_0_lst : List arrayinst) : state :=
     ARRAYS := ((sof v_state).ARRAYS) ++ var_0_lst
   }) (fof v_state)
 
-inductive add_arrayinst_is_wf : state → List arrayinst → state → Prop where
-  | add_arrayinst_is_wf_0 (v_state : state) (var_0_lst : List arrayinst) (ret_val : state) :
-    wf_state v_state →
-    Forall (fun var_0_elem => wf_arrayinst var_0_elem) var_0_lst →
-    ret_val = (add_arrayinst v_state var_0_lst) →
-    wf_state ret_val →
-    add_arrayinst_is_wf v_state var_0_lst ret_val
-
+theorem add_arrayinst_is_wf (v_state : state) (var_0_lst : List arrayinst) (ret_val : state) :
+  wf_state v_state →
+  Forall (fun var_0_elem => wf_arrayinst var_0_elem) var_0_lst →
+  ret_val = (add_arrayinst v_state var_0_lst) →
+  wf_state ret_val :=
+  sorry
 
 def add_exninst (v_state : state) (var_0_lst : List exninst) : state :=
   state.mk_state ({
@@ -13897,14 +13121,12 @@ def add_exninst (v_state : state) (var_0_lst : List exninst) : state :=
     EXNS := ((sof v_state).EXNS) ++ var_0_lst
   }) (fof v_state)
 
-inductive add_exninst_is_wf : state → List exninst → state → Prop where
-  | add_exninst_is_wf_0 (v_state : state) (var_0_lst : List exninst) (ret_val : state) :
-    wf_state v_state →
-    Forall (fun var_0_elem => wf_exninst var_0_elem) var_0_lst →
-    ret_val = (add_exninst v_state var_0_lst) →
-    wf_state ret_val →
-    add_exninst_is_wf v_state var_0_lst ret_val
-
+theorem add_exninst_is_wf (v_state : state) (var_0_lst : List exninst) (ret_val : state) :
+  wf_state v_state →
+  Forall (fun var_0_elem => wf_exninst var_0_elem) var_0_lst →
+  ret_val = (add_exninst v_state var_0_lst) →
+  wf_state ret_val :=
+  sorry
 
 inductive fun_growtable_before_fun_growtable_case_1 : tableinst → Nat → ref → Prop where
   | fun_growtable_case_0 (v_tableinst : tableinst) (v_n : Nat) (r : ref) (tableinst' : tableinst) (i' : uN) («at» : addrtype) (i : u64) (j_opt : Option u64) (rt : reftype) (r'_lst : List ref) :
@@ -13957,16 +13179,14 @@ inductive fun_growtable : tableinst → Nat → ref → Option tableinst → Pro
     fun_growtable x0 x1 x2 none
 
 
-inductive growtable_is_wf : tableinst → Nat → ref → tableinst → Prop where
-  | growtable_is_wf_0 (v_tableinst : tableinst) (nat : Nat) (v_ref : ref) (ret_val : tableinst) (var_0 : Option tableinst) :
-    fun_growtable v_tableinst nat v_ref var_0 →
-    wf_tableinst v_tableinst →
-    wf_ref v_ref →
-    var_0 ≠ none →
-    ret_val = (Option.get! var_0) →
-    wf_tableinst ret_val →
-    growtable_is_wf v_tableinst nat v_ref ret_val
-
+theorem growtable_is_wf (v_tableinst : tableinst) (nat : Nat) (v_ref : ref) (ret_val : tableinst) (var_0 : Option tableinst) :
+  fun_growtable v_tableinst nat v_ref var_0 →
+  wf_tableinst v_tableinst →
+  wf_ref v_ref →
+  var_0 ≠ none →
+  ret_val = (Option.get! var_0) →
+  wf_tableinst ret_val :=
+  sorry
 
 inductive fun_growmem_before_fun_growmem_case_1 : meminst → Nat → Prop where
   | fun_growmem_case_0 (v_meminst : meminst) (v_n : Nat) (meminst' : meminst) (i' : uN) («at» : addrtype) (i : u64) (j_opt : Option u64) (b_lst : List byte) :
@@ -14019,15 +13239,13 @@ inductive fun_growmem : meminst → Nat → Option meminst → Prop where
     fun_growmem x0 x1 none
 
 
-inductive growmem_is_wf : meminst → Nat → meminst → Prop where
-  | growmem_is_wf_0 (v_meminst : meminst) (nat : Nat) (ret_val : meminst) (var_0 : Option meminst) :
-    fun_growmem v_meminst nat var_0 →
-    wf_meminst v_meminst →
-    var_0 ≠ none →
-    ret_val = (Option.get! var_0) →
-    wf_meminst ret_val →
-    growmem_is_wf v_meminst nat ret_val
-
+theorem growmem_is_wf (v_meminst : meminst) (nat : Nat) (ret_val : meminst) (var_0 : Option meminst) :
+  fun_growmem v_meminst nat var_0 →
+  wf_meminst v_meminst →
+  var_0 ≠ none →
+  ret_val = (Option.get! var_0) →
+  wf_meminst ret_val :=
+  sorry
 
 inductive Num_ok : store → num → numtype → Prop where
   | mk_Num_ok (s : store) (nt : numtype) (c : num_) :
@@ -14281,15 +13499,13 @@ inductive fun_inst_valtype : moduleinst → valtype → valtype → Prop where
     fun_inst_valtype v_moduleinst t var_0
 
 
-inductive inst_valtype_is_wf : moduleinst → valtype → valtype → Prop where
-  | inst_valtype_is_wf_0 (v_moduleinst : moduleinst) (v_valtype : valtype) (ret_val : valtype) (var_0 : valtype) :
-    fun_inst_valtype v_moduleinst v_valtype var_0 →
-    wf_moduleinst v_moduleinst →
-    wf_valtype v_valtype →
-    ret_val = var_0 →
-    wf_valtype ret_val →
-    inst_valtype_is_wf v_moduleinst v_valtype ret_val
-
+theorem inst_valtype_is_wf (v_moduleinst : moduleinst) (v_valtype : valtype) (ret_val : valtype) (var_0 : valtype) :
+  fun_inst_valtype v_moduleinst v_valtype var_0 →
+  wf_moduleinst v_moduleinst →
+  wf_valtype v_valtype →
+  ret_val = var_0 →
+  wf_valtype ret_val :=
+  sorry
 
 inductive fun_inst_reftype : moduleinst → reftype → reftype → Prop where
   | fun_inst_reftype_case_0 (v_moduleinst : moduleinst) (rt : reftype) (var_0 : reftype) :
@@ -14297,15 +13513,13 @@ inductive fun_inst_reftype : moduleinst → reftype → reftype → Prop where
     fun_inst_reftype v_moduleinst rt var_0
 
 
-inductive inst_reftype_is_wf : moduleinst → reftype → reftype → Prop where
-  | inst_reftype_is_wf_0 (v_moduleinst : moduleinst) (v_reftype : reftype) (ret_val : reftype) (var_0 : reftype) :
-    fun_inst_reftype v_moduleinst v_reftype var_0 →
-    wf_moduleinst v_moduleinst →
-    wf_reftype v_reftype →
-    ret_val = var_0 →
-    wf_reftype ret_val →
-    inst_reftype_is_wf v_moduleinst v_reftype ret_val
-
+theorem inst_reftype_is_wf (v_moduleinst : moduleinst) (v_reftype : reftype) (ret_val : reftype) (var_0 : reftype) :
+  fun_inst_reftype v_moduleinst v_reftype var_0 →
+  wf_moduleinst v_moduleinst →
+  wf_reftype v_reftype →
+  ret_val = var_0 →
+  wf_reftype ret_val :=
+  sorry
 
 inductive fun_inst_globaltype : moduleinst → globaltype → globaltype → Prop where
   | fun_inst_globaltype_case_0 (v_moduleinst : moduleinst) (gt : globaltype) (var_0 : globaltype) :
@@ -14313,15 +13527,13 @@ inductive fun_inst_globaltype : moduleinst → globaltype → globaltype → Pro
     fun_inst_globaltype v_moduleinst gt var_0
 
 
-inductive inst_globaltype_is_wf : moduleinst → globaltype → globaltype → Prop where
-  | inst_globaltype_is_wf_0 (v_moduleinst : moduleinst) (v_globaltype : globaltype) (ret_val : globaltype) (var_0 : globaltype) :
-    fun_inst_globaltype v_moduleinst v_globaltype var_0 →
-    wf_moduleinst v_moduleinst →
-    wf_globaltype v_globaltype →
-    ret_val = var_0 →
-    wf_globaltype ret_val →
-    inst_globaltype_is_wf v_moduleinst v_globaltype ret_val
-
+theorem inst_globaltype_is_wf (v_moduleinst : moduleinst) (v_globaltype : globaltype) (ret_val : globaltype) (var_0 : globaltype) :
+  fun_inst_globaltype v_moduleinst v_globaltype var_0 →
+  wf_moduleinst v_moduleinst →
+  wf_globaltype v_globaltype →
+  ret_val = var_0 →
+  wf_globaltype ret_val :=
+  sorry
 
 inductive fun_inst_memtype : moduleinst → memtype → memtype → Prop where
   | fun_inst_memtype_case_0 (v_moduleinst : moduleinst) (mt : memtype) (var_0 : memtype) :
@@ -14329,15 +13541,13 @@ inductive fun_inst_memtype : moduleinst → memtype → memtype → Prop where
     fun_inst_memtype v_moduleinst mt var_0
 
 
-inductive inst_memtype_is_wf : moduleinst → memtype → memtype → Prop where
-  | inst_memtype_is_wf_0 (v_moduleinst : moduleinst) (v_memtype : memtype) (ret_val : memtype) (var_0 : memtype) :
-    fun_inst_memtype v_moduleinst v_memtype var_0 →
-    wf_moduleinst v_moduleinst →
-    wf_memtype v_memtype →
-    ret_val = var_0 →
-    wf_memtype ret_val →
-    inst_memtype_is_wf v_moduleinst v_memtype ret_val
-
+theorem inst_memtype_is_wf (v_moduleinst : moduleinst) (v_memtype : memtype) (ret_val : memtype) (var_0 : memtype) :
+  fun_inst_memtype v_moduleinst v_memtype var_0 →
+  wf_moduleinst v_moduleinst →
+  wf_memtype v_memtype →
+  ret_val = var_0 →
+  wf_memtype ret_val :=
+  sorry
 
 inductive fun_inst_tabletype : moduleinst → tabletype → tabletype → Prop where
   | fun_inst_tabletype_case_0 (v_moduleinst : moduleinst) (tt : tabletype) (var_0 : tabletype) :
@@ -14345,15 +13555,13 @@ inductive fun_inst_tabletype : moduleinst → tabletype → tabletype → Prop w
     fun_inst_tabletype v_moduleinst tt var_0
 
 
-inductive inst_tabletype_is_wf : moduleinst → tabletype → tabletype → Prop where
-  | inst_tabletype_is_wf_0 (v_moduleinst : moduleinst) (v_tabletype : tabletype) (ret_val : tabletype) (var_0 : tabletype) :
-    fun_inst_tabletype v_moduleinst v_tabletype var_0 →
-    wf_moduleinst v_moduleinst →
-    wf_tabletype v_tabletype →
-    ret_val = var_0 →
-    wf_tabletype ret_val →
-    inst_tabletype_is_wf v_moduleinst v_tabletype ret_val
-
+theorem inst_tabletype_is_wf (v_moduleinst : moduleinst) (v_tabletype : tabletype) (ret_val : tabletype) (var_0 : tabletype) :
+  fun_inst_tabletype v_moduleinst v_tabletype var_0 →
+  wf_moduleinst v_moduleinst →
+  wf_tabletype v_tabletype →
+  ret_val = var_0 →
+  wf_tabletype ret_val :=
+  sorry
 
 inductive Step_pure_before_ref_eq_true : List instr → Prop where
   | ref_eq_null_0 (ref_1 : ref) (ref_2 : ref) :
@@ -14938,15 +14146,13 @@ inductive fun_blocktype_ : state → blocktype → instrtype → Prop where
   | fun_blocktype__case_1 (z : state) (t_opt : Option valtype) : fun_blocktype_ z (blocktype._RESULT t_opt) (instrtype.mk_instrtype (.mk_list []) [] (.mk_list (Option.toList t_opt)))
 
 
-inductive blocktype__is_wf : state → blocktype → instrtype → Prop where
-  | blocktype__is_wf_0 (v_state : state) (v_blocktype : blocktype) (ret_val : instrtype) (var_0 : instrtype) :
-    fun_blocktype_ v_state v_blocktype var_0 →
-    wf_state v_state →
-    wf_blocktype v_blocktype →
-    ret_val = var_0 →
-    wf_instrtype ret_val →
-    blocktype__is_wf v_state v_blocktype ret_val
-
+theorem blocktype__is_wf (v_state : state) (v_blocktype : blocktype) (ret_val : instrtype) (var_0 : instrtype) :
+  fun_blocktype_ v_state v_blocktype var_0 →
+  wf_state v_state →
+  wf_blocktype v_blocktype →
+  ret_val = var_0 →
+  wf_instrtype ret_val :=
+  sorry
 
 inductive Step_read_before_br_on_cast_fail : config → Prop where
   | br_on_cast_succeed_0 (s : store) (f : frame) (v_ref : ref) (l : labelidx) (rt_1 : reftype) (rt_2 : reftype) (var_0 : reftype) :
@@ -16553,15 +15759,13 @@ inductive fun_alloctag : store → tagtype → store × tagaddr → Prop where
     }), List.length (s.TAGS)))
 
 
-inductive alloctag_is_wf : store → tagtype → store × tagaddr → Prop where
-  | alloctag_is_wf_0 (v_store : store) (v_tagtype : tagtype) (ret_val : store × tagaddr) (var_0 : store × tagaddr) :
-    fun_alloctag v_store v_tagtype var_0 →
-    wf_store v_store →
-    wf_typeuse v_tagtype →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    alloctag_is_wf v_store v_tagtype ret_val
-
+theorem alloctag_is_wf (v_store : store) (v_tagtype : tagtype) (ret_val : store × tagaddr) (var_0 : store × tagaddr) :
+  fun_alloctag v_store v_tagtype var_0 →
+  wf_store v_store →
+  wf_typeuse v_tagtype →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_alloctags : store → List tagtype → store × List tagaddr → Prop where
   | fun_alloctags_case_0 (s : store) : fun_alloctags s [] ((s, []))
@@ -16573,15 +15777,13 @@ inductive fun_alloctags : store → List tagtype → store × List tagaddr → P
     fun_alloctags s ([v_tagtype] ++ tagtype'_lst) ((s_2, [ja] ++ ja'_lst))
 
 
-inductive alloctags_is_wf : store → List tagtype → store × List tagaddr → Prop where
-  | alloctags_is_wf_0 (v_store : store) (var_0_lst : List tagtype) (ret_val : store × List tagaddr) (var_0 : store × List tagaddr) :
-    fun_alloctags v_store var_0_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    alloctags_is_wf v_store var_0_lst ret_val
-
+theorem alloctags_is_wf (v_store : store) (var_0_lst : List tagtype) (ret_val : store × List tagaddr) (var_0 : store × List tagaddr) :
+  fun_alloctags v_store var_0_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_0_elem => wf_typeuse var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocglobal : store → globaltype → val → store × globaladdr → Prop where
   | fun_allocglobal_case_0 (s : store) (v_globaltype : globaltype) (v_val : val) (v_globalinst : globalinst) :
@@ -16607,16 +15809,14 @@ inductive fun_allocglobal : store → globaltype → val → store × globaladdr
     }), List.length (s.GLOBALS)))
 
 
-inductive allocglobal_is_wf : store → globaltype → val → store × globaladdr → Prop where
-  | allocglobal_is_wf_0 (v_store : store) (v_globaltype : globaltype) (v_val : val) (ret_val : store × globaladdr) (var_0 : store × globaladdr) :
-    fun_allocglobal v_store v_globaltype v_val var_0 →
-    wf_store v_store →
-    wf_globaltype v_globaltype →
-    wf_val v_val →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocglobal_is_wf v_store v_globaltype v_val ret_val
-
+theorem allocglobal_is_wf (v_store : store) (v_globaltype : globaltype) (v_val : val) (ret_val : store × globaladdr) (var_0 : store × globaladdr) :
+  fun_allocglobal v_store v_globaltype v_val var_0 →
+  wf_store v_store →
+  wf_globaltype v_globaltype →
+  wf_val v_val →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocglobals : store → List globaltype → List val → store × List globaladdr → Prop where
   | fun_allocglobals_case_0 (s : store) : fun_allocglobals s [] [] ((s, []))
@@ -16628,16 +15828,14 @@ inductive fun_allocglobals : store → List globaltype → List val → store ×
     fun_allocglobals s ([v_globaltype] ++ globaltype'_lst) ([v_val] ++ val'_lst) ((s_2, [ga] ++ ga'_lst))
 
 
-inductive allocglobals_is_wf : store → List globaltype → List val → store × List globaladdr → Prop where
-  | allocglobals_is_wf_0 (v_store : store) (var_0_lst : List globaltype) (var_1_lst : List val) (ret_val : store × List globaladdr) (var_0 : store × List globaladdr) :
-    fun_allocglobals v_store var_0_lst var_1_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_0_elem => wf_globaltype var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_val var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocglobals_is_wf v_store var_0_lst var_1_lst ret_val
-
+theorem allocglobals_is_wf (v_store : store) (var_0_lst : List globaltype) (var_1_lst : List val) (ret_val : store × List globaladdr) (var_0 : store × List globaladdr) :
+  fun_allocglobals v_store var_0_lst var_1_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_0_elem => wf_globaltype var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_val var_1_elem) var_1_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocmem : store → memtype → store × memaddr → Prop where
   | fun_allocmem_case_0 (s : store) («at» : addrtype) (i : uN) (j_opt : Option u64) (v_meminst : meminst) :
@@ -16663,15 +15861,13 @@ inductive fun_allocmem : store → memtype → store × memaddr → Prop where
     }), List.length (s.MEMS)))
 
 
-inductive allocmem_is_wf : store → memtype → store × memaddr → Prop where
-  | allocmem_is_wf_0 (v_store : store) (v_memtype : memtype) (ret_val : store × memaddr) (var_0 : store × memaddr) :
-    fun_allocmem v_store v_memtype var_0 →
-    wf_store v_store →
-    wf_memtype v_memtype →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocmem_is_wf v_store v_memtype ret_val
-
+theorem allocmem_is_wf (v_store : store) (v_memtype : memtype) (ret_val : store × memaddr) (var_0 : store × memaddr) :
+  fun_allocmem v_store v_memtype var_0 →
+  wf_store v_store →
+  wf_memtype v_memtype →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocmems : store → List memtype → store × List memaddr → Prop where
   | fun_allocmems_case_0 (s : store) : fun_allocmems s [] ((s, []))
@@ -16683,15 +15879,13 @@ inductive fun_allocmems : store → List memtype → store × List memaddr → P
     fun_allocmems s ([v_memtype] ++ memtype'_lst) ((s_2, [ma] ++ ma'_lst))
 
 
-inductive allocmems_is_wf : store → List memtype → store × List memaddr → Prop where
-  | allocmems_is_wf_0 (v_store : store) (var_0_lst : List memtype) (ret_val : store × List memaddr) (var_0 : store × List memaddr) :
-    fun_allocmems v_store var_0_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_0_elem => wf_memtype var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocmems_is_wf v_store var_0_lst ret_val
-
+theorem allocmems_is_wf (v_store : store) (var_0_lst : List memtype) (ret_val : store × List memaddr) (var_0 : store × List memaddr) :
+  fun_allocmems v_store var_0_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_0_elem => wf_memtype var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_alloctable : store → tabletype → ref → store × tableaddr → Prop where
   | fun_alloctable_case_0 (s : store) («at» : addrtype) (i : uN) (j_opt : Option u64) (rt : reftype) (v_ref : ref) (v_tableinst : tableinst) :
@@ -16717,16 +15911,14 @@ inductive fun_alloctable : store → tabletype → ref → store × tableaddr �
     }), List.length (s.TABLES)))
 
 
-inductive alloctable_is_wf : store → tabletype → ref → store × tableaddr → Prop where
-  | alloctable_is_wf_0 (v_store : store) (v_tabletype : tabletype) (v_ref : ref) (ret_val : store × tableaddr) (var_0 : store × tableaddr) :
-    fun_alloctable v_store v_tabletype v_ref var_0 →
-    wf_store v_store →
-    wf_tabletype v_tabletype →
-    wf_ref v_ref →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    alloctable_is_wf v_store v_tabletype v_ref ret_val
-
+theorem alloctable_is_wf (v_store : store) (v_tabletype : tabletype) (v_ref : ref) (ret_val : store × tableaddr) (var_0 : store × tableaddr) :
+  fun_alloctable v_store v_tabletype v_ref var_0 →
+  wf_store v_store →
+  wf_tabletype v_tabletype →
+  wf_ref v_ref →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_alloctables : store → List tabletype → List ref → store × List tableaddr → Prop where
   | fun_alloctables_case_0 (s : store) : fun_alloctables s [] [] ((s, []))
@@ -16738,16 +15930,14 @@ inductive fun_alloctables : store → List tabletype → List ref → store × L
     fun_alloctables s ([v_tabletype] ++ tabletype'_lst) ([v_ref] ++ ref'_lst) ((s_2, [ta] ++ ta'_lst))
 
 
-inductive alloctables_is_wf : store → List tabletype → List ref → store × List tableaddr → Prop where
-  | alloctables_is_wf_0 (v_store : store) (var_0_lst : List tabletype) (var_1_lst : List ref) (ret_val : store × List tableaddr) (var_0 : store × List tableaddr) :
-    fun_alloctables v_store var_0_lst var_1_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_0_elem => wf_tabletype var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => wf_ref var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    alloctables_is_wf v_store var_0_lst var_1_lst ret_val
-
+theorem alloctables_is_wf (v_store : store) (var_0_lst : List tabletype) (var_1_lst : List ref) (ret_val : store × List tableaddr) (var_0 : store × List tableaddr) :
+  fun_alloctables v_store var_0_lst var_1_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_0_elem => wf_tabletype var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => wf_ref var_1_elem) var_1_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocfunc : store → deftype → funccode → moduleinst → store × funcaddr → Prop where
   | fun_allocfunc_case_0 (s : store) (v_deftype : deftype) (v_funccode : funccode) (v_moduleinst : moduleinst) (v_funcinst : funcinst) :
@@ -16775,16 +15965,14 @@ inductive fun_allocfunc : store → deftype → funccode → moduleinst → stor
     }), List.length (s.FUNCS)))
 
 
-inductive allocfunc_is_wf : store → deftype → funccode → moduleinst → store × funcaddr → Prop where
-  | allocfunc_is_wf_0 (v_store : store) (v_deftype : deftype) (v_funccode : funccode) (v_moduleinst : moduleinst) (ret_val : store × funcaddr) (var_0 : store × funcaddr) :
-    fun_allocfunc v_store v_deftype v_funccode v_moduleinst var_0 →
-    wf_store v_store →
-    wf_funccode v_funccode →
-    wf_moduleinst v_moduleinst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocfunc_is_wf v_store v_deftype v_funccode v_moduleinst ret_val
-
+theorem allocfunc_is_wf (v_store : store) (v_deftype : deftype) (v_funccode : funccode) (v_moduleinst : moduleinst) (ret_val : store × funcaddr) (var_0 : store × funcaddr) :
+  fun_allocfunc v_store v_deftype v_funccode v_moduleinst var_0 →
+  wf_store v_store →
+  wf_funccode v_funccode →
+  wf_moduleinst v_moduleinst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocfuncs : store → List deftype → List funccode → List moduleinst → store × List funcaddr → Prop where
   | fun_allocfuncs_case_0 (s : store) : fun_allocfuncs s [] [] [] ((s, []))
@@ -16796,16 +15984,14 @@ inductive fun_allocfuncs : store → List deftype → List funccode → List mod
     fun_allocfuncs s ([dt] ++ dt'_lst) ([v_funccode] ++ funccode'_lst) ([v_moduleinst] ++ moduleinst'_lst) ((s_2, [fa] ++ fa'_lst))
 
 
-inductive allocfuncs_is_wf : store → List deftype → List funccode → List moduleinst → store × List funcaddr → Prop where
-  | allocfuncs_is_wf_0 (v_store : store) (var_0_lst : List deftype) (var_1_lst : List funccode) (var_2_lst : List moduleinst) (ret_val : store × List funcaddr) (var_0 : store × List funcaddr) :
-    fun_allocfuncs v_store var_0_lst var_1_lst var_2_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_1_elem => wf_funccode var_1_elem) var_1_lst →
-    Forall (fun var_2_elem => wf_moduleinst var_2_elem) var_2_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocfuncs_is_wf v_store var_0_lst var_1_lst var_2_lst ret_val
-
+theorem allocfuncs_is_wf (v_store : store) (var_0_lst : List deftype) (var_1_lst : List funccode) (var_2_lst : List moduleinst) (ret_val : store × List funcaddr) (var_0 : store × List funcaddr) :
+  fun_allocfuncs v_store var_0_lst var_1_lst var_2_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_1_elem => wf_funccode var_1_elem) var_1_lst →
+  Forall (fun var_2_elem => wf_moduleinst var_2_elem) var_2_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocdata : store → datatype → List byte → store × dataaddr → Prop where
   | fun_allocdata_case_0 (s : store) (byte_lst : List byte) (v_datainst : datainst) :
@@ -16829,15 +16015,13 @@ inductive fun_allocdata : store → datatype → List byte → store × dataaddr
     }), List.length (s.DATAS)))
 
 
-inductive allocdata_is_wf : store → datatype → List byte → store × dataaddr → Prop where
-  | allocdata_is_wf_0 (v_store : store) (v_datatype : datatype) (var_0_lst : List byte) (ret_val : store × dataaddr) (var_0 : store × dataaddr) :
-    fun_allocdata v_store v_datatype var_0_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocdata_is_wf v_store v_datatype var_0_lst ret_val
-
+theorem allocdata_is_wf (v_store : store) (v_datatype : datatype) (var_0_lst : List byte) (ret_val : store × dataaddr) (var_0 : store × dataaddr) :
+  fun_allocdata v_store v_datatype var_0_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_0_elem => wf_byte var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocdatas : store → List datatype → List (List byte) → store × List dataaddr → Prop where
   | fun_allocdatas_case_0 (s : store) : fun_allocdatas s [] [] ((s, []))
@@ -16849,15 +16033,13 @@ inductive fun_allocdatas : store → List datatype → List (List byte) → stor
     fun_allocdatas s ([ok] ++ ok'_lst) ([b_lst] ++ b'_lst_lst) ((s_2, [da] ++ da'_lst))
 
 
-inductive allocdatas_is_wf : store → List datatype → List (List byte) → store × List dataaddr → Prop where
-  | allocdatas_is_wf_0 (v_store : store) (var_0_lst : List datatype) (var_1_lst_lst : List (List byte)) (ret_val : store × List dataaddr) (var_0 : store × List dataaddr) :
-    fun_allocdatas v_store var_0_lst var_1_lst_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_1_lst_elem => Forall (fun var_1_elem => wf_byte var_1_elem) var_1_lst_elem) var_1_lst_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocdatas_is_wf v_store var_0_lst var_1_lst_lst ret_val
-
+theorem allocdatas_is_wf (v_store : store) (var_0_lst : List datatype) (var_1_lst_lst : List (List byte)) (ret_val : store × List dataaddr) (var_0 : store × List dataaddr) :
+  fun_allocdatas v_store var_0_lst var_1_lst_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_1_lst_elem => Forall (fun var_1_elem => wf_byte var_1_elem) var_1_lst_elem) var_1_lst_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocelem : store → elemtype → List ref → store × elemaddr → Prop where
   | fun_allocelem_case_0 (s : store) (v_elemtype : reftype) (ref_lst : List ref) (v_eleminst : eleminst) :
@@ -16883,16 +16065,14 @@ inductive fun_allocelem : store → elemtype → List ref → store × elemaddr 
     }), List.length (s.ELEMS)))
 
 
-inductive allocelem_is_wf : store → elemtype → List ref → store × elemaddr → Prop where
-  | allocelem_is_wf_0 (v_store : store) (v_elemtype : elemtype) (var_0_lst : List ref) (ret_val : store × elemaddr) (var_0 : store × elemaddr) :
-    fun_allocelem v_store v_elemtype var_0_lst var_0 →
-    wf_store v_store →
-    wf_reftype v_elemtype →
-    Forall (fun var_0_elem => wf_ref var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocelem_is_wf v_store v_elemtype var_0_lst ret_val
-
+theorem allocelem_is_wf (v_store : store) (v_elemtype : elemtype) (var_0_lst : List ref) (ret_val : store × elemaddr) (var_0 : store × elemaddr) :
+  fun_allocelem v_store v_elemtype var_0_lst var_0 →
+  wf_store v_store →
+  wf_reftype v_elemtype →
+  Forall (fun var_0_elem => wf_ref var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 inductive fun_allocelems : store → List elemtype → List (List ref) → store × List elemaddr → Prop where
   | fun_allocelems_case_0 (s : store) : fun_allocelems s [] [] ((s, []))
@@ -16904,16 +16084,14 @@ inductive fun_allocelems : store → List elemtype → List (List ref) → store
     fun_allocelems s ([rt] ++ rt'_lst) ([ref_lst] ++ ref'_lst_lst) ((s_2, [ea] ++ ea'_lst))
 
 
-inductive allocelems_is_wf : store → List elemtype → List (List ref) → store × List elemaddr → Prop where
-  | allocelems_is_wf_0 (v_store : store) (var_0_lst : List elemtype) (var_1_lst_lst : List (List ref)) (ret_val : store × List elemaddr) (var_0 : store × List elemaddr) :
-    fun_allocelems v_store var_0_lst var_1_lst_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_0_elem => wf_reftype var_0_elem) var_0_lst →
-    Forall (fun var_1_lst_elem => Forall (fun var_1_elem => wf_ref var_1_elem) var_1_lst_elem) var_1_lst_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    allocelems_is_wf v_store var_0_lst var_1_lst_lst ret_val
-
+theorem allocelems_is_wf (v_store : store) (var_0_lst : List elemtype) (var_1_lst_lst : List (List ref)) (ret_val : store × List elemaddr) (var_0 : store × List elemaddr) :
+  fun_allocelems v_store var_0_lst var_1_lst_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_0_elem => wf_reftype var_0_elem) var_0_lst →
+  Forall (fun var_1_lst_elem => Forall (fun var_1_elem => wf_ref var_1_elem) var_1_lst_elem) var_1_lst_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) :=
+  sorry
 
 def allocexport (v_moduleinst : moduleinst) (v_export : «export») : exportinst :=
   match v_export with
@@ -16938,26 +16116,22 @@ def allocexport (v_moduleinst : moduleinst) (v_export : «export») : exportinst
     ADDR := externaddr.FUNC ((v_moduleinst.FUNCS)[proj_uN_0 x]!) : exportinst
   }
 
-inductive allocexport_is_wf : moduleinst → «export» → exportinst → Prop where
-  | allocexport_is_wf_0 (v_moduleinst : moduleinst) (v_export : «export») (ret_val : exportinst) :
-    wf_moduleinst v_moduleinst →
-    wf_export v_export →
-    ret_val = (allocexport v_moduleinst v_export) →
-    wf_exportinst ret_val →
-    allocexport_is_wf v_moduleinst v_export ret_val
-
+theorem allocexport_is_wf (v_moduleinst : moduleinst) (v_export : «export») (ret_val : exportinst) :
+  wf_moduleinst v_moduleinst →
+  wf_export v_export →
+  ret_val = (allocexport v_moduleinst v_export) →
+  wf_exportinst ret_val :=
+  sorry
 
 def allocexports (v_moduleinst : moduleinst) (var_0_lst : List «export») : List exportinst :=
   Map (fun v_export_elem => allocexport v_moduleinst v_export_elem) var_0_lst
 
-inductive allocexports_is_wf : moduleinst → List «export» → List exportinst → Prop where
-  | allocexports_is_wf_0 (v_moduleinst : moduleinst) (var_0_lst : List «export») (ret_val_lst : List exportinst) :
-    wf_moduleinst v_moduleinst →
-    Forall (fun var_0_elem => wf_export var_0_elem) var_0_lst →
-    ret_val_lst = (allocexports v_moduleinst var_0_lst) →
-    Forall (fun ret_val_elem => wf_exportinst ret_val_elem) ret_val_lst →
-    allocexports_is_wf v_moduleinst var_0_lst ret_val_lst
-
+theorem allocexports_is_wf (v_moduleinst : moduleinst) (var_0_lst : List «export») (ret_val_lst : List exportinst) :
+  wf_moduleinst v_moduleinst →
+  Forall (fun var_0_elem => wf_export var_0_elem) var_0_lst →
+  ret_val_lst = (allocexports v_moduleinst var_0_lst) →
+  Forall (fun ret_val_elem => wf_exportinst ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_allocmodule : store → module → List externaddr → List val → List ref → List (List ref) → store × moduleinst → Prop where
   | fun_allocmodule_case_0 (s : store) (v_module : module) (externaddr_lst : List externaddr) (val_G_lst : List val) (ref_T_lst : List ref) (ref_E_lst_lst : List (List ref)) (s_7 : store) (v_moduleinst : moduleinst) (tagtype_lst : List tagtype) (expr_G_lst : List expr) (globaltype_lst : List globaltype) (memtype_lst : List memtype) (expr_T_lst : List expr) (tabletype_lst : List tabletype) (expr_F_lst : List expr) (local_lst_lst : List (List «local»)) (x_lst : List idx) (byte_lst_lst : List (List byte)) (datamode_lst : List datamode) (elemmode_lst : List elemmode) (elemtype_lst : List elemtype) (expr_E_lst_lst : List (List expr)) (xi_lst : List exportinst) (type_lst : List type) (import_lst : List «import») (tag_lst : List tag) (global_lst : List global) (mem_lst : List mem) (table_lst : List table) (func_lst : List func) (data_lst : List data) (elem_lst : List elem) (start_opt : Option start) (export_lst : List «export») (aa_I_lst : List tagaddr) (ga_I_lst : List globaladdr) (ma_I_lst : List memaddr) (ta_I_lst : List tableaddr) (fa_I_lst : List funcaddr) (dt_lst : List deftype) (fa_lst : List Nat) (s_1 : store) (aa_lst : List tagaddr) (s_2 : store) (ga_lst : List globaladdr) (s_3 : store) (ma_lst : List memaddr) (s_4 : store) (ta_lst : List tableaddr) (s_5 : store) (da_lst : List dataaddr) (s_6 : store) (ea_lst : List elemaddr) (var_17 : store × List funcaddr) (var_16_lst : List elemtype) (var_15 : store × List elemaddr) (var_14 : store × List dataaddr) (var_13_lst : List tabletype) (var_12 : store × List tableaddr) (var_11_lst : List memtype) (var_10 : store × List memaddr) (var_9_lst : List globaltype) (var_8 : store × List globaladdr) (var_7_lst : List tagtype) (var_6 : store × List tagaddr) (var_5 : List deftype) (var_4 : List funcaddr) (var_3 : List tableaddr) (var_2 : List memaddr) (var_1 : List globaladdr) (var_0 : List tagaddr) :
@@ -17069,19 +16243,17 @@ inductive fun_allocmodule : store → module → List externaddr → List val �
     fun_allocmodule s v_module externaddr_lst val_G_lst ref_T_lst ref_E_lst_lst ((s_7, v_moduleinst))
 
 
-inductive allocmodule_is_wf : store → module → List externaddr → List val → List ref → List (List ref) → store × moduleinst → Prop where
-  | allocmodule_is_wf_0 (v_store : store) (v_module : module) (var_0_lst : List externaddr) (var_1_lst : List val) (var_2_lst : List ref) (var_3_lst_lst : List (List ref)) (ret_val : store × moduleinst) (var_0 : store × moduleinst) :
-    fun_allocmodule v_store v_module var_0_lst var_1_lst var_2_lst var_3_lst_lst var_0 →
-    wf_store v_store →
-    wf_module v_module →
-    Forall (fun var_1_elem => wf_val var_1_elem) var_1_lst →
-    Forall (fun var_2_elem => wf_ref var_2_elem) var_2_lst →
-    Forall (fun var_3_lst_elem => Forall (fun var_3_elem => wf_ref var_3_elem) var_3_lst_elem) var_3_lst_lst →
-    ret_val = var_0 →
-    wf_store (ret_val.1) →
-    wf_moduleinst (ret_val.2) →
-    allocmodule_is_wf v_store v_module var_0_lst var_1_lst var_2_lst var_3_lst_lst ret_val
-
+theorem allocmodule_is_wf (v_store : store) (v_module : module) (var_0_lst : List externaddr) (var_1_lst : List val) (var_2_lst : List ref) (var_3_lst_lst : List (List ref)) (ret_val : store × moduleinst) (var_0 : store × moduleinst) :
+  fun_allocmodule v_store v_module var_0_lst var_1_lst var_2_lst var_3_lst_lst var_0 →
+  wf_store v_store →
+  wf_module v_module →
+  Forall (fun var_1_elem => wf_val var_1_elem) var_1_lst →
+  Forall (fun var_2_elem => wf_ref var_2_elem) var_2_lst →
+  Forall (fun var_3_lst_elem => Forall (fun var_3_elem => wf_ref var_3_elem) var_3_lst_elem) var_3_lst_lst →
+  ret_val = var_0 →
+  wf_store (ret_val.1) →
+  wf_moduleinst (ret_val.2) :=
+  sorry
 
 inductive fun_rundata_ : dataidx → data → List instr → Prop where
   | fun_rundata__case_0 (x : uN) (v_n : Nat) (b_lst : List byte) :
@@ -17092,15 +16264,13 @@ inductive fun_rundata_ : dataidx → data → List instr → Prop where
     fun_rundata_ x (data.DATA b_lst (datamode.ACTIVE y instr_lst)) (instr_lst ++ [instr.CONST numtype.I32 (num_.mk_num__0 addrtype.I32 (uN.mk_uN 0)), instr.CONST numtype.I32 (num_.mk_num__0 addrtype.I32 (uN.mk_uN v_n)), instr.MEMORY_INIT y x, instr.DATA_DROP x])
 
 
-inductive rundata__is_wf : dataidx → data → List instr → Prop where
-  | rundata__is_wf_0 (v_dataidx : dataidx) (v_data : data) (ret_val_lst : List instr) (var_0 : List instr) :
-    fun_rundata_ v_dataidx v_data var_0 →
-    wf_uN 32 v_dataidx →
-    wf_data v_data →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_instr ret_val_elem) ret_val_lst →
-    rundata__is_wf v_dataidx v_data ret_val_lst
-
+theorem rundata__is_wf (v_dataidx : dataidx) (v_data : data) (ret_val_lst : List instr) (var_0 : List instr) :
+  fun_rundata_ v_dataidx v_data var_0 →
+  wf_uN 32 v_dataidx →
+  wf_data v_data →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_instr ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_runelem_ : elemidx → elem → List instr → Prop where
   | fun_runelem__case_0 (x : uN) (rt : reftype) (v_n : Nat) (e_lst : List expr) :
@@ -17114,15 +16284,13 @@ inductive fun_runelem_ : elemidx → elem → List instr → Prop where
     fun_runelem_ x (elem.ELEM rt e_lst (elemmode.ACTIVE y instr_lst)) (instr_lst ++ [instr.CONST numtype.I32 (num_.mk_num__0 addrtype.I32 (uN.mk_uN 0)), instr.CONST numtype.I32 (num_.mk_num__0 addrtype.I32 (uN.mk_uN v_n)), instr.TABLE_INIT y x, instr.ELEM_DROP x])
 
 
-inductive runelem__is_wf : elemidx → elem → List instr → Prop where
-  | runelem__is_wf_0 (v_elemidx : elemidx) (v_elem : elem) (ret_val_lst : List instr) (var_0 : List instr) :
-    fun_runelem_ v_elemidx v_elem var_0 →
-    wf_uN 32 v_elemidx →
-    wf_elem v_elem →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_instr ret_val_elem) ret_val_lst →
-    runelem__is_wf v_elemidx v_elem ret_val_lst
-
+theorem runelem__is_wf (v_elemidx : elemidx) (v_elem : elem) (ret_val_lst : List instr) (var_0 : List instr) :
+  fun_runelem_ v_elemidx v_elem var_0 →
+  wf_uN 32 v_elemidx →
+  wf_elem v_elem →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_instr ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_evalexprs : state → List expr → state × List ref → Prop where
   | fun_evalexprs_case_0 (z : state) : fun_evalexprs z [] ((z, []))
@@ -17134,16 +16302,14 @@ inductive fun_evalexprs : state → List expr → state × List ref → Prop whe
     fun_evalexprs z ([v_expr] ++ expr'_lst) ((z'', [v_ref] ++ ref'_lst))
 
 
-inductive evalexprs_is_wf : state → List expr → state × List ref → Prop where
-  | evalexprs_is_wf_0 (v_state : state) (var_0_lst : List expr) (ret_val : state × List ref) (var_0 : state × List ref) :
-    fun_evalexprs v_state var_0_lst var_0 →
-    wf_state v_state →
-    Forall (fun var_0_elem => Forall (fun var_0_elem => wf_instr var_0_elem) var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_state (ret_val.1) →
-    Forall (fun iter_elem => wf_ref iter_elem) (ret_val.2) →
-    evalexprs_is_wf v_state var_0_lst ret_val
-
+theorem evalexprs_is_wf (v_state : state) (var_0_lst : List expr) (ret_val : state × List ref) (var_0 : state × List ref) :
+  fun_evalexprs v_state var_0_lst var_0 →
+  wf_state v_state →
+  Forall (fun var_0_elem => Forall (fun var_0_elem => wf_instr var_0_elem) var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_state (ret_val.1) →
+  Forall (fun iter_elem => wf_ref iter_elem) (ret_val.2) :=
+  sorry
 
 inductive fun_evalexprss : state → List (List expr) → state × List (List ref) → Prop where
   | fun_evalexprss_case_0 (z : state) : fun_evalexprss z [] ((z, []))
@@ -17155,16 +16321,14 @@ inductive fun_evalexprss : state → List (List expr) → state × List (List re
     fun_evalexprss z ([expr_lst] ++ expr'_lst_lst) ((z'', [ref_lst] ++ ref'_lst_lst))
 
 
-inductive evalexprss_is_wf : state → List (List expr) → state × List (List ref) → Prop where
-  | evalexprss_is_wf_0 (v_state : state) (var_0_lst_lst : List (List expr)) (ret_val : state × List (List ref)) (var_0 : state × List (List ref)) :
-    fun_evalexprss v_state var_0_lst_lst var_0 →
-    wf_state v_state →
-    Forall (fun var_0_lst_elem => Forall (fun var_0_elem => Forall (fun var_0_elem => wf_instr var_0_elem) var_0_elem) var_0_lst_elem) var_0_lst_lst →
-    ret_val = var_0 →
-    wf_state (ret_val.1) →
-    Forall (fun iter_elem => Forall (fun iter_elem => wf_ref iter_elem) iter_elem) (ret_val.2) →
-    evalexprss_is_wf v_state var_0_lst_lst ret_val
-
+theorem evalexprss_is_wf (v_state : state) (var_0_lst_lst : List (List expr)) (ret_val : state × List (List ref)) (var_0 : state × List (List ref)) :
+  fun_evalexprss v_state var_0_lst_lst var_0 →
+  wf_state v_state →
+  Forall (fun var_0_lst_elem => Forall (fun var_0_elem => Forall (fun var_0_elem => wf_instr var_0_elem) var_0_elem) var_0_lst_elem) var_0_lst_lst →
+  ret_val = var_0 →
+  wf_state (ret_val.1) →
+  Forall (fun iter_elem => Forall (fun iter_elem => wf_ref iter_elem) iter_elem) (ret_val.2) :=
+  sorry
 
 inductive fun_evalglobals : state → List globaltype → List expr → state × List val → Prop where
   | fun_evalglobals_case_0 (z : state) : fun_evalglobals z [] [] ((z, []))
@@ -17193,17 +16357,15 @@ inductive fun_evalglobals : state → List globaltype → List expr → state ×
     fun_evalglobals z ([gt] ++ gt'_lst) ([v_expr] ++ expr'_lst) ((z'', [v_val] ++ val'_lst))
 
 
-inductive evalglobals_is_wf : state → List globaltype → List expr → state × List val → Prop where
-  | evalglobals_is_wf_0 (v_state : state) (var_0_lst : List globaltype) (var_1_lst : List expr) (ret_val : state × List val) (var_0 : state × List val) :
-    fun_evalglobals v_state var_0_lst var_1_lst var_0 →
-    wf_state v_state →
-    Forall (fun var_0_elem => wf_globaltype var_0_elem) var_0_lst →
-    Forall (fun var_1_elem => Forall (fun var_1_elem => wf_instr var_1_elem) var_1_elem) var_1_lst →
-    ret_val = var_0 →
-    wf_state (ret_val.1) →
-    Forall (fun iter_elem => wf_val iter_elem) (ret_val.2) →
-    evalglobals_is_wf v_state var_0_lst var_1_lst ret_val
-
+theorem evalglobals_is_wf (v_state : state) (var_0_lst : List globaltype) (var_1_lst : List expr) (ret_val : state × List val) (var_0 : state × List val) :
+  fun_evalglobals v_state var_0_lst var_1_lst var_0 →
+  wf_state v_state →
+  Forall (fun var_0_elem => wf_globaltype var_0_elem) var_0_lst →
+  Forall (fun var_1_elem => Forall (fun var_1_elem => wf_instr var_1_elem) var_1_elem) var_1_lst →
+  ret_val = var_0 →
+  wf_state (ret_val.1) →
+  Forall (fun iter_elem => wf_val iter_elem) (ret_val.2) :=
+  sorry
 
 inductive fun_instantiate : store → module → List externaddr → config → Prop where
   | fun_instantiate_case_0 (s : store) (v_module : module) (externaddr_lst : List externaddr) (xt_I_lst : List externtype) (xt_E_lst : List externtype) (expr_G_lst : List expr) (globaltype_lst : List globaltype) (expr_T_lst : List expr) (tabletype_lst : List tabletype) (byte_lst_lst : List (List byte)) (datamode_lst : List datamode) (elemmode_lst : List elemmode) (expr_E_lst_lst : List (List expr)) (reftype_lst : List reftype) (x_opt : Option idx) (moduleinst_0 : moduleinst) (z : state) (i_D : Nat) (i_E : Nat) (type_lst : List type) (import_lst : List «import») (tag_lst : List tag) (global_lst : List global) (mem_lst : List mem) (table_lst : List table) (func_lst : List func) (data_lst : List data) (elem_lst : List elem) (start_opt : Option start) (export_lst : List «export») (z' : state) (val_G_lst : List val) (z'' : state) (ref_T_lst : List ref) (z''' : state) (ref_E_lst_lst : List (List ref)) (s''' : store) (f : frame) (s'''' : store) (v_moduleinst : moduleinst) (instr_D_lst : List instr) (instr_E_lst : List instr) (instr_S_opt : Option instr) (var_11 : List funcaddr) (var_10 : List globaladdr) (var_9 : List deftype) (var_8_lst : List (List instr)) (var_7_lst : List (List instr)) (var_6 : store × moduleinst) (var_5 : state × List (List ref)) (var_4 : state × List ref) (var_3 : state × List val) (var_2 : List funcaddr) (var_1 : List globaladdr) (var_0 : List deftype) :
@@ -17291,15 +16453,13 @@ inductive fun_instantiate : store → module → List externaddr → config → 
     })) (instr_E_lst ++ (instr_D_lst ++ (Option.toList instr_S_opt))))
 
 
-inductive instantiate_is_wf : store → module → List externaddr → config → Prop where
-  | instantiate_is_wf_0 (v_store : store) (v_module : module) (var_0_lst : List externaddr) (ret_val : config) (var_0 : config) :
-    fun_instantiate v_store v_module var_0_lst var_0 →
-    wf_store v_store →
-    wf_module v_module →
-    ret_val = var_0 →
-    wf_config ret_val →
-    instantiate_is_wf v_store v_module var_0_lst ret_val
-
+theorem instantiate_is_wf (v_store : store) (v_module : module) (var_0_lst : List externaddr) (ret_val : config) (var_0 : config) :
+  fun_instantiate v_store v_module var_0_lst var_0 →
+  wf_store v_store →
+  wf_module v_module →
+  ret_val = var_0 →
+  wf_config ret_val :=
+  sorry
 
 inductive fun_invoke : store → funcaddr → List val → config → Prop where
   | fun_invoke_case_0 (s : store) (v_funcaddr : Nat) (val_lst : List val) (t_1_lst : List valtype) (t_2_lst : List valtype) :
@@ -17324,15 +16484,13 @@ inductive fun_invoke : store → funcaddr → List val → config → Prop where
     })) ((Map (fun v_val_elem => instr_val v_val_elem) val_lst) ++ [instr.REF_FUNC_ADDR v_funcaddr, instr.CALL_REF (typeuse_deftype (((s.FUNCS)[v_funcaddr]!).TYPE))]))
 
 
-inductive invoke_is_wf : store → funcaddr → List val → config → Prop where
-  | invoke_is_wf_0 (v_store : store) (v_funcaddr : funcaddr) (var_0_lst : List val) (ret_val : config) (var_0 : config) :
-    fun_invoke v_store v_funcaddr var_0_lst var_0 →
-    wf_store v_store →
-    Forall (fun var_0_elem => wf_val var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_config ret_val →
-    invoke_is_wf v_store v_funcaddr var_0_lst ret_val
-
+theorem invoke_is_wf (v_store : store) (v_funcaddr : funcaddr) (var_0_lst : List val) (ret_val : config) (var_0 : config) :
+  fun_invoke v_store v_funcaddr var_0_lst var_0 →
+  wf_store v_store →
+  Forall (fun var_0_elem => wf_val var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_config ret_val :=
+  sorry
 
 abbrev castop : Type := Option null × Option null
 
@@ -17350,12 +16508,10 @@ opaque ieee_ (v_N : N) (rat : Rat) : fNmag := by
      | intros ; assumption
 
 
-inductive ieee__is_wf : N → Rat → fNmag → Prop where
-  | ieee__is_wf_0 (v_N : N) (rat : Rat) (ret_val : fNmag) :
-    ret_val = (ieee_ v_N rat) →
-    wf_fNmag v_N ret_val →
-    ieee__is_wf v_N rat ret_val
-
+theorem ieee__is_wf (v_N : N) (rat : Rat) (ret_val : fNmag) :
+  ret_val = (ieee_ v_N rat) →
+  wf_fNmag v_N ret_val :=
+  sorry
 
 structure idctxt where
   MKidctxt ::
@@ -17441,14 +16597,12 @@ inductive fun_concat_idctxt : List idctxt → idctxt → Prop where
     fun_concat_idctxt ([v_I] ++ I'_lst) (v_I ++ var_0)
 
 
-inductive concat_idctxt_is_wf : List idctxt → idctxt → Prop where
-  | concat_idctxt_is_wf_0 (var_0_lst : List idctxt) (ret_val : idctxt) (var_0 : idctxt) :
-    fun_concat_idctxt var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_idctxt var_0_elem) var_0_lst →
-    ret_val = var_0 →
-    wf_idctxt ret_val →
-    concat_idctxt_is_wf var_0_lst ret_val
-
+theorem concat_idctxt_is_wf (var_0_lst : List idctxt) (ret_val : idctxt) (var_0 : idctxt) :
+  fun_concat_idctxt var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_idctxt var_0_elem) var_0_lst →
+  ret_val = var_0 →
+  wf_idctxt ret_val :=
+  sorry
 
 inductive Idctxt_ok : idctxt → Prop where
   | mk_Idctxt_ok (v_I : I) (field_lst_lst : List (List char)) :
@@ -17608,14 +16762,12 @@ inductive fun_importsd : List decl → List «import» → Prop where
     fun_importsd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive importsd_is_wf : List decl → List «import» → Prop where
-  | importsd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List «import») (var_0 : List «import») :
-    fun_importsd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_import ret_val_elem) ret_val_lst →
-    importsd_is_wf var_0_lst ret_val_lst
-
+theorem importsd_is_wf (var_0_lst : List decl) (ret_val_lst : List «import») (var_0 : List «import») :
+  fun_importsd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_import ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_tagsd : List decl → List tag → Prop where
   | fun_tagsd_case_0 : fun_tagsd [] []
@@ -17627,14 +16779,12 @@ inductive fun_tagsd : List decl → List tag → Prop where
     fun_tagsd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive tagsd_is_wf : List decl → List tag → Prop where
-  | tagsd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List tag) (var_0 : List tag) :
-    fun_tagsd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_tag ret_val_elem) ret_val_lst →
-    tagsd_is_wf var_0_lst ret_val_lst
-
+theorem tagsd_is_wf (var_0_lst : List decl) (ret_val_lst : List tag) (var_0 : List tag) :
+  fun_tagsd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_tag ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_globalsd : List decl → List global → Prop where
   | fun_globalsd_case_0 : fun_globalsd [] []
@@ -17646,14 +16796,12 @@ inductive fun_globalsd : List decl → List global → Prop where
     fun_globalsd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive globalsd_is_wf : List decl → List global → Prop where
-  | globalsd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List global) (var_0 : List global) :
-    fun_globalsd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_global ret_val_elem) ret_val_lst →
-    globalsd_is_wf var_0_lst ret_val_lst
-
+theorem globalsd_is_wf (var_0_lst : List decl) (ret_val_lst : List global) (var_0 : List global) :
+  fun_globalsd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_global ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_memsd : List decl → List mem → Prop where
   | fun_memsd_case_0 : fun_memsd [] []
@@ -17665,14 +16813,12 @@ inductive fun_memsd : List decl → List mem → Prop where
     fun_memsd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive memsd_is_wf : List decl → List mem → Prop where
-  | memsd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List mem) (var_0 : List mem) :
-    fun_memsd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_mem ret_val_elem) ret_val_lst →
-    memsd_is_wf var_0_lst ret_val_lst
-
+theorem memsd_is_wf (var_0_lst : List decl) (ret_val_lst : List mem) (var_0 : List mem) :
+  fun_memsd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_mem ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_tablesd : List decl → List table → Prop where
   | fun_tablesd_case_0 : fun_tablesd [] []
@@ -17684,14 +16830,12 @@ inductive fun_tablesd : List decl → List table → Prop where
     fun_tablesd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive tablesd_is_wf : List decl → List table → Prop where
-  | tablesd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List table) (var_0 : List table) :
-    fun_tablesd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_table ret_val_elem) ret_val_lst →
-    tablesd_is_wf var_0_lst ret_val_lst
-
+theorem tablesd_is_wf (var_0_lst : List decl) (ret_val_lst : List table) (var_0 : List table) :
+  fun_tablesd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_table ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_funcsd : List decl → List func → Prop where
   | fun_funcsd_case_0 : fun_funcsd [] []
@@ -17703,14 +16847,12 @@ inductive fun_funcsd : List decl → List func → Prop where
     fun_funcsd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive funcsd_is_wf : List decl → List func → Prop where
-  | funcsd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List func) (var_0 : List func) :
-    fun_funcsd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_func ret_val_elem) ret_val_lst →
-    funcsd_is_wf var_0_lst ret_val_lst
-
+theorem funcsd_is_wf (var_0_lst : List decl) (ret_val_lst : List func) (var_0 : List func) :
+  fun_funcsd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_func ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_datasd : List decl → List data → Prop where
   | fun_datasd_case_0 : fun_datasd [] []
@@ -17722,14 +16864,12 @@ inductive fun_datasd : List decl → List data → Prop where
     fun_datasd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive datasd_is_wf : List decl → List data → Prop where
-  | datasd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List data) (var_0 : List data) :
-    fun_datasd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_data ret_val_elem) ret_val_lst →
-    datasd_is_wf var_0_lst ret_val_lst
-
+theorem datasd_is_wf (var_0_lst : List decl) (ret_val_lst : List data) (var_0 : List data) :
+  fun_datasd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_data ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_elemsd : List decl → List elem → Prop where
   | fun_elemsd_case_0 : fun_elemsd [] []
@@ -17741,14 +16881,12 @@ inductive fun_elemsd : List decl → List elem → Prop where
     fun_elemsd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive elemsd_is_wf : List decl → List elem → Prop where
-  | elemsd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List elem) (var_0 : List elem) :
-    fun_elemsd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_elem ret_val_elem) ret_val_lst →
-    elemsd_is_wf var_0_lst ret_val_lst
-
+theorem elemsd_is_wf (var_0_lst : List decl) (ret_val_lst : List elem) (var_0 : List elem) :
+  fun_elemsd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_elem ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_startsd : List decl → List start → Prop where
   | fun_startsd_case_0 : fun_startsd [] []
@@ -17760,14 +16898,12 @@ inductive fun_startsd : List decl → List start → Prop where
     fun_startsd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive startsd_is_wf : List decl → List start → Prop where
-  | startsd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List start) (var_0 : List start) :
-    fun_startsd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_start ret_val_elem) ret_val_lst →
-    startsd_is_wf var_0_lst ret_val_lst
-
+theorem startsd_is_wf (var_0_lst : List decl) (ret_val_lst : List start) (var_0 : List start) :
+  fun_startsd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_start ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_exportsd : List decl → List «export» → Prop where
   | fun_exportsd_case_0 : fun_exportsd [] []
@@ -17779,14 +16915,12 @@ inductive fun_exportsd : List decl → List «export» → Prop where
     fun_exportsd ([v_decl] ++ decl'_lst) var_0
 
 
-inductive exportsd_is_wf : List decl → List «export» → Prop where
-  | exportsd_is_wf_0 (var_0_lst : List decl) (ret_val_lst : List «export») (var_0 : List «export») :
-    fun_exportsd var_0_lst var_0 →
-    Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
-    ret_val_lst = var_0 →
-    Forall (fun ret_val_elem => wf_export ret_val_elem) ret_val_lst →
-    exportsd_is_wf var_0_lst ret_val_lst
-
+theorem exportsd_is_wf (var_0_lst : List decl) (ret_val_lst : List «export») (var_0 : List «export») :
+  fun_exportsd var_0_lst var_0 →
+  Forall (fun var_0_elem => wf_decl var_0_elem) var_0_lst →
+  ret_val_lst = var_0 →
+  Forall (fun ret_val_elem => wf_export ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive fun_ordered : List decl → Bool → Prop where
   | fun_ordered_case_0 (decl_lst : List decl) (var_0 : List «import») :
@@ -19107,12 +18241,10 @@ opaque instrdots  : List instr := by
      | intros ; assumption
 
 
-inductive instrdots_is_wf : List instr → Prop where
-  | instrdots_is_wf_0 (ret_val_lst : List instr) :
-    ret_val_lst = instrdots →
-    Forall (fun ret_val_elem => wf_instr ret_val_elem) ret_val_lst →
-    instrdots_is_wf ret_val_lst
-
+theorem instrdots_is_wf (ret_val_lst : List instr) :
+  ret_val_lst = instrdots →
+  Forall (fun ret_val_elem => wf_instr ret_val_elem) ret_val_lst :=
+  sorry
 
 inductive label : Type where
   | LABEL_ (v_n : n) (instr_lst : List instr) : label
@@ -19140,13 +18272,11 @@ opaque allocX (r_X : Type) (Y : Type) (v_store : store) (X_0 : r_X) (Y_0 : Y) : 
      | intros ; assumption
 
 
-inductive allocX_is_wf (r_X : store × r_X × Y × store × addr) (Y : store × r_X × Y × store × addr) : store → r_X → Y → store × addr → Prop where
-  | allocX_is_wf_0 (r_X : Type) (Y : Type) (v_store : store) (X_0 : r_X) (Y_0 : Y) (ret_val : store × addr) :
-    wf_store v_store →
-    ret_val = (allocX r_X Y v_store X_0 Y_0) →
-    wf_store (ret_val.1) →
-    allocX_is_wf v_store X_0 Y_0 ret_val
-
+theorem allocX_is_wf (r_X : Type) (Y : Type) (v_store : store) (X_0 : r_X) (Y_0 : Y) (ret_val : store × addr) :
+  wf_store v_store →
+  ret_val = (allocX r_X Y v_store X_0 Y_0) →
+  wf_store (ret_val.1) :=
+  sorry
 
 def allocXs (r_X : Type) (Y : Type) (v_store : store) (var_0_lst : List r_X) (var_1_lst : List Y) : store × List addr :=
   match var_0_lst, var_1_lst with
@@ -19155,9 +18285,9 @@ def allocXs (r_X : Type) (Y : Type) (v_store : store) (var_0_lst : List r_X) (va
   let (s_2, a'_lst) := allocXs r_X Y s_1 X'_lst Y'_lst
   (s_2, [a] ++ a'_lst)
 
-inductive allocXs_is_wf (r_X : store × List r_X × List Y × store × List addr) (Y : store × List r_X × List Y × store × List addr) : store → List r_X → List Y → store × List addr → Prop where
-  | allocXs_is_wf_0 (r_X : Type) (Y : Type) (v_store : store) (var_0_lst : List r_X) (var_1_lst : List Y) (ret_val : store × List addr) :
-    wf_store v_store →
-    ret_val = (allocXs r_X Y v_store var_0_lst var_1_lst) →
-    wf_store (ret_val.1) →
-    allocXs_is_wf v_store var_0_lst var_1_lst ret_val
+theorem allocXs_is_wf (r_X : Type) (Y : Type) (v_store : store) (var_0_lst : List r_X) (var_1_lst : List Y) (ret_val : store × List addr) :
+  wf_store v_store →
+  ret_val = (allocXs r_X Y v_store var_0_lst var_1_lst) →
+  wf_store (ret_val.1) :=
+  sorry
+

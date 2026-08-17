@@ -777,9 +777,13 @@ inductive unop_ : Type where
 deriving Inhabited, BEq
 
 inductive wf_unop_ : numtype → unop_ → Prop where
-  | unop__case_0 (v_numtype : numtype) (v_Inn : Inn) (var_x : unop_Inn) :
-    v_numtype = (numtype_Inn v_Inn) →
-    wf_unop_ v_numtype (unop_.mk_unop__0 v_Inn var_x)
+  | unop__case_0
+    (v_numtype : numtype)
+    (v_Inn : Inn)
+    (var_x : unop_Inn)
+    :
+    v_numtype = (numtype_Inn v_Inn)
+    → wf_unop_ v_numtype (unop_.mk_unop__0 v_Inn var_x)
   | unop__case_1 (v_numtype : numtype) (v_Fnn : Fnn) (var_x : unop_Fnn) :
     v_numtype = (numtype_Fnn v_Fnn) →
     wf_unop_ v_numtype (unop_.mk_unop__1 v_Fnn var_x)
@@ -3797,24 +3801,39 @@ inductive fun_vunop_ : shape → vunop_ → vec_ → List vec_ → Prop where
     Forall (fun lane_1_30_elem => wf_lane_ (fun_lanetype (shape.X (lanetype_Jnn Jnn.I64) (dim.mk_dim v_M))) (lane_.mk_lane__2 Jnn.I64 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I64)) (Option.get! (proj_lane__2 lane_1_30_elem))))) lane_1_lst →
     v_M = M_0 →
     fun_vunop_ (shape.X lanetype.I64 (dim.mk_dim v_M)) (vunop_.mk_vunop__0 Jnn.I64 M_0 vunop_Jnn_N.POPCNT) v128_1 [v128]
-  | fun_vunop__case_10 (v_M : Nat) (v128_1 : uN) (M_0 : Nat) (lane_1_lst : List lane_) (v128 : vec_) :
-    lane_1_lst = (lanes_ (shape.X (lanetype_Jnn Jnn.I8) (dim.mk_dim v_M)) v128_1) →
-    Forall (fun lane_1_32_elem => (proj_lane__2 lane_1_32_elem) ≠ none) lane_1_lst →
-    v128 = (inv_lanes_ (shape.X (lanetype_Jnn Jnn.I8) (dim.mk_dim v_M)) (Map (fun lane_1_32_elem => lane_.mk_lane__2 Jnn.I8 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I8)) (Option.get! (proj_lane__2 lane_1_32_elem)))) lane_1_lst)) →
-    wf_shape (shape.X (lanetype_Jnn Jnn.I8) (dim.mk_dim v_M)) →
-    Forall (fun lane_1_33_elem => (proj_lane__2 lane_1_33_elem) ≠ none) lane_1_lst →
-    Forall (fun lane_1_33_elem => wf_lane_ (fun_lanetype (shape.X (lanetype_Jnn Jnn.I8) (dim.mk_dim v_M))) (lane_.mk_lane__2 Jnn.I8 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I8)) (Option.get! (proj_lane__2 lane_1_33_elem))))) lane_1_lst →
-    v_M = M_0 →
-    fun_vunop_ (shape.X lanetype.I8 (dim.mk_dim v_M)) (vunop_.mk_vunop__0 Jnn.I8 M_0 vunop_Jnn_N.POPCNT) v128_1 [v128]
-  | fun_vunop__case_11 (v_M : Nat) (v128_1 : uN) (M_0 : Nat) (lane_1_lst : List lane_) (v128 : vec_) :
-    lane_1_lst = (lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) v128_1) →
-    Forall (fun lane_1_35_elem => (proj_lane__2 lane_1_35_elem) ≠ none) lane_1_lst →
-    v128 = (inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) (Map (fun lane_1_35_elem => lane_.mk_lane__2 Jnn.I16 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I16)) (Option.get! (proj_lane__2 lane_1_35_elem)))) lane_1_lst)) →
-    wf_shape (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) →
-    Forall (fun lane_1_36_elem => (proj_lane__2 lane_1_36_elem) ≠ none) lane_1_lst →
-    Forall (fun lane_1_36_elem => wf_lane_ (fun_lanetype (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M))) (lane_.mk_lane__2 Jnn.I16 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I16)) (Option.get! (proj_lane__2 lane_1_36_elem))))) lane_1_lst →
-    v_M = M_0 →
-    fun_vunop_ (shape.X lanetype.I16 (dim.mk_dim v_M)) (vunop_.mk_vunop__0 Jnn.I16 M_0 vunop_Jnn_N.POPCNT) v128_1 [v128]
+
+  | fun_vunop__case_10
+    (v_M        : Nat)
+    (v128_1     : uN)
+    (M_0        : Nat)
+    (lane_1_lst : List lane_)
+    (v128       : vec_)
+    :
+      lane_1_lst = (lanes_ (shape.X (lanetype_Jnn Jnn.I8) (dim.mk_dim v_M)) v128_1)
+    → Forall (fun lane_1_32_elem => (proj_lane__2 lane_1_32_elem) ≠ none) lane_1_lst
+    → v128 = (inv_lanes_ (shape.X (lanetype_Jnn Jnn.I8) (dim.mk_dim v_M)) (Map (fun lane_1_32_elem => lane_.mk_lane__2 Jnn.I8 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I8)) (Option.get! (proj_lane__2 lane_1_32_elem)))) lane_1_lst))
+    → wf_shape (shape.X (lanetype_Jnn Jnn.I8) (dim.mk_dim v_M))
+    → Forall (fun lane_1_33_elem => (proj_lane__2 lane_1_33_elem) ≠ none) lane_1_lst
+    → Forall (fun lane_1_33_elem => wf_lane_ (fun_lanetype (shape.X (lanetype_Jnn Jnn.I8) (dim.mk_dim v_M))) (lane_.mk_lane__2 Jnn.I8 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I8)) (Option.get! (proj_lane__2 lane_1_33_elem))))) lane_1_lst
+    → v_M = M_0
+    → fun_vunop_ (shape.X lanetype.I8 (dim.mk_dim v_M)) (vunop_.mk_vunop__0 Jnn.I8 M_0 vunop_Jnn_N.POPCNT) v128_1 [v128]
+
+  | fun_vunop__case_11
+    (v_M        : Nat)
+    (v128_1     : uN)
+    (M_0        : Nat)
+    (lane_1_lst : List lane_)
+    (v128       : vec_)
+    :
+      lane_1_lst = (lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) v128_1)
+    → Forall (fun lane_1_35_elem => (proj_lane__2 lane_1_35_elem) ≠ none) lane_1_lst
+    → v128 = (inv_lanes_ (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M)) (Map (fun lane_1_35_elem => lane_.mk_lane__2 Jnn.I16 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I16)) (Option.get! (proj_lane__2 lane_1_35_elem)))) lane_1_lst))
+    → wf_shape (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M))
+    → Forall (fun lane_1_36_elem => (proj_lane__2 lane_1_36_elem) ≠ none) lane_1_lst
+    → Forall (fun lane_1_36_elem => wf_lane_ (fun_lanetype (shape.X (lanetype_Jnn Jnn.I16) (dim.mk_dim v_M))) (lane_.mk_lane__2 Jnn.I16 (ipopcnt_ (lsizenn (lanetype_Jnn Jnn.I16)) (Option.get! (proj_lane__2 lane_1_36_elem))))) lane_1_lst
+    → v_M = M_0
+    → fun_vunop_ (shape.X lanetype.I16 (dim.mk_dim v_M)) (vunop_.mk_vunop__0 Jnn.I16 M_0 vunop_Jnn_N.POPCNT) v128_1 [v128]
+
   | fun_vunop__case_12 (v_M : Nat) (v128_1 : uN) (M_0 : Nat) (lane_1_lst : List lane_) (lane_lst_lst : List (List lane_)) (v128_lst : List vec_) :
     lane_1_lst = (lanes_ (shape.X (lanetype_Fnn Fnn.F32) (dim.mk_dim v_M)) v128_1) →
     lane_lst_lst = (setproduct_ lane_ (Map (fun lane_1_38_elem => Map (fun iter_0_49_elem => lane_.mk_lane__0 (numtype_Fnn Fnn.F32) (num_.mk_num__1 Fnn.F32 iter_0_49_elem)) (fabs_ (sizenn (numtype_Fnn Fnn.F32)) (Option.get! (proj_num__1 (Option.get! (proj_lane__0 lane_1_38_elem)))))) lane_1_lst)) →
@@ -6829,26 +6848,34 @@ inductive growtable_is_wf : tableinst → Nat → ref → tableinst → Prop whe
 
 
 inductive fun_growmemory_before_fun_growmemory_case_1 : meminst → Nat → Prop where
-  | fun_growmemory_case_0 (mi : meminst) (v_n : Nat) (mi' : meminst) (i : u32) (j_opt : Option u32) (b_lst : List byte) (i' : Rat) :
-    ({
-      TYPE := memtype.PAGE (limits.mk_limits i j_opt)
-      BYTES := b_lst : meminst
-    }) = mi →
-    i' = ((((List.length b_lst) : Rat) / ((64 * Ki) : Rat)) + (v_n : Rat)) →
-    Forall (fun j_7_elem => i' ≤ ((proj_uN_0 j_7_elem) : Rat)) (Option.toList j_opt) →
-    mi' = ({
-      TYPE := memtype.PAGE (limits.mk_limits (uN.mk_uN (rat_to_nat i')) j_opt)
-      BYTES := b_lst ++ (List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0)) : meminst
-    }) →
-    wf_meminst ({
-      TYPE := memtype.PAGE (limits.mk_limits i j_opt)
-      BYTES := b_lst : meminst
-    }) →
-    wf_meminst ({
-      TYPE := memtype.PAGE (limits.mk_limits (uN.mk_uN (rat_to_nat i')) j_opt)
-      BYTES := b_lst ++ (List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0)) : meminst
-    }) →
-    fun_growmemory_before_fun_growmemory_case_1 mi v_n
+  | fun_growmemory_case_0
+    (mi     : meminst)
+    (v_n    : Nat)
+    (mi'    : meminst)
+    (i      : u32)
+    (j_opt  : Option u32)
+    (b_lst  : List byte)
+    (i'     : Rat)
+    :
+      ({
+        TYPE := memtype.PAGE (limits.mk_limits i j_opt)
+        BYTES := b_lst : meminst
+      }) = mi
+    → i' = ((((List.length b_lst) : Rat) / ((64 * Ki) : Rat)) + (v_n : Rat))
+    → Forall (fun j_7_elem => i' ≤ ((proj_uN_0 j_7_elem) : Rat)) (Option.toList j_opt)
+    → mi' = ({
+        TYPE := memtype.PAGE (limits.mk_limits (uN.mk_uN (rat_to_nat i')) j_opt)
+        BYTES := b_lst ++ (List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0)) : meminst
+      })
+    → wf_meminst ({
+        TYPE := memtype.PAGE (limits.mk_limits i j_opt)
+        BYTES := b_lst : meminst
+      })
+    → wf_meminst ({
+        TYPE := memtype.PAGE (limits.mk_limits (uN.mk_uN (rat_to_nat i')) j_opt)
+        BYTES := b_lst ++ (List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0)) : meminst
+      })
+    → fun_growmemory_before_fun_growmemory_case_1 mi v_n
 
 
 inductive fun_growmemory : meminst → Nat → Option meminst → Prop where
@@ -9472,74 +9499,90 @@ inductive Exportinst_ok : store → exportinst → Prop where
 
 
 inductive Moduleinst_ok : store → moduleinst → context → Prop where
-  | mk_Moduleinst_ok (s : store) (functype_lst : List functype) (funcaddr_lst : List funcaddr) (globaladdr_lst : List globaladdr) (tableaddr_lst : List tableaddr) (memaddr_lst : List memaddr) (elemaddr_lst : List elemaddr) (dataaddr_lst : List dataaddr) (exportinst_lst : List exportinst) (functype_F_lst : List functype) (globaltype_lst : List globaltype) (tabletype_lst : List tabletype) (memtype_lst : List memtype) (elemtype_lst : List elemtype) (datatype_lst : List datatype) :
-    Forall (fun v_functype_elem => Functype_ok v_functype_elem) functype_lst →
-    (List.length globaladdr_lst) = (List.length globaltype_lst) →
-    Forall₂ (fun v_globaladdr_elem v_globaltype_elem => Externaddr_ok s (externaddr.GLOBAL v_globaladdr_elem) (externtype.GLOBAL v_globaltype_elem)) globaladdr_lst globaltype_lst →
-    (List.length funcaddr_lst) = (List.length functype_F_lst) →
-    Forall₂ (fun v_funcaddr_elem functype_F_elem => Externaddr_ok s (externaddr.FUNC v_funcaddr_elem) (externtype.FUNC functype_F_elem)) funcaddr_lst functype_F_lst →
-    (List.length memaddr_lst) = (List.length memtype_lst) →
-    Forall₂ (fun v_memaddr_elem v_memtype_elem => Externaddr_ok s (externaddr.MEM v_memaddr_elem) (externtype.MEM v_memtype_elem)) memaddr_lst memtype_lst →
-    (List.length tableaddr_lst) = (List.length tabletype_lst) →
-    Forall₂ (fun v_tableaddr_elem v_tabletype_elem => Externaddr_ok s (externaddr.TABLE v_tableaddr_elem) (externtype.TABLE v_tabletype_elem)) tableaddr_lst tabletype_lst →
-    Forall (fun v_exportinst_elem => Exportinst_ok s v_exportinst_elem) exportinst_lst →
-    (List.length dataaddr_lst) = (List.length datatype_lst) →
-    Forall (fun v_dataaddr_elem => v_dataaddr_elem < (List.length (s.DATAS))) dataaddr_lst →
-    Forall₂ (fun v_dataaddr_elem v_datatype_elem => Datainst_ok s ((s.DATAS)[v_dataaddr_elem]!) v_datatype_elem) dataaddr_lst datatype_lst →
-    (List.length elemaddr_lst) = (List.length elemtype_lst) →
-    Forall (fun v_elemaddr_elem => v_elemaddr_elem < (List.length (s.ELEMS))) elemaddr_lst →
-    Forall₂ (fun v_elemaddr_elem v_elemtype_elem => Eleminst_ok s ((s.ELEMS)[v_elemaddr_elem]!) v_elemtype_elem) elemaddr_lst elemtype_lst →
-    disjoint_ name (Map (fun v_exportinst_elem => v_exportinst_elem.NAME) exportinst_lst) →
-    (List.length ((Map (fun v_globaladdr_elem => externaddr.GLOBAL v_globaladdr_elem) globaladdr_lst) ++ ((Map (fun v_memaddr_elem => externaddr.MEM v_memaddr_elem) memaddr_lst) ++ ((Map (fun v_tableaddr_elem => externaddr.TABLE v_tableaddr_elem) tableaddr_lst) ++ (Map (fun v_funcaddr_elem => externaddr.FUNC v_funcaddr_elem) funcaddr_lst))))) > 0 →
-    Forall (fun v_exportinst_elem => List.contains ((Map (fun v_globaladdr_elem => externaddr.GLOBAL v_globaladdr_elem) globaladdr_lst) ++ ((Map (fun v_memaddr_elem => externaddr.MEM v_memaddr_elem) memaddr_lst) ++ ((Map (fun v_tableaddr_elem => externaddr.TABLE v_tableaddr_elem) tableaddr_lst) ++ (Map (fun v_funcaddr_elem => externaddr.FUNC v_funcaddr_elem) funcaddr_lst)))) (v_exportinst_elem.ADDR)) exportinst_lst →
-    wf_store s →
-    wf_moduleinst ({
-      TYPES := functype_lst
-      FUNCS := funcaddr_lst
-      GLOBALS := globaladdr_lst
-      TABLES := tableaddr_lst
-      MEMS := memaddr_lst
-      ELEMS := elemaddr_lst
-      DATAS := dataaddr_lst
-      EXPORTS := exportinst_lst : moduleinst
-    }) →
-    wf_context ({
-      TYPES := functype_lst
-      FUNCS := functype_F_lst
-      GLOBALS := globaltype_lst
-      TABLES := tabletype_lst
-      MEMS := memtype_lst
-      ELEMS := elemtype_lst
-      DATAS := datatype_lst
-      LOCALS := []
-      LABELS := []
-      RETURN := none : context
-    }) →
-    Forall (fun v_globaltype_elem => wf_externtype (externtype.GLOBAL v_globaltype_elem)) globaltype_lst →
-    Forall (fun functype_F_elem => wf_externtype (externtype.FUNC functype_F_elem)) functype_F_lst →
-    Forall (fun v_memtype_elem => wf_externtype (externtype.MEM v_memtype_elem)) memtype_lst →
-    Forall (fun v_tabletype_elem => wf_externtype (externtype.TABLE v_tabletype_elem)) tabletype_lst →
-    Moduleinst_ok s ({
-      TYPES := functype_lst
-      FUNCS := funcaddr_lst
-      GLOBALS := globaladdr_lst
-      TABLES := tableaddr_lst
-      MEMS := memaddr_lst
-      ELEMS := elemaddr_lst
-      DATAS := dataaddr_lst
-      EXPORTS := exportinst_lst : moduleinst
-    }) ({
-      TYPES := functype_lst
-      FUNCS := functype_F_lst
-      GLOBALS := globaltype_lst
-      TABLES := tabletype_lst
-      MEMS := memtype_lst
-      ELEMS := elemtype_lst
-      DATAS := datatype_lst
-      LOCALS := []
-      LABELS := []
-      RETURN := none : context
-    })
+  | mk_Moduleinst_ok
+    (s              : store)
+    (functype_lst   : List functype)
+    (funcaddr_lst   : List funcaddr)
+    (globaladdr_lst : List globaladdr)
+    (tableaddr_lst  : List tableaddr)
+    (memaddr_lst    : List memaddr)
+    (elemaddr_lst   : List elemaddr)
+    (dataaddr_lst   : List dataaddr)
+    (exportinst_lst : List exportinst)
+    (functype_F_lst : List functype)
+    (globaltype_lst : List globaltype)
+    (tabletype_lst  : List tabletype)
+    (memtype_lst    : List memtype)
+    (elemtype_lst   : List elemtype)
+    (datatype_lst   : List datatype)
+    :
+      Forall (fun v_functype_elem => Functype_ok v_functype_elem) functype_lst
+    → (List.length globaladdr_lst) = (List.length globaltype_lst)
+    → Forall₂ (fun v_globaladdr_elem v_globaltype_elem => Externaddr_ok s (externaddr.GLOBAL v_globaladdr_elem) (externtype.GLOBAL v_globaltype_elem)) globaladdr_lst globaltype_lst
+    → (List.length funcaddr_lst) = (List.length functype_F_lst)
+    → Forall₂ (fun v_funcaddr_elem functype_F_elem => Externaddr_ok s (externaddr.FUNC v_funcaddr_elem) (externtype.FUNC functype_F_elem)) funcaddr_lst functype_F_lst
+    → (List.length memaddr_lst) = (List.length memtype_lst)
+    → Forall₂ (fun v_memaddr_elem v_memtype_elem => Externaddr_ok s (externaddr.MEM v_memaddr_elem) (externtype.MEM v_memtype_elem)) memaddr_lst memtype_lst
+    → (List.length tableaddr_lst) = (List.length tabletype_lst)
+    → Forall₂ (fun v_tableaddr_elem v_tabletype_elem => Externaddr_ok s (externaddr.TABLE v_tableaddr_elem) (externtype.TABLE v_tabletype_elem)) tableaddr_lst tabletype_lst
+    → Forall (fun v_exportinst_elem => Exportinst_ok s v_exportinst_elem) exportinst_lst
+    → (List.length dataaddr_lst) = (List.length datatype_lst)
+    → Forall (fun v_dataaddr_elem => v_dataaddr_elem < (List.length (s.DATAS))) dataaddr_lst
+    → Forall₂ (fun v_dataaddr_elem v_datatype_elem => Datainst_ok s ((s.DATAS)[v_dataaddr_elem]!) v_datatype_elem) dataaddr_lst datatype_lst
+    → (List.length elemaddr_lst) = (List.length elemtype_lst)
+    → Forall (fun v_elemaddr_elem => v_elemaddr_elem < (List.length (s.ELEMS))) elemaddr_lst
+    → Forall₂ (fun v_elemaddr_elem v_elemtype_elem => Eleminst_ok s ((s.ELEMS)[v_elemaddr_elem]!) v_elemtype_elem) elemaddr_lst elemtype_lst
+    → disjoint_ name (Map (fun v_exportinst_elem => v_exportinst_elem.NAME) exportinst_lst)
+    → (List.length ((Map (fun v_globaladdr_elem => externaddr.GLOBAL v_globaladdr_elem) globaladdr_lst) ++ ((Map (fun v_memaddr_elem => externaddr.MEM v_memaddr_elem) memaddr_lst) ++ ((Map (fun v_tableaddr_elem => externaddr.TABLE v_tableaddr_elem) tableaddr_lst) ++ (Map (fun v_funcaddr_elem => externaddr.FUNC v_funcaddr_elem) funcaddr_lst))))) > 0
+    → Forall (fun v_exportinst_elem => List.contains ((Map (fun v_globaladdr_elem => externaddr.GLOBAL v_globaladdr_elem) globaladdr_lst) ++ ((Map (fun v_memaddr_elem => externaddr.MEM v_memaddr_elem) memaddr_lst) ++ ((Map (fun v_tableaddr_elem => externaddr.TABLE v_tableaddr_elem) tableaddr_lst) ++ (Map (fun v_funcaddr_elem => externaddr.FUNC v_funcaddr_elem) funcaddr_lst)))) (v_exportinst_elem.ADDR)) exportinst_lst
+    → wf_store s
+    → wf_moduleinst ({
+        TYPES := functype_lst
+        FUNCS := funcaddr_lst
+        GLOBALS := globaladdr_lst
+        TABLES := tableaddr_lst
+        MEMS := memaddr_lst
+        ELEMS := elemaddr_lst
+        DATAS := dataaddr_lst
+        EXPORTS := exportinst_lst : moduleinst
+      })
+    → wf_context ({
+        TYPES := functype_lst
+        FUNCS := functype_F_lst
+        GLOBALS := globaltype_lst
+        TABLES := tabletype_lst
+        MEMS := memtype_lst
+        ELEMS := elemtype_lst
+        DATAS := datatype_lst
+        LOCALS := []
+        LABELS := []
+        RETURN := none : context
+      })
+    → Forall (fun v_globaltype_elem => wf_externtype (externtype.GLOBAL v_globaltype_elem)) globaltype_lst
+    → Forall (fun functype_F_elem => wf_externtype (externtype.FUNC functype_F_elem)) functype_F_lst
+    → Forall (fun v_memtype_elem => wf_externtype (externtype.MEM v_memtype_elem)) memtype_lst
+    → Forall (fun v_tabletype_elem => wf_externtype (externtype.TABLE v_tabletype_elem)) tabletype_lst
+    → Moduleinst_ok s ({
+        TYPES := functype_lst
+        FUNCS := funcaddr_lst
+        GLOBALS := globaladdr_lst
+        TABLES := tableaddr_lst
+        MEMS := memaddr_lst
+        ELEMS := elemaddr_lst
+        DATAS := dataaddr_lst
+        EXPORTS := exportinst_lst : moduleinst
+      }) ({
+        TYPES := functype_lst
+        FUNCS := functype_F_lst
+        GLOBALS := globaltype_lst
+        TABLES := tabletype_lst
+        MEMS := memtype_lst
+        ELEMS := elemtype_lst
+        DATAS := datatype_lst
+        LOCALS := []
+        LABELS := []
+        RETURN := none : context
+      })
 
 
 inductive Frame_ok : store → frame → context → Prop where
@@ -9590,66 +9633,103 @@ inductive Instr_ok2 : store → context → admininstr → functype → Prop whe
     wf_context C →
     wf_instr v_instr →
     Instr_ok2 s C (admininstr_instr v_instr) (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))
-  | label (s : store) (C : context) (v_n : n) (instr'_lst : List instr) (admininstr_lst : List admininstr) (t_lst : List valtype) (t'_lst : List valtype) :
-    Instrs_ok2 s C (Map (fun instr'_elem => admininstr_instr instr'_elem) instr'_lst) (functype.mk_functype (.mk_list t'_lst) (.mk_list t_lst)) →
-    Instrs_ok2 s (({
-      TYPES := []
-      FUNCS := []
-      GLOBALS := []
-      TABLES := []
-      MEMS := []
-      ELEMS := []
-      DATAS := []
-      LOCALS := []
-      LABELS := [.mk_list t'_lst]
-      RETURN := none : context
-    }) ++ C) admininstr_lst (functype.mk_functype (.mk_list []) (.mk_list t_lst)) →
-    wf_store s →
-    wf_context C →
-    wf_admininstr (admininstr.LABEL_ v_n instr'_lst admininstr_lst) →
-    wf_context ({
-      TYPES := []
-      FUNCS := []
-      GLOBALS := []
-      TABLES := []
-      MEMS := []
-      ELEMS := []
-      DATAS := []
-      LOCALS := []
-      LABELS := [.mk_list t'_lst]
-      RETURN := none : context
-    }) →
-    v_n = (List.length t'_lst) →
-    Instr_ok2 s C (admininstr.LABEL_ v_n instr'_lst admininstr_lst) (functype.mk_functype (.mk_list []) (.mk_list t_lst))
-  | Instr_ok2_frame (s : store) (C : context) (v_n : n) (f : frame) (admininstr_lst : List admininstr) (t_lst : List valtype) (C' : context) :
-    Frame_ok s f C' →
-    Expr_ok2 s ({
-      C' with
-      RETURN := some (.mk_list t_lst)
-    }) admininstr_lst (.mk_list t_lst) →
-    wf_store s →
-    wf_context C →
-    wf_context C' →
-    wf_admininstr (admininstr.FRAME_ v_n f admininstr_lst) →
-    v_n = (List.length t_lst) →
-    Instr_ok2 s C (admininstr.FRAME_ v_n f admininstr_lst) (functype.mk_functype (.mk_list []) (.mk_list t_lst))
-  | call_addr (s : store) (C : context) (v_funcaddr : funcaddr) (t_1_lst : List valtype) (t_2_lst : List valtype) :
-    Externaddr_ok s (externaddr.FUNC v_funcaddr) (externtype.FUNC (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))) →
-    wf_store s →
-    wf_context C →
-    wf_admininstr (admininstr.CALL_ADDR v_funcaddr) →
-    wf_externtype (externtype.FUNC (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))) →
-    Instr_ok2 s C (admininstr.CALL_ADDR v_funcaddr) (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))
-  | ref (s : store) (C : context) (v_ref : ref) (rt : reftype) :
-    Ref_ok s v_ref rt →
-    wf_store s →
-    wf_context C →
-    Instr_ok2 s C (admininstr_ref v_ref) (functype.mk_functype (.mk_list []) (.mk_list [valtype_reftype rt]))
-  | trap (s : store) (C : context) (t_1_lst : List valtype) (t_2_lst : List valtype) :
-    wf_store s →
-    wf_context C →
-    wf_admininstr admininstr.TRAP →
-    Instr_ok2 s C admininstr.TRAP (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))
+
+  | label
+    (s              : store)
+    (C              : context)
+    (v_n            : n)
+    (instr'_lst     : List instr)
+    (admininstr_lst : List admininstr)
+    (t_lst          : List valtype)
+    (t'_lst         : List valtype)
+    :
+      Instrs_ok2 s C (Map (fun instr'_elem => admininstr_instr instr'_elem) instr'_lst) (functype.mk_functype (.mk_list t'_lst) (.mk_list t_lst))
+    → Instrs_ok2 s (({
+        TYPES := []
+        FUNCS := []
+        GLOBALS := []
+        TABLES := []
+        MEMS := []
+        ELEMS := []
+        DATAS := []
+        LOCALS := []
+        LABELS := [.mk_list t'_lst]
+        RETURN := none : context
+      }) ++ C) admininstr_lst (functype.mk_functype (.mk_list []) (.mk_list t_lst))
+    → wf_store s
+    → wf_context C
+    → wf_admininstr (admininstr.LABEL_ v_n instr'_lst admininstr_lst)
+    → wf_context ({
+        TYPES := []
+        FUNCS := []
+        GLOBALS := []
+        TABLES := []
+        MEMS := []
+        ELEMS := []
+        DATAS := []
+        LOCALS := []
+        LABELS := [.mk_list t'_lst]
+        RETURN := none : context
+      })
+    → v_n = (List.length t'_lst)
+    → Instr_ok2 s C (admininstr.LABEL_ v_n instr'_lst admininstr_lst) (functype.mk_functype (.mk_list []) (.mk_list t_lst))
+
+  | Instr_ok2_frame
+    (s              : store)
+    (C              : context)
+    (v_n            : n)
+    (f              : frame)
+    (admininstr_lst : List admininstr)
+    (t_lst          : List valtype)
+    (C'             : context)
+    :
+      Frame_ok s f C'
+    → Expr_ok2 s ({
+        C' with
+        RETURN := some (.mk_list t_lst)
+      }) admininstr_lst (.mk_list t_lst)
+    → wf_store s
+    → wf_context C
+    → wf_context C'
+    → wf_admininstr (admininstr.FRAME_ v_n f admininstr_lst)
+    → v_n = (List.length t_lst)
+    → Instr_ok2 s C (admininstr.FRAME_ v_n f admininstr_lst) (functype.mk_functype (.mk_list []) (.mk_list t_lst))
+
+  | call_addr
+    (s          : store)
+    (C          : context)
+    (v_funcaddr : funcaddr)
+    (t_1_lst    : List valtype)
+    (t_2_lst    : List valtype)
+    :
+      Externaddr_ok s (externaddr.FUNC v_funcaddr) (externtype.FUNC (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst)))
+    → wf_store s
+    → wf_context C
+    → wf_admininstr (admininstr.CALL_ADDR v_funcaddr)
+    → wf_externtype (externtype.FUNC (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst)))
+    → Instr_ok2 s C (admininstr.CALL_ADDR v_funcaddr) (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))
+
+  | ref
+    (s      : store)
+    (C      : context)
+    (v_ref  : ref)
+    (rt     : reftype)
+    :
+      Ref_ok s v_ref rt
+    → wf_store s
+    → wf_context C
+    → Instr_ok2 s C (admininstr_ref v_ref) (functype.mk_functype (.mk_list []) (.mk_list [valtype_reftype rt]))
+
+  | trap
+    (s        : store)
+    (C        : context)
+    (t_1_lst  : List valtype)
+    (t_2_lst  : List valtype)
+    :
+      wf_store s
+    → wf_context C
+    → wf_admininstr admininstr.TRAP
+    → Instr_ok2 s C admininstr.TRAP (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))
 
 inductive Instrs_ok2 : store → context → List admininstr → functype → Prop where
   | empty (s : store) (C : context) :
@@ -9662,7 +9742,16 @@ inductive Instrs_ok2 : store → context → List admininstr → functype → Pr
     wf_context C →
     wf_admininstr v_admininstr →
     Instrs_ok2 s C [v_admininstr] (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))
-  | seq (s : store) (C : context) (admininstr_1_lst : List admininstr) (admininstr_2_lst : List admininstr) (t_1_lst : List valtype) (t_3_lst : List valtype) (t_2_lst : List valtype) :
+
+  | seq
+    (s : store)
+    (C : context)
+    (admininstr_1_lst : List admininstr)
+    (admininstr_2_lst : List admininstr)
+    (t_1_lst : List valtype)
+    (t_3_lst : List valtype)
+    (t_2_lst : List valtype)
+    :
     Instrs_ok2 s C admininstr_1_lst (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst)) →
     Instrs_ok2 s C admininstr_2_lst (functype.mk_functype (.mk_list t_2_lst) (.mk_list t_3_lst)) →
     wf_store s →
@@ -9670,6 +9759,7 @@ inductive Instrs_ok2 : store → context → List admininstr → functype → Pr
     Forall (fun admininstr_1_elem => wf_admininstr admininstr_1_elem) admininstr_1_lst →
     Forall (fun admininstr_2_elem => wf_admininstr admininstr_2_elem) admininstr_2_lst →
     Instrs_ok2 s C (admininstr_1_lst ++ admininstr_2_lst) (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_3_lst))
+
   | sub (s : store) (C : context) (admininstr_lst : List admininstr) (t'_1_lst : List valtype) (t'_2_lst : List valtype) (t_1_lst : List valtype) (t_2_lst : List valtype) :
     Instrs_ok2 s C admininstr_lst (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst)) →
     Resulttype_sub (.mk_list t'_1_lst) (.mk_list t_1_lst) →

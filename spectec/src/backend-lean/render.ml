@@ -35,6 +35,7 @@ and render_theorem (theorem : _theorem) : document =
   modifier_str
   ^^ string "theorem "
   ^^ id_str
+  ^^ space
   ^^ decl_sig_str
   ^^ string " :="
   ^^ nest 2 (hardline ^^ proof_str)
@@ -341,8 +342,9 @@ and render_term (term : term) : document =
       string "¬ "
       ^^ render_term term
 
-  | Premises { premises; conclusion } ->
-      (* Each premise on its own line followed by →, then the conclusion.
+  | Premises lines_terms ->
+      (* Each premise on its own line followed by →, then the conclusion
+         (the last element -- see the Premises variant's doc comment).
          The leading hardline + nest 2 means the block starts on a new line
          indented by 2 relative to the : that precedes it, giving e.g.:
 
@@ -369,6 +371,7 @@ and render_term (term : term) : document =
         (if needs_parens then string "(" ^^ s ^^ string ")" else s)
         ^^ string " →"
       in
+      let premises, conclusion = Util.Lib.List.split_last lines_terms in
       let lines =
         List.map render_premise premises @ [render_term conclusion]
       in
@@ -396,6 +399,7 @@ and render_term (term : term) : document =
       in
       string "let" ^^ config_doc ^^ decl_doc ^^ hardline ^^ render_term body
 
+  | Sorry -> string "sorry"
   (* | _ -> failwith (Printf.sprintf "render_term: unhandled term: %s" (show_term term)) *)
 
 and render_tactic_seq (tactic_seq : tactic_seq) : document =
