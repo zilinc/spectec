@@ -158,8 +158,20 @@ let rec subst_lean_term (substs : (string * term) list) (t : term) : term =
 
     | Lambda { params; body } ->
         (* CAPTURE-AVOIDANCE: remove any substs whose key is rebound by a param. *)
-        let bound        = List.filter_map (function Ident_FB n -> Some n | Hole_FB -> None)
-                             (NonEmptyList.to_list params) in
+        let idents_of_bracketed_binder = function
+          | ExplicitParam (idents, _)
+          | ImplicitParam (idents, _)
+          | OptAutoParam (idents, _, _) -> NonEmptyList.to_list idents
+          | InstanceParam _ -> []   (* anonymous instance binder, no name to shadow with *)
+        in
+        let names_of_fun_binder = function
+          | Ident_FB n -> [n]
+          | Hole_FB -> []
+          | BracketedBinder_FB bb ->
+              List.filter_map (function Ident_IOH n -> Some n | Hole_IOH _ -> None)
+                (idents_of_bracketed_binder bb)
+        in
+        let bound        = List.concat_map names_of_fun_binder (NonEmptyList.to_list params) in
         let inner_substs = List.filter (fun (k, _) -> not (List.mem k bound)) substs in
         Some (Lambda { params; body = subst_lean_term inner_substs body })
 

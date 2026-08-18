@@ -283,6 +283,7 @@ and let_decl =
 
 and fun_binder =
   | Ident_FB of ident
+  | BracketedBinder_FB of bracketed_binder
   | Hole_FB
 [@@deriving show]
 

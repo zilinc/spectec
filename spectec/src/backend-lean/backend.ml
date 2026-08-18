@@ -438,9 +438,132 @@ and create_iter
                                   (iterexp "d" (ListE (NumE (Nat 10)) (NumE (Nat 11)) (NumE (Nat 12))))
                                 *)
     ) = iterexp in
-    
+
     let arity = List.length id_exp_list in
-    
+
+    let elem_name_generator (id : Il.Ast.id) : string
+      (*
+        Gives sensible names to the variables that will be used to represent
+        elements of a list in the lambda. For example,
+
+        a.map (fun a_elem b_elem c_elem d_elem => a_elem + b_elem + c_elem + d_elem) |>.ap b |>.ap c |>.ap d
+
+        ^          ^
+        list       list elem
+      *)
+      = id.it ^ "_elem"
+    in
+
+    (* Typed binder `(id_elem : T)` for a real collection entry, where `T` is
+       read off the collection's own IL type annotation (its `.note`, which
+       for any entry in `id_exp_list` is always `IterT (elem_typ, _)` --
+       List/List1/ListN/Opt all wrap their element type this way). Renamed to
+       `id_elem` (not left as `id`) to avoid shadowing when the element var
+       and its own collection var share the same IL name (e.g. {v_expr <-
+       v_expr}) -- see `body` below for the matching substitution. *)
+    let typed_binder_for_collection ((id, coll_exp) : Il.Ast.id * Il.Ast.exp) : fun_binder =
+      let elem_typ = match coll_exp.note.it with
+        | IterT (t, _) -> t
+        | _ -> failwith "create_iter_exp: expected an iterated collection type"
+      in
+      BracketedBinder_FB (
+        ExplicitParam (
+          NonEmptyList.from_list_unsafe [Ident_IOH (elem_name_generator id)],
+          create_typ elem_typ
+        )
+      )
+    in
+
+    (* Typed binder for the synthetic index introduced by `ListN (_, Some
+       idx)`. Bound under its ORIGINAL IL name, not elem_name_generator-
+       renamed: unlike a real collection entry, the index's "collection" is
+       always a freshly-built `List.range n_exp` term, never a bare reference
+       to a variable literally named `idx` -- so it can never collide with its
+       own collection reference the way a real element can, and there's
+       nothing to rename it against. `exp`'s body already refers to this exact
+       name, so leaving it alone here keeps the generated Lean using the same
+       name the spec author wrote (and `body` below deliberately never
+       substitutes it). Always `Nat`, since `List.range`'s element type is
+       `Nat` unconditionally -- there's no `.note` to consult here as there is
+       for a real collection, since this binder isn't drawn from one. *)
+    let typed_binder_for_index (idx : Il.Ast.id) : fun_binder =
+      BracketedBinder_FB (
+        ExplicitParam (
+          NonEmptyList.from_list_unsafe [Ident_IOH idx.it],
+          Ident "Nat" (* This is safe because this case always uses List.range *)
+        )
+      )
+    in
+
+    (* Renaming happens entirely at the Lean-term level, after `exp` is
+       converted -- the original IL/EL expression is never touched. Only real
+       collection elements are substituted (to their `_elem`-suffixed name,
+       matching typed_binder_for_collection); the synthetic index, when
+       present, is deliberately excluded (see typed_binder_for_index) so it
+       keeps its author-chosen name in the generated Lean. Independent of
+       `iter`/arity, so it's shared unchanged across every branch below. *)
+    let body : term =
+      let substs =
+        List.map (fun (id, _) -> (id.it, Ident (elem_name_generator id))) id_exp_list
+      in
+      subst_lean_term substs (create_exp exp)
+    in
+
+    let collections = List.map (fun (_, coll_exp) -> create_exp coll_exp) id_exp_list in
+
+    let create_zip
+      (*
+        Creates a term that zips together the lists in `list_terms` using the
+        function `zipping_func`. For example, given
+
+        list_terms = [a, b, c, d]
+        zipping_func = fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem
+
+        The result will be the term:
+
+        a.map (fun w x y z => w + x + y + z) |>.ap b |>.ap c |>.ap d
+
+        where List.ap is our custom application function that should be defined in the prologue.
+      *)
+
+      (list_terms : term list)               (* [a, b, c, d]*)
+      (zipping_func : term)                  (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
+      : term =
+
+      (* this helper exists because we need a recursive function, but we also
+      need to reverse the terms list exactly once on entry. The reversing is
+      just to make it convenient to do hd and tl. *)
+      let rec go
+        (reversed_terms : term list)      (* [d, c, b, a]*)
+        (func : term)                     (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
+        : term =
+
+        let arity = List.length reversed_terms in
+
+        match arity with
+        | 0 -> failwith "arity should never reach 0 here"
+        | 1 ->
+          let term = List.hd reversed_terms in
+          FunApp (
+            (RightPipelineField (term, Ident "map")),
+            NonEmptyList.from_list_unsafe
+              [Term func]
+          )
+        | _ ->
+          let term = List.hd reversed_terms in
+          let nested = go (List.tl reversed_terms) func in
+          FunApp (
+            RightPipelineField (
+              nested,
+              Ident "ap"
+            ),
+            NonEmptyList.from_list_unsafe
+              [Term term]
+          )
+      in
+
+      go (List.rev list_terms) zipping_func
+    in
 
     match arity, iter with
     | 0, ListN (n_exp, None) ->
@@ -452,9 +575,10 @@ and create_iter
         NonEmptyList.from_list_unsafe
           [Term (create_exp n_exp); Term (create_exp exp)]
       )
-    | 0, ListN (n_exp, Some id) ->
+
+    | 0, ListN (n_exp, Some idx) ->
       (*
-        List.range n_exp |>.map (fun id => exp)
+        List.range n_exp |>.map (fun idx => exp)
       *)
       FunApp (
         RightPipelineField (
@@ -467,187 +591,64 @@ and create_iter
         NonEmptyList.from_list_unsafe
           [
             Term (Lambda {
-
-              (* NOTE: The point of the `id` in the case of `ListN (n_exp, Some
-              id)` is that the body `exp` already uses this name in its
-              variables, so we don't need to worry about matching names in the
-              backend.*)
-              params = NonEmptyList.from_list_unsafe [Ident_FB id.it];
-
-              body = create_exp exp;
+              params = NonEmptyList.from_list_unsafe [typed_binder_for_index idx];
+              body;
             })
           ]
       )
 
+    | arity, (List | List1 | ListN (_, None)) when arity > 0 ->
 
-    | _ ->
-      
-      (*
-        The remaining cases share some infrastructure which we define below,
-        before creating another `match` case to handle each remaining case
-      *)
-
-      let elem_name_generator (id : Il.Ast.id) : string
-        (*
-          Gives sensible names to the variables that will be used to represent
-          elements of a list in the lambda. For example,
-
-          a.map (fun a_elem b_elem c_elem d_elem => a_elem + b_elem + c_elem + d_elem) |>.ap b |>.ap c |>.ap d
-
-          ^          ^
-          list       list elem
-        *)
-        = id.it ^ "_elem"
+      let lambda_func : term =
+        Lambda {
+          params = NonEmptyList.from_list_unsafe (List.map typed_binder_for_collection id_exp_list);
+          body;
+        }
       in
-
-      (* [a, b, c, d] *)
-      let target_ids_to_rename = List.map (fun (id, _) -> id.it) id_exp_list in
-
-      let rename_il_vars (target_ids_to_rename : string list) (exp : Il.Ast.exp) : Il.Ast.exp =
-
-        let t = { Il.Walk.base_transformer with
-          transform_var_id = fun id ->
-            if List.mem id.it target_ids_to_rename
-            then { id with it = elem_name_generator id }
-            else id
-        } in
-
-        Il.Walk.transform_exp t exp
-      in
-
-      let renamed_exp = rename_il_vars target_ids_to_rename exp in
-
-      let collections = List.map (fun (_, exp) -> create_exp exp) id_exp_list in
-
-      let create_zip
-        (*
-          Creates a term that zips together the lists in `list_terms` using the
-          function `zipping_func`. For example, given
-
-          list_terms = [a, b, c, d]
-          zipping_func = fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem
-
-          The result will be the term:
-
-          a.map (fun w x y z => w + x + y + z) |>.ap b |>.ap c |>.ap d
-
-          where List.ap is our custom application function that should be defined in the prologue.
-        *)
-
-        (list_terms : term list)               (* [a, b, c, d]*)
-        (zipping_func : term)                  (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
-        : term =
-        
-        (* this helper exists because we need a recursive function, but we also
-        need to reverse the terms list exactly once on entry. The reversing is
-        just to make it convenient to do hd and tl. *)
-        let rec go
-          (reversed_terms : term list)      (* [d, c, b, a]*)
-          (func : term)                     (* fun a_elem, b_elem, c_elem, d_elem => a_elem + b_elem + c_elem + d_elem *)
-          : term =
-
-          let arity = List.length reversed_terms in
-          
-          match arity with
-          | 0 -> failwith "arity should never reach 0 here"
-          | 1 -> 
-            let term = List.hd reversed_terms in
-            FunApp (
-              (RightPipelineField (term, Ident "map")),
-              NonEmptyList.from_list_unsafe
-                [Term func]
-            )
-          | _ ->
-            let term = List.hd reversed_terms in
-            let nested = go (List.tl reversed_terms) func in
-            FunApp (
-              RightPipelineField (
-                nested,
-                Ident "ap"
-              ),
-              NonEmptyList.from_list_unsafe
-                [Term term]
-            )
-        in
-
-        go (List.rev list_terms) zipping_func
-      in
-      
-      (
-        match arity, iter with
-      
-          | arity, List | arity, List1 | arity, ListN (_, None)
-            when arity > 0 ->
-
-            let lambda_func : term =
-              Lambda {
-                params =
-                  NonEmptyList.from_list_unsafe (
-                    List.map
-                      (fun (id, _) -> Ident_FB (elem_name_generator id))
-                    id_exp_list
-                  );
-                body = create_exp renamed_exp;
-              }
-            in
-            used_exp_arities := arity :: !used_exp_arities;
-            FunApp (
-              Ident (map_name_of_arity arity),
-              NonEmptyList.from_list_unsafe (
-                Term lambda_func :: List.map (fun c -> Term c) collections
-              )
-            )
-
-          | arity, Opt when arity > 0 ->
-
-            let lambda_func : term =
-              Lambda {
-                params =
-                  NonEmptyList.from_list_unsafe (
-                    List.map
-                      (fun (id, _) -> Ident_FB (elem_name_generator id))
-                    id_exp_list
-                  );
-                body = create_exp renamed_exp;
-              }
-            in
-            used_opt_arities := arity :: !used_opt_arities;
-            FunApp (
-              Ident (omap_name_of_arity arity),
-              NonEmptyList.from_list_unsafe (
-                Term lambda_func :: List.map (fun c -> Term c) collections
-              )
-            )
-          
-          | arity, ListN (n_exp, Some id) when arity > 0 ->
-
-            let range_term =
-              FunApp (
-                DotProj (Ident "List", Ident "range"),
-                NonEmptyList.from_list_unsafe [Term (create_exp n_exp)]
-              )
-            in
-
-            let lambda_with_index = Lambda {
-                params =
-                  NonEmptyList.from_list_unsafe (
-
-                    (* extra term for index. DO NOT use elem_name_generator on
-                    this since `exp` already uses exactly this id *)
-                    Ident_FB id.it ::
-
-                    (List.map
-                      (fun (id, _) -> Ident_FB (elem_name_generator id))
-                    id_exp_list)
-                  );
-                body = create_exp renamed_exp;
-              }
-            in
-
-            create_zip (range_term :: collections) lambda_with_index
-
-          | _ -> failwith "other cases should not exist!"
+      used_exp_arities := arity :: !used_exp_arities;
+      FunApp (
+        Ident (map_name_of_arity arity),
+        NonEmptyList.from_list_unsafe (
+          Term lambda_func :: List.map (fun c -> Term c) collections
+        )
       )
+
+    | arity, Opt when arity > 0 ->
+
+      let lambda_func : term =
+        Lambda {
+          params = NonEmptyList.from_list_unsafe (List.map typed_binder_for_collection id_exp_list);
+          body;
+        }
+      in
+      used_opt_arities := arity :: !used_opt_arities;
+      FunApp (
+        Ident (omap_name_of_arity arity),
+        NonEmptyList.from_list_unsafe (
+          Term lambda_func :: List.map (fun c -> Term c) collections
+        )
+      )
+
+    | arity, ListN (n_exp, Some idx) when arity > 0 ->
+
+      let range_term =
+        FunApp (
+          DotProj (Ident "List", Ident "range"),
+          NonEmptyList.from_list_unsafe [Term (create_exp n_exp)]
+        )
+      in
+
+      let lambda_with_index = Lambda {
+          params = NonEmptyList.from_list_unsafe (
+            typed_binder_for_index idx :: List.map typed_binder_for_collection id_exp_list
+          );
+          body;
+        }
+      in
+
+      create_zip (range_term :: collections) lambda_with_index
+
+    | _ -> failwith "other cases should not exist!"
 
 and create_arg (arg : Il.Ast.arg) : term
   = match arg.it with
@@ -1176,66 +1177,97 @@ and create_iter_prem
     id_exp_list
   ) = iterexp in
 
-  let preprocess_for_iter_type
-    (iter : Il.Ast.iter)
-    (id_exp_list : (Il.Ast.id * Il.Ast.exp) list)
-    :
-    (string * term) list
-    =
-
-    (* Wrap a collection term in Option.toList if this is an Opt iteration.
-    e.g. for IterPr(p, (Opt, [("x", opt_exp)])):
-      opt_exp : Option α  →  Option.toList opt_exp : List α *)
-    let to_list_if_opt (t : term) : term =
-      match iter with
-      | Opt ->
-          FunApp (
-            DotProj (Ident "Option", Ident "toList"),
-            NonEmptyList.from_list_unsafe [Term t]
-          )
-      | _ -> t
-    in
-    
-    let terms : (string * term) list =
-      List.map
-        (fun (id, e) -> (id.it, to_list_if_opt (create_exp e)))
-        id_exp_list
-    in
-    
+  (* Wrap a collection term in Option.toList if this is an Opt iteration.
+  e.g. for IterPr(p, (Opt, [("x", opt_exp)])):
+    opt_exp : Option α  →  Option.toList opt_exp : List α *)
+  let to_list_if_opt (t : term) : term =
     match iter with
-    | ListN (n_exp, Some idx) ->
-        (idx.it, FunApp (
-          DotProj (Ident "List", Ident "range"),
-          NonEmptyList.from_list_unsafe [Term (create_exp n_exp)]
-        )) :: terms
-    | _ -> terms
+    | Opt ->
+        FunApp (
+          DotProj (Ident "Option", Ident "toList"),
+          NonEmptyList.from_list_unsafe [Term t]
+        )
+    | _ -> t
   in
 
-  let preprocessed_id_exp_list = preprocess_for_iter_type iter id_exp_list in
+  (* Every real collection's IL type annotation is `IterT (elem_typ, _)`
+     (List/List1/ListN/Opt all wrap their element type this way) -- read
+     `elem_typ` off it and convert to a Lean type term. *)
+  let elem_typ_of (e : Il.Ast.exp) : term =
+    match e.note.it with
+    | IterT (t, _) -> create_typ t
+    | _ -> failwith "create_iter_prem: expected an iterated collection type"
+  in
 
-  match preprocessed_id_exp_list with
+  let typed_binder (name : string) (typ : term) : fun_binder =
+    BracketedBinder_FB (
+      ExplicitParam (NonEmptyList.from_list_unsafe [Ident_IOH name], typ)
+    )
+  in
+
+  (* Renamed Lean identifier for a real collection's element, shared by
+     `entries` (the binder's name) and `substs` (the rewrite target) below,
+     so the two can never drift out of sync with each other. Always renamed
+     to avoid colliding with its own collection variable's name (e.g.
+     {v_expr <- v_expr}). *)
+  let elem_name (id : Il.Ast.id) : string = id.it ^ "_elem" in
+
+  (* One entry per lambda parameter, in the exact positional order used
+     throughout: the synthetic index first (if `iter` supplies one), then
+     each real collection in its original order. Each entry already carries
+     its FINAL Lean binder name: the index keeps its author-chosen name
+     (its "collection" is always a freshly-built `List.range n_exp` term,
+     never a bare reference to a variable literally named `idx`, so unlike a
+     real collection it can never collide with its own collection reference,
+     and there's nothing to rename it against), while each real collection's
+     element is `elem_name`-renamed. The index is always typed Nat, since
+     List.range's element type is Nat unconditionally and there's no `.note`
+     to consult for a binder that isn't drawn from a real collection. *)
+  let entries : (string * term * term) list =   (* (binder name, collection term, element type term) *)
+    (match iter with
+     | ListN (n_exp, Some idx) ->
+         [(idx.it,
+           FunApp (
+             DotProj (Ident "List", Ident "range"),
+             NonEmptyList.from_list_unsafe [Term (create_exp n_exp)]
+           ),
+           Ident "Nat")]
+     | _ -> [])
+    @ List.map
+        (fun (id, e) -> (elem_name id, to_list_if_opt (create_exp e), elem_typ_of e))
+        id_exp_list
+  in
+
+  let params_of (entries : (string * term * term) list) : fun_binder list =
+    List.map (fun (name, _, typ) -> typed_binder name typ) entries
+  in
+  let colls_of (entries : (string * term * term) list) : term list =
+    List.map (fun (_, coll, _) -> coll) entries
+  in
+
+  (* Renaming happens only for real elements -- the index, when present, is
+     deliberately excluded (see `entries` above), so it keeps its
+     author-chosen name in the generated Lean, exactly like create_iter_exp. *)
+  let substs = List.map (fun (id, _) -> (id.it, Ident (elem_name id))) id_exp_list in
+  let body = subst_lean_term substs (create_prem prem) in
+
+  match entries with
 
   (* ── Arity 0: degenerate — no iteration, emit premise directly ───────── *)
   | [] ->
-      create_prem prem
+      body
 
   (* ── Arity 1 ─────────────────────────────────────────────────────────── *)
-  | [(id, coll_term)] ->
+  | [(name, coll_term, typ)] ->
       (*
-        Always rename the bound element variable to id.it ^ "_elem" to avoid
-        shadowing when the element var and collection var share the same IL name
-        (e.g. {v_expr <- v_expr}).
-
-        Emit:  Forall (fun id_elem => body) collection
+        Emit:  Forall (fun (id_elem : T) => body) collection
       *)
-      let elem_var = id ^ "_elem" in
-      let body = subst_lean_term [(id, Ident elem_var)] (create_prem prem) in
       used_prem_arities := 1 :: !used_prem_arities;
       FunApp (
         Ident (forall_with_arity 1),
         NonEmptyList.from_list_unsafe [
           Term (Lambda {
-            params = NonEmptyList.from_list_unsafe [Ident_FB elem_var];
+            params = NonEmptyList.from_list_unsafe [typed_binder name typ];
             body;
           });
           Term coll_term;
@@ -1245,23 +1277,21 @@ and create_iter_prem
   (* ── Arity ≥ 2 ────────────────────────────────────────────────────────── *)
   | _ ->
       (*
-        Emit:  ForallN (fun id₁_elem … idN_elem => body) xs₁ … xsN
-        where each idᵢ_elem is id_exp_list[i].it ^ "_elem".
+        Emit:  ForallN (fun (id₁_elem : T₁) … (idN_elem : TN) => body) xs₁ … xsN
+
+        params_of/colls_of are both plain `List.map` over this same `entries`
+        list, so they're guaranteed equal in length by construction -- no
+        length check needed, there's no way for them to diverge.
       *)
-      let n : int = List.length preprocessed_id_exp_list in
-      let prem_term : term = create_prem prem in
-      used_prem_arities := n :: !used_prem_arities;
-      (* Rename each original id to id_elem; build a multi-param lambda. *)
-      let elem_vars = List.map (fun (id, _) -> id ^ "_elem") preprocessed_id_exp_list in
-      let substs = List.map2 (fun (id, _) ev -> (id, Ident ev)) preprocessed_id_exp_list elem_vars in
-      let body = subst_lean_term substs prem_term in
+      let arity = List.length entries in
+      used_prem_arities := arity :: !used_prem_arities;
       let lambda = Lambda {
-        params = NonEmptyList.from_list_unsafe (List.map (fun ev -> Ident_FB ev) elem_vars);
+        params = NonEmptyList.from_list_unsafe (params_of entries);
         body;
       } in
       FunApp (
-        Ident (forall_with_arity n),
-        NonEmptyList.from_list_unsafe (Term lambda :: List.map (fun (_, c) -> Term c) preprocessed_id_exp_list)
+        Ident (forall_with_arity arity),
+        NonEmptyList.from_list_unsafe (Term lambda :: List.map (fun c -> Term c) (colls_of entries))
       )
 
 
@@ -2499,7 +2529,28 @@ let rec create_def (def : Il.Ast.def) : command list
         (* HintD entries carry no code-gen information; strip them before
            length-checking or categorizing the remaining members. *)
         let defs = List.filter (fun d -> match d.it with HintD _ -> false | _ -> true) defs in
-        match List.length defs with
+        (* A RelD tagged wf-lemma-rel/wf-lemma-func is rendered above (in the
+           RelD case of create_def) as a standalone `theorem ... := by sorry`,
+           not an inductive -- and it isn't mutually recursive with its
+           siblings, so it doesn't need to live inside a `mutual` block at
+           all. Pull these out before classifying the rest of the group:
+           left in, `is_inductive` below treats every RelD as inductive
+           regardless of the hint, so a wf-lemma RelD gets bundled into
+           `all_inductive_or_structure`'s `defs`, `create_def def` for it
+           returns `[Theorem _]` (not `[Inductive _]`), and the
+           `filter_map` below silently drops it -- producing a `mutual ...
+           end` with nothing between when a whole group is wf-lemma RelD's
+           (e.g. free_heaptype_is_wf and its siblings). *)
+        let is_wf_lemma = fun def -> match def.it with
+          | RelD (id, _, _, _, _) ->
+            Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_rel_id id.it
+            || Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_func_id id.it
+          | _ -> false
+        in
+        let wf_lemma_defs, defs = List.partition is_wf_lemma defs in
+        let wf_lemma_theorems = List.concat_map create_def wf_lemma_defs in
+        wf_lemma_theorems @
+        (match List.length defs with
           | 0 -> []
           | 1 -> create_def (List.hd defs)
           | _ ->
@@ -2548,6 +2599,7 @@ let rec create_def (def : Il.Ast.def) : command list
                 | false, false -> []
             )
         )
+      )
     | HintD _ -> []
     (* | RelD (
         id,

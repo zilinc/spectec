@@ -134,6 +134,7 @@ and render__slice_bounds (bounds : _slice_bounds) : document =
 and render_fun_binder (binder : fun_binder) : document =
   match binder with
   | Ident_FB id -> render_id id
+  | BracketedBinder_FB bb -> render_bracketed_binder bb
   | Hole_FB -> string "_"
 
 (* TODO: adapt more properly from original backend *)
