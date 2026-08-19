@@ -587,16 +587,25 @@ and render__deriving (deriving : _deriving) : document =
   | idents -> string ("deriving ") ^^ (separate (string ", ") (List.map string idents))
 
 and render_decl_modifier (modifier : decl_modifier) : document =
-  let parts = List.filter_map Fun.id [
-    (match modifier.comment with Some c -> Some (string "/- " ^^ string c ^^ string " -/") | None -> None);
+  (* The comment (if any) always sits on its own line, terminated by its own
+     hardline -- it's not one of the space-separated flags below, since a
+     trailing `space` placed after that hardline would land as a stray
+     leading blank on the next line rather than as a separator. *)
+  let comment_doc = match modifier.comment with
+    | Some c -> string "/- " ^^ string c ^^ string " -/" ^^ hardline
+    | None -> empty
+  in
+  let flag_parts = List.filter_map Fun.id [
     (match modifier.visibility with Some Private -> Some (string "private") | Some Protected -> Some (string "protected") | Some Public -> Some (string "public") | None -> None);
     (if modifier.noncomputable then Some (string "noncomputable") else None);
     (if modifier.unsafe then Some (string "unsafe") else None);
     (match modifier.recursion_modifer with Some Partial -> Some (string "partial") | Some NonRec -> Some (string "nonrec") | None -> None);
   ] in
-  match parts with
-  | [] -> empty
-  | _ -> separate space parts ^^ space
+  let flags_doc = match flag_parts with
+    | [] -> empty
+    | _ -> separate space flag_parts ^^ space
+  in
+  comment_doc ^^ flags_doc
 
 and render_decl_sig (params, term : decl_sig) : document =
   (* Technically this is a subset of opt_decl_sig, but Lean's reference found it convenient to distinguish the two *)

@@ -34,7 +34,7 @@ def OMap {α₁ β : Type} (f : α₁ → β) (xs₁ : Option α₁) : Option β
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:162.14-162.17 -/
 inductive r_MUT : Type where
   | MUT : r_MUT
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Type Alias Definition at: ../specification/wasm-2.0/0-aux.spectec:7.1-7.15 -/
 abbrev N : Type := Nat
@@ -122,7 +122,7 @@ def disjoint_ (X : Type) [BEq X] (var_0_lst : List X) : Bool :=
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:6.1-6.49 -/
 inductive list (X : Type) : Type where
   | mk_list (X_lst : List X) : list X
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:6.1-6.49 -/
 def proj_list_0 (X : Type) (x : list X) : List X :=
@@ -132,7 +132,7 @@ def proj_list_0 (X : Type) (x : list X) : List X :=
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:15.1-15.36 -/
 inductive bit : Type where
   | mk_bit (i : Nat) : bit
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:15.8-15.11 -/
 inductive wf_bit : bit → Prop where
@@ -144,7 +144,7 @@ inductive wf_bit : bit → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:16.1-16.50 -/
 inductive byte : Type where
   | mk_byte (i : Nat) : byte
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:16.1-16.50 -/
 def proj_byte_0 (x : byte) : Nat :=
@@ -161,7 +161,7 @@ inductive wf_byte : byte → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:18.1-19.25 -/
 inductive uN : Type where
   | mk_uN (i : Nat) : uN
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:18.1-19.25 -/
 def proj_uN_0 (x : uN) : Nat :=
@@ -178,7 +178,7 @@ inductive wf_uN : N → uN → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:20.1-21.49 -/
 inductive sN : Type where
   | mk_sN (i : Int) : sN
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:20.1-21.49 -/
 def proj_sN_0 (x : sN) : Int :=
@@ -253,7 +253,7 @@ inductive fNmag : Type where
   | SUBNORM (v_m : m) : fNmag
   | INF : fNmag
   | NAN (v_m : m) : fNmag
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:59.8-59.14 -/
 inductive wf_fNmag : N → fNmag → Prop where
@@ -273,7 +273,7 @@ inductive wf_fNmag : N → fNmag → Prop where
 inductive fN : Type where
   | POS (_ : fNmag) : fN
   | NEG (_ : fNmag) : fN
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:54.8-54.11 -/
 inductive wf_fN : N → fN → Prop where
@@ -321,7 +321,7 @@ abbrev vN : Type := iN
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:88.1-88.85 -/
 inductive char : Type where
   | mk_char (i : Nat) : char
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:88.1-88.85 -/
 def proj_char_0 (x : char) : Nat :=
@@ -367,7 +367,7 @@ theorem utf8_is_wf (var_0_lst : List char) (ret_val_lst : List byte) (var_0 : Li
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:92.1-92.70 -/
 inductive name : Type where
   | mk_name (char_lst : List char) : name
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:92.1-92.70 -/
 def proj_name_0 (x : name) : List char :=
@@ -422,12 +422,12 @@ inductive numtype : Type where
   | I64 : numtype
   | F32 : numtype
   | F64 : numtype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:129.1-130.9 -/
 inductive vectype : Type where
   | V128 : vectype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:132.1-133.22 -/
 inductive consttype : Type where
@@ -436,13 +436,13 @@ inductive consttype : Type where
   | F32 : consttype
   | F64 : consttype
   | V128 : consttype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:135.1-136.24 -/
 inductive reftype : Type where
   | FUNCREF : reftype
   | EXTERNREF : reftype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:138.1-139.38 -/
 inductive valtype : Type where
@@ -454,7 +454,7 @@ inductive valtype : Type where
   | FUNCREF : valtype
   | EXTERNREF : valtype
   | BOT : valtype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at:  -/
 def valtype_numtype (var_0 : numtype) : valtype :=
@@ -479,7 +479,7 @@ def valtype_vectype (var_0 : vectype) : valtype :=
 inductive Inn : Type where
   | I32 : Inn
   | I64 : Inn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at:  -/
 def numtype_Inn (var_0 : Inn) : numtype :=
@@ -497,7 +497,7 @@ def valtype_Inn (var_0 : Inn) : valtype :=
 inductive Fnn : Type where
   | F32 : Fnn
   | F64 : Fnn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at:  -/
 def numtype_Fnn (var_0 : Fnn) : numtype :=
@@ -521,7 +521,7 @@ abbrev resulttype : Type := list valtype
 inductive packtype : Type where
   | I8 : packtype
   | I16 : packtype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:153.1-153.60 -/
 inductive lanetype : Type where
@@ -531,7 +531,7 @@ inductive lanetype : Type where
   | F64 : lanetype
   | I8 : lanetype
   | I16 : lanetype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at:  -/
 def lanetype_Fnn (var_0 : Fnn) : lanetype :=
@@ -568,7 +568,7 @@ inductive Jnn : Type where
   | I64 : Jnn
   | I8 : Jnn
   | I16 : Jnn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at:  -/
 def lanetype_Jnn (var_0 : Jnn) : lanetype :=
@@ -593,7 +593,7 @@ abbrev «mut» : Type := Option r_MUT
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:164.1-165.17 -/
 inductive limits : Type where
   | mk_limits (v_u32 : u32) (u32_opt : Option u32) : limits
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:164.8-164.14 -/
 inductive wf_limits : limits → Prop where
@@ -606,17 +606,17 @@ inductive wf_limits : limits → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:167.1-168.14 -/
 inductive globaltype : Type where
   | mk_globaltype (v_mut : «mut») (v_valtype : valtype) : globaltype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:169.1-170.27 -/
 inductive functype : Type where
   | mk_functype (v_resulttype_0 : resulttype) (v_resulttype_1 : resulttype) : functype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:171.1-172.17 -/
 inductive tabletype : Type where
   | mk_tabletype (v_limits : limits) (v_reftype : reftype) : tabletype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:171.8-171.17 -/
 inductive wf_tabletype : tabletype → Prop where
@@ -628,7 +628,7 @@ inductive wf_tabletype : tabletype → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:173.1-174.14 -/
 inductive memtype : Type where
   | PAGE (v_limits : limits) : memtype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:173.8-173.15 -/
 inductive wf_memtype : memtype → Prop where
@@ -643,7 +643,7 @@ abbrev elemtype : Type := reftype
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:177.1-178.5 -/
 inductive datatype : Type where
   | OK : datatype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:179.1-180.70 -/
 inductive externtype : Type where
@@ -651,7 +651,7 @@ inductive externtype : Type where
   | GLOBAL (v_globaltype : globaltype) : externtype
   | TABLE (v_tabletype : tabletype) : externtype
   | MEM (v_memtype : memtype) : externtype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:179.8-179.18 -/
 inductive wf_externtype : externtype → Prop where
@@ -668,7 +668,7 @@ inductive wf_externtype : externtype → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:323.1-323.60 -/
 inductive dim : Type where
   | mk_dim (i : Nat) : dim
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:323.1-323.60 -/
 def proj_dim_0 (x : dim) : Nat :=
@@ -685,7 +685,7 @@ inductive wf_dim : dim → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:324.1-324.69 -/
 inductive shape : Type where
   | X (v_lanetype : lanetype) (v_dim : dim) : shape
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:324.8-324.13 -/
 inductive wf_shape : shape → Prop where
@@ -788,7 +788,7 @@ def inv_fsize (nat : Nat) : Option Fnn :=
 inductive num_ : Type where
   | mk_num__0 (v_Inn : Inn) (var_x : iN) : num_
   | mk_num__1 (v_Fnn : Fnn) (var_x : fN) : num_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:259.8-259.13 -/
 inductive wf_num_ : numtype → num_ → Prop where
@@ -823,7 +823,7 @@ inductive lane_ : Type where
   | mk_lane__0 (v_numtype : numtype) (var_x : num_) : lane_
   | mk_lane__1 (v_packtype : packtype) (var_x : pack_) : lane_
   | mk_lane__2 (v_Jnn : Jnn) (var_x : iN) : lane_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:265.8-265.14 -/
 inductive wf_lane_ : lanetype → lane_ → Prop where
@@ -880,12 +880,12 @@ theorem zero_is_wf (v_numtype : numtype) (ret_val : num_) :
 inductive sx : Type where
   | U : sx
   | S : sx
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:280.1-280.56 -/
 inductive sz : Type where
   | mk_sz (i : Nat) : sz
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:280.1-280.56 -/
 def proj_sz_0 (x : sz) : Nat :=
@@ -905,7 +905,7 @@ inductive unop_Inn : Type where
   | CTZ : unop_Inn
   | POPCNT : unop_Inn
   | EXTEND (v_n : n) : unop_Inn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:282.1-282.22 -/
 inductive unop_Fnn : Type where
@@ -916,13 +916,13 @@ inductive unop_Fnn : Type where
   | FLOOR : unop_Fnn
   | TRUNC : unop_Fnn
   | NEAREST : unop_Fnn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:282.1-282.22 -/
 inductive unop_ : Type where
   | mk_unop__0 (v_Inn : Inn) (var_x : unop_Inn) : unop_
   | mk_unop__1 (v_Fnn : Fnn) (var_x : unop_Fnn) : unop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:282.8-282.14 -/
 inductive wf_unop_ : numtype → unop_ → Prop where
@@ -960,7 +960,7 @@ inductive binop_Inn : Type where
   | SHR (v_sx : sx) : binop_Inn
   | ROTL : binop_Inn
   | ROTR : binop_Inn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:286.1-286.23 -/
 inductive binop_Fnn : Type where
@@ -971,13 +971,13 @@ inductive binop_Fnn : Type where
   | MIN : binop_Fnn
   | MAX : binop_Fnn
   | COPYSIGN : binop_Fnn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:286.1-286.23 -/
 inductive binop_ : Type where
   | mk_binop__0 (v_Inn : Inn) (var_x : binop_Inn) : binop_
   | mk_binop__1 (v_Fnn : Fnn) (var_x : binop_Fnn) : binop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:286.8-286.15 -/
 inductive wf_binop_ : numtype → binop_ → Prop where
@@ -1004,12 +1004,12 @@ def proj_binop__1 (var_x : binop_) : Option binop_Fnn :=
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:293.1-293.24 -/
 inductive testop_Inn : Type where
   | EQZ : testop_Inn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:293.1-293.24 -/
 inductive testop_ : Type where
   | mk_testop__0 (v_Inn : Inn) (var_x : testop_Inn) : testop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:293.8-293.16 -/
 inductive wf_testop_ : numtype → testop_ → Prop where
@@ -1031,7 +1031,7 @@ inductive relop_Inn : Type where
   | GT (v_sx : sx) : relop_Inn
   | LE (v_sx : sx) : relop_Inn
   | GE (v_sx : sx) : relop_Inn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:297.1-297.23 -/
 inductive relop_Fnn : Type where
@@ -1041,13 +1041,13 @@ inductive relop_Fnn : Type where
   | GT : relop_Fnn
   | LE : relop_Fnn
   | GE : relop_Fnn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:297.1-297.23 -/
 inductive relop_ : Type where
   | mk_relop__0 (v_Inn : Inn) (var_x : relop_Inn) : relop_
   | mk_relop__1 (v_Fnn : Fnn) (var_x : relop_Fnn) : relop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:297.8-297.15 -/
 inductive wf_relop_ : numtype → relop_ → Prop where
@@ -1075,7 +1075,7 @@ def proj_relop__1 (var_x : relop_) : Option relop_Fnn :=
 inductive cvtop__Inn_1_Inn_2 : Type where
   | EXTEND (v_sx : sx) : cvtop__Inn_1_Inn_2
   | WRAP : cvtop__Inn_1_Inn_2
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:305.8-305.16 -/
 inductive wf_cvtop__Inn_1_Inn_2 : Inn → Inn → cvtop__Inn_1_Inn_2 → Prop where
@@ -1091,7 +1091,7 @@ inductive wf_cvtop__Inn_1_Inn_2 : Inn → Inn → cvtop__Inn_1_Inn_2 → Prop wh
 inductive cvtop__Inn_1_Fnn_2 : Type where
   | CONVERT (v_sx : sx) : cvtop__Inn_1_Fnn_2
   | REINTERPRET : cvtop__Inn_1_Fnn_2
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:305.8-305.16 -/
 inductive wf_cvtop__Inn_1_Fnn_2 : Inn → Fnn → cvtop__Inn_1_Fnn_2 → Prop where
@@ -1106,7 +1106,7 @@ inductive cvtop__Fnn_1_Inn_2 : Type where
   | TRUNC (v_sx : sx) : cvtop__Fnn_1_Inn_2
   | TRUNC_SAT (v_sx : sx) : cvtop__Fnn_1_Inn_2
   | REINTERPRET : cvtop__Fnn_1_Inn_2
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:305.8-305.16 -/
 inductive wf_cvtop__Fnn_1_Inn_2 : Fnn → Inn → cvtop__Fnn_1_Inn_2 → Prop where
@@ -1121,7 +1121,7 @@ inductive wf_cvtop__Fnn_1_Inn_2 : Fnn → Inn → cvtop__Fnn_1_Inn_2 → Prop wh
 inductive cvtop__Fnn_1_Fnn_2 : Type where
   | PROMOTE : cvtop__Fnn_1_Fnn_2
   | DEMOTE : cvtop__Fnn_1_Fnn_2
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:305.8-305.16 -/
 inductive wf_cvtop__Fnn_1_Fnn_2 : Fnn → Fnn → cvtop__Fnn_1_Fnn_2 → Prop where
@@ -1139,7 +1139,7 @@ inductive cvtop__ : Type where
   | mk_cvtop___1 (Inn_1 : Inn) (Fnn_2 : Fnn) (var_x : cvtop__Inn_1_Fnn_2) : cvtop__
   | mk_cvtop___2 (Fnn_1 : Fnn) (Inn_2 : Inn) (var_x : cvtop__Fnn_1_Inn_2) : cvtop__
   | mk_cvtop___3 (Fnn_1 : Fnn) (Fnn_2 : Fnn) (var_x : cvtop__Fnn_1_Fnn_2) : cvtop__
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:305.8-305.16 -/
 inductive wf_cvtop__ : numtype → numtype → cvtop__ → Prop where
@@ -1192,7 +1192,7 @@ def proj_cvtop___3 (var_x : cvtop__) : Option cvtop__Fnn_1_Fnn_2 :=
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:325.1-325.69 -/
 inductive ishape : Type where
   | X (v_Jnn : Jnn) (v_dim : dim) : ishape
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at:  -/
 def shape_ishape (var_0 : ishape) : shape :=
@@ -1209,7 +1209,7 @@ inductive wf_ishape : ishape → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:326.1-326.69 -/
 inductive fshape : Type where
   | X (v_Fnn : Fnn) (v_dim : dim) : fshape
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:326.8-326.14 -/
 inductive wf_fshape : fshape → Prop where
@@ -1221,7 +1221,7 @@ inductive wf_fshape : fshape → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:327.1-327.69 -/
 inductive pshape : Type where
   | X (v_Pnn : Pnn) (v_dim : dim) : pshape
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:327.8-327.14 -/
 inductive wf_pshape : pshape → Prop where
@@ -1250,7 +1250,7 @@ def shsize (v_shape : shape) : Nat :=
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:332.1-332.20 -/
 inductive vvunop : Type where
   | NOT : vvunop
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:333.1-333.41 -/
 inductive vvbinop : Type where
@@ -1258,24 +1258,24 @@ inductive vvbinop : Type where
   | ANDNOT : vvbinop
   | OR : vvbinop
   | XOR : vvbinop
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:334.1-334.28 -/
 inductive vvternop : Type where
   | BITSELECT : vvternop
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:335.1-335.27 -/
 inductive vvtestop : Type where
   | ANY_TRUE : vvtestop
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:337.1-337.21 -/
 inductive vunop_Jnn_N : Type where
   | ABS : vunop_Jnn_N
   | NEG : vunop_Jnn_N
   | POPCNT : vunop_Jnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:337.8-337.15 -/
 inductive wf_vunop_Jnn_N : Jnn → N → vunop_Jnn_N → Prop where
@@ -1295,13 +1295,13 @@ inductive vunop_Fnn_N : Type where
   | FLOOR : vunop_Fnn_N
   | TRUNC : vunop_Fnn_N
   | NEAREST : vunop_Fnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:337.1-337.21 -/
 inductive vunop_ : Type where
   | mk_vunop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vunop_Jnn_N) : vunop_
   | mk_vunop__1 (v_Fnn : Fnn) (v_N : N) (var_x : vunop_Fnn_N) : vunop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:337.8-337.15 -/
 inductive wf_vunop_ : shape → vunop_ → Prop where
@@ -1337,7 +1337,7 @@ inductive vbinop_Jnn_N : Type where
   | Q15MULR_SATS : vbinop_Jnn_N
   | MIN (v_sx : sx) : vbinop_Jnn_N
   | MAX (v_sx : sx) : vbinop_Jnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:342.8-342.16 -/
 inductive wf_vbinop_Jnn_N : Jnn → N → vbinop_Jnn_N → Prop where
@@ -1376,13 +1376,13 @@ inductive vbinop_Fnn_N : Type where
   | MAX : vbinop_Fnn_N
   | PMIN : vbinop_Fnn_N
   | PMAX : vbinop_Fnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:342.1-342.22 -/
 inductive vbinop_ : Type where
   | mk_vbinop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vbinop_Jnn_N) : vbinop_
   | mk_vbinop__1 (v_Fnn : Fnn) (v_N : N) (var_x : vbinop_Fnn_N) : vbinop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:342.8-342.16 -/
 inductive wf_vbinop_ : shape → vbinop_ → Prop where
@@ -1410,12 +1410,12 @@ def proj_vbinop__1 (var_x : vbinop_) : Option vbinop_Fnn_N :=
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.1-355.23 -/
 inductive vtestop_Jnn_N : Type where
   | ALL_TRUE : vtestop_Jnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.1-355.23 -/
 inductive vtestop_ : Type where
   | mk_vtestop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vtestop_Jnn_N) : vtestop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.8-355.17 -/
 inductive wf_vtestop_ : shape → vtestop_ → Prop where
@@ -1437,7 +1437,7 @@ inductive vrelop_Jnn_N : Type where
   | GT (v_sx : sx) : vrelop_Jnn_N
   | LE (v_sx : sx) : vrelop_Jnn_N
   | GE (v_sx : sx) : vrelop_Jnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:359.8-359.16 -/
 inductive wf_vrelop_Jnn_N : Jnn → N → vrelop_Jnn_N → Prop where
@@ -1465,13 +1465,13 @@ inductive vrelop_Fnn_N : Type where
   | GT : vrelop_Fnn_N
   | LE : vrelop_Fnn_N
   | GE : vrelop_Fnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:359.1-359.22 -/
 inductive vrelop_ : Type where
   | mk_vrelop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vrelop_Jnn_N) : vrelop_
   | mk_vrelop__1 (v_Fnn : Fnn) (v_N : N) (var_x : vrelop_Fnn_N) : vrelop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:359.8-359.16 -/
 inductive wf_vrelop_ : shape → vrelop_ → Prop where
@@ -1500,12 +1500,12 @@ def proj_vrelop__1 (var_x : vrelop_) : Option vrelop_Fnn_N :=
 inductive half : Type where
   | LOW : half
   | HIGH : half
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:368.1-368.19 -/
 inductive zero : Type where
   | ZERO : zero
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:370.1-370.99 -/
 inductive vcvtop : Type where
@@ -1514,18 +1514,18 @@ inductive vcvtop : Type where
   | CONVERT (half_opt : Option half) (v_sx : sx) : vcvtop
   | DEMOTE (v_zero : zero) : vcvtop
   | PROMOTELOW : vcvtop
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.1-372.25 -/
 inductive vshiftop_Jnn_N : Type where
   | SHL : vshiftop_Jnn_N
   | SHR (v_sx : sx) : vshiftop_Jnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.1-372.25 -/
 inductive vshiftop_ : Type where
   | mk_vshiftop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vshiftop_Jnn_N) : vshiftop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.8-372.18 -/
 inductive wf_vshiftop_ : ishape → vshiftop_ → Prop where
@@ -1542,7 +1542,7 @@ def proj_vshiftop__0 (var_x : vshiftop_) : vshiftop_Jnn_N :=
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:375.1-375.25 -/
 inductive vextunop_Jnn_N : Type where
   | EXTADD_PAIRWISE (v_sx : sx) : vextunop_Jnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:375.8-375.18 -/
 inductive wf_vextunop_Jnn_N : Jnn → N → vextunop_Jnn_N → Prop where
@@ -1554,7 +1554,7 @@ inductive wf_vextunop_Jnn_N : Jnn → N → vextunop_Jnn_N → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:375.1-375.25 -/
 inductive vextunop_ : Type where
   | mk_vextunop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vextunop_Jnn_N) : vextunop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:375.8-375.18 -/
 inductive wf_vextunop_ : ishape → vextunop_ → Prop where
@@ -1573,7 +1573,7 @@ def proj_vextunop__0 (var_x : vextunop_) : vextunop_Jnn_N :=
 inductive vextbinop_Jnn_N : Type where
   | EXTMUL (v_half : half) (v_sx : sx) : vextbinop_Jnn_N
   | DOTS : vextbinop_Jnn_N
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:378.8-378.19 -/
 inductive wf_vextbinop_Jnn_N : Jnn → N → vextbinop_Jnn_N → Prop where
@@ -1586,7 +1586,7 @@ inductive wf_vextbinop_Jnn_N : Jnn → N → vextbinop_Jnn_N → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:378.1-378.26 -/
 inductive vextbinop_ : Type where
   | mk_vextbinop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vextbinop_Jnn_N) : vextbinop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:378.8-378.19 -/
 inductive wf_vextbinop_ : ishape → vextbinop_ → Prop where
@@ -1622,7 +1622,7 @@ inductive wf_memarg : memarg → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:390.1-390.24 -/
 inductive loadop_Inn : Type where
   | mk_loadop_Inn (v_sz : sz) (v_sx : sx) : loadop_Inn
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:390.8-390.16 -/
 inductive wf_loadop_Inn : Inn → loadop_Inn → Prop where
@@ -1635,7 +1635,7 @@ inductive wf_loadop_Inn : Inn → loadop_Inn → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:390.1-390.24 -/
 inductive loadop_ : Type where
   | mk_loadop__0 (v_Inn : Inn) (var_x : loadop_Inn) : loadop_
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:390.8-390.16 -/
 inductive wf_loadop_ : numtype → loadop_ → Prop where
@@ -1655,13 +1655,13 @@ inductive vloadop : Type where
   | SHAPEX_ (__0 : Nat) (__1 : Nat) (v_sx : sx) : vloadop
   | SPLAT (_ : Nat) : vloadop
   | ZERO (_ : Nat) : vloadop
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:403.1-405.17 -/
 inductive blocktype : Type where
   | _RESULT (valtype_opt : Option valtype) : blocktype
   | _IDX (v_typeidx : typeidx) : blocktype
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:403.8-403.17 -/
 inductive wf_blocktype : blocktype → Prop where
@@ -1996,12 +1996,12 @@ inductive wf_datamode : datamode → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:544.1-545.16 -/
 inductive type : Type where
   | TYPE (v_functype : functype) : type
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:546.1-547.16 -/
 inductive «local» : Type where
   | LOCAL (v_valtype : valtype) : «local»
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:548.1-549.27 -/
 inductive func : Type where
@@ -2031,7 +2031,7 @@ inductive wf_global : global → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:552.1-553.18 -/
 inductive table : Type where
   | TABLE (v_tabletype : tabletype) : table
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:552.8-552.13 -/
 inductive wf_table : table → Prop where
@@ -2043,7 +2043,7 @@ inductive wf_table : table → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:554.1-555.17 -/
 inductive mem : Type where
   | MEMORY (v_memtype : memtype) : mem
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:554.8-554.11 -/
 inductive wf_mem : mem → Prop where
@@ -2081,7 +2081,7 @@ inductive wf_data : data → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:560.1-561.16 -/
 inductive start : Type where
   | START (v_funcidx : funcidx) : start
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:560.8-560.13 -/
 inductive wf_start : start → Prop where
@@ -2096,7 +2096,7 @@ inductive externidx : Type where
   | GLOBAL (v_globalidx : globalidx) : externidx
   | TABLE (v_tableidx : tableidx) : externidx
   | MEM (v_memidx : memidx) : externidx
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:563.8-563.17 -/
 inductive wf_externidx : externidx → Prop where
@@ -2117,7 +2117,7 @@ inductive wf_externidx : externidx → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:565.1-566.24 -/
 inductive «export» : Type where
   | EXPORT (v_name : name) (v_externidx : externidx) : «export»
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:565.8-565.14 -/
 inductive wf_export : «export» → Prop where
@@ -2130,7 +2130,7 @@ inductive wf_export : «export» → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:567.1-568.30 -/
 inductive «import» : Type where
   | IMPORT (v_name_0 : name) (v_name_1 : name) (v_externtype : externtype) : «import»
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:567.8-567.14 -/
 inductive wf_import : «import» → Prop where
@@ -6023,12 +6023,12 @@ inductive externaddr : Type where
   | GLOBAL (v_globaladdr : globaladdr) : externaddr
   | TABLE (v_tableaddr : tableaddr) : externaddr
   | MEM (v_memaddr : memaddr) : externaddr
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/4-runtime.spectec:37.1-38.62 -/
 inductive num : Type where
   | CONST (v_numtype : numtype) (_ : num_) : num
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:37.8-37.11 -/
 inductive wf_num : num → Prop where
@@ -6040,7 +6040,7 @@ inductive wf_num : num → Prop where
 /- Inductive Type Definition at: ../specification/wasm-2.0/4-runtime.spectec:39.1-40.62 -/
 inductive vec : Type where
   | VCONST (v_vectype : vectype) (_ : vec_) : vec
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:39.8-39.11 -/
 inductive wf_vec : vec → Prop where
@@ -6055,7 +6055,7 @@ inductive ref : Type where
   | REF_NULL (v_reftype : reftype) : ref
   | REF_FUNC_ADDR (v_funcaddr : funcaddr) : ref
   | REF_HOST_ADDR (v_hostaddr : hostaddr) : ref
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Type Definition at: ../specification/wasm-2.0/4-runtime.spectec:43.1-44.20 -/
 inductive val : Type where
@@ -6064,7 +6064,7 @@ inductive val : Type where
   | REF_NULL (v_reftype : reftype) : val
   | REF_FUNC_ADDR (v_funcaddr : funcaddr) : val
   | REF_HOST_ADDR (v_hostaddr : hostaddr) : val
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Auxiliary Definition at:  -/
 def val_ref (var_0 : ref) : val :=
@@ -6091,7 +6091,7 @@ inductive wf_val : val → Prop where
 inductive result : Type where
   | _VALS (val_lst : List val) : result
   | TRAP : result
-deriving Inhabited, BEq
+deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:46.8-46.14 -/
 inductive wf_result : result → Prop where
@@ -7940,7 +7940,7 @@ inductive Instr_ok : context → instr → functype → Prop where
     wf_memtype mt →
     wf_instr (instr.VSTORE_LANE vectype.V128 (sz.mk_sz v_n) v_memarg v_laneidx) →
     Instr_ok C (instr.VSTORE_LANE vectype.V128 (sz.mk_sz v_n) v_memarg v_laneidx) (functype.mk_functype (.mk_list [valtype.I32, valtype.V128]) (.mk_list []))
-
+deriving Inhabited, BEq
 /- Inductive Relations Definition at: ../specification/wasm-2.0/6-typing.spectec:142.1-142.65 -/
 inductive Instrs_ok : context → List instr → functype → Prop where
   | empty (C : context) :
@@ -7970,7 +7970,7 @@ inductive Instrs_ok : context → List instr → functype → Prop where
     wf_context C →
     Forall (fun (v_instr_elem : instr) => wf_instr v_instr_elem) instr_lst →
     Instrs_ok C instr_lst (functype.mk_functype (.mk_list (t_lst ++ t_1_lst)) (.mk_list (t_lst ++ t_2_lst)))
-
+deriving Inhabited, BEq
 
 end
 
@@ -10068,7 +10068,7 @@ inductive Instr_ok2 : store → context → admininstr → functype → Prop whe
     wf_context C →
     wf_admininstr admininstr.TRAP →
     Instr_ok2 s C admininstr.TRAP (functype.mk_functype (.mk_list t_1_lst) (.mk_list t_2_lst))
-
+deriving Inhabited, BEq
 /- Inductive Relations Definition at: ../specification/wasm-2.0/B-soundness.spectec:70.1-71.36 -/
 inductive Instrs_ok2 : store → context → List admininstr → functype → Prop where
   | empty (s : store) (C : context) :
@@ -10103,7 +10103,7 @@ inductive Instrs_ok2 : store → context → List admininstr → functype → Pr
     wf_context C →
     Forall (fun (v_admininstr_elem : admininstr) => wf_admininstr v_admininstr_elem) admininstr_lst →
     Instrs_ok2 s C admininstr_lst (functype.mk_functype (.mk_list (t_lst ++ t_1_lst)) (.mk_list (t_lst ++ t_2_lst)))
-
+deriving Inhabited, BEq
 /- Inductive Relations Definition at: ../specification/wasm-2.0/B-soundness.spectec:72.1-73.36 -/
 inductive Expr_ok2 : store → context → adminexpr → resulttype → Prop where
   | mk_Expr_ok2 (s : store) (C : context) (admininstr_lst : List admininstr) (t_lst : List valtype) :
@@ -10112,7 +10112,7 @@ inductive Expr_ok2 : store → context → adminexpr → resulttype → Prop whe
     wf_context C →
     Forall (fun (v_admininstr_elem : admininstr) => wf_admininstr v_admininstr_elem) admininstr_lst →
     Expr_ok2 s C admininstr_lst (.mk_list t_lst)
-
+deriving Inhabited, BEq
 
 end
 

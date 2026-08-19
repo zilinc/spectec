@@ -108,6 +108,90 @@ let create_inductive_type_with_params_applied
     | _ -> failwith "all params of a typecase should be TypP"
 
 let standard_deriving : _deriving option = Some ["Inhabited"; "BEq"]
+let extended_eq_deriving : _deriving option =
+  Some ["Inhabited"; "BEq"; "DecidableEq"; "ReflBEq"; "LawfulBEq"]
+
+(*
+  Lean's stock `deriving DecidableEq`/`ReflBEq`/`LawfulBEq` handlers succeed on
+  a type as long as no case has a field that nests a self-reference to that
+  type inside another type application (e.g. `List T`, `Option T`) -- verified
+  directly: `inductive T | leaf | node (children : List T)` fails to derive
+  `DecidableEq`/`ReflBEq` ("Deriving `ReflBEq` for nested inductives is not
+  supported"), while a *direct* self-referential field (e.g.
+  `add (a b : T) : T`) derives all three cleanly. Type parameters are not a
+  blocker either way -- Lean auto-threads the needed instance constraint (e.g.
+  `[DecidableEq X]`) into the derived instance itself, also verified directly
+  -- so this check only needs to walk for nesting, not for polymorphism.
+
+  A field type "nests" a self-reference when the reference to [parent_id]
+  occurs underneath some other type application (an [IterT], or a [VarT] with
+  type arguments) rather than appearing bare at the top of the field.
+*)
+let rec typ_nests_self_ref (parent_id : string) (under_wrapper : bool) (t : Il.Ast.typ) : bool
+  = match t.it with
+    | VarT (id, []) -> under_wrapper && id.it = parent_id
+    | VarT (id, args) ->
+      (under_wrapper && id.it = parent_id) ||
+      List.exists (fun (a : Il.Ast.arg) -> match a.it with
+        | TypA typ -> typ_nests_self_ref parent_id true typ
+        | _ -> false
+      ) args
+    | IterT (t', _) -> typ_nests_self_ref parent_id true t'
+    | TupT id_typ_list -> List.exists (fun (_, typ) -> typ_nests_self_ref parent_id under_wrapper typ) id_typ_list
+    | BoolT | NumT _ | TextT -> false
+
+(*
+  A type doesn't need to be self-referential to fail the [DecidableEq] derive:
+  it fails just as surely if any of its fields has a type that itself lacks
+  [DecidableEq] (e.g. `elemmode`'s `v_expr : expr` field, where
+  `expr := List instr` and `instr` is nested-self-referential per
+  [typ_nests_self_ref] -- confirmed by actually elaborating the generated
+  file: `elemmode` failed with `synthInstanceFailed` for exactly this reason).
+  [types_without_deceq] tracks every type id processed so far that ended up on
+  [standard_deriving] instead of [extended_eq_deriving], so later types can
+  check their own fields against it. This relies on [create_def] being called
+  over the script in dependency order, which the generated Lean file already
+  requires (Lean itself needs a type defined before it's referenced, mutual
+  groups aside).
+*)
+let types_without_deceq : (string, unit) Hashtbl.t = Hashtbl.create 64
+
+let rec typ_refs_bad_type (t : Il.Ast.typ) : bool
+  = match t.it with
+    | VarT (id, args) ->
+      Hashtbl.mem types_without_deceq id.it ||
+      List.exists (fun (a : Il.Ast.arg) -> match a.it with
+        | TypA typ -> typ_refs_bad_type typ
+        | _ -> false
+      ) args
+    | IterT (t', _) -> typ_refs_bad_type t'
+    | TupT id_typ_list -> List.exists (fun (_, typ) -> typ_refs_bad_type typ) id_typ_list
+    | BoolT | NumT _ | TextT -> false
+
+(*
+  Only applies the widened [extended_eq_deriving] when [parent_id] is neither
+  nested-self-referential (per [typ_nests_self_ref]) nor referencing an
+  already-known-bad field type (per [typ_refs_bad_type]); registers
+  [parent_id] itself into [types_without_deceq] on failure, so later types
+  that reference it inherit the same restriction.
+
+  This is deliberately blind to genuine multi-type mutual recursion (an
+  [Il.Ast.RecD] group with more than one member): that shape is out of scope
+  here (Lean's stock handlers are expected to need the same kind of help as
+  the nested-container case, unverified) and is overridden back to
+  [standard_deriving] -- with a matching [types_without_deceq] registration --
+  at the [MutualInductiveStructure] call site instead, where that information
+  is actually available.
+*)
+let choose_variant_deriving (parent_id : Il.Ast.id) (cases : Il.Ast.typcase list) : _deriving option
+  = let is_bad = List.exists (fun ((_, (typ, _, _), _) : Il.Ast.typcase) ->
+      typ_nests_self_ref parent_id.it false typ || typ_refs_bad_type typ
+    ) cases
+    in
+    if is_bad then begin
+      Hashtbl.replace types_without_deceq parent_id.it ();
+      standard_deriving
+    end else extended_eq_deriving
 
 let create_unop_bool (op : Il.Ast.unop) : term
   = match op with
@@ -1509,20 +1593,97 @@ let remove_overlapping_clauses (clauses : Il.Ast.clause list) : Il.Ast.clause li
   in
   Util.Lib.List.nub same_clause clauses
 
-let rec create_def (def : Il.Ast.def) : command list
-  = match def.it with
 
+
+(* What top-level Lean construct `create_def` will render `def` as. This is
+   the single source of truth for that classification -- comment_desc_def
+   (below) and the RecD case of create_def both used to re-derive it
+   independently by pattern-matching on def.it directly, which is how the
+   RelD case went stale: matching def.it alone can't see that a RelD tagged
+   wf-lemma-rel/wf-lemma-func renders as a Theorem, not an Inductive (that
+   requires consulting the hint index, same as create_def's own RelD case
+   does), so anything computing this by hand risks the same drift the old
+   is_def did too -- it called any non-empty-clause DecD "Def", without
+   checking whether it's actually a temporarily_axioms fallback (Opaque). *)
+type top_level_construct_type =
+  | AbbrevConstruct             (* TypD -> AliasT:     `abbrev X := ...` *)
+  | InductiveTypeConstruct      (* TypD -> VariantT:   `inductive X where ...` *)
+  | InductiveRelationConstruct  (* RelD, not a wf-lemma: `inductive X : ... -> Prop where ...` *)
+  | StructureConstruct          (* TypD -> StructT:    `structure X where ...` *)
+  | TypeFamilyConstruct         (* TypD, none of the above -- create_def emits no command *)
+  | WfLemmaTheoremConstruct     (* RelD tagged wf-lemma-rel/wf-lemma-func: `theorem X ... := by sorry` *)
+  | DefConstruct                (* DecD with clauses, not a temporarily_axioms fallback: `def X ... := ...` *)
+  | OpaqueConstruct             (* DecD with no clauses, or a temporarily_axioms fallback: `opaque X ... := ...` *)
+  | MutualConstruct             (* RecD: `mutual ... end` *)
+  | GrammarConstruct            (* GramD -- create_def emits no command *)
+  | HintConstruct               (* HintD -- carries no code-gen information *)
+
+let get_top_level_construct_type (def : Il.Ast.def) : top_level_construct_type =
+  match def.it with
+  | TypD (_, _, [{it = InstD (_, _, {it = AliasT _; _}); _}]) -> AbbrevConstruct
+  | TypD (_, _, [{it = InstD (_, _, {it = VariantT _; _}); _}]) -> InductiveTypeConstruct
+  | TypD (_, _, [{it = InstD (_, _, {it = StructT _; _}); _}]) -> StructureConstruct
+  | TypD _ -> TypeFamilyConstruct
+  | RecD _ -> MutualConstruct
+  | RelD (id, _, _, _, _) when
+      Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_rel_id id.it
+      || Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_func_id id.it
+    -> WfLemmaTheoremConstruct
+  | RelD _ -> InductiveRelationConstruct
+  | DecD (id, _, _, _) when List.mem_assoc id.it (!analysis).temporarily_axioms -> OpaqueConstruct
+  | DecD (_, _, _, []) -> OpaqueConstruct
+  | DecD _ -> DefConstruct
+  | HintD _ -> HintConstruct
+  | GramD _ -> GrammarConstruct
+
+(* A short, human-readable label for what kind of top-level construct `def`
+   is, mirroring the Rocq backend's `comment_desc_def` (src/backend-rocq/
+   print.ml) so the two backends describe the same IL shapes the same way. *)
+let comment_desc_def (def : Il.Ast.def) : string =
+  match get_top_level_construct_type def with
+  | AbbrevConstruct -> "Type Alias Definition"
+  | InductiveTypeConstruct -> "Inductive Type Definition"
+  | InductiveRelationConstruct -> "Inductive Relations Definition"
+  | StructureConstruct -> "Record Creation Definition"
+  | TypeFamilyConstruct -> "Type Family Definition"
+  | WfLemmaTheoremConstruct -> "Well-Formedness Theorem"
+  | DefConstruct -> "Auxiliary Definition"
+  | OpaqueConstruct -> "Axiom Definition"
+  | MutualConstruct -> "Mutual Recursion"
+  | GrammarConstruct -> "Grammar Production Definition"
+  | HintConstruct -> "Hint Definition"
+
+(* `def`'s originating location in the .spectec source, as a Lean doc-comment
+   ready to drop into a `decl_modifier`'s `comment` field -- e.g.
+     Some "Axiom Definition at: doc/example/NanoWasm.spectec:136.1-136.30"
+   The file/line/col comes straight from `def.at` (every Il.Ast.def, being a
+   `phrase`, already carries this -- no whole-file analysis needed). Exposed
+   standalone (rather than inlined into create_def) so the comment
+   text/format can be tweaked independently of create_def's dispatch logic. *)
+let create_comment (def : Il.Ast.def) : doc_comment option =
+  Some (comment_desc_def def ^ " at: " ^ Util.Source.string_of_region def.at)
+
+let rec create_def (def : Il.Ast.def) : command list
+  = let comment = create_comment def in
+    match get_top_level_construct_type def with
+
+    | AbbrevConstruct ->
+      (match def.it with
     | TypD (id, params, [{it = (InstD (quants, args, {it = AliasT t; _})); _}])
       ->
+      if typ_refs_bad_type t then Hashtbl.replace types_without_deceq id.it ();
       [
         Abbrev (AbbrevAsgn {
-          modifier = empty_modifier;
+          modifier = { empty_modifier with comment };
           id = id.it;
           signature = ([], Some (Type None));
           body = create_typ t;
         })
       ]
+      | _ -> failwith "unreachable: get_top_level_construct_type already confirmed AbbrevConstruct")
 
+    | InductiveTypeConstruct ->
+      (match def.it with
     | TypD (id, params, [{it = (InstD (quants, args, {it = VariantT ts; _})); _}])
       ->
         (* (X : Type) *)
@@ -1537,7 +1698,7 @@ let rec create_def (def : Il.Ast.def) : command list
 
         [
           Inductive {
-            modifier = empty_modifier;
+            modifier = { empty_modifier with comment };
             id = id.it;
             signature = (
               List.map
@@ -1547,10 +1708,13 @@ let rec create_def (def : Il.Ast.def) : command list
               Some (Type None)
             );
             cases = List.map (create_typcase id params) ts;
-            deriving = standard_deriving; (* TODO: look into deriving *)
+            deriving = choose_variant_deriving id ts;
           }
         ]
+      | _ -> failwith "unreachable: get_top_level_construct_type already confirmed InductiveTypeConstruct")
 
+    | StructureConstruct ->
+      (match def.it with
     | TypD (id, params, [{it = (InstD (quants, args, {it = StructT ts; _})); _}])
       ->
       let create_struct_field (typfield : Il.Ast.typfield) : struct_field
@@ -1565,9 +1729,14 @@ let rec create_def (def : Il.Ast.def) : command list
 
       let fields = List.map create_struct_field ts in
 
+      (* Structures aren't widened by [choose_variant_deriving] in this Tier-1
+         pass (out of scope), so register unconditionally: any later inductive
+         type with a field of this structure type must also stay conservative. *)
+      Hashtbl.replace types_without_deceq id.it ();
+
       let typ_struct : command
         = Structure {
-          modifier = empty_modifier;
+          modifier = { empty_modifier with comment };
           id = id.it;
           binders = [];
           universe = None;
@@ -1657,7 +1826,7 @@ let rec create_def (def : Il.Ast.def) : command list
           
             Def (
               DefStruct {
-                modifier = empty_modifier;
+                modifier = { empty_modifier with comment };
                 id = "append_" ^ id.it;
                 signature = (
                   [
@@ -1678,7 +1847,7 @@ let rec create_def (def : Il.Ast.def) : command list
 
         let append_instance : command =
           Instance {
-            modifier = empty_modifier;
+            modifier = { empty_modifier with comment };
             priority = None;
             id = None;
             signature = (
@@ -1705,7 +1874,12 @@ let rec create_def (def : Il.Ast.def) : command list
           append_func;
           append_instance;
         ]
+      | _ -> failwith "unreachable: get_top_level_construct_type already confirmed StructureConstruct")
 
+    | TypeFamilyConstruct -> []
+
+    | WfLemmaTheoremConstruct ->
+      (match def.it with
     | RelD (
         id,     (* fun_sum *)
         quants,     (* undep should get rid of params, so this should be empty *)
@@ -1714,21 +1888,6 @@ let rec create_def (def : Il.Ast.def) : command list
         rules   (* (RuleD "fun_sum_case_0" (Seq Arg Arg) (TupE (ListE) (NumE (Nat 0)))) *)
       )
       ->
-      (*
-        Taking the example of
-      
-        inductive fun_sum : List Nat → Nat → Prop where
-          | fun_sum_case_0 : fun_sum [] 0
-          | fun_sum_case_1 (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) :
-              fun_sum n'_lst var_0 →
-              fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
-      *)
-      
-      (* TODO: refactor for mainatinability *)
-      if Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_rel_id id.it
-         || Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_func_id id.it
-      then
-        
         (*
 
         This code supports the hack from undep where a lemma is smuggled in as
@@ -1768,7 +1927,7 @@ let rec create_def (def : Il.Ast.def) : command list
 
         [
           Theorem {
-            modifier = empty_modifier;
+            modifier = { empty_modifier with comment };
             id = id.it;
             signature = (
               List.map (fun q -> match q.it with
@@ -1808,8 +1967,28 @@ let rec create_def (def : Il.Ast.def) : command list
             proof = Sorry;
           }
         ]
-      else
+      | _ -> failwith "unreachable: get_top_level_construct_type already confirmed WfLemmaTheoremConstruct")
 
+    | InductiveRelationConstruct ->
+      (match def.it with
+    | RelD (
+        id,     (* fun_sum *)
+        quants,     (* undep should get rid of params, so this should be empty *)
+        mixop,
+        typ,    (* (TupT (typbind "_" (IterT nat List)) (typbind "_" nat)) *)
+        rules   (* (RuleD "fun_sum_case_0" (Seq Arg Arg) (TupE (ListE) (NumE (Nat 0)))) *)
+      )
+      ->
+      (*
+        Taking the example of
+      
+        inductive fun_sum : List Nat → Nat → Prop where
+          | fun_sum_case_0 : fun_sum [] 0
+          | fun_sum_case_1 (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) :
+              fun_sum n'_lst var_0 →
+              fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
+      *)
+      
       let signature : _params list (* (f_ : N → iN → iN) *)
         = List.map (
           fun q -> match q.it with
@@ -1954,7 +2133,7 @@ let rec create_def (def : Il.Ast.def) : command list
       (* let () = Printf.eprintf "DEBUG create_relations_inductive_type: %s  typ=%s\n%!" id.it (Il.Print.string_of_typ typ) in *)
       [
         Inductive {
-          modifier = empty_modifier;
+          modifier = { empty_modifier with comment };
           id = id.it;                       (* fun_sum *)
           signature = (
             signature,
@@ -1964,7 +2143,10 @@ let rec create_def (def : Il.Ast.def) : command list
           deriving = None; (* TODO: look into deriving *)
         }
       ]
+      | _ -> failwith "unreachable: get_top_level_construct_type already confirmed InductiveRelationConstruct")
 
+    | DefConstruct ->
+      (match def.it with
     | DecD (
       id,                               (* "Ki" *)
       [],                               (* This handles the case with no params *)
@@ -1985,7 +2167,7 @@ let rec create_def (def : Il.Ast.def) : command list
       ->
       [
         Def (DefAsgn {
-          modifier = empty_modifier;
+          modifier = { empty_modifier with comment };
           id = id.it;                               (* "Ki" *)
           signature = (
             [],
@@ -1994,64 +2176,6 @@ let rec create_def (def : Il.Ast.def) : command list
           body = create_exp exp;                    (* 1024 *)
         })
       ]
-
-
-    | DecD (
-      id,       (* "float" *)
-      params,   (*
-                  (ExpP "nat" nat)
-                  (ExpP "var_0" (IterT nat List))
-                *)
-      typ,      (* (VarT "const") *)
-      []
-    ) ->
-      (*
-        Let's say we have a definition like
-
-        /- Axiom Definition at: doc/example/NanoWasm.spectec:136.1-136.30 -/
-        opaque float (nat : Nat) (var_0 : (List Nat)) : const := opaqueDef
-
-        corresponding to IL AST
-
-        (DecD
-          "float"
-          (ExpP "nat" nat)
-          (ExpP "var_0" (IterT nat List))
-          (VarT "const")
-          []
-        )
-      *)
-      let signature : decl_sig (* (nat : Nat) (var_0 : (List Nat)) : const *)
-        =
-          List.map (
-            fun p -> match p.it with
-              | TypP t -> BracketedBinder(ExplicitParam(
-                NonEmptyList.from_list_unsafe [Ident_IOH t.it;], (* (X : Type) *)
-                Type None
-              ))
-              | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-                NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (v_state : state) *)
-                create_typ typ
-              ))
-              | _ -> error p.at ("only ExpP or TypP should be here 1, got: " ^ Il.Print.string_of_param p)
-          ) params,
-          create_typ typ
-
-          
-      in
-      [
-        Opaque {
-          modifier = empty_modifier;
-          id = id.it;                               (* "float" *)
-          signature = signature;
-          rhs = Some opaque_def;
-        }
-      ]
-    (* | DecD (id, [], typ, clauses)
-      -> None *)
-
-      
-
     | DecD (
       id,     (* "local" *)
       params, (*
@@ -2186,16 +2310,6 @@ let rec create_def (def : Il.Ast.def) : command list
          when the declared return type happens itself to be a function type. For
          every other return type (e.g. concatn_ : List X) this produces Lean that
          doesn't compile. Render it as an opaque axiom instead. *)
-      if List.mem_assoc id.it (!analysis).temporarily_axioms then
-        [
-          Opaque {
-            modifier = empty_modifier;
-            id = id.it;
-            signature = (fst signature, Option.get (snd signature));
-            rhs = Some opaque_def;
-          }
-        ]
-      else
       (* TODO WORKAROUND ---------------- REMOVE ONCE DEFTOREL IS FIXED *)
 
       (* Drop clauses that middlend/subexpansion.ml's per-clause type-family
@@ -2517,13 +2631,218 @@ let rec create_def (def : Il.Ast.def) : command list
 
       [
         Def (DefAsgn {
-          modifier = empty_modifier;
+          modifier = { empty_modifier with comment };
           id = id.it;
           signature = signature;
           body;
         })
       ]
-    | GramD _ -> []
+      | _ -> failwith "unreachable: get_top_level_construct_type already confirmed DefConstruct")
+
+    | OpaqueConstruct ->
+      (match def.it with
+    | DecD (
+      id,       (* "float" *)
+      params,   (*
+                  (ExpP "nat" nat)
+                  (ExpP "var_0" (IterT nat List))
+                *)
+      typ,      (* (VarT "const") *)
+      []
+    ) ->
+      (*
+        Let's say we have a definition like
+
+        /- Axiom Definition at: doc/example/NanoWasm.spectec:136.1-136.30 -/
+        opaque float (nat : Nat) (var_0 : (List Nat)) : const := opaqueDef
+
+        corresponding to IL AST
+
+        (DecD
+          "float"
+          (ExpP "nat" nat)
+          (ExpP "var_0" (IterT nat List))
+          (VarT "const")
+          []
+        )
+      *)
+      let signature : decl_sig (* (nat : Nat) (var_0 : (List Nat)) : const *)
+        =
+          List.map (
+            fun p -> match p.it with
+              | TypP t -> BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH t.it;], (* (X : Type) *)
+                Type None
+              ))
+              | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (v_state : state) *)
+                create_typ typ
+              ))
+              | _ -> error p.at ("only ExpP or TypP should be here 1, got: " ^ Il.Print.string_of_param p)
+          ) params,
+          create_typ typ
+
+          
+      in
+      [
+        Opaque {
+          modifier = { empty_modifier with comment };
+          id = id.it;                               (* "float" *)
+          signature = signature;
+          rhs = Some opaque_def;
+        }
+      ]
+    (* | DecD (id, [], typ, clauses)
+      -> None *)
+
+      
+
+    | DecD (
+      id,     (* "local" *)
+      params, (*
+                (ExpP "v_state" (VarT "state"))
+                (ExpP "v_localidx" (VarT "localidx"))
+              *)
+      typ,    (* (VarT "val") *)
+      clauses (*
+                (DecD
+                  "local"
+                  (ExpP "v_state" (VarT "state"))
+                  (ExpP "v_localidx" (VarT "localidx"))
+                  (VarT "val")
+                  (DefD
+                    (ExpP "s" (VarT "store"))
+                    (ExpP "f" (VarT "frame"))
+                    (ExpP "x" nat)
+                    (ExpA (CaseE (Seq (Atom mk_state) Arg Arg) (TupE (VarE "s") (VarE "f"))))
+                    (ExpA (VarE "x"))
+                    (IdxE (DotE (VarE "f") (Atom LOCALS)) (VarE "x"))
+                  )
+                )
+              *)
+    ) ->
+      (*
+        Let's say we have a definition like
+
+        /- Auxiliary Definition at: doc/example/NanoWasm.spectec:82.1-82.34 -/
+        def «local» (v_state : state) (v_localidx : localidx) : val :=
+          match v_state with
+          | .mk_state s f => ((f.LOCALS)[v_localidx]!)
+
+        corresponding to IL AST
+
+        (DecD
+          "local"
+          (ExpP "v_state" (VarT "state"))
+          (ExpP "v_localidx" (VarT "localidx"))
+          (VarT "val")
+          (DefD
+            (ExpP "s" (VarT "store"))
+            (ExpP "f" (VarT "frame"))
+            (ExpP "x" nat)
+            (ExpA (CaseE (Seq (Atom mk_state) Arg Arg) (TupE (VarE "s") (VarE "f"))))
+            (ExpA (VarE "x"))
+            (IdxE (DotE (VarE "f") (Atom LOCALS)) (VarE "x"))
+          )
+        )
+
+      *)
+
+
+      (* Which of this function's TypP names need [BEq X] / [Inhabited X] instance binders.
+         Both are computed globally by whole_file_analyses before code generation starts.
+         e.g. setminus1_: typp_names_needing_beq=["X"], typp_names_needing_inhabited=[]
+              fun_relaxed2: typp_names_needing_beq=[], typp_names_needing_inhabited=["r_X"] *)
+      let typp_names_needing_beq : string list =
+        List.assoc_opt id.it (!analysis).defs_needing_beq
+        |> Option.value ~default:[]
+      in
+      let typp_names_needing_inhabited : string list =
+        List.assoc_opt id.it (!analysis).defs_needing_inhabited
+        |> Option.value ~default:[]
+      in
+
+      let signature : opt_decl_sig (* (v_state : state) (v_localidx : localidx) : val *)
+        =
+          let params_as_binders : _params list
+            (* Each TypP emits (X : Type) always, then [BEq X] and/or [Inhabited X] as needed.
+               e.g. setminus1_'s TypP "X" → [(X : Type); [BEq X]]
+                    fun_relaxed2's TypP "r_X" → [(r_X : Type); [Inhabited r_X]]
+               ExpP and DefP each emit exactly one binder. *)
+            = List.concat_map (
+              fun p -> match p.it with
+                | TypP t ->
+                  let explicit : _params = BracketedBinder(ExplicitParam(
+                    NonEmptyList.from_list_unsafe [Ident_IOH t.it],
+                    Type None                                                (* (X : Type) -- always emitted *)
+                  )) in
+                  let beq : _params list =
+                    if List.mem t.it typp_names_needing_beq then
+                      [BracketedBinder(InstanceParam(                        (* [BEq X] -- e.g. for setminus1_ *)
+                        FunApp(Ident "BEq", NonEmptyList.from_list_unsafe [Term (Ident t.it)])
+                      ))]
+                    else []
+                  in
+                  let inhabited : _params list =
+                    if List.mem t.it typp_names_needing_inhabited then
+                      [BracketedBinder(InstanceParam(                        (* [Inhabited X] -- e.g. for fun_relaxed2 *)
+                        FunApp(Ident "Inhabited", NonEmptyList.from_list_unsafe [Term (Ident t.it)])
+                      ))]
+                    else []
+                  in
+                  [explicit] @ beq @ inhabited
+                | ExpP (id, typ) -> [BracketedBinder(ExplicitParam(
+                  NonEmptyList.from_list_unsafe [Ident_IOH id.it;], (* (var_0_lst : List X) *)
+                  create_typ typ
+                ))]
+                | DefP (
+                    id,
+                    params,
+                    typ
+                  ) ->
+                  let param_types = List.map (fun p -> match p.it with
+                    | ExpP (_, typ) -> create_typ typ
+                    | _ -> failwith "only ExpP should be here"
+                  ) params in
+                  [
+                    (* (f_ : N → iN → iN) *)
+                    BracketedBinder(ExplicitParam(
+                      NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+                      create_curried_func (param_types @ [create_typ typ])
+                    ))
+                  ]
+                | _ -> error p.at ("only ExpP or TypP should be here 2, got: " ^ Il.Print.string_of_param p)
+            ) params
+          in
+
+          params_as_binders,
+          Some (create_typ typ) (* val *)
+      in
+
+      (* TODO WORKAROUND ---------------- REMOVE ONCE DEFTOREL IS FIXED
+         (see whole_file_analyses.ml: "Temporary axioms" section / temporarily_axioms)
+
+         deftorel could not convert this DecD to a relation even though its clauses
+         carry genuine premises (either it has a TypP/DefP parameter, or it's passed
+         by name to a higher-order function elsewhere in the script). The def-body
+         renderer below (append_prems_to_term, reached via create_clause) has no way
+         to turn a leftover genuine premise into an actual guard: it chains premises
+         into the body as `prem_1 -> prem_2 -> ... -> body`, which only type-checks
+         when the declared return type happens itself to be a function type. For
+         every other return type (e.g. concatn_ : List X) this produces Lean that
+         doesn't compile. Render it as an opaque axiom instead. *)
+        [
+          Opaque {
+            modifier = { empty_modifier with comment };
+            id = id.it;
+            signature = (fst signature, Option.get (snd signature));
+            rhs = Some opaque_def;
+          }
+        ]
+      | _ -> failwith "unreachable: get_top_level_construct_type already confirmed OpaqueConstruct")
+
+    | MutualConstruct ->
+      (match def.it with
     | RecD defs ->
       (
         (* HintD entries carry no code-gen information; strip them before
@@ -2541,12 +2860,7 @@ let rec create_def (def : Il.Ast.def) : command list
            `filter_map` below silently drops it -- producing a `mutual ...
            end` with nothing between when a whole group is wf-lemma RelD's
            (e.g. free_heaptype_is_wf and its siblings). *)
-        let is_wf_lemma = fun def -> match def.it with
-          | RelD (id, _, _, _, _) ->
-            Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_rel_id id.it
-            || Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_func_id id.it
-          | _ -> false
-        in
+        let is_wf_lemma = fun def -> get_top_level_construct_type def = WfLemmaTheoremConstruct in
         let wf_lemma_defs, defs = List.partition is_wf_lemma defs in
         let wf_lemma_theorems = List.concat_map create_def wf_lemma_defs in
         wf_lemma_theorems @
@@ -2554,34 +2868,30 @@ let rec create_def (def : Il.Ast.def) : command list
           | 0 -> []
           | 1 -> create_def (List.hd defs)
           | _ ->
-            (* TODO: refactor to make maintenance easier *)
-            let is_inductive = fun def -> match def.it with
-              | RelD _ -> true
-
-              (* the case of TypD (id, params, [{it = (InstD (quants, args, {it = VariantT ts; _})); _}]) from elsewhere in create_def *)
-              | TypD (_, _, [{it = InstD (_, _, {it = VariantT _; _}); _}]) -> true
-              
+            let is_inductive = fun def -> match get_top_level_construct_type def with
+              | InductiveRelationConstruct | InductiveTypeConstruct -> true
               | _ -> false
             in
-            let is_structure = fun def -> match def.it with
-              | TypD (_, _, [{it = InstD (_, _, {it = StructT _; _}); _}]) -> true
-              | _ -> false
-            in
-            let is_def = fun def -> match def.it with 
-              | DecD (_, _, _, _ :: _) -> true   (* non-empty clauses → Def; empty clauses → Opaque, excluded *)
-              | _ -> false
-            in
-            let is_abbrev = fun def -> match def.it with
-              | TypD (_, _, [{it = InstD (_, _, {it = AliasT _; _}); _}]) -> true
-              | _ -> false
-            in
+            let is_structure = fun def -> get_top_level_construct_type def = StructureConstruct in
+            let is_def = fun def -> get_top_level_construct_type def = DefConstruct in
+            let is_abbrev = fun def -> get_top_level_construct_type def = AbbrevConstruct in
             let all_inductive_or_structure = List.for_all (fun def -> is_inductive def || is_structure def) defs in
             let all_abbrev_or_def = List.for_all (fun def -> is_abbrev def || is_def def) defs in
             (
               match all_inductive_or_structure, all_abbrev_or_def with
                 | true, _ ->
+                  (* Genuine multi-type mutual recursion is out of scope for
+                     [choose_variant_deriving] (see its comment) -- force
+                     every member back to [standard_deriving] regardless of
+                     what create_def computed for it in isolation, and
+                     register each one so later, non-mutual types that
+                     reference them inherit the same restriction. *)
                   let inductives = List.filter_map (fun def ->
-                    match create_def def with [Inductive i] -> Some i | _ -> None
+                    match create_def def with
+                    | [Inductive i] ->
+                      Hashtbl.replace types_without_deceq i.id ();
+                      Some { i with deriving = standard_deriving }
+                    | _ -> None
                   ) defs in
                   let structures = List.filter_map (fun def ->
                     match create_def def with [Structure s] -> Some s | _ -> None
@@ -2600,7 +2910,12 @@ let rec create_def (def : Il.Ast.def) : command list
             )
         )
       )
-    | HintD _ -> []
+      | _ -> failwith "unreachable: get_top_level_construct_type already confirmed MutualConstruct")
+
+    | GrammarConstruct -> []
+
+    | HintConstruct -> []
+
     (* | RelD (
         id,
         quants,
@@ -2615,7 +2930,6 @@ let rec create_def (def : Il.Ast.def) : command list
           ^ "typ=" ^ Il.Print.string_of_typ typ ^ "              ||||||||           "
           ^ "rules=" ^ String.concat "   XXX   " (List.map Il.Print.string_of_rule rules) ^ "              ||||||||           "
         ) *)
-    | TypD _ -> []
 
 
 let prologue : command list =

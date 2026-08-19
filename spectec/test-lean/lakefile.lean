@@ -8,4 +8,5 @@ require mathlib from git
 
 @[default_target]
 lean_lib TestLean where
-  globs := #[.one `«wasm2.0», .one `«custom_notation», .one `typing_lemmas]
+  globs := #[.one `«wasm2.0», .one `«custom_notation», .one `typing_lemmas,
+    .one `ExtendedDeriveDecEq, .one `sandbox_5]
