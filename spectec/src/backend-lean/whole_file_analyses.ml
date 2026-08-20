@@ -783,6 +783,246 @@ let gather_hints (il : script) : Hint_index.t =
     | _ -> index
   ) Hint_index.empty (flatten_defs il)
 
+(* ---- Deriving-clause classification -------------------------------------
+
+   Determines, for every top-level VariantT/StructT/RelD id in the script,
+   which "deriving category" it falls into -- the single fact backend.ml
+   needs to decide its Lean `deriving` clause (see Backend.deriving_for_
+   category). A pure, whole-script pass, like every other analysis in this
+   file, rather than an incremental Hashtbl mutated during backend.ml's
+   def-by-def code generation -- so its correctness no longer depends on
+   backend.ml traversing `il` in a particular (dependency) order the way an
+   incremental pass would.
+
+   The underlying question, for a data type (VariantT) or structure
+   (StructT), is: does Lean's stock `deriving DecidableEq`/`ReflBEq`/
+   `LawfulBEq` handler actually succeed on it? Verified directly
+   (test-lean/sandbox_6.lean): it fails exactly when a field nests a
+   self-reference under a container (e.g. `List T`) -- confirmed identical
+   for `structure` and `inductive`, byte-for-byte the same error message
+   ("None of the deriving handlers for class `DecidableEq` applied to
+   `<name>`") -- or when a field's type is itself such a type. That makes
+   this a transitive-closure problem over the type dependency graph: a type
+   is "bad" (falls back to a conservative clause) if it is itself
+   self-nested, if it is a member of a genuine multi-type mutual-recursion
+   group (out of scope for per-type shape analysis), or if it references
+   another type that is (transitively) bad.
+*)
+
+type deriving_category =
+  | RelationCategory
+    (* RelD, not a wf-lemma: a Prop-valued inductive relation (e.g.
+       [Instr_ok]). A Prop built from premised constructors generally has no
+       default inhabitant, so this never gets [Inhabited]/[BEq] either --
+       matches the Rocq backend, which never emits an eqtype/inhabitance
+       proof for a RelD (see [render_relation] in backend-rocq/print.ml). *)
+  | PlainDataCategory
+    (* A VariantT or StructT, standalone (not part of a genuine multi-type
+       mutual group), with no self-nesting, no bad-type reference, and no
+       type parameters. *)
+  | PolymorphicDataCategory
+    (* Like [PlainDataCategory], but with a [TypP] parameter (e.g.
+       [list (X : Type)]). Lean auto-threads the needed instance constraint
+       (e.g. [DecidableEq X]) into the derived instance itself, so this
+       behaves identically to [PlainDataCategory] today -- kept as its own
+       category because the Rocq backend can't do the same (its
+       [cant_do_equality] unconditionally [Admitted]s any [TypP] case),
+       which is worth keeping visible even though it doesn't currently
+       change [Backend.deriving_for_category]'s output. *)
+  | SelfNestedDataCategory
+    (* A VariantT or StructT, standalone, that nests a self-reference under
+       a container (per [typ_nests_self_ref]), or that (transitively)
+       references another type in this category or
+       [MutualGroupDataCategory]. This is the "`deriving DecidableEq` for
+       nested inductives (e.g. `instr`)" gap PR #192 flagged
+       (leanprover/lean4#2329) -- the Rocq backend doesn't have this
+       restriction, since its eq_dec proofs are ordinary
+       structurally-recursive Fixpoints rather than a derive-handler. *)
+  | MutualGroupDataCategory
+    (* A VariantT or StructT that is a member of a genuine multi-type
+       mutual-recursion group (an [Il.Ast.RecD], after stripping HintD
+       members and wf-lemma-tagged RelD's, with more than one remaining
+       member). [typ_nests_self_ref] only reasons about one type's own
+       fields, not about a whole mutually-recursive family, so this is out
+       of scope for per-type shape analysis and treated conservatively
+       regardless of the type's own shape. *)
+
+(* A field type "nests" a self-reference when the reference to [parent_id]
+   occurs underneath some other type application (an [IterT], or a [VarT]
+   with type arguments) rather than appearing bare at the top of the field.
+   Type parameters are not a blocker either way -- Lean auto-threads the
+   needed instance constraint (e.g. [DecidableEq X]) into the derived
+   instance itself -- so this only needs to walk for nesting, not for
+   polymorphism (see [PolymorphicDataCategory]). *)
+let rec typ_nests_self_ref (parent_id : string) (under_wrapper : bool) (t : Il.Ast.typ) : bool
+  = match t.it with
+    | VarT (id, []) -> under_wrapper && id.it = parent_id
+    | VarT (id, args) ->
+      (under_wrapper && id.it = parent_id) ||
+      List.exists (fun (a : Il.Ast.arg) -> match a.it with
+        | TypA typ -> typ_nests_self_ref parent_id true typ
+        | _ -> false
+      ) args
+    | IterT (t', _) -> typ_nests_self_ref parent_id true t'
+    | TupT id_typ_list -> List.exists (fun (_, typ) -> typ_nests_self_ref parent_id under_wrapper typ) id_typ_list
+    | BoolT | NumT _ | TextT -> false
+
+(* Whether [t] references any id in [bad] -- the propagation step of the
+   transitive-closure fixpoint, parameterised over the current "bad" set
+   rather than a global mutable table, so it can be reused unchanged at
+   every fixpoint iteration. *)
+let rec typ_refs_any (bad : string list) (t : Il.Ast.typ) : bool
+  = match t.it with
+    | VarT (id, args) ->
+      List.mem id.it bad ||
+      List.exists (fun (a : Il.Ast.arg) -> match a.it with
+        | TypA typ -> typ_refs_any bad typ
+        | _ -> false
+      ) args
+    | IterT (t', _) -> typ_refs_any bad t'
+    | TupT id_typ_list -> List.exists (fun (_, typ) -> typ_refs_any bad typ) id_typ_list
+    | BoolT | NumT _ | TextT -> false
+
+(* The shape of a top-level construct that participates in deriving
+   classification at all -- everything else (DecD, GramD, HintD, wf-lemma-
+   tagged RelD) is excluded upstream, in [shape_of_def]. Lets
+   [field_typs_of_shape]/the fixpoint below treat VariantT, StructT, and
+   AliasT uniformly (all three are just "a list of field types to check" --
+   one, for an alias), while still letting classification branch on "is
+   this even a relation" (skip field analysis entirely), "is this an alias"
+   (participates in the fixpoint but never gets a `deriving` clause of its
+   own, so is filtered out of the final result), vs "is this one of the two
+   real data shapes". *)
+type deriving_shape =
+  | ShapeVariant of Il.Ast.typcase list
+  | ShapeStruct of Il.Ast.typfield list
+  | ShapeAlias of Il.Ast.typ
+  | ShapeRelation
+
+let field_typs_of_shape (shape : deriving_shape) : Il.Ast.typ list =
+  match shape with
+  | ShapeVariant ts -> List.map (fun ((_, (typ, _, _), _) : Il.Ast.typcase) -> typ) ts
+  | ShapeStruct ts -> List.map (fun ((_, (typ, _, _), _) : Il.Ast.typfield) -> typ) ts
+  | ShapeAlias t -> [t]
+  | ShapeRelation -> []
+
+(* Classifies a single top-level def by its raw shape (id, its own type
+   params, and its VariantT/StructT/AliasT/RelD payload) -- [None] for
+   anything that doesn't participate in deriving classification at all
+   (DecD, GramD, HintD). Excludes wf-lemma-tagged RelD's, which render as
+   standalone theorems (see Backend.WfLemmaTheoremConstruct), not as
+   inductives, and so never carry a `deriving` clause of any kind.
+
+   AliasT (abbrev) is included even though an abbrev never itself gets a
+   `deriving` clause: e.g. `abbrev expr := List instr`, where `instr` is
+   self-nested. A later type with a field of type `expr` (not `instr`
+   directly) must still inherit the restriction -- confirmed necessary by
+   `elemmode`'s `v_expr : expr` field, which only fails to derive because
+   `expr` transitively reaches the already-bad `instr`. [ShapeAlias] lets
+   the same field-reference fixpoint below propagate through an alias
+   exactly like it does through a VariantT/StructT field, without a
+   self-nesting check of its own (an abbrev can't be self-referential --
+   Lean rejects a recursive plain type synonym outright -- so
+   [typ_nests_self_ref] is never applied to one, matching the pre-whole-
+   file-analysis version of this check). [gather_deriving_categories]
+   filters [ShapeAlias] entries back out of its returned list, since no
+   call site ever looks an abbrev's id up there. *)
+let shape_of_def (hints : Hint_index.t) (def : Il.Ast.def) : (string * Il.Ast.quant list * deriving_shape) option
+  = match def.it with
+    | TypD (id, params, [{it = InstD (_, _, {it = VariantT ts; _}); _}]) ->
+      Some (id.it, params, ShapeVariant ts)
+    | TypD (id, params, [{it = InstD (_, _, {it = StructT ts; _}); _}]) ->
+      Some (id.it, params, ShapeStruct ts)
+    | TypD (id, params, [{it = InstD (_, _, {it = AliasT t; _}); _}]) ->
+      Some (id.it, params, ShapeAlias t)
+    | RelD (id, params, _, _, _)
+      when not (Hint_index.has_hint hints ~hint_id:Middlend.Undep.wf_rel_id id.it
+                || Hint_index.has_hint hints ~hint_id:Middlend.Undep.wf_func_id id.it)
+      -> Some (id.it, params, ShapeRelation)
+    | _ -> None
+
+(* Every VariantT/StructT id that is a member of a genuine multi-type
+   mutual-recursion group: an [Il.Ast.RecD], after stripping HintD members,
+   with more than one remaining member, where every remaining member has a
+   recognised [deriving_shape] (VariantT, StructT, or non-wf-lemma RelD; an
+   AliasT member disqualifies the group, same as any other unrecognised
+   member -- consistent with the original code, where an all-abbrev-or-def
+   RecD is a wholly different mutual-group kind, [MutualDefAbbrev], never
+   mixed with inductives/structures) -- if any member doesn't match, this
+   isn't the homogeneous case and no member of it is treated as a
+   mutual-group data type. Mirrors backend.ml's former [MutualConstruct]
+   override ([create_mutual_construct]'s [is_inductive]/
+   [all_inductive_or_structure] check) exactly, including counting relation
+   members toward the ">1 members" threshold -- a single data type sharing
+   a `mutual` block with two-or-more total members (relations included) is
+   still conservative. *)
+let gather_mutual_group_data_ids (il : script) (hints : Hint_index.t) : string list =
+  List.concat_map (fun (def : Il.Ast.def) -> match def.it with
+    | RecD defs ->
+      let defs = List.filter (fun (d : Il.Ast.def) -> match d.it with HintD _ -> false | _ -> true) defs in
+      let shapes = List.filter_map (shape_of_def hints) defs in
+      if List.length shapes = List.length defs && List.length defs > 1 then
+        List.filter_map (fun (id, _, shape) -> match shape with
+          | ShapeVariant _ | ShapeStruct _ -> Some id
+          | ShapeAlias _ | ShapeRelation -> None
+        ) shapes
+      else []
+    | _ -> []
+  ) il
+
+(* Runs the full classification: seeds the "bad" set with direct
+   self-nesters and mutual-group data members, then fixpoint-propagates
+   badness through field references -- of a VariantT/StructT/AliasT
+   referencing a bad type, itself becomes bad -- exactly reproducing the
+   closure the old incremental Hashtbl-during-codegen approach computed as
+   a side effect of dependency-ordered traversal, just order-independently.
+   [ShapeAlias] entries participate in the fixpoint (so badness propagates
+   correctly through an alias) but are filtered out of the returned list,
+   since an abbrev never gets a `deriving` clause of its own. *)
+let gather_deriving_categories (il : script) : (string * deriving_category) list =
+  let hints = gather_hints il in
+  let shapes : (string * Il.Ast.quant list * deriving_shape) list =
+    List.filter_map (shape_of_def hints) (flatten_defs il)
+  in
+  let mutual_group_data_ids = gather_mutual_group_data_ids il hints in
+  let is_self_nested (id, _, shape) =
+    List.exists (typ_nests_self_ref id false) (field_typs_of_shape shape)
+  in
+  let initial_bad =
+    List.filter_map (fun ((id, _, shape) as entry) -> match shape with
+      | ShapeRelation | ShapeAlias _ -> None
+      | ShapeVariant _ | ShapeStruct _ ->
+        if is_self_nested entry || List.mem id mutual_group_data_ids then Some id else None
+    ) shapes
+    |> List.sort_uniq String.compare
+  in
+  let rec fixpoint (bad : string list) : string list =
+    let additions = List.filter_map (fun (id, _, shape) ->
+      if List.mem id bad then None
+      else match shape with
+        | ShapeRelation -> None
+        | ShapeVariant _ | ShapeStruct _ | ShapeAlias _ ->
+          if List.exists (typ_refs_any bad) (field_typs_of_shape shape) then Some id else None
+    ) shapes in
+    if additions = [] then bad
+    else fixpoint (List.sort_uniq String.compare (bad @ additions))
+  in
+  let bad_set = fixpoint initial_bad in
+  List.filter_map (fun (id, params, shape) ->
+    let category = match shape with
+      | ShapeAlias _ -> None
+      | ShapeRelation -> Some RelationCategory
+      | ShapeVariant _ | ShapeStruct _ ->
+        Some (
+          if List.mem id mutual_group_data_ids then MutualGroupDataCategory
+          else if List.mem id bad_set then SelfNestedDataCategory
+          else if params <> [] then PolymorphicDataCategory
+          else PlainDataCategory
+        )
+    in
+    Option.map (fun c -> (id, c)) category
+  ) shapes
+
 (* The result of the whole-script pre-pass, consumed by code generation in backend.ml.
    Computed once before code emission and stored in the `analysis` ref below. *)
 type whole_script_analysis =
@@ -836,6 +1076,13 @@ type whole_script_analysis =
        queries it directly via `Hint_index.has_hint` / `ids_with_hint`
        rather than needing a new gather_* field here. *)
     hints : Hint_index.t;
+    (* Maps every top-level VariantT/StructT/RelD id to its [deriving_category]
+       (see "Deriving-clause classification" above). backend.ml looks its own
+       id up here and passes the result through [Backend.deriving_for_category]
+       to get the actual Lean `deriving` clause -- no analysis happens at
+       code-generation time any more.
+       e.g. [("instr", SelfNestedDataCategory); ("Instr_ok", RelationCategory)] *)
+    deriving_categories : (string * deriving_category) list;
   }
 
 (* Run all whole-script analyses and bundle the results. *)
@@ -847,6 +1094,7 @@ let analyze_whole_script (il : script) : whole_script_analysis =
     alias_to_variant_map = gather_alias_to_variant_map il variant_type_names;
     defs_needing_beq = gather_defs_needing_beq il;
     defs_needing_inhabited = gather_defs_needing_inhabited il;
+    deriving_categories = gather_deriving_categories il;
     defs_needing_catchall =
       (let proj_names = gather_projection_func_names il in
        gather_defs_needing_catchall il ~proj_names);
@@ -864,6 +1112,7 @@ let analysis : whole_script_analysis ref = ref {
   alias_to_variant_map = [];
   defs_needing_beq = [];
   defs_needing_inhabited = [];
+  deriving_categories = [];
   defs_needing_catchall = [];
   colliding_relation_case_names = [];
   temporarily_axioms = [];
