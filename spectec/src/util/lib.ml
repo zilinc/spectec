@@ -244,6 +244,17 @@ sig
   val run_state : 'a m -> s -> ('a * s)
 end
 
+module type MonadLogger =
+sig
+  include Monad
+  type w
+  val push     : w -> unit m
+  val pop      : unit -> w m
+  val drop     : unit -> unit m
+  val clear    : unit -> unit m
+  val new_with : w -> unit m
+  val run_logger : 'a m -> 'a * w list
+end
 
 module State (S : sig type t end) : MonadState with type s = S.t = struct
   type s = S.t
@@ -301,12 +312,56 @@ module type Error = sig
   val string_of_error : t -> string
 end
 
+module StringError : Error with type t = string = struct
+  type t = string
+  let string_of_error s = s
+end
 
 module type MonadError = functor (E : Error) ->
 sig
   include Monad
   val throw : E.t -> 'a m
 end
+
+module Except : functor (E : Error) ->
+sig
+  include Monad
+  val throw : E.t -> 'a m
+  val run_except : 'a m -> ('a, E.t) result
+end = functor (E : Error) ->
+struct
+  type 'a m = ('a, E.t) result
+  let return x = Ok x
+  let throw e = Error e
+  let run_except m = m
+  let fail () = failwith "Except"
+  let ( >>= ) m f = match m with Ok x -> f x | Error e -> Error e
+  let ( let* ) = ( >>= )
+  let ( >=> ) f g x = f x >>= g
+  let ( >> ) ma mb = ma >>= fun _ -> mb
+  let ( <$> ) f = function Ok x -> Ok (f x) | Error e -> Error e
+  let ( <&> ) ma f = f <$> ma
+  let rec mapM f = function
+    | [] -> return []
+    | x :: xs -> let* x' = f x in let* xs' = mapM f xs in return (x' :: xs')
+  let iterM f xs = mapM f xs >> return ()
+  let mapiM f xs =
+    let rec go i = function
+      | [] -> return []
+      | x :: xs -> let* x' = f i x in let* xs' = go (i+1) xs in return (x' :: xs')
+    in go 0 xs
+  let opt_mapM f = function
+    | None   -> return None
+    | Some x -> let* y = f x in return (Some y)
+  let forM xs f = mapM f xs
+  let rec foldlM f b = function
+    | []      -> return b
+    | x :: xs -> f b x >>= fun x' -> foldlM f x' xs
+  let foldlM1 f = function
+    | []      -> invalid_arg "empty list"
+    | x :: xs -> foldlM f x xs
+end
+
 
 module type MonadErrorTrans = functor (E : Error) (M : Monad) ->
 sig
@@ -363,9 +418,78 @@ struct
     | []    -> return b
     | x::xs -> f b x >>= fun x' -> foldlM f x' xs
   let foldlM1 f = function
-    | [] -> raise (Invalid_argument "empty list is invalid")
+    | [] -> invalid_arg "empty list is invalid"
     | x::xs -> foldlM f x xs
   let lift m = ExceptT (let open M in let* x = m in return (Ok x))
   let throw e = ExceptT (M.return (Error e))
 end
 
+module type LogEntry = sig type t end
+
+module Logger (LE : LogEntry) =
+struct
+  type w = LE.t
+  type 'a m = Logger of (w list -> ('a * w list))
+  let unlogger (Logger x) w = x w
+  let run_logger m = unlogger m []
+
+  let push w = Logger (fun ws -> ((), w::ws))
+  let pop () = Logger (function
+  | [] -> invalid_arg "Cannot pop empty logger."
+  | w::ws -> w, ws
+  )
+  let drop () = Logger (function
+  | []    -> (), []
+  | _::ws -> (), ws
+  )
+  let clear () = Logger (fun _ -> (), [])
+  let new_with w = Logger (fun _ -> (), [w])
+
+  let return a = Logger (fun w -> (a, w))
+  let fail () = failwith "Logger"
+  let ( >>= ) (Logger f) g = Logger (fun w ->
+    let (a, w') = f w in unlogger (g a) w'
+  )
+  let ( let* ) = ( >>= )
+  let ( >=> ) f g = fun x -> (f x >>= fun y -> g y)
+  let ( >> ) ma f = ma >>= fun _ -> f
+  let ( <$> ) f (Logger r) = Logger (fun w -> let (a, w') = r w in (f a, w'))
+  let ( <&> ) ma f = f <$> ma
+  let rec mapM f = function
+    | [] -> return []
+    | x::xs -> let* x'  = f x in
+               let* xs' = mapM f xs in
+               return (x'::xs')
+  let mapiM f xs =
+    let rec mapiM' f i = function
+    | [] -> return []
+    | x::xs -> let* x'  = f i x in
+               let* xs' = mapiM' f (i+1) xs in
+               return (x'::xs')
+    in
+    mapiM' f 0 xs
+  let iterM f xs = mapM f xs >> return ()
+  let opt_mapM f = function
+    | None -> return None
+    | Some a -> let* b = f a in return (Some b)
+  let forM xs f = mapM f xs
+  let rec foldlM f b = function
+    | []    -> return b
+    | x::xs -> f b x >>= fun x' -> foldlM f x' xs
+  let foldlM1 f = function
+    | [] -> raise (Invalid_argument "empty list is invalid")
+    | x::xs -> foldlM f x xs
+end
+
+module ExceptLogger (E : Error)(LE : LogEntry) = struct
+  module L = Logger(LE)
+  module X = ExceptT(E)(L)
+  include X
+  type w = LE.t
+  let push w = X.lift (L.push w)
+  let pop () = X.lift (L.pop ())
+  let drop () = X.lift (L.drop ())
+  let clear () = X.lift (L.clear ())
+  let new_with w = X.lift (L.new_with w)
+  let run_logger m = L.run_logger (X.run_exceptT m)
+end

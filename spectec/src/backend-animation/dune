@@ -19,7 +19,6 @@
     main_animate
     ; main_interpret
     animate
-    antiunify
     common
     ; construct
     def
@@ -52,8 +51,11 @@
     main_interpret_v
     main_runner_v
     main_prose_v
-    prose_v
     main_repl
+    ; prose
+    antiunify
+    wasm_inject
+    prose_v
   )
 )
 

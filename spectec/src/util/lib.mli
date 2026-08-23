@@ -128,6 +128,19 @@ end
 module State (S : sig type t end) : MonadState with type s = S.t
 
 
+module type MonadLogger =
+sig
+  include Monad
+  type w
+  val push     : w -> unit m
+  val pop      : unit -> w m
+  val drop     : unit -> unit m
+  val clear    : unit -> unit m
+  val new_with : w -> unit m
+  val run_logger : 'a m -> 'a * w list
+end
+
+
 module type MonadTrans = functor (M : Monad) ->
 sig
   include Monad
@@ -140,6 +153,7 @@ sig
   val string_of_error : t -> string
 end
 
+module StringError : Error with type t = string
 
 module type MonadError = functor (E : Error) ->
 sig
@@ -154,10 +168,27 @@ sig
   val lift : 'a M.m -> 'a m
 end
 
+
+module Except : functor (E : Error) ->
+sig
+  include Monad
+  val throw : E.t -> 'a m
+  val run_except : 'a m -> ('a, E.t) result
+end
+
 module ExceptT (E : Error) (M : Monad) : sig
   include Monad
   val run_exceptT : 'a m -> ('a, E.t) result M.m
   val exceptT : ('a, E.t) result M.m -> 'a m
   val throw : E.t -> 'a m
   val lift : 'a M.m -> 'a m
+end
+
+module type LogEntry = sig type t end
+
+
+module ExceptLogger (E : Error) (LE : LogEntry) : sig
+  include MonadLogger with type w = LE.t
+  val throw : E.t -> 'a m
+  val run_logger : 'a m -> ('a, E.t) result * w list
 end

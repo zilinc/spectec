@@ -36,6 +36,12 @@ def $inv_concatn_(syntax X, nat, X*) : (X*)*
 def $inv_concatn_ hint(builtin)
 
 
+;; Reverse
+
+def $rev_(syntax X, X*) : X*
+def $rev_(syntax X, w^n) = (w^n[n-1-i])^(i < n)
+
+
 ;; Set functions
 
 def $disjoint_(syntax X, X*) : bool  hint(show %2 $disjoint) hint(macro none)

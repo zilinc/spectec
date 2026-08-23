@@ -73,14 +73,6 @@ let fresh_id (oname: string option) at : id =
 
 (* Animation monad *)
 
-
-
-module AnimError : Lib.Error with type t = string = struct
-  type t = string
-  let string_of_error s = s
-end
-
-
 (*
 type tmInfo = LenTmInfo of exp
 *)
@@ -183,7 +175,7 @@ module AnimState = struct
 end
 
 module AnimateS = Lib.State(AnimState)
-module AnimateE = Lib.ExceptT(AnimError)(AnimateS)
+module AnimateE = Lib.ExceptT(Lib.StringError)(AnimateS)
 
 module E = AnimateE
 module S = AnimateS
