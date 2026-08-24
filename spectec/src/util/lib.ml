@@ -424,7 +424,10 @@ struct
   let throw e = ExceptT (M.return (Error e))
 end
 
-module type LogEntry = sig type t end
+module type LogEntry = sig
+  type t
+  val string_of_log_entry : t -> string
+end
 
 module Logger (LE : LogEntry) =
 struct

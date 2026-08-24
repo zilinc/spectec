@@ -184,7 +184,10 @@ module ExceptT (E : Error) (M : Monad) : sig
   val lift : 'a M.m -> 'a m
 end
 
-module type LogEntry = sig type t end
+module type LogEntry = sig
+  type t
+  val string_of_log_entry : t -> string
+end
 
 
 module ExceptLogger (E : Error) (LE : LogEntry) : sig
