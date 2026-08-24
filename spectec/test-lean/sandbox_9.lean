@@ -181,6 +181,7 @@ def totalPrice (apples oranges : Nat) : Nat := apples + oranges
 #eval show MetaM Unit from do
   let ty ← Meta.inferType (Expr.const ``totalPrice [])
   Meta.forallTelescope ty fun fvars _body => do
+    logInfo m!"fvars: {fvars} | _body: {_body}"
     for fv in fvars do
       let n ← fv.fvarId!.getUserName
       let t ← Meta.inferType fv
@@ -188,7 +189,7 @@ def totalPrice (apples oranges : Nat) : Nat := apples + oranges
 
 -- ── 16. `mkAppM` (+ `isTypeCorrect`, + failure via `try`/`catch`) ───────
 #eval show MetaM Unit from do
-  let e ← Meta.mkAppM ``List.length #[toExpr ["apple", "banana"]]
+  let e ← Meta.mkAppM ``List.length #[toExpr [3]]
   IO.println s!"type-correct: {← Meta.isTypeCorrect e}"   -- true
   try
     let _ ← Meta.mkAppM ``String.append #[toExpr (3 : Nat), toExpr "apple"]
@@ -260,7 +261,7 @@ def appleYum (_ : Apple) : Bool := true
 
 #eval Yummy.yum Apple.apple   -- true
 
--- ── 22. `deriving Repr, Inhabited` on the tool's OWN data (not spec output) ─
+-- ── 22. `deriving Repr, Inhabited` on thetool's OWN data (not spec output) ─
 structure GroceryItem where
   name  : String
   price : Nat
