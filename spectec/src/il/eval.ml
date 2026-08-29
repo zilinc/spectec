@@ -843,9 +843,21 @@ and match_exp' env s e1 e2 : subst option =
     match_exp' env s' (ListE es12 $> e1) e22
   | ListE es1, CatE (e21, ({it = ListE es22; _} as e22))
     when List.length es22 <= List.length es1 ->
-    let es11, es12 = Lib.List.split (List.length es22) es1 in
+    let es11, es12 = Lib.List.split (List.length es1 - List.length es22) es1 in
     let* s' = match_exp' env s (ListE es11 $> e1) e21 in
     match_exp' env s' (ListE es12 $> e1) e22
+  | CatE (e11, ({it = ListE es12; _} as e12)), CatE (e21, ({it = ListE es22; _} as e22)) ->
+    if List.(length es12 < length es22) then
+      let es221, es222 = Lib.List.split List.(length es22 - length es12) es22 in
+      let* s' = match_exp' env s e11 (CatE (e21, ListE es221 $> e22) $> e21) in
+      match_exp' env s' e12 (ListE es222 $> e22)
+    else if List.(length es12 = length es22) then
+      let* s' = match_exp' env s e11 e21 in
+      match_exp' env s' e12 e22
+    else
+      let es121, es122 = Lib.List.split List.(length es12 - length es22) es12 in
+      let* s' = match_exp' env s (CatE (e11, ListE es121 $> e12) $> e11) e21 in
+      match_exp' env s' (ListE es122 $> e12) e22
 (*
   | IdxE (e11, e12), IdxE (e21, e22)
   | CommaE (e11, e12), CommaE (e21, e22)

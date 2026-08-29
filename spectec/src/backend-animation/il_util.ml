@@ -154,6 +154,7 @@ let no = no_region
 (* Construct type *)
 
 let natT ?(at = no) () = NumT `NatT $ at
+let boolT ?(at = no) () = BoolT $ at
 let iterT ?(at = no) t : typ = IterT (t, List) $ at
 let optT  ?(at = no) t : typ = IterT (t, Opt) $ at
 
@@ -193,6 +194,7 @@ and optE ?(at = no) t oe : exp = mk_expr at t (OptE oe)
 and optE' ?(at = no) oe : exp = match oe with
   | None   -> error at "optE: can't infer type when None"
   | Some e -> let t = iterT (e.note) in optE t oe
+and noneE ?(at = no) t = optE ~at t None
 and strE ?(at = no) ~note r = StrE r |> mk_expr at note
 and dotE ?(at = no) ~note e atom = DotE (e, atom) |> mk_expr at note
 (* [subE] is for subtyping, not subtraction, which is [subtrE] *)
@@ -209,21 +211,22 @@ and ltE ?(at = no) ?(ot = `NatT) lhs rhs =
   CmpE (`LtOp, ot, lhs, rhs) $$ at % (BoolT $ at)
 and lenE ?(at = no) e = LenE e $$ at % (natT ~at:at ())
 and compE ?(at = no) ~note (e1, e2) = CompE (e1, e2) |> mk_expr at note
-
-(*
-and unE ?(at = no) ~note (unop, t, e) = UnE (unop, t, e) |> mk_expr at note
 and binE ?(at = no) ~note (binop, t, e1, e2) = BinE (binop, t, e1, e2) |> mk_expr at note
+and unE ?(at = no) ~note (unop, t, e) = UnE (unop, t, e) |> mk_expr at note
 and updE ?(at = no) ~note (e1, pl, e2) = UpdE (e1, pl, e2) |> mk_expr at note
-and extE ?(at = no) ~note (e1, pl, e2, dir) = ExtE (e1, pl, e2, dir) |> mk_expr at note
+(* and extE ?(at = no) ~note (e1, pl, e2, dir) = ExtE (e1, pl, e2, dir) |> mk_expr at note *)
 and liftE ?(at = no) ~note e = LiftE e |> mk_expr at note
 and catE ?(at = no) ~note (e1, e2) = CatE (e1, e2) |> mk_expr at note
 and memE ?(at = no) ~note (e1, e2) = MemE (e1, e2) |> mk_expr at note
-and lenE ?(at = no) ~note e = LenE e |> mk_expr at note
-and callE ?(at = no) ~note (id, el) = CallE (id, el) |> mk_expr at note
-and invCallE ?(at = no) ~note (id, il, el) = InvCallE (id, il, el) |> mk_expr at note
+and callE ?(at = no) ~note (id, el) = CallE (id, List.map (fun e -> ExpA e $ at) el) |> mk_expr at note
+(* and invCallE ?(at = no) ~note (id, il, el) = InvCallE (id, il, el) |> mk_expr at note *)
 and iterE ?(at = no) ~note (e, ite) = IterE (e, ite) |> mk_expr at note
+
+(*
+and lenE ?(at = no) ~note e = LenE e |> mk_expr at note
 and optE ?(at = no) ~note e_opt = OptE e_opt |> mk_expr at note
 and listE ?(at = no) ~note el = ListE el |> mk_expr at note
+
 and getCurStateE ?(at = no) ~note () = GetCurStateE |> mk_expr at note
 and getCurContextE ?(at = no) ~note e = GetCurContextE e |> mk_expr at note
 and chooseE ?(at = no) ~note e = ChooseE e |> mk_expr at note
@@ -236,7 +239,6 @@ and hasTypeE ?(at = no) ~note (e, ty) = HasTypeE (e, ty) |> mk_expr at note
 and topValueE ?(at = no) ~note e_opt = TopValueE e_opt |> mk_expr at note
 and topValuesE ?(at = no) ~note e = TopValuesE e |> mk_expr at note
 and yetE ?(at = no) ~note s = YetE s |> mk_expr at note
-
 
 
 and mk_path at it = Util.Source.($) it at
@@ -384,3 +386,9 @@ let il_of_list t f l = List.map f l |> listE t
 let il_of_seq t f s = List.of_seq s |> il_of_list f t
 let il_of_opt t f opt = Option.map f opt |> optE t
 let il_of_tup t fel = List.map (fun (f, e) -> f e) fel |> tupE ~note:t
+
+
+(* Construct premises *)
+
+let letPr ?(at = no) qs lhs rhs = LetPr (qs, lhs, rhs) $ at
+let eqPr ?(at = no) ?(optyp = `BoolT) lhs rhs = IfPr (eqE ~at:at lhs rhs) $ at

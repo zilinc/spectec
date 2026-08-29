@@ -68,6 +68,7 @@ end = struct
   let ( <&> ) ma f = f <$> ma
   let ( >>= ) = Option.bind
   let ( let* ) = ( >>= )
+  let ( <*> ) mf ma = let* f = mf in let* a = ma in return (f a)
   let ( >=> ) f g = fun x -> (f x >>= fun y -> g y)
   let ( >> ) ma f = ma >>= fun _ -> f
   let rec mapM f = function

@@ -406,7 +406,7 @@ var e : expr
 def $memarg0 : memarg  hint(show )
 def $memarg0 = {ALIGN 0, OFFSET 0}
 
-def $const(consttype, lit_(consttype)) : instr  hint(show %.CONST %)
+def $const(consttype, lit_(consttype)) : val  hint(show %.CONST %)
 def $const(numtype, c) = (CONST numtype c)
 def $const(vectype, c) = (VCONST vectype c)
 

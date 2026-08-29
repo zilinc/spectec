@@ -114,13 +114,12 @@ let run il print_dl inline =
   build_animation_hints il;
   (* temporary fix *)
   H.add_anim_inv "proj_num__0" "inv_proj_num__0";
-  let (env, dl) = il
-                  |> List.filter_map is_anim_target
-                  |> List.map remove_or
-                  |> Il2dl.il2dl
-                  |> fun dl -> (dl, il)
-                  |> Animate.animate
-                  |> fun (il_env, dl) -> (il_env, if inline then List.map Inline.inline_dl_def dl else dl)
+  let pp_dl = il |> List.filter_map is_anim_target
+                 |> List.map remove_or
+                 |> Il2dl.il2dl
+  in
+  let env, dl = Animate.animate (pp_dl, il)
+                |> fun (il_env, dl) -> (il_env, if inline then List.map Inline.inline_dl_def dl else dl)
   in
   (* FIXME(zilinc): During the following step we lose the distinction between a relation
      name and a rule name in function definitions, because in IL there's only a single
@@ -131,4 +130,4 @@ let run il print_dl inline =
   let dl' = Il2dl.il2dl il'' in
   if print_dl then
     print_endline (List.map string_of_dl_def dl' |> String.concat "\n");
-  (env, dl')
+  (env, pp_dl, dl')

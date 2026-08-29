@@ -101,6 +101,7 @@ sig
   val ( >=> ) : ('a -> 'b m) -> ('b -> 'c m) -> 'a -> 'c m
   val ( >> ) : 'a m -> 'b m -> 'b m
   val ( <$> ) : ('a -> 'b) -> 'a m -> 'b m
+  val ( <*> ) : ('a -> 'b) m -> 'a m -> 'b m
   val ( <&> ) : 'a m -> ('a -> 'b) -> 'b m
   val mapM : ('a -> 'b m) -> 'a list -> 'b list m
   val iterM : ('a -> 'b m) -> 'a list -> unit m
@@ -159,12 +160,14 @@ module type MonadError = functor (E : Error) ->
 sig
   include Monad
   val throw : E.t -> 'a m
+  val catch : 'a m -> (E.t -> 'a m) -> 'a m
 end
 
 module type MonadErrorTrans = functor (E : Error) (M : Monad) ->
 sig
   include Monad
   val throw : E.t -> 'a m
+  val catch : 'a m -> (E.t -> 'a m) -> 'a m
   val lift : 'a M.m -> 'a m
 end
 
@@ -173,6 +176,7 @@ module Except : functor (E : Error) ->
 sig
   include Monad
   val throw : E.t -> 'a m
+  val catch : 'a m -> (E.t -> 'a m) -> 'a m
   val run_except : 'a m -> ('a, E.t) result
 end
 
@@ -181,6 +185,7 @@ module ExceptT (E : Error) (M : Monad) : sig
   val run_exceptT : 'a m -> ('a, E.t) result M.m
   val exceptT : ('a, E.t) result M.m -> 'a m
   val throw : E.t -> 'a m
+  val catch : 'a m -> (E.t -> 'a m) -> 'a m
   val lift : 'a M.m -> 'a m
 end
 
@@ -193,5 +198,6 @@ end
 module ExceptLogger (E : Error) (LE : LogEntry) : sig
   include MonadLogger with type w = LE.t
   val throw : E.t -> 'a m
+  val catch : 'a m -> (E.t -> 'a m) -> 'a m
   val run_logger : 'a m -> ('a, E.t) result * w list
 end

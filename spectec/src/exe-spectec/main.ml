@@ -430,7 +430,7 @@ let () =
 
     | Animate ->
       log "Translating to DL and animate...";
-      let (env, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
+      let (env, pp_dl, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
       log "DL Validating... ";
       Backend_animation.Valid.valid dl;
       (match !generate_ocaml with
@@ -457,8 +457,12 @@ let () =
       );
       (match !new_prose_ofile with
       | Some ofile ->
+        (*
         log ("Generating prose as plain text in " ^ ofile);
         Backend_animation.Main_prose_v.text_prose dl ofile
+        *)
+        log ("Prose injection");
+        ignore (Backend_animation.Main_prose_v.inject_prose pp_dl env)
       | None -> ()
       )
     );

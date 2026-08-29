@@ -1,0 +1,25 @@
+
+;; def $splitstack(instr*) : (val*, instr)
+;; def $splitstack(val* instr) = ($rev_(syntax val, val*), instr)
+
+;; def $splitstackres(instr*) : (val*, instr*)
+;; def $splitstackres(val*) = ($rev_(syntax val, val*), eps)
+;; def $splitstackres(val* instr*) = ($rev_(syntax val, val*), instr*)
+
+def $popvalue(val*) : (val, val*)
+def $popvalue(val val'*) = (val, val'*)
+
+def $pushvalue(val, val*) : val*
+def $pushvalue(val, val'*) = val val'*
+
+def $runinstr(val*, instr) : instr*
+def $runinstr(val*, instr) = $rev_(syntax val, val*) instr
+
+def $updatez(state, def $updater(state) : state) : state
+def $updatez(z, $f) = $f(z)
+
+
+rule Step/pure  hint(no_prose)
+rule Step/read  hint(no_prose)
+rule Step/call_ref-hostfunc-res  hint(no_prose)
+rule Step/call_ref-hostfunc-div  hint(no_prose)

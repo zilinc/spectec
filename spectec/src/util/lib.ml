@@ -221,6 +221,7 @@ sig
   val ( >=> ) : ('a -> 'b m) -> ('b -> 'c m) -> 'a -> 'c m
   val ( >> ) : 'a m -> 'b m -> 'b m
   val ( <$> ) : ('a -> 'b) -> 'a m -> 'b m
+  val ( <*> ) : ('a -> 'b) m -> 'a m -> 'b m
   val ( <&> ) : 'a m -> ('a -> 'b) -> 'b m
   val mapM : ('a -> 'b m) -> 'a list -> 'b list m
   val iterM : ('a -> 'b m) -> 'a list -> unit m
@@ -271,6 +272,7 @@ module State (S : sig type t end) : MonadState with type s = S.t = struct
   let ( >=> ) f g = fun x -> (f x >>= fun y -> g y)
   let ( >> ) ma f = ma >>= fun _ -> f
   let ( <$> ) f (State r) = State (fun s -> let (a, s') = r s in (f a, s'))
+  let ( <*> ) mf ma = let* f = mf in let* a = ma in return (f a)
   let ( <&> ) ma f = f <$> ma
   let rec mapM f = function
     | [] -> return []
@@ -321,18 +323,23 @@ module type MonadError = functor (E : Error) ->
 sig
   include Monad
   val throw : E.t -> 'a m
+  val catch : 'a m -> (E.t -> 'a m) -> 'a m
 end
 
 module Except : functor (E : Error) ->
 sig
   include Monad
   val throw : E.t -> 'a m
+  val catch : 'a m -> (E.t -> 'a m) -> 'a m
   val run_except : 'a m -> ('a, E.t) result
 end = functor (E : Error) ->
 struct
   type 'a m = ('a, E.t) result
   let return x = Ok x
   let throw e = Error e
+  let catch ma f = match ma with
+    | Error e -> f e
+    | _ -> ma
   let run_except m = m
   let fail () = failwith "Except"
   let ( >>= ) m f = match m with Ok x -> f x | Error e -> Error e
@@ -340,6 +347,7 @@ struct
   let ( >=> ) f g x = f x >>= g
   let ( >> ) ma mb = ma >>= fun _ -> mb
   let ( <$> ) f = function Ok x -> Ok (f x) | Error e -> Error e
+  let ( <*> ) mf ma = let* f = mf in let* a = ma in return (f a)
   let ( <&> ) ma f = f <$> ma
   let rec mapM f = function
     | [] -> return []
@@ -367,6 +375,7 @@ module type MonadErrorTrans = functor (E : Error) (M : Monad) ->
 sig
   include Monad
   val throw : E.t -> 'a m
+  val catch : 'a m -> (E.t -> 'a m) -> 'a m
   val lift : 'a M.m -> 'a m
 end
 
@@ -395,6 +404,7 @@ struct
     | Error e -> Error e
     ) |> return
   )
+  let ( <*> ) mf ma = let* f = mf in let* a = ma in return (f a)
   let ( <&> ) ma f = f <$> ma
   let rec mapM f = function
     | [] -> return []
@@ -422,6 +432,13 @@ struct
     | x::xs -> foldlM f x xs
   let lift m = ExceptT (let open M in let* x = m in return (Ok x))
   let throw e = ExceptT (M.return (Error e))
+  let catch ma f = ExceptT (
+    let open M in
+    let* a = run_exceptT ma in
+    match a with
+    | Error e -> run_exceptT (f e)
+    | _ -> return a
+  )
 end
 
 module type LogEntry = sig
@@ -457,6 +474,7 @@ struct
   let ( >=> ) f g = fun x -> (f x >>= fun y -> g y)
   let ( >> ) ma f = ma >>= fun _ -> f
   let ( <$> ) f (Logger r) = Logger (fun w -> let (a, w') = r w in (f a, w'))
+  let ( <*> ) mf ma = let* f = mf in let* a = ma in return (f a)
   let ( <&> ) ma f = f <$> ma
   let rec mapM f = function
     | [] -> return []
