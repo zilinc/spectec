@@ -44,14 +44,14 @@ type config = { mutable state  : exp option
 
 module Map = Map.Make(String)
 
-type primitives = { split_stack : string; split_stack' : string
-                  ; pop : string; push : string
+type primitives = { pop : string; push : string
+                  ; pops : string; pushes : string
                   ; run_instr : string; update_state : string }
 
-let primitives : primitives = { split_stack  = "splitstack"
-                              ; split_stack' = "splitstackres"
-                              ; pop          = "popvalue"
+let primitives : primitives = { pop          = "popvalue"
                               ; push         = "pushvalue"
+                              ; pops         = "popvalues"
+                              ; pushes       = "pushvalues"
                               ; run_instr    = "runinstr"
                               ; update_state = "updatez"
                               }
@@ -59,13 +59,6 @@ let primitives : primitives = { split_stack  = "splitstack"
 
 let il_env : Il.Env.t ref = ref Il.Env.empty
 let no_prose : (id * id) list ref = ref []
-
-
-let fresh_oracle = ref 0
-
-let fresh_var : string = let n = !fresh_oracle in
-                         fresh_oracle := (n+1);
-                         "__v" ^ string_of_int n
 
 
 let t_stack ?(at = no) () = VarT ("stack" $ at, []) $ at
@@ -77,6 +70,23 @@ let t_frame ?(at = no) () = VarT ("frame" $ at, []) $ at
 let t_instrs ?(at = no) () = iterT ~at (t_instr ())
 let t_vals ?(at = no) () = iterT ~at (t_val ())
 
+let fresh_oracle = ref 0
+
+let reset_oracle () = fresh_oracle := 0
+let get_fresh () =
+  let n = !fresh_oracle in
+  fresh_oracle := (n+1);
+  n
+
+let fresh_var () : string =
+  let n = get_fresh () in
+  "__v" ^ string_of_int n
+
+let fresh_stack ?(at = no) () : id * exp =
+  let n = get_fresh () in
+  let v = "__stack" ^ string_of_int n in
+  let id = v $ at in
+  id, mk_expr at (t_instrs ()) (VarE id)
 
 let chk_instr env exp : exp M.m =
   info ~cat:"debug" (lazy ("chk_instr: " ^ string_of_exp exp));
@@ -190,6 +200,7 @@ let split_stack_rhs env rhs : instr list M.m =
 type step_rule = Step | Step_read | Step_pure
 
 let inject_step_clause ~rule:step_rule env fid osubid cl nth =
+  reset_oracle ();
   let DefD (qs, args, exp, prems) = cl.it in
   let env = valid_quants env qs in
   let* a = match args with
@@ -202,14 +213,19 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
     return a
   | _ -> throw ("Wrong number of arguments: expected 1, got " ^ string_of_int (List.length args))
   in
-  let* state, stack_instr =
+  let* state, stack_instr, quant0, estack0, args' =
     if List.mem step_rule [Step; Step_read] then
       (match a.it with
-      | CaseE (mixop, { it = TupE [s; e]; _ }) when Value.vl_of_mixop mixop = [[];[";"];[]] -> return (s, e)
+      | CaseE (mixop, ({ it = TupE [s; e]; _ } as tup)) when Value.vl_of_mixop mixop = [[];[";"];[]] ->
+        let vstack0, estack0 = fresh_stack ~at:a.at () in
+        let args' = [ expA ~at:a.at (CaseE (mixop, TupE [s; estack0] $> tup) $> a) ] in
+        return (s, e, ExpP (vstack0, t_instr ()) $ a.at, estack0, args')
       | _ -> throw ("Unexpected argument " ^ string_of_exp a)
       )
     else
-      return (Obj.magic "Step_pure has no input state", a)
+      let vstack0, estack0 = fresh_stack ~at:a.at () in
+      let args' = [ expA ~at:a.at estack0 ] in
+      return (Obj.magic "Step_pure has no input state", a, ExpP (vstack0, t_instr ()) $ a.at, estack0, args')
   in
   let* state', stack_instr' =
     if step_rule = Step then
@@ -228,11 +244,26 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
     print_endline ("  > Initial state: " ^ string_of_exp state);
   print_endline ("  > To run instruction: " ^ string_of_exp instr);
   let* () = iterM (function
-  | Val   e -> print_endline ("  > Push value " ^ string_of_exp e ^ " to the stack"); return ()
-  | Vals  e -> print_endline ("  > Push values " ^ string_of_exp e ^ " to the stack"); return ()
+  | Val   e -> print_endline ("  > Pop value " ^ string_of_exp e ^ " from the stack"); return ()
+  | Vals  e -> print_endline ("  > Pop values " ^ string_of_exp e ^ " from the stack"); return ()
   | Instr e -> throw ("Unexpected instr on the value stack: " ^ string_of_exp e)
   | Nothing -> return ()
   ) vals in
+  let quants1, estack1, prems1 = List.fold_left (fun (qs, estack, prs) -> function
+  | Val   e -> let vstack', estack' = fresh_stack ~at:e.at () in
+               let t = t_tup [ t_instr (); t_instrs () ] in
+               let lhs = tupE ~at:e.at ~note:t [ e; estack' ] in
+               let rhs = CallE (primitives.pop $ no, [ expA ~at:estack.at estack ]) $$ estack'.at % t in
+               qs @ [ ExpP (vstack', t_instr ()) $ e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
+  | Vals  e -> let vstack', estack' = fresh_stack ~at:e.at () in
+               let t = t_tup [ t_instrs (); t_instrs () ] in
+               let lhs = tupE ~at:e.at ~note:t [ e; estack' ] in
+               let rhs = CallE (primitives.pops $ no, [ expA ~at:estack.at estack ]) $$ estack'.at % t in
+               qs @ [ ExpP (vstack', t_instr ()) $ e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
+  | Instr e -> assert false
+  | Nothing -> qs, estack, prs @ [ eqPr estack (listE (t_instrs ()) []) ]
+  ) ([], estack0, []) vals in
+  print_endline ("  > ----------");
   if step_rule = Step then
     print_endline ("  > Final state: " ^ string_of_exp state');
   List.iter (function
@@ -241,7 +272,39 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
   | Instr e -> print_endline ("  > Next, run instruction " ^ string_of_exp e)
   | Nothing -> ()
   ) instrs';
-  return cl
+  let quants2, estack2, prems2 = List.fold_left (fun (qs, estack, prs) -> function
+  | Val   e -> let vstack', estack' = fresh_stack ~at:e.at () in
+               let t = t_tup [ t_instr (); t_instrs () ] in
+               let lhs = estack' in
+               let rhs = CallE (primitives.push $ no, [ expA ~at:e.at (tupE ~at:e.at ~note:t [ e; estack ]) ])
+                           $$ estack'.at % t_instrs () in
+               qs @ [ ExpP (vstack', t_instr ()) $e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
+  | Vals  e -> let vstack', estack' = fresh_stack ~at:e.at () in
+               let t = t_tup [ t_instrs (); t_instrs () ] in
+               let lhs = estack' in
+               let rhs = CallE (primitives.pushes $ no, [ expA ~at:e.at (tupE ~at:e.at ~note:t [ e; estack ]) ])
+                           $$ estack'.at % t_instrs () in
+               qs @ [ ExpP (vstack', t_instr ()) $e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
+  | Instr e -> let vstack', estack' = fresh_stack ~at:e.at () in
+               let t = t_tup [ t_instr (); t_instrs () ] in
+               let lhs = estack' in
+               let rhs = CallE (primitives.run_instr $ no, [ expA ~at:e.at (tupE ~at:e.at ~note:t [ e; estack ]) ])
+                           $$ estack'.at % t_instrs () in
+               qs @ [ ExpP (vstack', t_instr ()) $e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
+  | Nothing -> qs, estack, prs
+  ) ([], listE (t_instrs ()) [], []) instrs' in
+  let pr_exp = eqPr ~at:estack2.at estack2 stack_instr' in
+  let qs' = quant0 :: quants1 @ qs @ quants2 in
+  let exp' =
+    if step_rule = Step then
+      (match exp.it with
+      | CaseE (mixop, ({ it = TupE [s; e]; _ } as tup)) -> CaseE (mixop , TupE [s; estack2] $> tup) $> exp
+      | _ -> assert false
+      )
+    else
+      estack2
+  in
+  return (DefD (qs', args', exp', prems1 @ prems @ prems2 @ [pr_exp]) $> cl)
 
 let inject_clause env id osubid nth (func_clause: func_clause) : func_clause M.m =
   let (orule_id, cl) = func_clause in

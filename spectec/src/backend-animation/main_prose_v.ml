@@ -26,4 +26,5 @@ let build_prose_rule_hint (env: Il.Env.t) =
 let inject_prose dl env =
   let no_prose = build_prose_rule_hint env in
   let dl' = Wasm_inject.inject_dl dl env no_prose in
+  let _ = Def.string_of_dl_script dl' in
   dl'

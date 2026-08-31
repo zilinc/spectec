@@ -1709,8 +1709,8 @@ let animate_inv_funcs envr (dl: dl_def list) : dl_def list =
 
 
 (* Entry function *)
-let animate (dl, il) =
-  let envr = ref (Il.Env.env_of_script il) in
+let animate env dl =
+  let envr = ref env in
   let dl' = dl |> List.map (animate_def envr)
                |> merge_defs
                |> animate_inv_funcs envr

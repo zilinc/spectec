@@ -109,7 +109,8 @@ let rec remove_or def =
 
 
 (* Entry *)
-let run il print_dl inline =
+
+let pp il print_dl =
   H.init_animation_hints ();
   build_animation_hints il;
   (* temporary fix *)
@@ -118,16 +119,23 @@ let run il print_dl inline =
                  |> List.map remove_or
                  |> Il2dl.il2dl
   in
-  let env, dl = Animate.animate (pp_dl, il)
-                |> fun (il_env, dl) -> (il_env, if inline then List.map Inline.inline_dl_def dl else dl)
-  in
+  if print_dl then
+    print_endline (List.map string_of_dl_def pp_dl |> String.concat "\n");
+
+  let env = Il.Env.env_of_script il in
+  env, pp_dl
+
+let run il print_dl inline =
+  let env, pp_dl = pp il false in
+  let env, dl = Animate.animate env pp_dl in
+  let dl' = if inline then List.map Inline.inline_dl_def dl else dl in
   (* FIXME(zilinc): During the following step we lose the distinction between a relation
      name and a rule name in function definitions, because in IL there's only a single
      function Id position to store the info, while in DL we have the optional subid field.
   *)
-  let il' = Dl2il.dl2il dl in
+  let il' = Dl2il.dl2il dl' in
   let il'' = Il.Dep.recursify_defs il' in
-  let dl' = Il2dl.il2dl il'' in
+  let dl'' = Il2dl.il2dl il'' in
   if print_dl then
-    print_endline (List.map string_of_dl_def dl' |> String.concat "\n");
-  (env, pp_dl, dl')
+    print_endline (List.map string_of_dl_def dl'' |> String.concat "\n");
+  (env, dl'')

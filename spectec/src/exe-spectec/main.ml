@@ -86,6 +86,7 @@ let print_al_o = ref ""
 let print_no_pos = ref false
 let new_interpreter_args = ref None
 let new_prose_ofile = ref None
+let new_new_prose_ofile = ref None
 let vl = ref false
 let animate_inline = ref false
 let repl_main = ref None
@@ -228,6 +229,7 @@ let argspec = Arg.align (
   "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), " New meta-interpreter VL";
   "--repl", Arg.String (fun main -> target := Animate; repl_main := Some main), " Run REPL by specifying the main function";
   "--new-prose-v", Arg.String (fun ofile -> target := Animate; new_prose_ofile := Some ofile; vl := true), " New prose generation";
+  "--new-new-prose-v", Arg.String (fun ofile -> target := Animate; new_new_prose_ofile := Some ofile; vl := true), " New new prose generation";
   "-ll-ani", Arg.String (fun s -> Backend_animation.Interpreter_v.(verbose := s :: !verbose)), "Logging switches for IL meta-interpreter";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
@@ -428,9 +430,9 @@ let () =
       log "Interpreting...";
       Backend_interpreter.Runner.run args
 
-    | Animate ->
+    | Animate when Option.is_none !new_new_prose_ofile ->
       log "Translating to DL and animate...";
-      let (env, pp_dl, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
+      let (env, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
       log "DL Validating... ";
       Backend_animation.Valid.valid dl;
       (match !generate_ocaml with
@@ -457,13 +459,22 @@ let () =
       );
       (match !new_prose_ofile with
       | Some ofile ->
-        (*
         log ("Generating prose as plain text in " ^ ofile);
         Backend_animation.Main_prose_v.text_prose dl ofile
-        *)
-        log ("Prose injection");
-        ignore (Backend_animation.Main_prose_v.inject_prose pp_dl env)
       | None -> ()
+      )
+    | Animate (* new new prose generation *) ->
+      log "Translating to DL...";
+      let env, pp_dl = Backend_animation.Main_animate.pp il false in
+      (match !new_new_prose_ofile with
+      | Some ofile ->
+        log ("Prose injection");
+        let dl = Backend_animation.Main_prose_v.inject_prose pp_dl env in
+        let injected_s = Backend_animation.Def.string_of_dl_script dl in
+        let oc = open_out ofile in
+        Printf.fprintf oc "%s\n" injected_s;
+        close_out oc;
+      | None -> assert false
       )
     );
 

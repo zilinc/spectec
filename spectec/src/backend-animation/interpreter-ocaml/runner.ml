@@ -40,7 +40,7 @@ let init_pipeline srcs =
   Il.Valid.valid il;
   let il = Middlend.Sideconditions.transform il in
   let il = Middlend.Typefamilyremoval.transform il in
-  let (env, _, dl) = Main_animate.run il false true in
+  let (env, dl) = Main_animate.run il false true in
   Valid.valid dl;
   Interpreter_v.il_env := env;
   Interpreter_v.dl := dl
