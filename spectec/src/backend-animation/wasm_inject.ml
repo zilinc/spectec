@@ -261,8 +261,10 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
                let rhs = CallE (primitives.pops $ no, [ expA ~at:estack.at estack ]) $$ estack'.at % t in
                qs @ [ ExpP (vstack', t_instr ()) $ e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
   | Instr e -> assert false
-  | Nothing -> qs, estack, prs @ [ eqPr estack (listE (t_instrs ()) []) ]
+  | Nothing -> qs, estack, prs
   ) ([], estack0, []) vals in
+  (* Finally, the input stack has been fully popped. *)
+  let pr_stack1 = eqPr estack1 (listE (t_instrs ()) []) in
   print_endline ("  > ----------");
   if step_rule = Step then
     print_endline ("  > Final state: " ^ string_of_exp state');
@@ -292,8 +294,9 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
                            $$ estack'.at % t_instrs () in
                qs @ [ ExpP (vstack', t_instr ()) $e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
   | Nothing -> qs, estack, prs
-  ) ([], listE (t_instrs ()) [], []) instrs' in
-  let pr_exp = eqPr ~at:estack2.at estack2 stack_instr' in
+  ) ([], estack1, []) instrs' in
+  (* Finally, the fully pushed output stack is equal to the RHS stack. *)
+  let pr_stack2 = eqPr ~at:estack2.at estack2 stack_instr' in
   let qs' = quant0 :: quants1 @ qs @ quants2 in
   let exp' =
     if step_rule = Step then
@@ -304,7 +307,7 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
     else
       estack2
   in
-  return (DefD (qs', args', exp', prems1 @ prems @ prems2 @ [pr_exp]) $> cl)
+  return (DefD (qs', args', exp', prems1 @ [pr_stack1] @ prems @ prems2 @ [pr_stack2]) $> cl)
 
 let inject_clause env id osubid nth (func_clause: func_clause) : func_clause M.m =
   let (orule_id, cl) = func_clause in
