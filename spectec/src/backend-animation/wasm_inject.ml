@@ -46,14 +46,15 @@ module Map = Map.Make(String)
 
 type primitives = { pop : string; push : string
                   ; pops : string; pushes : string
-                  ; run_instr : string; update_state : string }
+                  ; run_instr : string; run_next_instr : string; update_state : string }
 
-let primitives : primitives = { pop          = "popvalue"
-                              ; push         = "pushvalue"
-                              ; pops         = "popvalues"
-                              ; pushes       = "pushvalues"
-                              ; run_instr    = "runinstr"
-                              ; update_state = "updatez"
+let primitives : primitives = { pop            = "popvalue"
+                              ; push           = "pushvalue"
+                              ; pops           = "popvalues"
+                              ; pushes         = "pushvalues"
+                              ; run_instr      = "runinstr"
+                              ; run_next_instr = "runnextinstr"
+                              ; update_state   = "updatez"
                               }
 
 
@@ -260,9 +261,13 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
                let lhs = tupE ~at:e.at ~note:t [ e; estack' ] in
                let rhs = CallE (primitives.pops $ no, [ expA ~at:estack.at estack ]) $$ estack'.at % t in
                qs @ [ ExpP (vstack', t_instr ()) $ e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
-  | Instr e -> assert false
+  | Instr e -> let vstack', estack' = fresh_stack ~at:e.at () in
+               let t = t_tup [ t_instr (); t_instrs () ] in
+               let lhs = tupE ~at:e.at ~note:t [ e; estack' ] in
+               let rhs = CallE (primitives.run_instr $ no, [ expA ~at:estack.at estack ]) $$ estack'.at % t in
+               qs @ [ ExpP (vstack', t_instr ()) $ e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
   | Nothing -> qs, estack, prs
-  ) ([], estack0, []) vals in
+  ) ([], estack0, []) (Instr instr :: vals) in
   (* Finally, the input stack has been fully popped. *)
   let pr_stack1 = eqPr estack1 (listE (t_instrs ()) []) in
   print_endline ("  > ----------");
@@ -290,7 +295,7 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
   | Instr e -> let vstack', estack' = fresh_stack ~at:e.at () in
                let t = t_tup [ t_instr (); t_instrs () ] in
                let lhs = estack' in
-               let rhs = CallE (primitives.run_instr $ no, [ expA ~at:e.at (tupE ~at:e.at ~note:t [ e; estack ]) ])
+               let rhs = CallE (primitives.run_next_instr $ no, [ expA ~at:e.at (tupE ~at:e.at ~note:t [ e; estack ]) ])
                            $$ estack'.at % t_instrs () in
                qs @ [ ExpP (vstack', t_instr ()) $e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
   | Nothing -> qs, estack, prs

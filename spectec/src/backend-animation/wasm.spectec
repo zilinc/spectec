@@ -1,18 +1,20 @@
 def $popvalue(val*) : (val, val*)
-def $popvalue(val val'*) = (val, val'*)
+def $popvalue(val'* val) = (val, val'*)
 
 def $pushvalue(val, val*) : val*
-def $pushvalue(val, val'*) = val val'*
+def $pushvalue(val, val'*) = val'* val
 
 def $popvalues(val*) : (val*, val*)
-def $popvalues(val* val'*) = (val*, val'*)
+def $popvalues(val'* val*) = (val*, val'*)
 
 def $pushvalues(val*, val*) : val*
-def $pushvalues(val*, val'*) = val* val'*
+def $pushvalues(val*, val'*) = val'* val*
 
+def $runinstr(instr*) : (instr, val*)
+def $runinstr(val* instr) = (instr, val*)
 
-def $runinstr(instr, val*) : instr*
-def $runinstr(instr, val*) = val* instr
+def $runnextinstr(instr, val*) : instr*
+def $runnextinstr(instr, val*) = val* instr
 
 def $updatez(state, def $updater(state) : state) : state
 def $updatez(z, $f) = $f(z)
