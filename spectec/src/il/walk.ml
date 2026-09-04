@@ -366,26 +366,42 @@ and collect_sym c s =
   | IterG (s1, iterexp) -> collect_sym c s1 $@ collect_iterexp c iterexp
   | AttrG (e, s1) -> collect_exp c e $@ collect_sym c s1
 
-and collect_clause c clause =
+and collect_deftyp c dt = 
   let ( $@ ) = c.compose in
-  match clause.it with
-  | DefD (quants, args, exp, prems) ->
-      compose_list c (collect_quant c) quants $@
-      compose_list c (collect_arg c) args     $@
-      collect_exp c exp                        $@
-      compose_list c (collect_prem c) prems
+  match dt.it with
+  | AliasT typ -> collect_typ c typ
+  | StructT typfields -> compose_list c (fun (_, (typ, quants, prems), _) -> collect_typ c typ $@ compose_list c (collect_param c) quants $@ compose_list c (collect_prem c) prems) typfields
+  | VariantT typcases -> compose_list c (fun (_, (typ, quants, prems), _) -> collect_typ c typ $@ compose_list c (collect_param c) quants $@ compose_list c (collect_prem c) prems) typcases
 
-and collect_def c d =
+and collect_clause c cl =
+  let ( $@ ) = c.compose in
+  match cl.it with
+  | DefD (quants, args, exp, prems) -> compose_list c (collect_param c) quants $@ compose_list c (collect_arg c) args $@ collect_exp c exp $@ compose_list c (collect_prem c) prems
+
+and collect_rule c r =
+  let ( $@ ) = c.compose in
+  let RuleD (_, quants, _, exp, prems) = r.it in
+  compose_list c (collect_param c) quants $@ collect_exp c exp $@ compose_list c (collect_prem c) prems
+
+and collect_inst c inst = 
+  let ( $@ ) = c.compose in
+  match inst.it with
+  | InstD (quants, args, deftyp) -> compose_list c (collect_param c) quants $@ compose_list c (collect_arg c) args $@ collect_deftyp c deftyp
+
+and collect_prod c p = 
+  let ( $@ ) = c.compose in
+  match p.it with
+  | ProdD (quants, sym, exp, prems) -> compose_list c (collect_param c) quants $@ collect_sym c sym $@ collect_exp c exp $@ compose_list c (collect_prem c) prems
+
+and collect_def c d = 
   let ( $@ ) = c.compose in
   match d.it with
-  | DecD (_, params, typ, clauses) ->
-      compose_list c (collect_param c) params   $@
-      collect_typ c typ                          $@
-      compose_list c (collect_clause c) clauses
+  | TypD (_, params, insts) -> compose_list c (collect_param c) params $@ compose_list c (collect_inst c) insts
+  | RelD (_, params, _, typ, rules) -> compose_list c (collect_param c) params $@ collect_typ c typ $@ compose_list c (collect_rule c) rules
+  | DecD (_, params, typ, clauses) -> compose_list c (collect_param c) params $@ collect_typ c typ $@ compose_list c (collect_clause c) clauses
+  | GramD (_, params, typ, prods) -> compose_list c (collect_param c) params $@ collect_typ c typ $@ compose_list c (collect_prod c) prods
   | RecD defs -> compose_list c (collect_def c) defs
   | _ -> c.default
-
-let collect_script c il = compose_list c (collect_def c) il
 
 (* Concrete base collectors for convenience *)
 
