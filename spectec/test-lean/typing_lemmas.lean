@@ -6,6 +6,28 @@ open functype list
 set_option pp.parens true
 set_option pp.numericTypes true
 
+-- Cheap bridge from the codegen's custom, zip-based `Forall₂` to Mathlib's
+-- real inductive `List.Forall₂`, given the length fact that every
+-- `Resulttype_sub`/`Forall₂`-carrying constructor already hands you
+-- separately (see `mk_Resulttype_sub`). Once converted, the whole
+-- `List.Forall₂` lemma library (`forall₂_take_append`, `forall₂_take`,
+-- `Forall₂.length_eq`, ...) is available directly.
+theorem to_mathlib_forall₂ {α β : Type} {R : α → β → Prop} {l1 : List α} {l2 : List β}
+    (hlen : l1.length = l2.length) (h : Forall₂ R l1 l2) : List.Forall₂ R l1 l2 :=
+  List.forall₂_iff_zip.mpr ⟨hlen, fun hab => h _ hab⟩
+
+theorem from_mathlib_forall₂
+  {R : α → β → Prop}
+  {l1 : List α}
+  {l2 : List β}
+  :
+  List.Forall₂ R l1 l2
+  → Forall₂ R l1 l2
+  := fun h t ht => (List.forall₂_iff_zip.mp h).2 ht
+
+
+  -- sorry
+
 theorem zip_self_both_sides_equal
   {α : Type} (l : List α)
   : ∀ e_e ∈ l.zip l, e_e.1 = e_e.2 := by
@@ -372,13 +394,18 @@ theorem ais_empty_typing
           c' ainstrs ts t1s t2s
           instrs_ok2 wf_s wf_c'
           wf_all_ainstrs ih
-          t'1s t'2s
-          ainstrs_empty breakdown
+          -- t'1s t'2s
+          -- ainstrs_empty breakdown
           =>
           unfold resulttypeSub mkFunctype Forall at *
           simp_all
-          obtain ⟨breakdown_t'1s, breakdown_t'2s⟩ := breakdown
-          exact resulttype_sub_app ts t1s ts t2s (by exact resulttype_sub_refl ts) ih
+          intro t1s' t2s' empty_ainstrs t1s'_eq t2s'_eq
+          have ih' := ih t1s t2s empty_ainstrs rfl rfl
+          apply resulttype_sub_app
+          case h1 => exact resulttype_sub_refl ts
+          case h2 => exact ih'
+          -- obtain ⟨breakdown_t'1s, breakdown_t'2s⟩ := breakdown
+          -- exact resulttype_sub_app ts t1s ts t2s (by exact resulttype_sub_refl ts) ih
 
       exact main l (t1s f-> t2s) instrs_ok2 t1s t2s gen_instrs_ok2_list rfl
 
@@ -534,7 +561,7 @@ def ai_principal_typing
         | admininstr.CVTOP
             (nt1 : numtype)
             (nt2 : numtype)
-            (c : cvtop)             => p_functype = ([valtype_numtype nt2] f-> [valtype_numtype nt1])
+            (c : cvtop__)           => p_functype = ([valtype_numtype nt2] f-> [valtype_numtype nt1])
 
         | admininstr.VCONST
             (vt : vectype)
@@ -737,7 +764,7 @@ def ai_principal_typing
                                     => ∃ (ts : List valtype) (c' : context),
                                            p_functype = ([] f-> ts)
                                          ∧ Frame_ok p_store f c'
-                                         ∧ Expr_ok2 p_store c' admininstrs (list.mk_list ts)
+                                         ∧ Expr_ok2 p_store ({ c' with RETURN := some (list.mk_list ts) }) admininstrs (list.mk_list ts)
 
         | admininstr.TRAP           => true
 
@@ -1082,6 +1109,13 @@ theorem principal_typing_conversion (i : instr) :
 
   -- case mpr => sorry
 
+theorem instrtype_sub_refl
+  (ft : functype)
+  :
+  ft instrsub< ft
+  := by
+  sorry
+
 theorem ai_typing_inversion
   (s          : store)
   (c          : context)
@@ -1091,7 +1125,7 @@ theorem ai_typing_inversion
   Instr_ok2 s c ainstr (t1s f-> t2s) →
   ∃ t1s' t2s',
     ai_principal_typing s c ainstr (t1s' f-> t2s')
-    ∧ ((t1s' f-> t2s') ftsub< (t1s f-> t2s))
+    ∧ ((t1s' f-> t2s') instrsub< (t1s f-> t2s))
   := by
   intros instr_ok2
   generalize gen_ft : (t1s f-> t2s) = ft at instr_ok2
@@ -1106,27 +1140,28 @@ theorem ai_typing_inversion
       exact instr_ok
 
     case refine_2 =>
-      unfold mkFunctype at *
-      simp_all
-      apply Functype_sub.mk_Functype_sub
+      exact instrtype_sub_refl _
 
-  case frame
+  case Instr_ok2_frame
     return_length f ais ts c' frame_ok expr_ok2 wf_s wf_c' wf_ai length wf_c
     =>
     refine ⟨t1s, t2s, ?_, ?_⟩
-    unfold mkFunctype at *
-    simp_all
-    unfold ai_principal_typing
-    simp_all
-    refine ⟨ts, ?_⟩
-    unfold mkFunctype at *
-    simp_all
-    refine ⟨c', ?_, ?_⟩
-    exact frame_ok
-    exact expr_ok2
-    unfold mkFunctype at *
-    simp_all
-    constructor
+    case refine_1 =>
+      unfold mkFunctype at *
+      simp_all
+      unfold ai_principal_typing
+      simp_all
+      refine ⟨ts, ?_⟩
+      unfold mkFunctype at *
+      simp_all
+      refine ⟨c', ?_, ?_⟩
+      case refine_1 => exact frame_ok
+      case refine_2 => exact expr_ok2
+    case refine_2 =>
+      simp [mkFunctype] at gen_ft
+      obtain ⟨t1s_eq, t2s_eq⟩ := gen_ft
+      rw [t1s_eq, t2s_eq]
+      exact instrtype_sub_refl _
 
   case label
     arity is ais ts ts' wf_s wf_ai wf_context_with_LABELS length instrs_ok_is instrs_ok_ais wf_c
@@ -1147,9 +1182,10 @@ theorem ai_typing_inversion
         case refine_3 =>
           exact instrs_ok_ais
     case refine_2 =>
-      unfold mkFunctype at *
-      simp_all
-      constructor
+      simp [mkFunctype] at gen_ft
+      obtain ⟨t1s_eq, t2s_eq⟩ := gen_ft
+      rw [t1s_eq, t2s_eq]
+      exact instrtype_sub_refl _
   case call_addr
     faddr t1s' t2s' externaddr_ok wf_s wf_ais wf_ext wf_c
     =>
@@ -1165,7 +1201,7 @@ theorem ai_typing_inversion
     case refine_2 =>
       obtain ⟨t1s_eq, t2s_eq⟩ := gen_ft
       rw [t1s_eq, t2s_eq]
-      constructor
+      exact instrtype_sub_refl _
   case ref
     r rt ref_ok wf_s wf_c
     =>
@@ -1187,9 +1223,10 @@ theorem ai_typing_inversion
           case left => rfl
           case right => exists ext
     case refine_2 =>
-      unfold mkFunctype at *
-      simp_all
-      constructor
+      simp [mkFunctype] at gen_ft
+      obtain ⟨t1s_eq, t2s_eq⟩ := gen_ft
+      rw [t1s_eq, t2s_eq]
+      exact instrtype_sub_refl _
   case trap
     t1s' t2s' wf_s wf_ai wf_c
     =>
@@ -1199,8 +1236,7 @@ theorem ai_typing_inversion
       unfold ai_principal_typing
       simp
     case refine_2 =>
-      unfold mkFunctype at *
-      constructor
+      exact instrtype_sub_refl _
   -- obtain ⟨⟨t1s', t2s'⟩, ai_princ_typing, t1s't2s'_ftsub_t1st2s⟩ := ai_typing_inversion_helper s c ainstr t1s t2s instr_ok2
   -- all_goals unfold ai_principal_typing mkFunctype admininstr_instr
   -- all_goals simp_all
@@ -1497,13 +1533,6 @@ theorem construct_ai_val
       apply Instr_ok2.ref s c (ref.REF_HOST_ADDR haddr') rt
       <;> assumption
 
-theorem instrtype_sub_refl
-  (ft : functype)
-  :
-  ft instrsub< ft
-  := by
-  sorry
-
 theorem instr_subtyping_weaken2
   (tx1 tx2 ty1 ty2 ty2_sup : List valtype)
   :
@@ -1520,6 +1549,10 @@ theorem instrtype_sub_trans
   → (ft2 instrsub< ft3)
   → (ft1 instrsub< ft3)
   := by
+  intros ft1_sub_ft2 ft2_sub_ft3
+  unfold instrtype_sub at *
+  simp_all
+
   sorry
 
 theorem instr_subtyping_strengthen2
@@ -1529,7 +1562,72 @@ theorem instr_subtyping_strengthen2
   → (tx2_sub subs< tx2)
   → ((tx1 f-> ty1) instrsub< (tx2_sub f-> ty2))
   := by
-  sorry
+  intros orig_instrsub sub_rel
+  unfold instrtype_sub at *
+  unfold mkFunctype at *
+  simp_all
+  obtain ⟨
+    rest_in,
+    rest_out,
+    supplied_in,
+    tx2_breakdown,
+    needed_out,
+    ty2_breakdown,
+    rest_in_subs_rest_out,
+    supplied_in_subs_tx1,
+    ty1_subs_needed_out
+  ⟩ := orig_instrsub
+  simp_all
+  cases sub_rel
+  case mk_Resulttype_sub length elemwise_sub =>
+    simp_all
+    have split_tx2_sub : tx2_sub = tx2_sub.take rest_in.length ++ tx2_sub.drop rest_in.length := by
+      rw [List.take_append_drop]
+    have length' : tx2_sub.length = (rest_in ++ supplied_in).length := by
+      grind
+    have elemwise_sub' := to_mathlib_forall₂ length' elemwise_sub
+    have rest_in':
+      List.Forall₂
+        (fun t_1_elem t_2_elem => (t_1_elem sub<t_2_elem))
+        (List.take rest_in.length tx2_sub)
+        rest_in
+        := by
+      exact List.forall₂_take_append tx2_sub rest_in supplied_in elemwise_sub'
+    have rest_out':
+      List.Forall₂
+        (fun t_1_elem t_2_elem => (t_1_elem sub<t_2_elem))
+        (List.drop rest_in.length tx2_sub)
+        supplied_in
+        := by
+      exact List.forall₂_drop_append tx2_sub rest_in supplied_in elemwise_sub'
+    exists (List.take rest_in.length tx2_sub), rest_out, (List.drop rest_in.length tx2_sub)
+    refine ⟨?_, ?_⟩
+    case refine_1 => grind
+    case refine_2 =>
+      exists needed_out
+      refine ⟨?_, ?_, ?_, ?_⟩
+      case refine_1 => rfl
+      case refine_2 =>
+        apply resulttype_sub_trans
+        case t2s => exact rest_in
+        case h2 =>
+          exact rest_in_subs_rest_out
+        case h1 =>
+          apply Resulttype_sub.mk_Resulttype_sub
+          case a => exact rest_in'.length_eq
+          case a =>
+            apply from_mathlib_forall₂
+            exact rest_in'
+      case refine_3 =>
+        apply resulttype_sub_trans
+        case t2s => exact supplied_in
+        case h2 => exact supplied_in_subs_tx1
+        case h1 =>
+          apply Resulttype_sub.mk_Resulttype_sub
+          case a => exact rest_out'.length_eq
+          case a => exact from_mathlib_forall₂ rest_out'
+      case refine_4 =>
+        exact ty1_subs_needed_out
 
 theorem instrs_single_typing_inversion
   (c : context)
@@ -1679,7 +1777,7 @@ theorem instrs_single_typing_inversion
       exact resulttype_sub_refl t1s'
       exact resulttype_sub_refl t2s'
 
-theorem ais_single_typing_inversion
+theorem ais_single_typing_inversion'
   (s : store)
   (c : context)
   (ai : admininstr)
@@ -1862,4 +1960,115 @@ theorem ais_single_typing_inversion
 
       --   sorry
 
-    sorry
+theorem ais_single_typing_inversion
+  (s : store)
+  (c : context)
+  (ai : admininstr)
+  (ts1 ts2 : List valtype)
+  :
+  Instrs_ok2 s c [ai] (ts1 f-> ts2)
+  → ∃ ts1_sup ts2_sub,
+      ai_principal_typing s c ai (ts1_sup f-> ts2_sub)
+      ∧ ((ts1_sup f-> ts2_sub) instrsub< (ts1 f-> ts2))
+  := by
+  intros instrs_ok2
+  have asti' := ais_single_typing_inversion' s c ai ts1 ts2 instrs_ok2
+  obtain ⟨ts1_sup, ts2_sub, instr_ok2, instrsub_rel⟩ := asti'
+  have ai_inv := ai_typing_inversion s c ai ts1_sup ts2_sub instr_ok2
+  obtain ⟨ts1', ts2', pt, instrsub_rel'⟩ := ai_inv
+  exists ts1', ts2'
+  refine ⟨?_, ?_⟩
+  case refine_1 =>
+    exact pt
+  case refine_2 =>
+    exact instrtype_sub_trans
+      (ts1' f-> ts2')
+      (ts1_sup f-> ts2_sub)
+      (ts1 f-> ts2)
+      instrsub_rel'
+      instrsub_rel
+
+  -- exists ts1_sup, ts2_sub
+  -- refine ⟨?_, ?_⟩
+  -- case refine_1 =>
+  --   have ai_inv := ai_typing_inversion s c ai ts1_sup ts2_sub instr_ok2
+  --   obtain ⟨ts1', ts2', pt, instrsub_rel'⟩ := ai_inv
+  --   unfold ai_principal_typing
+
+  --   sorry
+  -- case refine_2 =>
+  --   exact instrsub_rel
+
+theorem instrs_seq_typing_inversion
+  (c : context)
+  (i : instr)
+  (is : List instr)
+  (ts1 ts3 : List valtype)
+  :
+  Instrs_ok c (i :: is) (ts1 f-> ts3)
+  → ∃ ts2,
+      Instr_ok c i (ts1 f-> ts2)
+      ∧ Instrs_ok c is (ts2 f-> ts3)
+  := by
+  intros instrs_ok
+  generalize instrs_eq : (i :: is) = instrs at instrs_ok
+  generalize ft_eq : (ts1 f-> ts3) = ft at instrs_ok
+  induction instrs_ok
+    using Instrs_ok.rec (motive_1 := fun _ _ _ _ => True)
+  <;> try simp_all
+  case instr
+    c' i' ts1_orig ts3_orig instr_ok wf_c' wf_i'
+    =>
+    obtain ⟨ts1_eq, ts3_eq⟩ := ft_eq
+    obtain ⟨i_eq, is_eq⟩ := instrs_eq
+    rw [i_eq, is_eq] at *
+    simp_all
+    exists ts3
+    refine ⟨?_, ?_⟩
+    case refine_1 =>
+      exact instr_ok
+    case refine_2 =>
+      apply (instrs_empty_typing c' ts3 ts3).mpr
+      refine ⟨?_, ?_⟩
+      case refine_1 => assumption
+      case refine_2 => apply resulttype_sub_refl
+  case seq
+    c' i_list is_list ts1_orig ts3_orig ts2_orig instrs_ok_ts1_to_ts2 instrs_ok_ts2_to_ts3 wf_c' wf_all_i_list wf_all_is_list ih_i_list ih_is_list
+    =>
+    cases i_list
+    case nil =>
+
+      sorry
+    case cons hd tl =>
+    
+      sorry
+    -- exists ts2_orig
+    -- refine ⟨?_, ?_⟩
+    -- unfold mkFunctype at *
+    -- simp_all
+    -- obtain ⟨ts1_eq, ts3_eq⟩ := ft_eq
+    -- subst ts1_eq
+    -- subst ts3_eq
+    -- case refine_1 =>
+    --   cases i_list
+    --   case nil =>
+    --     cases is_list
+    --     case nil =>
+    --       have f : False := by aesop
+    --       contradiction
+    --     case cons is_list_hd is_list_tl =>
+    --       simp_all
+    --       obtain ⟨is_hd_eq, is_tl_eq⟩ := instrs_eq
+    --       subst is_hd_eq
+    --       subst is_tl_eq
+
+    --       have h := (instrs_empty_typing c' ts1 ts2_orig).mp instrs_ok_ts1_to_ts2
+
+    --       sorry
+    --   case cons hd tl =>
+
+    --     sorry
+    -- case refine_2 =>
+    --   sorry
+  case sub => sorry
+  case frame => sorry
