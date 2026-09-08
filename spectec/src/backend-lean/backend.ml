@@ -1145,16 +1145,22 @@ let make_omap_def (n : int) : command =
 let rec create_prem (p : Il.Ast.prem) : term = match p.it with
   | RulePr (
     (id : Il.Ast.id),
-    ([] : Il.Ast.arg list),
+    (rel_args : Il.Ast.arg list),
     (mixop : Il.Ast.mixop),
     (exp : Il.Ast.exp)
   ) ->
+    (* `rel_args` carries the relation's own TypP/DefP/GramP quantifiers (e.g. the
+       `X` in a polymorphic relation like fun_concat_), positionally corresponding
+       to the callee's own params (see deftorel.ml's cvt_def_to_rel/create_fun_prem).
+       They must be rendered before the ordinary value/tuple arguments to match the
+       relation's declared parameter order. *)
     let flattened_mixop_args : term list
       = match exp.it with
         | TupE exps -> List.map create_exp exps
         | _ -> [create_exp exp]
     in
-    (match flattened_mixop_args with
+    let args = List.map create_arg rel_args @ flattened_mixop_args in
+    (match args with
       | [] -> Ident id.it
       | args ->
         FunApp (
@@ -1189,7 +1195,6 @@ let rec create_prem (p : Il.Ast.prem) : term = match p.it with
       Not (create_prem inner_prem)
   | ElsePr -> failwith "create_prem: ElsePr should have been filtered out by filter_else_prems"
   | LetPr _  -> failwith "LetPr should have been handled separately"
-  | _ -> failwith "create_prem: unhandled premise type"
 
 (*
   create_iter_prem — see the large comment block above create_prem for full docs.
@@ -1935,7 +1940,7 @@ let create_inductive_relation_construct (def : Il.Ast.def) : command list =
               ))
             | TypP id -> BracketedBinder(ExplicitParam(
               NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
-              create_typ typ
+              Type None
             ))
             | _ -> failwith "only DefP and TypP should be here"
         ) quants
@@ -1981,12 +1986,22 @@ let create_inductive_relation_construct (def : Il.Ast.def) : command list =
               prems   (* (RulePr "fun_sum" (Seq Arg Arg) (TupE (VarE "n'_lst") (VarE "var_0"))) *)
             )
             ->
-            (* let quants_not_in_parent : quant list (* (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) *)
-              = List.filter (fun q -> not (List.mem q quants_from_parent)) quants
-            in *)
+            let quant_id (q : Il.Ast.quant) : string
+              = match q.it with
+                | ExpP (id, _) | TypP id | DefP (id, _, _) | GramP (id, _, _) -> id.it
+            in
+            let parent_ids : string list = List.map quant_id quants_from_parent in
+            let quants_not_in_parent : quant list (* (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) *)
+              (* Quantifiers already declared by the enclosing RelD's own header
+                 (e.g. a relation's `syntax X` parameter) must not be redeclared
+                 per-case: Lean auto-generalizes an inductive's own parameters into
+                 every constructor, so redeclaring them here would just shadow the
+                 real one with an unused, dangling binder of the same name. *)
+              = List.filter (fun q -> not (List.mem (quant_id q) parent_ids)) quants
+            in
             let params_from_args : _params list (* (v_n : Nat) (n'_lst : List Nat) (var_0 : Nat) *)
               =
-              
+
               let param_from_arg (q : Il.Ast.quant) : _params option
                 = match q.it with
                   | ExpP (id, typ) -> Some(BracketedBinder(ExplicitParam(
@@ -2000,7 +2015,7 @@ let create_inductive_relation_construct (def : Il.Ast.def) : command list =
                   | DefP _ -> None
                   | _ -> failwith "only ExpP should be here"
               in
-              List.filter_map param_from_arg quants
+              List.filter_map param_from_arg quants_not_in_parent
             in
 
             let exp_with_rel_id_prepended : term (* fun_sum ([v_n] ++ n'_lst) (v_n + var_0) *)
@@ -2010,17 +2025,23 @@ let create_inductive_relation_construct (def : Il.Ast.def) : command list =
                     | _ -> [create_exp exp]
                 in
                 (* Lean 4 parametric inductives require parameters to appear explicitly in
-                   constructor conclusions: `Foo a b` not just `Foo b`. Prepend DefP ids. *)
-                let defp_args : term list
+                   constructor conclusions: `Foo a b` not just `Foo b`. Prepend the
+                   enclosing RelD's own TypP/DefP parameter ids, in their declared
+                   order - Lean does not auto-omit inductive parameters from
+                   conclusions.
+                   e.g. for `inductive fun_concat_ (X : Type) : ... where`, this
+                   turns the conclusion `fun_concat_ ([w_lst] ++ w'_lst_lst) (w_lst ++ var_0)`
+                   into `fun_concat_ X ([w_lst] ++ w'_lst_lst) (w_lst ++ var_0)`. *)
+                let parent_param_args : term list
                   = List.filter_map (fun (q : Il.Ast.quant) -> match q.it with
-                      | DefP (id, _, _) -> Some (Ident id.it : term)
+                      | DefP (id, _, _) | TypP id -> Some (Ident id.it : term)
                       | _ -> None
                     ) quants_from_parent
                 in
                 let id_as_term = (Ident rel_id.it : term) in
                 FunApp (
                   id_as_term,
-                  NonEmptyList.from_list_unsafe (List.map (fun arg -> Term arg) (defp_args @ mixop_args))
+                  NonEmptyList.from_list_unsafe (List.map (fun arg -> Term arg) (parent_param_args @ mixop_args))
                 )
             in
             
@@ -2509,6 +2530,7 @@ let create_def_construct (def : Il.Ast.def) : command list =
          pattern match incomplete in Lean. The catch-all makes it exhaustive again.
          Mirrors the Rocq backend's `| _ => default_val` approach. *)
       let needs_catchall = List.mem id.it (!analysis).defs_needing_catchall in
+      Printf.eprintf "[DBG needs_catchall] %s -> %b\n%!" id.it needs_catchall;
       let cases_with_catchall_temp_workaround =
         if needs_catchall then
           let wildcards =
