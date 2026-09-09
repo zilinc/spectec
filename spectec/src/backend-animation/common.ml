@@ -22,6 +22,8 @@ let step_table : (string * string) Map.t ref =
     "TESTOP"                  ;
     "RELOP"                   ;
     "CVTOP"                   ;
+    "WIDEOP"                  ;
+    "EXTWIDEOP"               ;
     "REF.I31"                 ;
     "REF.IS_NULL"             ;
     "REF.AS_NON_NULL"         ;

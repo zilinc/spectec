@@ -21,7 +21,6 @@
     i64.mul_wide_u)
 )
 
-(;
 ;; simple addition
 (assert_return (invoke "i64.add128"
                   (i64.const 0) (i64.const 0)
@@ -469,4 +468,3 @@
       i64.mul_wide_u)
   )
   "type mismatch")
-;)
