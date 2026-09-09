@@ -633,6 +633,24 @@ let vl_of_vreplaceop : RI.Ast.vreplaceop -> value list = function
     | V128.F64x2 (Replace n) -> [ vl_of_shape (nullary "F64") two    ; vl_of_nat8 n |> caseV1 ]
     )
 
+let vl_of_i64_wideop = function
+  | RI.Ast.I64Op.Add128 -> nullary "ADD128"
+  | RI.Ast.I64Op.Sub128 -> nullary "SUB128"
+
+let vl_of_wideop (op: RI.Ast.wideop) =
+  match op with
+  | I32 _ -> .
+  | I64 op -> [ nullary "I64"; vl_of_i64_wideop op ]
+  | F32 _ | F64 _ -> .
+
+let vl_of_i64_extwideop = function
+  | RI.Ast.I64Op.MulWide sx -> caseV [["MUL_WIDE"];[]] [ vl_of_sx sx ]
+
+let vl_of_extwideop (op: RI.Ast.extwideop) =
+  match op with
+  | I32 _ -> .
+  | I64 op -> [ nullary "I64"; vl_of_i64_extwideop op ]
+  | F32 _ | F64 _ -> .
 
 let vl_of_packsize = function
   | RI.Pack.Pack8  -> vl_of_nat 8  |> caseV1
@@ -821,7 +839,8 @@ let rec vl_of_instr (instr: RI.Ast.instr) =
   | ArrayInitElem (idx1, idx2) -> mk_instr "ARRAY.INIT_ELEM"   2 [vl_of_idx idx1; vl_of_idx idx2]
   | ExternConvert Internalize  -> mk_instr0 "ANY.CONVERT_EXTERN"
   | ExternConvert Externalize  -> mk_instr0 "EXTERN.CONVERT_ANY"
-
+  | Wide op                    -> mk_instr  "WIDEOP"           2 (vl_of_wideop op)
+  | Extwide op                 -> mk_instr  "EXTWIDEOP"        2 (vl_of_extwideop op)
 
 let vl_of_const (const: RI.Ast.const) = vl_of_list vl_of_instr const.it
 
@@ -1721,6 +1740,24 @@ let vl_to_vlaneop: value list -> RI.Ast.idx * RI.Ast.vlaneop * RI.I8.t = functio
     idx, op, vl_to_nat8 (as_singleton_case t)
   | vs -> error_value "vlaneop" (TupV vs)
 
+let vl_to_i64op f = function
+  | [ CaseV ([["I64"]], []); op ] -> RI.Value.I64 (f op)
+  | l -> error_values "op" l
+
+let vl_to_i64_wideop = function
+  | CaseV ([["ADD128"]], []) -> RI.Ast.I64Op.Add128
+  | CaseV ([["SUB128"]], []) -> RI.Ast.I64Op.Sub128
+  | v -> error_value "i64_wideop" v
+
+let vl_to_wideop = vl_to_i64op vl_to_i64_wideop
+
+let vl_to_i64_extwideop = function
+  | CaseV ([["MUL_WIDE"];[]], [op]) -> RI.Ast.I64Op.MulWide (vl_to_sx op)
+  | v -> error_value "i64_extwideop" v
+
+let vl_to_extwideop = vl_to_i64op vl_to_i64_extwideop
+
+
 
 (* Destruct expressions *)
 
@@ -1866,6 +1903,8 @@ and vl_to_instr' v : RI.Ast.instr' =
   | [["ARRAY.INIT_ELEM"];[];[]], [idx1; idx2] -> ArrayInitElem (vl_to_idx idx1, vl_to_idx idx2)
   | [["ANY.CONVERT_EXTERN"]], [] -> ExternConvert Internalize
   | [["EXTERN.CONVERT_ANY"]], [] -> ExternConvert Externalize
+  | [["WIDEOP"   ];[];[]], op -> Wide (vl_to_wideop op)
+  | [["EXTWIDEOP"];[];[]], op -> Extwide (vl_to_extwideop op)
   | _ -> error_value "instruction" v
 
 let vl_to_const : value -> RI.Ast.const = vl_to_list vl_to_instr |> vl_to_phrase

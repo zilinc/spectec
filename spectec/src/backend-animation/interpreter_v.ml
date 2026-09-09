@@ -408,6 +408,7 @@ and eval_exp ctx exp : value OptMonad.m =
           OptV None |> return
         else if List.for_all Option.is_some ovs then
           let vs1 = List.map Option.get ovs in
+          assert List.(length ids = length vs1);
           let* ctx' = foldlM (fun c (a, b) ->
             VContext.add_varid c a b |> return
           ) ctx (List.combine ids vs1) in
@@ -531,7 +532,7 @@ and compose at v1 v2 : value OptMonad.m =
   | ListV vs1, ListV vs2 -> listV (Array.append !vs1 !vs2) |> return
   | OptV None, OptV _ -> return v2
   | OptV _, OptV None -> return v1
-  | StrV vfs1, StrV vfs2 ->
+  | StrV vfs1, StrV vfs2 when List.(length vfs1 = length vfs2) ->
     let merge (atom1, v1) (atom2, v2) =
       assert (atom1 = atom2);
       let* v12 = compose at !v1 !v2 in
