@@ -9099,8 +9099,7 @@ rule Instr_ok2/label:
 rule Instr_ok2/frame:
   s; C |- FRAME_ n `{f} instr* : eps -> t^n
   -- Frame_ok: s |- f : C'
-  -- if C'.RETURN = t^n
-  -- Expr_ok2: s; C' |- instr* : t^n
+  -- Expr_ok2: s; {RETURN t^n} ++ C' |- instr* : t^n
 
 rule Instr_ok2/handler:
   s; C |- HANDLER_ n `{catch*} instr* : t_1* -> t_2*
@@ -9548,3 +9547,54 @@ def $allocXs(syntax X, syntax Y, s, X X'*, Y Y'*) = (s_2, a a'*)
 ;;
 
 ;; Binary format
+
+syntax symdots hint(show `...) hint(macro none) = 0
+
+def $var(syntax X) : nat hint(show %) hint(macro none)
+def $var(syntax X) = 0x00
+
+grammar Bvar(syntax X) : () hint(show %) hint(macro none) = 0x00 => ()
+grammar Bsym : A hint(macro none) = Bvar(B_1) => $var(A_1) | Bvar(symdots) | Bvar(B_n) => $var(A_n)
+
+grammar Bsymsplit/1 : () hint(show Bsym) hint(macro none) = Bvar(B_1) | ...
+grammar Bsymsplit/2 : () hint(show Bsym) hint(macro none) = ... | Bvar(B_2)
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;;
+;; Auxiliary definitions used for describing binary text notation
+;;
+
+;; Text format
+
+;; Defined in X.4-notation.binary
+;;syntax symdots hint(show `...) hint(macro none) = 0
+
+;;def $var(syntax X) : nat hint(show %) hint(macro none)
+;;def $var(syntax X) = 0x00
+
+grammar Tvar(syntax X) : () hint(show %) hint(macro none) = 0x00 => ()
+grammar Tsym : A hint(macro none) = Tvar(T_1) => $var(A_1) | Tvar(symdots) | Tvar(T_n) => $var(A_n)
+
+grammar Tsymsplit/1 : () hint(show Tsym) hint(macro none) = Tvar(B_1) | ...
+grammar Tsymsplit/2 : () hint(show Tsym) hint(macro none) = ... | Tvar(B_2)
+
+syntax abbreviated hint(macro none) = ()
+syntax expanded hint(macro none) = ()
+syntax `syntax hint(macro none) = ()
+
+grammar Tabbrev : () hint(show Tsym) hint(macro none) =
+  Tvar(abbreviated) Tvar(syntax `syntax) == Tvar(expanded) Tvar(syntax `syntax)
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────────────────
