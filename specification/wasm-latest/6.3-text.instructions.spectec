@@ -175,7 +175,7 @@ grammar Tplaininstr_(I)/elem : instr = ...
 ;; Memory instructions
 
 grammar Tmemarg_(N) : memarg =
-  | n:Talign_(N) m:Toffset => {ALIGN n, OFFSET m}
+  | m:Toffset n:Talign_(N) => {ALIGN n, OFFSET m}
 
 grammar Toffset : u64 =
   | "offset=" m:Tu64 => m
@@ -549,6 +549,13 @@ grammar Tplaininstr_(I)/num-cvt-reinterpret : instr = ...
   | "i64.reinterpret_f64" => CVTOP I64 F64 REINTERPRET
   | "f32.reinterpret_i32" => CVTOP F32 I32 REINTERPRET
   | "f64.reinterpret_i64" => CVTOP F64 I64 REINTERPRET
+  | ...
+
+grammar Tplaininstr_(I)/num-wide : instr = ...
+  | "i64.add128" => WIDEOP I64 ADD128
+  | "i64.sub128" => WIDEOP I64 SUB128
+  | "i64.mul_wide_s" => EXTWIDEOP I64 MUL_WIDE S
+  | "i64.mul_wide_u" => EXTWIDEOP I64 MUL_WIDE U
   | ...
 
 

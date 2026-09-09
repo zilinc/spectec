@@ -334,14 +334,13 @@ def $growmem(meminst, n) = meminst'
 ;; Host functions
 
 syntax hostcallresult =
-  | RES store result hint(show %, %)
-  | BOT
+  | RES store result hint(show (%, %))
+  | BOT              hint(macro "bot")
 
-;; Essentially a relation.
-def $hostcall(hostfunc, store, val*) : hostcallresult*  hint(show %4 <- %1(%2, %3))
+def $hostcall(hostfunc, store, val*) : hostcallresult*  hint(show %1#(%2, %3))
 def $hostcall hint(builtin)
 
 def $lift_result(result) : instr*  hint(show %)
 def $lift_result(_VALS val*) = val*
 def $lift_result(`(REF.EXN_ADDR a) THROW_REF) = (REF.EXN_ADDR a) THROW_REF
-def $lift_result(TRAP) = TRAP 
+def $lift_result(TRAP) = TRAP
