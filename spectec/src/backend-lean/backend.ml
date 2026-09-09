@@ -1924,24 +1924,54 @@ let create_inductive_relation_construct (def : Il.Ast.def) : command list =
               fun_sum n'_lst var_0 →
               fun_sum ([v_n] ++ n'_lst) (v_n + var_0)
       *)
-      
+
+      (* Which of this relation's TypP names need [BEq X] / [Inhabited X] instance
+         binders -- computed globally by Whole_file_analyses.analyze_typp_needs
+         (extended to also walk RelD rules and RulePr premises, see that file).
+         Keyed by this RelD's own id (e.g. "fun_disjoint_"), already the
+         fun_-prefixed final-IL name -- identical lookup to create_def_construct's. *)
+      let typp_names_needing_beq : string list =
+        List.assoc_opt id.it (!analysis).defs_needing_beq
+        |> Option.value ~default:[]
+      in
+      let typp_names_needing_inhabited : string list =
+        List.assoc_opt id.it (!analysis).defs_needing_inhabited
+        |> Option.value ~default:[]
+      in
+
       let signature : _params list (* (f_ : N → iN → iN) *)
-        = List.map (
+        = List.concat_map (
           fun q -> match q.it with
             | DefP (id, params, typ) ->
               let param_types = List.map (fun p -> match p.it with
                 | ExpP (_, typ) -> create_typ typ
                 | _ -> failwith "only ExpP should be here"
               ) params in
-              BracketedBinder(ExplicitParam(
+              [BracketedBinder(ExplicitParam(
                 NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
                 (* create_typ typ *)
                 create_curried_func (param_types @ [create_typ typ])
-              ))
-            | TypP id -> BracketedBinder(ExplicitParam(
-              NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
-              Type None
-            ))
+              ))]
+            | TypP t ->
+              let explicit : _params = BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH t.it],
+                Type None                                                 (* (X : Type) -- always emitted *)
+              )) in
+              let beq : _params list =
+                if List.mem t.it typp_names_needing_beq then
+                  [BracketedBinder(InstanceParam(                         (* [BEq X] *)
+                    FunApp(Ident "BEq", NonEmptyList.from_list_unsafe [Term (Ident t.it)])
+                  ))]
+                else []
+              in
+              let inhabited : _params list =
+                if List.mem t.it typp_names_needing_inhabited then
+                  [BracketedBinder(InstanceParam(                         (* [Inhabited X] *)
+                    FunApp(Ident "Inhabited", NonEmptyList.from_list_unsafe [Term (Ident t.it)])
+                  ))]
+                else []
+              in
+              [explicit] @ beq @ inhabited
             | _ -> failwith "only DefP and TypP should be here"
         ) quants
       in
@@ -2530,7 +2560,7 @@ let create_def_construct (def : Il.Ast.def) : command list =
          pattern match incomplete in Lean. The catch-all makes it exhaustive again.
          Mirrors the Rocq backend's `| _ => default_val` approach. *)
       let needs_catchall = List.mem id.it (!analysis).defs_needing_catchall in
-      Printf.eprintf "[DBG needs_catchall] %s -> %b\n%!" id.it needs_catchall;
+      (* Printf.eprintf "[DBG needs_catchall] %s -> %b\n%!" id.it needs_catchall; *)
       let cases_with_catchall_temp_workaround =
         if needs_catchall then
           let wildcards =

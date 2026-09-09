@@ -70,6 +70,24 @@ let map_over_decs
     | _ -> None
   ) (flatten_defs il)
 
+(* Iterate over every RelD in the script (including inside RecD groups), applying f
+   to each and returning one (name, result) pair per relation.
+   e.g. map_over_rels il (fun _id params _ _ rules -> rules)
+     → [("fun_disjoint_", [rule1; ...]); ...]
+   Kept separate from map_over_decs rather than generalising that combinator itself:
+   several other callers in this file (gather_defs_needing_catchall,
+   gather_defs_with_unconvertible_params, gather_defs_passed_as_higher_order_args)
+   are intentionally DecD-only by design -- see the "Risk/edge cases" note near
+   analyze_typp_needs's own callers. *)
+let map_over_rels
+    (il : script)
+    (f : Il.Ast.id -> Il.Ast.param list -> Il.Ast.mixop -> Il.Ast.typ -> Il.Ast.rule list -> 'a)
+    : (string * 'a) list =
+  List.filter_map (fun (def : Il.Ast.def) -> match def.it with
+    | RelD (id, params, mixop, typ, rules) -> Some (id.it, f id params mixop typ rules)
+    | _ -> None
+  ) (flatten_defs il)
+
 (* Core infrastructure: two-phase TypP-need analysis.
 
    Determines, for every DecD, which of its TypP names require a given typeclass
@@ -98,19 +116,40 @@ let analyze_typp_needs
       | _ -> None) params
   in
 
-  (* Collect (name, params, clauses) for every DecD once.
+  (* A generic function's body, whichever kind of def it came from -- lets phase 1
+     and phase 2 walk a DecD's clauses or a RelD's rules through one shared code
+     path below, instead of duplicating both phases per def-kind. Scoped to this
+     function only (via `let open struct ... end`), since nothing else in the
+     file needs to distinguish the two. *)
+  let open struct
+    type def_body =
+      | ClauseBody of Il.Ast.clause list
+      | RuleBody of Il.Ast.rule list
+  end in
+  let (collect_body : string list Il.Walk.collector -> def_body -> string list) =
+    fun c body -> match body with
+      | ClauseBody clauses -> List.concat_map (Il.Walk.collect_clause c) clauses
+      | RuleBody rules -> List.concat_map (Il.Walk.collect_rule c) rules
+  in
+
+  (* Collect (name, params, body) for every DecD *and* RelD once.
      Used in both phases to avoid re-walking the script on every fixpoint iteration.
-     e.g. [("setminus1_", ([TypP "X"; ...], [clause1; clause2]));
-           ("setminus_",  ([TypP "X"; ...], [clause1; clause2])); ...] *)
-  let decs : (string * (Il.Ast.param list * Il.Ast.clause list)) list =       (* e.g. [("setminus1_", ([TypP "X"; ...], [...])); ...] *)
-    map_over_decs il (fun _id params _typ clauses -> (params, clauses))
+     DecD/RelD names never collide -- deftorel.ml converts a given def from one
+     kind to the other wholesale, never both under the same name in the final IL --
+     so @-concatenating the two maps is safe.
+     e.g. [("setminus1_", ([TypP "X"; ...], ClauseBody [clause1; clause2]));
+           ("fun_disjoint_", ([TypP "X"; ...], RuleBody [rule1; ...])); ...] *)
+  let decs : (string * (Il.Ast.param list * def_body)) list =
+    map_over_decs il (fun _id params _typ clauses -> (params, ClauseBody clauses))
+    @ map_over_rels il (fun _id params _mixop _typ rules -> (params, RuleBody rules))
   in
 
   (* Phase 0: derive callee-name → param-list map from decs for positional type-arg matching
      in phase 2. When we see CallE "setminus1_" [TypA (VarT "X"); ...], this lets us look up
-     setminus1_'s TypP list ["X"] to match argument positions to TypP names.
-     e.g. [("setminus1_", [TypP "X"; ...]); ("setminus_", [TypP "X"; ...]); ...] *)
-  let dec_params_map : (string * Il.Ast.param list) list =                    (* e.g. [("setminus1_", [TypP "X"; ...]); ...] *)
+     setminus1_'s TypP list ["X"] to match argument positions to TypP names -- now also
+     covering RelD callees reached via a RulePr premise (e.g. "fun_setminus1_").
+     e.g. [("setminus1_", [TypP "X"; ...]); ("fun_disjoint_", [TypP "X"; ...]); ...] *)
+  let params_map : (string * Il.Ast.param list) list =                        (* e.g. [("setminus1_", [TypP "X"; ...]); ...] *)
     List.map (fun (name, (params, _)) -> (name, params)) decs
   in
 
@@ -137,23 +176,31 @@ let analyze_typp_needs
        fun_relaxed4: same pattern                                          → ["r_X"] retained
        initial_map = [("fun_relaxed2", ["r_X"]); ("fun_relaxed4", ["r_X"])] *)
   let initial_map : (string * string list) list =                             (* e.g. [("setminus1_", ["X"])] for BEq — functions with directly detected needs *)
-    List.filter_map (fun (name, (params, clauses)) ->
+    List.filter_map (fun (name, (params, body)) ->
       let typp_names : string list = typp_names_of params in                 (* e.g. ["X"] for setminus1_, [] for local_ *)
       if typp_names = [] then None                                            (* no type params → nothing to detect *)
       else
         let c : string list Il.Walk.collector = make_direct_collector typp_names in
         let found : string list =
-          List.concat_map (Il.Walk.collect_clause c) clauses
+          collect_body c body
           |> List.sort_uniq String.compare
         in                                                                    (* e.g. ["X"] for setminus1_, [] for setminus_ *)
         if found = [] then None else Some (name, found)
     ) decs
   in
 
-  (* Phase 2 collector: propagate needs through CallE edges.
+  (* Phase 2 propagation logic, shared by two different call sites: a `CallE`
+     (an ordinary function calling another) and a `RulePr` (a relation's rule
+     invoking another relation as a premise). Per deftorel.ml's
+     create_fun_prem/cvt_def_to_rel, a RulePr's args are the order-preserving
+     non-ExpA subsequence of the original call's args, so they align
+     positionally with the callee's own params exactly like a CallE's TypA
+     args align to a DecD's TypP params -- the exact same matching logic
+     applies unchanged to both.
 
-     For CallE("setminus1_", [TypA (VarT "X"); ExpA (VarE "w_1"); ExpA (VarE "lst")]):
-       callee_typps = ["X"]          (setminus1_'s TypP list from dec_params_map)
+     For CallE("setminus1_", [TypA (VarT "X"); ExpA (VarE "w_1"); ExpA (VarE "lst")])
+     (or, equally, a RulePr premise invoking a RelD callee the same way):
+       callee_typps = ["X"]          (setminus1_'s TypP list from params_map)
        type_args    = [VarT "X"]     (TypA entries from args, positionally matching callee_typps)
        callee_needs = ["X"]          (setminus1_ needs [BEq X])
        List.combine → [("X", VarT "X")]
@@ -167,52 +214,72 @@ let analyze_typp_needs
          not the caller's abstract TypP. Again resolved globally by Lean. No constraint on caller.
      We only propagate (Some xi) when the caller is forwarding its own abstract TypP xi,
      because only then does the caller lack a concrete instance in scope. *)
-  let make_callE_collector
+  let propagate_callee
+      (typp_names : string list)                                               (* e.g. ["X"] — TypP names in scope for the caller being analysed *)
+      (needs_map : (string * string list) list)                                (* e.g. [("setminus1_", ["X"])] — currently known needs, grows each fixpoint step *)
+      (callee_name : string)                                                    (* e.g. "setminus1_" *)
+      (args : Il.Ast.arg list)                                                  (* e.g. [TypA (VarT "X"); ExpA (VarE "w_1"); ...] *)
+      : string list =
+    match List.assoc_opt callee_name params_map with
+    | None -> []                                                    (* callee not a DecD/RelD we know about, e.g. a built-in *)
+    | Some callee_params ->
+        let callee_typps : string list = typp_names_of callee_params in  (* e.g. ["X"] for setminus1_ *)
+        (* TypA entries from the call site, positionally matching callee_typps:
+           [TypA (VarT "X"); ExpA (VarE "w_1"); ...] → [VarT "X"] *)
+        let type_args : Il.Ast.typ list =
+          List.filter_map (fun a -> match a.it with
+            | TypA t -> Some t | _ -> None) args
+        in
+        let callee_needs : string list =                            (* e.g. ["X"] for setminus1_ *)
+          List.assoc_opt callee_name needs_map |> Option.value ~default:[]
+        in
+        (* pair each callee TypP with the corresponding type argument positionally;
+           equal length by IL well-formedness (each TypA matches exactly one TypP) *)
+        List.combine callee_typps type_args
+        |> List.filter_map (fun (callee_typp, type_arg) ->
+          if not (List.mem callee_typp callee_needs) then None      (* callee doesn't need [TC] for this TypP slot *)
+          else match type_arg.it with
+            | VarT (xi, []) when List.mem xi.it typp_names ->
+                (* Caller forwards its own abstract TypP xi (e.g. VarT "X" where "X" ∈ typp_names).
+                   Lean has no concrete instance for xi in scope → must constrain the caller. *)
+                Some xi.it                                          (* e.g. Some "X" → setminus_ gains [BEq X] *)
+            | VarT (_, []) ->
+                (* type_arg is a VarT but not one of the caller's own TypP names.
+                   Scenario 2: xi names a globally defined concrete type (e.g. VarT "Nat").
+                   Lean's global typeclass search resolves [TC Nat] automatically.
+                   No constraint on the caller is needed. *)
+                None
+            | _ ->
+                (* type_arg is not a bare VarT — it's a concrete compound type (e.g. IterT, BoolT, NumT).
+                   Scenario 1: the callee is instantiated at a concrete type.
+                   Lean's global typeclass search resolves [TC <concrete>] automatically.
+                   No constraint on the caller is needed. *)
+                None)
+  in
+
+  (* Phase 2 collector: propagate needs through both CallE edges (ordinary
+     function calls) and RulePr edges (a relation's rule invoking another
+     relation as a premise) using the shared logic above. Both hooks return
+     `(found, true)` so traversal continues into any nested sub-expressions
+     or sub-premises (e.g. a RulePr wrapped in NegPr/IterPr for spectec's
+     `-- otherwise` clauses) -- collect_prem's own NegPr/IterPr cases
+     re-invoke this hook on the unwrapped RulePr. *)
+  let make_propagation_collector
       (typp_names : string list)                                               (* e.g. ["X"] — TypP names in scope for the caller being analysed *)
       (needs_map : (string * string list) list)                                (* e.g. [("setminus1_", ["X"])] — currently known needs, grows each fixpoint step *)
       : string list Il.Walk.collector =                                        (* e.g. collector that returns ["X"] when caller calls setminus1_ with TypA (VarT "X") *)
     { (Il.Walk.base_collector [] (@)) with
-      collect_exp = fun e ->
-        let found : string list = match e.it with
-          | CallE (callee_id, args) ->
-              (match List.assoc_opt callee_id.it dec_params_map with
-              | None -> []                                                    (* callee not a DecD we know about, e.g. a built-in *)
-              | Some callee_params ->
-                  let callee_typps : string list = typp_names_of callee_params in  (* e.g. ["X"] for setminus1_ *)
-                  (* TypA entries from the call site, positionally matching callee_typps:
-                     [TypA (VarT "X"); ExpA (VarE "w_1"); ...] → [VarT "X"] *)
-                  let type_args : Il.Ast.typ list =
-                    List.filter_map (fun a -> match a.it with
-                      | TypA t -> Some t | _ -> None) args
-                  in
-                  let callee_needs : string list =                            (* e.g. ["X"] for setminus1_ *)
-                    List.assoc_opt callee_id.it needs_map |> Option.value ~default:[]
-                  in
-                  (* pair each callee TypP with the corresponding type argument positionally;
-                     equal length by IL well-formedness (each TypA matches exactly one TypP) *)
-                  List.combine callee_typps type_args
-                  |> List.filter_map (fun (callee_typp, type_arg) ->
-                    if not (List.mem callee_typp callee_needs) then None      (* callee doesn't need [TC] for this TypP slot *)
-                    else match type_arg.it with
-                      | VarT (xi, []) when List.mem xi.it typp_names ->
-                          (* Caller forwards its own abstract TypP xi (e.g. VarT "X" where "X" ∈ typp_names).
-                             Lean has no concrete instance for xi in scope → must constrain the caller. *)
-                          Some xi.it                                          (* e.g. Some "X" → setminus_ gains [BEq X] *)
-                      | VarT (_, []) ->
-                          (* type_arg is a VarT but not one of the caller's own TypP names.
-                             Scenario 2: xi names a globally defined concrete type (e.g. VarT "Nat").
-                             Lean's global typeclass search resolves [TC Nat] automatically.
-                             No constraint on the caller is needed. *)
-                          None
-                      | _ ->
-                          (* type_arg is not a bare VarT — it's a concrete compound type (e.g. IterT, BoolT, NumT).
-                             Scenario 1: the callee is instantiated at a concrete type.
-                             Lean's global typeclass search resolves [TC <concrete>] automatically.
-                             No constraint on the caller is needed. *)
-                          None))
+      collect_exp = (fun e ->
+        let found = match e.it with
+          | CallE (callee_id, args) -> propagate_callee typp_names needs_map callee_id.it args
           | _ -> []
-        in
-        (found, true)
+        in (found, true));
+      collect_prem = (fun p ->
+        let found = match p.it with
+          | RulePr (callee_id, args, _mixop, _exp) ->
+              propagate_callee typp_names needs_map callee_id.it args
+          | _ -> []
+        in (found, true));
     }
   in
 
@@ -232,13 +299,13 @@ let analyze_typp_needs
   let one_step
       (needs_map : (string * string list) list)                               (* e.g. [("setminus1_", ["X"])] at start of iteration 1 *)
       : (string * string list) list * bool =                                  (* e.g. ([("setminus1_", ["X"]); ("setminus_", ["X"])], true) after iteration 1 *)
-    List.fold_left (fun (acc, any_changed) (name, (params, clauses)) ->
+    List.fold_left (fun (acc, any_changed) (name, (params, body)) ->
       let typp_names : string list = typp_names_of params in                 (* e.g. ["X"] for setminus_ *)
       if typp_names = [] then (acc, any_changed)
       else
-        let c : string list Il.Walk.collector = make_callE_collector typp_names acc in
+        let c : string list Il.Walk.collector = make_propagation_collector typp_names acc in
         let new_needs : string list =
-          List.concat_map (Il.Walk.collect_clause c) clauses
+          collect_body c body
           |> List.sort_uniq String.compare
         in                                                                    (* e.g. ["X"] for setminus_ in iteration 1 *)
         let current : string list = List.assoc_opt name acc |> Option.value ~default:[] in  (* e.g. [] for setminus_ before update *)
