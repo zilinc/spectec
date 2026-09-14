@@ -119,7 +119,7 @@ opaque inv_concatn_ (X : Type) (nat : Nat) (var_0_lst : List X) : List (List X) 
 
 
 /- Inductive Relations Definition at: test.spectec:75.6-75.16 -/
-inductive fun_disjoint_ (X : Type) : List X → Bool → Prop where
+inductive fun_disjoint_ (X : Type) [BEq X] : List X → Bool → Prop where
   | fun_disjoint__case_0 : fun_disjoint_ X [] true
   | fun_disjoint__case_1 (w : X) (w'_lst : List X) (var_0 : Bool) :
     (List.length w'_lst) > 0 →
@@ -128,7 +128,7 @@ inductive fun_disjoint_ (X : Type) : List X → Bool → Prop where
 
 
 /- Inductive Relations Definition at: test.spectec:80.6-80.17 -/
-inductive fun_setminus1_ (X : Type) : X → List X → List X → Prop where
+inductive fun_setminus1_ (X : Type) [BEq X] : X → List X → List X → Prop where
   | fun_setminus1__case_0 (w : X) : fun_setminus1_ X w [] [w]
   | fun_setminus1__case_1 (w : X) (w_1 : X) (w'_lst : List X) (var_0 : List X) :
     fun_setminus1_ X w w'_lst var_0 →
@@ -141,7 +141,7 @@ inductive fun_setminus1_ (X : Type) : X → List X → List X → Prop where
 
 
 /- Inductive Relations Definition at: test.spectec:79.6-79.16 -/
-inductive fun_setminus_ (X : Type) : List X → List X → List X → Prop where
+inductive fun_setminus_ (X : Type) [BEq X] : List X → List X → List X → Prop where
   | fun_setminus__case_0 (w_lst : List X) : fun_setminus_ X [] w_lst []
   | fun_setminus__case_1 (w_1 : X) (w'_lst : List X) (w_lst : List X) (var_1 : List X) (var_0 : List X) :
     fun_setminus_ X w'_lst w_lst var_1 →
@@ -2023,42 +2023,21 @@ theorem subst_typevar_is_wf (v_typevar : typevar) (var_0_lst : List typevar) (va
   wf_typeuse ret_val :=
   sorry
 
-mutual
-/- Inductive Relations Definition at: test.spectec:737.6-737.17 -/
-inductive fun_minus_recs_before_fun_minus_recs_case_3 : List typevar → List typeuse → Prop where
-  | fun_minus_recs_before_fun_minus_recs_case_3_fun_minus_recs_case_2 (x : uN) (tv_lst : List typevar) (tu_1 : typeuse) (tu_lst : List typeuse) (tv'_lst : List typevar) (tu'_lst : List typeuse) (var_0 : Option (List typevar × List typeuse)) :
-    fun_minus_recs tv_lst tu_lst var_0 →
-    var_0 ≠ none →
-    ((tv'_lst, tu'_lst)) = (Option.get! var_0) →
-    fun_minus_recs_before_fun_minus_recs_case_3 ([typevar._IDX x] ++ tv_lst) ([tu_1] ++ tu_lst)
-  | fun_minus_recs_before_fun_minus_recs_case_3_fun_minus_recs_case_1 (v_n : Nat) (tv_lst : List typevar) (tu_1 : typeuse) (tu_lst : List typeuse) (var_0 : Option (List typevar × List typeuse)) : fun_minus_recs_before_fun_minus_recs_case_3 ([typevar.REC v_n] ++ tv_lst) ([tu_1] ++ tu_lst)
-  | fun_minus_recs_before_fun_minus_recs_case_3_fun_minus_recs_case_0 : fun_minus_recs_before_fun_minus_recs_case_3 [] []
-
-/- Inductive Relations Definition at: test.spectec:737.6-737.17 -/
-inductive fun_minus_recs : List typevar → List typeuse → Option (List typevar × List typeuse) → Prop where
-  | fun_minus_recs_fun_minus_recs_case_0 : fun_minus_recs [] [] (some (([], [])))
-  | fun_minus_recs_fun_minus_recs_case_1 (v_n : Nat) (tv_lst : List typevar) (tu_1 : typeuse) (tu_lst : List typeuse) (var_0 : Option (List typevar × List typeuse)) :
-    fun_minus_recs tv_lst tu_lst var_0 →
-    fun_minus_recs ([typevar.REC v_n] ++ tv_lst) ([tu_1] ++ tu_lst) var_0
-  | fun_minus_recs_fun_minus_recs_case_2 (x : uN) (tv_lst : List typevar) (tu_1 : typeuse) (tu_lst : List typeuse) (tv'_lst : List typevar) (tu'_lst : List typeuse) (var_0 : Option (List typevar × List typeuse)) :
-    fun_minus_recs tv_lst tu_lst var_0 →
-    var_0 ≠ none →
-    ((tv'_lst, tu'_lst)) = (Option.get! var_0) →
-    fun_minus_recs ([typevar._IDX x] ++ tv_lst) ([tu_1] ++ tu_lst) (some (([typevar._IDX x] ++ tv'_lst, [tu_1] ++ tu'_lst)))
-  | fun_minus_recs_case_3 (x0 : List typevar) (x1 : List typeuse) :
-    ¬ fun_minus_recs_before_fun_minus_recs_case_3 x0 x1 →
-    fun_minus_recs x0 x1 none
-
-
-end
+/- Auxiliary Definition at: test.spectec:737.1-737.87 -/
+def minus_recs (var_0_lst : List typevar) (var_1_lst : List typeuse) : Option (List typevar × List typeuse) :=
+  match var_0_lst, var_1_lst with
+  | [], [] => some (([], []))
+  | (typevar.REC v_n) :: tv_lst, tu_1 :: tu_lst => minus_recs tv_lst tu_lst
+  | (typevar._IDX x) :: tv_lst, tu_1 :: tu_lst => let (tv'_lst, tu'_lst) := Option.get! (minus_recs tv_lst tu_lst)
+  some (([typevar._IDX x] ++ tv'_lst, [tu_1] ++ tu'_lst))
+  | _, _ => none
 
 /- Well-Formedness Theorem at: test.spectec:737.6-737.17 -/
-theorem minus_recs_is_wf (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : List typevar × List typeuse) (var_0 : Option (List typevar × List typeuse)) :
-  fun_minus_recs var_0_lst var_1_lst var_0 →
+theorem minus_recs_is_wf (var_0_lst : List typevar) (var_1_lst : List typeuse) (ret_val : List typevar × List typeuse) :
   Forall (fun (var_0_elem : typevar) => wf_typevar var_0_elem) var_0_lst →
   Forall (fun (var_1_elem : typeuse) => wf_typeuse var_1_elem) var_1_lst →
-  var_0 ≠ none →
-  ret_val = (Option.get! var_0) →
+  (minus_recs var_0_lst var_1_lst) ≠ none →
+  ret_val = (Option.get! (minus_recs var_0_lst var_1_lst)) →
   Forall (fun (iter_elem : typevar) => wf_typevar iter_elem) (ret_val.1) →
   Forall (fun (iter_elem : typeuse) => wf_typeuse iter_elem) (ret_val.2) :=
   sorry
@@ -2181,12 +2160,11 @@ inductive fun_subst_subtype : subtype → List typevar → List typeuse → subt
 
 /- Inductive Relations Definition at: test.spectec:689.6-689.20 -/
 inductive fun_subst_rectype : rectype → List typevar → List typeuse → rectype → Prop where
-  | fun_subst_rectype_case_0 (st_lst : List subtype) (tv_lst : List typevar) (tu_lst : List typeuse) (tv'_lst : List typevar) (tu'_lst : List typeuse) (var_1 : Option (List typevar × List typeuse)) (var_0_lst : List subtype) :
-    fun_minus_recs tv_lst tu_lst var_1 →
+  | fun_subst_rectype_case_0 (st_lst : List subtype) (tv_lst : List typevar) (tu_lst : List typeuse) (tv'_lst : List typevar) (tu'_lst : List typeuse) (var_0_lst : List subtype) :
     (List.length var_0_lst) = (List.length st_lst) →
     Forall₂ (fun (var_0_elem : subtype) (st_elem : subtype) => fun_subst_subtype st_elem tv'_lst tu'_lst var_0_elem) var_0_lst st_lst →
-    var_1 ≠ none →
-    ((tv'_lst, tu'_lst)) = (Option.get! var_1) →
+    (minus_recs tv_lst tu_lst) ≠ none →
+    ((tv'_lst, tu'_lst)) = (Option.get! (minus_recs tv_lst tu_lst)) →
     fun_subst_rectype (rectype.REC (list.mk_list st_lst)) tv_lst tu_lst (rectype.REC (list.mk_list var_0_lst))
 
 /- Inductive Relations Definition at: test.spectec:690.6-690.20 -/

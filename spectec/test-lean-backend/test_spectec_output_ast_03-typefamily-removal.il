@@ -11527,6 +11527,7 @@
     (CaseE (Seq (Atom VCONST) Arg Arg) (TupE (VarE "vectype") (VarE "c")))
   )
 )
+(HintD (DecH "const" (hint "partial" "{}")))
 (HintD (DecH "const" (hint "show" "{%.CONST %}")))
 (DecD
   "free_shape"
@@ -25572,6 +25573,7 @@
   (ExpP "num_" (VarT "num_" (ExpA (VarE "numtype"))))
   (IterT (VarT "byte") List)
 )
+(HintD (DecH "nbytes_" (hint "partial" "{}")))
 (HintD
   (DecH "nbytes_" (hint "show" "$bytes_(%, %)") (hint "inverse" "$inv_nbytes_"))
 )
@@ -25590,6 +25592,7 @@
   (ExpP "lit_" (VarT "lit_" (ExpA (VarE "storagetype"))))
   (IterT (VarT "byte") List)
 )
+(HintD (DecH "zbytes_" (hint "partial" "{}")))
 (HintD
   (DecH "zbytes_" (hint "show" "$bytes_(%, %)") (hint "inverse" "$inv_zbytes_"))
 )
@@ -25602,6 +25605,7 @@
   )
   (IterT (VarT "byte") List)
 )
+(HintD (DecH "cbytes_" (hint "partial" "{}")))
 (HintD
   (DecH "cbytes_" (hint "show" "$bytes_(%, %)") (hint "inverse" "$inv_cbytes_"))
 )
@@ -27711,6 +27715,7 @@
   (ExpP "num_" (VarT "num_" (ExpA (VarE "numtype_1"))))
   (VarT "num_" (ExpA (VarE "numtype_2")))
 )
+(HintD (DecH "reinterpret__" (hint "partial" "{}")))
 (HintD (DecH "wrap__" (hint "builtin" "{}")))
 (HintD (DecH "extend__" (hint "builtin" "{}")))
 (HintD (DecH "trunc__" (hint "builtin" "{}")))
@@ -27769,6 +27774,7 @@
     )
   )
 )
+(HintD (DecH "lpacknum_" (hint "partial" "{}")))
 (HintD
   (DecH "lpacknum_" (hint "show" "$pack_(%, %)") (hint "macro" "\"packnum\""))
 )
@@ -27844,6 +27850,7 @@
     )
   )
 )
+(HintD (DecH "cpacknum_" (hint "partial" "{}")))
 (HintD
   (DecH "cpacknum_" (hint "show" "$pack_(%, %)") (hint "macro" "\"packnum\""))
 )
@@ -27898,6 +27905,7 @@
     )
   )
 )
+(HintD (DecH "lunpacknum_" (hint "partial" "{}")))
 (HintD
   (DecH
     "lunpacknum_"
@@ -27976,6 +27984,7 @@
     )
   )
 )
+(HintD (DecH "cunpacknum_" (hint "partial" "{}")))
 (HintD
   (DecH
     "cunpacknum_"
@@ -28440,6 +28449,7 @@
     )
   )
 )
+(HintD (DecH "unop_" (hint "partial" "{}")))
 (HintD (DecH "unop_" (hint "show" "%2#$_(%1, %3)")))
 (DecD
   "binop_"
@@ -29571,6 +29581,7 @@
     )
   )
 )
+(HintD (DecH "binop_" (hint "partial" "{}")))
 (HintD (DecH "binop_" (hint "show" "%2#$_(%1, %3, %4)")))
 (DecD
   "testop_"
@@ -29612,6 +29623,7 @@
     )
   )
 )
+(HintD (DecH "testop_" (hint "partial" "{}")))
 (HintD (DecH "testop_" (hint "show" "%2#$_(%1, %3)")))
 (DecD
   "relop_"
@@ -30241,6 +30253,7 @@
     )
   )
 )
+(HintD (DecH "relop_" (hint "partial" "{}")))
 (HintD (DecH "relop_" (hint "show" "%2#$_(%1, %3, %4)")))
 (DecD
   "cvtop__"
@@ -30754,6 +30767,7 @@
     )
   )
 )
+(HintD (DecH "cvtop__" (hint "partial" "{}")))
 (HintD (DecH "cvtop__" (hint "show" "%3#$__(%1, %2, %4)")))
 (DecD
   "lanes_"
@@ -31033,6 +31047,7 @@
     (OptE)
   )
 )
+(HintD (DecH "zeroop" (hint "partial" "{}")))
 (DecD
   "halfop"
   (ExpP "shape_1" (VarT "shape"))
@@ -31292,6 +31307,7 @@
     (OptE (CaseE (Atom LOW) (TupE)))
   )
 )
+(HintD (DecH "halfop" (hint "partial" "{}")))
 (DecD
   "half"
   (ExpP "half" (VarT "half"))
@@ -34129,6 +34145,7 @@
     )
   )
 )
+(HintD (DecH "vunop_" (hint "partial" "{}")))
 (HintD (DecH "vunop_" (hint "show" "%2#$_(%1, %3)")))
 (DecD
   "vbinop_"
@@ -34933,6 +34950,7 @@
     )
   )
 )
+(HintD (DecH "vbinop_" (hint "partial" "{}")))
 (HintD (DecH "vbinop_" (hint "show" "%2#$_(%1, %3, %4)")))
 (DecD
   "vternop_"
@@ -35066,6 +35084,7 @@
     )
   )
 )
+(HintD (DecH "vternop_" (hint "partial" "{}")))
 (HintD (DecH "vternop_" (hint "show" "%2#$_(%1, %3, %4, %5)")))
 (DecD
   "vrelop_"
@@ -35555,6 +35574,7 @@
     )
   )
 )
+(HintD (DecH "vrelop_" (hint "partial" "{}")))
 (HintD (DecH "vrelop_" (hint "show" "%2#$_(%1, %3, %4)")))
 (DecD
   "lcvtop__"
@@ -36131,6 +36151,7 @@
     )
   )
 )
+(HintD (DecH "lcvtop__" (hint "partial" "{}")))
 (HintD (DecH "lcvtop__" (hint "show" "%3#$__(%1, %2)^(%4)#((%5))")))
 (DecD
   "vcvtop__"
@@ -36573,6 +36594,7 @@
     )
   )
 )
+(HintD (DecH "vcvtop__" (hint "partial" "{}")))
 (HintD (DecH "vcvtop__" (hint "show" "%3#$__(%1, %2)^(%4)#((%5))")))
 (DecD
   "vshiftop_"
@@ -36674,6 +36696,7 @@
     )
   )
 )
+(HintD (DecH "vshiftop_" (hint "partial" "{}")))
 (HintD (DecH "vshiftop_" (hint "show" "%2#$_(%1)#(%3, %4)")))
 (DecD
   "vbitmaskop_"
@@ -36795,6 +36818,7 @@
     )
   )
 )
+(HintD (DecH "vswizzlop_" (hint "partial" "{}")))
 (HintD (DecH "vswizzlop_" (hint "show" "%2#$_(%1, %3, %4)")))
 (DecD
   "vshufflop_"
@@ -37267,6 +37291,7 @@
     )
   )
 )
+(HintD (DecH "vextunop__" (hint "partial" "{}")))
 (HintD (DecH "vextunop__" (hint "show" "%3#$__(%1, %2, %4)")))
 (DecD
   "ivdot_"
@@ -37862,6 +37887,7 @@
     )
   )
 )
+(HintD (DecH "vextbinop__" (hint "partial" "{}")))
 (HintD (DecH "vextbinop__" (hint "show" "%3#$__(%1, %2, %4, %5)")))
 (DecD
   "vextternop__"
@@ -38071,6 +38097,7 @@
     )
   )
 )
+(HintD (DecH "vextternop__" (hint "partial" "{}")))
 (HintD (DecH "vextternop__" (hint "show" "%3#$__(%1, %2, %4, %5, %6)")))
 (HintD (DecH "ivadd_pairwise_" (hint "show" "$ivadd__pairwise_(%, %)")))
 (HintD (DecH "ivdot_sat_" (hint "show" "$ivdot__sat_(%, %, %)")))
@@ -59361,27 +59388,43 @@
         (Infix Arg |- (Infix Arg : Arg))
         (TupE (VarE "s") (VarE "f") (VarE "C'"))
       )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (DotE (VarE "C'") (Atom RETURN))
-          (OptE
-            (CaseE
-              Arg
-              (TupE
-                (IterE (VarE "t") (ListN (VarE "n")) (iterexp "t" (VarE "t*")))
-              )
-            )
-          )
-        )
-      )
       (RulePr
         "Expr_ok2"
         (Infix (Infix Arg ; Arg) |- (Infix Arg : Arg))
         (TupE
           (VarE "s")
-          (VarE "C'")
+          (CompE
+            (StrE
+              (expfield (Atom TYPES) (ListE))
+              (expfield (Atom TAGS) (ListE))
+              (expfield (Atom GLOBALS) (ListE))
+              (expfield (Atom MEMS) (ListE))
+              (expfield (Atom TABLES) (ListE))
+              (expfield (Atom FUNCS) (ListE))
+              (expfield (Atom DATAS) (ListE))
+              (expfield (Atom ELEMS) (ListE))
+              (expfield (Atom LOCALS) (ListE))
+              (expfield (Atom LABELS) (ListE))
+              (expfield
+                (Atom RETURN)
+                (OptE
+                  (CaseE
+                    Arg
+                    (TupE
+                      (IterE
+                        (VarE "t")
+                        (ListN (VarE "n"))
+                        (iterexp "t" (VarE "t*"))
+                      )
+                    )
+                  )
+                )
+              )
+              (expfield (Atom REFS) (ListE))
+              (expfield (Atom RECS) (ListE))
+            )
+            (VarE "C'")
+          )
           (IterE (VarE "instr") List (iterexp "instr" (VarE "instr*")))
           (CaseE
             Arg
@@ -62037,6 +62080,27 @@
 (HintD
   (DecH "allocXs" (hint "show" "$allocX*#((%3, %4, %5))") (hint "macro" "none"))
 )
+(TypD
+  "symdots"
+  (InstD
+    (VariantT
+      (typcase
+        Arg
+        (TupT (typbind "i" nat))
+        (IfPr (CmpE EqOp bool (VarE "i") (NumE (Nat 0))))
+      )
+    )
+  )
+)
+(HintD (TypH "symdots" (hint "show" "...") (hint "macro" "none")))
+(DecD "var" (TypP "X") nat (DefD (TypP "X") (TypA (VarT "X")) (NumE (Nat 0))))
+(HintD (DecH "var" (hint "show" "%") (hint "macro" "none")))
+(TypD "abbreviated" (InstD (AliasT (TupT))))
+(HintD (TypH "abbreviated" (hint "macro" "none")))
+(TypD "expanded" (InstD (AliasT (TupT))))
+(HintD (TypH "expanded" (hint "macro" "none")))
+(TypD "syntax" (InstD (AliasT (TupT))))
+(HintD (TypH "syntax" (hint "macro" "none")))
 (GramD
   "Bbyte"
   (VarT "byte")
@@ -88452,4 +88516,72 @@
   )
 )
 (HintD (GramH "Tdecldots_" (hint "show" "$dots")))
+(GramD
+  "Bvar"
+  (TypP "X")
+  (TupT)
+  (ProdD (NumG 0x00) (ProjE (TupE (TupE) (TupE)) 1))
+)
+(HintD (GramH "Bvar" (hint "show" "%") (hint "macro" "none")))
+(GramD
+  "Bsym"
+  (VarT "A")
+  (ProdD (VarG "Bvar" (TypA (VarT "B"))) (CallE "var" (TypA (VarT "A"))))
+  (ProdD
+    (SeqG (VarG "Bvar" (TypA (VarT "symdots"))) (VarG "Bvar" (TypA (VarT "B"))))
+    (CallE "var" (TypA (VarT "A")))
+  )
+)
+(HintD (GramH "Bsym" (hint "macro" "none")))
+(GramD
+  "Bsymsplit"
+  (TupT)
+  (ProdD
+    (ExpP "<implicit-prod-result>" (TupT))
+    (AttrG (VarE "<implicit-prod-result>") (VarG "Bvar" (TypA (VarT "B"))))
+    (ProjE (TupE (VarE "<implicit-prod-result>") (TupE)) 1)
+  )
+  (ProdD
+    (ExpP "<implicit-prod-result>" (TupT))
+    (AttrG (VarE "<implicit-prod-result>") (VarG "Bvar" (TypA (VarT "B"))))
+    (ProjE (TupE (VarE "<implicit-prod-result>") (TupE)) 1)
+  )
+)
+(HintD (GramH "Bsymsplit" (hint "show" "Bsym") (hint "macro" "none")))
+(HintD (GramH "Bsymsplit" (hint "show" "Bsym") (hint "macro" "none")))
+(GramD
+  "Tvar"
+  (TypP "X")
+  (TupT)
+  (ProdD (NumG 0x00) (ProjE (TupE (TupE) (TupE)) 1))
+)
+(HintD (GramH "Tvar" (hint "show" "%") (hint "macro" "none")))
+(GramD
+  "Tsym"
+  (VarT "A")
+  (ProdD (VarG "Tvar" (TypA (VarT "T"))) (CallE "var" (TypA (VarT "A"))))
+  (ProdD
+    (SeqG (VarG "Tvar" (TypA (VarT "symdots"))) (VarG "Tvar" (TypA (VarT "T"))))
+    (CallE "var" (TypA (VarT "A")))
+  )
+)
+(HintD (GramH "Tsym" (hint "macro" "none")))
+(GramD
+  "Tsymsplit"
+  (TupT)
+  (ProdD
+    (ExpP "<implicit-prod-result>" (TupT))
+    (AttrG (VarE "<implicit-prod-result>") (VarG "Tvar" (TypA (VarT "B"))))
+    (ProjE (TupE (VarE "<implicit-prod-result>") (TupE)) 1)
+  )
+  (ProdD
+    (ExpP "<implicit-prod-result>" (TupT))
+    (AttrG (VarE "<implicit-prod-result>") (VarG "Tvar" (TypA (VarT "B"))))
+    (ProjE (TupE (VarE "<implicit-prod-result>") (TupE)) 1)
+  )
+)
+(HintD (GramH "Tsymsplit" (hint "show" "Tsym") (hint "macro" "none")))
+(HintD (GramH "Tsymsplit" (hint "show" "Tsym") (hint "macro" "none")))
+(GramD "Tabbrev" (TupT))
+(HintD (GramH "Tabbrev" (hint "show" "Tsym") (hint "macro" "none")))
 

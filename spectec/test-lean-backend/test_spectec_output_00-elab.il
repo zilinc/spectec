@@ -7664,41 +7664,41 @@ relation Context_ok: `|-%:OK`(context)
     -- (Resulttype_ok: `%|-%:OK`(C_0, `%`_resulttype([(rt' : reftype <: valtype)])))?{rt' <- `rt'?`}
     -- (if (x!`%`_idx.0 < |dt_F*{dt_F <- `dt_F*`}|))*{x <- `x*`}
 
-;; test.spectec:9400.1-9400.48
+;; test.spectec:9399.1-9399.48
 relation Localval_ok: `%|-%:%`(store, val?, localtype)
-  ;; test.spectec:9405.1-9407.26
+  ;; test.spectec:9404.1-9406.26
   rule set{s : store, val : val, t : valtype}:
     `%|-%:%`(s, ?(val), `%%`_localtype(SET_init, t))
     -- Val_ok: `%|-%:%`(s, val, t)
 
-  ;; test.spectec:9409.1-9410.23
+  ;; test.spectec:9408.1-9409.23
   rule unset{s : store}:
     `%|-%:%`(s, ?(), `%%`_localtype(UNSET_init, BOT_valtype))
 
-;; test.spectec:9153.1-9153.51
+;; test.spectec:9152.1-9152.51
 relation Datainst_ok: `%|-%:%`(store, datainst, datatype)
-  ;; test.spectec:9188.1-9189.23
+  ;; test.spectec:9187.1-9188.23
   rule _{s : store, `b*` : byte*}:
     `%|-%:%`(s, {BYTES b*{b <- `b*`}}, OK_datatype)
 
-;; test.spectec:9154.1-9154.51
+;; test.spectec:9153.1-9153.51
 relation Eleminst_ok: `%|-%:%`(store, eleminst, elemtype)
-  ;; test.spectec:9191.1-9194.30
+  ;; test.spectec:9190.1-9193.30
   rule _{s : store, rt : reftype, `ref*` : ref*}:
     `%|-%:%`(s, {TYPE rt, REFS ref*{ref <- `ref*`}}, rt)
     -- Reftype_ok: `%|-%:OK`({TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [], RETURN ?(), REFS [], RECS []}, rt)
     -- (Ref_ok: `%|-%:%`(s, ref, rt))*{ref <- `ref*`}
 
-;; test.spectec:9155.1-9155.49
+;; test.spectec:9154.1-9154.49
 relation Exportinst_ok: `%|-%:OK`(store, exportinst)
-  ;; test.spectec:9196.1-9198.33
+  ;; test.spectec:9195.1-9197.33
   rule _{s : store, nm : name, xa : externaddr, xt : externtype}:
     `%|-%:OK`(s, {NAME nm, ADDR xa})
     -- Externaddr_ok: `%|-%:%`(s, xa, xt)
 
-;; test.spectec:9220.1-9220.54
+;; test.spectec:9219.1-9219.54
 relation Moduleinst_ok: `%|-%:%`(store, moduleinst, context)
-  ;; test.spectec:9222.1-9258.117
+  ;; test.spectec:9221.1-9257.117
   rule _{s : store, `deftype*` : deftype*, `tagaddr*` : tagaddr*, `globaladdr*` : globaladdr*, `memaddr*` : memaddr*, `tableaddr*` : tableaddr*, `funcaddr*` : funcaddr*, `dataaddr*` : dataaddr*, `elemaddr*` : elemaddr*, `exportinst*` : exportinst*, `tagtype*` : tagtype*, `globaltype*` : globaltype*, `memtype*` : memtype*, `tabletype*` : tabletype*, `deftype_F*` : deftype*, `datatype*` : datatype*, `elemtype*` : elemtype*, `subtype*` : subtype*}:
     `%|-%:%`(s, {TYPES deftype*{deftype <- `deftype*`}, TAGS tagaddr*{tagaddr <- `tagaddr*`}, GLOBALS globaladdr*{globaladdr <- `globaladdr*`}, MEMS memaddr*{memaddr <- `memaddr*`}, TABLES tableaddr*{tableaddr <- `tableaddr*`}, FUNCS funcaddr*{funcaddr <- `funcaddr*`}, DATAS dataaddr*{dataaddr <- `dataaddr*`}, ELEMS elemaddr*{elemaddr <- `elemaddr*`}, EXPORTS exportinst*{exportinst <- `exportinst*`}}, {TYPES deftype*{deftype <- `deftype*`}, TAGS tagtype*{tagtype <- `tagtype*`}, GLOBALS globaltype*{globaltype <- `globaltype*`}, MEMS memtype*{memtype <- `memtype*`}, TABLES tabletype*{tabletype <- `tabletype*`}, FUNCS deftype_F*{deftype_F <- `deftype_F*`}, DATAS datatype*{datatype <- `datatype*`}, ELEMS elemtype*{elemtype <- `elemtype*`}, LOCALS [], LABELS [], RETURN ?(), REFS `%`_funcidx(i)^(i<|funcaddr*{funcaddr <- `funcaddr*`}|){}, RECS subtype*{subtype <- `subtype*`}})
     -- (Deftype_ok: `%|-%:OK`({TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [], RETURN ?(), REFS [], RECS []}, deftype))*{deftype <- `deftype*`}
@@ -7713,9 +7713,9 @@ relation Moduleinst_ok: `%|-%:%`(store, moduleinst, context)
     -- if $disjoint_(syntax name, exportinst.NAME_exportinst*{exportinst <- `exportinst*`})
     -- (if (exportinst.ADDR_exportinst <- TAG_externaddr(tagaddr)*{tagaddr <- `tagaddr*`} ++ GLOBAL_externaddr(globaladdr)*{globaladdr <- `globaladdr*`} ++ MEM_externaddr(memaddr)*{memaddr <- `memaddr*`} ++ TABLE_externaddr(tableaddr)*{tableaddr <- `tableaddr*`} ++ FUNC_externaddr(funcaddr)*{funcaddr <- `funcaddr*`}))*{exportinst <- `exportinst*`}
 
-;; test.spectec:9401.1-9401.44
+;; test.spectec:9400.1-9400.44
 relation Frame_ok: `%|-%:%`(store, frame, context)
-  ;; test.spectec:9412.1-9415.37
+  ;; test.spectec:9411.1-9414.37
   rule _{s : store, `val?*` : val?*, moduleinst : moduleinst, C : context, `lct*` : localtype*}:
     `%|-%:%`(s, {LOCALS val?{val <- `val?`}*{`val?` <- `val?*`}, MODULE moduleinst}, C +++ {TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS lct*{lct <- `lct*`}, LABELS [], RETURN ?(), REFS [], RECS []})
     -- Moduleinst_ok: `%|-%:%`(s, moduleinst, C)
@@ -7742,50 +7742,49 @@ relation Instr_ok2: `%;%|-%:%`(store, context, instr, instrtype)
     -- Instrs_ok2: `%;%|-%:%`(s, C, instr'*{instr' <- `instr'*`}, `%->_%%`_instrtype(`%`_resulttype(t'^n{t' <- `t'*`}), x'*{x' <- `x'*`}, `%`_resulttype(t*{t <- `t*`})))
     -- Instrs_ok2: `%;%|-%:%`(s, {TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [`%`_resulttype(t'^n{t' <- `t'*`})], RETURN ?(), REFS [], RECS []} +++ C, instr*{instr <- `instr*`}, `%->_%%`_instrtype(`%`_resulttype([]), x*{x <- `x*`}, `%`_resulttype(t*{t <- `t*`})))
 
-  ;; test.spectec:9099.1-9103.37
+  ;; test.spectec:9099.1-9102.53
   rule frame{s : store, C : context, n : n, f : frame, `instr*` : instr*, `t*` : valtype*, C' : context}:
     `%;%|-%:%`(s, C, `FRAME_%{%}%`_instr(n, f, instr*{instr <- `instr*`}), `%->_%%`_instrtype(`%`_resulttype([]), [], `%`_resulttype(t^n{t <- `t*`})))
     -- Frame_ok: `%|-%:%`(s, f, C')
-    -- if (C'.RETURN_context = ?(`%`_resulttype(t^n{t <- `t*`})))
-    -- Expr_ok2: `%;%|-%:%`(s, C', instr*{instr <- `instr*`}, `%`_resulttype(t^n{t <- `t*`}))
+    -- Expr_ok2: `%;%|-%:%`(s, {TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [], RETURN ?(`%`_resulttype(t^n{t <- `t*`})), REFS [], RECS []} +++ C', instr*{instr <- `instr*`}, `%`_resulttype(t^n{t <- `t*`}))
 
-  ;; test.spectec:9105.1-9108.52
+  ;; test.spectec:9104.1-9107.52
   rule handler{s : store, C : context, n : n, `catch*` : catch*, `instr*` : instr*, `t_1*` : valtype*, `t_2*` : valtype*, `x*` : idx*}:
     `%;%|-%:%`(s, C, `HANDLER_%{%}%`_instr(n, catch*{catch <- `catch*`}, instr*{instr <- `instr*`}), `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), [], `%`_resulttype(t_2*{t_2 <- `t_2*`})))
     -- (Catch_ok: `%|-%:OK`(C, catch))*{catch <- `catch*`}
     -- Instrs_ok2: `%;%|-%:%`(s, C, instr*{instr <- `instr*`}, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), x*{x <- `x*`}, `%`_resulttype(t_2*{t_2 <- `t_2*`})))
 
-  ;; test.spectec:9110.1-9112.42
+  ;; test.spectec:9109.1-9111.42
   rule trap{s : store, C : context, `t_1*` : valtype*, `t_2*` : valtype*}:
     `%;%|-%:%`(s, C, TRAP_instr, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), [], `%`_resulttype(t_2*{t_2 <- `t_2*`})))
     -- Instrtype_ok: `%|-%:OK`(C, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), [], `%`_resulttype(t_2*{t_2 <- `t_2*`})))
 
 ;; test.spectec:9081.1-9082.36
 relation Instrs_ok2: `%;%|-%:%`(store, context, instr*, instrtype)
-  ;; test.spectec:9115.1-9116.27
+  ;; test.spectec:9114.1-9115.27
   rule empty{s : store, C : context}:
     `%;%|-%:%`(s, C, [], `%->_%%`_instrtype(`%`_resulttype([]), [], `%`_resulttype([])))
 
-  ;; test.spectec:9118.1-9120.45
+  ;; test.spectec:9117.1-9119.45
   rule instr{s : store, C : context, instr : instr, `t_1*` : valtype*, `t_2*` : valtype*}:
     `%;%|-%:%`(s, C, [instr], `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), [], `%`_resulttype(t_2*{t_2 <- `t_2*`})))
     -- Instr_ok2: `%;%|-%:%`(s, C, instr, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), [], `%`_resulttype(t_2*{t_2 <- `t_2*`})))
 
-  ;; test.spectec:9122.1-9126.86
+  ;; test.spectec:9121.1-9125.86
   rule seq{s : store, C : context, `instr_1*` : instr*, `instr_2*` : instr*, `t_1*` : valtype*, `x_1*` : idx*, `x_2*` : idx*, `t_3*` : valtype*, `t_2*` : valtype*, `init*` : init*, `t*` : valtype*}:
     `%;%|-%:%`(s, C, instr_1*{instr_1 <- `instr_1*`} ++ instr_2*{instr_2 <- `instr_2*`}, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), x_1*{x_1 <- `x_1*`} ++ x_2*{x_2 <- `x_2*`}, `%`_resulttype(t_3*{t_3 <- `t_3*`})))
     -- Instrs_ok2: `%;%|-%:%`(s, C, instr_1*{instr_1 <- `instr_1*`}, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), x_1*{x_1 <- `x_1*`}, `%`_resulttype(t_2*{t_2 <- `t_2*`})))
     -- (if (C.LOCALS_context[x_1!`%`_idx.0] = `%%`_localtype(init, t)))*{init <- `init*`, t <- `t*`, x_1 <- `x_1*`}
     -- Instrs_ok2: `%;%|-%:%`(s, $with_locals(C, x_1*{x_1 <- `x_1*`}, `%%`_localtype(SET_init, t)*{t <- `t*`}), instr_2*{instr_2 <- `instr_2*`}, `%->_%%`_instrtype(`%`_resulttype(t_2*{t_2 <- `t_2*`}), x_2*{x_2 <- `x_2*`}, `%`_resulttype(t_3*{t_3 <- `t_3*`})))
 
-  ;; test.spectec:9128.1-9132.33
+  ;; test.spectec:9127.1-9131.33
   rule sub{s : store, C : context, `instr*` : instr*, it' : instrtype, it : instrtype}:
     `%;%|-%:%`(s, C, instr*{instr <- `instr*`}, it')
     -- Instrs_ok2: `%;%|-%:%`(s, C, instr*{instr <- `instr*`}, it)
     -- Instrtype_sub: `%|-%<:%`(C, it, it')
     -- Instrtype_ok: `%|-%:OK`(C, it')
 
-  ;; test.spectec:9135.1-9138.33
+  ;; test.spectec:9134.1-9137.33
   rule frame{s : store, C : context, `instr*` : instr*, `t*` : valtype*, `t_1*` : valtype*, `x*` : idx*, `t_2*` : valtype*}:
     `%;%|-%:%`(s, C, instr*{instr <- `instr*`}, `%->_%%`_instrtype(`%`_resulttype(t*{t <- `t*`} ++ t_1*{t_1 <- `t_1*`}), x*{x <- `x*`}, `%`_resulttype(t*{t <- `t*`} ++ t_2*{t_2 <- `t_2*`})))
     -- Instrs_ok2: `%;%|-%:%`(s, C, instr*{instr <- `instr*`}, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), x*{x <- `x*`}, `%`_resulttype(t_2*{t_2 <- `t_2*`})))
@@ -7793,47 +7792,47 @@ relation Instrs_ok2: `%;%|-%:%`(store, context, instr*, instrtype)
 
 ;; test.spectec:9083.1-9084.36
 relation Expr_ok2: `%;%|-%:%`(store, context, expr, resulttype)
-  ;; test.spectec:9141.1-9143.44
+  ;; test.spectec:9140.1-9142.44
   rule _{s : store, C : context, `instr*` : instr*, `t*` : valtype*}:
     `%;%|-%:%`(s, C, instr*{instr <- `instr*`}, `%`_resulttype(t*{t <- `t*`}))
     -- Instrs_ok2: `%;%|-%:%`(s, C, instr*{instr <- `instr*`}, `%->_%%`_instrtype(`%`_resulttype([]), [], `%`_resulttype(t*{t <- `t*`})))
 }
 
-;; test.spectec:9148.1-9148.48
+;; test.spectec:9147.1-9147.48
 relation Taginst_ok: `%|-%:%`(store, taginst, tagtype)
-  ;; test.spectec:9160.1-9162.31
+  ;; test.spectec:9159.1-9161.31
   rule _{s : store, jt : tagtype}:
     `%|-%:%`(s, {TYPE jt}, jt)
     -- Tagtype_ok: `%|-%:OK`({TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [], RETURN ?(), REFS [], RECS []}, jt)
 
-;; test.spectec:9149.1-9149.57
+;; test.spectec:9148.1-9148.57
 relation Globalinst_ok: `%|-%:%`(store, globalinst, globaltype)
-  ;; test.spectec:9164.1-9167.26
+  ;; test.spectec:9163.1-9166.26
   rule _{s : store, `mut?` : mut?, t : valtype, val : val}:
     `%|-%:%`(s, {TYPE `%%`_globaltype(mut?{mut <- `mut?`}, t), VALUE val}, `%%`_globaltype(mut?{mut <- `mut?`}, t))
     -- Globaltype_ok: `%|-%:OK`({TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [], RETURN ?(), REFS [], RECS []}, `%%`_globaltype(mut?{mut <- `mut?`}, t))
     -- Val_ok: `%|-%:%`(s, val, t)
 
-;; test.spectec:9150.1-9150.48
+;; test.spectec:9149.1-9149.48
 relation Meminst_ok: `%|-%:%`(store, meminst, memtype)
-  ;; test.spectec:9169.1-9172.37
+  ;; test.spectec:9168.1-9171.37
   rule _{s : store, at : addrtype, n : n, `m?` : m?, `b*` : byte*}:
     `%|-%:%`(s, {TYPE `%%PAGE`_memtype(at, `[%..%]`_limits(`%`_u64(n), `%`_u64(m)?{m <- `m?`})), BYTES b*{b <- `b*`}}, `%%PAGE`_memtype(at, `[%..%]`_limits(`%`_u64(n), `%`_u64(m)?{m <- `m?`})))
     -- Memtype_ok: `%|-%:OK`({TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [], RETURN ?(), REFS [], RECS []}, `%%PAGE`_memtype(at, `[%..%]`_limits(`%`_u64(n), `%`_u64(m)?{m <- `m?`})))
     -- if (|b*{b <- `b*`}| = (n * (64 * $Ki)))
 
-;; test.spectec:9151.1-9151.54
+;; test.spectec:9150.1-9150.54
 relation Tableinst_ok: `%|-%:%`(store, tableinst, tabletype)
-  ;; test.spectec:9174.1-9178.30
+  ;; test.spectec:9173.1-9177.30
   rule _{s : store, at : addrtype, n : n, `m?` : m?, rt : reftype, `ref*` : ref*}:
     `%|-%:%`(s, {TYPE `%%%`_tabletype(at, `[%..%]`_limits(`%`_u64(n), `%`_u64(m)?{m <- `m?`}), rt), REFS ref*{ref <- `ref*`}}, `%%%`_tabletype(at, `[%..%]`_limits(`%`_u64(n), `%`_u64(m)?{m <- `m?`}), rt))
     -- Tabletype_ok: `%|-%:OK`({TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [], RETURN ?(), REFS [], RECS []}, `%%%`_tabletype(at, `[%..%]`_limits(`%`_u64(n), `%`_u64(m)?{m <- `m?`}), rt))
     -- if (|ref*{ref <- `ref*`}| = n)
     -- (Ref_ok: `%|-%:%`(s, ref, rt))*{ref <- `ref*`}
 
-;; test.spectec:9152.1-9152.50
+;; test.spectec:9151.1-9151.50
 relation Funcinst_ok: `%|-%:%`(store, funcinst, deftype)
-  ;; test.spectec:9180.1-9186.33
+  ;; test.spectec:9179.1-9185.33
   rule _{s : store, dt : deftype, moduleinst : moduleinst, func : func, C : context, dt' : deftype}:
     `%|-%:%`(s, {TYPE dt, MODULE moduleinst, CODE (func : func <: funccode)}, dt)
     -- Deftype_ok: `%|-%:OK`({TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [], RETURN ?(), REFS [], RECS []}, dt)
@@ -7841,81 +7840,81 @@ relation Funcinst_ok: `%|-%:%`(store, funcinst, deftype)
     -- Func_ok: `%|-%:%`(C, func, dt')
     -- Deftype_sub: `%|-%<:%`(C, dt', dt)
 
-;; test.spectec:9156.1-9156.49
+;; test.spectec:9155.1-9155.49
 relation Structinst_ok: `%|-%:OK`(store, structinst)
-  ;; test.spectec:9201.1-9204.34
+  ;; test.spectec:9200.1-9203.34
   rule _{s : store, dt : deftype, `fv*` : fieldval*, `mut?*` : mut?*, `zt*` : storagetype*}:
     `%|-%:OK`(s, {TYPE dt, FIELDS fv*{fv <- `fv*`}})
     -- Expand: `%~~%`(dt, STRUCT_comptype(`%`_list(`%%`_fieldtype(mut?{mut <- `mut?`}, zt)*{`mut?` <- `mut?*`, zt <- `zt*`})))
     -- (Fieldval_ok: `%|-%:%`(s, fv, zt))*{fv <- `fv*`, zt <- `zt*`}
 
-;; test.spectec:9157.1-9157.47
+;; test.spectec:9156.1-9156.47
 relation Arrayinst_ok: `%|-%:OK`(store, arrayinst)
-  ;; test.spectec:9206.1-9209.34
+  ;; test.spectec:9205.1-9208.34
   rule _{s : store, dt : deftype, `fv*` : fieldval*, `mut?` : mut?, zt : storagetype}:
     `%|-%:OK`(s, {TYPE dt, FIELDS fv*{fv <- `fv*`}})
     -- Expand: `%~~%`(dt, ARRAY_comptype(`%%`_fieldtype(mut?{mut <- `mut?`}, zt)))
     -- (Fieldval_ok: `%|-%:%`(s, fv, zt))*{fv <- `fv*`}
 
-;; test.spectec:9158.1-9158.43
+;; test.spectec:9157.1-9157.43
 relation Exninst_ok: `%|-%:OK`(store, exninst)
-  ;; test.spectec:9211.1-9215.29
+  ;; test.spectec:9210.1-9214.29
   rule _{s : store, ta : tagaddr, `val*` : val*, dt : deftype, `t*` : valtype*}:
     `%|-%:OK`(s, {TAG ta, FIELDS val*{val <- `val*`}})
     -- if ((dt : deftype <: typeuse) = s.TAGS_store[ta].TYPE_taginst)
     -- Expand: `%~~%`(dt, `FUNC%->%`_comptype(`%`_resulttype(t*{t <- `t*`}), `%`_resulttype([])))
     -- (Val_ok: `%|-%:%`(s, val, t))*{t <- `t*`, val <- `val*`}
 
-;; test.spectec:9289.1-9290.50
+;; test.spectec:9288.1-9289.50
 rec {
 
-;; test.spectec:9289.1-9290.50
+;; test.spectec:9288.1-9289.50
 relation ImmutReachable: `%>>_%%`(fieldval, store, fieldval)
-  ;; test.spectec:9303.1-9306.35
+  ;; test.spectec:9302.1-9305.35
   rule trans{fv_1 : fieldval, s : store, fv_2 : fieldval, fv' : fieldval}:
     `%>>_%%`(fv_1, s, fv_2)
     -- ImmutReachable: `%>>_%%`(fv_1, s, fv')
     -- ImmutReachable: `%>>_%%`(fv', s, fv_2)
 
-  ;; test.spectec:9308.1-9311.20
+  ;; test.spectec:9307.1-9310.20
   rule `ref.struct`{a : addr, s : store, i : nat, `ft*` : fieldtype*, zt : storagetype}:
     `%>>_%%`(`REF.STRUCT_ADDR`_fieldval(a), s, s.STRUCTS_store[a].FIELDS_structinst[i])
     -- Expand: `%~~%`(s.STRUCTS_store[a].TYPE_structinst, STRUCT_comptype(`%`_list(ft*{ft <- `ft*`})))
     -- if (ft*{ft <- `ft*`}[i] = `%%`_fieldtype(?(), zt))
 
-  ;; test.spectec:9313.1-9315.42
+  ;; test.spectec:9312.1-9314.42
   rule `ref.array`{a : addr, s : store, i : nat, zt : storagetype}:
     `%>>_%%`(`REF.ARRAY_ADDR`_fieldval(a), s, s.ARRAYS_store[a].FIELDS_arrayinst[i])
     -- Expand: `%~~%`(s.ARRAYS_store[a].TYPE_arrayinst, ARRAY_comptype(`%%`_fieldtype(?(), zt)))
 
-  ;; test.spectec:9317.1-9318.44
+  ;; test.spectec:9316.1-9317.44
   rule `ref.exn`{a : addr, s : store, i : nat}:
     `%>>_%%`(`REF.EXN_ADDR`_fieldval(a), s, (s.EXNS_store[a].FIELDS_exninst[i] : val <: fieldval))
 
-  ;; test.spectec:9320.1-9321.28
+  ;; test.spectec:9319.1-9320.28
   rule `ref.extern`{ref : ref, s : store}:
     `%>>_%%`(`REF.EXTERN`_fieldval(ref), s, (ref : ref <: fieldval))
 }
 
-;; test.spectec:9296.1-9296.57
+;; test.spectec:9295.1-9295.57
 def $NotImmutReachable(fieldval : fieldval, store : store, fieldval : fieldval) : bool
-  ;; test.spectec:9297.1-9297.80
+  ;; test.spectec:9296.1-9296.80
   def $NotImmutReachable{fv_1 : fieldval, s : store, fv_2 : fieldval}(fv_1, s, fv_2) = false
     -- ImmutReachable: `%>>_%%`(fv_1, s, fv_2)
-  ;; test.spectec:9298.1-9298.59
+  ;; test.spectec:9297.1-9297.59
   def $NotImmutReachable{fv_1 : fieldval, s : store, fv_2 : fieldval}(fv_1, s, fv_2) = true
     -- otherwise
 
-;; test.spectec:9291.1-9292.54
+;; test.spectec:9290.1-9291.54
 relation NotImmutReachable: `~%>>_%%`(fieldval, store, fieldval)
-  ;; test.spectec:9300.1-9300.82
+  ;; test.spectec:9299.1-9299.82
   rule _{fv_1 : fieldval, s : store, fv_2 : fieldval}:
     `~%>>_%%`(fv_1, s, fv_2)
     -- if $NotImmutReachable(fv_1, s, fv_2)
 
-;; test.spectec:9263.1-9263.33
+;; test.spectec:9262.1-9262.33
 relation Store_ok: `|-%:OK`(store)
-  ;; test.spectec:9265.1-9286.102
+  ;; test.spectec:9264.1-9285.102
   rule _{s : store, `taginst*` : taginst*, `tagtype*` : tagtype*, `globalinst*` : globalinst*, `globaltype*` : globaltype*, `meminst*` : meminst*, `memtype*` : memtype*, `tableinst*` : tableinst*, `tabletype*` : tabletype*, `deftype*` : deftype*, `funcinst*` : funcinst*, `datainst*` : datainst*, `datatype*` : datatype*, `eleminst*` : eleminst*, `elemtype*` : elemtype*, `structinst*` : structinst*, `arrayinst*` : arrayinst*, `exninst*` : exninst*}:
     `|-%:OK`(s)
     -- (Taginst_ok: `%|-%:%`(s, taginst, tagtype))*{taginst <- `taginst*`, tagtype <- `tagtype*`}
@@ -7933,80 +7932,80 @@ relation Store_ok: `|-%:OK`(store)
     -- (NotImmutReachable: `~%>>_%%`(`REF.EXN_ADDR`_fieldval(a), s, `REF.EXN_ADDR`_fieldval(a)))^(a<|exninst*{exninst <- `exninst*`}|){}
     -- if (s = {TAGS taginst*{taginst <- `taginst*`}, GLOBALS globalinst*{globalinst <- `globalinst*`}, MEMS meminst*{meminst <- `meminst*`}, TABLES tableinst*{tableinst <- `tableinst*`}, FUNCS funcinst*{funcinst <- `funcinst*`}, DATAS datainst*{datainst <- `datainst*`}, ELEMS eleminst*{eleminst <- `eleminst*`}, STRUCTS structinst*{structinst <- `structinst*`}, ARRAYS arrayinst*{arrayinst <- `arrayinst*`}, EXNS exninst*{exninst <- `exninst*`}})
 
-;; test.spectec:9326.1-9326.45
+;; test.spectec:9325.1-9325.45
 relation Extend_taginst: `%<=%`(taginst, taginst)
-  ;; test.spectec:9338.1-9339.26
+  ;; test.spectec:9337.1-9338.26
   rule _{jt : tagtype}:
     `%<=%`({TYPE jt}, {TYPE jt})
 
-;; test.spectec:9327.1-9327.54
+;; test.spectec:9326.1-9326.54
 relation Extend_globalinst: `%<=%`(globalinst, globalinst)
-  ;; test.spectec:9341.1-9343.33
+  ;; test.spectec:9340.1-9342.33
   rule _{`mut?` : mut?, t : valtype, val : val, val' : val}:
     `%<=%`({TYPE `%%`_globaltype(mut?{mut <- `mut?`}, t), VALUE val}, {TYPE `%%`_globaltype(mut?{mut <- `mut?`}, t), VALUE val'})
     -- if ((mut?{mut <- `mut?`} = ?(MUT_mut)) \/ (val = val'))
 
-;; test.spectec:9328.1-9328.45
+;; test.spectec:9327.1-9327.45
 relation Extend_meminst: `%<=%`(meminst, meminst)
-  ;; test.spectec:9345.1-9348.22
+  ;; test.spectec:9344.1-9347.22
   rule _{at : addrtype, n : n, `m?` : m?, `b*` : byte*, n' : n, `b'*` : byte*}:
     `%<=%`({TYPE `%%PAGE`_memtype(at, `[%..%]`_limits(`%`_u64(n), `%`_u64(m)?{m <- `m?`})), BYTES b*{b <- `b*`}}, {TYPE `%%PAGE`_memtype(at, `[%..%]`_limits(`%`_u64(n'), `%`_u64(m)?{m <- `m?`})), BYTES b'*{b' <- `b'*`}})
     -- if (n <= n')
     -- if (|b*{b <- `b*`}| <= |b'*{b' <- `b'*`}|)
 
-;; test.spectec:9329.1-9329.51
+;; test.spectec:9328.1-9328.51
 relation Extend_tableinst: `%<=%`(tableinst, tableinst)
-  ;; test.spectec:9350.1-9353.26
+  ;; test.spectec:9349.1-9352.26
   rule _{at : addrtype, n : n, `m?` : m?, rt : reftype, `ref*` : ref*, n' : n, `ref'*` : ref*}:
     `%<=%`({TYPE `%%%`_tabletype(at, `[%..%]`_limits(`%`_u64(n), `%`_u64(m)?{m <- `m?`}), rt), REFS ref*{ref <- `ref*`}}, {TYPE `%%%`_tabletype(at, `[%..%]`_limits(`%`_u64(n'), `%`_u64(m)?{m <- `m?`}), rt), REFS ref'*{ref' <- `ref'*`}})
     -- if (n <= n')
     -- if (|ref*{ref <- `ref*`}| <= |ref'*{ref' <- `ref'*`}|)
 
-;; test.spectec:9330.1-9330.48
+;; test.spectec:9329.1-9329.48
 relation Extend_funcinst: `%<=%`(funcinst, funcinst)
-  ;; test.spectec:9355.1-9356.66
+  ;; test.spectec:9354.1-9355.66
   rule _{dt : deftype, mm : moduleinst, fc : funccode}:
     `%<=%`({TYPE dt, MODULE mm, CODE fc}, {TYPE dt, MODULE mm, CODE fc})
 
-;; test.spectec:9331.1-9331.48
+;; test.spectec:9330.1-9330.48
 relation Extend_datainst: `%<=%`(datainst, datainst)
-  ;; test.spectec:9358.1-9360.30
+  ;; test.spectec:9357.1-9359.30
   rule _{`b*` : byte*, `b'*` : byte*}:
     `%<=%`({BYTES b*{b <- `b*`}}, {BYTES b'*{b' <- `b'*`}})
     -- if ((b*{b <- `b*`} = b'*{b' <- `b'*`}) \/ (b'*{b' <- `b'*`} = []))
 
-;; test.spectec:9332.1-9332.48
+;; test.spectec:9331.1-9331.48
 relation Extend_eleminst: `%<=%`(eleminst, eleminst)
-  ;; test.spectec:9362.1-9364.36
+  ;; test.spectec:9361.1-9363.36
   rule _{rt : reftype, `ref*` : ref*, `ref'*` : ref*}:
     `%<=%`({TYPE rt, REFS ref*{ref <- `ref*`}}, {TYPE rt, REFS ref'*{ref' <- `ref'*`}})
     -- if ((ref*{ref <- `ref*`} = ref'*{ref' <- `ref'*`}) \/ (ref'*{ref' <- `ref'*`} = []))
 
-;; test.spectec:9333.1-9333.54
+;; test.spectec:9332.1-9332.54
 relation Extend_structinst: `%<=%`(structinst, structinst)
-  ;; test.spectec:9366.1-9369.34
+  ;; test.spectec:9365.1-9368.34
   rule _{dt : deftype, `fv*` : fieldval*, `fv'*` : fieldval*, `mut?*` : mut?*, `zt*` : storagetype*}:
     `%<=%`({TYPE dt, FIELDS fv*{fv <- `fv*`}}, {TYPE dt, FIELDS fv'*{fv' <- `fv'*`}})
     -- Expand: `%~~%`(dt, STRUCT_comptype(`%`_list(`%%`_fieldtype(mut?{mut <- `mut?`}, zt)*{`mut?` <- `mut?*`, zt <- `zt*`})))
     -- (if ((mut?{mut <- `mut?`} = ?(MUT_mut)) \/ (fv = fv')))*{fv <- `fv*`, fv' <- `fv'*`, `mut?` <- `mut?*`}
 
-;; test.spectec:9334.1-9334.51
+;; test.spectec:9333.1-9333.51
 relation Extend_arrayinst: `%<=%`(arrayinst, arrayinst)
-  ;; test.spectec:9371.1-9374.34
+  ;; test.spectec:9370.1-9373.34
   rule _{dt : deftype, `fv*` : fieldval*, `fv'*` : fieldval*, `mut?` : mut?, zt : storagetype}:
     `%<=%`({TYPE dt, FIELDS fv*{fv <- `fv*`}}, {TYPE dt, FIELDS fv'*{fv' <- `fv'*`}})
     -- Expand: `%~~%`(dt, ARRAY_comptype(`%%`_fieldtype(mut?{mut <- `mut?`}, zt)))
     -- (if ((mut?{mut <- `mut?`} = ?(MUT_mut)) \/ (fv = fv')))*{fv <- `fv*`, fv' <- `fv'*`}
 
-;; test.spectec:9335.1-9335.45
+;; test.spectec:9334.1-9334.45
 relation Extend_exninst: `%<=%`(exninst, exninst)
-  ;; test.spectec:9376.1-9377.50
+  ;; test.spectec:9375.1-9376.50
   rule _{ta : tagaddr, `val*` : val*}:
     `%<=%`({TAG ta, FIELDS val*{val <- `val*`}}, {TAG ta, FIELDS val*{val <- `val*`}})
 
-;; test.spectec:9336.1-9336.39
+;; test.spectec:9335.1-9335.39
 relation Extend_store: `%<=%`(store, store)
-  ;; test.spectec:9380.1-9395.62
+  ;; test.spectec:9379.1-9394.62
   rule _{s : store, s' : store}:
     `%<=%`(s, s')
     -- (Extend_taginst: `%<=%`(s.TAGS_store[a], s'.TAGS_store[a]))^(a<|s.TAGS_store|){}
@@ -8020,43 +8019,43 @@ relation Extend_store: `%<=%`(store, store)
     -- (Extend_arrayinst: `%<=%`(s.ARRAYS_store[a], s'.ARRAYS_store[a]))^(a<|s.ARRAYS_store|){}
     -- (Extend_exninst: `%<=%`(s.EXNS_store[a], s'.EXNS_store[a]))^(a<|s.EXNS_store|){}
 
-;; test.spectec:9402.1-9402.38
+;; test.spectec:9401.1-9401.38
 relation State_ok: `|-%:%`(state, context)
-  ;; test.spectec:9417.1-9420.26
+  ;; test.spectec:9416.1-9419.26
   rule _{s : store, f : frame, C : context}:
     `|-%:%`(`%;%`_state(s, f), C)
     -- Store_ok: `|-%:OK`(s)
     -- Frame_ok: `%|-%:%`(s, f, C)
 
-;; test.spectec:9403.1-9403.43
+;; test.spectec:9402.1-9402.43
 relation Config_ok: `|-%:%`(config, resulttype)
-  ;; test.spectec:9422.1-9425.35
+  ;; test.spectec:9421.1-9424.35
   rule _{s : store, f : frame, `instr*` : instr*, `t*` : valtype*, C : context}:
     `|-%:%`(`%;%`_config(`%;%`_state(s, f), instr*{instr <- `instr*`}), `%`_resulttype(t*{t <- `t*`}))
     -- State_ok: `|-%:%`(`%;%`_state(s, f), C)
     -- Expr_ok2: `%;%|-%:%`(s, C, instr*{instr <- `instr*`}, `%`_resulttype(t*{t <- `t*`}))
 
-;; test.spectec:9440.1-9440.32
+;; test.spectec:9439.1-9439.32
 syntax A = nat
 
-;; test.spectec:9441.1-9441.32
+;; test.spectec:9440.1-9440.32
 syntax B = nat
 
-;; test.spectec:9443.1-9443.77
+;; test.spectec:9442.1-9442.77
 syntax sym = 
   | _FIRST(A_1 : A)
   | _DOTS
   | _LAST(A_n : A)
 
-;; test.spectec:9445.1-9445.68
+;; test.spectec:9444.1-9444.68
 syntax symsplit = 
   | _FIRST(A_1 : A)
   | _LAST(A_2 : A)
 
-;; test.spectec:9447.1-9447.37
+;; test.spectec:9446.1-9446.37
 syntax recorddots = ()
 
-;; test.spectec:9448.1-9451.22
+;; test.spectec:9447.1-9450.22
 syntax record = 
 {
   FIELD_1 A,
@@ -8064,22 +8063,22 @@ syntax record =
   `...` recorddots
 }
 
-;; test.spectec:9453.1-9453.71
+;; test.spectec:9452.1-9452.71
 syntax pth = 
   | PTHSYNTAX
 
-;; test.spectec:9468.1-9468.32
+;; test.spectec:9467.1-9467.32
 syntax T = nat
 
-;; test.spectec:9470.1-9470.36
+;; test.spectec:9469.1-9469.36
 relation NotationTypingPremise: `%`(nat)
 
-;; test.spectec:9471.1-9471.58
+;; test.spectec:9470.1-9470.58
 relation NotationTypingPremisedots: `...`
 
-;; test.spectec:9472.1-9472.35
+;; test.spectec:9471.1-9471.35
 relation NotationTypingScheme: `%`(nat)
-  ;; test.spectec:9474.1-9479.38
+  ;; test.spectec:9473.1-9478.38
   rule _{conclusion : nat, premise_1 : nat, premise_2 : nat, premise_n : nat}:
     `%`(conclusion)
     -- NotationTypingPremise: `%`(premise_1)
@@ -8087,67 +8086,86 @@ relation NotationTypingScheme: `%`(nat)
     -- NotationTypingPremisedots: `...`
     -- NotationTypingPremise: `%`(premise_n)
 
-;; test.spectec:9481.1-9481.83
+;; test.spectec:9480.1-9480.83
 rec {
 
-;; test.spectec:9481.1-9481.83
+;; test.spectec:9480.1-9480.83
 relation NotationTypingInstrScheme: `%|-%:%`(context, instr*, instrtype)
-  ;; test.spectec:9483.1-9484.38
+  ;; test.spectec:9482.1-9483.38
   rule `i32.add`{C : context}:
     `%|-%:%`(C, [BINOP_instr(I32_numtype, ADD_binop_)], `%->_%%`_instrtype(`%`_resulttype([I32_valtype I32_valtype]), [], `%`_resulttype([I32_valtype])))
 
-  ;; test.spectec:9486.1-9488.29
+  ;; test.spectec:9485.1-9487.29
   rule `global.get`{C : context, x : idx, t : valtype, mut : mut}:
     `%|-%:%`(C, [`GLOBAL.GET`_instr(x)], `%->_%%`_instrtype(`%`_resulttype([]), [], `%`_resulttype([t])))
     -- if (C.GLOBALS_context[x!`%`_idx.0] = `%%`_globaltype(?(mut), t))
 
-  ;; test.spectec:9490.1-9493.78
+  ;; test.spectec:9489.1-9492.78
   rule block{C : context, blocktype : blocktype, `instr*` : instr*, `t_1*` : valtype*, `t_2*` : valtype*}:
     `%|-%:%`(C, [BLOCK_instr(blocktype, instr*{instr <- `instr*`})], `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), [], `%`_resulttype(t_2*{t_2 <- `t_2*`})))
     -- Blocktype_ok: `%|-%:%`(C, blocktype, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), [], `%`_resulttype(t_2*{t_2 <- `t_2*`})))
     -- NotationTypingInstrScheme: `%|-%:%`({TYPES [], TAGS [], GLOBALS [], MEMS [], TABLES [], FUNCS [], DATAS [], ELEMS [], LOCALS [], LABELS [`%`_resulttype(t_2*{t_2 <- `t_2*`})], RETURN ?(), REFS [], RECS []} +++ C, instr*{instr <- `instr*`}, `%->_%%`_instrtype(`%`_resulttype(t_1*{t_1 <- `t_1*`}), [], `%`_resulttype(t_2*{t_2 <- `t_2*`})))
 }
 
-;; test.spectec:9508.1-9508.49
+;; test.spectec:9507.1-9507.49
 relation NotationReduct: `~>%`(instr*)
-  ;; test.spectec:9510.1-9511.85
+  ;; test.spectec:9509.1-9510.85
   rule 2{q_1 : num_(F64_numtype), q_4 : num_(F64_numtype), q_3 : num_(F64_numtype)}:
     `~>%`([CONST_instr(F64_numtype, q_1) CONST_instr(F64_numtype, q_4) CONST_instr(F64_numtype, q_3) BINOP_instr(F64_numtype, ADD_binop_) BINOP_instr(F64_numtype, MUL_binop_)])
 
-  ;; test.spectec:9513.1-9514.53
+  ;; test.spectec:9512.1-9513.53
   rule 3{q_1 : num_(F64_numtype), q_5 : num_(F64_numtype)}:
     `~>%`([CONST_instr(F64_numtype, q_1) CONST_instr(F64_numtype, q_5) BINOP_instr(F64_numtype, MUL_binop_)])
 
-  ;; test.spectec:9516.1-9517.21
+  ;; test.spectec:9515.1-9516.21
   rule 4{q_6 : num_(F64_numtype)}:
     `~>%`([CONST_instr(F64_numtype, q_6)])
 
-;; test.spectec:9522.1-9522.40
+;; test.spectec:9521.1-9521.40
 def $instrdots : instr*
 
-;; test.spectec:9524.1-9524.75
+;; test.spectec:9523.1-9523.75
 syntax label = 
   | `LABEL_%{%}`(n : n, `instr*` : instr*)
 
-;; test.spectec:9525.1-9525.84
+;; test.spectec:9524.1-9524.84
 syntax callframe = 
   | `FRAME_%{%}`(n : n, frame : frame)
 
-;; test.spectec:9532.1-9532.78
+;; test.spectec:9531.1-9531.78
 def $allocX(syntax X, syntax Y, store : store, X : X, Y : Y) : (store, addr)
 
-;; test.spectec:9533.1-9533.117
+;; test.spectec:9532.1-9532.117
 rec {
 
-;; test.spectec:9533.1-9533.117
+;; test.spectec:9532.1-9532.117
 def $allocXs(syntax X, syntax Y, store : store, X*, Y*) : (store, addr*)
-  ;; test.spectec:9534.1-9534.57
+  ;; test.spectec:9533.1-9533.57
   def $allocXs{syntax X, syntax Y, s : store}(syntax X, syntax Y, s, [], []) = (s, [])
-  ;; test.spectec:9535.1-9537.65
+  ;; test.spectec:9534.1-9536.65
   def $allocXs{syntax X, syntax Y, s : store, X : X, `X'*` : X*, Y : Y, `Y'*` : Y*, s_2 : store, a : addr, `a'*` : addr*, s_1 : store}(syntax X, syntax Y, s, [X] ++ X'*{X' <- `X'*`}, [Y] ++ Y'*{Y' <- `Y'*`}) = (s_2, [a] ++ a'*{a' <- `a'*`})
     -- if ((s_1, a) = $allocX(syntax X, syntax Y, s, X, Y))
     -- if ((s_2, a'*{a' <- `a'*`}) = $allocXs(syntax X, syntax Y, s_1, X'*{X' <- `X'*`}, Y'*{Y' <- `Y'*`}))
 }
+
+;; test.spectec:9551.1-9551.52
+syntax symdots = 
+  | `%`(i : nat)
+    -- if (i = 0)
+
+;; test.spectec:9553.1-9553.55
+def $var(syntax X) : nat
+  ;; test.spectec:9554.1-9554.26
+  def $var{syntax X}(syntax X) = 0
+
+;; test.spectec:9587.1-9587.41
+syntax abbreviated = ()
+
+;; test.spectec:9588.1-9588.38
+syntax expanded = ()
+
+;; test.spectec:9589.1-9589.37
+syntax syntax = ()
 
 ;; test.spectec:5949.1-5949.41
 grammar Bbyte : byte
@@ -11780,4 +11798,45 @@ grammar Tmodule : module
 grammar Tdecldots_(I : I) : (decl, idctxt)*
   ;; test.spectec:9025.60-9025.70
   prod{`<implicit-prod-result>` : (decl, idctxt)} [`<implicit-prod-result>`]:Tdecl_(I)*{} => [`<implicit-prod-result>`]
+
+;; test.spectec:9556.1-9556.71
+grammar Bvar(syntax X) : ()
+  ;; test.spectec:9556.61-9556.71
+  prod 0x00 => ((), ()).1
+
+;; test.spectec:9557.1-9557.100
+grammar Bsym : A
+  ;; test.spectec:9557.37-9557.59
+  prod Bvar(syntax B) => $var(syntax A)
+  ;; test.spectec:9557.62-9557.100
+  prod (Bvar(syntax symdots) | Bvar(syntax B)) => $var(syntax A)
+
+;; test.spectec:9560.1-9560.76
+grammar Bsymsplit : ()
+  ;; test.spectec:9559.61-9559.70
+  prod{`<implicit-prod-result>` : ()} `<implicit-prod-result>`:Bvar(syntax B) => (`<implicit-prod-result>`, ()).1
+  ;; test.spectec:9560.67-9560.76
+  prod{`<implicit-prod-result>` : ()} `<implicit-prod-result>`:Bvar(syntax B) => (`<implicit-prod-result>`, ()).1
+
+;; test.spectec:9581.1-9581.71
+grammar Tvar(syntax X) : ()
+  ;; test.spectec:9581.61-9581.71
+  prod 0x00 => ((), ()).1
+
+;; test.spectec:9582.1-9582.100
+grammar Tsym : A
+  ;; test.spectec:9582.37-9582.59
+  prod Tvar(syntax T) => $var(syntax A)
+  ;; test.spectec:9582.62-9582.100
+  prod (Tvar(syntax symdots) | Tvar(syntax T)) => $var(syntax A)
+
+;; test.spectec:9585.1-9585.76
+grammar Tsymsplit : ()
+  ;; test.spectec:9584.61-9584.70
+  prod{`<implicit-prod-result>` : ()} `<implicit-prod-result>`:Tvar(syntax B) => (`<implicit-prod-result>`, ()).1
+  ;; test.spectec:9585.67-9585.76
+  prod{`<implicit-prod-result>` : ()} `<implicit-prod-result>`:Tvar(syntax B) => (`<implicit-prod-result>`, ()).1
+
+;; test.spectec:9591.1-9592.80
+grammar Tabbrev : ()
 
