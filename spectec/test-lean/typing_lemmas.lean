@@ -1143,7 +1143,7 @@ theorem ai_typing_inversion
       exact instrtype_sub_refl _
 
   case Instr_ok2_frame
-    return_length f ais ts c' frame_ok expr_ok2 wf_s wf_c' wf_ai length wf_c
+    return_length f ais ts c' frame_ok expr_ok2 wf_s wf_c' wf_ai wf_c'' length wf_c
     =>
     refine ⟨t1s, t2s, ?_, ?_⟩
     case refine_1 =>
@@ -2040,7 +2040,7 @@ theorem instrs_seq_typing_inversion
 
       sorry
     case cons hd tl =>
-    
+
       sorry
     -- exists ts2_orig
     -- refine ⟨?_, ?_⟩
