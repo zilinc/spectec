@@ -19,6 +19,9 @@ def $runnextinstr(instr, val*) = val* instr
 def $updatez(state, def $updater(state) : state) : state
 def $updatez(z, $f) = $f(z)
 
+def $rhs(syntax X, X) : X
+def $rhs(syntax X, X) = X
+
 
 rule Step/pure  hint(no_prose)
 rule Step/read  hint(no_prose)

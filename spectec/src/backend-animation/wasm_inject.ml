@@ -1,10 +1,12 @@
 open Il.Ast
+open Il.Free
 open Il.Print
 open Il.Valid
 open Il.Eval
 open Il_util
 open Def
 open Util
+open Lib.Fun
 open Source
 open Xl.Mixop
 open Xl.Atom
@@ -46,7 +48,8 @@ module Map = Map.Make(String)
 
 type primitives = { pop : string; push : string
                   ; pops : string; pushes : string
-                  ; run_instr : string; run_next_instr : string; update_state : string }
+                  ; run_instr : string; run_next_instr : string; update_state : string
+                  ; rhs : string }
 
 let primitives : primitives = { pop            = "popvalue"
                               ; push           = "pushvalue"
@@ -55,6 +58,7 @@ let primitives : primitives = { pop            = "popvalue"
                               ; run_instr      = "runinstr"
                               ; run_next_instr = "runnextinstr"
                               ; update_state   = "updatez"
+                              ; rhs            = "rhs"
                               }
 
 
@@ -83,11 +87,23 @@ let fresh_var () : string =
   let n = get_fresh () in
   "__v" ^ string_of_int n
 
+let fresh_fun oname : string =
+  let n = get_fresh () in
+  match oname with
+  | None -> "__f" ^ string_of_int n
+  | Some s -> "__" ^ s ^ string_of_int n
+
 let fresh_stack ?(at = no) () : id * exp =
   let n = get_fresh () in
   let v = "__stack" ^ string_of_int n in
   let id = v $ at in
   id, mk_expr at (t_instrs ()) (VarE id)
+
+
+
+(* ************************************************************************** *)
+(*                           Explicate Stack                                  *)
+(* ************************************************************************** *)
 
 let chk_instr env exp : exp M.m =
   info ~cat:"debug" (lazy ("chk_instr: " ^ string_of_exp exp));
@@ -95,7 +111,6 @@ let chk_instr env exp : exp M.m =
   (* | exception e -> throw ("Failed to check for type equivalence (instr): " ^ Printexc.to_string e) *)
   | false -> throw ("Unexpected type: " ^ string_of_typ exp.note ^ "; expected instr")
   | true -> return exp
-
 
 let chk_val_instr env exp : exp M.m =
   info ~cat:"debug" (lazy ("chk_val_instr: " ^ string_of_exp exp));
@@ -198,9 +213,10 @@ let split_stack_rhs env rhs : instr list M.m =
   let* () = drop () in
   return instrs
 
+
 type step_rule = Step | Step_read | Step_pure
 
-let inject_step_clause ~rule:step_rule env fid osubid cl nth =
+let explicate_step_clause ~rule:step_rule env fid osubid cl nth =
   reset_oracle ();
   let DefD (qs, args, exp, prems) = cl.it in
   let env = valid_quants env qs in
@@ -232,7 +248,7 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
     if step_rule = Step then
       (match exp.it with
       | CaseE (mixop, { it = TupE [s; e]; _ }) when Value.vl_of_mixop mixop = [[];[";"];[]] -> return (s, e)
-      | _ -> throw ("Unexpected function body " ^ string_of_exp exp)
+      | _ -> throw ("Unexpected function body: " ^ string_of_exp exp)
       )
     else
       return (Obj.magic "Step_read or Step_pure has no output state", exp)
@@ -314,7 +330,7 @@ let inject_step_clause ~rule:step_rule env fid osubid cl nth =
   in
   return (DefD (qs', args', exp', prems1 @ [pr_stack1] @ prems @ prems2 @ [pr_stack2]) $> cl)
 
-let inject_clause env id osubid nth (func_clause: func_clause) : func_clause M.m =
+let explicate_clause env id osubid nth (func_clause: func_clause) : func_clause M.m =
   let (orule_id, cl) = func_clause in
   let fid = string_of_funcname id osubid in
   let* () = push (cl.at, "in clause " ^ string_of_int (nth + 1)) in
@@ -326,11 +342,11 @@ let inject_clause env id osubid nth (func_clause: func_clause) : func_clause M.m
       return cl
     )
     else if id.it = "Step_pure" then
-      inject_step_clause ~rule:Step_pure env fid osubid cl nth
+      explicate_step_clause ~rule:Step_pure env fid osubid cl nth
     else if id.it = "Step_read" then
-      inject_step_clause ~rule:Step_read env fid osubid cl nth
+      explicate_step_clause ~rule:Step_read env fid osubid cl nth
     else if id.it = "Step" then
-      inject_step_clause ~rule:Step env fid osubid cl nth
+      explicate_step_clause ~rule:Step env fid osubid cl nth
     else (
       info ~cat:"not_step" (lazy ("Not a step rule: " ^ id.it));
       return cl
@@ -339,22 +355,136 @@ let inject_clause env id osubid nth (func_clause: func_clause) : func_clause M.m
   let* () = drop () in
   return (orule_id, cl')
 
-let inject_fdef (fdef: func_def) : func_def M.m = match fdef.it with
-  | (id, osubid, ps, t, clauses, opartial) ->
-    let fid = string_of_funcname id osubid in
-    let* () = new_with (fdef.at, "in definition " ^ fid) in
-    let* clauses' = mapiM (inject_clause !il_env id osubid) clauses in
-    return ((id, osubid, ps, t, clauses', opartial) $ fdef.at)
 
-let rec inject_def def : dl_def M.m = match def with
-  | TypeDef _ -> return def
-  | FuncDef fdef -> let* fdef' = inject_fdef fdef in return (FuncDef fdef')
-  | RecDef defs -> let* defs' = mapM inject_def defs in return (RecDef defs')
 
-let inject_dl dl (env: Il.Env.t) hints =
+(* ************************************************************************** *)
+(*                              Merge Clauses                                 *)
+(* ************************************************************************** *)
+
+
+(* ASSUMES: [e1] and [e2] has equivalent types. *)
+let gen_if_function env fid at qs cond (ths, e1) (els, e2) : (dl_def * exp) M.m =
+  let* () = push (at, "when generating if-function") in
+  let fname = fresh_fun (Some fid) in
+  let* cond_exp = match cond.it with
+  | IfPr e -> return e
+  | _ -> throw ("Unsupported type of premise as an if-condition: " ^ string_of_prem cond)
+  in
+  let fvs = Xl.Gen_free.(free_prem cond ++ free_exp e1 ++ free_exp e2 ++ free_prems ths ++ free_prems els).varid in
+  let qs', args' = List.filter_map (fun q -> match q.it with
+  | ExpP (x, t) -> if Set.mem x.it fvs then Some (q, varE ~at:x.at ~note:t x.it |> expA ~at:x.at) else None
+  | _ -> None
+  ) qs |> List.split in
+  let tru_cl = None, DefD (qs', args' @ [expA ~at (boolE ~at true )], e1, ths) $ at in
+  let fls_cl = None, DefD (qs', args' @ [expA ~at (boolE ~at false)], e2, els) $ at in
+  let cls = [tru_cl; fls_cl] in
+  let fndef = FuncDef (("if" $ at, Some (fname $ at), qs', e1.note, cls, None) $ at) in
+  let fncall = CallE ("if/" ^ fname $ at, args' @ [expA ~at cond_exp]) $$ at % e1.note in
+  let* () = drop () in
+  return (fndef, fncall)
+
+let dual_ops op1 op2 : bool =
+  match op1, op2 with
+  | `EqOp, `NeOp
+  | `NeOp, `EqOp
+  | `GtOp, `LeOp
+  | `GeOp, `LtOp
+  | `LtOp, `GeOp
+  | `LeOp, `GtOp -> true
+  | _, _ -> false
+
+(* A set of rules that two premises are considered to be complementary. *)
+let dual_prems p1 p2 : bool =
+  match p1.it, p2.it with
+  | _, ElsePr -> true
+  | IfPr e1, IfPr e2 ->
+    (match e1.it, e2.it with
+    | CmpE (op1, _ot1, e11, e12) , CmpE (op2, _ot2, e21, e22) 
+      when dual_ops op1 op2 && Il.Eq.eq_exp e11 e21 && Il.Eq.eq_exp e12 e22 -> true
+    | _, _ -> false
+    )
+  | _, _ -> false
+
+(* RETURNS: a continuation from the RHS id to a list of premises, where the final return is bound to the RHS id. *)
+let rec naive_merge env fid qs (prems1, e1) (prems2, e2) : ((id -> prem list) * dl_def list) M.m =
+  let at = over_region [over_region (prems1 @ prems2 |> List.map at); e1.at; e2.at] in
+  let* () = push (at, "when naïvely merging two clauses") in
+  let* () = if Il.Eval.equiv_typ env e1.note e2.note |> not then
+      throw ("The return types of two clauses do not match:\n" ^
+             "  ▹ e1 = " ^ string_of_exp e1 ^ "; t1 = " ^ string_of_typ e1.note ^ "\n" ^
+             "  ▹ e2 = " ^ string_of_exp e2 ^ "; t2 = " ^ string_of_typ e2.note)
+    else return ()
+  in
+  match prems1, prems2 with
+  | [], [] -> return ((fun _ -> []), [])
+  | p11::ps1, p21::ps2 when Il.Eq.eq_prem p11 p21 ->
+      let* k_ps', defs = naive_merge env fid qs (ps1, e1) (ps2, e2) in
+      return ((fun rhs -> p11 :: k_ps' rhs), defs)
+  | p11::ps1, p21::ps2 when dual_prems p11 p21 ->
+    let* (if_def, if_call) = gen_if_function env fid at qs p11 (ps1, e1) (ps2, e2) in
+    return ((fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), [if_def])
+  | p11::ps1, p21::ps2 ->
+    let* (if_def, if_call) = gen_if_function env fid at qs p11 (ps1, e1) (p21 :: ps2, e2) in
+    return ((fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), [if_def])
+
+let merge_quants qs1 qs2 : quant list M.m =
+  return (qs1 @ qs2)  (* TODO *)
+
+let rhs_func at t : id -> exp = function id ->
+  (* let tX = VarT ("X" $ no, []) $ no in *)
+  let ve = VarE id $$ at % t in
+  CallE (primitives.rhs $ at, [typA ~at t; expA ~at ve]) $$ at % t
+
+let merge_func_clauses env id fid (clauses: func_clause list) : (func_clause list * dl_def list) M.m =
+  if List.mem id.it Common.step_relids |> not then return (clauses, []) else
+  let* clause', if_defs =
+    (match clauses with
+    | [] -> throw ("Function definition `" ^ fid ^ "` has no clauses")
+    | [cl] -> return (cl, [])
+    | cl1::cl2::cls ->
+      let _, { it = DefD (qs1, args1, exp1, prems1); _ } = cl1 in
+      let _, { it = DefD (qs2, args2, exp2, prems2); _ } = cl2 in
+      let* () = if Il.Eq.eq_list Il.Eq.eq_arg args1 args2 |> not then
+          throw ("Arguments do not match:\n" ^
+                 "  ▹ args1: " ^ string_of_args args1 ^ "\n" ^
+                 "  ▹ args2: " ^ string_of_args args2)
+        else return ()
+      in
+      let* qs = merge_quants qs1 qs2 in
+      let* (k_prems, if_defs) = naive_merge env fid qs (prems1, exp1) (prems2, exp2) in
+      let v_rhs = fresh_var () $ no in
+      let q_rhs = ExpP (v_rhs, exp1.note) $ no in
+      let e_rhs = rhs_func (over_region [exp1.at; exp2.at]) exp1.note v_rhs in
+      let cl = None, (DefD (q_rhs::qs, args1, e_rhs, k_prems v_rhs)) $ (over_region (List.map (snd >.> at) clauses)) in
+      return (cl, if_defs)
+    )
+  in
+  return ([clause'], if_defs)
+
+
+
+(* ************************************************************************** *)
+(*                        Inject Wasm-Specific Info                           *)
+(* ************************************************************************** *)
+
+
+let inject_fdef fdef : (func_def * dl_def list) M.m =
+  let (id, osubid, ps, t, clauses, opartial) = fdef.it in
+  let fid = string_of_funcname id osubid in
+  let* () = new_with (fdef.at, "in definition `" ^ fid ^ "`") in
+  let* clauses' = mapiM (explicate_clause !il_env id osubid) clauses in
+  let* clauses'', if_defs = merge_func_clauses !il_env id fid clauses' in
+  return ((id, osubid, ps, t, clauses'', opartial) $ fdef.at, if_defs)
+
+let rec inject_def def : dl_def list M.m = match def with
+  | TypeDef _ -> return [def]
+  | FuncDef fdef -> let* fdef', if_defs = inject_fdef fdef in return (if_defs @ [FuncDef fdef'])
+  | RecDef defs -> let* defs' = List.concat <$> mapM inject_def defs in return [RecDef defs']
+
+let inject_dl dl (env: Il.Env.t) hints : dl_def list =
   il_env := env;
   no_prose := hints;
-  let (r, ctx) = mapM inject_def dl |> run_logger in
+  let (r, ctx) = List.concat <$> mapM inject_def dl |> run_logger in
   match r with
   | Ok dl'  -> dl'
   | Error e ->

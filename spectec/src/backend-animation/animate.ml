@@ -1422,15 +1422,15 @@ and animate_prems' envr at : prem list E.m =
                   String.concat "\n▸ " err))
     (* failed to make progress, but we can try allowing inverses *)
     | false, false, false ->
-      let* () = update (allow_inverse >>> clr_progress >>> mv_to_prems) in
+      let* () = update (allow_inverse >.> clr_progress >.> mv_to_prems) in
       animate_prems' envr at
     (* failed to make progress even inversion is allowed, we can still try allowing guess *)
     | false, true, false ->
-      let* () = update (allow_nondet >>> clr_progress >>> mv_to_prems) in
+      let* () = update (allow_nondet >.> clr_progress >.> mv_to_prems) in
       animate_prems' envr at
     (* has made some progress, enter next iteration *)
     | true, _, _ ->
-      let* () = update (clr_progress >>> mv_to_prems) in
+      let* () = update (clr_progress >.> mv_to_prems) in
       animate_prems' envr at
     end
   (* continue with the current iteration *)
@@ -1443,7 +1443,7 @@ and animate_prems' envr at : prem list E.m =
            match r with
            | Error e ->
              (* Recover from failure. NOTE: Need to also restore old known set. *)
-             let* () = S.update (push_prem' prem >>> add_failure e >>> put_knowns (get_knowns s')) in
+             let* () = S.update (push_prem' prem >.> add_failure e >.> put_knowns (get_knowns s')) in
              animate_prems' envr at |> E.run_exceptT
            | Ok prems -> E.run_exceptT (
                let ( let* ) = E.( >>= ) in
