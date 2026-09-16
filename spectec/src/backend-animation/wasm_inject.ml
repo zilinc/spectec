@@ -429,7 +429,37 @@ let rec naive_merge env fid qs (prems1, e1) (prems2, e2) : ((id -> prem list) * 
     return ((fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), [if_def])
 
 let merge_quants qs1 qs2 : quant list M.m =
-  return (qs1 @ qs2)  (* TODO *)
+  (* A very naïve merging strategy. FIXME: If it correct if a common variable is
+     depended by types?
+  *)
+  let open Il.Eq in
+  let* qs2' = foldlM (fun acc q2 ->
+    match q2.it with
+    | ExpP (x, t) ->
+      foldlM (fun ex q1 ->
+        match q1.it with
+        | ExpP (x', t') when eq_id x x' && not (eq_typ t t')
+        -> throw ("Binding conflict: variable `" ^ x'.it ^ "` has different types in two branches:\n" ^
+                  "  ▹ t1 = " ^ string_of_typ t ^ "\n" ^
+                  "  ▹ t2 = " ^ string_of_typ t')
+        | _ when eq_param q1 q2 -> return true
+        | _ -> return false
+      ) false qs1 >>= fun ex -> return (if ex then acc else acc @ [q2])
+    | DefP (f, ps, t) ->
+      foldlM (fun ex q1 ->
+        match q1.it with
+        | DefP (f', ps', t') when eq_id f f' && not (eq_list eq_param ps ps' && eq_typ t t')
+        -> throw ("Binding conflict: definition `" ^ f'.it ^ "` has different types in two branches:\n" ^
+                  "  ▹ t1 = " ^ string_of_params ps ^ " -> " ^ string_of_typ t ^ "\n" ^
+                  "  ▹ t2 = " ^ string_of_params ps' ^ " -> " ^ string_of_typ t')
+        | _ when eq_param q1 q2 -> return true
+        | _ -> return false
+      ) false qs1 >>= fun ex -> return (if ex then acc else acc @ [q2])
+    | TypP  _ | GramP _
+    -> return (if List.exists (fun q1 -> eq_param q1 q2) qs1 then acc else (acc @ [q2]))
+  ) [] qs2
+  in
+  return (qs1 @ qs2')
 
 let rhs_func at t : id -> exp = function id ->
   let ve = VarE id $$ at % t in
