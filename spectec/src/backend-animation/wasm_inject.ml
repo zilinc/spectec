@@ -13,10 +13,12 @@ open Xl.Atom
 open Lazy
 
 
-let verbose : string list = ["no_prose"] (* @ ["debug"] *)
+let verbose : string list = ["no_prose"] (* @ ["debug"; "draft_prose"] *)
 
 let info ?(cat = "default") (lz_msg: string lazy_t) =
   if List.mem cat verbose then print_endline ("[I] " ^ force lz_msg) else ()
+
+let draft_prose = info ~cat:"draft_prose"
 
 module ErrorContext : Lib.LogEntry with type t = region * string = struct
   type t = region * string
@@ -256,13 +258,13 @@ let explicate_step_clause ~rule:step_rule env fid osubid cl nth =
   (* We symbolically execute the split_stack function at the meta-level. *)
   let* vals, instr = split_stack_lhs env stack_instr in
   let* instrs' = split_stack_rhs env stack_instr' in
-  print_endline ("[I] Function `" ^ fid ^ "` clause " ^ string_of_int (nth+1) ^ ":");
+  draft_prose (lazy ("[I] Function `" ^ fid ^ "` clause " ^ string_of_int (nth+1) ^ ":"));
   if List.mem step_rule [Step; Step_read] then
-    print_endline ("  > Initial state: " ^ string_of_exp state);
-  print_endline ("  > To run instruction: " ^ string_of_exp instr);
+    draft_prose (lazy ("  > Initial state: " ^ string_of_exp state));
+  draft_prose (lazy ("  > To run instruction: " ^ string_of_exp instr));
   let* () = iterM (function
-  | Val   e -> print_endline ("  > Pop value " ^ string_of_exp e ^ " from the stack"); return ()
-  | Vals  e -> print_endline ("  > Pop values " ^ string_of_exp e ^ " from the stack"); return ()
+  | Val   e -> draft_prose (lazy ("  > Pop value " ^ string_of_exp e ^ " from the stack")); return ()
+  | Vals  e -> draft_prose (lazy ("  > Pop values " ^ string_of_exp e ^ " from the stack")); return ()
   | Instr e -> throw ("Unexpected instr on the value stack: " ^ string_of_exp e)
   | Nothing -> return ()
   ) vals in
@@ -286,13 +288,13 @@ let explicate_step_clause ~rule:step_rule env fid osubid cl nth =
   ) ([], estack0, []) (Instr instr :: vals) in
   (* Finally, the input stack has been fully popped. *)
   let pr_stack1 = eqPr estack1 (listE (t_instrs ()) []) in
-  print_endline ("  > ----------");
+  draft_prose (lazy ("  > ----------"));
   if step_rule = Step then
-    print_endline ("  > Final state: " ^ string_of_exp state');
+    draft_prose (lazy ("  > Final state: " ^ string_of_exp state'));
   List.iter (function
-  | Val   e -> print_endline ("  > Push value " ^ string_of_exp e ^ " to the stack")
-  | Vals  e -> print_endline ("  > Push values " ^ string_of_exp e ^ " to the stack")
-  | Instr e -> print_endline ("  > Next, run instruction " ^ string_of_exp e)
+  | Val   e -> draft_prose (lazy ("  > Push value " ^ string_of_exp e ^ " to the stack"))
+  | Vals  e -> draft_prose (lazy ("  > Push values " ^ string_of_exp e ^ " to the stack"))
+  | Instr e -> draft_prose (lazy ("  > Next, run instruction " ^ string_of_exp e))
   | Nothing -> ()
   ) instrs';
   let quants2, estack2, prems2 = List.fold_left (fun (qs, estack, prs) -> function
@@ -408,7 +410,6 @@ let dual_prems p1 p2 : bool =
 (* RETURNS: a continuation from the RHS id to a list of premises, where the final return is bound to the RHS id. *)
 let rec naive_merge env fid qs (prems1, e1) (prems2, e2) : ((id -> prem list) * dl_def list) M.m =
   let at = over_region [over_region (prems1 @ prems2 |> List.map at); e1.at; e2.at] in
-  let* () = push (at, "when naïvely merging two clauses") in
   let* () = if Il.Eval.equiv_typ env e1.note e2.note |> not then
       throw ("The return types of two clauses do not match:\n" ^
              "  ▹ e1 = " ^ string_of_exp e1 ^ "; t1 = " ^ string_of_typ e1.note ^ "\n" ^
@@ -431,11 +432,11 @@ let merge_quants qs1 qs2 : quant list M.m =
   return (qs1 @ qs2)  (* TODO *)
 
 let rhs_func at t : id -> exp = function id ->
-  (* let tX = VarT ("X" $ no, []) $ no in *)
   let ve = VarE id $$ at % t in
   CallE (primitives.rhs $ at, [typA ~at t; expA ~at ve]) $$ at % t
 
 let merge_func_clauses env id fid (clauses: func_clause list) : (func_clause list * dl_def list) M.m =
+  let* () = push (id.at, "when merging function clauses") in
   if List.mem id.it Common.step_relids |> not then return (clauses, []) else
   let* clause', if_defs =
     (match clauses with
@@ -459,6 +460,7 @@ let merge_func_clauses env id fid (clauses: func_clause list) : (func_clause lis
       return (cl, if_defs)
     )
   in
+  let* () = drop () in
   return ([clause'], if_defs)
 
 
