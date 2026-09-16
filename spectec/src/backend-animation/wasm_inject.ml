@@ -51,7 +51,7 @@ module Map = Map.Make(String)
 type primitives = { pop : string; push : string
                   ; pops : string; pushes : string
                   ; run_instr : string; run_next_instr : string; update_state : string
-                  ; rhs : string }
+                  ; rhs : string; if_func : string; rel_func : string }
 
 let primitives : primitives = { pop            = "popvalue"
                               ; push           = "pushvalue"
@@ -61,6 +61,8 @@ let primitives : primitives = { pop            = "popvalue"
                               ; run_next_instr = "runnextinstr"
                               ; update_state   = "updatez"
                               ; rhs            = "rhs"
+                              ; if_func        = "@if"
+                              ; rel_func       = "@rel"
                               }
 
 
@@ -77,30 +79,69 @@ let t_frame ?(at = no) () = VarT ("frame" $ at, []) $ at
 let t_instrs ?(at = no) () = iterT ~at (t_instr ())
 let t_vals ?(at = no) () = iterT ~at (t_val ())
 
-let fresh_oracle = ref 0
-
-let reset_oracle () = fresh_oracle := 0
-let get_fresh () =
-  let n = !fresh_oracle in
-  fresh_oracle := (n+1);
+let local_oracle = ref 0
+let reset_local_oracle () = local_oracle := 0
+let get_local_fresh () =
+  let n = !local_oracle in
+  local_oracle := (n+1);
   n
 
 let fresh_var () : string =
-  let n = get_fresh () in
+  let n = get_local_fresh () in
   "__v" ^ string_of_int n
 
-let fresh_fun oname : string =
-  let n = get_fresh () in
-  match oname with
-  | None -> "__f" ^ string_of_int n
-  | Some s -> "__" ^ s ^ string_of_int n
-
 let fresh_stack ?(at = no) () : id * exp =
-  let n = get_fresh () in
+  let n = get_local_fresh () in
   let v = "__stack" ^ string_of_int n in
   let id = v $ at in
   id, mk_expr at (t_instrs ()) (VarE id)
 
+let global_oracle = ref 0
+let reset_global_oracle () = global_oracle := 0
+let get_global_fresh () =
+  let n = !global_oracle in
+  global_oracle := (n+1);
+  n
+
+let fresh_fun oname : string =
+  let n = get_global_fresh () in
+  match oname with
+  | None -> "fn_" ^ string_of_int n
+  | Some s -> s ^ "_" ^ string_of_int n
+
+
+let merge_quants env qs1 qs2 : quant list M.m =
+  (* A very naïve merging strategy. FIXME: If it correct if a common variable is
+     depended by types?
+  *)
+  let open Il.Eq in
+  let* qs2' = foldlM (fun acc q2 ->
+    match q2.it with
+    | ExpP (x, t) ->
+      foldlM (fun ex q1 ->
+        match q1.it with
+        | ExpP (x', t') when eq_id x x' && not (equiv_typ env t t')
+        -> throw ("Binding conflict: variable `" ^ x'.it ^ "` has different types in two branches:\n" ^
+                  "  ▹ t1 = " ^ string_of_typ t ^ "\n" ^
+                  "  ▹ t2 = " ^ string_of_typ t')
+        | _ when eq_param q1 q2 -> return true
+        | _ -> return false
+      ) false qs1 >>= fun ex -> return (if ex then acc else acc @ [q2])
+    | DefP (f, ps, t) ->
+      foldlM (fun ex q1 ->
+        match q1.it with
+        | DefP (f', ps', t') when eq_id f f' && not (eq_list eq_param ps ps' && equiv_typ env t t')
+        -> throw ("Binding conflict: definition `" ^ f'.it ^ "` has different types in two branches:\n" ^
+                  "  ▹ t1 = " ^ string_of_params ps ^ " -> " ^ string_of_typ t ^ "\n" ^
+                  "  ▹ t2 = " ^ string_of_params ps' ^ " -> " ^ string_of_typ t')
+        | _ when eq_param q1 q2 -> return true
+        | _ -> return false
+      ) false qs1 >>= fun ex -> return (if ex then acc else acc @ [q2])
+    | TypP  _ | GramP _
+    -> return (if List.exists (fun q1 -> eq_param q1 q2) qs1 then acc else (acc @ [q2]))
+  ) [] qs2
+  in
+  return (qs1 @ qs2')
 
 
 (* ************************************************************************** *)
@@ -219,7 +260,6 @@ let split_stack_rhs env rhs : instr list M.m =
 type step_rule = Step | Step_read | Step_pure
 
 let explicate_step_clause ~rule:step_rule env fid osubid cl nth =
-  reset_oracle ();
   let DefD (qs, args, exp, prems) = cl.it in
   let env = valid_quants env qs in
   let* a = match args with
@@ -333,6 +373,7 @@ let explicate_step_clause ~rule:step_rule env fid osubid cl nth =
   return (DefD (qs', args', exp', prems1 @ [pr_stack1] @ prems @ prems2 @ [pr_stack2]) $> cl)
 
 let explicate_clause env id osubid nth (func_clause: func_clause) : func_clause M.m =
+  reset_local_oracle ();
   let (orule_id, cl) = func_clause in
   let fid = string_of_funcname id osubid in
   let* () = push (cl.at, "in clause " ^ string_of_int (nth + 1)) in
@@ -363,27 +404,42 @@ let explicate_clause env id osubid nth (func_clause: func_clause) : func_clause 
 (*                              Merge Clauses                                 *)
 (* ************************************************************************** *)
 
+let gen_rel_function env fid at qs prem : (dl_def * exp) M.m =
+  let fname = fresh_fun (Some fid) in
+  let* () = push (at, "when generating rel-function `" ^ primitives.rel_func ^ "/" ^ fname ^ "`") in
+  let qs' = qs in  (* FIXME: we can drop unused entries. *)
+  let cl_tru = None, DefD (qs', [], boolE ~at true, [prem]) $ at in
+  let fndef = FuncDef ((primitives.rel_func $ at, Some (fname $ at), [], boolT ~at (), [cl_tru], Some Partial) $ at) in
+  let fncall = CallE (primitives.rel_func ^ "/" ^ fname $ at, []) $$ at % (boolT ~at ()) in
+  let* () = drop () in
+  return (fndef, fncall)
 
 (* ASSUMES: [e1] and [e2] has equivalent types. *)
-let gen_if_function env fid at qs cond (ths, e1) (els, e2) : (dl_def * exp) M.m =
-  let* () = push (at, "when generating if-function") in
+let gen_if_function env fid at (qs, cond) (qs1, ths, e1) (qs2, els, e2) : (dl_def list * exp) M.m =
   let fname = fresh_fun (Some fid) in
-  let* cond_exp = match cond.it with
-  | IfPr e -> return e
+  let* () = push (at, "when generating if-function `" ^ primitives.if_func ^ "/" ^ fname ^ "`") in
+  let* fndefs, cond_exp = match cond.it with
+  | IfPr e -> return ([], e)
+  | RulePr _ ->
+    let* rel_fndef, rel_fncall = gen_rel_function env fid at qs cond in
+    return ([rel_fndef], rel_fncall)
   | _ -> throw ("Unsupported type of premise as an if-condition: " ^ string_of_prem cond)
   in
   let fvs = Xl.Gen_free.(free_prem cond ++ free_exp e1 ++ free_exp e2 ++ free_prems ths ++ free_prems els).varid in
   let qs', args' = List.filter_map (fun q -> match q.it with
   | ExpP (x, t) -> if Set.mem x.it fvs then Some (q, varE ~at:x.at ~note:t x.it |> expA ~at:x.at) else None
   | _ -> None
-  ) qs |> List.split in
-  let tru_cl = None, DefD (qs', args' @ [expA ~at (boolE ~at true )], e1, ths) $ at in
-  let fls_cl = None, DefD (qs', args' @ [expA ~at (boolE ~at false)], e2, els) $ at in
+  ) qs |> List.split in  (* FIXME: [qs] is wrong. *)
+  let* tru_quants = merge_quants env qs' qs1 in
+  let* fls_quants = merge_quants env qs' qs2 in
+  let tru_cl = None, DefD (tru_quants, args' @ [expA ~at (boolE ~at true )], e1, ths) $ at in
+  let fls_cl = None, DefD (fls_quants, args' @ [expA ~at (boolE ~at false)], e2, els) $ at in
   let cls = [tru_cl; fls_cl] in
-  let fndef = FuncDef (("if" $ at, Some (fname $ at), qs', e1.note, cls, None) $ at) in
-  let fncall = CallE ("if/" ^ fname $ at, args' @ [expA ~at cond_exp]) $$ at % e1.note in
+  let fndef = FuncDef ((primitives.if_func $ at, Some (fname $ at), qs', e1.note, cls, None) $ at) in
+  let fncall = CallE (primitives.if_func ^ "/" ^ fname $ at, args' @ [expA ~at cond_exp]) $$ at % e1.note in
   let* () = drop () in
-  return (fndef, fncall)
+  return (fndefs @ [fndef], fncall)
+
 
 let dual_ops op1 op2 : bool =
   match op1, op2 with
@@ -408,7 +464,7 @@ let dual_prems p1 p2 : bool =
   | _, _ -> false
 
 (* RETURNS: a continuation from the RHS id to a list of premises, where the final return is bound to the RHS id. *)
-let rec naive_merge env fid qs (prems1, e1) (prems2, e2) : ((id -> prem list) * dl_def list) M.m =
+let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * (id -> prem list) * dl_def list) M.m =
   let at = over_region [over_region (prems1 @ prems2 |> List.map at); e1.at; e2.at] in
   let* () = if Il.Eval.equiv_typ env e1.note e2.note |> not then
       throw ("The return types of two clauses do not match:\n" ^
@@ -417,60 +473,39 @@ let rec naive_merge env fid qs (prems1, e1) (prems2, e2) : ((id -> prem list) * 
     else return ()
   in
   match prems1, prems2 with
-  | [], [] -> return ((fun _ -> []), [])
+  | [], [] -> return ([], (fun _ -> []), [])
   | p11::ps1, p21::ps2 when Il.Eq.eq_prem p11 p21 ->
-      let* k_ps', defs = naive_merge env fid qs (ps1, e1) (ps2, e2) in
-      return ((fun rhs -> p11 :: k_ps' rhs), defs)
+      let* qs, k_ps', defs = naive_merge env fid (qs1, ps1, e1) (qs2, ps2, e2) in
+      let* qs' = merge_quants env qs qs1 in  (* [qs] is the merge result of [qs1] and [qs2], so it should never
+                                                conflict with [qs1]. [qs1] should contain those bindings in [p11]
+                                                which mayn't be in [qs].
+                                              *)
+      return (qs', (fun rhs -> p11 :: k_ps' rhs), defs)
   | p11::ps1, p21::ps2 when dual_prems p11 p21 ->
-    let* (if_def, if_call) = gen_if_function env fid at qs p11 (ps1, e1) (ps2, e2) in
-    return ((fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), [if_def])
+    let qs11 = [] in   (* TODO: those in [p11] *)
+    let qs1' = qs1 in  (* TODO: exclude [p11] *)
+    let qs2' = qs2 in  (* TODO: exclude [p21] *)
+    let qs_call = [] in  (* TODO: those in [if_call] *)
+    let* (fn_defs, if_call) = gen_if_function env fid at (qs11, p11) (qs1', ps1, e1) (qs2', ps2, e2) in
+    return (qs_call, (fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), fn_defs)
   | p11::ps1, p21::ps2 ->
-    let* (if_def, if_call) = gen_if_function env fid at qs p11 (ps1, e1) (p21 :: ps2, e2) in
-    return ((fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), [if_def])
-
-let merge_quants qs1 qs2 : quant list M.m =
-  (* A very naïve merging strategy. FIXME: If it correct if a common variable is
-     depended by types?
-  *)
-  let open Il.Eq in
-  let* qs2' = foldlM (fun acc q2 ->
-    match q2.it with
-    | ExpP (x, t) ->
-      foldlM (fun ex q1 ->
-        match q1.it with
-        | ExpP (x', t') when eq_id x x' && not (eq_typ t t')
-        -> throw ("Binding conflict: variable `" ^ x'.it ^ "` has different types in two branches:\n" ^
-                  "  ▹ t1 = " ^ string_of_typ t ^ "\n" ^
-                  "  ▹ t2 = " ^ string_of_typ t')
-        | _ when eq_param q1 q2 -> return true
-        | _ -> return false
-      ) false qs1 >>= fun ex -> return (if ex then acc else acc @ [q2])
-    | DefP (f, ps, t) ->
-      foldlM (fun ex q1 ->
-        match q1.it with
-        | DefP (f', ps', t') when eq_id f f' && not (eq_list eq_param ps ps' && eq_typ t t')
-        -> throw ("Binding conflict: definition `" ^ f'.it ^ "` has different types in two branches:\n" ^
-                  "  ▹ t1 = " ^ string_of_params ps ^ " -> " ^ string_of_typ t ^ "\n" ^
-                  "  ▹ t2 = " ^ string_of_params ps' ^ " -> " ^ string_of_typ t')
-        | _ when eq_param q1 q2 -> return true
-        | _ -> return false
-      ) false qs1 >>= fun ex -> return (if ex then acc else acc @ [q2])
-    | TypP  _ | GramP _
-    -> return (if List.exists (fun q1 -> eq_param q1 q2) qs1 then acc else (acc @ [q2]))
-  ) [] qs2
-  in
-  return (qs1 @ qs2')
+    let qs11 = [] in   (* TODO: those in [p11] *)
+    let qs1' = qs1 in  (* TODO: exclude [p11] *)
+    let qs_call = [] in  (* TODO: those in [if_call] *)
+    let* (fn_defs, if_call) = gen_if_function env fid at (qs11, p11) (qs1', ps1, e1) (qs2, p21 :: ps2, e2) in
+    return (qs_call, (fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), fn_defs)
 
 let rhs_func at t : id -> exp = function id ->
   let ve = VarE id $$ at % t in
   CallE (primitives.rhs $ at, [typA ~at t; expA ~at ve]) $$ at % t
 
+(* ASSUMES: [clauses] is not empty. *)
 let merge_func_clauses env id fid (clauses: func_clause list) : (func_clause list * dl_def list) M.m =
-  let* () = push (id.at, "when merging function clauses") in
+  let* () = push (over_region (List.map (snd >.> at) clauses), "when merging function clauses") in
   if List.mem id.it Common.step_relids |> not then return (clauses, []) else
   let* clause', if_defs =
     (match clauses with
-    | [] -> throw ("Function definition `" ^ fid ^ "` has no clauses")
+    | [] -> assert false
     | [cl] -> return (cl, [])
     | cl1::cl2::cls ->
       let _, { it = DefD (qs1, args1, exp1, prems1); _ } = cl1 in
@@ -481,8 +516,7 @@ let merge_func_clauses env id fid (clauses: func_clause list) : (func_clause lis
                  "  ▹ args2: " ^ string_of_args args2)
         else return ()
       in
-      let* qs = merge_quants qs1 qs2 in
-      let* (k_prems, if_defs) = naive_merge env fid qs (prems1, exp1) (prems2, exp2) in
+      let* (qs, k_prems, if_defs) = naive_merge env fid (qs1, prems1, exp1) (qs2, prems2, exp2) in
       let v_rhs = fresh_var () $ no in
       let q_rhs = ExpP (v_rhs, exp1.note) $ no in
       let e_rhs = rhs_func (over_region [exp1.at; exp2.at]) exp1.note v_rhs in
@@ -505,7 +539,10 @@ let inject_fdef fdef : (func_def * dl_def list) M.m =
   let fid = string_of_funcname id osubid in
   let* () = new_with (fdef.at, "in definition `" ^ fid ^ "`") in
   let* clauses' = mapiM (explicate_clause !il_env id osubid) clauses in
-  let* clauses'', if_defs = merge_func_clauses !il_env id fid clauses' in
+  let* clauses'', if_defs = match clauses' with
+  | [] -> return ([], [])
+  | _ -> merge_func_clauses !il_env id fid clauses'
+  in
   return ((id, osubid, ps, t, clauses'', opartial) $ fdef.at, if_defs)
 
 let rec inject_def def : dl_def list M.m = match def with
