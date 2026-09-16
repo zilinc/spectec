@@ -1,5 +1,6 @@
 open Il.Ast
 open Il.Free
+open Il.Subst
 open Il.Print
 open Il.Valid
 open Il.Eval
@@ -45,8 +46,6 @@ type config = { mutable state  : exp option
               ; mutable frame  : exp option
               ; mutable frame' : exp option
               }
-
-module Map = Map.Make(String)
 
 type primitives = { pop : string; push : string
                   ; pops : string; pushes : string
@@ -110,38 +109,44 @@ let fresh_fun oname : string =
   | Some s -> s ^ "_" ^ string_of_int n
 
 
-let merge_quants env qs1 qs2 : quant list M.m =
+
+let rec quant_exists env q qs : subst * bool =
+  let open Il.Eq in
+  match qs with
+  | [] -> (empty, false)
+  | q'::qs' ->
+    (match q.it, q'.it with
+    | ExpP (x, t), ExpP (x', t') when eq_id x x' && (equiv_typ env t t') ->
+      (* There can't be a conflict. *)
+      (empty, true)
+    | ExpP (x, t), ExpP (x', t') when eq_id x x' ->
+      let n = get_local_fresh () in
+      let x'' = (x.it ^ string_of_int n) $ x.at in
+      (* There can't be another conflict or another entry that is the same as [q]. *)
+      (add_varid empty x (VarE x'' $$ x''.at % t), false)
+    | DefP (fid, params, t), DefP (fid', params', t')
+      when eq_id fid fid' && not (eq_list eq_param params params' && equiv_typ env t t')->
+      (* Conflict. *)
+      let n = get_local_fresh () in
+      let fid'' = (fid.it ^ string_of_int n) $ fid.at in
+      (add_defid empty fid fid'', false)
+    | DefP (fid, params, t), DefP (fid', params', t') when eq_id fid fid' ->
+      (empty, true)
+    | _ -> quant_exists env q qs'
+    )
+
+(* Merging is left-biased. It will produce an alpha-renaming for [qs2]. *)
+let merge_quants env qs1 qs2 : (quant list * subst * subst) M.m =
   (* A very naïve merging strategy. FIXME: If it correct if a common variable is
      depended by types?
   *)
-  let open Il.Eq in
-  let* qs2' = foldlM (fun acc q2 ->
-    match q2.it with
-    | ExpP (x, t) ->
-      foldlM (fun ex q1 ->
-        match q1.it with
-        | ExpP (x', t') when eq_id x x' && not (equiv_typ env t t')
-        -> throw ("Binding conflict: variable `" ^ x'.it ^ "` has different types in two branches:\n" ^
-                  "  ▹ t1 = " ^ string_of_typ t ^ "\n" ^
-                  "  ▹ t2 = " ^ string_of_typ t')
-        | _ when eq_param q1 q2 -> return true
-        | _ -> return false
-      ) false qs1 >>= fun ex -> return (if ex then acc else acc @ [q2])
-    | DefP (f, ps, t) ->
-      foldlM (fun ex q1 ->
-        match q1.it with
-        | DefP (f', ps', t') when eq_id f f' && not (eq_list eq_param ps ps' && equiv_typ env t t')
-        -> throw ("Binding conflict: definition `" ^ f'.it ^ "` has different types in two branches:\n" ^
-                  "  ▹ t1 = " ^ string_of_params ps ^ " -> " ^ string_of_typ t ^ "\n" ^
-                  "  ▹ t2 = " ^ string_of_params ps' ^ " -> " ^ string_of_typ t')
-        | _ when eq_param q1 q2 -> return true
-        | _ -> return false
-      ) false qs1 >>= fun ex -> return (if ex then acc else acc @ [q2])
-    | TypP  _ | GramP _
-    -> return (if List.exists (fun q1 -> eq_param q1 q2) qs1 then acc else (acc @ [q2]))
-  ) [] qs2
+  let* subst, qs2' = foldlM (fun (subst', qs2') q2 ->
+    let subst, ex = quant_exists env q2 qs1 in
+    return (union subst subst', if ex then qs2' else qs2' @ [q2])
+  ) (empty, []) qs2
   in
-  return (qs1 @ qs2')
+  let qs2'', subst' = subst_quants subst qs2' in
+  return (qs1 @ qs2'', subst, subst')
 
 
 (* ************************************************************************** *)
@@ -425,13 +430,13 @@ let gen_if_function env fid at (qs, cond) (qs1, ths, e1) (qs2, els, e2) : (dl_de
     return ([rel_fndef], rel_fncall)
   | _ -> throw ("Unsupported type of premise as an if-condition: " ^ string_of_prem cond)
   in
-  let fvs = Xl.Gen_free.(free_prem cond ++ free_exp e1 ++ free_exp e2 ++ free_prems ths ++ free_prems els).varid in
+  let fvs = Il.Free.(free_prem cond ++ free_exp e1 ++ free_exp e2 ++ free_prems ths ++ free_prems els).varid in
   let qs', args' = List.filter_map (fun q -> match q.it with
   | ExpP (x, t) -> if Set.mem x.it fvs then Some (q, varE ~at:x.at ~note:t x.it |> expA ~at:x.at) else None
   | _ -> None
   ) qs |> List.split in  (* FIXME: [qs] is wrong. *)
-  let* tru_quants = merge_quants env qs' qs1 in
-  let* fls_quants = merge_quants env qs' qs2 in
+  let* tru_quants, tru_s, tru_s' = merge_quants env qs' qs1 in
+  let* fls_quants, fls_s, fls_s' = merge_quants env qs' qs2 in
   let tru_cl = None, DefD (tru_quants, args' @ [expA ~at (boolE ~at true )], e1, ths) $ at in
   let fls_cl = None, DefD (fls_quants, args' @ [expA ~at (boolE ~at false)], e2, els) $ at in
   let cls = [tru_cl; fls_cl] in
@@ -476,10 +481,11 @@ let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * 
   | [], [] -> return ([], (fun _ -> []), [])
   | p11::ps1, p21::ps2 when Il.Eq.eq_prem p11 p21 ->
       let* qs, k_ps', defs = naive_merge env fid (qs1, ps1, e1) (qs2, ps2, e2) in
-      let* qs' = merge_quants env qs qs1 in  (* [qs] is the merge result of [qs1] and [qs2], so it should never
-                                                conflict with [qs1]. [qs1] should contain those bindings in [p11]
-                                                which mayn't be in [qs].
-                                              *)
+      (* FIXME *)
+      let* qs', s, s' = merge_quants env qs qs1 in  (* [qs] is the merge result of [qs1] and [qs2], so it should never
+                                                       conflict with [qs1]. [qs1] should contain those bindings in [p11]
+                                                       which mayn't be in [qs].
+                                                    *)
       return (qs', (fun rhs -> p11 :: k_ps' rhs), defs)
   | p11::ps1, p21::ps2 when dual_prems p11 p21 ->
     let qs11 = [] in   (* TODO: those in [p11] *)

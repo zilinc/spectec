@@ -42,6 +42,7 @@ val subst_typfield : subst -> typfield -> typfield
 val subst_prems : subst -> prem list -> prem list
 val subst_args : subst -> arg list -> arg list
 val subst_params : subst -> param list -> param list * subst
+val subst_quants : subst -> param list -> param list * subst
 
 val subst_list : (subst -> 'a -> 'a) -> subst -> 'a list -> 'a list
 
