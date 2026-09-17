@@ -14,7 +14,7 @@ open Xl.Atom
 open Lazy
 
 
-let verbose : string list = ["no_prose"] (* @ ["debug"; "draft_prose"] *)
+let verbose : string list = ["no_prose"] (* @ ["debug_merge"; "debug_stack"; "draft_prose"] *)
 
 let info ?(cat = "default") (lz_msg: string lazy_t) =
   if List.mem cat verbose then print_endline ("[I] " ^ force lz_msg) else ()
@@ -109,6 +109,30 @@ let fresh_fun oname : string =
   | Some s -> s ^ "_" ^ string_of_int n
 
 
+let subst_varid s x =
+  match Map.find_opt x.it s.varid with
+  | None -> x
+  | Some e ->
+    (match e.it with
+    | VarE x' -> x'
+    | _ -> assert false
+    )
+
+let subst_quant s p =
+  (match p.it with
+  | ExpP (x, t) -> ExpP (subst_varid s x, subst_typ s t)
+  | TypP x -> TypP x
+  | DefP (x, ps, t) ->
+    let ps', s' = subst_params s ps in
+    DefP (subst_defid s x, ps', subst_typ s' t)
+  | GramP (x, ps, t) ->
+    let ps', s' = subst_params s ps in
+    GramP (x, ps', subst_typ s' t)
+  ) $ p.at
+
+let subst_quants s ps = subst_list_dep subst_quant Il.Free.bound_quant s ps
+
+
 
 let rec quant_exists env q qs : subst * bool =
   let open Il.Eq in
@@ -116,19 +140,18 @@ let rec quant_exists env q qs : subst * bool =
   | [] -> (empty, false)
   | q'::qs' ->
     (match q.it, q'.it with
-    | ExpP (x, t), ExpP (x', t') when eq_id x x' && (equiv_typ env t t') ->
-      (* There can't be a conflict. *)
-      (empty, true)
-    | ExpP (x, t), ExpP (x', t') when eq_id x x' ->
+    | ExpP (x, t), ExpP (x', t') when eq_id x x' && not (equiv_typ env t t') ->
       let n = get_local_fresh () in
-      let x'' = (x.it ^ string_of_int n) $ x.at in
-      (* There can't be another conflict or another entry that is the same as [q]. *)
+      let x'' = (x.it ^ "_" ^ string_of_int n) $ x.at in
+      (* Conflict. There can't be another conflict or another entry that is the same as [q]. *)
       (add_varid empty x (VarE x'' $$ x''.at % t), false)
+    | ExpP (x, t), ExpP (x', t') when eq_id x x' ->
+      (empty, true)
     | DefP (fid, params, t), DefP (fid', params', t')
       when eq_id fid fid' && not (eq_list eq_param params params' && equiv_typ env t t')->
       (* Conflict. *)
       let n = get_local_fresh () in
-      let fid'' = (fid.it ^ string_of_int n) $ fid.at in
+      let fid'' = (fid.it ^ "_" ^ string_of_int n) $ fid.at in
       (add_defid empty fid fid'', false)
     | DefP (fid, params, t), DefP (fid', params', t') when eq_id fid fid' ->
       (empty, true)
@@ -146,7 +169,25 @@ let merge_quants env qs1 qs2 : (quant list * subst * subst) M.m =
   ) (empty, []) qs2
   in
   let qs2'', subst' = subst_quants subst qs2' in
+  let _ = info ~cat:"debug_merge"
+            (lazy ("merge_quants:\n" ^
+                   "  ▹ subst = " ^ string_of_subst subst ^ "\n" ^
+                   "  ▹ qs2' = " ^ string_of_quants qs2' ^ "\n" ^
+                   "  ▹ qs2'' = " ^ string_of_quants qs2''
+                  ))
+  in
   return (qs1 @ qs2'', subst, subst')
+
+(* Throws an error if conflicting. *)
+let merge_compatible_quants env qs1 qs2 : quant list M.m =
+  let* qs, s, _ = merge_quants env qs1 qs2 in
+  if is_empty s then
+    return qs
+  else
+    throw ("Quantifier lists cannot conflict each other:\n" ^
+            "  ▹ qs1 = " ^ string_of_quants qs1 ^ "\n" ^
+            "  ▹ qs2 = " ^ string_of_quants qs2)
+
 
 
 (* ************************************************************************** *)
@@ -154,14 +195,14 @@ let merge_quants env qs1 qs2 : (quant list * subst * subst) M.m =
 (* ************************************************************************** *)
 
 let chk_instr env exp : exp M.m =
-  info ~cat:"debug" (lazy ("chk_instr: " ^ string_of_exp exp));
+  info ~cat:"debug_stack" (lazy ("chk_instr: " ^ string_of_exp exp));
   match equiv_typ env exp.note (t_instr ()) with
   (* | exception e -> throw ("Failed to check for type equivalence (instr): " ^ Printexc.to_string e) *)
   | false -> throw ("Unexpected type: " ^ string_of_typ exp.note ^ "; expected instr")
   | true -> return exp
 
 let chk_val_instr env exp : exp M.m =
-  info ~cat:"debug" (lazy ("chk_val_instr: " ^ string_of_exp exp));
+  info ~cat:"debug_stack" (lazy ("chk_val_instr: " ^ string_of_exp exp));
   let* exp' = chk_instr env exp in
   match exp.it with
   | SubE (e, t1, t2) when sub_typ env t1 (t_val ()) -> return exp'
@@ -178,7 +219,7 @@ let chk_val_instr env exp : exp M.m =
   | _ -> throw ("Invalid expression: " ^ string_of_exp exp ^ "; expected a val")
 
 let rec chk_vals_instrs env exp : exp M.m =
-  info ~cat:"debug" (lazy ("chk_vals_instrs: " ^ string_of_exp exp));
+  info ~cat:"debug_stack" (lazy ("chk_vals_instrs: " ^ string_of_exp exp));
   let* () = match equiv_typ env exp.note (t_instrs ()) with
   (* | exception e -> throw ("Failed to check for type equivalence (instr*): " ^ Printexc.to_string e) *)
   | false -> throw ("Unexpected expression: " ^ string_of_exp exp ^ "; expected instr* but got " ^ string_of_typ exp.note)
@@ -198,7 +239,7 @@ let mk_vals xs = Vals xs
 let mk_instr x = Instr x
 
 let rec split_instr_from_back env exp : (exp option * instr) M.m =
-  info ~cat:"debug" (lazy ("split_instr_from_back: " ^ string_of_exp exp));
+  info ~cat:"debug_stack" (lazy ("split_instr_from_back: " ^ string_of_exp exp));
   match exp.it with
   | ListE [] -> return (None, Nothing)
   | ListE es ->
@@ -226,7 +267,7 @@ let rec split_instr_from_back env exp : (exp option * instr) M.m =
     return (None, Vals exp')
 
 let rec split_instrs_from_back env exp : instr list M.m =
-  info ~cat:"debug" (lazy ("split_instrs_from_back: " ^ string_of_exp exp));
+  info ~cat:"debug_stack" (lazy ("split_instrs_from_back: " ^ string_of_exp exp));
   let* oexp', instr = split_instr_from_back env exp in
   match oexp' with
   | Some exp' -> let* instrs = split_instrs_from_back env exp' in
@@ -409,41 +450,57 @@ let explicate_clause env id osubid nth (func_clause: func_clause) : func_clause 
 (*                              Merge Clauses                                 *)
 (* ************************************************************************** *)
 
-let gen_rel_function env fid at qs prem : (dl_def * exp) M.m =
+(* [qs] should contain bindings used by [prem]. *)
+let gen_rel_function env fid at qs prem : (exp * dl_def) M.m =
   let fname = fresh_fun (Some fid) in
   let* () = push (at, "when generating rel-function `" ^ primitives.rel_func ^ "/" ^ fname ^ "`") in
-  let qs' = qs in  (* FIXME: we can drop unused entries. *)
-  let cl_tru = None, DefD (qs', [], boolE ~at true, [prem]) $ at in
-  let fndef = FuncDef ((primitives.rel_func $ at, Some (fname $ at), [], boolT ~at (), [cl_tru], Some Partial) $ at) in
+  let fvs = Il.Free.(free_prem prem).varid in
+  let params, args = List.filter_map (fun q -> match q.it with
+  | ExpP (x, t) -> if Set.mem x.it fvs then Some (q, varE ~at:x.at ~note:t x.it |> expA ~at:x.at) else None
+  | _ -> None
+  ) qs |> List.split in
+  let cl_tru = None, DefD (qs, args, boolE ~at true, [prem]) $ at in
+  let fndef = FuncDef ((primitives.rel_func $ at, Some (fname $ at), params, boolT ~at (), [cl_tru], Some Partial) $ at) in
   let fncall = CallE (primitives.rel_func ^ "/" ^ fname $ at, []) $$ at % (boolT ~at ()) in
   let* () = drop () in
-  return (fndef, fncall)
+  return (fncall, fndef)
 
 (* ASSUMES: [e1] and [e2] has equivalent types. *)
-let gen_if_function env fid at (qs, cond) (qs1, ths, e1) (qs2, els, e2) : (dl_def list * exp) M.m =
+let gen_if_function env fid at (qs, cond) (qs1, ths, e1) (qs2, els, e2) : (quant list * exp * dl_def list) M.m =
+  let _ = info ~cat:"debug_merge"
+            (lazy ("gen_if_function:\n" ^
+                   "  ▹ qs = " ^ string_of_quants qs ^ "\n" ^
+                   "  ▹ qs1 = " ^ string_of_quants qs1 ^ "\n" ^
+                   "  ▹ qs2 = " ^ string_of_quants qs2
+                  ))
+  in
   let fname = fresh_fun (Some fid) in
   let* () = push (at, "when generating if-function `" ^ primitives.if_func ^ "/" ^ fname ^ "`") in
   let* fndefs, cond_exp = match cond.it with
   | IfPr e -> return ([], e)
   | RulePr _ ->
-    let* rel_fndef, rel_fncall = gen_rel_function env fid at qs cond in
+    let* rel_fncall, rel_fndef = gen_rel_function env fid at qs cond in  (* FIXME: [qs] may contain entries not mentioned in [cond]. *)
     return ([rel_fndef], rel_fncall)
   | _ -> throw ("Unsupported type of premise as an if-condition: " ^ string_of_prem cond)
   in
-  let fvs = Il.Free.(free_prem cond ++ free_exp e1 ++ free_exp e2 ++ free_prems ths ++ free_prems els).varid in
-  let qs', args' = List.filter_map (fun q -> match q.it with
+  (* [qs] can't conflict with [qs1], but it may with [qs2], because the if-condition is often taken from the first clause. *)
+  let* tru_quants = merge_compatible_quants env qs qs1 in
+  let* fls_quants, fls_s, fls_s' = merge_quants env qs qs2 in
+  let* all_quants = merge_compatible_quants env tru_quants fls_quants in
+  let e2' = subst_exp fls_s e2 in
+  let els' = subst_prems fls_s els in
+  let fvs = Il.Free.(free_prem cond ++ free_exp e1 ++ free_exp e2' ++ free_prems ths ++ free_prems els').varid in
+  let params, args = List.filter_map (fun q -> match q.it with
   | ExpP (x, t) -> if Set.mem x.it fvs then Some (q, varE ~at:x.at ~note:t x.it |> expA ~at:x.at) else None
   | _ -> None
-  ) qs |> List.split in  (* FIXME: [qs] is wrong. *)
-  let* tru_quants, tru_s, tru_s' = merge_quants env qs' qs1 in
-  let* fls_quants, fls_s, fls_s' = merge_quants env qs' qs2 in
-  let tru_cl = None, DefD (tru_quants, args' @ [expA ~at (boolE ~at true )], e1, ths) $ at in
-  let fls_cl = None, DefD (fls_quants, args' @ [expA ~at (boolE ~at false)], e2, els) $ at in
+  ) all_quants |> List.split in
+  let tru_cl = None, DefD (tru_quants,                   args @ [expA ~at (boolE ~at true )],                  e1 ,                    ths ) $ at in
+  let fls_cl = None, DefD (fls_quants, subst_args fls_s' args @ [expA ~at (boolE ~at false)], subst_exp fls_s' e2', subst_prems fls_s' els') $ at in
   let cls = [tru_cl; fls_cl] in
-  let fndef = FuncDef ((primitives.if_func $ at, Some (fname $ at), qs', e1.note, cls, None) $ at) in
-  let fncall = CallE (primitives.if_func ^ "/" ^ fname $ at, args' @ [expA ~at cond_exp]) $$ at % e1.note in
+  let fndef = FuncDef ((primitives.if_func $ at, Some (fname $ at), params @ [ExpP ("_" $ at, boolT ~at ()) $ at], e1.note, cls, None) $ at) in
+  let fncall = CallE (primitives.if_func ^ "/" ^ fname $ at, args @ [expA ~at cond_exp]) $$ at % e1.note in
   let* () = drop () in
-  return (fndefs @ [fndef], fncall)
+  return (all_quants, fncall, fndefs @ [fndef])
 
 
 let dual_ops op1 op2 : bool =
@@ -470,6 +527,12 @@ let dual_prems p1 p2 : bool =
 
 (* RETURNS: a continuation from the RHS id to a list of premises, where the final return is bound to the RHS id. *)
 let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * (id -> prem list) * dl_def list) M.m =
+  let _ = info ~cat:"debug_merge"
+            (lazy ("naive_merge:\n" ^
+                   "  ▹ qs1 = " ^ string_of_quants qs1 ^ "\n" ^
+                   "  ▹ qs2 = " ^ string_of_quants qs2
+                  ))
+  in
   let at = over_region [over_region (prems1 @ prems2 |> List.map at); e1.at; e2.at] in
   let* () = if Il.Eval.equiv_typ env e1.note e2.note |> not then
       throw ("The return types of two clauses do not match:\n" ^
@@ -481,24 +544,17 @@ let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * 
   | [], [] -> return ([], (fun _ -> []), [])
   | p11::ps1, p21::ps2 when Il.Eq.eq_prem p11 p21 ->
       let* qs, k_ps', defs = naive_merge env fid (qs1, ps1, e1) (qs2, ps2, e2) in
-      (* FIXME *)
-      let* qs', s, s' = merge_quants env qs qs1 in  (* [qs] is the merge result of [qs1] and [qs2], so it should never
-                                                       conflict with [qs1]. [qs1] should contain those bindings in [p11]
-                                                       which mayn't be in [qs].
-                                                    *)
-      return (qs', (fun rhs -> p11 :: k_ps' rhs), defs)
+      return (qs, (fun rhs -> p11 :: k_ps' rhs), defs)
   | p11::ps1, p21::ps2 when dual_prems p11 p21 ->
-    let qs11 = [] in   (* TODO: those in [p11] *)
+    let qs11 = qs1 in  (* TODO: those in [p11] *)
     let qs1' = qs1 in  (* TODO: exclude [p11] *)
     let qs2' = qs2 in  (* TODO: exclude [p21] *)
-    let qs_call = [] in  (* TODO: those in [if_call] *)
-    let* (fn_defs, if_call) = gen_if_function env fid at (qs11, p11) (qs1', ps1, e1) (qs2', ps2, e2) in
+    let* (qs_call, if_call, fn_defs) = gen_if_function env fid at (qs11, p11) (qs1', ps1, e1) (qs2', ps2, e2) in
     return (qs_call, (fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), fn_defs)
   | p11::ps1, p21::ps2 ->
-    let qs11 = [] in   (* TODO: those in [p11] *)
+    let qs11 = qs1 in  (* TODO: those in [p11] *)
     let qs1' = qs1 in  (* TODO: exclude [p11] *)
-    let qs_call = [] in  (* TODO: those in [if_call] *)
-    let* (fn_defs, if_call) = gen_if_function env fid at (qs11, p11) (qs1', ps1, e1) (qs2, p21 :: ps2, e2) in
+    let* (qs_call, if_call, fn_defs) = gen_if_function env fid at (qs11, p11) (qs1', ps1, e1) (qs2, p21 :: ps2, e2) in
     return (qs_call, (fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), fn_defs)
 
 let rhs_func at t : id -> exp = function id ->

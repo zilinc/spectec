@@ -7,6 +7,7 @@ type t = subst
 
 val empty : subst
 val union : subst -> subst -> subst (* right overrides *)
+val is_empty : subst -> bool
 
 val add_varid : subst -> id -> exp -> subst
 val add_typid : subst -> id -> typ -> subst
@@ -28,6 +29,7 @@ val mem_typid : subst -> id -> bool
 val mem_defid : subst -> id -> bool
 val mem_gramid : subst -> id -> bool
 
+val subst_defid : subst -> id -> id
 val subst_typ : subst -> typ -> typ
 val subst_exp : subst -> exp -> exp
 val subst_path : subst -> path -> path
@@ -42,9 +44,9 @@ val subst_typfield : subst -> typfield -> typfield
 val subst_prems : subst -> prem list -> prem list
 val subst_args : subst -> arg list -> arg list
 val subst_params : subst -> param list -> param list * subst
-val subst_quants : subst -> param list -> param list * subst
 
 val subst_list : (subst -> 'a -> 'a) -> subst -> 'a list -> 'a list
+val subst_list_dep : (subst -> 'a -> 'a) -> ('a -> Free.sets) -> subst -> 'a list -> 'a list * subst
 
 val string_of_subst : subst -> string
 val string_of_dom_subst : subst -> string

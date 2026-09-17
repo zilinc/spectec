@@ -60,6 +60,11 @@ let rec subst_list_dep subst_x bound_x s = function
     let xs', s' = subst_list_dep subst_x bound_x (remove_varids s (bound_x x).Free.varid) xs in
     x'::xs', s'
 
+let is_empty s = Map.is_empty s.varid &&
+                 Map.is_empty s.typid &&
+                 Map.is_empty s.defid &&
+                 Map.is_empty s.gramid
+
 
 (* Identifiers *)
 
