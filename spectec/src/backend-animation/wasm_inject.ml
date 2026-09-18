@@ -404,8 +404,10 @@ let explicate_step_clause ~rule:step_rule env fid osubid cl nth =
                qs @ [ ExpP (vstack', t_instr ()) $e.at ], estack', prs @ [ eqPr ~at:e.at lhs rhs ]
   | Nothing -> qs, estack, prs
   ) ([], estack1, []) instrs' in
-  (* Finally, the fully pushed output stack is equal to the RHS stack. *)
-  let pr_stack2 = eqPr ~at:estack2.at estack2 stack_instr' in
+  (* Finally, the fully pushed output stack is equal to the RHS stack. But this just repeats
+     the same results established by earlier steps.
+   *)
+  (* let pr_stack2 = eqPr ~at:estack2.at estack2 stack_instr' in *)
   let qs' = quant0 :: quants1 @ qs @ quants2 in
   let exp' =
     if step_rule = Step then
@@ -416,7 +418,7 @@ let explicate_step_clause ~rule:step_rule env fid osubid cl nth =
     else
       estack2
   in
-  return (DefD (qs', args', exp', prems1 @ [pr_stack1] @ prems @ prems2 @ [pr_stack2]) $> cl)
+  return (DefD (qs', args', exp', prems1 @ [pr_stack1] @ prems @ prems2) $> cl)
 
 let explicate_clause env id osubid nth (func_clause: func_clause) : func_clause M.m =
   reset_local_oracle ();
@@ -525,6 +527,7 @@ let dual_prems p1 p2 : bool =
     )
   | _, _ -> false
 
+(* FIXME: This function won't work for 3 or more way branching. *)
 (* RETURNS: a continuation from the RHS id to a list of premises, where the final return is bound to the RHS id. *)
 let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * (id -> prem list) * dl_def list) M.m =
   let _ = info ~cat:"debug_merge"
@@ -562,13 +565,13 @@ let rhs_func at t : id -> exp = function id ->
   CallE (primitives.rhs $ at, [typA ~at t; expA ~at ve]) $$ at % t
 
 (* ASSUMES: [clauses] is not empty. *)
-let merge_func_clauses env id fid (clauses: func_clause list) : (func_clause list * dl_def list) M.m =
+let rec merge_func_clauses env id fid (clauses: func_clause list) : (func_clause list * dl_def list) M.m =
   let* () = push (over_region (List.map (snd >.> at) clauses), "when merging function clauses") in
   if List.mem id.it Common.step_relids |> not then return (clauses, []) else
-  let* clause', if_defs =
+  let* clauses', if_defs =
     (match clauses with
     | [] -> assert false
-    | [cl] -> return (cl, [])
+    | [cl] -> return ([cl], [])
     | cl1::cl2::cls ->
       let _, { it = DefD (qs1, args1, exp1, prems1); _ } = cl1 in
       let _, { it = DefD (qs2, args2, exp2, prems2); _ } = cl2 in
@@ -583,11 +586,12 @@ let merge_func_clauses env id fid (clauses: func_clause list) : (func_clause lis
       let q_rhs = ExpP (v_rhs, exp1.note) $ no in
       let e_rhs = rhs_func (over_region [exp1.at; exp2.at]) exp1.note v_rhs in
       let cl = None, (DefD (q_rhs::qs, args1, e_rhs, k_prems v_rhs)) $ (over_region (List.map (snd >.> at) clauses)) in
-      return (cl, if_defs)
+      let* cls', if_defs' = merge_func_clauses env id fid (cl::cls) in  (* Recurse *)
+      return (cls', if_defs @ if_defs)
     )
   in
   let* () = drop () in
-  return ([clause'], if_defs)
+  return (clauses', if_defs)
 
 
 
