@@ -1,6 +1,12 @@
 open Ast
 open Util.Source
 
+(* Hint a spec writer places manually on a def to mean "no backend should
+   emit anything derived from this" -- see middlend/handleexplicitignores.ml,
+   which strips any def (and everything referencing it) carrying this hint
+   before any other pass runs. *)
+let hint_ignore_in_backend = "nobackendrender"
+
 (* Types for mode hint *)
 type mode = In | Out
 type side = L | R

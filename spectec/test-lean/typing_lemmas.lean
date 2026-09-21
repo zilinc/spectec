@@ -2013,6 +2013,7 @@ theorem instrs_seq_typing_inversion
   intros instrs_ok
   generalize instrs_eq : (i :: is) = instrs at instrs_ok
   generalize ft_eq : (ts1 f-> ts3) = ft at instrs_ok
+  #check Instrs_ok.rec
   induction instrs_ok
     using Instrs_ok.rec (motive_1 := fun _ _ _ _ => True)
   <;> try simp_all
@@ -2033,15 +2034,11 @@ theorem instrs_seq_typing_inversion
       case refine_1 => assumption
       case refine_2 => apply resulttype_sub_refl
   case seq
-    c' i_list is_list ts1_orig ts3_orig ts2_orig instrs_ok_ts1_to_ts2 instrs_ok_ts2_to_ts3 wf_c' wf_all_i_list wf_all_is_list ih_i_list ih_is_list
+    c' i_list_1 i_list_2 ts1_orig ts3_orig ts2_orig instrs_ok_ts1_to_ts2 instrs_ok_ts2_to_ts3 wf_c' wf_all_i_list wf_all_is_list ih_i_list ih_is_list
     =>
-    cases i_list
-    case nil =>
-
-      sorry
-    case cons hd tl =>
-
-      sorry
+    unfold mkFunctype at ft_eq
+    simp at ft_eq
+    sorry
     -- exists ts2_orig
     -- refine ⟨?_, ?_⟩
     -- unfold mkFunctype at *

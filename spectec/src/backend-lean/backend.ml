@@ -1578,7 +1578,7 @@ let get_top_level_construct_type (def : Il.Ast.def) : top_level_construct_type =
       || Hint_index.has_hint (!analysis.hints) ~hint_id:Middlend.Undep.wf_func_id id.it
     -> WfLemmaTheoremConstruct
   | RelD _ -> InductiveRelationConstruct
-  | DecD (id, _, _, _) when List.mem_assoc id.it (!analysis).temporarily_axioms -> OpaqueConstruct
+  | DecD (id, _, _, _) when Hint_index.has_hint (!analysis.hints) ~hint_id:Backend_interpreter.Interpreter.builtin_hint_id id.it -> OpaqueConstruct
   | DecD (_, _, _, []) -> OpaqueConstruct
   | DecD _ -> DefConstruct
   | HintD _ -> HintConstruct
@@ -2282,20 +2282,6 @@ let create_def_construct (def : Il.Ast.def) : command list =
           Some (create_typ typ) (* val *)
       in
 
-      (* TODO WORKAROUND ---------------- REMOVE ONCE DEFTOREL IS FIXED
-         (see whole_file_analyses.ml: "Temporary axioms" section / temporarily_axioms)
-
-         deftorel could not convert this DecD to a relation even though its clauses
-         carry genuine premises (either it has a TypP/DefP parameter, or it's passed
-         by name to a higher-order function elsewhere in the script). The def-body
-         renderer below (append_prems_to_term, reached via create_clause) has no way
-         to turn a leftover genuine premise into an actual guard: it chains premises
-         into the body as `prem_1 -> prem_2 -> ... -> body`, which only type-checks
-         when the declared return type happens itself to be a function type. For
-         every other return type (e.g. concatn_ : List X) this produces Lean that
-         doesn't compile. Render it as an opaque axiom instead. *)
-      (* TODO WORKAROUND ---------------- REMOVE ONCE DEFTOREL IS FIXED *)
-
       (* Drop clauses that middlend/subexpansion.ml's per-clause type-family
          expansion left overlapping with an earlier clause (see
          remove_overlapping_clauses above) before any match-arm generation
@@ -2553,27 +2539,6 @@ let create_def_construct (def : Il.Ast.def) : command list =
       let match_terms = create_match_term params param_ever_deconstructed_list in
       let cases = List.map (fun clause -> create_clause clause params param_ever_deconstructed_list) clauses in
 
-      (* TODO WORKAROUND ---------------- REMOVE ONCE TYPEFAMILYREMOVAL MECHANISM IS FIXED *)
-      (* Append `| _ => Inhabited.default` when any matched param has a type that was
-         originally a type family. After type-family flattening, cross-product constructor
-         combinations exist syntactically but are semantically impossible, making the
-         pattern match incomplete in Lean. The catch-all makes it exhaustive again.
-         Mirrors the Rocq backend's `| _ => default_val` approach. *)
-      let needs_catchall = List.mem id.it (!analysis).defs_needing_catchall in
-      (* Printf.eprintf "[DBG needs_catchall] %s -> %b\n%!" id.it needs_catchall; *)
-      let cases_with_catchall_temp_workaround =
-        if needs_catchall then
-          let wildcards =
-            List.init
-              (List.length match_terms)
-              (fun _ -> (Hole Hole : term))
-          in
-          cases @ [(wildcards, DotProj (Ident "Inhabited", Ident "default"))]
-        else
-          cases
-      in
-      (* TODO WORKAROUND ---------------- REMOVE ONCE TYPEFAMILYREMOVAL MECHANISM IS FIXED *)
-
       let body =
         if match_terms = [] then
           (*
@@ -2611,7 +2576,7 @@ let create_def_construct (def : Il.Ast.def) : command list =
           let renamed_prems = List.map (Il.Walk.transform_prem t) clause_prems in
           append_prems_to_term (create_exp renamed) renamed_prems
         else
-          Match { match_terms; cases = cases_with_catchall_temp_workaround }
+          Match { match_terms; cases = cases }
       in
 
       [
@@ -2804,18 +2769,6 @@ let create_opaque_construct (def : Il.Ast.def) : command list =
           Some (create_typ typ) (* val *)
       in
 
-      (* TODO WORKAROUND ---------------- REMOVE ONCE DEFTOREL IS FIXED
-         (see whole_file_analyses.ml: "Temporary axioms" section / temporarily_axioms)
-
-         deftorel could not convert this DecD to a relation even though its clauses
-         carry genuine premises (either it has a TypP/DefP parameter, or it's passed
-         by name to a higher-order function elsewhere in the script). The def-body
-         renderer below (append_prems_to_term, reached via create_clause) has no way
-         to turn a leftover genuine premise into an actual guard: it chains premises
-         into the body as `prem_1 -> prem_2 -> ... -> body`, which only type-checks
-         when the declared return type happens itself to be a function type. For
-         every other return type (e.g. concatn_ : List X) this produces Lean that
-         doesn't compile. Render it as an opaque axiom instead. *)
         [
           Opaque {
             modifier = { empty_modifier with comment = create_comment def };

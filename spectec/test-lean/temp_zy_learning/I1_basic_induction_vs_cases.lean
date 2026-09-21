@@ -51,7 +51,8 @@ theorem count_pos_or_zero (s : PearStack) : pearCount s = 0 ∨ pearCount s > 0 
     -- `ih : pearCount rest = 0 ∨ pearCount rest > 0` -- USE it to avoid
     -- re-deriving anything about `rest` from scratch:
     right
-    simp [pearCount]
+    rw [pearCount] at *
+    simp
 
 /- ─── Confirm this is literally `.rec`/`.casesOn` under the hood ───
    `#print` the compiled proof term for each theorem above and look at

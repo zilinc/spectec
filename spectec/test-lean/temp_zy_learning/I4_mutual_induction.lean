@@ -77,6 +77,83 @@ set_option pp.proofs true in
 -- three FruitBasket-motive arguments, all as siblings of ONE
 -- `FruitBasket.rec` application.
 
+/- ─── `apply` translations ───
+   Both recursors are literally the SAME shape as I3's single-motive
+   examples, just with an extra `{motive_2 : GiftWrap → Sort u_1}` binder
+   spliced in right after `motive_1` -- confirm via `#check @FruitBasket.rec`.
+   `apply`'s peeling still goes left to right: `motive_1` gets solved by
+   unifying against the (reverted) goal exactly as before, but NOTHING in
+   either goal below ever mentions `GiftWrap`, so `motive_2` can NEVER be
+   inferred from unification -- it has to be supplied by hand one way or
+   another, no matter which tactic drives the recursor. -/
+
+-- "args" version: supply everything explicitly, no `revert` needed.
+theorem count_nonneg_apply_args (b : FruitBasket) : fruitCount b ≥ 0 := by
+  apply FruitBasket.rec
+    (motive_1 := fun b => fruitCount b ≥ 0)
+    (motive_2 := fun _ => True)
+    (t := b)
+  · exact Nat.zero_le _
+  · intro kind rest ih; exact Nat.zero_le _
+  · intro gift rest giftIh ih; exact Nat.zero_le _
+  · intro contents ih; trivial
+
+-- "bare" version: `revert b` lets `apply` infer `motive_1` and `t` from
+-- the goal's own Pi-shape, same as I3 -- but `motive_2` is STILL
+-- unconstrained, so `apply` turns it into its own extra goal (right where
+-- it sits in the recursor's argument list, i.e. before the four case
+-- goals) instead of erroring outright. Target it BY NAME with `case`
+-- rather than by bullet position, since its position is easy to
+-- misjudge:
+theorem count_nonneg_apply_bare (b : FruitBasket) : fruitCount b ≥ 0 := by
+  revert b
+  #check FruitBasket.rec
+  apply FruitBasket.rec
+  case motive_2 => exact fun _ => True
+  · exact Nat.zero_le _
+  · intro kind rest ih; exact Nat.zero_le _
+  · intro gift rest giftIh ih; exact Nat.zero_le _
+  · intro contents ih; trivial
+
+-- Same recipe for the genuinely-mutual proof, once per recursor call.
+theorem count_matches_apply_args (b : FruitBasket) (g : GiftWrap) :
+    fruitCount b = fruitCount b ∧ giftCount g = giftCount g := by
+  constructor
+  · apply FruitBasket.rec
+      (motive_1 := fun b => fruitCount b = fruitCount b)
+      (motive_2 := fun g => giftCount g = giftCount g)
+      (t := b)
+    · rfl
+    · intro kind rest ih; rfl
+    · intro gift rest giftIh restIh; rfl
+    · intro contents ih; rfl
+  · apply GiftWrap.rec
+      (motive_1 := fun b => fruitCount b = fruitCount b)
+      (motive_2 := fun g => giftCount g = giftCount g)
+      (t := g)
+    · rfl
+    · intro kind rest ih; rfl
+    · intro gift rest giftIh restIh; rfl
+    · intro contents ih; rfl
+
+theorem count_matches_apply_bare (b : FruitBasket) (g : GiftWrap) :
+    fruitCount b = fruitCount b ∧ giftCount g = giftCount g := by
+  constructor
+  · revert b
+    apply FruitBasket.rec
+    case motive_2 => exact fun g => giftCount g = giftCount g
+    · rfl
+    · intro kind rest ih; rfl
+    · intro gift rest giftIh restIh; rfl
+    · intro contents ih; rfl
+  · revert g
+    apply GiftWrap.rec
+    case motive_1 => exact fun b => fruitCount b = fruitCount b
+    · rfl
+    · intro kind rest ih; rfl
+    · intro gift rest giftIh restIh; rfl
+    · intro contents ih; rfl
+
 /- Note we called TWO different recursors here (`FruitBasket.rec` and
    `GiftWrap.rec`) for the two halves of the proof -- and BOTH accepted
    the SAME four case names (`empty`, `addFruit`, `addGift`, `wrap`),

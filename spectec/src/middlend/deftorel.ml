@@ -19,7 +19,7 @@ type env = {
   mutable rec_funcs : StringSet.t
 }
 
-let empty_env = {
+let empty_env () = {
   il_env = Il.Env.empty;
   rel_set = StringSet.empty;
   rec_funcs = StringSet.empty
@@ -780,16 +780,16 @@ let reorder_new_defs new_defs d =
   | _ -> [d]
 
 let monomorphization il =
-  let env = empty_env in 
+  let env = empty_env () in
   env.il_env <- Il.Env.env_of_script il;
   create_rel_set env il;
   
   let def_ids = collect_fcalls_with_def env il in
-  print_endline ("Monomorphization: " ^ String.concat ", " (List.map (fun (id, ids) -> id.it ^ "(" ^ String.concat ", " (List.map (fun (_, id') -> id'.it) ids) ^ ")") def_ids));
+  (* print_endline ("Monomorphization: " ^ String.concat ", " (List.map (fun (id, ids) -> id.it ^ "(" ^ String.concat ", " (List.map (fun (_, id') -> id'.it) ids) ^ ")") def_ids)); *)
   let defs = ref (List.concat_map (monomorphize_def def_ids) il) in
-  print_endline ("Monomorphization: " ^ String.concat ", " (List.map (fun d -> match d.it with
+  (* print_endline ("Monomorphization: " ^ String.concat ", " (List.map (fun d -> match d.it with
   | DecD (id, _, _, _) -> id.it
-  | _ -> "") !defs));
+  | _ -> "") !defs)); *)
   
   let transformer = { base_transformer with transform_exp = transform_exp_fcall env } in
   let il' = List.map (Walk.transform_def transformer) il in
@@ -798,7 +798,7 @@ let monomorphization il =
 let transform (il : script): script =
   let il' = monomorphization il in
 
-  let env = empty_env in 
+  let env = empty_env () in
   env.il_env <- Il.Env.env_of_script il';
   List.iter (create_rec_func_set env) il';
   List.concat_map (transform_def env) il'

@@ -41,10 +41,17 @@ theorem auto_infers_fine (n : Nat) (b : BoundedBasket n) :
 -- -- (Lean expected a still-flexible motive it could solve; handing it an
 -- -- already-fixed one collapses the "conclusion" to a closed term the
 -- -- elaborator can no longer adjust to match your goal.)
-
+#check BoundedBasket.rec
 -- ATTEMPT B: same motive, via `apply` on the raw recursor -- WORKS.
 theorem attempt_B (n : Nat) (b : BoundedBasket n) : n = n := by
   apply BoundedBasket.rec (motive := fun n _ => n = n) (t := b)
+  · rfl
+  · intro n rest ih
+    rfl
+
+theorem attempt_B2 (n : Nat) (b : BoundedBasket n) : n = n := by
+  revert b
+  apply BoundedBasket.rec
   · rfl
   · intro n rest ih
     rfl
