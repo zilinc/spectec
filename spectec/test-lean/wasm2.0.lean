@@ -1,3 +1,5 @@
+import ExtendedDeriveDecEq
+
 def List.ap (fs : List (α → β)) (xs : List α) : List β :=
   List.zipWith ((· ·)) fs xs
 
@@ -1742,6 +1744,7 @@ inductive instr : Type where
   | MEMORY_INIT (v_dataidx : dataidx) : instr
   | DATA_DROP (v_dataidx : dataidx) : instr
 deriving Inhabited, BEq
+derive_deceq instr
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:524.8-524.13 -/
 inductive wf_instr : instr → Prop where
@@ -1967,6 +1970,12 @@ inductive elemmode : Type where
   | PASSIVE : elemmode
   | DECLARE : elemmode
 deriving Inhabited, BEq
+set_option trace.DecEqMutual.derive true in
+derive_deceq elemmode
+#print elemmode.decEq
+#check @elemmode.decEq
+#print instDecidableEqElemmode   -- Lean's standard deriving-infra naming (Deriving.Util.mkInstName)
+
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:541.8-541.16 -/
 inductive wf_elemmode : elemmode → Prop where
@@ -1983,6 +1992,7 @@ inductive datamode : Type where
   | ACTIVE (v_memidx : memidx) (v_expr : expr) : datamode
   | PASSIVE : datamode
 deriving Inhabited, BEq
+derive_deceq datamode
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:542.8-542.16 -/
 inductive wf_datamode : datamode → Prop where
@@ -2007,6 +2017,7 @@ deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 inductive func : Type where
   | FUNC (v_typeidx : typeidx) (local_lst : List «local») (v_expr : expr) : func
 deriving Inhabited, BEq
+derive_deceq func
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:548.8-548.12 -/
 inductive wf_func : func → Prop where
@@ -2020,6 +2031,7 @@ inductive wf_func : func → Prop where
 inductive global : Type where
   | GLOBAL (v_globaltype : globaltype) (v_expr : expr) : global
 deriving Inhabited, BEq
+derive_deceq global
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:550.8-550.14 -/
 inductive wf_global : global → Prop where
@@ -2056,6 +2068,7 @@ inductive wf_mem : mem → Prop where
 inductive elem : Type where
   | ELEM (v_reftype : reftype) (expr_lst : List expr) (v_elemmode : elemmode) : elem
 deriving Inhabited, BEq
+derive_deceq elem
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:556.8-556.12 -/
 inductive wf_elem : elem → Prop where
@@ -2069,6 +2082,7 @@ inductive wf_elem : elem → Prop where
 inductive data : Type where
   | DATA (byte_lst : List byte) (v_datamode : datamode) : data
 deriving Inhabited, BEq
+derive_deceq data
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:558.8-558.12 -/
 inductive wf_data : data → Prop where
@@ -2145,6 +2159,7 @@ inductive wf_import : «import» → Prop where
 inductive module : Type where
   | MODULE (type_lst : List type) (import_lst : List «import») (func_lst : List func) (global_lst : List global) (table_lst : List table) (mem_lst : List mem) (elem_lst : List elem) (data_lst : List data) (start_opt : Option start) (export_lst : List «export») : module
 deriving Inhabited, BEq
+derive_deceq module
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:570.8-570.14 -/
 inductive wf_module : module → Prop where
@@ -8195,6 +8210,7 @@ structure funcinst where
   MODULE : moduleinst
   CODE : func
 deriving Inhabited, BEq
+derive_deceq funcinst
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:60.8-60.16 -/
 inductive wf_funcinst : funcinst → Prop where
@@ -8292,6 +8308,7 @@ structure store where
   ELEMS : List eleminst
   DATAS : List datainst
 deriving Inhabited, BEq
+derive_deceq store
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:104.8-104.13 -/
 inductive wf_store : store → Prop where
@@ -8333,6 +8350,7 @@ inductive wf_frame : frame → Prop where
 inductive state : Type where
   | mk_state (v_store : store) (v_frame : frame) : state
 deriving Inhabited, BEq
+derive_deceq state
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:116.8-116.13 -/
 inductive wf_state : state → Prop where
@@ -8419,6 +8437,7 @@ inductive admininstr : Type where
   | FRAME_ (v_n : n) (v_frame : frame) (admininstr_lst : List admininstr) : admininstr
   | TRAP : admininstr
 deriving Inhabited, BEq
+derive_deceq admininstr
 
 /- Auxiliary Definition at:  -/
 def admininstr_instr (var_0 : instr) : admininstr :=
@@ -8739,6 +8758,7 @@ inductive wf_admininstr : admininstr → Prop where
 inductive config : Type where
   | mk_config (v_state : state) (admininstr_lst : List admininstr) : config
 deriving Inhabited, BEq
+derive_deceq config
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:117.8-117.14 -/
 inductive wf_config : config → Prop where

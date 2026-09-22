@@ -26,6 +26,7 @@ let rec render_command (cmd : command) : document =
   | Mutual m -> render_mutual m
   | Instance i -> render_instance i
   | Theorem t -> render_theorem t
+  | DeriveDeceq d -> render__derive_deceq d
 
 and render_theorem (theorem : _theorem) : document =
   let modifier_str = render_decl_modifier theorem.modifier in
@@ -458,10 +459,7 @@ and render__structure (s : _structure) : document =
       Some ((render_decl_modifier constructor_modifier) ^^ (render_id constructor_id) ^^ string " ::")
   in
   let fields_str = separate hardline (List.map render_struct_field s.fields) in
-  let deriving_str = match s.deriving with
-  | None -> empty
-  | Some der -> render__deriving der
-  in
+  let deriving_str = render__deriving s.deriving in
   modifier_str
   ^^ string "structure "
   ^^ id_str
@@ -535,10 +533,7 @@ and render__inductive (ind : _inductive) : document =
   let id_str = render_id ind.id in
   let decl_sig_str = render_opt_decl_sig ind.signature in
   let cases_str = separate hardline (List.map render__inductive_case ind.cases) in
-  let deriving_str = match ind.deriving with 
-    | None -> empty
-    | Some der -> render__deriving der
-  in
+  let deriving_str = render__deriving ind.deriving in
   modifier_str
   ^^ string "inductive "
   ^^ id_str
@@ -582,9 +577,13 @@ and render__abbrev (abbrev : _abbrev) : document =
     ^^ cases_str
 
 and render__deriving (deriving : _deriving) : document =
-  match deriving with
+  match deriving.deriving with
   | [] -> empty
   | idents -> string ("deriving ") ^^ (separate (string ", ") (List.map string idents))
+
+and render__derive_deceq (d : _derive_deceq) : document =
+  string "derive_deceq "
+  ^^ separate (string " ") (List.map render_id (NonEmptyList.to_list d))
 
 and render_decl_modifier (modifier : decl_modifier) : document =
   (* The comment (if any) always sits on its own line, terminated by its own
@@ -654,11 +653,14 @@ and render_bracketed_binder (binder : bracketed_binder) : document =
   | InstanceParam term ->
     string "[" ^^ render_term term ^^ string "]"
 
-(* NOTE: _script isn't a Lean AST construct at time of writing; this function is
-just for convenience *)
-and render__script (script : command list) : document =
-  let commands_str = separate (hardline ^^ hardline) (List.map render_command script) in
-  commands_str
+and render__imports (imports : _imports) : document =
+  separate hardline (List.map (fun m -> string "import " ^^ string m) imports)
+
+and render__script (script : _script) : document =
+  let commands_str = separate (hardline ^^ hardline) (List.map render_command script.commands) in
+  match script.imports with
+  | [] -> commands_str
+  | _ -> render__imports script.imports ^^ hardline ^^ hardline ^^ commands_str
 
 (* PPrint never trims whitespace on its own: a few render_term branches (e.g.
    By's "by ", opt_decl_sig's " : " before a Premises node) put a literal
@@ -691,7 +693,7 @@ let normalize_trailing_newline (s : string) : string =
   in
   String.sub s 0 (last_non_newline len) ^ "\n"
 
-let render_script_to_string (script : command list) : string =
+let render_script_to_string (script : _script) : string =
   let buf = Buffer.create 4096 in
   PPrint.ToBuffer.pretty 1.0 80 buf (render__script script);
   Buffer.contents buf

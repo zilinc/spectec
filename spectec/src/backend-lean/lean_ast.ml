@@ -383,7 +383,18 @@ type decl_modifier = {
 }
 [@@deriving show]
 
-type _deriving = ident list [@@deriving show]
+type _deriving = {
+  deriving: ident list;
+  derive_deceq: bool;
+}[@@deriving show]
+
+(* Not part of Lean 4's own core grammar -- a custom command declared by
+   test-lean/ExtendedDeriveDecEq.lean:
+     syntax (name := deriveDecEqCmd) "derive_deceq " ident+ : command
+   Modeled with the same `ident+` (non-empty list) shape as that rule, even
+   though the elaborator only ever consults the first name and warns on the
+   rest -- see [Backend.deceq_commands_for], which always emits exactly one. *)
+type _derive_deceq = ident non_empty_list [@@deriving show]
 
 
 type _def_case = term * term [@@deriving show]
@@ -421,7 +432,7 @@ type _inductive = {
   id: decl_id;
   signature: opt_decl_sig;
   cases: _inductive_case list;
-  deriving: _deriving option
+  deriving: _deriving;
 }
 [@@deriving show]
 
@@ -458,7 +469,7 @@ type _structure = {
   (* TODO: extends *)
   constructor: (decl_modifier * ident) option;
   fields: struct_field list;
-  deriving: _deriving option;
+  deriving: _deriving;
 }
 [@@deriving show]
 
@@ -509,4 +520,21 @@ type command =
   | Mutual of mutual
   | Instance of instance
   | Theorem of _theorem
+  | DeriveDeceq of _derive_deceq
+[@@deriving show]
+
+(* Not part of Lean 4's own command grammar: an import precedes every
+   command in a file and isn't a command itself, so -- like every other
+   _-prefixed type in this file -- it's modeled on its own rather than
+   folded into [command]. *)
+type _imports = ident list [@@deriving show]
+
+(* Not a Lean AST construct either: the whole generated file, imports then
+   commands. Was previously just `command list` with the intent noted in a
+   comment (see render.ml's render__script); [_imports] is now a real
+   field instead of an unmodeled side channel. *)
+type _script = {
+  imports: _imports;
+  commands: command list;
+}
 [@@deriving show]

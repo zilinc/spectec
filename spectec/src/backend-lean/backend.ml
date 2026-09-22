@@ -107,9 +107,18 @@ let create_inductive_type_with_params_applied
         FunApp (Ident parent_type.it, NonEmptyList.from_list_unsafe args)
     | _ -> failwith "all params of a typecase should be TypP"
 
-let standard_deriving : _deriving option = Some ["Inhabited"; "BEq"]
-let extended_eq_deriving : _deriving option =
-  Some ["Inhabited"; "BEq"; "DecidableEq"; "ReflBEq"; "LawfulBEq"]
+let standard_deriving : _deriving = {
+  deriving = ["Inhabited"; "BEq"];
+  derive_deceq = true;
+}
+let extended_eq_deriving : _deriving = {
+  deriving = ["Inhabited"; "BEq"; "DecidableEq"; "ReflBEq"; "LawfulBEq"];
+  derive_deceq = false;
+}
+let empty_deriving : _deriving = {
+  deriving = [];
+  derive_deceq = false;
+}
 
 (*
   The [deriving] clause for each [Whole_file_analyses.deriving_category] (see
@@ -118,9 +127,9 @@ let extended_eq_deriving : _deriving option =
   stronger equality mechanism (e.g. test-lean/ExtendedDeriveDecEq.lean's
   [derive_deceq] command) instead of falling back to [standard_deriving].
 *)
-let deriving_for_category (category : deriving_category) : _deriving option
+let deriving_for_category (category : deriving_category) : _deriving
   = match category with
-    | RelationCategory -> None
+    | RelationCategory -> empty_deriving
     | PlainDataCategory | PolymorphicDataCategory -> extended_eq_deriving
     | SelfNestedDataCategory | MutualGroupDataCategory -> standard_deriving
 
@@ -131,10 +140,36 @@ let deriving_for_category (category : deriving_category) : _deriving option
   self-nesting/bad-reference analysis (or, for structures, skip analysis
   entirely) now just looks its own id up here.
 *)
-let deriving_of_id (id : Il.Ast.id) : _deriving option
+let deriving_of_id (id : Il.Ast.id) : _deriving
   = match List.assoc_opt id.it (!analysis).deriving_categories with
     | Some category -> deriving_for_category category
     | None -> failwith ("deriving_of_id: " ^ id.it ^ " missing from whole-script deriving-category analysis")
+
+(*
+  The trailing [DeriveDeceq] command for a type or mutual group, if
+  [deriving] calls for one -- [] otherwise. [names] is every candidate id
+  that could stand in for the group (just the one id for a standalone type;
+  every member's id for a mutual group) -- [ExtendedDeriveDecEq.lean]'s
+  command only ever needs one representative name (it derives the whole
+  group and warns if given more than one), currently just the first of
+  [names]. Kept as a list, rather than a single pre-chosen name, so that
+  choice can be revisited here later without touching call sites.
+*)
+(* Tracks whether [deceq_commands_for] emitted a [DeriveDeceq] command this
+   run -- consulted by exe-spectec/main.ml to decide whether the generated
+   file needs `import ExtendedDeriveDecEq` at its head (that syntax doesn't
+   exist without it: `derive_deceq` is a command ExtendedDeriveDecEq.lean
+   declares, not part of Lean's own grammar). Reset in [create_script],
+   mirroring [used_prem_arities] et al. below. *)
+let used_derive_deceq : bool ref = ref false
+
+let deceq_commands_for (names : string list) (deriving : _deriving) : command list =
+  if not deriving.derive_deceq then []
+  else match names with
+    | [] -> []
+    | representative :: _ ->
+      used_derive_deceq := true;
+      [DeriveDeceq (NonEmptyList.from_list_unsafe [representative])]
 
 let create_unop_bool (op : Il.Ast.unop) : term
   = match op with
@@ -1639,21 +1674,20 @@ let create_inductive_type_construct (def : Il.Ast.def) : command list =
             | _ -> failwith "only TypP should be here"
         in
 
-        [
-          Inductive {
-            modifier = { empty_modifier with comment = create_comment def };
-            id = id.it;
-            signature = (
-              List.map
-                create_typ_binder
-                params,
+        let deriving = deriving_of_id id in
+        Inductive {
+          modifier = { empty_modifier with comment = create_comment def };
+          id = id.it;
+          signature = (
+            List.map
+              create_typ_binder
+              params,
 
-              Some (Type None)
-            );
-            cases = List.map (create_typcase id params) ts;
-            deriving = deriving_of_id id;
-          }
-        ]
+            Some (Type None)
+          );
+          cases = List.map (create_typcase id params) ts;
+          deriving;
+        } :: deceq_commands_for [id.it] deriving
     | _ -> failwith "unreachable: get_top_level_construct_type already confirmed InductiveTypeConstruct"
 
 let create_structure_construct (def : Il.Ast.def) : command list =
@@ -1672,6 +1706,7 @@ let create_structure_construct (def : Il.Ast.def) : command list =
 
       let fields = List.map create_struct_field ts in
 
+      let deriving = deriving_of_id id in
       let typ_struct : command
         = Structure {
           modifier = { empty_modifier with comment = create_comment def };
@@ -1680,12 +1715,13 @@ let create_structure_construct (def : Il.Ast.def) : command list =
           universe = None;
           constructor = Some (empty_modifier, "MK" ^ id.it); (* following previous version *)
           fields = fields;
-          deriving = deriving_of_id id;
+          deriving;
         }
       in
+      let deceq_cmds = deceq_commands_for [id.it] deriving in
 
       if not (List.mem id.it !analysis.types_needing_append_instances) then
-        [typ_struct]
+        typ_struct :: deceq_cmds
       else
         (*
           If the type needs append instances, then create the append function,
@@ -1807,8 +1843,9 @@ let create_structure_construct (def : Il.Ast.def) : command list =
           }
         in
 
-        [
-          typ_struct;
+        [typ_struct]
+        @ deceq_cmds
+        @ [
           append_func;
           append_instance;
         ]
@@ -2828,13 +2865,39 @@ let rec create_mutual_construct (def : Il.Ast.def) : command list =
                        classification -- see that type's doc comment for why
                        forcing [Inhabited]/[BEq] onto a Prop-valued relation is
                        wrong regardless of its mutual-group membership. *)
+                    (* [create_def] on an individual member can return more than
+                       just the [Inductive]/[Structure] itself -- e.g. its own
+                       redundant [DeriveDeceq] command, self-appended by
+                       [create_inductive_type_construct]/[create_structure_construct]
+                       whenever [deriving.derive_deceq] is set, since those
+                       functions don't know they're being called from inside a
+                       mutual group that already emits one combined
+                       `derive_deceq` for the whole block below. Search for the
+                       [Inductive]/[Structure] within the list rather than
+                       requiring it be the sole element, and drop any such
+                       per-member extras -- otherwise, when every member in the
+                       group needs per-member deceq, none of them match the old
+                       singleton pattern and both lists end up empty. *)
                     let inductives = List.filter_map (fun def ->
-                      match create_def def with [Inductive i] -> Some i | _ -> None
+                      List.find_map (function Inductive i -> Some i | _ -> None) (create_def def)
                     ) defs in
                     let structures = List.filter_map (fun def ->
-                      match create_def def with [Structure s] -> Some s | _ -> None
+                      List.find_map (function Structure s -> Some s | _ -> None) (create_def def)
                     ) defs in
+                    (* Every member shares the same [deriving] (the whole
+                       group is uniformly [MutualGroupDataCategory]), so any
+                       one of them tells us whether the group needs a
+                       trailing `derive_deceq` -- [deceq_commands_for] picks
+                       which name(s) to actually use from the full pool. *)
+                    let names = List.map (fun (i : _inductive) -> i.id) inductives
+                      @ List.map (fun (s : _structure) -> s.id) structures in
+                    let deriving = match inductives, structures with
+                      | ind :: _, _ -> ind.deriving
+                      | [], s :: _ -> s.deriving
+                      | [], [] -> failwith "unreachable: all_inductive_or_structure with >1 members"
+                    in
                     [Mutual (MutualInductiveStructure (inductives, structures))]
+                    @ deceq_commands_for names deriving
 
                   | false, true ->
                     let defs' = List.filter_map (fun def -> (* Name collision *)
@@ -2885,13 +2948,14 @@ let prologue : command list =
     rat_to_nat;
   ]
 
-let create_script (il : script) : command list =
+let create_script (il : script) : _script =
   analysis := analyze_whole_script il;
   il_env := Il.Env.env_of_script il;
   (* Generate all commands.  Side effects record used arities for each family. *)
   used_prem_arities := [];
   used_exp_arities  := [];
   used_opt_arities  := [];
+  used_derive_deceq := false;
   let generated = List.concat (List.map (fun def -> create_def def) il) in
   let forall_defs =
     List.sort_uniq compare !used_prem_arities
@@ -2905,4 +2969,10 @@ let create_script (il : script) : command list =
     List.sort_uniq compare !used_opt_arities
     |> List.map make_omap_def
   in
-  prologue @ forall_defs @ map_defs @ omap_defs @ generated
+  {
+    (* `derive_deceq` is a command ExtendedDeriveDecEq.lean declares, not
+       part of Lean's own grammar, so it only parses once that file is
+       imported -- see [used_derive_deceq]'s doc comment above. *)
+    imports = if !used_derive_deceq then ["ExtendedDeriveDecEq"] else [];
+    commands = prologue @ forall_defs @ map_defs @ omap_defs @ generated;
+  }
