@@ -426,13 +426,7 @@ let explicate_clause env id osubid nth (func_clause: func_clause) : func_clause 
   let fid = string_of_funcname id osubid in
   let* () = push (cl.at, "in clause " ^ string_of_int (nth + 1)) in
   let* cl' =
-    if Option.is_some orule_id &&
-       List.exists (fun (id', subid') -> Il.Eq.eq_id id id' && Il.Eq.eq_id (Option.get orule_id) subid') !no_prose
-    then (
-      info ~cat:"no_prose" (lazy ("Suppressed by hint: " ^ id.it ^ "/" ^ (Option.get orule_id).it));
-      return cl
-    )
-    else if id.it = "Step_pure" then
+    if id.it = "Step_pure" then
       explicate_step_clause ~rule:Step_pure env fid osubid cl nth
     else if id.it = "Step_read" then
       explicate_step_clause ~rule:Step_read env fid osubid cl nth
@@ -440,7 +434,7 @@ let explicate_clause env id osubid nth (func_clause: func_clause) : func_clause 
       explicate_step_clause ~rule:Step env fid osubid cl nth
     else (
       info ~cat:"not_step" (lazy ("Not a step rule: " ^ id.it));
-      return cl
+      assert false
     )
   in
   let* () = drop () in
@@ -469,14 +463,14 @@ let gen_rel_function env fid at qs prem : (exp * dl_def) M.m =
 
 (* ASSUMES: [e1] and [e2] has equivalent types. *)
 let gen_if_function env fid at (qs, cond) (qs1, ths, e1) (qs2, els, e2) : (quant list * exp * dl_def list) M.m =
+  let fname = fresh_fun (Some fid) in
   let _ = info ~cat:"debug_merge"
-            (lazy ("gen_if_function:\n" ^
+            (lazy ("gen_if_function: `" ^ fname ^ "`\n" ^
                    "  ▹ qs = " ^ string_of_quants qs ^ "\n" ^
                    "  ▹ qs1 = " ^ string_of_quants qs1 ^ "\n" ^
                    "  ▹ qs2 = " ^ string_of_quants qs2
                   ))
   in
-  let fname = fresh_fun (Some fid) in
   let* () = push (at, "when generating if-function `" ^ primitives.if_func ^ "/" ^ fname ^ "`") in
   let* fndefs, cond_exp = match cond.it with
   | IfPr e -> return ([], e)
@@ -527,9 +521,28 @@ let dual_prems p1 p2 : bool =
     )
   | _, _ -> false
 
+let contains_if_calls e : bool =
+  let open Il.Walk in
+  let if_collector: bool collector = {
+    default         = false;
+    compose         = (||);
+    collect_exp     = (fun e -> match e.it with
+                                | CallE (fid, _) -> (String.starts_with ~prefix:primitives.if_func fid.it, true)
+                                | _ -> (false, true));
+    collect_prem    = (fun _ -> (false, true));
+    collect_iterexp = (fun _ -> (false, true));
+    collect_typ     = (fun _ -> (false, true));
+    collect_arg     = (fun _ -> (false, true));
+  } in
+  Il.Walk.collect_exp if_collector e
+
+let rhs_func at t : id -> exp = function id ->
+  let ve = VarE id $$ at % t in
+  CallE (primitives.rhs $ at, [typA ~at t; expA ~at ve]) $$ at % t
+
 (* FIXME: This function won't work for 3 or more way branching. *)
 (* RETURNS: a continuation from the RHS id to a list of premises, where the final return is bound to the RHS id. *)
-let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * (id -> prem list) * dl_def list) M.m =
+let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * (exp -> prem list) * dl_def list) M.m =
   let _ = info ~cat:"debug_merge"
             (lazy ("naive_merge:\n" ^
                    "  ▹ qs1 = " ^ string_of_quants qs1 ^ "\n" ^
@@ -546,28 +559,80 @@ let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * 
   match prems1, prems2 with
   | [], [] -> return ([], (fun _ -> []), [])
   | p11::ps1, p21::ps2 when Il.Eq.eq_prem p11 p21 ->
-      let* qs, k_ps', defs = naive_merge env fid (qs1, ps1, e1) (qs2, ps2, e2) in
-      return (qs, (fun rhs -> p11 :: k_ps' rhs), defs)
+    let* qs, k_ps', defs = naive_merge env fid (qs1, ps1, e1) (qs2, ps2, e2) in
+    return (qs, (fun rhs -> p11 :: k_ps' rhs), defs)
   | p11::ps1, p21::ps2 when dual_prems p11 p21 ->
     let qs11 = qs1 in  (* TODO: those in [p11] *)
     let qs1' = qs1 in  (* TODO: exclude [p11] *)
     let qs2' = qs2 in  (* TODO: exclude [p21] *)
     let* (qs_call, if_call, fn_defs) = gen_if_function env fid at (qs11, p11) (qs1', ps1, e1) (qs2', ps2, e2) in
-    return (qs_call, (fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), fn_defs)
+    return (qs_call, (fun rhs -> [IfPr (eqE ~at rhs if_call) $ at]), fn_defs)
   | p11::ps1, p21::ps2 ->
     let qs11 = qs1 in  (* TODO: those in [p11] *)
     let qs1' = qs1 in  (* TODO: exclude [p11] *)
     let* (qs_call, if_call, fn_defs) = gen_if_function env fid at (qs11, p11) (qs1', ps1, e1) (qs2, p21 :: ps2, e2) in
-    return (qs_call, (fun rhs -> [IfPr (eqE ~at (VarE rhs $> if_call) if_call) $ at]), fn_defs)
+    return (qs_call, (fun rhs -> [IfPr (eqE ~at rhs if_call) $ at]), fn_defs)
 
-let rhs_func at t : id -> exp = function id ->
-  let ve = VarE id $$ at % t in
-  CallE (primitives.rhs $ at, [typA ~at t; expA ~at ve]) $$ at % t
+(* ASSUMES: Neither list is empty. *)
+let rec score_merge prems1 prems2 : int =
+  match prems1, prems2 with
+  | [], _ | _, [] -> assert false
+  | p11::ps1, p21::ps2 ->
+    (match p11.it, p21.it with
+    | _ when Il.Eq.eq_prem p11 p21 -> 100 + score_merge ps1 ps2
+    | _ when dual_prems p11 p21 -> 90
+    | IfPr e1, _ when contains_if_calls e1 -> 0
+    | _, IfPr e2 when contains_if_calls e2 -> 0
+    | _ -> 10
+    )
+
+let rec select_merge_func_clauses env fid clauses : (func_clause list * dl_def list) M.m =
+  if List.is_empty clauses then throw ("No clause to merge") else
+  if List.length clauses = 1 then return (clauses, []) else
+
+  let module IntPair = struct
+    type t = int * int
+    let compare (i11, i12) (i21, i22) = Stdlib.(let r1 = compare i11 i21 in if r1 <> 0 then r1 else compare i21 i22)
+  end in
+  let module IIM = Stdlib.Map.Make(IntPair) in
+  let score_table : int IIM.t =
+    List.mapi (fun i (_, { it = DefD (_, _, _, prems); _ }) ->
+      List.mapi (fun j (_, { it = DefD (_, _, _, prems'); _ }) ->
+        ((i, j), score_merge prems prems')
+      ) (List.drop (i+1) clauses)
+    ) clauses |> List.concat |> IIM.of_list
+  in
+  assert (IIM.cardinal score_table = let l = List.length clauses in l * (l - 1) / 2);
+  let p, top_score = IIM.fold (fun k v ((_, max) as acc) ->
+    if v > max then (k, v) else acc
+  ) score_table ((0, 0), -1) in
+  let _, picked, clauses' = List.fold_left (fun (idx, choose, keep) cl ->
+    if fst p = idx || snd p = idx then (idx+1, choose@[cl], keep)
+                                  else (idx+1, choose, keep@[cl])
+  ) (0, [], []) clauses in
+  assert (List.length picked = 2);
+  let _, { it = DefD (qs1, args1, e1, prems1); at = at1; _ } = List.nth picked 0 in
+  let _, { it = DefD (qs2, args2, e2, prems2); at = at2; _ } = List.nth picked 1 in
+  let at = over_region [at1; at2] in
+  let* () = push (at, "when merging the " ^ string_of_int (fst p) ^ " and " ^ string_of_int (snd p) ^ "clauses with a score of " ^ string_of_int top_score) in
+  let* () = if Il.Eq.eq_list Il.Eq.eq_arg args1 args2 |> not then
+      throw ("Arguments do not match:\n" ^
+             "  ▹ args1: " ^ string_of_args args1 ^ "\n" ^
+             "  ▹ args2: " ^ string_of_args args2)
+    else return ()
+  in
+  let* qs, k_prems, defs = naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) in
+  let v_rhs = fresh_var () $ no in
+  let q_rhs = ExpP (v_rhs, e1.note) $ no in
+  let e_rhs = rhs_func (over_region [e1.at; e2.at]) e1.note v_rhs in
+  (* Recursive call. *)
+  let* clauses'', defs' = select_merge_func_clauses env fid ((None, DefD (q_rhs::qs, args1, e_rhs, k_prems e_rhs) $ at) :: clauses') in
+  return (clauses'', defs@defs')
+
 
 (* ASSUMES: [clauses] is not empty. *)
-let rec merge_func_clauses env id fid (clauses: func_clause list) : (func_clause list * dl_def list) M.m =
+let rec naive_merge_func_clauses env fid (clauses: func_clause list) : (func_clause list * dl_def list) M.m =
   let* () = push (over_region (List.map (snd >.> at) clauses), "when merging function clauses") in
-  if List.mem id.it Common.step_relids |> not then return (clauses, []) else
   let* clauses', if_defs =
     (match clauses with
     | [] -> assert false
@@ -585,9 +650,9 @@ let rec merge_func_clauses env id fid (clauses: func_clause list) : (func_clause
       let v_rhs = fresh_var () $ no in
       let q_rhs = ExpP (v_rhs, exp1.note) $ no in
       let e_rhs = rhs_func (over_region [exp1.at; exp2.at]) exp1.note v_rhs in
-      let cl = None, (DefD (q_rhs::qs, args1, e_rhs, k_prems v_rhs)) $ (over_region (List.map (snd >.> at) clauses)) in
-      let* cls', if_defs' = merge_func_clauses env id fid (cl::cls) in  (* Recurse *)
-      return (cls', if_defs @ if_defs)
+      let cl = None, (DefD (q_rhs::qs, args1, VarE v_rhs $> e_rhs, k_prems e_rhs)) $ (over_region (List.map (snd >.> at) clauses)) in
+      let* cls', if_defs' = naive_merge_func_clauses env fid (cl::cls) in  (* Recurse, BAD!!! *)
+      return (cls', if_defs @ if_defs')
     )
   in
   let* () = drop () in
@@ -604,12 +669,29 @@ let inject_fdef fdef : (func_def * dl_def list) M.m =
   let (id, osubid, ps, t, clauses, opartial) = fdef.it in
   let fid = string_of_funcname id osubid in
   let* () = new_with (fdef.at, "in definition `" ^ fid ^ "`") in
-  let* clauses' = mapiM (explicate_clause !il_env id osubid) clauses in
-  let* clauses'', if_defs = match clauses' with
+  (* If not a Step* rule, we don't do anything. *)
+  if List.mem id.it Common.step_relids |> not then return (fdef, []) else
+  (* If a Step* rule, we filter out the clauses that are marked `no_prose`. *)
+  let clauses' = List.filter (fun cl ->
+    let orule_id, _ = cl in
+    if Option.is_some orule_id &&
+       List.exists (fun (id', subid') -> Il.Eq.eq_id id id' && Il.Eq.eq_id (Option.get orule_id) subid') !no_prose
+    then (
+      info ~cat:"no_prose" (lazy ("Suppressed by hint: " ^ id.it ^ "/" ^ (Option.get orule_id).it));
+      (* NOTE: We assume the annotation of no_prose must be done in a way that, removing these rules
+         and reordering them don't change the semantics of the original set of rules. This is particularly
+         important if there're otherwise premises.
+       *)
+      false
+    )
+    else true
+  ) clauses in
+  let* clauses'' = mapiM (explicate_clause !il_env id osubid) clauses' in
+  let* clauses''', if_defs = match clauses'' with
   | [] -> return ([], [])
-  | _ -> merge_func_clauses !il_env id fid clauses'
+  | _ -> select_merge_func_clauses !il_env fid clauses''
   in
-  return ((id, osubid, ps, t, clauses'', opartial) $ fdef.at, if_defs)
+  return ((id, osubid, ps, t, clauses''', opartial) $ fdef.at, if_defs)
 
 let rec inject_def def : dl_def list M.m = match def with
   | TypeDef _ -> return [def]
