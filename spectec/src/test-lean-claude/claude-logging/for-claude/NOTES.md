@@ -3,6 +3,84 @@
 Last updated: 2026-09-23 (session 1, resumed after a VSCode/environment crash
 mid-session; this file is being written on the resume).
 
+## ⚠️ 2026-09-23 (later, same day) UPDATE — local Rocq checkout has been re-synced
+
+The user manually merged `rocq-backend-proof` into this branch (commit
+`b78d56eeb`, "merge with rocq-backend-proof, change in typefamilyremoval.ml").
+**Verified** (by comparing against `gh api repos/Wasm-DSL/spectec/branches/rocq-backend-proof`
+live, and checking for conflict markers / clean `git status`): the merge is
+correct and complete — `spectec/test-rocq/theories/` is now byte-identical to
+the live upstream HEAD, commit `a8b585cdb` ("Vector Instructions for
+Preservation proven, and most well-formedness lemmas done."), which was
+*also* confirmed still current (no further upstream commits) as of this
+check. This is the same commit `bundle2/response_2.md` had flagged as the
+live HEAD we were stale against (we were at `5b03ae067`, 2026-07-01).
+
+**Full analysis of what changed and what it means for this project is in
+`claude-logging/verbatim_dialogue_log/bundle3/updated_documents/resync_impact_report.md`
+— read that before continuing any Phase-2/3 work.** Headline points (see
+that doc for detail/evidence):
+
+1. **The SIMD/vector gap in Preservation is CLOSED upstream.**
+   `type_preservation_pure.v` and `type_preservation.v` both went from
+   several `Admitted` lemmas (all SIMD-only, per our old digests) to **zero**
+   `Admitted` in the new checkout — ~90 new vector-instruction lemmas were
+   added and fully `Qed`-proved. Our `sorry`s in `TypePreservationPure.lean`/
+   `TypePreservation.lean` justified as "faithfully mirrors a permanent Rocq
+   gap" **no longer have that justification** — the Rocq side now has real
+   proofs to port. This is the single biggest scope change from the resync.
+2. **`extension_lemmas.v` was renamed wholesale.** Every
+   `store_extension_*`/`*_extension_refl*`/`Val_ok_store`/`funcinst_same`
+   name our `ExtensionLemmas.lean` was ported against no longer exists in
+   the new checkout — renamed to `Extend_store_*`/`extend_*_refl*`
+   (converging on the same naming convention as the auto-generated Lean
+   `Extend_store`/`Extend_funcinst` etc. — possibly not a coincidence). Our
+   Lean file's *declarations* (facts/proofs) are still fine, but its
+   *names* are now stale relative to the "signatures must be directly from
+   the Rocq proof" requirement — needs a rename pass.
+3. **`type_progress.v` now exists** (4260 lines, was previously only a
+   staging-directory draft at the old commit) — the Progress half of type
+   safety, previously entirely out of scope for lack of a copy. Digested in
+   `claude-logging/for-claude/digest_type_progress.md`. It depends on
+   `wasm`, `helper_lemmas`, `helper_tactics`, `typing_lemmas`,
+   `extension_lemmas`, `subtyping`, `axioms` — **not** on
+   `type_preservation`/`type_preservation_pure` (Progress and Preservation
+   are independent branches off the same shared infra, contrary to what
+   `proof_prioritization.md` Tier H #37 guessed).
+4. **`helper_lemmas.v` lost several lemmas** our `HelperLemmas.lean` already
+   stubbed (`leadd`, `length_app_lt`, `add_false`, `concat_cancel_last_n`,
+   `lt_irrefl`, the whole `Forall2_nth`/`_lookup`/`_list_update*` family,
+   `Forall_nth'`, `repeat_size`, `ltsize`, `list_update_func_split*`,
+   `list_update_map`, `lookup_list_update_func`) — these are gone upstream,
+   so `proof_prioritization.md` Tier B item 2 ("tier-0 cluster", listed as
+   free/easy wins) is pointing at several lemmas that no longer need
+   porting at all. Don't waste time "faithfully" keeping dead stubs; see
+   the impact report for the reconciled list.
+5. **`axioms.v` grew from 2 to 9 axioms** (`nbytes_len`/`ibytes_len`
+   themselves are byte-for-byte unchanged — our existing port of those two
+   is still correct — but 7 new vector/inverse-bijection axioms were added:
+   `nbytes_len'`, `ibytes_len'`, `ibytes_len''`, `vbytes_len'`,
+   `truncz_quot`, `lanes_len`, `nbytes_inv`, `ibytes_inv`, `vbytes_inv`).
+6. **One real gap remains in Preservation**: `extension_lemmas.v`'s
+   `construct_meminsts_grow` (the `lim_old + v_n <= 2^16` memory-growth
+   bound) is still `Admitted` upstream — same lemma flagged in
+   `proof_prioritization.md` Tier F #27 — but new supporting machinery
+   (`pagediv`, `update_holds_upto_le`/`_lt`, `holds_upto_*`) was added
+   alongside it, suggesting the author was actively working toward closing
+   it and got partway. Worth a fresh look with the new lemmas available.
+7. **Progress's one remaining gap (`t_progress_be`, 5 `admit.` sites) is
+   confirmed, in the author's own inline comments, to be exactly the
+   `lane_`-union generator encoding bug** diagnosed via commit-history
+   archaeology in `rocq_proof_intuition.md` — that diagnosis is now
+   validated word-for-word against the actual source, not just inferred.
+
+None of this required modifying anything outside `spectec/src/test-lean-claude/`
+— the resync itself was the user's own manual merge; my role here was
+read-only verification (`gh api`, `git diff`/`show` against two already-local
+commit objects, `git status`) plus writing new analysis into this project's
+own directory. Safety check re-run and clean, see
+`claude-logging/safety-checks/`.
+
 ## Task recap
 
 Translate `spectec/test-rocq/theories/` (a Rocq/Coq mechanized proof of WASM
