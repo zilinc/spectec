@@ -1744,6 +1744,7 @@ inductive instr : Type where
   | MEMORY_INIT (v_dataidx : dataidx) : instr
   | DATA_DROP (v_dataidx : dataidx) : instr
 deriving Inhabited, BEq
+
 derive_deceq instr
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:524.8-524.13 -/
@@ -1970,12 +1971,8 @@ inductive elemmode : Type where
   | PASSIVE : elemmode
   | DECLARE : elemmode
 deriving Inhabited, BEq
-set_option trace.DecEqMutual.derive true in
-derive_deceq elemmode
-#print elemmode.decEq
-#check @elemmode.decEq
-#print instDecidableEqElemmode   -- Lean's standard deriving-infra naming (Deriving.Util.mkInstName)
 
+derive_deceq elemmode
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:541.8-541.16 -/
 inductive wf_elemmode : elemmode → Prop where
@@ -1992,6 +1989,7 @@ inductive datamode : Type where
   | ACTIVE (v_memidx : memidx) (v_expr : expr) : datamode
   | PASSIVE : datamode
 deriving Inhabited, BEq
+
 derive_deceq datamode
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:542.8-542.16 -/
@@ -2017,6 +2015,7 @@ deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 inductive func : Type where
   | FUNC (v_typeidx : typeidx) (local_lst : List «local») (v_expr : expr) : func
 deriving Inhabited, BEq
+
 derive_deceq func
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:548.8-548.12 -/
@@ -2031,6 +2030,7 @@ inductive wf_func : func → Prop where
 inductive global : Type where
   | GLOBAL (v_globaltype : globaltype) (v_expr : expr) : global
 deriving Inhabited, BEq
+
 derive_deceq global
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:550.8-550.14 -/
@@ -2068,6 +2068,7 @@ inductive wf_mem : mem → Prop where
 inductive elem : Type where
   | ELEM (v_reftype : reftype) (expr_lst : List expr) (v_elemmode : elemmode) : elem
 deriving Inhabited, BEq
+
 derive_deceq elem
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:556.8-556.12 -/
@@ -2082,6 +2083,7 @@ inductive wf_elem : elem → Prop where
 inductive data : Type where
   | DATA (byte_lst : List byte) (v_datamode : datamode) : data
 deriving Inhabited, BEq
+
 derive_deceq data
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:558.8-558.12 -/
@@ -2159,6 +2161,7 @@ inductive wf_import : «import» → Prop where
 inductive module : Type where
   | MODULE (type_lst : List type) (import_lst : List «import») (func_lst : List func) (global_lst : List global) (table_lst : List table) (mem_lst : List mem) (elem_lst : List elem) (data_lst : List data) (start_opt : Option start) (export_lst : List «export») : module
 deriving Inhabited, BEq
+
 derive_deceq module
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:570.8-570.14 -/
@@ -3377,9 +3380,12 @@ theorem promote___is_wf (v_M : M) (v_N : N) (v_fN : fN) (ret_val_lst : List fN) 
   Forall (fun (ret_val_elem : fN) => wf_fN v_N ret_val_elem) ret_val_lst :=
   sorry
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:63.1-63.76 -/
-def reinterpret__ (numtype_1 : numtype) (numtype_2 : numtype) (v_num_ : num_) : Option num_ :=
-  none
+/- Axiom Definition at: ../specification/wasm-2.0/3-numerics.spectec:63.1-63.76 -/
+opaque reinterpret__ (numtype_1 : numtype) (numtype_2 : numtype) (v_num_ : num_) : Option num_ := by
+  first
+     | exact Inhabited.default
+     | intros ; assumption
+
 
 /- Well-Formedness Theorem at: ../specification/wasm-2.0/3-numerics.spectec:63.6-63.20 -/
 theorem reinterpret___is_wf (numtype_1 : numtype) (numtype_2 : numtype) (v_num_ : num_) (ret_val : num_) :
@@ -3644,9 +3650,12 @@ theorem fbytes__is_wf (v_N : N) (v_fN : fN) (ret_val_lst : List byte) :
   Forall (fun (ret_val_elem : byte) => wf_byte ret_val_elem) ret_val_lst :=
   sorry
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:80.1-80.103 -/
-def nbytes_ (v_numtype : numtype) (v_num_ : num_) : Option (List byte) :=
-  none
+/- Axiom Definition at: ../specification/wasm-2.0/3-numerics.spectec:80.1-80.103 -/
+opaque nbytes_ (v_numtype : numtype) (v_num_ : num_) : Option (List byte) := by
+  first
+     | exact Inhabited.default
+     | intros ; assumption
+
 
 /- Well-Formedness Theorem at: ../specification/wasm-2.0/3-numerics.spectec:80.6-80.14 -/
 theorem nbytes__is_wf (v_numtype : numtype) (v_num_ : num_) (ret_val_lst : List byte) :
@@ -8210,6 +8219,7 @@ structure funcinst where
   MODULE : moduleinst
   CODE : func
 deriving Inhabited, BEq
+
 derive_deceq funcinst
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:60.8-60.16 -/
@@ -8308,6 +8318,7 @@ structure store where
   ELEMS : List eleminst
   DATAS : List datainst
 deriving Inhabited, BEq
+
 derive_deceq store
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:104.8-104.13 -/
@@ -8350,6 +8361,7 @@ inductive wf_frame : frame → Prop where
 inductive state : Type where
   | mk_state (v_store : store) (v_frame : frame) : state
 deriving Inhabited, BEq
+
 derive_deceq state
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:116.8-116.13 -/
@@ -8437,6 +8449,7 @@ inductive admininstr : Type where
   | FRAME_ (v_n : n) (v_frame : frame) (admininstr_lst : List admininstr) : admininstr
   | TRAP : admininstr
 deriving Inhabited, BEq
+
 derive_deceq admininstr
 
 /- Auxiliary Definition at:  -/
@@ -8758,6 +8771,7 @@ inductive wf_admininstr : admininstr → Prop where
 inductive config : Type where
   | mk_config (v_state : state) (admininstr_lst : List admininstr) : config
 deriving Inhabited, BEq
+
 derive_deceq config
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/4-runtime.spectec:117.8-117.14 -/
@@ -11712,8 +11726,8 @@ inductive fun_instantiate : store → module → List externaddr → config → 
       LOCALS := []
       MODULE := v_moduleinst : frame
     }) →
-    Forall (fun (i_71346 : Nat) => i_71346 < (List.length elem_lst)) (List.range n_E) →
-    instr_E_lst = (concat_ instr (List.range n_E |>.map (fun (i_71346 : Nat) => runelem ((elem_lst)[i_71346]!) (uN.mk_uN i_71346)))) →
+    Forall (fun (i_77718 : Nat) => i_77718 < (List.length elem_lst)) (List.range n_E) →
+    instr_E_lst = (concat_ instr (List.range n_E |>.map (fun (i_77718 : Nat) => runelem ((elem_lst)[i_77718]!) (uN.mk_uN i_77718)))) →
     Forall (fun (j_17 : Nat) => (rundata ((data_lst)[j_17]!) (uN.mk_uN j_17)) ≠ none) (List.range n_D) →
     Forall (fun (j_17 : Nat) => j_17 < (List.length data_lst)) (List.range n_D) →
     instr_D_lst = (concat_ instr (List.range n_D |>.map (fun (j_17 : Nat) => Option.get! (rundata ((data_lst)[j_17]!) (uN.mk_uN j_17))))) →
@@ -11744,7 +11758,7 @@ inductive fun_instantiate : store → module → List externaddr → config → 
       LOCALS := []
       MODULE := v_moduleinst : frame
     }) →
-    Forall (fun (i_71349 : Nat) => wf_uN 32 (uN.mk_uN i_71349)) (List.range n_E) →
+    Forall (fun (i_77721 : Nat) => wf_uN 32 (uN.mk_uN i_77721)) (List.range n_E) →
     Forall (fun (j_18 : Nat) => wf_uN 32 (uN.mk_uN j_18)) (List.range n_D) →
     fun_instantiate s v_module externaddr_lst (config.mk_config (state.mk_state s' f) ((Map (fun (instr_E_elem : instr) => admininstr_instr instr_E_elem) instr_E_lst) ++ ((Map (fun (instr_D_elem : instr) => admininstr_instr instr_D_elem) instr_D_lst) ++ (Option.toList (OMap (fun (x_elem : idx) => admininstr.CALL x_elem) x_opt)))))
 
