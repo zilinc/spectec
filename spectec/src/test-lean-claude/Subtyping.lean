@@ -55,12 +55,19 @@ def instrtype_sub (tf tf' : functype) : Prop :=
 
 /-! ## Valtype subtyping — refl / trans / inversion (subtyping.v:33-77) -/
 
-/-- Rocq `subtyping.v:33` `valtype_sub_refl`. -/
-theorem valtype_sub_refl (t : valtype) : Valtype_sub t t := sorry
+/-- Rocq `subtyping.v:33` `valtype_sub_refl`. Proof reused from a prior Lean session's
+    `InstrtypeSub.lean`/`SeqTypingInversion.lean` (both have this identical proof). -/
+theorem valtype_sub_refl (t : valtype) : Valtype_sub t t := Valtype_sub.refl t
 
-/-- Rocq `subtyping.v:39` `valtype_sub_trans`. -/
+/-- Rocq `subtyping.v:39` `valtype_sub_trans`. Proof reused from a prior Lean session
+    (see above): the only non-`refl` case is `bot`, which concludes `Sub BOT c`
+    unconditionally regardless of the middle term. -/
 theorem valtype_sub_trans (t1 t2 t3 : valtype) :
-    Valtype_sub t1 t2 → Valtype_sub t2 t3 → Valtype_sub t1 t3 := sorry
+    Valtype_sub t1 t2 → Valtype_sub t2 t3 → Valtype_sub t1 t3 := by
+  intro h1 h2
+  cases h1 with
+  | refl _ => exact h2
+  | bot _ => exact Valtype_sub.bot t3
 
 /-- Rocq `subtyping.v:49` `valtype_sub_non_bot`. -/
 theorem valtype_sub_non_bot (v v_valtype : valtype) :
@@ -72,25 +79,91 @@ theorem resulttype_sub_non_bot (v_ts v_ts2 : List valtype) :
 
 /-! ## Resulttype (list) subtyping — refl / size / trans / app-split (subtyping.v:79-347) -/
 
-/-- Rocq `subtyping.v:79` `resulttype_sub_refl`. -/
-theorem resulttype_sub_refl (ts : List valtype) : ResulttypeSub ts ts := sorry
+/-- New plumbing (no direct Rocq counterpart — `Forall2` is an inductive relation there,
+    so reflexivity is a one-line induction; here `Forall₂` is a zip-based `def`, needing
+    this explicit pointwise unfolding). Reused from a prior Lean session's
+    `InstrtypeSub.lean`/`SeqTypingInversion.lean` (`forall2_valtype_sub_refl`). -/
+theorem forall2_valtype_sub_refl (ts : List valtype) :
+    Forall₂ (fun a b => Valtype_sub a b) ts ts := by
+  induction ts with
+  | nil => intro p hp; simp at hp
+  | cons x xs ih =>
+    intro p hp
+    simp only [List.zip_cons_cons, List.mem_cons] at hp
+    rcases hp with hp | hp
+    · rw [hp]; exact valtype_sub_refl x
+    · exact ih p hp
+
+/-- New plumbing (see `forall2_valtype_sub_refl`). Reused from a prior Lean session
+    (`forall2_valtype_sub_trans`). -/
+theorem forall2_valtype_sub_trans {t1s t2s t3s : List valtype}
+    (hlen12 : t1s.length = t2s.length) (hlen23 : t2s.length = t3s.length)
+    (h1 : Forall₂ (fun a b => Valtype_sub a b) t1s t2s)
+    (h2 : Forall₂ (fun a b => Valtype_sub a b) t2s t3s) :
+    Forall₂ (fun a b => Valtype_sub a b) t1s t3s := by
+  induction t1s generalizing t2s t3s with
+  | nil =>
+    match t2s, t3s, hlen12, hlen23 with
+    | [], [], _, _ => intro p hp; simp at hp
+  | cons x xs ih =>
+    match t2s, hlen12 with
+    | y :: ys, hlen12 =>
+      match t3s, hlen23 with
+      | z :: zs, hlen23 =>
+        have hxy : Valtype_sub x y := h1 (x, y) (by simp)
+        have hyz : Valtype_sub y z := h2 (y, z) (by simp)
+        have hxz : Valtype_sub x z := valtype_sub_trans x y z hxy hyz
+        have htail : Forall₂ (fun a b => Valtype_sub a b) xs zs := by
+          apply ih (Nat.succ.inj hlen12) (Nat.succ.inj hlen23)
+          · intro p hp; exact h1 p (by simp; right; exact hp)
+          · intro p hp; exact h2 p (by simp; right; exact hp)
+        intro p hp
+        simp only [List.zip_cons_cons, List.mem_cons] at hp
+        rcases hp with hp | hp
+        · rw [hp]; exact hxz
+        · exact htail p hp
+
+/-- Rocq `subtyping.v:79` `resulttype_sub_refl`. Proof reused from a prior Lean session. -/
+theorem resulttype_sub_refl (ts : List valtype) : ResulttypeSub ts ts :=
+  Resulttype_sub.mk_Resulttype_sub ts ts rfl (forall2_valtype_sub_refl ts)
 
 /-- Rocq `subtyping.v:88` `resulttype_sub_size_eq`. -/
 theorem resulttype_sub_size_eq (ts1 ts2 : List valtype) :
-    ResulttypeSub ts1 ts2 → ts1.length = ts2.length := sorry
+    ResulttypeSub ts1 ts2 → ts1.length = ts2.length := by
+  intro h; cases h with
+  | mk_Resulttype_sub _ _ hlen _ => exact hlen
 
-/-- Rocq `subtyping.v:97` `resulttype_sub_trans`. -/
+/-- Rocq `subtyping.v:97` `resulttype_sub_trans`. Proof reused from a prior Lean session. -/
 theorem resulttype_sub_trans (ts1 ts2 ts3 : List valtype) :
-    ResulttypeSub ts1 ts2 → ResulttypeSub ts2 ts3 → ResulttypeSub ts1 ts3 := sorry
+    ResulttypeSub ts1 ts2 → ResulttypeSub ts2 ts3 → ResulttypeSub ts1 ts3 := by
+  intro h1 h2
+  cases h1 with
+  | mk_Resulttype_sub _ _ hlen1 hf1 =>
+    cases h2 with
+    | mk_Resulttype_sub _ _ hlen2 hf2 =>
+      exact Resulttype_sub.mk_Resulttype_sub ts1 ts3 (hlen1.trans hlen2)
+        (forall2_valtype_sub_trans hlen1 hlen2 hf1 hf2)
 
 /-- Rocq `subtyping.v:122` `resulttype_sub_app_trans`. -/
 theorem resulttype_sub_app_trans (ts_sub ts ts1 ts2 : List valtype) :
     ResulttypeSub ts_sub ts → ResulttypeSub (ts ++ ts1) ts2 → ResulttypeSub (ts_sub ++ ts1) ts2 := sorry
 
-/-- Rocq `subtyping.v:188` `resulttype_sub_app`. -/
+/-- Rocq `subtyping.v:188` `resulttype_sub_app`. Proof reused from a prior Lean session. -/
 theorem resulttype_sub_app (ts1_sub ts2_sub ts1 ts2 : List valtype) :
     ResulttypeSub ts1_sub ts1 → ResulttypeSub ts2_sub ts2 →
-    ResulttypeSub (ts1_sub ++ ts2_sub) (ts1 ++ ts2) := sorry
+    ResulttypeSub (ts1_sub ++ ts2_sub) (ts1 ++ ts2) := by
+  intro h1 h2
+  cases h1 with
+  | mk_Resulttype_sub _ _ hlen1 hf1 =>
+    cases h2 with
+    | mk_Resulttype_sub _ _ hlen2 hf2 =>
+      refine Resulttype_sub.mk_Resulttype_sub (ts1_sub ++ ts2_sub) (ts1 ++ ts2) (by simp [hlen1, hlen2]) ?_
+      have hzip := List.zip_append (l₁ := ts1_sub) (r₁ := ts2_sub) (l₂ := ts1) (r₂ := ts2) hlen1
+      intro p hp
+      rw [hzip] at hp
+      rcases List.mem_append.mp hp with hp | hp
+      · exact hf1 p hp
+      · exact hf2 p hp
 
 /-- Rocq `subtyping.v:219` `Forall2_app'`. General list lemma, not subtyping-specific,
     but Rocq places it here (used to prove `resulttype_sub_app'` below). -/
@@ -119,29 +192,107 @@ theorem resulttype_sub_split (ts1 ts2 : List valtype) (n : Nat) :
 -- duplicates kept "for compatibility reasons" — already ported in `HelperLemmas.lean`
 -- (`TLC.drop_size_cat`, `TLC.take_size_cat`), reused here rather than redeclared.
 
-/-- Rocq `subtyping.v:318` `resulttype_sub_split_sup`. -/
+/-- Rocq `subtyping.v:318` `resulttype_sub_split_sup`. Proof reused from a prior Lean
+    session's `InstrtypeSub.lean` (adapted from its existential presentation to this
+    file's `take`/`drop` presentation — same underlying `List.zip_append` argument). -/
 theorem resulttype_sub_split_sup (ts ts1 ts2 : List valtype) :
     ResulttypeSub ts (ts1 ++ ts2) →
-    ResulttypeSub (ts.take ts1.length) ts1 ∧ ResulttypeSub (ts.drop ts1.length) ts2 := sorry
+    ResulttypeSub (ts.take ts1.length) ts1 ∧ ResulttypeSub (ts.drop ts1.length) ts2 := by
+  intro h
+  cases h with
+  | mk_Resulttype_sub _ _ hlen hf =>
+    have hle : ts1.length ≤ ts.length := by
+      simp only [List.length_append] at hlen; omega
+    have hlent : ts1.length = (ts.take ts1.length).length := by simp [List.length_take, hle]
+    have hzip : ts.zip (ts1 ++ ts2)
+        = (ts.take ts1.length).zip ts1 ++ (ts.drop ts1.length).zip ts2 := by
+      calc ts.zip (ts1 ++ ts2)
+          = (ts.take ts1.length ++ ts.drop ts1.length).zip (ts1 ++ ts2) := by
+            rw [List.take_append_drop]
+        _ = (ts.take ts1.length).zip ts1 ++ (ts.drop ts1.length).zip ts2 := List.zip_append hlent.symm
+    refine ⟨Resulttype_sub.mk_Resulttype_sub (ts.take ts1.length) ts1 hlent.symm ?_,
+      Resulttype_sub.mk_Resulttype_sub (ts.drop ts1.length) ts2 ?_ ?_⟩
+    · intro p hp
+      exact hf p (hzip ▸ List.mem_append.mpr (Or.inl hp))
+    · simp only [List.length_append] at hlen
+      simp [List.length_drop]; omega
+    · intro p hp
+      exact hf p (hzip ▸ List.mem_append.mpr (Or.inr hp))
 
-/-- Rocq `subtyping.v:334` `resulttype_sub_split_sup'`. -/
+/-- Rocq `subtyping.v:334` `resulttype_sub_split_sup'`. Proof reused from a prior Lean
+    session's `InstrtypeSub.lean` (its `resulttype_sub_split`, adapted to `take`/`drop`
+    presentation). -/
 theorem resulttype_sub_split_sup' (ts ts1 ts2 : List valtype) :
     ResulttypeSub (ts1 ++ ts2) ts →
-    ResulttypeSub ts1 (ts.take ts1.length) ∧ ResulttypeSub ts2 (ts.drop ts1.length) := sorry
+    ResulttypeSub ts1 (ts.take ts1.length) ∧ ResulttypeSub ts2 (ts.drop ts1.length) := by
+  intro h
+  cases h with
+  | mk_Resulttype_sub _ _ hlen hf =>
+    have hle : ts1.length ≤ ts.length := by
+      simp only [List.length_append] at hlen; omega
+    have hlent : ts1.length = (ts.take ts1.length).length := by simp [List.length_take, hle]
+    have hzip : (ts1 ++ ts2).zip ts
+        = ts1.zip (ts.take ts1.length) ++ ts2.zip (ts.drop ts1.length) := by
+      calc (ts1 ++ ts2).zip ts
+          = (ts1 ++ ts2).zip (ts.take ts1.length ++ ts.drop ts1.length) := by
+            rw [List.take_append_drop]
+        _ = ts1.zip (ts.take ts1.length) ++ ts2.zip (ts.drop ts1.length) := List.zip_append hlent
+    refine ⟨Resulttype_sub.mk_Resulttype_sub ts1 (ts.take ts1.length) hlent ?_,
+      Resulttype_sub.mk_Resulttype_sub ts2 (ts.drop ts1.length) ?_ ?_⟩
+    · intro p hp
+      exact hf p (hzip ▸ List.mem_append.mpr (Or.inl hp))
+    · simp only [List.length_append] at hlen
+      simp [List.length_drop]; omega
+    · intro p hp
+      exact hf p (hzip ▸ List.mem_append.mpr (Or.inr hp))
 
 /-! ## instrtype_sub core — reflexivity, transitivity (subtyping.v:349-460) -/
 
-/-- Rocq `subtyping.v:349` `instrtype_sub_refl`. -/
-theorem instrtype_sub_refl (tf : functype) : instrtype_sub tf tf := sorry
+/-- Rocq `subtyping.v:349` `instrtype_sub_refl`. Proof reused from a prior Lean session's
+    `InstrtypeSub.lean` — its `instrtype_sub` def (copied from `typing_lemmas.lean`) is
+    field-for-field identical to this file's `instrtype_sub` up to variable renaming
+    (`ts_sub`/`ts`/`ts11_sub`/`ts12_sup` here ↔ their `rest_in`/`rest_out`/`supplied_in`/
+    `needed_out`), confirmed by direct comparison. -/
+theorem instrtype_sub_refl (tf : functype) : instrtype_sub tf tf := by
+  obtain ⟨t1, t2⟩ := tf
+  obtain ⟨t1'⟩ := t1
+  obtain ⟨t2'⟩ := t2
+  refine ⟨[], [], t1', t2', rfl, rfl, ?_, ?_, ?_⟩
+  · exact resulttype_sub_refl []
+  · exact resulttype_sub_refl t1'
+  · exact resulttype_sub_refl t2'
 
 /-- Rocq `subtyping.v:363` `instrtype_sub_trans`. The hardest/longest proof in the file
-    (~73 lines in Rocq, an explicit "sandwich" `take`/`drop` alignment argument). A
-    previous session's `InstrtypeSub.lean` already has a complete (0-`sorry`) Lean proof of
-    this exact statement (against an equivalent `instrtype_sub` definition) — see
-    `claude-logging/for-claude/digest_prior_lean_attempts.md` — worth reusing once the
-    definitions are confirmed to line up field-for-field. -/
+    (~73 lines in Rocq, an explicit "sandwich" `take`/`drop` alignment argument). Proof
+    reused from a prior Lean session's `InstrtypeSub.lean` (confirmed field-isomorphic
+    `instrtype_sub`, see `instrtype_sub_refl` above), adapted from that file's existential
+    presentation of `resulttype_sub_split_sup`/`_sup'` to this file's `take`/`drop`
+    presentation (which matches Rocq's own statement more directly). -/
 theorem instrtype_sub_trans (tf1 tf2 tf3 : functype) :
-    instrtype_sub tf1 tf2 → instrtype_sub tf2 tf3 → instrtype_sub tf1 tf3 := sorry
+    instrtype_sub tf1 tf2 → instrtype_sub tf2 tf3 → instrtype_sub tf1 tf3 := by
+  obtain ⟨oi1', oo1'⟩ := tf1
+  obtain ⟨oi1⟩ := oi1'
+  obtain ⟨oo1⟩ := oo1'
+  obtain ⟨si2', no2'⟩ := tf2
+  obtain ⟨si2⟩ := si2'
+  obtain ⟨no2⟩ := no2'
+  obtain ⟨si3', no3'⟩ := tf3
+  obtain ⟨si3⟩ := si3'
+  obtain ⟨no3⟩ := no3'
+  intro h12 h23
+  obtain ⟨rin12, rout12, sup12, nout12, hsi2, hno2, hrsub12, hsup12, hnout12⟩ := h12
+  obtain ⟨rin23, rout23, sup23, nout23, hsi3, hno3, hrsub23, hsup23, hnout23⟩ := h23
+  subst hsi2
+  subst hno2
+  obtain ⟨ha, hb⟩ := resulttype_sub_split_sup sup23 rin12 sup12 hsup23
+  obtain ⟨hc, hd⟩ := resulttype_sub_split_sup' nout23 rout12 nout12 hnout23
+  refine ⟨rin23 ++ (sup23.take rin12.length), rout23 ++ (nout23.take rout12.length),
+    sup23.drop rin12.length, nout23.drop rout12.length, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hsi3, List.append_assoc, List.take_append_drop]
+  · rw [hno3, List.append_assoc, List.take_append_drop]
+  · exact resulttype_sub_app _ _ _ _ hrsub23 (resulttype_sub_trans _ _ _ (resulttype_sub_trans _ _ _ ha hrsub12) hc)
+  · exact resulttype_sub_trans _ _ _ hb hsup12
+  · exact resulttype_sub_trans _ _ _ hnout12 hd
 
 -- Rocq's 3 `PreOrder` typeclass instances (subtyping.v:439,447,455) are registered purely for
 -- Coq's generalized-rewriting (`setoid_rewrite`) support; not load-bearing for any proof
@@ -277,6 +428,14 @@ theorem instr_subtyping_strengthen2 (tx1 ty1 tx2 ty2 ts : List valtype) :
     are confirmed aligned. -/
 theorem instr_subtyping_weaken2 (tx1 ty1 tx2 ty2 ts : List valtype) :
     instrtype_sub (mkFunctype tx1 ty1) (mkFunctype tx2 ty2) → ResulttypeSub ty2 ts →
-    instrtype_sub (mkFunctype tx1 ty1) (mkFunctype tx2 ts) := sorry
+    instrtype_sub (mkFunctype tx1 ty1) (mkFunctype tx2 ts) := by
+  intro h hy
+  obtain ⟨rin, rout, sup, nout, htx2, hty2, hrsub, hsup, hnout⟩ := h
+  subst hty2
+  obtain ⟨hrout', hnout'⟩ := resulttype_sub_split_sup' ts rout nout hy
+  refine ⟨rin, ts.take rout.length, sup, ts.drop rout.length, htx2,
+    (List.take_append_drop rout.length ts).symm,
+    resulttype_sub_trans _ _ _ hrsub hrout', hsup,
+    resulttype_sub_trans _ _ _ hnout hnout'⟩
 
 end TLC

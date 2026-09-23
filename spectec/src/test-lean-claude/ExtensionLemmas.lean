@@ -10,17 +10,55 @@ import TypePreservationPure
 Lean port of `spectec/test-rocq/theories/extension_lemmas.v`. Full
 digest: `claude-logging/for-claude/digest_subtyping_and_extension_lemmas.md`.
 
-**Naming note**: Rocq's `Store_extension`/`Func_extension`/`Table_extension`/
-`Mem_extension`/`Global_extension`/`Elem_extension`/`Data_extension` are
-used throughout `extension_lemmas.v` and `type_preservation.v`, but no
-declaration under those exact names could be found anywhere in the Rocq
-sources by direct grep (see `claude-logging/for-claude/digest_wasm_v.md`,
-open question #11). The only store-extension-shaped relations that
-actually exist (confirmed by grep of both `wasm.v` and `wasm2.0.lean`) are
-`Extend_store`/`Extend_funcinst`/`Extend_tableinst`/`Extend_meminst`/
-`Extend_globalinst`/`Extend_eleminst`/`Extend_datainst`. This file uses
-those confirmed names throughout, treating `Store_extension` etc. as a
-paraphrase/shorthand used by the digest's author for the same relations.
+**Naming note (RESOLVED, session 1 continuation)**: Rocq's
+`Store_extension`/`Func_extension`/`Table_extension`/`Mem_extension`/
+`Global_extension`/`Elem_extension`/`Data_extension` are used pervasively
+throughout `extension_lemmas.v` and `type_preservation.v`, but a direct
+`grep -rn "Inductive Func_extension\|Definition Func_extension\|Notation
+Func_extension"` (and the same for every other name in that list) across
+**every** `.v` file in `test-rocq/theories/` returns **zero hits** — these
+names are not declared *anywhere* in the current Rocq sources, under any
+declaration form. The only store-extension-shaped relations that actually
+exist (confirmed both in `wasm.v` and in `wasm2.0.lean`, both generated
+from the same EL spec) are `Extend_store`/`Extend_funcinst`/
+`Extend_tableinst`/`Extend_meminst`/`Extend_globalinst`/`Extend_eleminst`/
+`Extend_datainst`. Best explanation, strongly supported by the evidence:
+`extension_lemmas.v` (and `type_preservation.v`) were written against an
+**earlier generation of the SpecTec Rocq backend** that named these
+relations `Store_extension`/`Func_extension`/etc.; the backend was later
+regenerated with the `Extend_*` naming convention (matching `wasm2.0.lean`'s
+convention, which never used the old names at all), and the hand-written
+lemma files were never updated to match. Under this theory, **Rocq's
+`extension_lemmas.v` and `type_preservation.v` likely do not currently
+compile against the current `wasm.v`** — consistent with this session's
+earlier failed attempt to get `dune build` to run at all (blocked on a
+missing `mathcomp` findlib package, so this couldn't be confirmed
+directly; worth another attempt in a future session, ideally by fixing
+the opam switch rather than assuming). This file uses the confirmed
+`Extend_*` names throughout (`Store_extension s s'` → `Extend_store s s'`,
+etc.) — the semantic content of each relation (checked field-by-field
+against `extension_lemmas.v`'s usage) lines up with the corresponding
+`Extend_*` relation, so this is very likely the intended 1:1
+correspondence, not a coincidence. **Consequence for lemma signatures**:
+the `Extend_*` relations' constructors (confirmed by reading
+`wasm2.0.lean` directly) bake in `wf_*` well-formedness premises for
+`Extend_funcinst`/`Extend_globalinst`/`Extend_tableinst`/`Extend_meminst`/
+`Extend_datainst` (but NOT `Extend_eleminst`, which has none) — Rocq's own
+`func_extension_refl0`/etc. (about the now-undefined `Func_extension`)
+apparently did NOT need such premises (one-line `econstructor.` proofs),
+which is further evidence those Rocq lemmas are stale/were written
+against a `Func_extension` with a laxer constructor. The lemma
+*signatures* below have been corrected to add the `wf_*` hypotheses the
+*current*, real `Extend_*` relations actually require — this is a
+deliberate deviation from a literal reading of the (now-inapplicable)
+Rocq statement, in service of the same underlying mathematical fact
+(reflexivity of the extension order) stated against the relation that
+actually exists in this project's target. A prior Lean session's
+`Extension.lean` (see `digest_prior_lean_attempts.md`) independently
+arrived at the same corrected signatures (it read `wasm2.0.lean`'s
+`Extend_*` definitions directly rather than trusting the Rocq lemma
+signature) — its proofs are reused below.
+
 Similarly, `Admin_instrs_ok`/`Thread_ok`/`Admin_instr_ok` (cited by the
 digest for the custom `Scheme`-based mutual induction backing
 `store_extension_ais`) do not exist under those names either — the
@@ -163,28 +201,219 @@ theorem store_typed_exterval_types (v_S : store) (v_f : funcinst) (v_a : Nat) :
 
 /-! ## Extension relations are reflexive per store-component kind (extension_lemmas.v:629-793) -/
 
-theorem func_extension_refl0 (f : funcinst) : Extend_funcinst f f := sorry
-theorem func_extension_refl (f : List funcinst) : Forall₂ Extend_funcinst f f := sorry
-theorem table_extension_refl0 (t : tableinst) : Extend_tableinst t t := sorry
-theorem table_extension_refl (t : List tableinst) : Forall₂ Extend_tableinst t t := sorry
-theorem mem_extension_refl0 (m : meminst) : Extend_meminst m m := sorry
-theorem mem_extension_refl (m : List meminst) : Forall₂ Extend_meminst m m := sorry
-theorem global_extension_refl_0 (g : globalinst) : Extend_globalinst g g := sorry
-theorem global_extension_refl (g : List globalinst) : Forall₂ Extend_globalinst g g := sorry
-theorem elem_extension_refl0 (e : eleminst) : Extend_eleminst e e := sorry
-theorem elem_extension_refl (e : List eleminst) : Forall₂ Extend_eleminst e e := sorry
-theorem data_extension_refl0 (d : datainst) : Extend_datainst d d := sorry
-theorem data_extension_refl (d : List datainst) : Forall₂ Extend_datainst d d := sorry
+/-- Rocq `extension_lemmas.v:629` `func_extension_refl0` (about the now-stale
+    `Func_extension`; corrected here to the real `Extend_funcinst`, which — unlike Rocq's
+    `Func_extension` — bakes in a `wf_funcinst` premise; see the naming note above). Proof
+    reused from a prior Lean session's `Extension.lean` (`extend_funcinst_refl`), which
+    independently derived this same corrected signature. -/
+theorem func_extension_refl0 {f : funcinst} (h : wf_funcinst f) : Extend_funcinst f f := by
+  obtain ⟨ft, mm, fc⟩ := f
+  exact Extend_funcinst.mk_Extend_funcinst ft mm fc h
 
-/-- Rocq `extension_lemmas.v:767` `store_extension_refl`. **No explicit `store_extension_trans`
-    (transitivity) lemma exists anywhere in the Rocq file** — downstream preservation
-    proofs re-derive extension facts per reduction step rather than composing two
-    `Extend_store` proofs. Not ported here either, matching the Rocq gap. -/
-theorem store_extension_refl (s : store) : Extend_store s s := sorry
+theorem func_extension_refl {f : List funcinst} (h : Forall wf_funcinst f) :
+    Forall₂ Extend_funcinst f f := by
+  induction f with
+  | nil => intro p hp; simp at hp
+  | cons x xs ih =>
+    intro p hp
+    simp only [List.zip_cons_cons, List.mem_cons] at hp
+    have hx : wf_funcinst x := h x (by simp)
+    have hxs : Forall wf_funcinst xs := fun a ha => h a (by simp [ha])
+    rcases hp with hp | hp
+    · rw [hp]; exact func_extension_refl0 hx
+    · exact ih hxs p hp
+
+/-- Rocq `extension_lemmas.v:646` `table_extension_refl0`, corrected to `Extend_tableinst`
+    (see naming note). Proof reused from `Extension.lean` (`extend_tableinst_refl`). -/
+theorem table_extension_refl0 {t : tableinst} (h : wf_tableinst t) : Extend_tableinst t t := by
+  obtain ⟨ty, refs⟩ := t
+  obtain ⟨lim, rt⟩ := ty
+  obtain ⟨v_u32, u32_opt⟩ := lim
+  obtain ⟨v_n⟩ := v_u32
+  rcases u32_opt with _ | u32opt
+  · exact Extend_tableinst.mk_Extend_tableinst v_n none rt refs v_n refs
+      (Nat.le_refl v_n) (Nat.le_refl refs.length) h h
+  · obtain ⟨n'⟩ := u32opt
+    exact Extend_tableinst.mk_Extend_tableinst v_n (some n') rt refs v_n refs
+      (Nat.le_refl v_n) (Nat.le_refl refs.length) h h
+
+theorem table_extension_refl {t : List tableinst} (h : Forall wf_tableinst t) :
+    Forall₂ Extend_tableinst t t := by
+  induction t with
+  | nil => intro p hp; simp at hp
+  | cons x xs ih =>
+    intro p hp
+    simp only [List.zip_cons_cons, List.mem_cons] at hp
+    have hx : wf_tableinst x := h x (by simp)
+    have hxs : Forall wf_tableinst xs := fun a ha => h a (by simp [ha])
+    rcases hp with hp | hp
+    · rw [hp]; exact table_extension_refl0 hx
+    · exact ih hxs p hp
+
+/-- Rocq `extension_lemmas.v:673` `mem_extension_refl0`, corrected to `Extend_meminst`
+    (see naming note). Proof reused from `Extension.lean` (`extend_meminst_refl`). -/
+theorem mem_extension_refl0 {m : meminst} (h : wf_meminst m) : Extend_meminst m m := by
+  obtain ⟨ty, bs⟩ := m
+  obtain ⟨lim⟩ := ty
+  obtain ⟨v_u32, u32_opt⟩ := lim
+  obtain ⟨v_n⟩ := v_u32
+  rcases u32_opt with _ | u32opt
+  · exact Extend_meminst.mk_Extend_meminst v_n none bs v_n bs
+      (Nat.le_refl v_n) (Nat.le_refl bs.length) h h
+  · obtain ⟨n'⟩ := u32opt
+    exact Extend_meminst.mk_Extend_meminst v_n (some n') bs v_n bs
+      (Nat.le_refl v_n) (Nat.le_refl bs.length) h h
+
+theorem mem_extension_refl {m : List meminst} (h : Forall wf_meminst m) :
+    Forall₂ Extend_meminst m m := by
+  induction m with
+  | nil => intro p hp; simp at hp
+  | cons x xs ih =>
+    intro p hp
+    simp only [List.zip_cons_cons, List.mem_cons] at hp
+    have hx : wf_meminst x := h x (by simp)
+    have hxs : Forall wf_meminst xs := fun a ha => h a (by simp [ha])
+    rcases hp with hp | hp
+    · rw [hp]; exact mem_extension_refl0 hx
+    · exact ih hxs p hp
+
+/-- Rocq `extension_lemmas.v:699` `global_extension_refl_0`, corrected to
+    `Extend_globalinst` (see naming note). Proof reused from `Extension.lean`
+    (`extend_globalinst_refl`). -/
+theorem global_extension_refl_0 {g : globalinst} (h : wf_globalinst g) : Extend_globalinst g g := by
+  obtain ⟨ty, v⟩ := g
+  obtain ⟨v_mut, t⟩ := ty
+  exact Extend_globalinst.mk_Extend_globalinst v_mut t v v (Or.inr rfl) h h
+
+theorem global_extension_refl {g : List globalinst} (h : Forall wf_globalinst g) :
+    Forall₂ Extend_globalinst g g := by
+  induction g with
+  | nil => intro p hp; simp at hp
+  | cons x xs ih =>
+    intro p hp
+    simp only [List.zip_cons_cons, List.mem_cons] at hp
+    have hx : wf_globalinst x := h x (by simp)
+    have hxs : Forall wf_globalinst xs := fun a ha => h a (by simp [ha])
+    rcases hp with hp | hp
+    · rw [hp]; exact global_extension_refl_0 hx
+    · exact ih hxs p hp
+
+/-- Rocq `extension_lemmas.v:725` `elem_extension_refl0`. `Extend_eleminst` has no `wf_*`
+    premise (matches Rocq — no `wf_eleminst` exists on either side), so this one needs no
+    correction. Proof reused from `Extension.lean` (`extend_eleminst_refl`). -/
+theorem elem_extension_refl0 (e : eleminst) : Extend_eleminst e e := by
+  obtain ⟨rt, refs⟩ := e
+  exact Extend_eleminst.mk_Extend_eleminst rt refs refs (Or.inl rfl)
+
+theorem elem_extension_refl (e : List eleminst) : Forall₂ Extend_eleminst e e := by
+  induction e with
+  | nil => intro p hp; simp at hp
+  | cons x xs ih =>
+    intro p hp
+    simp only [List.zip_cons_cons, List.mem_cons] at hp
+    rcases hp with hp | hp
+    · rw [hp]; exact elem_extension_refl0 x
+    · exact ih p hp
+
+/-- Rocq `extension_lemmas.v:746` `data_extension_refl0`, corrected to `Extend_datainst`
+    (see naming note). Proof reused from `Extension.lean` (`extend_datainst_refl`). -/
+theorem data_extension_refl0 {d : datainst} (h : wf_datainst d) : Extend_datainst d d := by
+  obtain ⟨bs⟩ := d
+  exact Extend_datainst.mk_Extend_datainst bs bs (Or.inl rfl) h h
+
+theorem data_extension_refl {d : List datainst} (h : Forall wf_datainst d) :
+    Forall₂ Extend_datainst d d := by
+  induction d with
+  | nil => intro p hp; simp at hp
+  | cons x xs ih =>
+    intro p hp
+    simp only [List.zip_cons_cons, List.mem_cons] at hp
+    have hx : wf_datainst x := h x (by simp)
+    have hxs : Forall wf_datainst xs := fun a ha => h a (by simp [ha])
+    rcases hp with hp | hp
+    · rw [hp]; exact data_extension_refl0 hx
+    · exact ih hxs p hp
+
+/-- Bounds side-condition needed by `Extend_store`'s constructor: every index into
+    `List.range l.length` is `< l.length`. No Rocq counterpart (new plumbing needed only
+    because `wasm2.0.lean` represents `Extend_store` via `Forall _ (List.range n)` index
+    bounds rather than Rocq's `holds_upto` predicate). Reused from a prior Lean session's
+    `Extension.lean` (`forall_range_lt`). -/
+theorem forall_range_lt {α : Type} (l : List α) :
+    Forall (fun a => a < l.length) (List.range l.length) := by
+  intro a ha
+  exact List.mem_range.mp ha
+
+/-- Lifts a single-instance reflexivity fact, plus a well-formedness `Forall` over a list,
+    to the index-`Forall`-over-`List.range` shape `Extend_store` needs. New plumbing, no
+    Rocq counterpart (see `forall_range_lt`). Reused from `Extension.lean`
+    (`forall_range_refl`). -/
+theorem forall_range_refl {α : Type} [Inhabited α] (l : List α) (P : α → Prop)
+    (R : α → α → Prop) (hP : Forall P l) (hR : ∀ x, P x → R x x) :
+    Forall (fun a => R (l[a]!) (l[a]!)) (List.range l.length) := by
+  intro a ha
+  have ha' : a < l.length := List.mem_range.mp ha
+  have hmem : l[a]! ∈ l := by
+    rw [getElem!_pos l a ha']
+    exact List.getElem_mem ha'
+  exact hR _ (hP _ hmem)
+
+/-- As `forall_range_refl`, but for `Extend_eleminst`, which has no well-formedness side
+    condition. Reused from `Extension.lean` (`forall_range_refl_noWf`). -/
+theorem forall_range_refl_noWf {α : Type} [Inhabited α] (l : List α) (R : α → α → Prop)
+    (hR : ∀ x, R x x) : Forall (fun a => R (l[a]!) (l[a]!)) (List.range l.length) := by
+  intro a _
+  exact hR _
+
+/-- Rocq `extension_lemmas.v:767` `store_extension_refl`, corrected to `Extend_store` (see
+    naming note). **No explicit `store_extension_trans` (transitivity) lemma exists
+    anywhere in the Rocq file** — downstream preservation proofs re-derive extension facts
+    per reduction step rather than composing two `Extend_store` proofs. Not ported here
+    either, matching the Rocq gap. Proof reused from a prior Lean session's
+    `Extension.lean` (`extend_store_refl`). -/
+theorem store_extension_refl {s : store} (h : wf_store s) : Extend_store s s := by
+  cases h with
+  | store_case_ funcs globals tables mems elems datas hfuncs hglobals htables hmems hdatas =>
+    have hwf : wf_store { FUNCS := funcs, GLOBALS := globals, TABLES := tables, MEMS := mems, ELEMS := elems, DATAS := datas } :=
+      wf_store.store_case_ funcs globals tables mems elems datas hfuncs hglobals htables hmems hdatas
+    exact Extend_store.mk_Extend_store _ _
+      (forall_range_lt globals) (forall_range_lt globals)
+      (forall_range_refl globals wf_globalinst Extend_globalinst hglobals
+        (fun x hx => global_extension_refl_0 hx))
+      (forall_range_lt mems) (forall_range_lt mems)
+      (forall_range_refl mems wf_meminst Extend_meminst hmems
+        (fun x hx => mem_extension_refl0 hx))
+      (forall_range_lt tables) (forall_range_lt tables)
+      (forall_range_refl tables wf_tableinst Extend_tableinst htables
+        (fun x hx => table_extension_refl0 hx))
+      (forall_range_lt funcs) (forall_range_lt funcs)
+      (forall_range_refl funcs wf_funcinst Extend_funcinst hfuncs
+        (fun x hx => func_extension_refl0 hx))
+      (forall_range_lt datas) (forall_range_lt datas)
+      (forall_range_refl datas wf_datainst Extend_datainst hdatas
+        (fun x hx => data_extension_refl0 hx))
+      (forall_range_lt elems) (forall_range_lt elems)
+      (forall_range_refl_noWf elems Extend_eleminst elem_extension_refl0)
+      hwf hwf
 
 /-- Rocq `extension_lemmas.v:787` `funcinst_same`. `Extend_funcinst` forces literal
     equality (funcs are immutable once allocated) — used pervasively downstream to erase
-    func-extension side conditions. -/
+    func-extension side conditions.
+
+    **CAVEAT (not present in Rocq)**: `wasm2.0.lean`'s `Forall₂` is a zip-based `def`
+    (`∀ t ∈ xs.zip ys, P t.1 t.2`, see `ExtendedDeriveDecEq.lean`), which does NOT force
+    `f1.length = f2.length` the way Rocq's inductive `Forall2` does — so `Forall₂
+    Extend_funcinst f1 f2` alone is satisfiable even when `f1`/`f2` have different lengths
+    (e.g. `f1` longer, with the extra tail elements simply never constrained). This lemma
+    is therefore NOT provable as literally stated below without an extra length hypothesis;
+    every actual call site in `extension_lemmas.v` applies it to a `Forall₂` fact that
+    arose alongside a separate length-equality fact (e.g. from `se_invert_funcs`'s
+    `Forall₂ Extend_funcinst s.FUNCS fs'` together with knowing `fs'` came from splitting
+    `s'.FUNCS`). Left as `sorry` deliberately — needs either restating with an explicit
+    `f1.length = f2.length` hypothesis, or a case-by-case fix at each call site once this
+    file's later lemmas (`store_extension_ref` etc.) are actually proved. Flagged here
+    rather than silently adding a hypothesis that would make this lemma's signature
+    diverge from how it may be invoked positionally elsewhere. -/
 theorem funcinst_same (f1 f2 : List funcinst) : Forall₂ Extend_funcinst f1 f2 → f1 = f2 := sorry
 
 /-! ## `Extend_store` preserves `Ref_ok`/`Val_ok` (extension_lemmas.v:796-877) -/

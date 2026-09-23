@@ -126,7 +126,7 @@
         ["HelperLemmas transitive imports (legacy)", "38ee09ae9f915f9b"],
         ["HelperLemmas:importAllArts", "a0ca03c6de5688a9"],
         ["Subtyping transitive imports (legacy)", "de0c7525e40bac7e"],
-        ["Subtyping:importAllArts", "f314ce8d5c56c98a"]]]]],
+        ["Subtyping:importAllArts", "53548e6071c20459"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -141,4 +141,4 @@
   ["Module.name: TypingLemmas", "fb3981b2264ba5c9"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "f1df2f4e4a6e2116"}
+ "depHash": "3d524668f3a8d868"}

@@ -78,8 +78,8 @@
         ["HelperLemmas transitive imports (legacy)", "38ee09ae9f915f9b"],
         ["HelperLemmas:importAllArts", "a0ca03c6de5688a9"],
         ["Subtyping transitive imports (legacy)", "de0c7525e40bac7e"],
-        ["Subtyping:importAllArts", "f314ce8d5c56c98a"],
-        ["TypingLemmas transitive imports (legacy)", "6ce7c2e230c60af9"],
+        ["Subtyping:importAllArts", "53548e6071c20459"],
+        ["TypingLemmas transitive imports (legacy)", "9e5df99a2240d707"],
         ["TypingLemmas:importAllArts", "3262a5f61ae94f35"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
@@ -95,4 +95,4 @@
   ["Module.name: TypePreservationPure", "0d58925b5b521533"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "49e351da918e85fc"}
+ "depHash": "ccc23732edc30f50"}
