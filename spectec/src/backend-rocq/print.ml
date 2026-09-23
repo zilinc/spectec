@@ -127,7 +127,7 @@ let line_parens spc s = "|" ^ spc ^ s ^ spc ^ "|"
 
 let op_parens optyp s = 
   match optyp with
-  | `NatT -> parens s ^ "%N"
+  | `NatT -> parens s ^ "%BN"
   | `IntT -> parens s ^ "%Z"
   | `RatT -> parens s ^ "%Q"
   | `RealT -> parens s ^ "%nat" (* TODO *)
@@ -715,7 +715,7 @@ let render_wfness_func_lemma id rule =
   "Proof. Admitted"
 
 let render_function_def prefix id at params r_typ clauses = 
-  let has_typ_fam = List.length params > 1 && List.exists is_type_family_param params in
+  (* let has_typ_fam = List.length params > 1 && List.exists is_type_family_param params in *)
   let is_proj_func = StringSet.mem id !env_ref.proj_set in
   let base_list_collector = base_collector [] (@) in
   let c = { base_list_collector with collect_exp = needs_inh_class; collect_path = needs_inh_class_path } in
@@ -734,7 +734,6 @@ let render_function_def prefix id at params r_typ clauses =
     let string_of_let = string_of_list "\n\t\t\t" "\n\t\t\t" "\n\t\t\t" render_prem let_prems in 
     "|" ^ render_match_args args ^ " => " ^ string_of_let ^ render_exp RHS exp) clauses
   ) ^
-  (if has_typ_fam then "\n\t\t" ^ render_extra_clause params else "") ^
   "\n\tend" ^
   if is_proj_func 
   then 
@@ -905,7 +904,7 @@ let exported_string =
 	"\t\t| x :: l', N0, N0 => nil\n" ^
 	"\t\t| x :: l', Npos n, N0 => nil\n" ^
 	"\t\t| x :: l', N0, Npos m => x :: list_slice l' N0 (N.pred j)\n" ^
-	"\t\t| x :: l', Npos n, Npos m => list_slice l' (N.pred i) (N.pred j)\n" ^
+	"\t\t| x :: l', Npos n, m => list_slice l' (N.pred i) j\n" ^
 	"\tend.\n\n" ^
   "Fixpoint list_slice_update {α: Type} (l: seq α) (i: N) (j: N) (update_l: seq α): seq α :=\n" ^
 	"\tmatch l, i, j, update_l with\n" ^
@@ -914,7 +913,7 @@ let exported_string =
 	"\t\t| l', N0, N0, _ => l'\n" ^
 	"\t\t| l', Npos n, N0, _ => l'\n" ^
 	"\t\t| x :: l', N0, Npos m, y :: u_l' => y :: list_slice_update l' N0 (N.pred j) u_l'\n" ^
-	"\t\t| x :: l', Npos n, Npos m, _ => x :: list_slice_update l' (N.pred i) (N.pred j) update_l\n" ^
+	"\t\t| x :: l', Npos n, m, _ => x :: list_slice_update l' (N.pred i) j update_l\n" ^
 	"\tend.\n\n" ^
   "Definition list_extend {α: Type} (l: seq α) (y: α): seq α :=\n" ^
   "\ty :: l.\n\n" ^
@@ -957,20 +956,34 @@ let exported_string =
 
   "Definition N_geb (x y : N) : bool := N.leb y x.\n\n" ^
   "Definition N_gtb (x y : N) : bool := N.ltb y x.\n\n" ^
+  "Declare Scope binN_scope.\n" ^
+  "Delimit Scope binN_scope with BN.\n" ^
+  "Notation \"x + y\" := (N.add x y) : binN_scope.\n" ^
+  "Notation \"x - y\" := (N.sub x y) : binN_scope.\n" ^
+  "Notation \"x * y\" := (N.mul x y) : binN_scope.\n" ^
+  "Notation \"x ^ y\" := (N.pow x y) : binN_scope.\n" ^
+  "Infix \"mod\" := N.modulo (at level 40, no associativity) : binN_scope.\n" ^
+  "Notation \"x <? y\" := (N.ltb x y) : binN_scope.\n" ^
+  "Notation \"x <=? y\" := (N.leb x y) : binN_scope.\n" ^
+  "Notation \"x >? y\" := (N_gtb x y) : binN_scope.\n" ^
+  "Notation \"x >=? y\" := (N_geb x y) : binN_scope.\n" ^
+  "Notation \"x < y\" := (N.lt x y) : binN_scope.\n" ^
+  "Notation \"x <= y\" := (N.le x y) : binN_scope.\n" ^
+  "Notation \"x > y\" := (N.gt x y) : binN_scope.\n" ^
+  "Notation \"x >= y\" := (N.ge x y) : binN_scope.\n\n" ^
   "Definition Qge_bool (x y : Q) : bool :=\n" ^
   "\tQle_bool y x.\n\n" ^
   "Definition Qlt_bool (x y : Q) : bool :=\n" ^
   "\tnegb (Qle_bool y x).\n\n" ^
   "Definition Qgt_bool (x y : Q) : bool :=\n" ^
   "\tnegb (Qle_bool x y).\n\n" ^
-
-  "Infix \">?\"  := N_gtb : N_scope. \n\n" ^ 
-  "Infix \">=?\" := N_geb : N_scope.\n\n" ^
   "Infix \"<=?\" := Qle_bool : Q_scope.\n\n" ^
   "Infix \">=?\" := Qge_bool : Q_scope.\n\n" ^
   "Infix \"<?\" := Qlt_bool : Q_scope.\n\n" ^
   "Infix \">?\" := Qgt_bool : Q_scope.\n\n" ^
-
+  "Infix \"==\" := Qeq_bool (at level 70, no associativity) : Q_scope.\n\n" ^
+  "Definition Qne_bool (x y : Q) : bool := negb (Qeq_bool x y).\n\n" ^
+  "Infix \"!=\" := Qne_bool (at level 70, no associativity) : Q_scope.\n\n" ^
   "Definition option_to_list {T: Type} (arg : option T) : seq T :=\n" ^
 	"\tmatch arg with\n" ^
 	"\t\t| None => nil\n" ^
@@ -1019,14 +1032,24 @@ let exported_string =
   "Definition Q_eq_dec : forall (v1 v2 : Q),\n" ^
   "\t{v1 = v2} + {v1 <> v2}.\n" ^
   "Proof. do ? decidable_equality_step. Defined.\n\n" ^
-
-  "Definition Q_eqb (v1 v2 : Q) : bool :=\n" ^
-	"\tis_left(Q_eq_dec v1 v2).\n" ^
-  "Definition eqQP : Equality.axiom (Q_eqb) :=\n" ^
-	"\teq_dec_Equality_axiom (Q) (Q_eq_dec).\n\n" ^
-  "HB.instance Definition _ := hasDecEq.Build (Q) (eqQP).\n" ^
   "Hint Resolve Q_eq_dec : eq_dec_db.\n\n" ^
-
+  "Lemma Qeq_bool_toZ : forall (q1 q2 : Q), Qeq_bool q1 q2 = true -> Qfloor q1 = Qfloor q2.\n" ^
+  "Proof. intros q1 q2 H. apply Qeq_bool_iff in H. now rewrite H. Qed.\n\n" ^
+  "Lemma Qeq_bool_toN : forall (q1 q2 : Q),\n" ^
+  "\tQeq_bool q1 q2 = true -> Z.to_N (Qfloor q1) = Z.to_N (Qfloor q2).\n" ^
+  "Proof. intros q1 q2 H. now rewrite (Qeq_bool_toZ _ _ H). Qed.\n\n" ^
+  "Lemma Forall_Qle_bool_Qeq : forall (q1 q2 : Q) (T : Type) (f : T -> Q) (l : seq T),\n" ^
+  "\tQeq_bool q1 q2 = true ->\n" ^
+  "\tList.Forall (fun x => Qle_bool q1 (f x) = true) l ->\n" ^
+  "\tList.Forall (fun x => Qle_bool q2 (f x) = true) l.\n" ^
+  "Proof.\n" ^
+  "\tintros q1 q2 T f l Hq Hall.\n" ^
+  "\tapply Qeq_bool_iff in Hq.\n" ^
+  "\teapply List.Forall_impl; [ | exact Hall ].\n" ^
+  "\tintros x Hx. apply Qle_bool_iff in Hx. apply Qle_bool_iff.\n" ^
+  "\tapply (Qle_trans q2 q1 (f x)); [ | exact Hx ].\n" ^
+  "\tapply Qle_lteq. right. now apply Qeq_sym.\n" ^
+  "Qed.\n\n" ^
   "Class Coercion (A B : Type) := { coerce : A -> B }.\n\n" ^
   "Notation \"x ':>' B\" := (coerce (A:=_) (B:=B) x)\n" ^
   "(at level 70, right associativity).\n\n" ^

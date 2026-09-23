@@ -23,6 +23,13 @@ repeat lazymatch goal with
 		destruct H
 end.
 
+Ltac decompH H :=
+match type of H with
+	| _ /\ _ => 
+		destruct H as [? H']; decompH H'
+  | _ => subst; idtac
+end.
+
 
 (** Similar to [set (name := term)], but introduce an equality instead of a local definition. **)
 Ltac set_eq name term :=
@@ -326,6 +333,26 @@ Ltac ineq_to_prop :=
     apply/ltnP
   | _ : _ |- is_true (_ <= _) =>
     apply/leP
+  | H : context[(_ <? _)%BN] |- _ =>
+    move/N.ltb_lt in H
+  | H : context[(_ <=? _)%BN] |- _ =>
+    move/N.leb_le in H
+  | H : context[(_ >? _)%BN] |- _ =>
+    unfold N_gtb in H;
+    move/N.ltb_lt in H
+  | H : context[(_ >=? _)%BN] |- _ =>
+    unfold N_geb in H;
+    move/N.leb_le in H
+  | _ : _ |- context[(_ <? _)%BN] =>
+    apply/N.ltb_lt
+  | _ : _ |- context[(_ <=? _)%BN] =>
+    apply/N.leb_le
+  | _ : _ |- context[(_ >? _)%BN] =>
+    unfold N_gtb;
+    apply/N.ltb_lt
+  | _ : _ |- context[(_ >=? _)%BN] =>
+    unfold N_geb;
+    apply/N.leb_le
   (* | _ : _ |- is_true (_ > _) =>
     apply/gtnP
   | _ : _ |- is_true (_ >= _) =>
@@ -353,6 +380,16 @@ Ltac ineq_to_propH H :=
     move/ltnP in H
   | is_true (_ <= _) =>
     move/leP in H
+  | context[(_ <? _)%BN] =>
+    move/N.ltb_lt in H
+  | context[(_ <=? _)%BN] =>
+    move/N.leb_le in H
+  | context[(_ >? _)%BN] =>
+    unfold N_gtb in H;
+    move/N.ltb_lt in H
+  | context[(_ >=? _)%BN] =>
+    unfold N_geb in H;
+    move/N.leb_le in H
   (* | is_true (_ > _) =>
     move/gtnP in H
   | is_true (_ >= _) =>
@@ -407,5 +444,10 @@ Ltac inv_Forall H :=
     apply Forall_app in H; destruct H as [HP1 HP2];
     inv_Forall HP1;
     inv_Forall HP2
+  | Forall _ (_ :: _) =>
+    let HP1 := fresh "HP" in
+    let Hrest := fresh "Hrest" in 
+    inversion H as [ | ? ? HP1 Hrest]; subst;
+    inv_Forall Hrest
   | _ => idtac
   end.
