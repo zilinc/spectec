@@ -1,0 +1,19 @@
+{"plugins": [],
+ "package": "test-lean-claude",
+ "options": {},
+ "name": "ExtensionLemmas",
+ "isModule": false,
+ "importArts":
+ {"«wasm2.0»":
+  ["/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/wasm2.0.olean"],
+  "TypingLemmas":
+  ["/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/TypingLemmas.olean"],
+  "TypePreservationPure":
+  ["/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/TypePreservationPure.olean"],
+  "Subtyping":
+  ["/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/Subtyping.olean"],
+  "HelperLemmas":
+  ["/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/HelperLemmas.olean"],
+  "ExtendedDeriveDecEq":
+  ["/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/ExtendedDeriveDecEq.olean"]},
+ "dynlibs": []}

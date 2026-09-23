@@ -1,0 +1,905 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["653a595ee2cb1627.olean"],
+  "m": false,
+  "i": "d6372eae0e8cb7a7.ilean",
+  "c": "df00474544f72ce2.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/Cli/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/batteries/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/Qq/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/aesop/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/importGraph/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/plausible/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/mathlib/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean /home/zhengyew/.elan/toolchains/leanprover--lean4---v4.32.0/bin/lean /home/zhengyew/spectec/spectec/src/test-lean-claude/wasm2.0.lean -o /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/wasm2.0.olean -i /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/wasm2.0.ilean -c /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/ir/wasm2.0.c --setup /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/ir/wasm2.0.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "wasm2.0.lean:297:11: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:301:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:307:10: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:311:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:362:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:702:30: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:811:19: Variable name `v_Inn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:817:19: Variable name `v_Fnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:849:21: Variable name `v_numtype` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:855:21: Variable name `v_packtype` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:861:21: Variable name `v_Jnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:876:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:942:21: Variable name `v_Inn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:948:21: Variable name `v_Fnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:997:23: Variable name `v_Inn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1003:23: Variable name `v_Fnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1026:25: Variable name `v_Inn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1067:23: Variable name `v_Inn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1073:23: Variable name `v_Fnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1173:25: Variable name `Inn_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1173:31: Variable name `Inn_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1179:25: Variable name `Inn_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1179:31: Variable name `Fnn_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1185:25: Variable name `Fnn_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1185:31: Variable name `Inn_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1191:25: Variable name `Fnn_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1191:31: Variable name `Fnn_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1238:12: Variable name `v_Lnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:1241:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1322:23: Variable name `v_Jnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1322:29: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1328:23: Variable name `v_Fnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1328:29: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1403:25: Variable name `v_Jnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1403:31: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1409:25: Variable name `v_Fnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1409:31: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1432:27: Variable name `v_Jnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1432:33: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1492:25: Variable name `v_Jnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1492:31: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1498:25: Variable name `v_Fnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1498:31: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1542:29: Variable name `v_Jnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1542:35: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1572:29: Variable name `v_Jnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1572:35: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1604:31: Variable name `v_Jnn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1604:37: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:1653:25: Variable name `v_Inn` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2191:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:2211:30: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2247:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2266:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2281:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2296:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2311:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2326:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2343:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2358:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2371:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2446:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2460:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2474:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2488:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2502:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2516:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2530:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2544:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2558:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2572:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2586:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2600:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2634:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2650:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2665:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2680:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2695:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2710:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2725:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2740:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2752:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2767:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2792:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2805:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2820:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2841:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2857:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2872:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2887:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2902:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2914:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:2929:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3032:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:3043:11: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3047:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3061:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3077:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3092:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3107:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3122:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3137:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3152:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:3160:10: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3164:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3181:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3199:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3217:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3235:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:3244:10: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3248:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3331:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3349:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3363:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3377:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3391:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3406:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3420:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3574:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3591:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3605:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3619:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3633:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3647:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3661:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3676:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3691:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3705:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3719:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3733:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3747:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3761:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3776:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3790:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3804:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:3812:11: Variable name `v_N` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3816:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3830:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3843:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3862:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3889:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3917:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3936:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3955:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3971:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:3986:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4001:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4016:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4035:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4054:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4069:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4084:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4094:18: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4094:25: Variable name `v_sx` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4095:19: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4095:28: Variable name `v_sx` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4096:21: Variable name `v_sx` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4103:25: Variable name `v_sx` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4104:28: Variable name `v_sx` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4105:21: Variable name `v_sx` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4105:26: Variable name `zero_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:4106:18: Variable name `v_zero` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4121:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4137:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4151:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:4644:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:6082:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:7513:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7527:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7527:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7527:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7529:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7529:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7529:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7531:36: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7531:75: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7531:95: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7533:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7533:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7533:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7535:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7535:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7535:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7537:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7537:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7537:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7539:36: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7539:75: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7539:95: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7541:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7541:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7541:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7543:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7543:75: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7543:95: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7545:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7545:75: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7545:95: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7547:36: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7547:74: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7547:94: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7549:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7549:75: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7549:95: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7551:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7551:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7551:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7553:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7553:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7553:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7555:36: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7555:75: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7555:95: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7557:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7557:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7557:96: Variable name `v_half` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7559:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7559:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7559:97: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7561:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7561:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7561:97: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7563:36: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7563:75: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7563:96: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7565:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7565:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7565:97: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7567:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7567:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7567:97: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7569:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7569:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7569:97: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7571:36: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7571:75: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7571:96: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7573:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7573:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7573:97: Variable name `half_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7575:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7575:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7575:104: Variable name `zero_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7577:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7577:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7577:104: Variable name `zero_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7579:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7579:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7579:104: Variable name `zero_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7581:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7581:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7581:104: Variable name `zero_opt` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7583:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7583:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7585:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7585:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7587:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7587:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7589:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7589:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7591:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7591:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7593:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7593:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7595:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7595:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7597:37: Variable name `M_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:7597:76: Variable name `M_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:7602:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:7719:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8006:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8050:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8798:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8851:21: Variable name `f` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8854:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8863:19: Variable name `s` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8866:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8875:19: Variable name `s` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8880:21: Variable name `f` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8883:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8892:21: Variable name `f` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8895:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8904:21: Variable name `f` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8907:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8916:21: Variable name `f` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8919:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8928:21: Variable name `f` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8933:21: Variable name `f` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8936:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8945:19: Variable name `s` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8948:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:8957:19: Variable name `s` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8965:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8978:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:8991:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9004:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9022:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:9032:19: Variable name `s` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9035:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:9047:65: Variable name `elem_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9051:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9071:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:9086:49: Variable name `elem_2` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9091:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:9103:85: Variable name `elem_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9107:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9127:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:9140:77: Variable name `elem_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9144:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9164:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9183:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9243:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:9303:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:10637:131: Variable name `elem_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:10706:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:10981:17: Variable name `k` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:11027:161: Variable name `elem_1` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11099:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11209:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11305:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11326:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11353:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11373:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11399:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11419:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11445:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11465:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11487:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11506:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11529:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11549:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11578:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11645:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:11658:14: Variable name `v_reftype` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:11658:24: Variable name `expr_lst` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:11659:14: Variable name `v_reftype` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:11659:24: Variable name `expr_lst` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:11660:14: Variable name `v_reftype` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11664:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "wasm2.0.lean:11674:14: Variable name `byte_lst` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11680:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11767:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message": "wasm2.0.lean:11812:8: declaration uses `sorry`",
+   "level": "warning"}],
+ "inputs":
+ [["«wasm2.0»:deps",
+   [["deps",
+     [["«test-lean-claude»/TestLeanClaude:extraDep",
+       [["@«test-lean-claude»:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["ExtendedDeriveDecEq transitive imports (legacy)", "00000000000006bb"],
+        ["ExtendedDeriveDecEq:importAllArts", "93208aa8fcf86caa"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.32.0, commit 8c9756b28d64dab099da31a4c09229a9e6a2ef35",
+   "5d4a267a1ba5cafb"],
+  ["/home/zhengyew/spectec/spectec/src/test-lean-claude/wasm2.0.lean",
+   "39bbbd41ab4d0a4e"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: «wasm2.0»", "b1a1a58856685def"],
+  ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "be02b77a2b05496a"}
