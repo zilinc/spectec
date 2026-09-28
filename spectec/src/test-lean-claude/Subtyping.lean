@@ -413,13 +413,23 @@ theorem instrtype_sub_add_same (ts1 ts2 ts3 : List valtype) :
 theorem resulttype_sub_cons (t t' : valtype) (ts ts' : List valtype) :
     ResulttypeSub (t :: ts) (t' :: ts') → Valtype_sub t t' ∧ ResulttypeSub ts ts' := sorry
 
-/-- Rocq `subtyping.v:878` `instr_subtyping_strengthen2`. Already proved (0 sorry) in a
-    previous session's `typing_lemmas.lean` — see
-    `claude-logging/for-claude/digest_prior_lean_attempts.md` §1A — worth porting that
-    proof once definitions are confirmed aligned. -/
+/-- Rocq `subtyping.v:878` `instr_subtyping_strengthen2`. Mirror image of
+    `instr_subtyping_weaken2` below (strengthens the *input* side via
+    `resulttype_sub_split_sup` instead of weakening the *output* side via
+    `resulttype_sub_split_sup'`) — proved directly by the same technique
+    rather than ported from a prior session, since the dual proof is a
+    one-for-one transcription once `instr_subtyping_weaken2`'s shape is
+    understood. -/
 theorem instr_subtyping_strengthen2 (tx1 ty1 tx2 ty2 ts : List valtype) :
     instrtype_sub (mkFunctype tx1 ty1) (mkFunctype tx2 ty2) → ResulttypeSub ts tx2 →
-    instrtype_sub (mkFunctype tx1 ty1) (mkFunctype ts ty2) := sorry
+    instrtype_sub (mkFunctype tx1 ty1) (mkFunctype ts ty2) := by
+  intro h hy
+  obtain ⟨rin, rout, sup, nout, htx2, hty2, hrsub, hsup, hnout⟩ := h
+  subst htx2
+  obtain ⟨hrin', hsup'⟩ := resulttype_sub_split_sup ts rin sup hy
+  refine ⟨ts.take rin.length, rout, ts.drop rin.length, nout,
+    (List.take_append_drop rin.length ts).symm, hty2,
+    resulttype_sub_trans _ _ _ hrin' hrsub, resulttype_sub_trans _ _ _ hsup' hsup, hnout⟩
 
 /-- Rocq `subtyping.v:898` (last declaration in file) `instr_subtyping_weaken2`. Already
     proved (0 sorry) in a previous session's `InstrtypeSub.lean` — see

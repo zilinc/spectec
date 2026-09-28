@@ -1,7 +1,97 @@
 # Notes for a future Claude session — READ THIS FIRST
 
-Last updated: 2026-09-23 (session 1, resumed after a VSCode/environment crash
-mid-session; this file is being written on the resume).
+Last updated: 2026-09-24 (session 2 — a fresh Claude session that picked this
+project up cold, per the user's instruction, continuing session 1's standing
+rules; see `claude-logging/verbatim_dialogue_log/bundle3`/`bundle4`).
+
+## ✅ 2026-09-24 UPDATE (bundle8) — `ai_principal_typing` ported, `Mathlib` now imported
+
+`spectec/test-lean/typing_lemmas.lean` (a prior, hand-written Lean attempt
+by the user, predating this project, built against a **byte-identical**
+`wasm2.0.lean` — confirmed via `diff`) turned out to already contain a
+mostly-complete `ai_principal_typing` (the ~340-line, 50+ case central
+definition that everything in the "inversion" family depends on) plus
+proved `instr_typing_inversion`/`ai_typing_inversion`/
+`principal_typing_conversion`. Per the user's explicit go-ahead (check
+correctness first), all four were ported into `TypingLemmas.lean`. **One
+real bug was found and fixed** in the source file's `BR_TABLE` case: an
+unparenthesized `∀ l ∈ ls, ...` accidentally swallowed a trailing `∃ r',
+...` clause, silently dropping the default-label validity/subtyping
+requirement whenever `ls = []` — checked against the live Rocq
+`ai_principal_typing` (`typing_lemmas.v:414`) to confirm the fix. See
+`bundle8/response_8.md` for the full list of what was ported and the other
+correctness spot-checks (LOAD/STORE packed-access cases flagged as a
+possible live upstream-vs-port discrepancy, not a porting bug).
+
+**`TypingLemmas.lean` now `import Mathlib.Tactic`** (first use of Mathlib
+in this project; it was already a resolved-but-unused `lakefile.lean`
+dependency). Fetched via `lake exe cache get` rather than a from-source
+compile. If you're picking this file up cold: it now uses `omega`,
+`norm_num`, `exact_mod_cast`, `positivity`, `linarith`, and a
+Mathlib-enlarged `simp_all` in a few of the newly-ported proofs — this is
+expected, not a mistake to "clean up."
+
+**A real representation gap was found (not fixed, per the user's explicit
+instruction to leave it for their own review)**: `Vals_ok_non_bot` is false
+as literally stated, because this project's generated `Forall₂` is a
+zip-based `def` (doesn't force equal list lengths) unlike Rocq's
+length-forcing inductive `Forall2`. Full writeup with fix options:
+`bundle8/vals_ok_non_bot_analysis.md`. **Do not attempt to prove
+`Vals_ok_non_bot` as currently stated** — it needs either a length
+hypothesis added to its signature or `Vals_ok`'s own definition changed
+first; see the analysis doc before touching it.
+
+**`cases`/`case` binder-ordering discovery**: beyond the previously-known
+"a leading `store`/`context` index doesn't get a name if it unifies with an
+existing outer variable" rule, this bundle found that hypotheses whose type
+*mentions already-bound data* can get reordered ahead of hypotheses that
+are textually earlier in the source constructor declaration (seen in
+`Instr_ok.br_table`, `Instr_ok2.plain`, `Ref_ok.func`). When a `case tag
+names... => ...` block's names don't type-check against what you expected
+from reading the source declaration, don't try to hand-recompute the
+order — replace the tactic body with `trace_state; sorry` (or plain
+`cases h` + `rename_i` if even that doesn't help, as it didn't for one
+`Ref_ok.func` spot) and read the real order off the dumped context.
+
+## ✅ 2026-09-24 UPDATE — `ExtensionLemmas.lean` rename/reshape pass done
+
+Per the 2026-09-23 resync update immediately below, `ExtensionLemmas.lean`
+has now been brought current against the live Rocq source (`a8b585cdb`):
+every renamed `store_extension_*`/`*_extension_refl*` identifier is now
+`Extend_store_*`/`extend_*_refl*`, the `holds_upto` idiom (matching Rocq
+`wasm.v:107`'s own definition) has been introduced and used throughout for
+every lemma whose conclusion moved from `Forall₂`/existential-split to an
+index-based shape, `minst_invert_funcs`/`_tables`/`_globals`/`_mems` now use
+the unified `Externtype_sub` relation (already present in `wasm2.0.lean`),
+6 new lemmas were added (`limits_sub_refl`/`_trans`, `externtype_sub_refl`/
+`_trans`, `externtype_global_eq`/`_func_eq`, `Extend_store_refs'`), and every
+lemma that gained a new `wf_*` premise or restructured hypothesis upstream
+(`global_set_global_extension`, `store_none_mem_extension`,
+`memory_grow_mem_extension`, `table_set_table_extension`,
+`table_grow_table_extension`, `elem_drop_elem_extension`,
+`data_drop_data_extension`, all 8 `addrs_*`/`addrss_*_extension` lemmas,
+`construct_tableinsts_grow`, `construct_meminsts`, `construct_meminsts_grow`)
+has been restated to match. `HelperLemmas.lean` also got the 7 new
+`axioms.v` axioms (`nbytes_len'`, `ibytes_len'`, `ibytes_len''`,
+`vbytes_len'`, `truncz_quot`, `lanes_len`, `nbytes_inv`, `ibytes_inv`,
+`vbytes_inv`). **Full project `lake build` confirmed clean (exit 0, 0
+errors) after this pass** — see `ExtensionLemmas.lean`'s own header comment
+and per-lemma doc comments for exactly what changed and why, and
+`claude-logging/verbatim_dialogue_log/bundle4/response_4.md` for the
+session-level account. `Val_ok_store` and `funcinst_same` remain flagged
+(not renamed-and-updated, since no matching declaration was found upstream
+under any obvious name — see their in-file comments) rather than removed,
+since nothing else in this project depends on them.
+
+**All of this was a signature-only pass — no proofs were filled in this
+turn** (every `sorry` from before is still a `sorry`, just against a
+corrected signature where one was needed). The next natural step is Tier
+B/C/D of `proof_prioritization.md` (as corrected by
+`proof_prioritization_addendum.md`), starting with `HelperLemmas.lean`'s
+corrected tier-0 cluster, or the newly-real Tier E2 (vector preservation
+lemmas) / Tier I (`type_progress.v`) work described there.
+
+## ⚠️ 2026-09-23 (later, same day) UPDATE — local Rocq checkout has been re-synced
 
 ## ⚠️ 2026-09-23 (later, same day) UPDATE — local Rocq checkout has been re-synced
 

@@ -1,7 +1,7 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["e4390570d144cb4d.olean"],
+ {"o": ["56e618f362f8d287.olean"],
   "m": false,
   "i": "cd699e4c401b0b50.ilean",
   "c": "97c7454c02aa5e6f.c"},
@@ -11,59 +11,140 @@
    "level": "trace"},
   {"message": "TypePreservationPure.lean:34:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:34:8: The declaration 'Step_pure__nop_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:39:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:39:8: The declaration 'Step_pure__drop_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:45:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:45:8: The declaration 'Step_pure__select_preserves_helper' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:52:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:52:8: The declaration 'Step_pure__select_true_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:61:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:61:8: The declaration 'Step_pure__select_false_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:70:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:70:8: The declaration 'Step_pure__if_preserves_helper' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:77:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:77:8: The declaration 'Step_pure__if_true_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:85:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:85:8: The declaration 'Step_pure__if_false_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:93:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:93:8: The declaration 'Step_pure__label_vals_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:102:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:102:8: The declaration 'Step_pure__br_zero_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:111:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:111:8: The declaration 'Step_pure__br_succ_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:121:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:121:8: The declaration 'Step_pure__br_if_true_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:127:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:127:8: The declaration 'Step_pure__br_if_false_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:134:8: declaration uses `sorry`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:138:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:138:8: The declaration 'Step_pure__br_table_lt_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:148:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:148:8: The declaration 'Step_pure__br_table_ge_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:157:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:157:8: The declaration 'Step_pure__frame_vals_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:166:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:166:8: The declaration 'Step_pure__return_frame_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:179:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:179:8: The declaration 'Step_pure__return_label_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:190:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:190:8: The declaration 'Step_pure__unop_val_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:198:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:198:8: The declaration 'Step_pure__binop_val_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:207:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:207:8: The declaration 'Step_pure__testop_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:214:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:214:8: The declaration 'Step_pure__relop_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:222:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:222:8: The declaration 'Step_pure__cvtop_val_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:229:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:229:8: The declaration 'Step_pure__local_tee_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:237:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:237:8: The declaration 'Step_pure__ref_is_null_helper' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:246:8: declaration uses `sorry`",
    "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:246:8: The declaration 'Step_pure__ref_is_null_true_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "level": "warning"},
   {"message": "TypePreservationPure.lean:255:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "TypePreservationPure.lean:255:8: The declaration 'Step_pure__ref_is_null_false_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message": "TypePreservationPure.lean:266:8: declaration uses `sorry`",
    "level": "warning"}],
@@ -76,11 +157,11 @@
        [["«wasm2.0» transitive imports (legacy)", "042b7ef8e4b09de0"],
         ["«wasm2.0»:importAllArts", "2779e9d30f5e846a"],
         ["HelperLemmas transitive imports (legacy)", "38ee09ae9f915f9b"],
-        ["HelperLemmas:importAllArts", "a0ca03c6de5688a9"],
-        ["Subtyping transitive imports (legacy)", "de0c7525e40bac7e"],
-        ["Subtyping:importAllArts", "53548e6071c20459"],
-        ["TypingLemmas transitive imports (legacy)", "9e5df99a2240d707"],
-        ["TypingLemmas:importAllArts", "3262a5f61ae94f35"]]]]],
+        ["HelperLemmas:importAllArts", "3c0165ef07d87c93"],
+        ["Subtyping transitive imports (legacy)", "9f0951abdd215fcd"],
+        ["Subtyping:importAllArts", "d9227a6b0518dad9"],
+        ["TypingLemmas transitive imports (legacy)", "f6466159ee1eb425"],
+        ["TypingLemmas:importAllArts", "06b0b91f227ae03c"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -95,4 +176,4 @@
   ["Module.name: TypePreservationPure", "0d58925b5b521533"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "ccc23732edc30f50"}
+ "depHash": "1e115f4a47b080f5"}

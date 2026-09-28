@@ -75,15 +75,30 @@ theorem length_app_lt {α : Type} (l l' l1' l2' : List α) :
 
 /-- Rocq `helper_lemmas.v:94` `length_same_split_zero`. -/
 theorem length_same_split_zero {α : Type} (l l2' : List α) :
-    l.length = l.length + l2'.length → l2'.length = 0 := sorry
+    l.length = l.length + l2'.length → l2'.length = 0 := by
+  intro h; omega
 
 /-- Rocq `helper_lemmas.v:106` `length_app_both_nil`. -/
 theorem length_app_both_nil {α : Type} (l l' l1' l2' : List α) :
-    l.length = l'.length → l.length = l1'.length → l' = l1' ++ l2' → l2' = [] := sorry
+    l.length = l'.length → l.length = l1'.length → l' = l1' ++ l2' → l2' = [] := by
+  intro h1 h2 h3
+  have hlen : l2'.length = 0 := by
+    rw [h3, List.length_append] at h1
+    omega
+  cases l2' with
+  | nil => rfl
+  | cons a as => simp at hlen
 
 /-- Rocq `helper_lemmas.v:122` `length_app_nil`. -/
 theorem length_app_nil {α : Type} (l' l1' l2' : List α) :
-    l'.length = l1'.length → l' = l1' ++ l2' → l2' = [] := sorry
+    l'.length = l1'.length → l' = l1' ++ l2' → l2' = [] := by
+  intro h1 h2
+  have hlen : l2'.length = 0 := by
+    rw [h2, List.length_append] at h1
+    omega
+  cases l2' with
+  | nil => rfl
+  | cons a as => simp at hlen
 
 /-- Rocq `helper_lemmas.v:135` `Forall_nth'`. (Merged with the near-duplicate `Forall_size`,
     helper_lemmas.v:144, which only differs by a stdlib/mathcomp `List.nth`↔`nth` bridge not
@@ -181,23 +196,40 @@ theorem list_slice_update_length {α : Type} (l l' : List α) (i n : Nat) :
 
 /-- Rocq `helper_lemmas.v:523` `split_append_last`. -/
 theorem split_append_last {α : Type} (z y : List α) (i j : α) :
-    z ++ [i] = y ++ [j] → z = y ∧ i = j := sorry
+    z ++ [i] = y ++ [j] → z = y ∧ i = j := by
+  intro h
+  have hrev : i :: z.reverse = j :: y.reverse := by
+    simpa using congrArg List.reverse h
+  injection hrev with hij hzy
+  refine ⟨?_, hij⟩
+  simpa using congrArg List.reverse hzy
 
 /-- Rocq `helper_lemmas.v:539` `split_append_1`. -/
 theorem split_append_1 {α : Type} (z : List α) (i j : α) :
-    z ++ [i] = [j] → z = [] ∧ i = j := sorry
+    z ++ [i] = [j] → z = [] ∧ i = j := by
+  intro h
+  exact split_append_last z [] i j (by simpa using h)
 
 /-- Rocq `helper_lemmas.v:550` `split_append_2`. -/
 theorem split_append_2 {α : Type} (z : List α) (i j k : α) :
-    z ++ [i] = [j, k] → z = [j] ∧ i = k := sorry
+    z ++ [i] = [j, k] → z = [j] ∧ i = k := by
+  intro h
+  exact split_append_last z [j] i k (by simpa using h)
 
 /-- Rocq `helper_lemmas.v:559` `split_append_left_1`. -/
 theorem split_append_left_1 {α : Type} (z : List α) (i j : α) :
-    [i] ++ z = [j] → z = [] ∧ i = j := sorry
+    [i] ++ z = [j] → z = [] ∧ i = j := by
+  intro h
+  simp only [List.cons_append, List.nil_append, List.cons.injEq] at h
+  exact ⟨h.2, h.1⟩
 
 /-- Rocq `helper_lemmas.v:571` `empty_append`. -/
 theorem empty_append {α : Type} (i j : List α) :
-    [] = i ++ j → i = [] ∧ j = [] := sorry
+    [] = i ++ j → i = [] ∧ j = [] := by
+  intro h
+  cases i with
+  | nil => exact ⟨rfl, by simpa using h.symm⟩
+  | cons a as => simp at h
 
 /-- Rocq `helper_lemmas.v:582` `lookup_app`. -/
 theorem lookup_app {α : Type} [Inhabited α] (l l' : List α) (n : Nat) :
@@ -215,14 +247,17 @@ theorem lookup_app {α : Type} [Inhabited α] (l l' : List α) (n : Nat) :
 -- first, falls back to `b ()`). The three lemmas below restate the Rocq facts using `orElse`.
 
 /-- Rocq `helper_lemmas.v:606` `_append_option_none`. -/
-theorem option_orElse_none {α : Type} (c : Option α) : (c.orElse (fun _ => none)) = c := sorry
+theorem option_orElse_none {α : Type} (c : Option α) : (c.orElse (fun _ => none)) = c := by
+  cases c <;> simp
 
 /-- Rocq `helper_lemmas.v:614` `_append_option_none_left`. -/
-theorem option_none_orElse {α : Type} (c : Option α) : ((none : Option α).orElse (fun _ => c)) = c := sorry
+theorem option_none_orElse {α : Type} (c : Option α) : ((none : Option α).orElse (fun _ => c)) = c := by
+  simp
 
 /-- Rocq `helper_lemmas.v:622` `_append_some_left`. -/
 theorem option_some_orElse {α : Type} (b : α) (c : Option α) :
-    ((some b).orElse (fun _ => c)) = some b := sorry
+    ((some b).orElse (fun _ => c)) = some b := by
+  simp
 
 /-! ## Section 6 : arithmetic helper lemmas (helper_lemmas.v:626-755) -/
 
@@ -230,10 +265,10 @@ theorem option_some_orElse {α : Type} (b : α) (c : Option α) :
 theorem add_false (n m : Nat) : n + (m + 1) ≠ n := sorry
 
 /-- Rocq `helper_lemmas.v:742` `add_sub`. -/
-theorem add_sub (a b : Nat) : a + b - b = a := sorry
+theorem add_sub (a b : Nat) : a + b - b = a := by omega
 
 /-- Rocq `helper_lemmas.v:749` `add_sub'`. -/
-theorem add_sub' (a b : Nat) : a + b - a = b := sorry
+theorem add_sub' (a b : Nat) : a + b - a = b := by omega
 
 /-! ## Section 7 : list-concatenation cancellation (helper_lemmas.v:637-683) -/
 
@@ -264,25 +299,47 @@ theorem lookup_label_1 (C : context) (t : resulttype) (n : Nat) :
 /-! ## Section 9 : more seq/arithmetic lemmas (helper_lemmas.v:757-850) -/
 
 /-- Rocq `helper_lemmas.v:757` `sizecat_le1`. -/
-theorem sizecat_le1 {α : Type} (l l' : List α) : l.length ≤ (l ++ l').length := sorry
+theorem sizecat_le1 {α : Type} (l l' : List α) : l.length ≤ (l ++ l').length := by
+  rw [List.length_append]; omega
 
 /-- Rocq `helper_lemmas.v:765` `sizecat_le2`. -/
-theorem sizecat_le2 {α : Type} (l l' : List α) : l'.length ≤ (l ++ l').length := sorry
+theorem sizecat_le2 {α : Type} (l l' : List α) : l'.length ≤ (l ++ l').length := by
+  rw [List.length_append]; omega
 
 -- `lt_irrefl` (helper_lemmas.v:773) NOT PORTED: Rocq states this as a *Boolean* equation
 -- (ssrnat idiom, `x < x = false`); Lean's `Nat.lt_irrefl` (already in core) is the direct
 -- Prop-valued equivalent, no restatement needed.
 
 /-- Rocq `helper_lemmas.v:779` `drop_size_cat`. -/
-theorem drop_size_cat {α : Type} (x y : List α) : (x ++ y).drop x.length = y := sorry
+theorem drop_size_cat {α : Type} (x y : List α) : (x ++ y).drop x.length = y := by
+  induction x with
+  | nil => simp
+  | cons a as ih => simpa using ih
 
 /-- Rocq `helper_lemmas.v:789` `take_size_cat`. -/
-theorem take_size_cat {α : Type} (x y : List α) : (x ++ y).take x.length = x := sorry
+theorem take_size_cat {α : Type} (x y : List α) : (x ++ y).take x.length = x := by
+  induction x with
+  | nil => simp
+  | cons a as ih => simpa using ih
 
 /-- Rocq `helper_lemmas.v:800` `size_eq_cat`. Polymorphic twin of `concat_cancel_last_n`
     above (same conclusion, different Rocq proof technique via `take`/`drop`). -/
 theorem size_eq_cat {α : Type} (l1 l2 l1' l2' : List α) :
-    l1.length = l2.length → l1' ++ l1 = l2' ++ l2 → l1' = l2' ∧ l1 = l2 := sorry
+    l1.length = l2.length → l1' ++ l1 = l2' ++ l2 → l1' = l2' ∧ l1 = l2 := by
+  intro hlen heq
+  have hlen' : l1'.length = l2'.length := by
+    have hl := congrArg List.length heq
+    simp only [List.length_append] at hl
+    omega
+  have h1 : l2' = l1' := by
+    have h := take_size_cat l1' l1
+    rw [heq, hlen'] at h
+    rwa [take_size_cat] at h
+  have h2 : l2 = l1 := by
+    have h := drop_size_cat l1' l1
+    rw [heq, hlen'] at h
+    rwa [drop_size_cat] at h
+  exact ⟨h1.symm, h2.symm⟩
 
 -- `size_cons` (helper_lemmas.v:833) NOT PORTED: trivial `List.length_cons`, already in Lean core.
 
@@ -292,7 +349,14 @@ theorem ltsize {α : Type} (x : Nat) (s s2 : List α) : x < s.length → x < (s 
 -- `repeat_size` (helper_lemmas.v:849) NOT PORTED: trivial `List.length_replicate`, already in
 -- Lean core.
 
-/-! ## Axioms (from `axioms.v`, the Rocq development's only 2 primitive axioms) -/
+/-! ## Axioms (from `axioms.v`). Originally 2 primitive axioms; the
+    2026-09-24 resync (see
+    `claude-logging/verbatim_dialogue_log/bundle3/updated_documents/resync_impact_report.md`)
+    brought `axioms.v` up from 2 to 9 axioms — the original `nbytes_len`/
+    `ibytes_len` are byte-for-byte unchanged upstream (still correct as
+    ported below); the 7 new ones (all vector/SIMD or inverse-bijection
+    facts, needed by the newly-closed-upstream vector preservation lemmas —
+    see `NOTES.md`) are added below them. -/
 
 /-- Rocq `axioms.v:13` `nbytes_len`. `nbytes_` and `size` (Rocq: `res_size`) already exist as
     backend `opaque`s in `wasm2.0.lean` (lines ~705, ~3654); this restates Rocq's axiom about
@@ -308,5 +372,63 @@ axiom nbytes_len (v_nt : numtype) (v_c : num_) (h : nbytes_ v_nt v_c ≠ none) :
     from `wasm2.0.lean` (`size : valtype → Option Nat`, unrelated to this `sz : N`). -/
 axiom ibytes_len (sz v_n : N) (v_c : iN) :
     (ibytes_ v_n (wrap__ sz v_n v_c)).length = v_n / 8
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `nbytes_len'`. A `Rat`-valued
+    restatement of `nbytes_len` without the Nat-division floor — the two
+    coincide since bit-widths are always multiples of 8, but the current
+    Rocq source states both. -/
+axiom nbytes_len' (v_nt : numtype) (v_c : num_) (h : nbytes_ v_nt v_c ≠ none) :
+    ((Option.get! (nbytes_ v_nt v_c)).length : Rat) = (Option.get! (size (valtype_numtype v_nt)) : Rat) / 8
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_len'`. `Rat`-valued
+    restatement of `ibytes_len`. -/
+axiom ibytes_len' (sz v_n : N) (v_c : iN) :
+    ((ibytes_ v_n (wrap__ sz v_n v_c)).length : Rat) = (v_n : Rat) / 8
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_len''`. Same fact as
+    `ibytes_len'` but without the `wrap__` composition — a direct statement
+    about `ibytes_` at any bit-width, independent of how the underlying
+    integer value was produced. -/
+axiom ibytes_len'' (v_n : N) (v_c : iN) :
+    ((ibytes_ v_n v_c).length : Rat) = (v_n : Rat) / 8
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `vbytes_len'`. The vector/SIMD
+    analogue of `nbytes_len'`/`ibytes_len'`. -/
+axiom vbytes_len' (v_vt : vectype) (v_c : vec_) :
+    ((vbytes_ v_vt v_c).length : Rat) = (Option.get! (size (valtype_vectype v_vt)) : Rat) / 8
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `truncz_quot`. `truncz`
+    (truncation of a rational towards zero) is an uninterpreted `opaque` in
+    `wasm2.0.lean` (line ~2384, `truncz : Rat → Int`); on a quotient of two
+    integers — the only way the spec's integer operators ever use it — it
+    coincides with Lean's `Int.tdiv` (truncating division, matching Coq's
+    `Z.quot`). -/
+axiom truncz_quot (a b : Int) (h : b ≠ 0) :
+    truncz ((a : Rat) / (b : Rat)) = Int.tdiv a b
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `lanes_len`. `lanes_` is an
+    uninterpreted `opaque` in `wasm2.0.lean` (line ~4062). By its definition
+    in the specification it splits a 128-bit vector into exactly `dim`
+    lanes. -/
+axiom lanes_len (lt : lanetype) (v_N : N) (c : vec_) :
+    (lanes_ (shape.X lt (dim.mk_dim v_N)) c).length = v_N
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `nbytes_inv`. `nbytes_`/
+    `ibytes_` and their inverses `inv_nbytes_`/`inv_ibytes_` are
+    uninterpreted `opaque`s in `wasm2.0.lean`. In the specification they are
+    mutually inverse bijections between values and byte sequences of the
+    right width. -/
+axiom nbytes_inv (nt : numtype) (bs : List byte) (h : nbytes_ nt (inv_nbytes_ nt bs) ≠ none)
+    (hlen : (bs.length : Rat) = (Option.get! (size (valtype_numtype nt)) : Rat) / 8) :
+    Option.get! (nbytes_ nt (inv_nbytes_ nt bs)) = bs
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_inv`. -/
+axiom ibytes_inv (v_N : N) (bs : List byte) (hlen : (bs.length : Rat) = (v_N : Rat) / 8) :
+    ibytes_ v_N (inv_ibytes_ v_N bs) = bs
+
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `vbytes_inv`. -/
+axiom vbytes_inv (vt : vectype) (bs : List byte)
+    (hlen : (bs.length : Rat) = (Option.get! (size (valtype_vectype vt)) : Rat) / 8) :
+    vbytes_ vt (inv_vbytes_ vt bs) = bs
 
 end TLC

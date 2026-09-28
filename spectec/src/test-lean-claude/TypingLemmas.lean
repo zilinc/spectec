@@ -1,3 +1,4 @@
+import Mathlib.Tactic
 import «wasm2.0»
 import HelperLemmas
 import Subtyping
@@ -56,39 +57,44 @@ def upd_local_return (C : context) (loc : List valtype) (ret : Option resulttype
 def upd_local_label_return (C : context) (loc : List valtype) (lab : List resulttype) (ret : Option resulttype) : context :=
   upd_return (upd_label (upd_local C loc) lab) ret
 
-/-- Rocq `typing_lemmas.v:105` `upd_label_overwrite`. -/
+/-- Rocq `typing_lemmas.v:105` `upd_label_overwrite`. `upd_label` is a plain record update on
+    `LABELS`, so overwriting it twice collapses definitionally. -/
 theorem upd_label_overwrite (C : context) (l1 l2 : List resulttype) :
-    upd_label (upd_label C l1) l2 = upd_label C l2 := sorry
+    upd_label (upd_label C l1) l2 = upd_label C l2 := rfl
 
 /-- Rocq `typing_lemmas.v:111` `upd_label_is_same_as_append`. Rocq builds a near-empty
     context with `LABELS := lab ++ LABELS C` and generic-appends onto `v_C`; since Lean's
     `context.LABELS` is a plain list field, `upd_label` already IS that append directly, so
     this collapses to `rfl` and is stated only for provenance. -/
 theorem upd_label_is_same_as_append (C : context) (lab : List resulttype) :
-    upd_label C (lab ++ C.LABELS) = { C with LABELS := lab ++ C.LABELS } := sorry
+    upd_label C (lab ++ C.LABELS) = { C with LABELS := lab ++ C.LABELS } := rfl
 
 /-- Rocq `typing_lemmas.v:118` `upd_local_is_same_as_append`. -/
 theorem upd_local_is_same_as_append (C : context) (loc : List valtype) :
-    upd_local C (loc ++ C.LOCALS) = { C with LOCALS := loc ++ C.LOCALS } := sorry
+    upd_local C (loc ++ C.LOCALS) = { C with LOCALS := loc ++ C.LOCALS } := rfl
 
 /-- Rocq `typing_lemmas.v:125` `upd_local_return_is_same_as_append`. -/
 theorem upd_local_return_is_same_as_append (C : context) (loc : List valtype) (ret : Option resulttype) :
     upd_local_return C (loc ++ C.LOCALS) (ret.orElse (fun _ => C.RETURN)) =
-      { C with LOCALS := loc ++ C.LOCALS, RETURN := ret.orElse (fun _ => C.RETURN) } := sorry
+      { C with LOCALS := loc ++ C.LOCALS, RETURN := ret.orElse (fun _ => C.RETURN) } := rfl
 
 /-- Rocq `typing_lemmas.v:142` `upd_return_is_same_as_append`. -/
 theorem upd_return_is_same_as_append (C : context) (ret : Option resulttype) :
-    upd_return C (ret.orElse (fun _ => C.RETURN)) = { C with RETURN := ret.orElse (fun _ => C.RETURN) } := sorry
+    upd_return C (ret.orElse (fun _ => C.RETURN)) = { C with RETURN := ret.orElse (fun _ => C.RETURN) } := rfl
 
 /-- Rocq `typing_lemmas.v:150` `upd_label_unchanged`. -/
 theorem upd_label_unchanged (C : context) (lab : List resulttype) :
-    C.LABELS = lab → upd_label C lab = C := sorry
+    C.LABELS = lab → upd_label C lab = C := by
+  intro h; subst h; rfl
 
 /-- Rocq `typing_lemmas.v:158` `upd_label_unchanged_typing`. See also
     `spectec/test-rocq/upd_label_unchanged_typing_verified_walkthrough.md` for a detailed
-    Rocq-side walkthrough of this specific lemma. -/
+    Rocq-side walkthrough of this specific lemma. Direct corollary of `upd_label_unchanged`
+    (`upd_label v_C v_C.LABELS = v_C` trivially, so both sides of the `↔` are the same
+    proposition). -/
 theorem upd_label_unchanged_typing (v_S : store) (v_C : context) (v_admininstrs : List admininstr) (v_ft : functype) :
-    Instrs_ok2 v_S v_C v_admininstrs v_ft ↔ Instrs_ok2 v_S (upd_label v_C v_C.LABELS) v_admininstrs v_ft := sorry
+    Instrs_ok2 v_S v_C v_admininstrs v_ft ↔ Instrs_ok2 v_S (upd_label v_C v_C.LABELS) v_admininstrs v_ft := by
+  rw [upd_label_unchanged v_C v_C.LABELS rfl]
 
 /-! ## `instr_of : admininstr → Option instr` (typing_lemmas.v:174-245) -/
 
@@ -100,39 +106,262 @@ def instr_of (ai : admininstr) : Option instr := sorry
 
 /-! ## Context/store well-formedness projections (typing_lemmas.v:247-278) -/
 
-/-- Rocq `typing_lemmas.v:247` `instr_ok_context_wf`. -/
+/-- Rocq `typing_lemmas.v:247` `instr_ok_context_wf`. Every `Instr_ok` constructor bakes in
+    `wf_context`/`wf_instr` directly (confirmed by reading all 72 cases in `wasm2.0.lean`), so
+    this is a case split closed uniformly by `assumption` (which searches by type, not name,
+    so it's robust to not knowing every constructor's exact argument list). -/
 theorem instr_ok_context_wf (v_C : context) (v_instr : instr) (v_ft : functype) :
-    Instr_ok v_C v_instr v_ft → wf_context v_C ∧ wf_instr v_instr := sorry
+    Instr_ok v_C v_instr v_ft → wf_context v_C ∧ wf_instr v_instr := by
+  intro h
+  cases h <;> exact ⟨by assumption, by assumption⟩
 
-/-- Rocq `typing_lemmas.v:255` `ainstr_ok_context_store_wf`. -/
+/-- Helper: `wf_admininstr` unconditionally holds for `admininstr_ref v_ref`, for any `v_ref`
+    (all three `wf_admininstr` cases for `REF_NULL`/`REF_FUNC_ADDR`/`REF_HOST_ADDR` have no
+    premises in `wasm2.0.lean`). Needed because `Instr_ok2`'s `ref` constructor, unlike its
+    other 5 constructors, does NOT bake in a `wf_admininstr` premise directly. -/
+theorem wf_admininstr_ref (v_ref : ref) : wf_admininstr (admininstr_ref v_ref) := by
+  cases v_ref <;> constructor
+
+/-- Helper: `wf_instr v_instr → wf_admininstr (admininstr_instr v_instr)`. Needed because
+    `Instr_ok2`'s `plain` constructor gives `wf_instr v_instr` (the *static* instruction's
+    wellformedness), not `wf_admininstr (admininstr_instr v_instr)` directly. `admininstr_instr`
+    maps every `instr` constructor to the identically-shaped `admininstr` constructor of the
+    same name, and (confirmed by spot-checking several cases in `wasm2.0.lean`) `wf_instr`'s
+    and `wf_admininstr`'s cases for corresponding constructors carry identical premises (both
+    generated from the same EL-spec wellformedness rule) — so this case-splits both sides in
+    lockstep and closes every resulting premise-subgoal by `assumption`. -/
+theorem wf_instr_admininstr (v_instr : instr) (h : wf_instr v_instr) :
+    wf_admininstr (admininstr_instr v_instr) := by
+  cases v_instr <;> cases h <;> constructor <;> assumption
+
+/-- Rocq `typing_lemmas.v:255` `ainstr_ok_context_store_wf`. 4 of `Instr_ok2`'s 6
+    constructors bake in `wf_admininstr` directly (closed by `assumption`); `plain` needs
+    `wf_instr_admininstr` and `ref` needs `wf_admininstr_ref` instead (see their doc
+    comments). -/
 theorem ainstr_ok_context_store_wf (v_S : store) (v_C : context) (v_ainstr : admininstr) (v_ft : functype) :
-    Instr_ok2 v_S v_C v_ainstr v_ft → wf_context v_C ∧ wf_store v_S ∧ wf_admininstr v_ainstr := sorry
+    Instr_ok2 v_S v_C v_ainstr v_ft → wf_context v_C ∧ wf_store v_S ∧ wf_admininstr v_ainstr := by
+  intro h
+  cases h <;> exact ⟨by assumption, by assumption,
+    by first | assumption | exact wf_admininstr_ref _ | exact wf_instr_admininstr _ (by assumption)⟩
 
-/-- Rocq `typing_lemmas.v:263` `instrs_ok_context_wf`. -/
+/-- Rocq `typing_lemmas.v:263` `instrs_ok_context_wf`. Unlike `instr_ok_context_wf`, the
+    `Forall wf_instr v_instrs` component isn't a single hypothesis in every `Instrs_ok`
+    constructor: `empty` needs it derived (vacuously, for `[]`), `instr` needs it derived from
+    a singular `wf_instr` fact, and `seq` needs two `Forall`s combined across `++`. `sub`/
+    `frame` do carry it directly. Every constructor argument (data and hypothesis alike) is
+    named explicitly below, matching `wasm2.0.lean`'s `Instrs_ok` telescope exactly, to avoid
+    relying on `rename_i`'s exact ordering. -/
 theorem instrs_ok_context_wf (v_C : context) (v_instrs : List instr) (v_ft : functype) :
-    Instrs_ok v_C v_instrs v_ft → wf_context v_C ∧ Forall wf_instr v_instrs := sorry
+    Instrs_ok v_C v_instrs v_ft → wf_context v_C ∧ Forall wf_instr v_instrs := by
+  intro h
+  refine ⟨by cases h <;> assumption, ?_⟩
+  cases h with
+  | empty C hwf => intro p hp; simp at hp
+  | instr C v_instr t_1_lst t_2_lst hty hwf hinstr =>
+      intro p hp; simp at hp; subst hp; exact hinstr
+  | seq C instr_1_lst instr_2_lst t_1_lst t_3_lst t_2_lst h1 h2 hwf hf1 hf2 =>
+      intro p hp
+      rcases List.mem_append.mp hp with hp' | hp'
+      · exact hf1 p hp'
+      · exact hf2 p hp'
+  | sub C instr_lst t'_1_lst t'_2_lst t_1_lst t_2_lst h1 hs1 hs2 hwf hf => exact hf
+  | frame C instr_lst t_lst t_1_lst t_2_lst h1 hwf hf => exact hf
 
-/-- Rocq `typing_lemmas.v:271` `ainstrs_ok_context_store_wf`. -/
+/-- Rocq `typing_lemmas.v:271` `ainstrs_ok_context_store_wf`. `Instrs_ok2` mirrors `Instrs_ok`
+    field-for-field (with `Instr_ok2`/`wf_admininstr`/`wf_store` in place of `Instr_ok`/
+    `wf_instr`); same proof shape as `instrs_ok_context_wf`, with the last constructor named
+    `Instrs_ok2_frame` rather than `frame`. -/
 theorem ainstrs_ok_context_store_wf (v_S : store) (v_C : context) (v_ainstrs : List admininstr) (v_ft : functype) :
-    Instrs_ok2 v_S v_C v_ainstrs v_ft → wf_context v_C ∧ wf_store v_S ∧ Forall wf_admininstr v_ainstrs := sorry
+    Instrs_ok2 v_S v_C v_ainstrs v_ft → wf_context v_C ∧ wf_store v_S ∧ Forall wf_admininstr v_ainstrs := by
+  intro h
+  refine ⟨by cases h <;> assumption, by cases h <;> assumption, ?_⟩
+  cases h with
+  | empty C hs hwf => intro p hp; simp at hp
+  | instr C v_admininstr t_1_lst t_2_lst hty hs hwf hinstr =>
+      intro p hp; simp at hp; subst hp; exact hinstr
+  | seq C admininstr_1_lst admininstr_2_lst t_1_lst t_3_lst t_2_lst h1 h2 hs hwf hf1 hf2 =>
+      intro p hp
+      rcases List.mem_append.mp hp with hp' | hp'
+      · exact hf1 p hp'
+      · exact hf2 p hp'
+  | sub C admininstr_lst t'_1_lst t'_2_lst t_1_lst t_2_lst h1 hs1 hs2 hs hwf hf => exact hf
+  | Instrs_ok2_frame C admininstr_lst t_lst t_1_lst t_2_lst h1 hs hwf hf => exact hf
 
 /-! ## Composition/empty-typing lemmas (typing_lemmas.v:280-424) -/
 
-/-- Rocq `typing_lemmas.v:349` `instrs_empty_typing`. -/
-theorem instrs_empty_typing (v_C : context) (t1s t2s : List valtype) :
-    Instrs_ok v_C [] (mkFunctype t1s t2s) ↔ (wf_context v_C ∧ ResulttypeSub t1s t2s) := sorry
+-- `instrs_empty_typing`/`ais_empty_typing` (Rocq `typing_lemmas.v:349`/`333`) are stated and
+-- proved further below, right after `ais_ok_widen_out`, since their proofs need
+-- `instrs_ok_nil_sub`/`instrs_ok_widen_in`/`ais_ok_nil_sub`/`ais_ok_widen_in` (part of the
+-- seq-typing-inversion scaffolding), which are declared later in this file.
 
-/-- Rocq `typing_lemmas.v:427` `ai_principal_typing` — **THE central definition of the
-    file**. TODO(phase 2): body is a ~57-case match over `admininstr` giving each
-    constructor's principal (most-specific) functype as an existential/equality Prop,
-    mirroring each `Instr_ok`/`Instr_ok2` typing rule's premises verbatim. Stubbed for now
-    — see the digest's `ai_principal_typing` section for the complete Rocq case list
-    (NOP/UNREACHABLE/DROP/SELECT/BLOCK/LOOP/IFELSE/BR/BR_IF/BR_TABLE/CALL/CALL_INDIRECT/
-    RETURN/CONST/UNOP/BINOP/TESTOP/RELOP/CVTOP/VCONST/REF_NULL/REF_FUNC/REF_IS_NULL/
-    LOCAL_GET,SET,TEE/GLOBAL_GET,SET/TABLE_*/ELEM_DROP/LOAD/STORE/MEMORY_*/DATA_DROP/
-    REF_FUNC_ADDR/REF_HOST_ADDR/CALL_ADDR/LABEL_/FRAME_/TRAP; SIMD ops fall to a vacuous
-    `True` catchall, matching `type_preservation.v`'s SIMD-only gaps). -/
-def ai_principal_typing (v_S : store) (v_C : context) (v_ai : admininstr) (v_ft : functype) : Prop := sorry
+/-- Rocq `typing_lemmas.v:427` (originally `typing_lemmas.v:377` in an older layout)
+    `ai_principal_typing` — **THE central definition of the file**. Ported from a prior Lean
+    session's own hand-written `spectec/test-lean/typing_lemmas.lean` (built against the
+    *identical*, byte-for-byte `wasm2.0.lean` this project uses — confirmed via `diff` before
+    porting), per the user's explicit go-ahead to reuse it after checking correctness.
+
+    **One real bug found and fixed while checking**: the source file's `BR_TABLE` case wrote
+    `∀ l ∈ ls, ∃ r, ... ∧ ... ∧ ∃ r', ...` with no parens around the `∀`'s body, so Lean's
+    greedy parsing put the trailing `∃ r', LABELS[l']? = r' ∧ ts subs< r'` clause *inside* the
+    `∀ l ∈ ls` binder. That's vacuously true whenever `ls = []` (a valid `BR_TABLE` with only
+    a default target), silently dropping the requirement that the *default* label `l'` itself
+    be valid and subtype-compatible — checked against the live Rocq `ai_principal_typing`
+    (`typing_lemmas.v:414`), which states the two `Forall`s over `ls` and the two conditions
+    on `l'` as five independent top-level conjuncts, confirming the default-label conditions
+    must NOT be gated by `ls`. Fixed here by parenthesizing the `∀` explicitly.
+
+    **One area kept as a faithful-but-not-bit-exact port, flagged rather than silently
+    trusted**: the `LOAD`/`STORE` packed-access cases here existentially quantify over an
+    `Inn` (`I32`/`I64`) restricted numtype (`nt = numtype_Inn inntype`), which is vacuously
+    unsatisfiable for `F32`/`F64` — semantically equivalent to the live Rocq version's
+    explicit `admininstr_LOAD F32/F64 (Some _) _ => False` cases for `LOAD`. Rocq's current
+    `STORE`-packed case, however, no longer excludes `F32`/`F64` at all (its exclusion arms
+    are commented out in the live source), which does NOT match this ported case's implicit
+    exclusion — a live upstream-vs-port discrepancy, not a porting mistake made here. Left
+    as-is (matching the more conservative/older reading) since resolving it requires a
+    judgment call about which Rocq revision is authoritative; revisit if any downstream
+    `STORE`-with-packing proof needs the relaxed (Rocq-current) reading instead. -/
+def ai_principal_typing (v_S : store) (v_C : context) (v_ai : admininstr) (v_ft : functype) : Prop :=
+  match v_ai with
+  | admininstr.NOP => v_ft = mkFunctype [] []
+  | admininstr.UNREACHABLE => True
+  | admininstr.DROP => ∃ t : valtype, v_ft = mkFunctype [t] []
+  | admininstr.SELECT (some [t]) => v_ft = mkFunctype [t, t, valtype.I32] [t]
+  | admininstr.SELECT none =>
+    ∃ t t' : valtype,
+      v_ft = mkFunctype [t, t, valtype.I32] [t] ∧ Valtype_sub t t' ∧
+      ((∃ nt : numtype, t' = valtype_numtype nt) ∨ (∃ vt : vectype, t' = valtype_vectype vt))
+  | admininstr.SELECT _ => False
+  | admininstr.BLOCK bt instrs =>
+    ∃ t1s t2s : List valtype,
+      v_ft = mkFunctype t1s t2s ∧ Blocktype_ok v_C bt (mkFunctype t1s t2s) ∧
+      Instrs_ok { v_C with LABELS := (list.mk_list t2s) :: v_C.LABELS } instrs (mkFunctype t1s t2s)
+  | admininstr.LOOP bt instrs =>
+    ∃ t1s t2s : List valtype,
+      v_ft = mkFunctype t1s t2s ∧ Blocktype_ok v_C bt (mkFunctype t1s t2s) ∧
+      Instrs_ok { v_C with LABELS := (list.mk_list t1s) :: v_C.LABELS } instrs (mkFunctype t1s t2s)
+  | admininstr.IFELSE bt instrs1 instrs2 =>
+    ∃ t1s t2s : List valtype,
+      v_ft = mkFunctype (t1s ++ [valtype.I32]) t2s ∧ Blocktype_ok v_C bt (mkFunctype t1s t2s) ∧
+      Instrs_ok { v_C with LABELS := (list.mk_list t2s) :: v_C.LABELS } instrs1 (mkFunctype t1s t2s) ∧
+      Instrs_ok { v_C with LABELS := (list.mk_list t2s) :: v_C.LABELS } instrs2 (mkFunctype t1s t2s)
+  | admininstr.BR l =>
+    ∃ t1s ts t2s : List valtype,
+      v_ft = mkFunctype (t1s ++ ts) t2s ∧ v_C.LABELS[proj_uN_0 l]? = some (list.mk_list ts)
+  | admininstr.BR_IF l =>
+    ∃ ts : List valtype,
+      v_ft = mkFunctype (ts ++ [valtype.I32]) ts ∧ v_C.LABELS[proj_uN_0 l]? = some (list.mk_list ts)
+  | admininstr.BR_TABLE ls l' =>
+    ∃ t1s ts t2s : List valtype,
+      v_ft = mkFunctype (t1s ++ ts ++ [valtype.I32]) t2s ∧
+      (∀ l ∈ ls, ∃ r : resulttype, v_C.LABELS[proj_uN_0 l]? = some r ∧ Resulttype_sub (list.mk_list ts) r) ∧
+      (∃ r' : resulttype, v_C.LABELS[proj_uN_0 l']? = some r' ∧ Resulttype_sub (list.mk_list ts) r')
+  | admininstr.CALL x =>
+    ∃ t1s t2s : List valtype, v_ft = mkFunctype t1s t2s ∧ v_C.FUNCS[proj_uN_0 x]? = some (mkFunctype t1s t2s)
+  | admininstr.CALL_INDIRECT x y =>
+    ∃ t1s t2s : List valtype, ∃ lim : limits,
+      v_ft = mkFunctype (t1s ++ [valtype.I32]) t2s ∧
+      v_C.TABLES[proj_uN_0 x]? = some (tabletype.mk_tabletype lim reftype.FUNCREF) ∧
+      v_C.TYPES[proj_uN_0 y]? = some (mkFunctype t1s t2s)
+  | admininstr.RETURN =>
+    ∃ t1s ts t2s : List valtype, v_ft = mkFunctype (t1s ++ ts) t2s ∧ v_C.RETURN = some (list.mk_list ts)
+  | admininstr.CONST nt c => v_ft = mkFunctype [] [valtype_numtype nt] ∧ wf_num_ nt c
+  | admininstr.UNOP nt _ => v_ft = mkFunctype [valtype_numtype nt] [valtype_numtype nt]
+  | admininstr.BINOP nt _ => v_ft = mkFunctype [valtype_numtype nt, valtype_numtype nt] [valtype_numtype nt]
+  | admininstr.TESTOP nt _ => v_ft = mkFunctype [valtype_numtype nt] [valtype.I32]
+  | admininstr.RELOP nt _ => v_ft = mkFunctype [valtype_numtype nt, valtype_numtype nt] [valtype.I32]
+  | admininstr.CVTOP nt1 nt2 _ => v_ft = mkFunctype [valtype_numtype nt2] [valtype_numtype nt1]
+  | admininstr.VCONST vt c =>
+    ∃ uN_size : Nat, size (valtype_vectype vt) = some uN_size ∧ wf_uN uN_size c ∧
+      v_ft = mkFunctype [] [valtype_vectype vt]
+  | admininstr.REF_NULL rt => v_ft = mkFunctype [] [valtype_reftype rt]
+  | admininstr.REF_FUNC x =>
+    ∃ ft : functype, v_ft = mkFunctype [] [valtype_reftype reftype.FUNCREF] ∧ v_C.FUNCS[proj_uN_0 x]? = some ft
+  | admininstr.REF_IS_NULL => ∃ rt : reftype, v_ft = mkFunctype [valtype_reftype rt] [valtype.I32]
+  | admininstr.LOCAL_GET x =>
+    ∃ t : valtype, v_ft = mkFunctype [] [t] ∧ v_C.LOCALS[proj_uN_0 x]? = some t
+  | admininstr.LOCAL_SET x =>
+    ∃ t : valtype, v_ft = mkFunctype [t] [] ∧ v_C.LOCALS[proj_uN_0 x]? = some t
+  | admininstr.LOCAL_TEE x =>
+    ∃ t : valtype, v_ft = mkFunctype [t] [t] ∧ v_C.LOCALS[proj_uN_0 x]? = some t
+  | admininstr.GLOBAL_GET x =>
+    ∃ (t : valtype) (m : «mut»), v_ft = mkFunctype [] [t] ∧ v_C.GLOBALS[proj_uN_0 x]? = some (globaltype.mk_globaltype m t)
+  | admininstr.GLOBAL_SET x =>
+    ∃ (t : valtype) (m : «mut»), v_ft = mkFunctype [t] [] ∧ v_C.GLOBALS[proj_uN_0 x]? = some (globaltype.mk_globaltype m t)
+  | admininstr.TABLE_GET x =>
+    ∃ (rt : reftype) (lim : limits),
+      v_ft = mkFunctype [valtype.I32] [valtype_reftype rt] ∧ v_C.TABLES[proj_uN_0 x]? = some (tabletype.mk_tabletype lim rt)
+  | admininstr.TABLE_SET x =>
+    ∃ (rt : reftype) (lim : limits),
+      v_ft = mkFunctype [valtype.I32, valtype_reftype rt] [] ∧ v_C.TABLES[proj_uN_0 x]? = some (tabletype.mk_tabletype lim rt)
+  | admininstr.TABLE_SIZE x =>
+    ∃ (rt : reftype) (lim : limits),
+      v_ft = mkFunctype [] [valtype.I32] ∧ v_C.TABLES[proj_uN_0 x]? = some (tabletype.mk_tabletype lim rt)
+  | admininstr.TABLE_GROW x =>
+    ∃ (rt : reftype) (lim : limits),
+      v_ft = mkFunctype [valtype_reftype rt, valtype.I32] [valtype.I32] ∧ v_C.TABLES[proj_uN_0 x]? = some (tabletype.mk_tabletype lim rt)
+  | admininstr.TABLE_FILL x =>
+    ∃ (rt : reftype) (lim : limits),
+      v_ft = mkFunctype [valtype.I32, valtype_reftype rt, valtype.I32] [] ∧ v_C.TABLES[proj_uN_0 x]? = some (tabletype.mk_tabletype lim rt)
+  | admininstr.TABLE_COPY x1 x2 =>
+    ∃ (rt : reftype) (lim1 lim2 : limits),
+      v_ft = mkFunctype [valtype.I32, valtype.I32, valtype.I32] [] ∧
+      v_C.TABLES[proj_uN_0 x1]? = some (tabletype.mk_tabletype lim1 rt) ∧
+      v_C.TABLES[proj_uN_0 x2]? = some (tabletype.mk_tabletype lim2 rt)
+  | admininstr.TABLE_INIT x1 x2 =>
+    ∃ (rt : reftype) (lim : limits),
+      v_ft = mkFunctype [valtype.I32, valtype.I32, valtype.I32] [] ∧
+      v_C.TABLES[proj_uN_0 x1]? = some (tabletype.mk_tabletype lim rt) ∧
+      v_C.ELEMS[proj_uN_0 x2]? = some rt
+  | admininstr.ELEM_DROP x =>
+    ∃ rt : reftype, v_ft = mkFunctype [] [] ∧ v_C.ELEMS[proj_uN_0 x]? = some rt
+  | admininstr.LOAD nt none marg =>
+    ∃ (mt : memtype) (sz : Nat),
+      v_ft = mkFunctype [valtype.I32] [valtype_numtype nt] ∧ v_C.MEMS[0]? = some mt ∧
+      size (valtype_numtype nt) = some sz ∧ 2 ^ (proj_uN_0 marg.ALIGN) ≤ (sz / 8)
+  | admininstr.LOAD nt (some (loadop_.mk_loadop__0 inntype (loadop_Inn.mk_loadop_Inn (sz.mk_sz num_bits_to_read) _))) marg =>
+    nt = numtype_Inn inntype ∧
+    ∃ mt : memtype,
+      v_ft = mkFunctype [valtype.I32] [valtype_Inn inntype] ∧ v_C.MEMS[0]? = some mt ∧
+      2 ^ (proj_uN_0 marg.ALIGN) ≤ (num_bits_to_read / 8)
+  | admininstr.STORE nt none marg =>
+    ∃ (mt : memtype) (sz : Nat),
+      v_ft = mkFunctype [valtype.I32, valtype_numtype nt] [] ∧ v_C.MEMS[0]? = some mt ∧
+      size (valtype_numtype nt) = some sz ∧ 2 ^ (proj_uN_0 marg.ALIGN) ≤ (sz / 8)
+  | admininstr.STORE nt (some (sz.mk_sz num_bits_to_read)) marg =>
+    ∃ (mt : memtype) (inntype : Inn),
+      nt = numtype_Inn inntype ∧ v_ft = mkFunctype [valtype.I32, valtype_numtype nt] [] ∧
+      v_C.MEMS[0]? = some mt ∧ 2 ^ (proj_uN_0 marg.ALIGN) ≤ (num_bits_to_read / 8)
+  | admininstr.MEMORY_SIZE => ∃ mt : memtype, v_ft = mkFunctype [] [valtype.I32] ∧ v_C.MEMS[0]? = some mt
+  | admininstr.MEMORY_GROW => ∃ mt : memtype, v_ft = mkFunctype [valtype.I32] [valtype.I32] ∧ v_C.MEMS[0]? = some mt
+  | admininstr.MEMORY_FILL =>
+    ∃ mt : memtype, v_ft = mkFunctype [valtype.I32, valtype.I32, valtype.I32] [] ∧ v_C.MEMS[0]? = some mt
+  | admininstr.MEMORY_COPY =>
+    ∃ mt : memtype, v_ft = mkFunctype [valtype.I32, valtype.I32, valtype.I32] [] ∧ v_C.MEMS[0]? = some mt
+  | admininstr.MEMORY_INIT x =>
+    ∃ mt : memtype,
+      v_ft = mkFunctype [valtype.I32, valtype.I32, valtype.I32] [] ∧ v_C.MEMS[0]? = some mt ∧
+      v_C.DATAS[proj_uN_0 x]? = some datatype.OK
+  | admininstr.DATA_DROP x => v_ft = mkFunctype [] [] ∧ v_C.DATAS[proj_uN_0 x]? = some datatype.OK
+  | admininstr.REF_FUNC_ADDR a =>
+    ∃ ft : functype,
+      v_ft = mkFunctype [] [valtype_reftype reftype.FUNCREF] ∧
+      Externaddr_ok v_S (externaddr.FUNC a) (externtype.FUNC ft)
+  | admininstr.CALL_ADDR a =>
+    ∃ ts1 ts2 : List valtype,
+      v_ft = mkFunctype ts1 ts2 ∧ Externaddr_ok v_S (externaddr.FUNC a) (externtype.FUNC (mkFunctype ts1 ts2))
+  | admininstr.LABEL_ n_ instrs admininstrs =>
+    ∃ ts t's : List valtype,
+      v_ft = mkFunctype [] ts ∧ t's.length = n_ ∧
+      Instrs_ok2 v_S v_C (instrs.map admininstr_instr) (mkFunctype t's ts) ∧
+      Instrs_ok2 v_S { v_C with LABELS := (list.mk_list t's) :: v_C.LABELS } admininstrs (mkFunctype [] ts)
+  | admininstr.FRAME_ _ f admininstrs =>
+    ∃ (ts : List valtype) (c' : context),
+      v_ft = mkFunctype [] ts ∧ Frame_ok v_S f c' ∧
+      Expr_ok2 v_S { c' with RETURN := some (list.mk_list ts) } admininstrs (list.mk_list ts)
+  | admininstr.TRAP => True
+  | admininstr.EXTEND _ _ => False
+  | _ => True
 
 /-- Rocq `typing_lemmas.v:676` `instr_principal_typing`. Store is irrelevant for the
     surface (non-administrative) judgment; Rocq plugs in `default_val : store`, matching
@@ -144,15 +373,301 @@ def instr_principal_typing (v_C : context) (v_instr : instr) (v_ft : functype) :
 
 /-- Rocq `typing_lemmas.v:679` `instr_typing_inversion`. -/
 theorem instr_typing_inversion (v_C : context) (v_instr : instr) (t1s t2s : List valtype) :
-    Instr_ok v_C v_instr (mkFunctype t1s t2s) → instr_principal_typing v_C v_instr (mkFunctype t1s t2s) := sorry
+    Instr_ok v_C v_instr (mkFunctype t1s t2s) → instr_principal_typing v_C v_instr (mkFunctype t1s t2s) := by
+  intro h
+  cases h
+  case br_table l_lst l' t1_lst t_lst wf_instr_bt h_ls_bound h_ls_sub h_l'_bound h_l'_sub wf_c =>
+    -- Handled *before* the shared `simp_all` pipeline below: empirically, `simp_all`
+    -- mangles this specific case's hypothesis names/shapes (its two `Forall`s over the
+    -- same `l_lst`, plus a `∀ l ∈ ls` in the goal, confuse it), unlike every other case,
+    -- which `simp_all` handles fine. Confirmed via `trace_state` during porting. Also
+    -- note: `cases`'s actual binder order here is NOT the source declaration order —
+    -- `wf_instr` (declared last, but mentions the same `l_lst`/`l'` as the conclusion
+    -- index) is bound *first* among the hypotheses, confirmed empirically the same way.
+    unfold instr_principal_typing
+    unfold ai_principal_typing
+    simp only [admininstr_instr]
+    refine ⟨t1_lst, t_lst, t2s, by simp [List.append_assoc], ?_, ?_⟩
+    · intro l hl
+      exact ⟨v_C.LABELS[proj_uN_0 l]!, by simp [h_ls_bound l hl], h_ls_sub l hl⟩
+    · exact ⟨v_C.LABELS[proj_uN_0 l']!, by simp [h_l'_bound], h_l'_sub⟩
+  all_goals (
+    unfold instr_principal_typing
+    <;> unfold ai_principal_typing
+    <;> simp only [admininstr_instr]
+    <;> try simp_all)
+
+  case drop t wf_drop wf_c =>
+    exists t
+
+  case select_impl
+      t t' nt vt subt
+      t'_constraints wf_select wf_c =>
+    refine ⟨t, rfl, t', subt, ?_⟩
+    rcases t'_constraints with t'_constraint | t'_constraint
+    · exact Or.inl ⟨nt, t'_constraint⟩
+    · exact Or.inr ⟨vt, t'_constraint⟩
+
+  case block
+      bt instrs wf_block wf_c wf_c' bt_ok instrs_ok =>
+    exists t1s
+    exists t2s
+
+  case loop
+      bt instrs wf_loop wf_c wf_c' bt_ok instrs_ok =>
+    exists t1s
+    exists t2s
+
+  case «if»
+      bt instrs1 instrs2 t wf_if wf_c wf_c' bt_ok instrs1_ok instrs2_ok =>
+    exists t
+    exists t2s
+
+  case br
+      lidx t1s' ts wf_br lidx_within_LABELS LABELS_gives_ts wf_c =>
+    exists t1s'
+    exists ts
+    apply And.intro
+    · exists t2s
+    · unfold proj_list_0 at LABELS_gives_ts
+      have hlab : v_C.LABELS[proj_uN_0 lidx] = list.mk_list ts :=
+        Eq.subst (motive := fun z => v_C.LABELS[proj_uN_0 lidx] = list.mk_list z) LABELS_gives_ts rfl
+      simp only [hlab]
+
+  case br_if
+      lidx wf_br_if lidx_within_LABELS wf_c LABELS_gives_t2s =>
+    exists t2s
+    apply And.intro
+    · rfl
+    · unfold proj_list_0 at LABELS_gives_t2s
+      have h : v_C.LABELS[(proj_uN_0 lidx)] = (list.mk_list t2s) :=
+        Eq.subst (motive := fun x => v_C.LABELS[(proj_uN_0 lidx)] = list.mk_list x) LABELS_gives_t2s rfl
+      simp only [h]
+
+  case call
+      idx wf_call idx_within_FUNCS wf_c FUNCS_gives_ft =>
+    exists t1s
+    exists t2s
+
+  case call_indirect
+      idx1 idx2 t1s' lim wf_call_indirect wf_tt idx1_within_TABLES idx2_within_TYPES
+      TABLES_gives_tt idx2_within_TYPES2 wf_c TYPES_gives_ft =>
+    exists t1s', t2s
+
+  case «return»
+      t1s' ts wf_return RETURN_gives_ts wf_c =>
+    exists t1s', t2s
+
+  case const
+      nt n wf_const wf_c =>
+    cases wf_const with
+    | instr_case_13 nt n h =>
+        exact h
+
+  case ref_func
+      idx ft wf_ref_func idx_in_FUNCS FUNCS_gives_ft wf_c =>
+    rfl
+
+  case ref_is_null
+      rt wr_ref_is_null wf_c =>
+    exists rt
+
+  case vconst
+      vec wf_vconst wf_c =>
+    cases wf_vconst with
+    | instr_case_20 vt v not_none_size wf_vec =>
+        refine ⟨(size (valtype_vectype vectype.V128)).get!, ?_, ?_, ?_⟩
+        · obtain ⟨x, hx⟩ := Option.ne_none_iff_exists.mp not_none_size
+          rfl
+        · exact wf_vec
+        · rfl
+
+  case load_val
+      nt marg mt MEMS_length_nonzero nt_size_not_none
+      size_constraint wf_mt wf_load MEMS_length_nonzero2
+      mt_at_MEMS_0_idx wf_c =>
+    refine ⟨(size (valtype_numtype nt)).get!, ?_, ?_⟩
+    · cases nt <;>
+      simp [size, valtype_numtype]
+    · cases nt <;>
+      simp [size, valtype_numtype] at size_constraint ⊢ <;>
+      norm_num at size_constraint <;>
+      exact_mod_cast size_constraint
+
+  case load_pack
+      inn m is_signed marg mt size_constraint wf_inn
+      wf_load MEMS_not_empty MEMS_0_is_marg wf_c =>
+    cases m
+    · norm_num at size_constraint ⊢
+      have h_false : False := by
+        have h_pos : (2 ^ (proj_uN_0 marg.ALIGN)) > (0 : Rat) := by positivity
+        linarith only [size_constraint, h_pos]
+      exact h_false
+    · rename_i n
+      have bridge :
+        ∀ (n0 n1 n2 : Nat), n0 ≤ ((n1 : Rat) / n2) → n0 ≤ (n1 / n2) := by
+            intros n0 n1 n2 h
+            rcases Nat.eq_zero_or_pos n2 with hz | hpos
+            · subst hz
+              simp at h ⊢
+              exact_mod_cast h
+            · rcases lt_or_ge ((n1:Rat) / n2) (n0 + 1 : Rat) with hlt | hge
+              · have heq : n1 / n2 = n0 := by
+                  have hmul_le : n0 * n2 ≤ n1 := by
+                    rw [le_div_iff₀ (by exact_mod_cast hpos : (0:Rat) < n2)] at h
+                    exact_mod_cast h
+                  have hmul_lt : n1 < (n0 + 1) * n2 := by
+                    rw [div_lt_iff₀ (by exact_mod_cast hpos : (0:Rat) < n2)] at hlt
+                    exact_mod_cast hlt
+                  have h1 : n0 ≤ (n1 / n2) := (Nat.le_div_iff_mul_le hpos).mpr hmul_le
+                  have h2 : (n1 / n2) < (n0 + 1) := (Nat.div_lt_iff_lt_mul hpos).mpr hmul_lt
+                  omega
+                omega
+              · have : n0 + 1 ≤ n1 / n2 := by
+                  rw [Nat.le_div_iff_mul_le hpos]
+                  rw [le_div_iff₀ (by exact_mod_cast hpos)] at hge
+                  exact_mod_cast hge
+                omega
+      exact_mod_cast
+        bridge (2 ^ (proj_uN_0 marg.ALIGN)) n.succ 8
+          (by exact_mod_cast size_constraint)
+
+  case store_val
+      nt marg mt MEMS_length_nonzero nt_size_not_none size_constraint
+      wf_mt wf_store MEMS_length_nonzero2 mt_at_MEMS_0_idx wf_c =>
+    refine ⟨(size (valtype_numtype nt)).get!, ?_, ?_⟩
+    · cases nt <;>
+      simp [size, valtype_numtype]
+    · cases nt <;>
+      simp [size, valtype_numtype, Option.bind, Option.get] at size_constraint ⊢ <;>
+      norm_num at size_constraint <;>
+        exact_mod_cast size_constraint
+
+  case store_pack
+      inn m marg mt size_constraint wf_mt wf_store
+      MEMS_not_empty MEMS_0_is_mt wf_c =>
+    apply And.intro
+    · cases inn <;>
+      simp [valtype_Inn, valtype_numtype] <;>
+      rfl
+    · have bridge :
+        ∀ (n0 n1 n2 : Nat), n0 ≤ ((n1 : Rat) / n2) → n0 ≤ (n1 / n2) := by
+            intros n0 n1 n2 h
+            rcases Nat.eq_zero_or_pos n2 with h_zero | h_pos
+            · subst h_zero
+              simp [*] at h ⊢
+              exact h
+            · rcases lt_or_ge (n1 / n2) (n0 + 1) with h2_near | h_far
+              · have lower_limit : n1/n2 = n0 := by
+                    let upper := h2_near
+                    have lower : n0 ≤ n1/n2 := by
+                        have h_throwaway : n0 * n2 ≤ n1 := by
+                            rw [le_div_iff₀ (by exact_mod_cast h_pos)] at h
+                            exact_mod_cast h
+                        exact (Nat.le_div_iff_mul_le h_pos).mpr h_throwaway
+                    omega
+                omega
+              · omega
+      have applied_bridge := bridge ((2 : ℕ) ^ (proj_uN_0 marg.ALIGN)) m 8 (
+        by
+        exact_mod_cast size_constraint
+      )
+      exact applied_bridge
+
+/-- Rocq `typing_lemmas.v:676` (in-between helper, not independently named in the Rocq
+    source but needed by `ai_typing_inversion`'s `plain` case below): bridges
+    `instr_principal_typing` (surface, `Instr_ok`-facing) and `ai_principal_typing`
+    (administrative, `Instr_ok2`-facing) for the "plain" (non-purely-administrative)
+    instructions, since `Instr_ok2.plain` produces its conclusion via `admininstr_instr`.
+    Ported from a prior Lean session's `spectec/test-lean/typing_lemmas.lean`
+    `principal_typing_conversion`. -/
+theorem principal_typing_conversion (i : instr) :
+    ∀ (s : store) (c : context) (t1s t2s : List valtype),
+      instr_principal_typing c i (mkFunctype t1s t2s)
+      ↔ ai_principal_typing s c (admininstr_instr i) (mkFunctype t1s t2s) := by
+  intro s c t1s t2s
+  unfold instr_principal_typing
+  cases i <;> try rfl
+  case SELECT op_ts =>
+    cases op_ts
+    case none => rfl
+    case some t =>
+      cases t
+      case nil => rfl
+      case cons head tail =>
+        cases tail
+        case nil => rfl
+        case cons head' tail' => rfl
+  case LOAD nt o_loadop marg =>
+    cases o_loadop
+    case none => rfl
+    case some loadop =>
+      cases loadop
+      case mk_loadop__0 inn l_inn => rfl
+  case STORE nt o_sz marg =>
+    cases o_sz
+    case none => rfl
+    case some sz => rfl
 
 /-- Rocq `typing_lemmas.v:720` `ai_typing_inversion` — **the master per-instruction
     inversion lemma**, administrative level, up to `<ti:` subtyping. Highest
-    difficulty/longest proof in the "inversion" family (57-way case split in Rocq). -/
+    difficulty/longest proof in the "inversion" family (57-way case split in Rocq). Ported
+    from a prior Lean session's `spectec/test-lean/typing_lemmas.lean` (built against the
+    identical `wasm2.0.lean`), using this project's own already-proved `instrtype_sub_refl`
+    (`Subtyping.lean`) in place of that file's own un-proved copy of the same lemma. -/
 theorem ai_typing_inversion (v_S : store) (v_C : context) (v_ai : admininstr) (t1s t2s : List valtype) :
     Instr_ok2 v_S v_C v_ai (mkFunctype t1s t2s) →
     ∃ t1s' t2s', ai_principal_typing v_S v_C v_ai (mkFunctype t1s' t2s') ∧
-      instrtype_sub (mkFunctype t1s' t2s') (mkFunctype t1s t2s) := sorry
+      instrtype_sub (mkFunctype t1s' t2s') (mkFunctype t1s t2s) := by
+  intro instr_ok2
+  generalize gen_ft : mkFunctype t1s t2s = ft at instr_ok2
+  cases instr_ok2 using Instr_ok2.casesOn
+  case plain i t1s' t2s' hwfS hwfI hinstr_ok hwfC =>
+    refine ⟨t1s', t2s', ?_, ?_⟩
+    case refine_1 =>
+      apply (principal_typing_conversion i v_S v_C t1s' t2s').mp
+      exact instr_typing_inversion v_C i t1s' t2s' hinstr_ok
+    case refine_2 =>
+      exact instrtype_sub_refl _
+  case Instr_ok2_frame v_n f ais t_lst c' hframe hexpr hwfS hwfC' hwfai hwfCtx hlen hwfC =>
+    refine ⟨[], t_lst, ?_, ?_⟩
+    case refine_1 =>
+      exact ⟨t_lst, c', rfl, hframe, hexpr⟩
+    case refine_2 =>
+      exact instrtype_sub_refl _
+  case label v_n instrs ais out_ts lab_ts hwfS hwfai hwfCtx hlen instrs_ok ais_ok hwfC =>
+    refine ⟨[], out_ts, ?_, ?_⟩
+    case refine_1 =>
+      exact ⟨out_ts, lab_ts, rfl, hlen.symm, instrs_ok, ais_ok⟩
+    case refine_2 =>
+      exact instrtype_sub_refl _
+  case call_addr faddr t1s' t2s' hext hwfS hwfai hwfext hwfC =>
+    refine ⟨t1s', t2s', ?_, ?_⟩
+    case refine_1 =>
+      exact ⟨t1s', t2s', rfl, hext⟩
+    case refine_2 =>
+      exact instrtype_sub_refl _
+  case ref r rt href hwfS hwfC =>
+    refine ⟨[], [valtype_reftype rt], ?_, ?_⟩
+    case refine_1 =>
+      unfold ai_principal_typing
+      cases r with
+      | REF_NULL rt' =>
+        unfold admininstr_ref
+        cases href with
+        | null hs => rfl
+      | REF_FUNC_ADDR faddr =>
+        cases href
+        rename_i extft hwf_store hwf_externtype hexternaddr
+        exact ⟨extft, rfl, hexternaddr⟩
+      | REF_HOST_ADDR haddr =>
+        trivial
+    case refine_2 =>
+      exact instrtype_sub_refl _
+  case trap ta tb hwfS hwfai hwfC =>
+    refine ⟨ta, tb, ?_, ?_⟩
+    case refine_1 => trivial
+    case refine_2 => exact instrtype_sub_refl _
 
 /-! ## Single/seq/append composition — surface and administrative, both directions
     (typing_lemmas.v:852-1218) -/
@@ -194,28 +709,374 @@ theorem ais_single_val_typing_inversion (v_S : store) (v_C : context) (v_val : v
     Instrs_ok2 v_S v_C [admininstr_val v_val] (mkFunctype ts1 ts2) →
     ∃ t, instrtype_sub (mkFunctype [] [t]) (mkFunctype ts1 ts2) ∧ Val_ok v_S v_val t := sorry
 
+/-! ### Sequence-typing inversion machinery (ported from a prior Lean session's
+    `spectec/test-lean/test-lean-claude/SeqTypingInversion.lean`, which independently
+    discovered — and fixed — a false-lemma bug: an earlier attempt stated the analogous fact
+    with singular `Instr_ok` on the head, which is FALSE (see
+    `claude-logging/for-claude/digest_prior_lean_attempts.md` §3). The sequence-level
+    conclusion below (`Instrs_ok`/`Instrs_ok2` on both pieces, not singular `Instr_ok`/
+    `Instr_ok2` on the head) is the Rocq-faithful, actually-true shape. The `_gen`/`_nil_*`/
+    `_widen_*` lemmas here have no direct named Rocq counterpart (they're this proof's own
+    induction scaffolding — Rocq's tactic proof of the same fact doesn't need named
+    sub-lemmas), kept `private`-in-spirit (not exported as project API) but not marked
+    `private` since later `TypePreservation*` work may find them independently useful. -/
+
+theorem instrs_ok_nil_sub_gen {C : context} {instr_lst : List instr} {ft : functype}
+    (h : Instrs_ok C instr_lst ft) :
+    instr_lst = [] → ∀ t1 t2, ft = mkFunctype t1 t2 → ResulttypeSub t1 t2 := by
+  induction h using Instrs_ok.rec (motive_1 := fun _ _ _ _ => True) with
+  | empty C' _ =>
+    intro _ t1 t2 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    rw [← e1, ← e2]
+    exact resulttype_sub_refl []
+  | instr C' v_instr t1' t2' _ _ _ => intro heq _ _ _; cases heq
+  | seq C' i1 i2 s1 s3 s2 h1 h2 _ _ _ ih1 ih2 =>
+    intro heq t1 t2 hft
+    have h12 : i1 = [] ∧ i2 = [] := List.append_eq_nil_iff.mp heq
+    obtain ⟨e1, e2⟩ := h12
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e3, e4⟩ := hft
+    have hs12 : ResulttypeSub s1 s2 := ih1 e1 s1 s2 rfl
+    have hs23 : ResulttypeSub s2 s3 := ih2 e2 s2 s3 rfl
+    rw [← e3, ← e4]
+    exact resulttype_sub_trans s1 s2 s3 hs12 hs23
+  | sub C' i t1'' t2'' t1''' t2''' hok hsub1 hsub2 _ _ ih =>
+    intro heq t1 t2 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    have hmid := ih heq t1''' t2''' rfl
+    rw [← e1, ← e2]
+    exact resulttype_sub_trans t1'' t2''' t2'' (resulttype_sub_trans t1'' t1''' t2''' hsub1 hmid) hsub2
+  | frame C' i tpre t1'''' t2'''' hok _ _ ih =>
+    intro heq t1 t2 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    have hmid := ih heq t1'''' t2'''' rfl
+    rw [← e1, ← e2]
+    exact resulttype_sub_app tpre t1'''' tpre t2'''' (resulttype_sub_refl tpre) hmid
+  | _ => intros; trivial
+
+theorem instrs_ok_nil_sub {C : context} {t1 t2 : List valtype}
+    (h : Instrs_ok C [] (mkFunctype t1 t2)) : ResulttypeSub t1 t2 :=
+  instrs_ok_nil_sub_gen h rfl t1 t2 rfl
+
+/-- `Instrs_ok C [] (t f-> t)` for any `t`: the empty sequence trivially "does nothing", via
+    `frame` prepending `t` to `Instrs_ok.empty`'s `[] f-> []`. -/
+theorem instrs_ok_nil_refl {C : context} (hC : wf_context C) (t : List valtype) :
+    Instrs_ok C [] (mkFunctype t t) := by
+  have h := Instrs_ok.frame C [] t [] [] (Instrs_ok.empty C hC) hC (by intro x hx; simp at hx)
+  simpa [mkFunctype] using h
+
+/-- Contravariant input-widening for a fixed `Instrs_ok` derivation: if `Instrs_ok C is (t
+    f-> t2)` and `t1 subs< t`, then also `Instrs_ok C is (t1 f-> t2)`. Direct application of
+    `Instrs_ok.sub` with a reflexive output-side witness. -/
+theorem instrs_ok_widen_in {C : context} {is : List instr} {t t1 t2 : List valtype}
+    (h : Instrs_ok C is (mkFunctype t t2)) (hsub : ResulttypeSub t1 t)
+    (hC : wf_context C) (hwf : Forall (fun i => wf_instr i) is) :
+    Instrs_ok C is (mkFunctype t1 t2) :=
+  Instrs_ok.sub C is t1 t2 t t2 h hsub (resulttype_sub_refl t2) hC hwf
+
+/-- Covariant output-widening: dual of `instrs_ok_widen_in`. -/
+theorem instrs_ok_widen_out {C : context} {is : List instr} {t t1 t2 : List valtype}
+    (h : Instrs_ok C is (mkFunctype t1 t)) (hsub : ResulttypeSub t t2)
+    (hC : wf_context C) (hwf : Forall (fun i => wf_instr i) is) :
+    Instrs_ok C is (mkFunctype t1 t2) :=
+  Instrs_ok.sub C is t1 t2 t1 t h (resulttype_sub_refl t1) hsub hC hwf
+
+theorem instrs_ok_cons_gen {C : context} {instr_lst : List instr} {ft : functype}
+    (h : Instrs_ok C instr_lst ft) :
+    ∀ (i : instr) (is : List instr), instr_lst = i :: is →
+    ∀ (ts1 ts3 : List valtype), ft = mkFunctype ts1 ts3 →
+    ∃ ts2, Instrs_ok C [i] (mkFunctype ts1 ts2) ∧ Instrs_ok C is (mkFunctype ts2 ts3) := by
+  induction h using Instrs_ok.rec (motive_1 := fun _ _ _ _ => True) with
+  | empty C' _ => intro i is heq; simp at heq
+  | instr C' v_instr t1' t2' hok hwf_c hwf_i =>
+    intro i is heq ts1 ts3 hft
+    simp only [List.cons.injEq] at heq
+    obtain ⟨e1, e2⟩ := heq
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e3, e4⟩ := hft
+    subst e1; subst e2; subst e3; subst e4
+    refine ⟨t2', ?_, ?_⟩
+    · exact Instrs_ok.instr C' v_instr t1' t2' hok hwf_c hwf_i
+    · exact instrs_ok_nil_refl hwf_c t2'
+  | seq C' i1 i2 s1 s3 s2 h1 h2 hwf_c hwf_i1 hwf_i2 ih1 ih2 =>
+    intro i is heq ts1 ts3 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e3, e4⟩ := hft
+    subst e3; subst e4
+    cases i1 with
+    | nil =>
+      simp only [List.nil_append] at heq
+      subst heq
+      have hsub1 : ResulttypeSub s1 s2 := instrs_ok_nil_sub h1
+      obtain ⟨ts2', hpart1, hpart2⟩ := ih2 i is rfl s2 s3 rfl
+      have hwf_i' : Forall (fun j => wf_instr j) [i] := by
+        intro x hx; simp at hx; rw [hx]; exact hwf_i2 i (by simp)
+      refine ⟨ts2', instrs_ok_widen_in hpart1 hsub1 hwf_c hwf_i', hpart2⟩
+    | cons hd tl =>
+      simp only [List.cons_append, List.cons.injEq] at heq
+      obtain ⟨e1, e2⟩ := heq
+      subst e1
+      obtain ⟨ts2', hpart1, hpart2⟩ := ih1 hd tl rfl s1 s2 rfl
+      refine ⟨ts2', hpart1, ?_⟩
+      have hwf_tl : Forall (fun i => wf_instr i) tl := by
+        intro x hx; exact hwf_i1 x (by simp [hx])
+      rw [← e2]
+      exact Instrs_ok.seq C' tl i2 ts2' s3 s2 hpart2 h2 hwf_c hwf_tl hwf_i2
+  | sub C' i' t1'' t2'' t1''' t2''' hok hsub1 hsub2 hwf_c hwf_i ih =>
+    intro i is heq ts1 ts3 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    subst e1; subst e2
+    obtain ⟨ts2', hpart1, hpart2⟩ := ih i is heq t1''' t2''' rfl
+    have hwf_i' : Forall (fun j => wf_instr j) [i] := by
+      intro x hx; simp at hx; rw [hx]
+      exact hwf_i i (by rw [heq]; simp)
+    have hwf_is : Forall (fun j => wf_instr j) is := by
+      intro x hx; exact hwf_i x (by rw [heq]; simp [hx])
+    refine ⟨ts2', ?_, ?_⟩
+    · exact instrs_ok_widen_in hpart1 hsub1 hwf_c hwf_i'
+    · exact instrs_ok_widen_out hpart2 hsub2 hwf_c hwf_is
+  | frame C' i' tpre t1'''' t2'''' hok hwf_c hwf_i ih =>
+    intro i is heq ts1 ts3 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    obtain ⟨ts2', hpart1, hpart2⟩ := ih i is heq t1'''' t2'''' rfl
+    have hwf_i' : Forall (fun j => wf_instr j) [i] := by
+      intro x hx; simp at hx; rw [hx]
+      exact hwf_i i (by rw [heq]; simp)
+    have hwf_is : Forall (fun j => wf_instr j) is := by
+      intro x hx; exact hwf_i x (by rw [heq]; simp [hx])
+    refine ⟨tpre ++ ts2', ?_, ?_⟩
+    · rw [← e1]; exact Instrs_ok.frame C' [i] tpre t1'''' ts2' hpart1 hwf_c hwf_i'
+    · rw [← e2]; exact Instrs_ok.frame C' is tpre ts2' t2'''' hpart2 hwf_c hwf_is
+  | _ => intros; trivial
+
 /-- Rocq `typing_lemmas.v:1056` `instrs_seq_typing_inversion`. **IMPORTANT**: this is the
     Rocq-faithful sequence-level statement (`Instrs_ok`, not singular `Instr_ok`, on the
     head) — a previous session's `typing_lemmas.lean` mis-stated the analogous lemma with
     singular `Instr_ok` on the head and it was proved FALSE (see
-    `claude-logging/for-claude/digest_prior_lean_attempts.md` §3). Use exactly this shape. -/
+    `claude-logging/for-claude/digest_prior_lean_attempts.md` §3). Use exactly this shape.
+    Proof ported from a prior Lean session's `SeqTypingInversion.lean`
+    (`instrs_seq_typing_inversion_fixed`), adapted to this file's `[v_instr] ++ v_instrs`
+    phrasing (defeq to `v_instr :: v_instrs`) and this file's conjunct order. -/
 theorem instrs_seq_typing_inversion (v_C : context) (v_instrs : List instr) (v_instr : instr) (t1s t2s : List valtype) :
     Instrs_ok v_C ([v_instr] ++ v_instrs) (mkFunctype t1s t2s) →
-    ∃ t3s, Instrs_ok v_C v_instrs (mkFunctype t3s t2s) ∧ Instrs_ok v_C [v_instr] (mkFunctype t1s t3s) := sorry
+    ∃ t3s, Instrs_ok v_C v_instrs (mkFunctype t3s t2s) ∧ Instrs_ok v_C [v_instr] (mkFunctype t1s t3s) := by
+  intro h
+  obtain ⟨t3s, hpart1, hpart2⟩ := instrs_ok_cons_gen h v_instr v_instrs rfl t1s t2s rfl
+  exact ⟨t3s, hpart2, hpart1⟩
 
-/-- Rocq `typing_lemmas.v:1121` `ais_seq_typing_inversion`. Administrative analog; matches
-    the shape already proved (0 sorry) in a previous session's `SeqTypingInversion.lean`
-    (`instrs_seq_typing_inversion_fixed`) — see
-    `claude-logging/for-claude/digest_prior_lean_attempts.md` §3 — worth porting that proof
-    once definitions are confirmed aligned. -/
+/-! ### Administrative analogue: same proof shape, `Instrs_ok2`/`Instr_ok2`/`wf_admininstr`/
+    `wf_store` throughout in place of `Instrs_ok`/`Instr_ok`/`wf_instr`. -/
+
+theorem ais_ok_nil_sub_gen {v_S : store} {C : context} {ai_lst : List admininstr} {ft : functype}
+    (h : Instrs_ok2 v_S C ai_lst ft) :
+    ai_lst = [] → ∀ t1 t2, ft = mkFunctype t1 t2 → ResulttypeSub t1 t2 := by
+  induction h using Instrs_ok2.rec
+    (motive_1 := fun _ _ _ _ => True) (motive_3 := fun _ _ _ _ => True) with
+  | empty C' _ _ =>
+    intro _ t1 t2 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    rw [← e1, ← e2]
+    exact resulttype_sub_refl []
+  | instr C' v_ai t1' t2' _ _ _ _ => intro heq _ _ _; cases heq
+  | seq C' i1 i2 s1 s3 s2 h1 h2 _ _ _ _ ih1 ih2 =>
+    intro heq t1 t2 hft
+    have h12 : i1 = [] ∧ i2 = [] := List.append_eq_nil_iff.mp heq
+    obtain ⟨e1, e2⟩ := h12
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e3, e4⟩ := hft
+    have hs12 : ResulttypeSub s1 s2 := ih1 e1 s1 s2 rfl
+    have hs23 : ResulttypeSub s2 s3 := ih2 e2 s2 s3 rfl
+    rw [← e3, ← e4]
+    exact resulttype_sub_trans s1 s2 s3 hs12 hs23
+  | sub C' i t1'' t2'' t1''' t2''' hok hsub1 hsub2 _ _ _ ih =>
+    intro heq t1 t2 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    have hmid := ih heq t1''' t2''' rfl
+    rw [← e1, ← e2]
+    exact resulttype_sub_trans t1'' t2''' t2'' (resulttype_sub_trans t1'' t1''' t2''' hsub1 hmid) hsub2
+  | Instrs_ok2_frame C' i tpre t1'''' t2'''' hok _ _ _ ih =>
+    intro heq t1 t2 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    have hmid := ih heq t1'''' t2'''' rfl
+    rw [← e1, ← e2]
+    exact resulttype_sub_app tpre t1'''' tpre t2'''' (resulttype_sub_refl tpre) hmid
+  | _ => intros; trivial
+
+theorem ais_ok_nil_sub {v_S : store} {C : context} {t1 t2 : List valtype}
+    (h : Instrs_ok2 v_S C [] (mkFunctype t1 t2)) : ResulttypeSub t1 t2 :=
+  ais_ok_nil_sub_gen h rfl t1 t2 rfl
+
+theorem ais_ok_nil_refl {v_S : store} {C : context} (hS : wf_store v_S) (hC : wf_context C) (t : List valtype) :
+    Instrs_ok2 v_S C [] (mkFunctype t t) := by
+  have h := Instrs_ok2.Instrs_ok2_frame v_S C [] t [] [] (Instrs_ok2.empty v_S C hS hC) hS hC
+    (by intro x hx; simp at hx)
+  simpa [mkFunctype] using h
+
+theorem ais_ok_widen_in {v_S : store} {C : context} {ais : List admininstr} {t t1 t2 : List valtype}
+    (h : Instrs_ok2 v_S C ais (mkFunctype t t2)) (hsub : ResulttypeSub t1 t)
+    (hS : wf_store v_S) (hC : wf_context C) (hwf : Forall (fun a => wf_admininstr a) ais) :
+    Instrs_ok2 v_S C ais (mkFunctype t1 t2) :=
+  Instrs_ok2.sub v_S C ais t1 t2 t t2 h hsub (resulttype_sub_refl t2) hS hC hwf
+
+theorem ais_ok_widen_out {v_S : store} {C : context} {ais : List admininstr} {t t1 t2 : List valtype}
+    (h : Instrs_ok2 v_S C ais (mkFunctype t1 t)) (hsub : ResulttypeSub t t2)
+    (hS : wf_store v_S) (hC : wf_context C) (hwf : Forall (fun a => wf_admininstr a) ais) :
+    Instrs_ok2 v_S C ais (mkFunctype t1 t2) :=
+  Instrs_ok2.sub v_S C ais t1 t2 t1 t h (resulttype_sub_refl t1) hsub hS hC hwf
+
+/-- Rocq `typing_lemmas.v:349` `instrs_empty_typing`. ⇒: `instrs_ok_context_wf` +
+    `instrs_ok_nil_sub`. ⇐: `instrs_ok_nil_refl` (reflexive `t2s f-> t2s`) widened on the
+    input side via `instrs_ok_widen_in` — mirrors Rocq's own `frame`-then-`sub` proof. -/
+theorem instrs_empty_typing (v_C : context) (t1s t2s : List valtype) :
+    Instrs_ok v_C [] (mkFunctype t1s t2s) ↔ (wf_context v_C ∧ ResulttypeSub t1s t2s) := by
+  constructor
+  · intro h
+    exact ⟨(instrs_ok_context_wf v_C [] (mkFunctype t1s t2s) h).1, instrs_ok_nil_sub h⟩
+  · rintro ⟨hwf, hsub⟩
+    exact instrs_ok_widen_in (instrs_ok_nil_refl hwf t2s) hsub hwf (by intro x hx; simp at hx)
+
+/-- Rocq `typing_lemmas.v:333` `ais_empty_typing`. Administrative counterpart of
+    `instrs_empty_typing` above, same proof shape via the `Instrs_ok2` nil/widen lemmas. -/
+theorem ais_empty_typing (v_S : store) (v_C : context) (t1s t2s : List valtype) :
+    Instrs_ok2 v_S v_C [] (mkFunctype t1s t2s) ↔ (wf_context v_C ∧ wf_store v_S ∧ ResulttypeSub t1s t2s) := by
+  constructor
+  · intro h
+    obtain ⟨hwfC, hwfS, _⟩ := ainstrs_ok_context_store_wf v_S v_C [] (mkFunctype t1s t2s) h
+    exact ⟨hwfC, hwfS, ais_ok_nil_sub h⟩
+  · rintro ⟨hwfC, hwfS, hsub⟩
+    exact ais_ok_widen_in (ais_ok_nil_refl hwfS hwfC t2s) hsub hwfS hwfC (by intro x hx; simp at hx)
+
+theorem ais_ok_cons_gen {v_S : store} {C : context} {ai_lst : List admininstr} {ft : functype}
+    (h : Instrs_ok2 v_S C ai_lst ft) :
+    ∀ (a : admininstr) (ais : List admininstr), ai_lst = a :: ais →
+    ∀ (ts1 ts3 : List valtype), ft = mkFunctype ts1 ts3 →
+    ∃ ts2, Instrs_ok2 v_S C [a] (mkFunctype ts1 ts2) ∧ Instrs_ok2 v_S C ais (mkFunctype ts2 ts3) := by
+  induction h using Instrs_ok2.rec
+    (motive_1 := fun _ _ _ _ => True) (motive_3 := fun _ _ _ _ => True) with
+  | empty C' _ _ => intro a ais heq; simp at heq
+  | instr C' v_ai t1' t2' hok hs hwf_c hwf_i =>
+    intro a ais heq ts1 ts3 hft
+    simp only [List.cons.injEq] at heq
+    obtain ⟨e1, e2⟩ := heq
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e3, e4⟩ := hft
+    subst e1; subst e2; subst e3; subst e4
+    refine ⟨t2', ?_, ?_⟩
+    · exact Instrs_ok2.instr v_S C' v_ai t1' t2' hok hs hwf_c hwf_i
+    · exact ais_ok_nil_refl hs hwf_c t2'
+  | seq C' i1 i2 s1 s3 s2 h1 h2 hs hwf_c hwf_i1 hwf_i2 ih1 ih2 =>
+    intro a ais heq ts1 ts3 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e3, e4⟩ := hft
+    subst e3; subst e4
+    cases i1 with
+    | nil =>
+      simp only [List.nil_append] at heq
+      subst heq
+      have hsub1 : ResulttypeSub s1 s2 := ais_ok_nil_sub h1
+      obtain ⟨ts2', hpart1, hpart2⟩ := ih2 a ais rfl s2 s3 rfl
+      have hwf_a' : Forall (fun j => wf_admininstr j) [a] := by
+        intro x hx; simp at hx; rw [hx]; exact hwf_i2 a (by simp)
+      refine ⟨ts2', ais_ok_widen_in hpart1 hsub1 hs hwf_c hwf_a', hpart2⟩
+    | cons hd tl =>
+      simp only [List.cons_append, List.cons.injEq] at heq
+      obtain ⟨e1, e2⟩ := heq
+      subst e1
+      obtain ⟨ts2', hpart1, hpart2⟩ := ih1 hd tl rfl s1 s2 rfl
+      refine ⟨ts2', hpart1, ?_⟩
+      have hwf_tl : Forall (fun a => wf_admininstr a) tl := by
+        intro x hx; exact hwf_i1 x (by simp [hx])
+      rw [← e2]
+      exact Instrs_ok2.seq v_S C' tl i2 ts2' s3 s2 hpart2 h2 hs hwf_c hwf_tl hwf_i2
+  | sub C' i' t1'' t2'' t1''' t2''' hok hsub1 hsub2 hs hwf_c hwf_i ih =>
+    intro a ais heq ts1 ts3 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    subst e1; subst e2
+    obtain ⟨ts2', hpart1, hpart2⟩ := ih a ais heq t1''' t2''' rfl
+    have hwf_a' : Forall (fun j => wf_admininstr j) [a] := by
+      intro x hx; simp at hx; rw [hx]
+      exact hwf_i a (by rw [heq]; simp)
+    have hwf_ais : Forall (fun j => wf_admininstr j) ais := by
+      intro x hx; exact hwf_i x (by rw [heq]; simp [hx])
+    refine ⟨ts2', ?_, ?_⟩
+    · exact ais_ok_widen_in hpart1 hsub1 hs hwf_c hwf_a'
+    · exact ais_ok_widen_out hpart2 hsub2 hs hwf_c hwf_ais
+  | Instrs_ok2_frame C' i' tpre t1'''' t2'''' hok hs hwf_c hwf_i ih =>
+    intro a ais heq ts1 ts3 hft
+    unfold mkFunctype at hft
+    simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    obtain ⟨ts2', hpart1, hpart2⟩ := ih a ais heq t1'''' t2'''' rfl
+    have hwf_a' : Forall (fun j => wf_admininstr j) [a] := by
+      intro x hx; simp at hx; rw [hx]
+      exact hwf_i a (by rw [heq]; simp)
+    have hwf_ais : Forall (fun j => wf_admininstr j) ais := by
+      intro x hx; exact hwf_i x (by rw [heq]; simp [hx])
+    refine ⟨tpre ++ ts2', ?_, ?_⟩
+    · rw [← e1]; exact Instrs_ok2.Instrs_ok2_frame v_S C' [a] tpre t1'''' ts2' hpart1 hs hwf_c hwf_a'
+    · rw [← e2]; exact Instrs_ok2.Instrs_ok2_frame v_S C' ais tpre ts2' t2'''' hpart2 hs hwf_c hwf_ais
+  | _ => intros; trivial
+
+/-- Rocq `typing_lemmas.v:1121` `ais_seq_typing_inversion`. Administrative analog of
+    `instrs_seq_typing_inversion`; proof ported the same way from a prior Lean session's
+    `SeqTypingInversion.lean` (`instrs_seq_typing_inversion_fixed`), re-derived here for the
+    `Instrs_ok2`/store-threaded setting (see `ais_ok_cons_gen` above). -/
 theorem ais_seq_typing_inversion (v_S : store) (v_C : context) (v_ais : List admininstr) (v_ai : admininstr) (t1s t2s : List valtype) :
     Instrs_ok2 v_S v_C ([v_ai] ++ v_ais) (mkFunctype t1s t2s) →
-    ∃ t3s, Instrs_ok2 v_S v_C v_ais (mkFunctype t3s t2s) ∧ Instrs_ok2 v_S v_C [v_ai] (mkFunctype t1s t3s) := sorry
+    ∃ t3s, Instrs_ok2 v_S v_C v_ais (mkFunctype t3s t2s) ∧ Instrs_ok2 v_S v_C [v_ai] (mkFunctype t1s t3s) := by
+  intro h
+  obtain ⟨t3s, hpart1, hpart2⟩ := ais_ok_cons_gen h v_ai v_ais rfl t1s t2s rfl
+  exact ⟨t3s, hpart2, hpart1⟩
 
-/-- Rocq `typing_lemmas.v:1184` `ais_composition_typing`. -/
+/-- Rocq `typing_lemmas.v:1184` `ais_composition_typing`. Generalizes `ais_seq_typing_inversion`
+    from a single head admininstr to an arbitrary prefix `v_ais1`, by induction on `v_ais1`
+    reusing `ais_seq_typing_inversion` at each step. -/
 theorem ais_composition_typing (v_S : store) (v_C : context) (v_ais1 v_ais2 : List admininstr) (t1s t2s : List valtype) :
     Instrs_ok2 v_S v_C (v_ais1 ++ v_ais2) (mkFunctype t1s t2s) →
-    ∃ t3s, Instrs_ok2 v_S v_C v_ais1 (mkFunctype t1s t3s) ∧ Instrs_ok2 v_S v_C v_ais2 (mkFunctype t3s t2s) := sorry
+    ∃ t3s, Instrs_ok2 v_S v_C v_ais1 (mkFunctype t1s t3s) ∧ Instrs_ok2 v_S v_C v_ais2 (mkFunctype t3s t2s) := by
+  induction v_ais1 generalizing t1s with
+  | nil =>
+    intro h
+    simp only [List.nil_append] at h
+    exact ⟨t1s, ais_ok_nil_refl (ainstrs_ok_context_store_wf v_S v_C v_ais2 (mkFunctype t1s t2s) h).2.1
+      (ainstrs_ok_context_store_wf v_S v_C v_ais2 (mkFunctype t1s t2s) h).1 t1s, h⟩
+  | cons a as ih =>
+    intro h
+    simp only [List.cons_append] at h
+    obtain ⟨tmid, hrest_typing, ha_typing⟩ := ais_seq_typing_inversion v_S v_C (as ++ v_ais2) a t1s t2s h
+    obtain ⟨t3s, has_typing, hv_ais2_typing⟩ := ih tmid hrest_typing
+    have hwf_a_all := ainstrs_ok_context_store_wf v_S v_C [a] (mkFunctype t1s tmid) ha_typing
+    have hwf_as_all := ainstrs_ok_context_store_wf v_S v_C as (mkFunctype tmid t3s) has_typing
+    refine ⟨t3s, ?_, hv_ais2_typing⟩
+    have heq2 : [a] ++ as = a :: as := rfl
+    rw [← heq2]
+    exact Instrs_ok2.seq v_S v_C [a] as t1s t3s tmid ha_typing has_typing
+      hwf_as_all.2.1 hwf_as_all.1 hwf_a_all.2.2 hwf_as_all.2.2
 
 /-! ## More inversion/construction lemmas (typing_lemmas.v:1335-1594) -/
 
@@ -224,49 +1085,118 @@ theorem ai_val_principal_typing_inversion (v_S : store) (v_C : context) (v_val :
     ai_principal_typing v_S v_C (admininstr_val v_val) (mkFunctype t1s t2s) →
     ∃ t_lst, [] = t1s ∧ [t_lst] = t2s := sorry
 
-/-- Rocq `typing_lemmas.v:1375` `injective_admininstr_instr`. -/
-theorem injective_admininstr_instr : Function.Injective admininstr_instr := sorry
+set_option maxHeartbeats 1000000 in
+/-- Rocq `typing_lemmas.v:1375` `injective_admininstr_instr`. Rocq: `destruct x1; destruct x2;
+    try discriminate; auto` — same shape here (`admininstr_instr` maps each of `instr`'s 68
+    constructors to the identically-shaped `admininstr` constructor of the same name; a
+    same-constructor case reduces the goal to reflexivity, a mismatched pair is closed by
+    `simp`'s built-in constructor-injectivity/no-confusion). 68×68 cases, mechanical.
+    `maxHeartbeats` raised: importing `Mathlib.Tactic` (for `ai_principal_typing`'s port,
+    see above) enlarges `simp_all`'s default simp-set enough that the 68×68 case bash no
+    longer finishes in the default budget (it did before, in ~26s, per bundle7's own log). -/
+theorem injective_admininstr_instr : Function.Injective admininstr_instr := by
+  intro a b h
+  cases a <;> cases b <;> simp_all [admininstr_instr]
 
 /-- Rocq `typing_lemmas.v:1382` `construct_instrs_typing_single`. -/
 theorem construct_instrs_typing_single (v_C : context) (v_ai : instr) (ts1 ts2 : List valtype) :
-    Instr_ok v_C v_ai (mkFunctype ts1 ts2) → Instrs_ok v_C [v_ai] (mkFunctype ts1 ts2) := sorry
+    Instr_ok v_C v_ai (mkFunctype ts1 ts2) → Instrs_ok v_C [v_ai] (mkFunctype ts1 ts2) := by
+  intro h
+  obtain ⟨hwf, hwfi⟩ := instr_ok_context_wf v_C v_ai (mkFunctype ts1 ts2) h
+  exact Instrs_ok.instr v_C v_ai ts1 ts2 h hwf hwfi
 
 /-- Rocq `typing_lemmas.v:1391` `construct_ais_typing_single`. -/
 theorem construct_ais_typing_single (v_S : store) (v_C : context) (v_ai : admininstr) (ts1 ts2 : List valtype) :
-    Instr_ok2 v_S v_C v_ai (mkFunctype ts1 ts2) → Instrs_ok2 v_S v_C [v_ai] (mkFunctype ts1 ts2) := sorry
+    Instr_ok2 v_S v_C v_ai (mkFunctype ts1 ts2) → Instrs_ok2 v_S v_C [v_ai] (mkFunctype ts1 ts2) := by
+  intro h
+  obtain ⟨hwfC, hwfS, hwfa⟩ := ainstr_ok_context_store_wf v_S v_C v_ai (mkFunctype ts1 ts2) h
+  exact Instrs_ok2.instr v_S v_C v_ai ts1 ts2 h hwfS hwfC hwfa
 
-/-- Rocq `typing_lemmas.v:1400` `construct_ais_subtyping`. -/
+/-- Rocq `typing_lemmas.v:1400` `construct_ais_subtyping`. Rocq's proof: `frame`-extend the
+    original derivation by the `instrtype_sub` witness's shared/subsumed prefix (`ts_sub`),
+    then `sub` the two remaining pieces via `resulttype_sub_app` (one side reflexive on
+    `ts_sub`, the other using the existential's own two `ResulttypeSub` facts directly). -/
 theorem construct_ais_subtyping (v_S : store) (v_C : context) (v_ais : List admininstr) (ts1 ts2 ts1' ts2' : List valtype) :
     Instrs_ok2 v_S v_C v_ais (mkFunctype ts1 ts2) →
     instrtype_sub (mkFunctype ts1 ts2) (mkFunctype ts1' ts2') →
-    Instrs_ok2 v_S v_C v_ais (mkFunctype ts1' ts2') := sorry
+    Instrs_ok2 v_S v_C v_ais (mkFunctype ts1' ts2') := by
+  intro hai hsub
+  obtain ⟨ts_sub, ts, ts1_sub, ts2_sup, heq1, heq2, hsub_ts, hsub1, hsub2⟩ := hsub
+  subst heq1
+  subst heq2
+  obtain ⟨hwfC, hwfS, hwfF⟩ := ainstrs_ok_context_store_wf v_S v_C v_ais (mkFunctype ts1 ts2) hai
+  have hframe := Instrs_ok2.Instrs_ok2_frame v_S v_C v_ais ts_sub ts1 ts2 hai hwfS hwfC hwfF
+  exact Instrs_ok2.sub v_S v_C v_ais (ts_sub ++ ts1_sub) (ts ++ ts2_sup) (ts_sub ++ ts1) (ts_sub ++ ts2)
+    hframe
+    (resulttype_sub_app ts_sub ts1_sub ts_sub ts1 (resulttype_sub_refl ts_sub) hsub1)
+    (resulttype_sub_app ts_sub ts2 ts ts2_sup hsub_ts hsub2)
+    hwfS hwfC hwfF
 
 /-- Rocq `typing_lemmas.v:1423` `injective_valtype_numtype`. -/
-theorem injective_valtype_numtype : Function.Injective valtype_numtype := sorry
+theorem injective_valtype_numtype : Function.Injective valtype_numtype := by
+  intro a b h
+  cases a <;> cases b <;> simp_all [valtype_numtype]
 
 /-- Rocq `typing_lemmas.v:1442` `construct_ais_compose`. Heavily reused in
     `type_preservation_pure.v` to glue partial typing derivations back together. -/
 theorem construct_ais_compose (v_S : store) (v_C : context) (v_ais1 v_ais2 : List admininstr) (t1s t2s t3s : List valtype) :
     Instrs_ok2 v_S v_C v_ais1 (mkFunctype t1s t2s) → Instrs_ok2 v_S v_C v_ais2 (mkFunctype t2s t3s) →
-    Instrs_ok2 v_S v_C (v_ais1 ++ v_ais2) (mkFunctype t1s t3s) := sorry
+    Instrs_ok2 v_S v_C (v_ais1 ++ v_ais2) (mkFunctype t1s t3s) := by
+  intro h1 h2
+  obtain ⟨hwfC1, hwfS1, hwfF1⟩ := ainstrs_ok_context_store_wf v_S v_C v_ais1 (mkFunctype t1s t2s) h1
+  obtain ⟨hwfC2, hwfS2, hwfF2⟩ := ainstrs_ok_context_store_wf v_S v_C v_ais2 (mkFunctype t2s t3s) h2
+  exact Instrs_ok2.seq v_S v_C v_ais1 v_ais2 t1s t3s t2s h1 h2 hwfS1 hwfC1 hwfF1 hwfF2
 
 /-- Rocq `typing_lemmas.v:1453` `construct_ai_const_I32`. -/
 theorem construct_ai_const_I32 (v_S : store) (v_C : context) (v_num : num_) :
     wf_num_ numtype.I32 v_num → wf_context v_C → wf_store v_S →
-    Instr_ok2 v_S v_C (admininstr.CONST numtype.I32 v_num) (mkFunctype [] [valtype.I32]) := sorry
+    Instr_ok2 v_S v_C (admininstr.CONST numtype.I32 v_num) (mkFunctype [] [valtype.I32]) := by
+  intro hwfnum hwfC hwfS
+  have hwfinstr : wf_instr (instr.CONST numtype.I32 v_num) := wf_instr.instr_case_13 numtype.I32 v_num hwfnum
+  exact Instr_ok2.plain v_S v_C (instr.CONST numtype.I32 v_num) [] [valtype.I32]
+    (Instr_ok.const v_C numtype.I32 v_num hwfC hwfinstr) hwfS hwfC hwfinstr
 
-/-- Rocq `typing_lemmas.v:1466` `construct_ai_ref`. -/
+/-- Rocq `typing_lemmas.v:1466` `construct_ai_ref`. Simpler than Rocq's own proof: unlike
+    Rocq's mirrored `Instr_ok2__ref` constructor (which Rocq only invokes for the
+    `FUNC_ADDR`/`HOST_ADDR` cases, routing `REF_NULL` through the "plain" `instr` path
+    instead), this backend's `Instr_ok2.ref` constructor is generic over every `ref`
+    constructor including `REF_NULL` (confirmed in `wasm2.0.lean`), so no case split on
+    `Ref_ok` is needed at all. -/
 theorem construct_ai_ref (v_S : store) (v_C : context) (v_ref : ref) (t : reftype) :
     Ref_ok v_S v_ref t → wf_context v_C → wf_store v_S →
-    Instr_ok2 v_S v_C (admininstr_ref v_ref) (mkFunctype [] [valtype_reftype t]) := sorry
+    Instr_ok2 v_S v_C (admininstr_ref v_ref) (mkFunctype [] [valtype_reftype t]) := by
+  intro href hwfC hwfS
+  exact Instr_ok2.ref v_S v_C v_ref t href hwfS hwfC
 
 /-- Rocq `typing_lemmas.v:1490` `adminval_val_ref`. -/
-theorem adminval_val_ref (r : ref) : admininstr_val (val_ref r) = admininstr_ref r := sorry
+theorem adminval_val_ref (r : ref) : admininstr_val (val_ref r) = admininstr_ref r := by
+  cases r <;> rfl
 
-/-- Rocq `typing_lemmas.v:1497` `construct_ai_val`. -/
+/-- Rocq `typing_lemmas.v:1497` `construct_ai_val`. `vectype`/`reftype` sub-cases use
+    `cases vt`/`adminval_val_ref` respectively since `vectype` has a single constructor
+    (`V128`) and the `reftype` case reduces to `construct_ai_ref` via the equation just
+    proved above. -/
 theorem construct_ai_val (v_S : store) (v_C : context) (v_val : val) (t : valtype) :
     Val_ok v_S v_val t → wf_context v_C → wf_store v_S →
-    Instr_ok2 v_S v_C (admininstr_val v_val) (mkFunctype [] [t]) := sorry
+    Instr_ok2 v_S v_C (admininstr_val v_val) (mkFunctype [] [t]) := by
+  intro hval hwfC hwfS
+  cases hval with
+  | numtype nt c_t hs hwfval =>
+    cases hwfval with
+    | val_case_0 _ _ hwfnum =>
+      have hwfinstr : wf_instr (instr.CONST nt c_t) := wf_instr.instr_case_13 nt c_t hwfnum
+      exact Instr_ok2.plain v_S v_C (instr.CONST nt c_t) [] [valtype_numtype nt]
+        (Instr_ok.const v_C nt c_t hwfC hwfinstr) hs hwfC hwfinstr
+  | vectype vt c_t hs hwfval =>
+    cases vt
+    cases hwfval with
+    | val_case_1 _ _ hsize hwfuN =>
+      have hwfinstr : wf_instr (instr.VCONST vectype.V128 c_t) := wf_instr.instr_case_20 vectype.V128 c_t hsize hwfuN
+      exact Instr_ok2.plain v_S v_C (instr.VCONST vectype.V128 c_t) [] [valtype.V128]
+        (Instr_ok.vconst v_C c_t hwfC hwfinstr) hs hwfC hwfinstr
+  | reftype r rt href hs =>
+    rw [adminval_val_ref]
+    exact construct_ai_ref v_S v_C r rt href hwfC hs
 
 /-- Rocq `typing_lemmas.v:1523` `construct_ai_maybe`. -/
 theorem construct_ai_maybe (v_S : store) (v_C : context) (ai : admininstr) (t1 t2 : List valtype) :
@@ -280,9 +1210,17 @@ theorem construct_ais_vals' (v_S : store) (v_C v_C' : context) (v_vals : List va
     Instrs_ok2 v_S v_C (v_vals.map admininstr_val) v_ft → wf_context v_C' →
     Instrs_ok2 v_S v_C' (v_vals.map admininstr_val) v_ft := sorry
 
-/-- Rocq `typing_lemmas.v:1578` `construct_ais_trap`. TRAP typechecks at ANY functype. -/
+/-- Rocq `typing_lemmas.v:1578` `construct_ais_trap`. TRAP typechecks at ANY functype: unlike
+    Rocq's `Instrs_ok2__seq`-based decomposition, `Instr_ok2.trap` here is already generic
+    over the target functype, so `construct_ais_typing_single` closes it directly. -/
 theorem construct_ais_trap (v_S : store) (v_C : context) (v_ft : functype) :
-    wf_context v_C → wf_store v_S → Instrs_ok2 v_S v_C [admininstr.TRAP] v_ft := sorry
+    wf_context v_C → wf_store v_S → Instrs_ok2 v_S v_C [admininstr.TRAP] v_ft := by
+  intro hwfC hwfS
+  obtain ⟨t1, t2⟩ := v_ft
+  obtain ⟨t1s⟩ := t1
+  obtain ⟨t2s⟩ := t2
+  exact construct_ais_typing_single v_S v_C admininstr.TRAP t1s t2s
+    (Instr_ok2.trap v_S v_C t1s t2s hwfS hwfC wf_admininstr.admininstr_case_73)
 
 /-! ## Val_ok / Vals_ok infrastructure (typing_lemmas.v:1596-1805) -/
 
@@ -299,7 +1237,12 @@ def Vals_ok (v_S : store) (v_vals : List val) (v_ts : List valtype) : Prop :=
 
 /-- Rocq `typing_lemmas.v:1607` `Val_ok_non_bot`. -/
 theorem Val_ok_non_bot (v_S : store) (v_val : val) (t : valtype) :
-    Val_ok v_S v_val t → t ≠ valtype.BOT := sorry
+    Val_ok v_S v_val t → t ≠ valtype.BOT := by
+  intro h
+  cases h with
+  | numtype nt _ _ _ => cases nt <;> simp [valtype_numtype]
+  | vectype vt _ _ _ => cases vt <;> simp [valtype_vectype]
+  | reftype _ rt _ _ => cases rt <;> simp [valtype_reftype]
 
 /-- Rocq `typing_lemmas.v:1619` `ais_vals_typing_inversion`. -/
 theorem ais_vals_typing_inversion (v_S : store) (v_C : context) (v_vals : List val) (t1s t2s : List valtype) :
@@ -314,9 +1257,14 @@ theorem construct_ais_vals (v_S : store) (v_C : context) (v_vals : List val) (t1
 
 /-! ## Subtyping-composition helpers (typing_lemmas.v:1807-1831) -/
 
-/-- Rocq `typing_lemmas.v:1807` `resulttype_sub_single_inversion`. -/
+/-- Rocq `typing_lemmas.v:1807` `resulttype_sub_single_inversion`. `Forall₂` here is the
+    zip-based `def` (not an inductive), so `[t1].zip [t2] = [(t1,t2)]` and membership is
+    closed by `simp`. -/
 theorem resulttype_sub_single_inversion (t1 t2 : valtype) :
-    ResulttypeSub [t1] [t2] → Valtype_sub t1 t2 := sorry
+    ResulttypeSub [t1] [t2] → Valtype_sub t1 t2 := by
+  intro h
+  cases h with
+  | mk_Resulttype_sub _ _ _ hf => exact hf (t1, t2) (by simp)
 
 /-- Rocq `typing_lemmas.v:1817` `construct_ais_instrtype_sub`. Same statement/proof as
     `construct_ais_subtyping` above (Rocq keeps both names, used interchangeably
@@ -324,7 +1272,8 @@ theorem resulttype_sub_single_inversion (t1 t2 : valtype) :
 theorem construct_ais_instrtype_sub (v_S : store) (v_C : context) (v_ais : List admininstr) (t1s t2s t1s' t2s' : List valtype) :
     Instrs_ok2 v_S v_C v_ais (mkFunctype t1s t2s) →
     instrtype_sub (mkFunctype t1s t2s) (mkFunctype t1s' t2s') →
-    Instrs_ok2 v_S v_C v_ais (mkFunctype t1s' t2s') := sorry
+    Instrs_ok2 v_S v_C v_ais (mkFunctype t1s' t2s') :=
+  construct_ais_subtyping v_S v_C v_ais t1s t2s t1s' t2s'
 
 /-! ## `inst_match` — context-component invariance (typing_lemmas.v:1833-1922) -/
 
@@ -334,38 +1283,58 @@ def inst_match (C C' : context) : Prop :=
   C.TYPES = C'.TYPES ∧ C.FUNCS = C'.FUNCS ∧ C.GLOBALS = C'.GLOBALS ∧ C.TABLES = C'.TABLES ∧
   C.MEMS = C'.MEMS ∧ C.ELEMS = C'.ELEMS ∧ C.DATAS = C'.DATAS
 
-/-- Rocq `typing_lemmas.v:1842` `construct_inst_match_label`. -/
+/-- Rocq `typing_lemmas.v:1842` `construct_inst_match_label`. `inst_match`
+    deliberately excludes LABELS (see its own doc comment above), and
+    `upd_label` only touches LABELS, so this is definitional. -/
 theorem construct_inst_match_label (C C' : context) (lab : List resulttype) :
-    inst_match C C' → inst_match C (upd_label C' lab) := sorry
+    inst_match C C' → inst_match C (upd_label C' lab) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1852` `construct_inst_match_return`. -/
+/-- Rocq `typing_lemmas.v:1852` `construct_inst_match_return`. Definitional,
+    as `construct_inst_match_label` (RETURN is excluded from `inst_match`). -/
 theorem construct_inst_match_return (C C' : context) (ret : Option resulttype) :
-    inst_match C C' → inst_match C (upd_return C' ret) := sorry
+    inst_match C C' → inst_match C (upd_return C' ret) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1862` `construct_inst_match_local`. -/
+/-- Rocq `typing_lemmas.v:1862` `construct_inst_match_local`. Definitional,
+    as `construct_inst_match_label` (LOCALS is excluded from `inst_match`). -/
 theorem construct_inst_match_local (C C' : context) (loc : List valtype) :
-    inst_match C C' → inst_match C (upd_local C' loc) := sorry
+    inst_match C C' → inst_match C (upd_local C' loc) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1872` `construct_inst_match_local_label_return`. -/
+/-- Rocq `typing_lemmas.v:1872` `construct_inst_match_local_label_return`.
+    Definitional, as `construct_inst_match_label` (all three touched fields
+    are excluded from `inst_match`). -/
 theorem construct_inst_match_local_label_return (C C' : context) (loc : List valtype) (lab : List resulttype) (ret : Option resulttype) :
-    inst_match C C' → inst_match C (upd_local_label_return C' loc lab ret) := sorry
+    inst_match C C' → inst_match C (upd_local_label_return C' loc lab ret) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1882` `construct_inst_match_local_return`. -/
+/-- Rocq `typing_lemmas.v:1882` `construct_inst_match_local_return`.
+    Definitional, as `construct_inst_match_label`. -/
 theorem construct_inst_match_local_return (C C' : context) (loc : List valtype) (ret : Option resulttype) :
-    inst_match C C' → inst_match C (upd_local_return C' loc ret) := sorry
+    inst_match C C' → inst_match C (upd_local_return C' loc ret) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1892` `construct_inst_prepend_label`. -/
+/-- Rocq `typing_lemmas.v:1892` `construct_inst_prepend_label`. Definitional,
+    as `construct_inst_match_label` (`prepend_label` only touches LABELS). -/
 theorem construct_inst_prepend_label (C C' : context) (lab : resulttype) :
-    inst_match C C' → inst_match C (prepend_label C' lab) := sorry
+    inst_match C C' → inst_match C (prepend_label C' lab) := fun h => h
 
 /-! ## Non-bottom propagation to lists (typing_lemmas.v:1927-1959) -/
 
-/-- Rocq `typing_lemmas.v:1927` `Vals_ok_non_bot`. -/
+/-- Rocq `typing_lemmas.v:1927` `Vals_ok_non_bot`. **Representation gap, left `sorry`**: Rocq's
+    `Forall2` is inductive and forces `v_ts.length = v_val.length`; this file's `Forall₂` is
+    the zip-based `def` (`∀ p ∈ v_ts.zip v_val, P p`), which does NOT force equal length. As
+    literally stated the lemma is false when `v_ts` is strictly longer than `v_val` (e.g.
+    `v_ts := [BOT]`, `v_val := []`: the zip is `[]`, so the hypothesis holds vacuously, but
+    the conclusion `Forall (· ≠ BOT) [BOT]` is false). Same class of gap as `funcinst_same`
+    (see `bundle3`'s resync notes) — needs either an explicit added length hypothesis or a
+    stronger caller-side invariant before this can be proved; not attempted this pass. -/
 theorem Vals_ok_non_bot (v_S : store) (v_val : List val) (v_ts : List valtype) :
     Forall₂ (fun t v => Val_ok v_S v t) v_ts v_val → Forall (fun t => t ≠ valtype.BOT) v_ts := sorry
 
 /-- Rocq `typing_lemmas.v:1952` `Ref_ok_non_bot`. -/
 theorem Ref_ok_non_bot (v_S : store) (v_val : ref) (t : reftype) :
-    Ref_ok v_S v_val t → valtype_reftype t ≠ valtype.BOT := sorry
+    Ref_ok v_S v_val t → valtype_reftype t ≠ valtype.BOT := by
+  intro h
+  cases h with
+  | null _ => cases t <;> simp [valtype_reftype]
+  | func _ _ _ _ _ => simp [valtype_reftype]
+  | extern _ _ => simp [valtype_reftype]
 
 end TLC

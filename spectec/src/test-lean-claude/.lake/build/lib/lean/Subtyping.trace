@@ -1,9 +1,9 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["5aa4ee0e99cd5ba1.olean"],
+ {"o": ["26de9ce8af0b4d7f.olean"],
   "m": false,
-  "i": "bcb4d1c344437ba2.ilean",
+  "i": "b2d9298a102b62c0.ilean",
   "c": "3e5a1da5adc88044.c"},
  "log":
  [{"message":
@@ -66,8 +66,6 @@
   {"message": "Subtyping.lean:409:8: declaration uses `sorry`",
    "level": "warning"},
   {"message": "Subtyping.lean:413:8: declaration uses `sorry`",
-   "level": "warning"},
-  {"message": "Subtyping.lean:420:8: declaration uses `sorry`",
    "level": "warning"}],
  "inputs":
  [["Subtyping:deps",
@@ -78,7 +76,7 @@
        [["«wasm2.0» transitive imports (legacy)", "042b7ef8e4b09de0"],
         ["«wasm2.0»:importAllArts", "2779e9d30f5e846a"],
         ["HelperLemmas transitive imports (legacy)", "38ee09ae9f915f9b"],
-        ["HelperLemmas:importAllArts", "a0ca03c6de5688a9"]]]]],
+        ["HelperLemmas:importAllArts", "3c0165ef07d87c93"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -87,10 +85,10 @@
   ["Lean 4.32.0, commit 8c9756b28d64dab099da31a4c09229a9e6a2ef35",
    "5d4a267a1ba5cafb"],
   ["/home/zhengyew/spectec/spectec/src/test-lean-claude/Subtyping.lean",
-   "f56fd69b5d3ee0d1"],
+   "1cc6cd6e53cdbcc8"],
   ["options", "00000000000006bb"],
   ["isModule: false", "feefd2a0d3a1847e"],
   ["Module.name: Subtyping", "23e8db55f482b518"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "c301320d9eb902b0"}
+ "depHash": "a3de8a9af1291fa7"}
