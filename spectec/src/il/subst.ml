@@ -9,7 +9,6 @@ module Map = Map.Make(String)
 type subst =
   {varid : exp Map.t; typid : typ Map.t; defid : id Map.t; gramid : sym Map.t}
 type t = subst
-
 let empty =
   { varid = Map.empty;
     typid = Map.empty;
