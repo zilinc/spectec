@@ -14,6 +14,7 @@ type target =
  | Prose of bool
  | Splice of Backend_splice.Config.t
  | Animate
+ | ProseNeo
  | Interpreter of string list
  | RunThrough
 
@@ -87,7 +88,6 @@ let print_al_o = ref ""
 let print_no_pos = ref false
 let new_interpreter_args = ref None
 let new_prose_ofile = ref None
-let new_new_prose_ofile = ref None
 let vl = ref false
 let animate_inline = ref false
 let repl_main = ref None
@@ -230,7 +230,7 @@ let argspec = Arg.align (
   "--new-interpreter-v", Arg.Rest_all (fun args -> target := Animate; new_interpreter_args := Some args; vl := true), " New meta-interpreter VL";
   "--repl", Arg.String (fun main -> target := Animate; repl_main := Some main), " Run REPL by specifying the main function";
   "--new-prose-v", Arg.String (fun ofile -> target := Animate; new_prose_ofile := Some ofile; vl := true), " New prose generation";
-  "--new-new-prose-v", Arg.String (fun ofile -> target := Animate; new_new_prose_ofile := Some ofile; vl := true), " New new prose generation";
+  "--prose-neo", Arg.String (fun ofile -> target := ProseNeo; new_prose_ofile := Some ofile; vl := true), " Prose generation NEO";
   "-ll-ani", Arg.String (fun s -> Backend_animation.Interpreter_v.(verbose := s :: !verbose)), "Logging switches for IL meta-interpreter";
   "--debug", Arg.Unit (fun () -> Backend_interpreter.Debugger.debug := true),
     " Debug interpreter";
@@ -287,7 +287,7 @@ let () =
     (match !target with
     | Prose _ | Splice _ | Interpreter _ ->
       enable_pass Sideconditions
-    | Animate ->
+    | Animate | ProseNeo ->
       ()
       (*
       sideconditions_on_defs := true;
@@ -320,7 +320,7 @@ let () =
 
     let al =
       if not !print_al && !print_al_o = "" &&
-         (!target = Check || !target = Ast || !target = Latex || !target = Animate) then []
+         (!target = Check || !target = Ast || !target = Latex || !target = Animate || !target = ProseNeo) then []
       else (
         log "Translating to AL...";
         let interp = match !target with
@@ -431,7 +431,7 @@ let () =
       log "Interpreting...";
       Backend_interpreter.Runner.run args
 
-    | Animate when Option.is_none !new_new_prose_ofile ->
+    | Animate ->
       log "Translating to DL and animate...";
       (*
       Let antiunified_il = anti_unification IL in
@@ -483,13 +483,12 @@ let () =
         Backend_animation.Main_prose_v.text_prose dl ofile
       | None -> ()
       )
-    | Animate (* new new prose generation *) ->
+    | ProseNeo ->
       log "Translating to DL...";
-      let env, pp_dl = Backend_animation.Main_animate.pp il true in
-      let () = print_endline (List.map string_of_dl_def pp_dl |> String.concat "\n") in
-      (match !new_new_prose_ofile with
+      let env, pp_dl = Backend_animation.Main_animate.pp il false in
+      (match !new_prose_ofile with
       | Some ofile ->
-        log ("Prose injection");
+        log ("Imperative step injection");
         let dl = Backend_animation.Main_prose_v.inject_prose pp_dl env in
         let injected_s = Backend_animation.Def.string_of_dl_script dl in
         let oc = open_out ofile in
