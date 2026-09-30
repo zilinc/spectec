@@ -365,12 +365,38 @@ theorem Step_pure__br_table_ge_preserves (v_S : store) (v_C : context) (v_i : nu
     Instrs_ok2 v_S v_C [admininstr.BR v_l'] v_ft := sorry
 
 /-- Rocq `type_preservation_pure.v:501` `Step_pure__frame_vals_preserves`. Uses
-    `construct_ais_vals'` (context-irrelevance) to cross the frame boundary. -/
+    `construct_ais_vals'` (context-irrelevance) to cross the frame boundary — same shape as
+    `Step_pure__label_vals_preserves` above, except `FRAME_`'s principal typing wraps its
+    body in `Expr_ok2` (one extra inversion step to reach the underlying `Instrs_ok2`) and
+    the crossed context is `{c' with RETURN := ...}` for the `Frame_ok`-supplied `c'`, not a
+    `LABELS`-extension of `v_C` itself; `Frame_ok v_S v_f c'` itself is never inverted since
+    nothing about `v_f`'s actual identity is needed. -/
 theorem Step_pure__frame_vals_preserves (v_S : store) (v_C : context) (v_n : n) (v_f : frame)
     (v_val : List val) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.FRAME_ v_n v_f (v_val.map admininstr_val)] v_ft →
     Step_pure [admininstr.FRAME_ v_n v_f (v_val.map admininstr_val)] (v_val.map admininstr_val) →
-    Instrs_ok2 v_S v_C (v_val.map admininstr_val) v_ft := sorry
+    Instrs_ok2 v_S v_C (v_val.map admininstr_val) v_ft := by
+  intro h _
+  obtain ⟨t1, t2⟩ := v_ft
+  obtain ⟨t1s⟩ := t1
+  obtain ⟨t2s⟩ := t2
+  obtain ⟨t1s_sup, t2s_sub, hprincipal, hsub⟩ :=
+    ais_single_typing_inversion v_S v_C (admininstr.FRAME_ v_n v_f (v_val.map admininstr_val)) t1s t2s h
+  unfold ai_principal_typing at hprincipal
+  obtain ⟨ts, c', heq, hframe, hexpr⟩ := hprincipal
+  unfold mkFunctype at heq
+  simp only [functype.mk_functype.injEq, list.mk_list.injEq] at heq
+  obtain ⟨e1, e2⟩ := heq
+  rw [e1, e2] at hsub
+  obtain ⟨hwfC, hwfS, _⟩ :=
+    ainstrs_ok_context_store_wf v_S v_C [admininstr.FRAME_ v_n v_f (v_val.map admininstr_val)]
+      (mkFunctype t1s t2s) h
+  cases hexpr with
+  | mk_Expr_ok2 _ _ _ hinstrs _ _ _ =>
+    have hbody' : Instrs_ok2 v_S v_C (v_val.map admininstr_val) (mkFunctype [] ts) :=
+      construct_ais_vals' v_S { c' with RETURN := some (list.mk_list ts) } v_C v_val
+        (mkFunctype [] ts) hinstrs hwfC
+    exact construct_ais_subtyping v_S v_C (v_val.map admininstr_val) [] ts t1s t2s hbody' hsub
 
 /-- Rocq `type_preservation_pure.v:517` `Step_pure__return_frame_preserves`. **`Admitted`
     in Rocq — proof script entirely commented out, genuinely never attempted.** Kept as

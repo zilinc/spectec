@@ -360,12 +360,15 @@ theorem ltsize {α : Type} (x : Nat) (s s2 : List α) : x < s.length → x < (s 
     see `NOTES.md`) are added below them. -/
 
 /-- Rocq `axioms.v:13` `nbytes_len`. `nbytes_` and `size` (Rocq: `res_size`) already exist as
-    backend `opaque`s in `wasm2.0.lean` (lines ~705, ~3654); this restates Rocq's axiom about
-    their relationship, adding the `≠ none` guard that `nbytes_'s` `Option` return type (not
-    present in Rocq, where it's total for `numtype` inputs) requires. `(Nat.divmod n 7 0 7).1`
-    in Rocq is stdlib's internal implementation of `n / 8`; restated directly as `/ 8` here. -/
-axiom nbytes_len (v_nt : numtype) (v_c : num_) (h : nbytes_ v_nt v_c ≠ none) :
-    (Option.get! (nbytes_ v_nt v_c)).length = (Option.get! (size (valtype_numtype v_nt))) / 8
+    backend `opaque`s in `wasm2.0.lean` (lines ~705, ~3967); this restates Rocq's axiom about
+    their relationship. (2026-09-30 resync: `nbytes_`'s `wasm2.0.lean` signature is now
+    `List byte` directly, matching Rocq's totality for `numtype` inputs — the earlier `Option`
+    return type this axiom's `≠ none` guard worked around is gone from the regenerated file,
+    so the guard and `Option.get!` wrapper on `nbytes_` are dropped here too; `size` itself is
+    still `Option Nat`, so its own `Option.get!` is unchanged.) `(Nat.divmod n 7 0 7).1` in Rocq
+    is stdlib's internal implementation of `n / 8`; restated directly as `/ 8` here. -/
+axiom nbytes_len (v_nt : numtype) (v_c : num_) :
+    (nbytes_ v_nt v_c).length = (Option.get! (size (valtype_numtype v_nt))) / 8
 
 /-- Rocq `axioms.v:17` `ibytes_len`. Rocq's bound variable is itself named `size`, shadowing
     the unrelated `size` byte-length function used in `nbytes_len` above (a Rocq/spectec
@@ -377,9 +380,10 @@ axiom ibytes_len (sz v_n : N) (v_c : iN) :
 /-- Rocq `axioms.v` (2026-09-24 resync: NEW) `nbytes_len'`. A `Rat`-valued
     restatement of `nbytes_len` without the Nat-division floor — the two
     coincide since bit-widths are always multiples of 8, but the current
-    Rocq source states both. -/
-axiom nbytes_len' (v_nt : numtype) (v_c : num_) (h : nbytes_ v_nt v_c ≠ none) :
-    ((Option.get! (nbytes_ v_nt v_c)).length : Rat) = (Option.get! (size (valtype_numtype v_nt)) : Rat) / 8
+    Rocq source states both. (2026-09-30 resync: `≠ none`/`Option.get!` on
+    `nbytes_` dropped — see `nbytes_len` above.) -/
+axiom nbytes_len' (v_nt : numtype) (v_c : num_) :
+    ((nbytes_ v_nt v_c).length : Rat) = (Option.get! (size (valtype_numtype v_nt)) : Rat) / 8
 
 /-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_len'`. `Rat`-valued
     restatement of `ibytes_len`. -/
@@ -418,10 +422,11 @@ axiom lanes_len (lt : lanetype) (v_N : N) (c : vec_) :
     `ibytes_` and their inverses `inv_nbytes_`/`inv_ibytes_` are
     uninterpreted `opaque`s in `wasm2.0.lean`. In the specification they are
     mutually inverse bijections between values and byte sequences of the
-    right width. -/
-axiom nbytes_inv (nt : numtype) (bs : List byte) (h : nbytes_ nt (inv_nbytes_ nt bs) ≠ none)
+    right width. (2026-09-30 resync: `≠ none`/`Option.get!` on `nbytes_`
+    dropped — see `nbytes_len` above.) -/
+axiom nbytes_inv (nt : numtype) (bs : List byte)
     (hlen : (bs.length : Rat) = (Option.get! (size (valtype_numtype nt)) : Rat) / 8) :
-    Option.get! (nbytes_ nt (inv_nbytes_ nt bs)) = bs
+    nbytes_ nt (inv_nbytes_ nt bs) = bs
 
 /-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_inv`. -/
 axiom ibytes_inv (v_N : N) (bs : List byte) (hlen : (bs.length : Rat) = (v_N : Rat) / 8) :

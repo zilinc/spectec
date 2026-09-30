@@ -802,23 +802,35 @@ theorem construct_meminsts (s : store) (ts : List memtype) (ma : Nat) (v_mt : me
     Forall₂ (fun v ty => Meminst_ok s v ty)
       (list_update_func s.MEMS ma (fun m => { m with BYTES := list_slice_update m.BYTES v_i v_nb.length v_nb })) ts := sorry
 
-/-- Rocq `construct_meminsts_grow` (current source). **Still `Admitted` in
-    the current upstream Rocq source** (the sole remaining Preservation-side
-    gap after the 2026-09-24 resync — the `lim_old + v_n ≤ v_j` memory-growth
-    bound; see the resync impact report). Gained a `Forall wf_meminst
-    minsts` premise and binds the post-`memory.grow` mem list via an
-    explicit `minsts = ...` hypothesis. (Upstream now states `lim_old` as a
-    `Q` (rational) rather than `Nat`, reflecting a broader spec-level move to
-    rational-valued page counts — but `wasm2.0.lean` was **not** regenerated
-    by this resync and still represents page counts as `Nat`/`uN`, so this
-    Lean signature stays `Nat`-based, matching our actual target types
-    rather than Rocq's `Q`; the arithmetic content is identical.) -/
+/-- Rocq `construct_meminsts_grow` (2026-09-30 `rocq-backend-proof-final`
+    resync). **No longer `Admitted` upstream** — the prior gap (`lim_old +
+    v_n ≤ 2^16`, the hard page-count cap baked into `Memtype_ok` via
+    `Limits_ok _ (2^16)`; see `Limits_ok`/`Memtype_ok` in `wasm2.0.lean`)
+    is now closed because `$growmemory` itself gained a matching
+    `-- if i' <= $(2^16)` side condition (`5-runtime-aux.spectec`), which
+    Rocq's proof consumes directly instead of deriving it. Mirrored here as
+    a new `lim_old + v_n ≤ 2 ^ 16` hypothesis (added last among the
+    Nat-valued premises, matching Rocq's new `HBound` position just before
+    the `minsts = ...` binder). Still `Nat`-based rather than Rocq's `Q`,
+    per the pre-existing representational note (unaffected by this resync).
+    **Now a genuine target** (previously permanently blocked) — not yet
+    attempted for real: the Rocq proof's own route is pure `Q`/`Z`
+    rational-conversion bookkeeping that has no Lean counterpart to mirror,
+    and this codebase's zip-based `Forall₂` (unlike Rocq's inductive
+    `Forall2`) doesn't support the same structural induction Rocq's proof
+    uses without first separately establishing `s.MEMS.length = ts.length`
+    (the same class of gap as `Vals_ok`/`Vals_ok_non_bot`, see
+    `HelperLemmas.lean`'s `Forall₂` bridge) — flagged for a focused future
+    pass rather than rushed here. (Separately, pre-existing and unrelated to
+    this resync: this signature hard-codes the declared-max limit as always
+    present (`some (uN.mk_uN v_j)`) where Rocq's `v_j_opt` is a genuine
+    `Option`; not fixed here, flagged in the audit notes.) -/
 theorem construct_meminsts_grow (s : store) (ts : List memtype) (ma : Nat) (b_lst : List byte)
     (lim_old v_n v_j : Nat) (minsts : List meminst) :
     Forall wf_meminst minsts →
     Forall₂ (fun v ty => Meminst_ok s v ty) s.MEMS ts →
     lookup_total s.MEMS ma = meminst.MKmeminst (memtype.PAGE (limits.mk_limits (uN.mk_uN lim_old) (some (uN.mk_uN v_j)))) b_lst →
-    lim_old = b_lst.length / (64 * Ki) → lim_old + v_n ≤ v_j →
+    lim_old = b_lst.length / (64 * Ki) → lim_old + v_n ≤ v_j → lim_old + v_n ≤ 2 ^ 16 →
     minsts = list_update_func s.MEMS ma (fun _ =>
       meminst.MKmeminst (memtype.PAGE (limits.mk_limits (uN.mk_uN (lim_old + v_n)) (some (uN.mk_uN v_j))))
         (b_lst ++ List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0))) →

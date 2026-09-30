@@ -1,7 +1,103 @@
 # Notes for a future Claude session — READ THIS FIRST
 
-Last updated: 2026-09-30 (bundle12 — same session as bundle9/10/11,
-continuing directly; see `claude-logging/verbatim_dialogue_log/bundle12`).
+Last updated: 2026-09-30 (bundle13 — same session as bundle9/10/11/12,
+continuing directly; see `claude-logging/verbatim_dialogue_log/bundle13`).
+
+## ✅ 2026-09-30 UPDATE (bundle13) — resync onto `rocq-backend-proof-final`
+
+The user merged `rocq-backend-proof-final` into `lean-backend`
+(`8ac6699ac`) and manually regenerated `wasm2.0.lean`; this bundle's job
+was to resync everything onto it and audit for pre-existing gaps. Full
+detail in `bundle13/user_requested_documents/rocq_changes_summary_v2.md` —
+short version:
+
+- **The merge is ~95% a SIMD/vector-instruction restructuring**
+  (`vloadop`/`vextunop_`/`vextbinop_`/`vcvtop` all reshaped). This whole
+  project deliberately excludes SIMD (stated in `TypePreservationPure.lean`/
+  `TypePreservation.lean` headers) — confirmed via grep that none of it
+  appears anywhere in our 6 files. Non-event.
+- **One real build break, found via `lake build` (not diff-reading) and
+  fixed**: `nbytes_`/`ibytes_`/`fbytes_`/`vbytes_` became *total*
+  (`List byte`, not `Option (List byte)`) in the regenerated
+  `wasm2.0.lean`. Three `HelperLemmas.lean` axioms (`nbytes_len`,
+  `nbytes_len'`, `nbytes_inv`) had a `≠ none`/`Option.get!` workaround for
+  the old partial signature that no longer type-checked. Fixed by dropping
+  the workaround (kept `size`'s own `Option.get!` — `size` itself is still
+  partial, unaffected). **`lake build` is 100% clean after this fix** — 0
+  errors project-wide, and since `Subtyping.lean`/`TypingLemmas.lean` are
+  fully `Qed`'d (not just `sorry`'d), their clean build is strong evidence
+  nothing else broke, not just that signatures happen to typecheck.
+- **`construct_meminsts_grow` (`ExtensionLemmas.lean`) is no longer
+  permanently blocked** — Rocq's own version went from `Admitted` (missing
+  a `lim_old + v_n ≤ 2^16` bound) to fully `Qed`'d, because `$growmemory`
+  gained a matching side condition upstream. Added the matching hypothesis
+  to the Lean signature (rebuilt clean); **body deliberately left `sorry`**
+  — needs a `Forall₂`-length-matching prerequisite first (same class of gap
+  as `Vals_ok`, see `HelperLemmas.lean`'s mathlib bridge), not attempted
+  this bundle. Full reasoning in `rocq_changes_summary_v2.md` §2.
+- **Pre-existing, unrelated-to-this-resync bug also spotted while reading
+  that lemma**: `construct_meminsts_grow`'s signature hard-codes the
+  memory's declared max as always-present (`some (uN.mk_uN v_j)`) where
+  Rocq's `v_j_opt` is a genuine `Option`. Not fixed (would need real
+  surgery), flagged in `proof_prioritization_v4.md`.
+- **Everything else checked and found not to need any change**: 9 new
+  `axioms.v` axioms (all `type_progress.v`-only, out of scope);
+  `Datainst_ok`/`Eleminst_ok`'s new `< 2^32` length bound (auto-inherited
+  via the regenerated `inductive`s, no textual signature change needed
+  anywhere that references them); `typing_lemmas.v`'s one change (tactic
+  simplification only, zero content change).
+- **Systematic signature audit**: per the user's explicit request (quoting
+  my own bundle12 words back), dispatched as a background task comparing
+  every Lean signature against its named Rocq counterpart project-wide.
+  See `bundle13/user_requested_documents/signature_audit_v1.md` for the
+  report — check that file's own summary for what it found; if this
+  section hasn't been updated to say the findings were triaged, they
+  weren't yet as of whenever this paragraph was last touched.
+
+New docs this bundle (all in `bundle13/user_requested_documents/`):
+`rocq_changes_summary_v2.md` (supersedes bundle9's version for "what
+changed since we last looked"), `proof_dependencies_v3.md` (refreshes
+bundle9's badly-stale status table — `TypingLemmas`/`Subtyping` were shown
+at 13/32 remaining, now both 0), `proof_prioritization_v4.md` (layers the
+resync's effect on top of bundle12's v3 ordering, which is otherwise
+unchanged), `signature_audit_v1.md` (the audit report).
+
+**Also proved `Step_pure__frame_vals_preserves`** (first item in v3/v4's
+queue) while waiting on the audit agent — structurally confirmed to match
+`label_vals_preserves` as predicted, modulo one extra `Expr_ok2` inversion
+step (`FRAME_`'s principal typing wraps its body in `Expr_ok2`, not a bare
+`Instrs_ok2`) and crossing into `{c' with RETURN := ...}` rather than a
+`LABELS`-extension of `v_C`. **Lean gotcha hit and fixed**: `cases hexpr
+with | mk_Expr_ok2 ... =>` needed exactly 7 pattern names, not 8 — despite
+`Expr_ok2`'s constructor having 4 explicit args + 4 hypotheses (8 total),
+one explicit arg (`t_lst`, wrapped as `.mk_list t_lst` against our already-
+concrete `.mk_list ts`) gets silently unified away by `cases` and doesn't
+consume a name slot. A plain `obtain ⟨hinstrs, _, _, _⟩ := hexpr` did NOT
+work here (unlike other single-constructor inductive destructuring
+elsewhere in this codebase) — got a delayed "unknown identifier" error
+several lines later rather than an immediate one at the `obtain` site,
+which cost some back-and-forth to trace to the real cause; `cases ... with
+| mk_Expr_ok2 <7 names> =>` was needed instead. Worth remembering if
+`obtain` on an indexed-family hypothesis ever silently misbehaves again —
+switch to `cases ... with` and let the "N expected" error tell you the
+right arity directly, rather than assuming `obtain`'s error (or lack of
+one) is trustworthy.
+
+**Attempted `return_label_preserves` next, deliberately deferred**: read
+Rocq's ~30-line proof (`type_preservation_pure.v:549-588`) — genuinely a
+step up in difficulty from `frame_vals_preserves`/`label_vals_preserves`,
+needs `RETURN`'s own principal typing checked against `v_C.RETURN` and
+composed with the value list's typing via `resulttype_sub_app`-style
+"the label's inner resulttype splits into what RETURN needs plus leftover
+subtyping slack" reasoning — not a quick follow-on. Left as `sorry`,
+correctly next in the queue for a focused attempt (not stuck due to any
+resync issue, just genuinely more involved).
+
+Current real-`sorry` tally: `HelperLemmas.lean` 28 (dead cluster,
+unaffected — the 3 fixed axioms weren't sorries), `Subtyping.lean` 0,
+`TypingLemmas.lean` 0, `TypePreservationPure.lean` **10** (down from 11),
+`ExtensionLemmas.lean` 76, `TypePreservation.lean` 12. **351 total
+declarations project-wide, 126 still `sorry`.**
 
 ## ✅ 2026-09-30 UPDATE (bundle12) — `TypePreservationPure.lean`: 20 → 11 real sorries; prioritization doc corrected
 
