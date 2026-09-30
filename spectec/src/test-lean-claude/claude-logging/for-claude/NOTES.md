@@ -1,8 +1,299 @@
 # Notes for a future Claude session — READ THIS FIRST
 
-Last updated: 2026-09-24 (session 2 — a fresh Claude session that picked this
-project up cold, per the user's instruction, continuing session 1's standing
-rules; see `claude-logging/verbatim_dialogue_log/bundle3`/`bundle4`).
+Last updated: 2026-09-30 (bundle12 — same session as bundle9/10/11,
+continuing directly; see `claude-logging/verbatim_dialogue_log/bundle12`).
+
+## ✅ 2026-09-30 UPDATE (bundle12) — `TypePreservationPure.lean`: 20 → 11 real sorries; prioritization doc corrected
+
+Continued Tier D. Done this bundle: `unop_val_preserves`,
+`binop_val_preserves`, `testop_preserves`, `relop_preserves`,
+`cvtop_val_preserves`, `local_tee_preserves`, `ref_is_null_helper` (+
+`_true`/`_false`). **9 more lemmas, real-`sorry` count 20 → 11.**
+
+**Two more Phase-1 signature bugs found and fixed** (same class as
+bundle9's `ai_principal_typing` gap): `Step_pure__testop_preserves` and
+`Step_pure__relop_preserves`'s stubs were both missing the
+`wf_admininstr (admininstr.CONST numtype.I32 v_c) →` hypothesis Rocq's
+real signature has — unprovable without it (needed to derive `wf_num_`
+for the freshly-synthesized comparison result). Fixed both to match Rocq
+before proving. **Worth a systematic signature audit of the remaining
+unproven lemmas across the whole project at some point** — three of these
+gaps have now turned up incidentally while proving, never from a
+dedicated check.
+
+**Per the user's explicit request, the prioritization doc has been
+corrected** — see `bundle12/user_requested_documents/proof_prioritization_v3.md`.
+Headline correction: `select_preserves_helper` was paired with `if` as
+"medium" in the original doc; they are NOT comparable — `if` composes two
+fixed-shape principal typings in one step, `select` needs an *exact*
+non-bot-pinned equality between two independently-typed values before any
+composition lemma applies. Reclassified as hard, sequenced near the end
+alongside `br_succ`/`br_table_*` rather than early. New suggested order for
+the 9 remaining genuine targets (excluding the 2 deliberate permanent
+gaps): `frame_vals` → `return_label` → `br_zero` → `select` cluster →
+`br_succ` → `br_table_lt`/`_ge`.
+
+**Confirmed pattern taxonomy** (see v3 doc for detail): essentially every
+lemma done in bundles 11–12 follows one of two shapes — (a) split via
+`ais_seq_typing_inversion`, recombine principal types via one
+`instrtype_sub_compose*` call, construct and widen; or (b) cross a context
+boundary via `construct_ais_vals'`. `select`/`br_succ`/`br_table_*` are
+hard precisely because they don't fit either shape.
+
+**Verified**: full project `lake build` clean after every lemma. Safety
+check clean throughout — confirmed via direct `git status --porcelain`
+inspection that zero files outside `spectec/src/test-lean-claude/` were
+touched this bundle.
+
+Current real-`sorry` tally: `HelperLemmas.lean` 28 (dead), `Subtyping.lean`
+0, `TypingLemmas.lean` 0, `TypePreservationPure.lean` **11** (down from
+29 at the start of bundle11), `ExtensionLemmas.lean` 76,
+`TypePreservation.lean` 12.
+
+## What's next (post-bundle12)
+
+Follow `bundle12/user_requested_documents/proof_prioritization_v3.md`'s
+ordering: `frame_vals_preserves`, `return_label_preserves`, `br_zero_preserves`,
+then the `select` cluster (fresh attempt using the `ais_vals_typing_inversion`-
+on-a-pair idea from bundle11's notes), then `br_succ_preserves`,
+`br_table_lt_preserves`, `br_table_ge_preserves`. Leave
+`return_frame_preserves`/`t_pure_preservation` for last (deliberate
+permanent-gap-shaped items, per the file's own header comment). Once
+`TypePreservationPure.lean` is done, `ExtensionLemmas.lean`'s independent
+76-lemma track is the next natural target (see `proof_prioritization_v2.md`'s
+Tier E, still accurate).
+
+## ✅ 2026-09-30 UPDATE (bundle11) — `TypePreservationPure.lean` started: 9 of 29 lemmas done
+
+Started working through Tier D (`TypePreservationPure.lean`'s 27
+`Step_pure__*_preserves` lemmas, now unblocked since bundle10). Done this
+bundle, all verified against the actual Rocq tactic proof first per the
+user's explicit instruction ("replicate Rocq's tactics closely, diverge
+only when needed"): `Step_pure__nop_preserves`, `_drop_preserves`,
+`_if_preserves_helper`, `_if_true_preserves`, `_if_false_preserves`,
+`_label_vals_preserves`, `_br_if_true_preserves`, `_br_if_false_preserves`,
+`proj_identity`. Real `sorry` count: **29 → 20**.
+
+**Method, and where it diverged from Rocq**: Rocq's proofs in this file
+lean heavily on custom Ltac macros from `helper_tactics.v`
+(`resolve_wfness`, `invert_ais_typing`, `resolve_all_pt`,
+`resolve_subtyping`, `construct_ais_typing`, `join_subtyping_eq`/`_ge`/`_le`/
+`_trans`) that aren't ported 1:1 per project convention — reverse-engineered
+each one's actual mathematical content by comparing its RESULT type against
+Rocq's own compose-lemma family before writing the Lean tactic sequence.
+Confirmed mappings: `join_subtyping_eq` = `instrtype_sub_compose_eq`,
+`join_subtyping_le` = `instrtype_sub_compose_le`, `join_subtyping_ge` =
+`instrtype_sub_compose_ge`/`instrtype_sub_compose1` (context-dependent —
+check which shape actually matches before assuming). One genuine
+divergence: `_label_vals_preserves` skips Rocq's second `invert_ais_typing`
+(further decomposing the value-list body) entirely, using
+`construct_ais_vals'` (context-irrelevance, already proved) to jump
+straight from the LABEL-extended context back to the outer one in one step.
+
+**`Step_pure__select_preserves_helper`/`_select_true_preserves`/
+`_select_false_preserves` deliberately skipped, not attempted** — genuinely
+harder than the prioritization doc's "medium" estimate: requires pinning
+`ta = t` and `tb = t` *exactly* (not just subtype) via `Val_ok_non_bot` +
+`valtype_sub_non_bot`, chained through 4 composed principal-typing facts
+where the naive `instrtype_sub_compose`-family tools don't directly apply
+(the shared "pivot" type isn't syntactically identical across steps until
+*after* the non-bot pinning). Recommend a fresh, focused attempt using
+`ais_vals_typing_inversion` on `[val v1, val v2]` as a *pair* (bypasses
+some of the manual composition) rather than inverting both instructions
+fully separately — flagged as an idea for next time, not yet tried.
+
+**New debugging finding, worth recording**: several `subst h` calls in this
+bundle unexpectedly eliminated the *wrong* side of an equation (e.g.
+`h : t1s = tp1' ++ ts1'` — `subst h` sometimes eliminates whichever
+variable Lean's heuristic picks, which was NOT always the newly-introduced
+existential-witness variable I intended to keep using) causing
+"unknown identifier" errors at every later use of the variable I'd meant to
+survive. **Fix pattern that worked reliably**: avoid `subst` when both
+sides of an equation are free local variables and you care which one
+survives — use `rw [h]`/`rw [h1, h2]` against the *goal* instead (rewriting
+forward, keeping both variables bound, only the goal's shape changes).
+Worth adding to the project's running "Lean gotchas" list alongside the
+existing `cases`/binder-order notes.
+
+**Verified**: full project `lake build` clean after every lemma. Safety
+check clean throughout.
+
+Current real-`sorry` tally: `HelperLemmas.lean` 28 (dead), `Subtyping.lean`
+0, `TypingLemmas.lean` 0, `TypePreservationPure.lean` **20** (down from 29),
+`ExtensionLemmas.lean` 76, `TypePreservation.lean` 12.
+
+## What's next (post-bundle11)
+
+Continue `TypePreservationPure.lean`'s remaining ~19 real targets (20 minus
+the 1 deliberate `return_frame`/`t_pure_preservation`-style gap — actually
+2 deliberate gaps remain: `Step_pure__return_frame_preserves` and
+`t_pure_preservation` itself, both `Admitted` in Rocq for non-mathematical
+reasons per the file's own header comment) in Rocq's file order: the
+`unop`/`binop`/`testop`/`relop`/`cvtop_val` repetitive cluster next (likely
+the most mechanical remaining batch, good momentum), then `local_tee`,
+then `ref_is_null_helper`/`_true`/`_false`, then `frame_vals_preserves`
+(uses `construct_ais_vals'` again) and `return_label_preserves`, saving
+`br_zero`/`br_succ`/`br_table_lt`/`br_table_ge` (confirmed genuinely
+hardest, per the file's own digest) and the deferred `select` cluster for
+last, with a fresh strategy for each per the notes above.
+
+## ✅ 2026-09-30 UPDATE (bundle10) — `Subtyping.lean` AND `TypingLemmas.lean` both fully complete (0 sorries)
+
+Following the user's guidance ("replicate Rocq's tactics closely, diverge
+only when needed; if that fails, understand the Rocq proof as a whole first")
+to finish `ais_vals_typing_inversion`/`construct_ais_vals` (the last 2
+`TypingLemmas.lean` sorries from bundle9), this bundle first had to port
+essentially all of `Subtyping.lean`'s `instrtype_sub_compose*` family (14
+lemmas: `Forall2_app'`, `resulttype_sub_app'`, `Forall2_take`/`_drop`,
+`resulttype_sub_split`, `resulttype_sub_empty`/`_empty_sub`,
+`instrtype_sub_compose`/`_le`/`_ge`/`_eq`/`_le'`/`_ge'`/`1`/`0`/`2`,
+`instrtype_sub_cancel_left`, `instrtype_sub_empty`/`_sub_empty`/`_sub_empty1`/
+`_sub_empty2`, `instrtype_sub_iff_resulttype_sub`/`'`, `instrtype_sub_extend`,
+`instrtype_sub_add_same`, `resulttype_sub_cons`, plus
+`valtype_sub_non_bot`/`resulttype_sub_non_bot`/`resulttype_sub_app_trans`) —
+**this closed out `Subtyping.lean` entirely (0 real `sorry`s left)**, the
+first fully-complete lemma file in the project.
+
+Method: read each Rocq proof in full first (per the user's guidance) to
+understand its exact algebraic content — most of the `compose_le`/`compose_ge`
+family's apparent complexity turned out to be ssreflect/mathcomp
+size-arithmetic bookkeeping (`sizecat'`, `eq_to_prop`, `N.add_cancel_r`,
+`sizeN_inj`) that Lean's `omega` plus `List.length_append` absorbs in one
+line, and Rocq's own `cat_take_drop`/`resulttype_sub_app'` gymnastics for
+splitting a list at a known-length point turned out to already exist
+directly as `resulttype_sub_split_sup`/`_sup'` (Tier A, proved since
+bundle1-2) — using those directly, several proofs got noticeably *shorter*
+than Rocq's. A few lemmas (`instrtype_sub_extend`) were given a genuinely
+different, more direct proof than Rocq's (same conclusion, different
+witness derivation) since replicating Rocq's exact `N`-arithmetic chain
+added no value once the underlying algebraic fact was understood.
+
+**`construct_ais_vals` (the Rocq file's longest/most intricate proof, ~125
+lines, `last_ind` induction from the right)** was ported via a **genuinely
+different induction strategy**: ordinary left `induction v_vals` (cons-based,
+matching every other proof in this file) instead of Rocq's `last_ind`
+(right/snoc-based). This works because the "hard part" Rocq's right-induction
+needed — splitting an `instrtype_sub` fact's codomain at exactly the right
+point using `take`/`drop`+size arithmetic — has a clean left-recursive
+analogue using `resulttype_sub_split_sup'` directly on the *domain* structure
+`t :: ts'`, avoiding essentially all of Rocq's arithmetic bookkeeping. The
+resulting Lean proof is well under half of Rocq's line count. This is
+exactly the kind of "diverge when it helps" case the task's standing
+instructions anticipated — documented in the lemma's own doc comment for
+any future session that goes looking for why it doesn't mirror Rocq's
+`last_ind` structure.
+
+**`TypingLemmas.lean`'s remaining 2 sorries from bundle9 are now also done**
+(`ais_vals_typing_inversion` via straightforward left-induction +
+`instrtype_sub_compose2`; `construct_ais_vals` as above) — **`TypingLemmas.lean`
+now has 0 real `sorry`s too.**
+
+**Practical consequence**: Tier D (`TypePreservationPure.lean`'s 27
+lemmas) is now **fully** unblocked with no remaining gaps in its
+dependencies — every lemma it needs from `TypingLemmas.lean`/`Subtyping.lean`
+now has a real proof, not just a stated signature. This is the natural next
+target.
+
+**Verified**: full project `lake build` clean throughout (checked after
+every lemma, not just at the end) — final state exit 0, 3005 jobs. Safety
+check re-run clean.
+
+Current real-`sorry` tally: `HelperLemmas.lean` 28 (all dead/no-longer-in-Rocq,
+see bundle9's note), `Subtyping.lean` **0**, `TypingLemmas.lean` **0**,
+`TypePreservationPure.lean` 29, `ExtensionLemmas.lean` 76,
+`TypePreservation.lean` 12.
+
+## What's next (post-bundle10)
+
+`TypePreservationPure.lean`'s 27 `Step_pure__*_preserves` lemmas (Tier D,
+now fully unblocked) — work through in Rocq's own file order per
+`proof_prioritization_v2.md`'s Tier D guidance (still accurate). Give
+special attention to `Step_pure__return_frame_preserves`, historically
+`Admitted` in Rocq for a non-mathematical reason (a lost proof during a
+July rename, not intrinsic difficulty — see `rocq_proof_intuition.md`).
+`ExtensionLemmas.lean`'s independent 76-lemma track remains available in
+parallel at any point.
+
+## ✅ 2026-09-30 UPDATE (bundle9) — `TypingLemmas.lean` down to 2 real `sorry`s; real bug fixed in `ai_principal_typing`
+
+Checked upstream `rocq-backend-proof` (live HEAD `58af2e2f9`, "Some more cases
+done") — a small, targeted delta (2 more `t_progress_be` SIMD lane-cases
+closed in `type_progress.v` [VUNOP, VTESTOP]; two lemmas closed in `wasm.v`;
+comments in `wasm.v` reference a NOT-YET-PUSHED `wf_counterexamples.v`
+documenting 6 `*_is_wf` theorems as provably FALSE — `fone_is_wf`,
+`utf8_is_wf`, `Step_pure_is_wf`, `Step_read_is_wf`, `runelem_is_wf`,
+`rundata_is_wf` — flagged for the parallel `*_is_wf` audit effort, not
+currently load-bearing anywhere in this project). **None of our 6 ported
+files needed updating** — confirmed via direct diff that nothing in the
+already-ported Rocq files changed in this range. Full writeup:
+`bundle9/user_requested_documents/rocq_changes_summary.md`.
+
+**`Vals_ok_non_bot` gap resolved** per explicit user decision (Options 2+3
+from `bundle8/vals_ok_non_bot_analysis.md`): `Vals_ok` redefined to bake in
+`v_ts.length = v_vals.length` alongside the zip-based `Forall₂`; a generic
+`to_mathlib_forall₂`/`from_mathlib_forall₂` bridge added to
+`HelperLemmas.lean` (now imports `Mathlib.Tactic`); `Vals_ok_non_bot` proved
+via the bridge. Full writeup:
+`bundle9/user_requested_documents/vals_ok_non_bot_resolution.md`.
+
+**`TypingLemmas.lean`'s `instr_of` transcribed** (the other big Tier-C
+blocker alongside `ai_principal_typing`, which bundle8 already closed) — a
+62-case mirror image of `wasm2.0.lean`'s own already-generated
+`admininstr_instr : instr → admininstr`, read directly off that definition
+constructor-for-constructor rather than re-derived from the Rocq digest, plus
+a round-trip sanity lemma `instr_of_admininstr_instr`. This unblocked nearly
+everything else still open in the file: `instrs_single_typing_inversion`,
+`ais_single_typing_inversion'`/`ais_single_typing_inversion`,
+`ai_val_principal_typing_inversion`, `ais_single_ref_typing_inversion`,
+`ais_single_val_typing_inversion`, `construct_ai_maybe`,
+`construct_ais_vals'` — all proved this bundle (several needed new `_gen`
+induction scaffolds mirroring `instrs_ok_nil_sub_gen`/`instrs_ok_cons_gen`'s
+existing pattern for `Instrs_ok`/`Instrs_ok2`'s indexed-family induction,
+since Lean's `induction ... using Foo.rec` needs the discriminating list/
+functype equalities pre-generalized — see the file's own new `_gen` lemmas
+for the idiom). `TypingLemmas.lean`'s real-`sorry` count: **17 → 2** (only
+`ais_vals_typing_inversion` and `construct_ais_vals` remain — the latter is
+the Rocq file's longest/most intricate proof, ~125 lines with a `last_ind`
+over two lists simultaneously; deliberately left for a focused follow-up
+rather than rushed).
+
+**Real bug found and fixed**: `ai_principal_typing` (ported in bundle8 from
+`spectec/test-lean/typing_lemmas.lean`) was missing an explicit case for
+`admininstr.REF_HOST_ADDR`, silently falling through to the generic
+`| _ => True` catch-all — meaning `ai_principal_typing` was vacuously true
+(any functype accepted) for any `REF_HOST_ADDR`-headed administrative
+instruction, contradicting Rocq's real statement
+(`v_ft = ([] :-> [EXTERNREF])`). Not caught in bundle8 since nothing had yet
+exercised that specific case; surfaced this bundle while proving
+`ai_val_principal_typing_inversion`. Fixed by adding the missing case
+(`admininstr.REF_HOST_ADDR _ => v_ft = mkFunctype [] [valtype_reftype
+reftype.EXTERNREF]`, matching Rocq exactly) and correspondingly fixing
+`ai_typing_inversion`'s `ref`/`REF_HOST_ADDR` branch (previously closed by a
+now-invalid bare `trivial`, now `cases href with | extern hs => rfl`, since
+`Ref_ok.extern` forces `rt = EXTERNREF` by index unification). **If you're
+auditing this project's correctness, this is worth double-checking** — it's
+the kind of gap that's easy to reintroduce if `ai_principal_typing` is ever
+re-derived or re-ported.
+
+**Verified**: full project `lake build` clean (exit 0, 3005 jobs) after
+every change this bundle, checked incrementally after each lemma. Safety
+check re-run clean.
+
+Current real-`sorry` tally (excludes doc-comment mentions of the word):
+`HelperLemmas.lean` 28, `Subtyping.lean` 29, `TypingLemmas.lean` **2** (down
+from 17), `TypePreservationPure.lean` 29, `ExtensionLemmas.lean` 76,
+`TypePreservation.lean` 12.
+
+## What's next (post-bundle9)
+
+`TypingLemmas.lean`'s two remaining lemmas (`ais_vals_typing_inversion`,
+`construct_ais_vals`) are the last blocker before Tier E
+(`TypePreservationPure.lean`'s 27 lemmas) is **fully** unblocked — though in
+practice Tier E's lemmas mostly need `ai_typing_inversion`/
+`ais_single_typing_inversion`-style facts (already done), not these two
+specifically, so Tier E work can proceed in parallel if preferred. See
+`bundle9/user_requested_documents/proof_prioritization_v2.md` (supersedes
+the bundle2/bundle3-addendum chain) for the full reasoning and ordering.
 
 ## ✅ 2026-09-24 UPDATE (bundle8) — `ai_principal_typing` ported, `Mathlib` now imported
 

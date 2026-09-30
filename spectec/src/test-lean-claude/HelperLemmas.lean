@@ -1,3 +1,4 @@
+import Mathlib.Tactic
 import «wasm2.0»
 
 /-!
@@ -430,5 +431,43 @@ axiom ibytes_inv (v_N : N) (bs : List byte) (hlen : (bs.length : Rat) = (v_N : R
 axiom vbytes_inv (vt : vectype) (bs : List byte)
     (hlen : (bs.length : Rat) = (Option.get! (size (valtype_vectype vt)) : Rat) / 8) :
     vbytes_ vt (inv_vbytes_ vt bs) = bs
+
+/-! ## `Forall₂` bridge to Mathlib's `List.Forall₂` (2026-09-30, bundle9)
+
+Not a port of any Rocq lemma — new project-local infrastructure. This
+codebase's generated `Forall₂` (`wasm2.0.lean:18`) is a zip-based `def`
+(`∀ t ∈ xs₁.zip xs₂, P t.1 t.2`), unlike Rocq's `Forall2`, which is an
+*inductive* relation that forces `xs₁.length = xs₂.length` as part of its
+own shape. Concretely: with `xs₁ := [x]`, `xs₂ := []`, our `Forall₂ P xs₁
+xs₂` reduces to `∀ p ∈ [], _`, which is vacuously `True` — a fact Rocq's
+`Forall2 P [x] []` simply has no proof of at all (`nil`/`cons` mismatch is
+uninhabited there). This gap is invisible as long as a Rocq `Forall2` proof
+never needs the length fact, but several downstream lemmas do (see
+`TypingLemmas.lean`'s `Vals_ok`/`Vals_ok_non_bot`, and the same class of
+issue previously flagged for `funcinst_same` in
+`ExtensionLemmas.lean`/bundle3's resync notes). Once an explicit length
+hypothesis is supplied, this pair of lemmas converts freely between our
+`Forall₂` and Mathlib's `List.Forall₂` (an inductive relation with a real
+`nil`/`cons` induction principle), which is more ergonomic to do induction
+on directly than the zip-based version. -/
+
+/-- Given an explicit length hypothesis, this codebase's zip-based `Forall₂`
+    coincides with Mathlib's inductive `List.Forall₂`. -/
+theorem to_mathlib_forall₂ {α β : Type} {R : α → β → Prop} {l1 : List α} {l2 : List β}
+    (hlen : l1.length = l2.length) (h : Forall₂ R l1 l2) : List.Forall₂ R l1 l2 := by
+  rw [List.forall₂_iff_zip]
+  refine ⟨hlen, ?_⟩
+  intro a b hab
+  exact h (a, b) hab
+
+/-- The reverse direction needs no extra hypothesis: Mathlib's `List.Forall₂`
+    already forces equal length by construction (`List.Forall₂.length_eq`). -/
+theorem from_mathlib_forall₂ {α β : Type} {R : α → β → Prop} {l1 : List α} {l2 : List β}
+    (h : List.Forall₂ R l1 l2) : l1.length = l2.length ∧ Forall₂ R l1 l2 := by
+  rw [List.forall₂_iff_zip] at h
+  obtain ⟨hlen, hz⟩ := h
+  refine ⟨hlen, ?_⟩
+  intro p hp
+  exact hz hp
 
 end TLC

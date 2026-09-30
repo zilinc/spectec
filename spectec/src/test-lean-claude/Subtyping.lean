@@ -71,11 +71,31 @@ theorem valtype_sub_trans (t1 t2 t3 : valtype) :
 
 /-- Rocq `subtyping.v:49` `valtype_sub_non_bot`. -/
 theorem valtype_sub_non_bot (v v_valtype : valtype) :
-    Valtype_sub v_valtype v → v_valtype ≠ valtype.BOT → v = v_valtype := sorry
+    Valtype_sub v_valtype v → v_valtype ≠ valtype.BOT → v = v_valtype := by
+  intro h hne
+  cases h with
+  | refl _ => rfl
+  | bot _ => exact absurd rfl hne
 
-/-- Rocq `subtyping.v:60` `resulttype_sub_non_bot`. -/
+/-- Rocq `subtyping.v:60` `resulttype_sub_non_bot`. Pointwise application of
+    `valtype_sub_non_bot` across the zip, by induction on both lists together (using the
+    length equality `ResulttypeSub` provides to keep them in lockstep). -/
 theorem resulttype_sub_non_bot (v_ts v_ts2 : List valtype) :
-    Forall (fun v_t => v_t ≠ valtype.BOT) v_ts → ResulttypeSub v_ts v_ts2 → v_ts = v_ts2 := sorry
+    Forall (fun v_t => v_t ≠ valtype.BOT) v_ts → ResulttypeSub v_ts v_ts2 → v_ts = v_ts2 := by
+  intro hnb h
+  cases h with
+  | mk_Resulttype_sub _ _ hlen hf =>
+    have h2 : List.Forall₂ Valtype_sub v_ts v_ts2 := to_mathlib_forall₂ hlen hf
+    clear hf hlen
+    induction h2 with
+    | nil => rfl
+    | cons hval _ ih =>
+      rename_i a b l1 l2 _
+      have ha : a ≠ valtype.BOT := hnb a (by simp)
+      have htail : Forall (fun v_t => v_t ≠ valtype.BOT) l1 := by
+        intro x hx; exact hnb x (by simp [hx])
+      have hb : b = a := valtype_sub_non_bot b a hval ha
+      rw [hb, ih htail]
 
 /-! ## Resulttype (list) subtyping — refl / size / trans / app-split (subtyping.v:79-347) -/
 
@@ -144,9 +164,8 @@ theorem resulttype_sub_trans (ts1 ts2 ts3 : List valtype) :
       exact Resulttype_sub.mk_Resulttype_sub ts1 ts3 (hlen1.trans hlen2)
         (forall2_valtype_sub_trans hlen1 hlen2 hf1 hf2)
 
-/-- Rocq `subtyping.v:122` `resulttype_sub_app_trans`. -/
-theorem resulttype_sub_app_trans (ts_sub ts ts1 ts2 : List valtype) :
-    ResulttypeSub ts_sub ts → ResulttypeSub (ts ++ ts1) ts2 → ResulttypeSub (ts_sub ++ ts1) ts2 := sorry
+-- `resulttype_sub_app_trans` (Rocq `subtyping.v:122`) is defined just below `resulttype_sub_app`
+-- (`subtyping.v:188`), since its proof needs it.
 
 /-- Rocq `subtyping.v:188` `resulttype_sub_app`. Proof reused from a prior Lean session. -/
 theorem resulttype_sub_app (ts1_sub ts2_sub ts1 ts2 : List valtype) :
@@ -165,28 +184,66 @@ theorem resulttype_sub_app (ts1_sub ts2_sub ts1 ts2 : List valtype) :
       · exact hf1 p hp
       · exact hf2 p hp
 
+/-- Rocq `subtyping.v:122` `resulttype_sub_app_trans`. -/
+theorem resulttype_sub_app_trans (ts_sub ts ts1 ts2 : List valtype) :
+    ResulttypeSub ts_sub ts → ResulttypeSub (ts ++ ts1) ts2 → ResulttypeSub (ts_sub ++ ts1) ts2 := by
+  intro h1 h2
+  exact resulttype_sub_trans _ _ _ (resulttype_sub_app ts_sub ts1 ts ts1 h1 (resulttype_sub_refl ts1)) h2
+
 /-- Rocq `subtyping.v:219` `Forall2_app'`. General list lemma, not subtyping-specific,
-    but Rocq places it here (used to prove `resulttype_sub_app'` below). -/
+    but Rocq places it here (used to prove `resulttype_sub_app'` below). Converse of
+    `List.zip_append`, same zip-splitting technique as `resulttype_sub_app`. -/
 theorem Forall2_app' {α β : Type} (R : α → β → Prop) (l1 l2 : List α) (l1' l2' : List β) :
     l1.length = l1'.length → Forall₂ R (l1 ++ l2) (l1' ++ l2') →
-    Forall₂ R l1 l1' ∧ Forall₂ R l2 l2' := sorry
+    Forall₂ R l1 l1' ∧ Forall₂ R l2 l2' := by
+  intro hlen h
+  have hzip : (l1 ++ l2).zip (l1' ++ l2') = l1.zip l1' ++ l2.zip l2' := List.zip_append hlen
+  refine ⟨?_, ?_⟩
+  · intro p hp; exact h p (hzip ▸ List.mem_append.mpr (Or.inl hp))
+  · intro p hp; exact h p (hzip ▸ List.mem_append.mpr (Or.inr hp))
 
-/-- Rocq `subtyping.v:238` `resulttype_sub_app'`. -/
+/-- Rocq `subtyping.v:238` `resulttype_sub_app'`. Converse of `resulttype_sub_app`, same
+    zip-splitting technique. -/
 theorem resulttype_sub_app' (ts1_sub ts2_sub ts1 ts2 : List valtype) :
     ts1_sub.length = ts1.length → ResulttypeSub (ts1_sub ++ ts2_sub) (ts1 ++ ts2) →
-    ResulttypeSub ts1_sub ts1 ∧ ResulttypeSub ts2_sub ts2 := sorry
+    ResulttypeSub ts1_sub ts1 ∧ ResulttypeSub ts2_sub ts2 := by
+  intro hlen1 h
+  cases h with
+  | mk_Resulttype_sub _ _ hlen hf =>
+    have hlen2 : ts2_sub.length = ts2.length := by
+      simp only [List.length_append] at hlen; omega
+    obtain ⟨hf1, hf2⟩ := Forall2_app' _ ts1_sub ts2_sub ts1 ts2 hlen1 hf
+    exact ⟨Resulttype_sub.mk_Resulttype_sub ts1_sub ts1 hlen1 hf1,
+      Resulttype_sub.mk_Resulttype_sub ts2_sub ts2 hlen2 hf2⟩
 
-/-- Rocq `subtyping.v:255` `Forall2_take`. -/
+/-- Rocq `subtyping.v:255` `Forall2_take`. Via `List.zip_eq_zipWith`/`List.take_zipWith`
+    (Lean core), `(l1.take n).zip (l2.take n) = (l1.zip l2).take n`, then membership in a
+    `take` implies membership in the original list. -/
 theorem Forall2_take {α β : Type} (R : α → β → Prop) (l1 : List α) (l2 : List β) (n : Nat) :
-    Forall₂ R l1 l2 → Forall₂ R (l1.take n) (l2.take n) := sorry
+    Forall₂ R l1 l2 → Forall₂ R (l1.take n) (l2.take n) := by
+  intro h p hp
+  have heq : (l1.take n).zip (l2.take n) = (l1.zip l2).take n := by
+    simp [List.zip_eq_zipWith, List.take_zipWith]
+  rw [heq] at hp
+  exact h p (List.mem_of_mem_take hp)
 
-/-- Rocq `subtyping.v:264` `Forall2_drop`. -/
+/-- Rocq `subtyping.v:264` `Forall2_drop`. Dual of `Forall2_take` via `List.drop_zipWith`. -/
 theorem Forall2_drop {α β : Type} (R : α → β → Prop) (l1 : List α) (l2 : List β) (n : Nat) :
-    Forall₂ R l1 l2 → Forall₂ R (l1.drop n) (l2.drop n) := sorry
+    Forall₂ R l1 l2 → Forall₂ R (l1.drop n) (l2.drop n) := by
+  intro h p hp
+  have heq : (l1.drop n).zip (l2.drop n) = (l1.zip l2).drop n := by
+    simp [List.zip_eq_zipWith, List.drop_zipWith]
+  rw [heq] at hp
+  exact h p (List.mem_of_mem_drop hp)
 
 /-- Rocq `subtyping.v:273` `resulttype_sub_split`. -/
 theorem resulttype_sub_split (ts1 ts2 : List valtype) (n : Nat) :
-    ResulttypeSub ts1 ts2 → ResulttypeSub (ts1.take n) (ts2.take n) ∧ ResulttypeSub (ts1.drop n) (ts2.drop n) := sorry
+    ResulttypeSub ts1 ts2 → ResulttypeSub (ts1.take n) (ts2.take n) ∧ ResulttypeSub (ts1.drop n) (ts2.drop n) := by
+  intro h
+  cases h with
+  | mk_Resulttype_sub _ _ hlen hf =>
+    refine ⟨Resulttype_sub.mk_Resulttype_sub (ts1.take n) (ts2.take n) (by simp [hlen]) (Forall2_take _ ts1 ts2 n hf),
+      Resulttype_sub.mk_Resulttype_sub (ts1.drop n) (ts2.drop n) (by simp [hlen]) (Forall2_drop _ ts1 ts2 n hf)⟩
 
 -- `drop_size_cat`/`take_size_cat` (subtyping.v:297,307): Rocq's own comment calls these
 -- duplicates kept "for compatibility reasons" — already ported in `HelperLemmas.lean`
@@ -301,10 +358,16 @@ theorem instrtype_sub_trans (tf1 tf2 tf3 : functype) :
 /-! ## Empty-resulttype edge cases (subtyping.v:462-473) -/
 
 /-- Rocq `subtyping.v:462` `resulttype_sub_empty`. -/
-theorem resulttype_sub_empty (ts : List valtype) : ResulttypeSub ts [] → ts = [] := sorry
+theorem resulttype_sub_empty (ts : List valtype) : ResulttypeSub ts [] → ts = [] := by
+  intro h
+  cases h with
+  | mk_Resulttype_sub _ _ hlen _ => simpa using hlen
 
 /-- Rocq `subtyping.v:473` `resulttype_empty_sub`. -/
-theorem resulttype_empty_sub (ts : List valtype) : ResulttypeSub [] ts → ts = [] := sorry
+theorem resulttype_empty_sub (ts : List valtype) : ResulttypeSub [] ts → ts = [] := by
+  intro h
+  cases h with
+  | mk_Resulttype_sub _ _ hlen _ => simpa using hlen.symm
 
 /-! ## instrtype_sub composition/algebra — the "frame rule" toolkit (subtyping.v:485-914) -/
 
@@ -312,28 +375,89 @@ theorem resulttype_empty_sub (ts : List valtype) : ResulttypeSub [] ts → ts = 
 theorem instrtype_sub_compose (ts1 ts2 ts3 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts1 ts2) (mkFunctype txs tys) →
     instrtype_sub (mkFunctype ts2 ts3) (mkFunctype tys tzs) →
-    instrtype_sub (mkFunctype ts1 ts3) (mkFunctype txs tzs) := sorry
+    instrtype_sub (mkFunctype ts1 ts3) (mkFunctype txs tzs) := by
+  rintro ⟨tp1', tp1, ts1', ts2'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+    ⟨tp2', tp2, ts2', ts3'', h2e1, h2e2, h2s1, h2s2, h2s3⟩
+  subst h1e1; subst h1e2; subst h2e2
+  -- `h2e1` was rewritten by the `subst h1e2` above: `tp1 ++ ts2'' = tp2' ++ ts2'`
+  have h1s3' : ResulttypeSub (tp1' ++ ts2) (tp2' ++ ts2') := by
+    rw [← h2e1]; exact resulttype_sub_app tp1' ts2 tp1 ts2'' h1s1 h1s3
+  have h2s2' : ResulttypeSub (tp2' ++ ts2') (tp2 ++ ts2) := resulttype_sub_app tp2' ts2' tp2 ts2 h2s1 h2s2
+  have hcomb : ResulttypeSub (tp1' ++ ts2) (tp2 ++ ts2) := resulttype_sub_trans _ _ _ h1s3' h2s2'
+  have hlen : tp1'.length = tp2.length := by
+    cases hcomb with
+    | mk_Resulttype_sub _ _ hl _ =>
+      simp only [List.length_append] at hl
+      omega
+  obtain ⟨h3, _⟩ := resulttype_sub_app' tp1' ts2 tp2 ts2 hlen hcomb
+  exact ⟨tp1', tp2, ts1', ts3'', rfl, rfl, h3, h1s2, h2s3⟩
 
 /-- Rocq `subtyping.v:510` `instrtype_sub_compose_le`. -/
 theorem instrtype_sub_compose_le (ts1 ts2' ts2 ts3 ts4 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts1 ts2') (mkFunctype txs tys) →
     instrtype_sub (mkFunctype (ts3 ++ ts2) ts4) (mkFunctype tys tzs) →
     ts2.length = ts2'.length →
-    instrtype_sub (mkFunctype (ts3 ++ ts1) ts4) (mkFunctype txs tzs) ∧ ResulttypeSub ts2' ts2 := sorry
+    instrtype_sub (mkFunctype (ts3 ++ ts1) ts4) (mkFunctype txs tzs) ∧ ResulttypeSub ts2' ts2 := by
+  rintro ⟨tp1', tp1, ts1', ts2'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+    ⟨tp2', tp2, ts3ts2', ts4'', h2e1, h2e2, h2s1, h2s2, h2s3⟩ hsize
+  subst h1e1; subst h1e2; subst h2e2
+  have h1s3' : ResulttypeSub (tp1' ++ ts2') (tp2' ++ ts3ts2') := by
+    rw [← h2e1]; exact resulttype_sub_app tp1' ts2' tp1 ts2'' h1s1 h1s3
+  have h2s2' : ResulttypeSub (tp2' ++ ts3ts2') (tp2 ++ (ts3 ++ ts2)) :=
+    resulttype_sub_app tp2' ts3ts2' tp2 (ts3 ++ ts2) h2s1 h2s2
+  have hcomb : ResulttypeSub (tp1' ++ ts2') ((tp2 ++ ts3) ++ ts2) := by
+    rw [List.append_assoc]
+    exact resulttype_sub_trans _ _ _ h1s3' h2s2'
+  have hlen : tp1'.length = (tp2 ++ ts3).length := by
+    cases hcomb with
+    | mk_Resulttype_sub _ _ hl _ =>
+      simp only [List.length_append] at hl ⊢
+      omega
+  obtain ⟨h3, h4⟩ := resulttype_sub_app' tp1' ts2' (tp2 ++ ts3) ts2 hlen hcomb
+  refine ⟨?_, h4⟩
+  obtain ⟨hA, hB⟩ := resulttype_sub_split_sup tp1' tp2 ts3 h3
+  exact ⟨tp1'.take tp2.length, tp2, tp1'.drop tp2.length ++ ts1', ts4'',
+    by rw [← List.append_assoc, List.take_append_drop], rfl, hA,
+    resulttype_sub_app _ _ _ _ hB h1s2, h2s3⟩
 
 /-- Rocq `subtyping.v:578` `instrtype_sub_compose_ge`. -/
 theorem instrtype_sub_compose_ge (ts1 ts2 ts3' ts3 ts4 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts1 (ts2 ++ ts3')) (mkFunctype txs tys) →
     instrtype_sub (mkFunctype ts3 ts4) (mkFunctype tys tzs) →
     ts3.length = ts3'.length →
-    instrtype_sub (mkFunctype ts1 (ts2 ++ ts4)) (mkFunctype txs tzs) ∧ ResulttypeSub ts3' ts3 := sorry
+    instrtype_sub (mkFunctype ts1 (ts2 ++ ts4)) (mkFunctype txs tzs) ∧ ResulttypeSub ts3' ts3 := by
+  rintro ⟨tp1', tp1, ts1', ts2ts3'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+    ⟨tp2', tp2, ts3sub, ts4'', h2e1, h2e2, h2s1, h2s2, h2s3⟩ hsize
+  subst h1e1; subst h1e2; subst h2e2
+  have h1s3' : ResulttypeSub (tp1' ++ (ts2 ++ ts3')) (tp2' ++ ts3sub) := by
+    rw [← h2e1]; exact resulttype_sub_app tp1' (ts2 ++ ts3') tp1 ts2ts3'' h1s1 h1s3
+  have h2s2' : ResulttypeSub (tp2' ++ ts3sub) (tp2 ++ ts3) :=
+    resulttype_sub_app tp2' ts3sub tp2 ts3 h2s1 h2s2
+  have hcomb : ResulttypeSub ((tp1' ++ ts2) ++ ts3') (tp2 ++ ts3) := by
+    rw [List.append_assoc]
+    exact resulttype_sub_trans _ _ _ h1s3' h2s2'
+  have hlen : (tp1' ++ ts2).length = tp2.length := by
+    cases hcomb with
+    | mk_Resulttype_sub _ _ hl _ =>
+      simp only [List.length_append] at hl ⊢
+      omega
+  obtain ⟨h3, h4⟩ := resulttype_sub_app' (tp1' ++ ts2) ts3' tp2 ts3 hlen hcomb
+  refine ⟨?_, h4⟩
+  obtain ⟨h5, h6⟩ := resulttype_sub_split_sup' tp2 tp1' ts2 h3
+  exact ⟨tp1', tp2.take tp1'.length, ts1', tp2.drop tp1'.length ++ ts4'',
+    rfl, by rw [← List.append_assoc, List.take_append_drop], h5, h1s2,
+    resulttype_sub_app _ _ _ _ h6 h2s3⟩
 
 /-- Rocq `subtyping.v:636` `instrtype_sub_compose_eq`. -/
 theorem instrtype_sub_compose_eq (ts1 ts2 ts2' ts3 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts1 ts2) (mkFunctype txs tys) →
     instrtype_sub (mkFunctype ts2' ts3) (mkFunctype tys tzs) →
     ts2.length = ts2'.length →
-    instrtype_sub (mkFunctype ts1 ts3) (mkFunctype txs tzs) ∧ ResulttypeSub ts2 ts2' := sorry
+    instrtype_sub (mkFunctype ts1 ts3) (mkFunctype txs tzs) ∧ ResulttypeSub ts2 ts2' := by
+  intro h1 h2 hsize
+  have h2' : instrtype_sub (mkFunctype ([] ++ ts2') ts3) (mkFunctype tys tzs) := by simpa using h2
+  obtain ⟨hfirst, hsecond⟩ := instrtype_sub_compose_le ts1 ts2 ts2' [] ts3 txs tys tzs h1 h2' hsize.symm
+  exact ⟨by simpa using hfirst, hsecond⟩
 
 /-- Rocq `subtyping.v:646` `instrtype_sub_compose_le'`. -/
 theorem instrtype_sub_compose_le' (ts1 ts2 ts3 ts4 txs tys tzs : List valtype) :
@@ -341,7 +465,17 @@ theorem instrtype_sub_compose_le' (ts1 ts2 ts3 ts4 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts3 ts4) (mkFunctype tys tzs) →
     ts2.length ≤ ts3.length →
     instrtype_sub (mkFunctype ((ts3.take (ts3.length - ts2.length)) ++ ts1) ts4) (mkFunctype txs tzs) ∧
-      ResulttypeSub ts2 (ts3.drop (ts3.length - ts2.length)) := sorry
+      ResulttypeSub ts2 (ts3.drop (ts3.length - ts2.length)) := by
+  intro h1 h2 hsize
+  have hsplit : ts3 = ts3.take (ts3.length - ts2.length) ++ ts3.drop (ts3.length - ts2.length) :=
+    (List.take_append_drop _ _).symm
+  have h2' : instrtype_sub
+      (mkFunctype (ts3.take (ts3.length - ts2.length) ++ ts3.drop (ts3.length - ts2.length)) ts4)
+      (mkFunctype tys tzs) := by rw [← hsplit]; exact h2
+  have hlensuf : (ts3.drop (ts3.length - ts2.length)).length = ts2.length := by
+    simp only [List.length_drop]; omega
+  exact instrtype_sub_compose_le ts1 ts2 (ts3.drop (ts3.length - ts2.length))
+    (ts3.take (ts3.length - ts2.length)) ts4 txs tys tzs h1 h2' hlensuf
 
 /-- Rocq `subtyping.v:662` `instrtype_sub_compose_ge'`. -/
 theorem instrtype_sub_compose_ge' (ts1 ts2 ts3 ts4 txs tys tzs : List valtype) :
@@ -349,13 +483,25 @@ theorem instrtype_sub_compose_ge' (ts1 ts2 ts3 ts4 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts3 ts4) (mkFunctype tys tzs) →
     ts3.length ≤ ts2.length →
     instrtype_sub (mkFunctype ts1 ((ts2.take (ts2.length - ts3.length)) ++ ts4)) (mkFunctype txs tzs) ∧
-      ResulttypeSub (ts2.drop (ts2.length - ts3.length)) ts3 := sorry
+      ResulttypeSub (ts2.drop (ts2.length - ts3.length)) ts3 := by
+  intro h1 h2 hsize
+  have hsplit : ts2 = ts2.take (ts2.length - ts3.length) ++ ts2.drop (ts2.length - ts3.length) :=
+    (List.take_append_drop _ _).symm
+  have h1' : instrtype_sub
+      (mkFunctype ts1 (ts2.take (ts2.length - ts3.length) ++ ts2.drop (ts2.length - ts3.length)))
+      (mkFunctype txs tys) := by rw [← hsplit]; exact h1
+  have hlensuf : ts3.length = (ts2.drop (ts2.length - ts3.length)).length := by
+    simp only [List.length_drop]; omega
+  exact instrtype_sub_compose_ge ts1 (ts2.take (ts2.length - ts3.length))
+    (ts2.drop (ts2.length - ts3.length)) ts3 ts4 txs tys tzs h1' h2 hlensuf
 
 /-- Rocq `subtyping.v:679` `instrtype_sub_compose1`. -/
 theorem instrtype_sub_compose1 (ts1 ts2 ts3 ts4 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts1 ts2) (mkFunctype txs tys) →
     instrtype_sub (mkFunctype (ts3 ++ ts2) ts4) (mkFunctype tys tzs) →
-    instrtype_sub (mkFunctype (ts3 ++ ts1) ts4) (mkFunctype txs tzs) := sorry
+    instrtype_sub (mkFunctype (ts3 ++ ts1) ts4) (mkFunctype txs tzs) := by
+  intro h1 h2
+  exact (instrtype_sub_compose_le ts1 ts2 ts2 ts3 ts4 txs tys tzs h1 h2 rfl).1
 
 /-- Rocq `subtyping.v:688` `instrtype_sub_compose0`. Semantically identical to
     `instrtype_sub_compose` above (Rocq derives it via `compose1` instead, kept separate
@@ -363,55 +509,139 @@ theorem instrtype_sub_compose1 (ts1 ts2 ts3 ts4 txs tys tzs : List valtype) :
 theorem instrtype_sub_compose0 (ts1 ts2 ts3 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts1 ts2) (mkFunctype txs tys) →
     instrtype_sub (mkFunctype ts2 ts3) (mkFunctype tys tzs) →
-    instrtype_sub (mkFunctype ts1 ts3) (mkFunctype txs tzs) := sorry
+    instrtype_sub (mkFunctype ts1 ts3) (mkFunctype txs tzs) := by
+  intro h1 h2
+  have h2' : instrtype_sub (mkFunctype ([] ++ ts2) ts3) (mkFunctype tys tzs) := by simpa using h2
+  have := instrtype_sub_compose1 ts1 ts2 [] ts3 txs tys tzs h1 h2'
+  simpa using this
 
 /-- Rocq `subtyping.v:697` `instrtype_sub_compose2`. -/
 theorem instrtype_sub_compose2 (ts1 ts2 ts3 ts4 txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype ts1 (ts2 ++ ts3)) (mkFunctype txs tys) →
     instrtype_sub (mkFunctype ts3 ts4) (mkFunctype tys tzs) →
-    instrtype_sub (mkFunctype ts1 (ts2 ++ ts4)) (mkFunctype txs tzs) := sorry
+    instrtype_sub (mkFunctype ts1 (ts2 ++ ts4)) (mkFunctype txs tzs) := by
+  intro h1 h2
+  exact (instrtype_sub_compose_ge ts1 ts2 ts3 ts3 ts4 txs tys tzs h1 h2 rfl).1
 
 /-- Rocq `subtyping.v:706` `instrtype_sub_cancel_left`. -/
 theorem instrtype_sub_cancel_left (t : valtype) (ts1 ts2 txs tys : List valtype) :
     instrtype_sub (mkFunctype (t :: ts1) (t :: ts2)) (mkFunctype txs tys) →
-    instrtype_sub (mkFunctype ts1 ts2) (mkFunctype txs tys) := sorry
+    instrtype_sub (mkFunctype ts1 ts2) (mkFunctype txs tys) := by
+  intro h1
+  have hframe : instrtype_sub (mkFunctype ts1 ts2) (mkFunctype (t :: ts1) (t :: ts2)) :=
+    ⟨[t], [t], ts1, ts2, rfl, rfl, resulttype_sub_refl [t], resulttype_sub_refl ts1, resulttype_sub_refl ts2⟩
+  exact instrtype_sub_trans _ _ _ hframe h1
 
 /-- Rocq `subtyping.v:720` `instrtype_sub_empty`. -/
 theorem instrtype_sub_empty (txs tys : List valtype) :
-    instrtype_sub (mkFunctype [] []) (mkFunctype txs tys) → ResulttypeSub txs tys := sorry
+    instrtype_sub (mkFunctype [] []) (mkFunctype txs tys) → ResulttypeSub txs tys := by
+  rintro ⟨tp1', tp1, ts1', ts2'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+  subst h1e1; subst h1e2
+  exact resulttype_sub_app tp1' ts1' tp1 ts2'' h1s1 (resulttype_sub_trans _ _ _ h1s2 h1s3)
 
 /-- Rocq `subtyping.v:732` `instrtype_sub_sub_empty`. -/
 theorem instrtype_sub_sub_empty (txs tys : List valtype) :
-    instrtype_sub (mkFunctype txs tys) (mkFunctype [] []) → txs = [] ∧ tys = [] := sorry
+    instrtype_sub (mkFunctype txs tys) (mkFunctype [] []) → txs = [] ∧ tys = [] := by
+  rintro ⟨tp1', tp1, ts1', ts2'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+  have e1 : tp1' = [] ∧ ts1' = [] := List.append_eq_nil_iff.mp h1e1.symm
+  have e2 : tp1 = [] ∧ ts2'' = [] := List.append_eq_nil_iff.mp h1e2.symm
+  rw [e1.2] at h1s2
+  rw [e2.2] at h1s3
+  exact ⟨resulttype_empty_sub txs h1s2, resulttype_sub_empty tys h1s3⟩
 
 /-- Rocq `subtyping.v:747` `instrtype_sub_sub_empty1`. -/
 theorem instrtype_sub_sub_empty1 (txs tys tzs : List valtype) :
-    instrtype_sub (mkFunctype txs tys) (mkFunctype [] tzs) → txs = [] ∧ ResulttypeSub tys tzs := sorry
+    instrtype_sub (mkFunctype txs tys) (mkFunctype [] tzs) → txs = [] ∧ ResulttypeSub tys tzs := by
+  rintro ⟨tp1', tp1, ts1', ts2'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+  have e1 : tp1' = [] ∧ ts1' = [] := List.append_eq_nil_iff.mp h1e1.symm
+  rw [e1.1] at h1s1
+  have etp1 : tp1 = [] := resulttype_empty_sub tp1 h1s1
+  rw [e1.2] at h1s2
+  have etxs : txs = [] := resulttype_empty_sub txs h1s2
+  refine ⟨etxs, ?_⟩
+  rw [etp1, List.nil_append] at h1e2
+  rw [h1e2]; exact h1s3
 
 /-- Rocq `subtyping.v:761` `instrtype_sub_sub_empty2`. -/
 theorem instrtype_sub_sub_empty2 (txs tys tzs : List valtype) :
-    instrtype_sub (mkFunctype txs tys) (mkFunctype tzs []) → tys = [] ∧ ResulttypeSub tzs txs := sorry
+    instrtype_sub (mkFunctype txs tys) (mkFunctype tzs []) → tys = [] ∧ ResulttypeSub tzs txs := by
+  rintro ⟨tp1', tp1, ts1', ts2'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+  have e2 : tp1 = [] ∧ ts2'' = [] := List.append_eq_nil_iff.mp h1e2.symm
+  rw [e2.1] at h1s1
+  have etp1' : tp1' = [] := resulttype_sub_empty tp1' h1s1
+  rw [e2.2] at h1s3
+  have etys : tys = [] := resulttype_sub_empty tys h1s3
+  refine ⟨etys, ?_⟩
+  rw [etp1', List.nil_append] at h1e1
+  rw [h1e1]; exact h1s2
 
 /-- Rocq `subtyping.v:775` `instrtype_sub_iff_resulttype_sub`. -/
 theorem instrtype_sub_iff_resulttype_sub (ts1 ts2 ts3 : List valtype) :
-    ResulttypeSub ts1 ts2 ↔ instrtype_sub (mkFunctype ts3 ts1) (mkFunctype ts3 ts2) := sorry
+    ResulttypeSub ts1 ts2 ↔ instrtype_sub (mkFunctype ts3 ts1) (mkFunctype ts3 ts2) := by
+  constructor
+  · intro h
+    exact ⟨[], [], ts3, ts2, by simp, by simp, resulttype_sub_refl [], resulttype_sub_refl ts3, h⟩
+  · rintro ⟨tp1', tp1, ts1', ts2'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+    have htp1'_len : tp1'.length = 0 := by
+      have h1s2' : ResulttypeSub ts1' (tp1' ++ ts1') := h1e1 ▸ h1s2
+      cases h1s2' with
+      | mk_Resulttype_sub _ _ hlen _ =>
+        simp only [List.length_append] at hlen
+        omega
+    have htp1' : tp1' = [] := List.length_eq_zero_iff.mp htp1'_len
+    have htp1 : tp1 = [] := resulttype_empty_sub tp1 (htp1' ▸ h1s1)
+    have he2 : ts2 = ts2'' := by rw [h1e2, htp1, List.nil_append]
+    rw [he2]
+    exact h1s3
 
 /-- Rocq `subtyping.v:807` `instrtype_sub_iff_resulttype_sub'`. -/
 theorem instrtype_sub_iff_resulttype_sub' (ts1 ts2 ts3 : List valtype) :
-    ResulttypeSub ts1 ts2 ↔ instrtype_sub (mkFunctype ts2 ts3) (mkFunctype ts1 ts3) := sorry
+    ResulttypeSub ts1 ts2 ↔ instrtype_sub (mkFunctype ts2 ts3) (mkFunctype ts1 ts3) := by
+  constructor
+  · intro h
+    exact ⟨[], [], ts1, ts3, by simp, by simp, resulttype_sub_refl [], h, resulttype_sub_refl ts3⟩
+  · rintro ⟨tp1', tp1, ts1', ts2'', h1e1, h1e2, h1s1, h1s2, h1s3⟩
+    have htp1_len : tp1.length = 0 := by
+      have h1s3' : ResulttypeSub (tp1 ++ ts2'') ts2'' := h1e2 ▸ h1s3
+      cases h1s3' with
+      | mk_Resulttype_sub _ _ hlen _ =>
+        simp only [List.length_append] at hlen
+        omega
+    have htp1 : tp1 = [] := List.length_eq_zero_iff.mp htp1_len
+    have htp1' : tp1' = [] := resulttype_sub_empty tp1' (htp1 ▸ h1s1)
+    rw [h1e1, htp1', List.nil_append]
+    exact h1s2
 
-/-- Rocq `subtyping.v:837` `instrtype_sub_extend`. -/
+/-- Rocq `subtyping.v:837` `instrtype_sub_extend`. Rocq's own proof chains through
+    `instrtype_sub_compose_le` with an auxiliary `instrtype_sub_refl (tys->tzs)` fact and
+    some `N`-arithmetic bookkeeping specific to relating `tys`'s length to `t2s`'s; ported
+    here via a more direct route to the same witness (`t3s := ts`, the *original* Hsub's own
+    "unrelated frame" witness), since the only real content needed is
+    `ResulttypeSub txs (ts ++ t1s)`, built directly from `resulttype_sub_app`. -/
 theorem instrtype_sub_extend (t1s t2s txs tys tzs : List valtype) :
     instrtype_sub (mkFunctype t1s t2s) (mkFunctype txs tys) →
-    ∃ t3s, instrtype_sub (mkFunctype (t3s ++ t1s) tzs) (mkFunctype txs tzs) := sorry
+    ∃ t3s, instrtype_sub (mkFunctype (t3s ++ t1s) tzs) (mkFunctype txs tzs) := by
+  rintro ⟨ts', ts, t1s', t2s', h1, h2, h3, h4, h5⟩
+  refine ⟨ts, [], [], txs, tzs, rfl, rfl, resulttype_sub_refl [], ?_, resulttype_sub_refl tzs⟩
+  rw [h1]
+  exact resulttype_sub_app ts' t1s' ts t1s h3 h4
 
 /-- Rocq `subtyping.v:856` `instrtype_sub_add_same`. The explicit "frame rule" lemma. -/
 theorem instrtype_sub_add_same (ts1 ts2 ts3 : List valtype) :
-    instrtype_sub (mkFunctype ts1 ts2) (mkFunctype (ts3 ++ ts1) (ts3 ++ ts2)) := sorry
+    instrtype_sub (mkFunctype ts1 ts2) (mkFunctype (ts3 ++ ts1) (ts3 ++ ts2)) :=
+  ⟨ts3, ts3, ts1, ts2, rfl, rfl, resulttype_sub_refl ts3, resulttype_sub_refl ts1, resulttype_sub_refl ts2⟩
 
 /-- Rocq `subtyping.v:867` `resulttype_sub_cons`. -/
 theorem resulttype_sub_cons (t t' : valtype) (ts ts' : List valtype) :
-    ResulttypeSub (t :: ts) (t' :: ts') → Valtype_sub t t' ∧ ResulttypeSub ts ts' := sorry
+    ResulttypeSub (t :: ts) (t' :: ts') → Valtype_sub t t' ∧ ResulttypeSub ts ts' := by
+  intro h
+  cases h with
+  | mk_Resulttype_sub _ _ hlen hf =>
+    have hzip : (t :: ts).zip (t' :: ts') = (t, t') :: ts.zip ts' := rfl
+    refine ⟨hf (t, t') (hzip ▸ List.mem_cons_self ..), ?_⟩
+    refine Resulttype_sub.mk_Resulttype_sub ts ts' (by simpa using hlen) ?_
+    intro p hp
+    exact hf p (hzip ▸ List.mem_cons_of_mem _ hp)
 
 /-- Rocq `subtyping.v:878` `instr_subtyping_strengthen2`. Mirror image of
     `instr_subtyping_weaken2` below (strengthens the *input* side via

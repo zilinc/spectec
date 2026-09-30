@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: HelperLemmas
-// Imports: public import Init public meta import Init public import «wasm2.0»
+// Imports: public import Init public meta import Init public import Mathlib.Tactic public import «wasm2.0»
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -229,6 +229,7 @@ return v___x_85_;
 }
 lean_object* initialize_Init(uint8_t builtin);
 lean_object* initialize_Init(uint8_t builtin);
+lean_object* initialize_mathlib_Mathlib_Tactic(uint8_t builtin);
 lean_object* initialize_test_x2dlean_x2dclaude_wasm2_x2e0(uint8_t builtin);
 static bool _G_initialized = false;
 LEAN_EXPORT lean_object* initialize_test_x2dlean_x2dclaude_HelperLemmas(uint8_t builtin) {
@@ -239,6 +240,9 @@ res = initialize_Init(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_Init(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_mathlib_Mathlib_Tactic(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_test_x2dlean_x2dclaude_wasm2_x2e0(builtin);
