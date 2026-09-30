@@ -2295,19 +2295,10 @@ Lemma Extend_store_eleminst: forall v_S v_S' a t,
 	Eleminst_ok v_S' a t.
 Proof.
 	move => s s' x t HSt Het.
-
-	inversion Het; subst.
-	econstructor.
-
-	induction ref_lst; auto.
-	inversion H; subst; auto.
-	econstructor.
-	{
-		eapply Extend_store_ref; eauto.
-	}
-	2: by inversion HSt.
-	eapply IHref_lst; eauto.
-	by inversion Het.
+	inversion Het as [s0 rt refs HRefs Hlen Hws]; subst.
+	apply: mk_Eleminst_ok; [ | exact: Hlen | by inversion HSt ].
+	elim: HRefs {Het Hlen} => [ |r rs Hr _ IH]; constructor => //.
+	by eapply Extend_store_ref; eauto.
 Qed.
 
 Lemma Extend_store_eleminsts': forall v_S v_S' aa ts,
@@ -2341,16 +2332,15 @@ Proof.
 		inversion HElemsExtend as [? ? ? Href Heq1 Heq2]; subst.
 
 		remember (store_ELEMS0 [|a|]) as inst.
-		inversion H2 as [? ? ? HRefOks HWfstore Heq3 Heq4]; subst.
+		inversion H2 as [? ? ? HRefOks HBound HWfstore Heq3 Heq4]; subst.
 
 		rewrite -Heq4 in Heq1.
 		injection Heq1 as ?; subst.
 
-		econstructor; eauto.
 		eq_to_propH Href.
 		destruct Href; move/eqP in H; subst.
-		- eapply Extend_store_refs'; eauto.
-		- econstructor.	
+		- econstructor; eauto. eapply Extend_store_refs'; eauto.
+		- econstructor; [ constructor | by [] | eauto ].
 	}
 	eapply IHaa; auto.
 	by inversion HLen.
@@ -2364,14 +2354,7 @@ Proof.
 	move => s s' aa ts HS He.
 	induction He; auto.
 	econstructor; auto.
-	invert_elems.
-	inversion H; subst.
-	econstructor.
-	induction H0; auto.
-	econstructor.
-	- eapply Extend_store_ref; eauto.
-	- eapply IHForall. by inversion H.
-	- by inversion HS.
+	by eapply Extend_store_eleminst; eauto.
 Qed.
 
 Lemma Extend_store_datainsts': forall v_S v_S' aa ts,
@@ -2409,6 +2392,13 @@ Proof.
 		eapply holds_upto_lookup with (i := a) in HDatasExtend; eauto.
 		inversion HDatasExtend; subst.
 		econstructor; eauto.
+		(* Extend_datainst either keeps the bytes or drops them. *)
+		match goal with | [ Hb : is_true ((_ == ?b') || (?b' == [::])) |- _ ] =>
+			move/orP: Hb => [/eqP <- | /eqP -> //] end.
+		match goal with
+		| [ Ha : {| datainst_BYTES := ?x |} = ?l, Hc : {| datainst_BYTES := ?y |} = ?l |- _ ] =>
+			rewrite -Hc in Ha; injection Ha as ?; subst end.
+		assumption.
 	}
 
 	eapply IHaa; eauto.
@@ -2933,6 +2923,7 @@ Lemma construct_meminsts_grow: forall s ts ma b_lst (lim_old : Q) (v_n : N) v_j_
 		BYTES := b_lst |} ->
 	lim_old = pagediv b_lst ->
 	Forall (fun (j : u32) => ((lim_old + v_n)%Q <= (j :> N))%Q) v_j_opt ->
+	((lim_old + v_n)%Q <= (((2 ^ 16)%BN : N) : Q))%Q ->
 	minsts = (list_update_func (store_MEMS s) ma
 		(fun=> {| meminst_TYPE := PAGE (mk_limits (mk_uN (lim_old + v_n)%BN) v_j_opt);
 			BYTES := b_lst ++ list_repeat (mk_byte 0) (v_n * (64 * Ki)%BN)%BN |})) ->
@@ -2940,7 +2931,7 @@ Lemma construct_meminsts_grow: forall s ts ma b_lst (lim_old : Q) (v_n : N) v_j_
 		minsts
 		(list_update_func ts ma (fun=> PAGE (mk_limits (mk_uN (lim_old + v_n)%BN) v_j_opt))).
 Proof.
-	move => s ts ma b_lst lim_old v_n v_j_opt minsts HWfminsts Hold HLookup HLim HRange HEq.
+	move => s ts ma b_lst lim_old v_n v_j_opt minsts HWfminsts Hold HLookup HLim HRange HBound HEq.
 	subst.
 	move : ma HLookup HRange HWfminsts.
 	induction Hold; auto; move => ma HLookup HRange HWfminsts.
@@ -3023,8 +3014,18 @@ Proof.
 			rewrite -Qround.Zdiv_Qdiv.
 			econstructor; eauto.
 			clear IHHold.
-		admit.
-		(* TODO - Find some way of showing lim_old + v_n <= 2 ^ 16 *)
+		(* The bound comes from the `i' <= 2^16` premise of $growmemory. *)
+		unfold pagediv in HBound.
+		apply Qround.Qfloor_resp_le in HBound.
+		rewrite Qround.Qfloor_Z in HBound.
+		rewrite Qfloor_add_Z in HBound.
+		rewrite -Qround.Zdiv_Qdiv in HBound.
+		apply Zle_Nle in HBound.
+		rewrite Znat.Z2N.inj_add in HBound; try done.
+		+ repeat rewrite (Znat.N2Z.id) in HBound.
+			by apply/N.leb_spec0.
+		+ apply Zdiv.Z_div_nonneg_nonneg; try done; apply Znat.N2Z.is_nonneg.
+		+ apply Znat.N2Z.is_nonneg.
 	}
 	simpl.
 	resolve_Nsucc.
@@ -3035,7 +3036,7 @@ Proof.
 	simpl in HWfminsts.
 	resolve_Nsucc.
 	inv_Forall HWfminsts; eauto.
-Admitted.
+Qed.
 
 Lemma construct_datainsts: forall s da dt b_lst,
 	Forall2 (fun v t => Datainst_ok s v t) (store_DATAS s) dt ->

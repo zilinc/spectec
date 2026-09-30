@@ -35,8 +35,8 @@ Axiom ibytes_len'': forall v_n v_c,
 (* `truncz` (truncation of a rational towards zero) is an uninterpreted Axiom
    in wasm.v.  On a quotient of two integers - the only way the integer
    operators of the spec ever use it - it coincides with Z.quot. *)
-Axiom truncz_quot : forall (a b : Z), b <> 0%Z ->
-  truncz (inject_Z a / inject_Z b)%Q = Z.quot a b.
+  Axiom truncz_quot : forall (a b : Z), b <> 0%Z ->
+    truncz (inject_Z a / inject_Z b)%Q = Z.quot a b.
 
 (* `lanes_` is an uninterpreted Axiom in wasm.v.  By its definition in the
    specification it splits a 128-bit vector into exactly `dim` lanes. *)
@@ -57,3 +57,44 @@ Axiom ibytes_inv : forall (v_N : res_N) (bs : seq byte),
 Axiom vbytes_inv : forall (vt : vectype) (bs : seq byte),
   (|bs|) = ((((!(res_size (valtype_vectype vt))) : Q) / (8%num : Q))%Q : N) ->
   vbytes_ vt (inv_vbytes_ vt bs) = bs.
+
+(* Likewise `ibits_` and `inv_ibits_` are mutually inverse between iN(N) and
+   bit sequences of length N.  The bits must be well-formed (0 or 1), since
+   `ibits_` only ever produces such bits. *)
+Axiom ibits_inv : forall (v_N : res_N) (bs : seq bit),
+  (|bs|) = v_N ->
+  List.Forall (fun b => wf_bit b) bs ->
+  ibits_ v_N (inv_ibits_ v_N bs) = bs.
+
+
+(* The float comparisons `feq_` .. `fge_` are uninterpreted Axioms in wasm.v
+   returning a u32.  In the specification they return a boolean, i.e. 0 or 1. *)
+Axiom feq_bit : forall (v_N : res_N) (a b : fN), wf_uN 1 (feq_ v_N a b).
+Axiom fne_bit : forall (v_N : res_N) (a b : fN), wf_uN 1 (fne_ v_N a b).
+Axiom flt_bit : forall (v_N : res_N) (a b : fN), wf_uN 1 (flt_ v_N a b).
+Axiom fgt_bit : forall (v_N : res_N) (a b : fN), wf_uN 1 (fgt_ v_N a b).
+Axiom fle_bit : forall (v_N : res_N) (a b : fN), wf_uN 1 (fle_ v_N a b).
+Axiom fge_bit : forall (v_N : res_N) (a b : fN), wf_uN 1 (fge_ v_N a b).
+(* `ishl_` / `ishr_` are uninterpreted builtins in wasm.v, typed as taking a
+   u32 shift amount.  $binop_ however passes them the full operand (a 64-bit
+   value for I64 SHL / SHR; Wasm 3.0 does the same), for which ishl__is_wf /
+   ishr__is_wf do not apply.  By the specification the shift amount is taken
+   modulo N, so the result is in iN(N) whatever the shift amount. *)
+Axiom ishl_wf : forall (v_N : res_N) (i : iN) (k : u32),
+  wf_uN v_N i -> wf_uN v_N (ishl_ v_N i k).
+Axiom ishr_wf : forall (v_N : res_N) (v_sx : sx) (i : iN) (k : u32),
+  wf_uN v_N i -> wf_uN v_N (ishr_ v_N v_sx i k).
+
+(* `trunc_sat__`, `demote__` and `promote__` are uninterpreted Axioms in wasm.v.
+   In the specification trunc_sat is total (it saturates, and maps NaN to 0),
+   and demote / promote return a non-empty set of results (a single value, or
+   the admissible NaNs).  So each always produces a result - which the vcvtop
+   rules need, since they pick one lane from each set of results.  (These are
+   consistent with the admitted _is_wf lemmas: INF is a well-formed fN of every
+   size.) *)
+Axiom trunc_sat_total : forall (v_M : M) (v_N : res_N) (v_sx : sx) (x : fN),
+  trunc_sat__ v_M v_N v_sx x != None.
+Axiom demote_nonempty : forall (v_M : M) (v_N : res_N) (x : fN),
+  demote__ v_M v_N x != [::].
+Axiom promote_nonempty : forall (v_M : M) (v_N : res_N) (x : fN),
+  promote__ v_M v_N x != [::].
