@@ -29,6 +29,7 @@ namespace TLC
 /-! ## Prelude helpers (from wasm.v's hand-written prelude, not backend-generated) -/
 
 /-- Rocq: `lookup_total {T} {Inhabited T} (l : seq T) (n : nat) : T := seq.nth default_val l n`. -/
+-- TODO FROM USER: This looks like a Rocq-specific design choice that I overturned in my handwritten test-lean. Investigate further to see if this is necessary.
 def lookup_total {α : Type} [Inhabited α] (l : List α) (n : Nat) : α := l[n]!
 
 /-- Rocq: `Fixpoint list_update {A} (l : seq A) (n : nat) (y : A) : seq A`. Matches `List.set`. -/
@@ -38,12 +39,133 @@ abbrev list_update {α : Type} (l : List α) (n : Nat) (y : α) : List α := l.s
     Matches `List.modify`. -/
 abbrev list_update_func {α : Type} (l : List α) (n : Nat) (f : α → α) : List α := l.modify n f
 
-/-- Rocq: `Fixpoint list_slice_update {A} (l : seq A) (i j : nat) (update_l : seq A) : seq A`,
-    replacing the `n`-element slice `[i, i+n)` of `l` with `update_l` (where `n = |update_l|`).
-    Rocq names the second index parameter `j`; we call it `n` to match the invariant
-    `n = update_l.length` used at every call site (`list_slice_update_length` below). -/
+/-- Not a Rocq port — new project-local infrastructure (bundle15, "Template A"
+    per the `ExtensionLemmas.lean` sorry-triage report). The `[a]!`-indexed
+    characterization of `List.modify` needed to prove every `*_extension`
+    lemma's `holds_upto`-monotonicity goal: at the modified index, the
+    updated value is `f` applied to the old one; elsewhere, unchanged. Built
+    from Lean core's `getElem_modify_eq`/`getElem_modify_ne`
+    (`Init/Data/List/Nat/Modify.lean`) via the standard `[a]!`-to-`[a]'h`
+    bridge (`getElem!_pos`). -/
+theorem getElem!_modify_eq_or_ne {α : Type} [Inhabited α] (l : List α) (idx a : Nat) (f : α → α)
+    (ha : a < l.length) :
+    (l.modify idx f)[a]! = if a = idx then f (l[a]!) else l[a]! := by
+  have hmod : a < (l.modify idx f).length := by simp [ha]
+  rw [getElem!_pos (l.modify idx f) a hmod]
+  by_cases h : a = idx
+  · subst h
+    rw [List.getElem_modify_eq f a l (by simpa using hmod), getElem!_pos l a ha]
+    simp
+  · rw [List.getElem_modify_ne f l (Ne.symm h) hmod, getElem!_pos l a ha, if_neg h]
+
+/-! ### "Template B": membership in a `zip` after a `List.modify`
+
+    Not Rocq ports — new project-local infrastructure (bundle16). Rocq's
+    `Forall2` is an *inductive* relation, so its `construct_*` proofs in
+    `extension_lemmas.v` can induct on it directly and peel off the updated
+    position. This codebase's generated `Forall₂` is the zip-based `def`
+    `∀ p ∈ xs.zip ys, P p.1 p.2`, so the corresponding step is: "every pair in
+    the zip of a modified list is either an original pair, or the image of the
+    pair at the modified index". That is exactly what these three lemmas say,
+    and they are what the whole `ExtensionLemmas.lean` `construct_*` family
+    needs (the position-correlation bridge noted as missing in
+    `proof_prioritization_v5.md`). Each also hands back membership of the
+    *original* element, so the caller can feed it the `Forall`/`Forall₂`
+    hypothesis it already has. -/
+
+theorem mem_modify {α : Type} [Inhabited α] (f : α → α) (l : List α) :
+    ∀ (idx : Nat) (x : α), x ∈ l.modify idx f → x ∈ l ∨ (x = f (l[idx]!) ∧ l[idx]! ∈ l) := by
+  induction l with
+  | nil => intro idx x hx; simp at hx
+  | cons a l ih =>
+    intro idx x hx
+    cases idx with
+    | zero =>
+      simp only [List.modify_zero_cons, List.mem_cons] at hx
+      rcases hx with rfl | hx
+      · exact Or.inr ⟨by simp, by simp⟩
+      · exact Or.inl (by simp [hx])
+    | succ i =>
+      simp only [List.modify_succ_cons, List.mem_cons] at hx
+      rcases hx with rfl | hx
+      · exact Or.inl (by simp)
+      · rcases ih i x hx with h | ⟨h1, h2⟩
+        · exact Or.inl (by simp [h])
+        · exact Or.inr ⟨by simpa using h1, by simpa using List.mem_cons_of_mem a h2⟩
+
+theorem mem_zip_modify {α β : Type} [Inhabited α] (f : α → α) (l : List α) :
+    ∀ (ts : List β) (idx : Nat) (p : α × β), p ∈ (l.modify idx f).zip ts →
+      p ∈ l.zip ts ∨ (p.1 = f (l[idx]!) ∧ (l[idx]!, p.2) ∈ l.zip ts) := by
+  induction l with
+  | nil => intro ts idx p hp; simp at hp
+  | cons a l ih =>
+    intro ts idx p hp
+    cases ts with
+    | nil => simp at hp
+    | cons b ts =>
+      cases idx with
+      | zero =>
+        simp only [List.modify_zero_cons, List.zip_cons_cons, List.mem_cons] at hp
+        rcases hp with rfl | hp
+        · exact Or.inr ⟨by simp, by simp⟩
+        · exact Or.inl (by simp [hp])
+      | succ i =>
+        simp only [List.modify_succ_cons, List.zip_cons_cons, List.mem_cons] at hp
+        rcases hp with rfl | hp
+        · exact Or.inl (by simp)
+        · rcases ih ts i p hp with h | ⟨h1, h2⟩
+          · exact Or.inl (by simp [h])
+          · exact Or.inr ⟨by simpa using h1, by simpa using List.mem_cons_of_mem (a, b) h2⟩
+
+theorem mem_zip_modify₂ {α β : Type} [Inhabited α] [Inhabited β] (f : α → α) (g : β → β)
+    (l : List α) :
+    ∀ (ts : List β) (idx : Nat) (p : α × β), p ∈ (l.modify idx f).zip (ts.modify idx g) →
+      p ∈ l.zip ts ∨
+        (p.1 = f (l[idx]!) ∧ p.2 = g (ts[idx]!) ∧ (l[idx]!, ts[idx]!) ∈ l.zip ts) := by
+  induction l with
+  | nil => intro ts idx p hp; simp at hp
+  | cons a l ih =>
+    intro ts idx p hp
+    cases ts with
+    | nil => simp at hp
+    | cons b ts =>
+      cases idx with
+      | zero =>
+        simp only [List.modify_zero_cons, List.zip_cons_cons, List.mem_cons] at hp
+        rcases hp with rfl | hp
+        · exact Or.inr ⟨by simp, by simp, by simp⟩
+        · exact Or.inl (by simp [hp])
+      | succ i =>
+        simp only [List.modify_succ_cons, List.zip_cons_cons, List.mem_cons] at hp
+        rcases hp with rfl | hp
+        · exact Or.inl (by simp)
+        · rcases ih ts i p hp with h | ⟨h1, h2, h3⟩
+          · exact Or.inl (by simp [h])
+          · exact Or.inr ⟨by simpa using h1, by simpa using h2,
+              by simpa using List.mem_cons_of_mem (a, b) h3⟩
+
+/-- Rocq: `Fixpoint list_slice_update {A} (l : seq A) (i j : nat) (update_l : seq A) : seq A`
+    (`wasm.v:66-74`), replacing (up to) the `n`-element slice `[i, i+n)` of `l` with
+    `update_l` (where `n = |update_l|` at every real call site). **Redefined 2026-09-30
+    (bundle13 signature audit)** to mirror Rocq's actual structural-recursion algorithm
+    exactly, rather than the earlier `take`/`append`/`drop` formulation: that formulation is
+    only length-preserving when `n = update_l.length` exactly, whereas Rocq's version
+    recurses element-by-element down `l`, stops early and returns the untouched remainder as
+    soon as either the index countdown or `update_l` itself runs out, and is therefore
+    *unconditionally* length-preserving (`list_slice_update_length` below needs no side
+    hypothesis, matching Rocq). Behaviorally identical to the old definition at every call
+    site in this codebase (all of which supply `n = update_l.length`), so this is a pure
+    representational correction, not a behavior change for anything already relying on it. -/
 def list_slice_update {α : Type} (l : List α) (i n : Nat) (update_l : List α) : List α :=
-  (l.take i) ++ update_l ++ (l.drop (i + n))
+  match l, update_l with
+  | [], _ => []
+  | l, [] => l
+  | x :: l', y :: u_l' =>
+    match i, n with
+    | 0, 0 => x :: l'
+    | _ + 1, 0 => x :: l'
+    | 0, n + 1 => y :: list_slice_update l' 0 n u_l'
+    | i + 1, n => x :: list_slice_update l' i n (y :: u_l')
 
 /-- Rocq: `Fixpoint In2 {A B} (x : A) (y : B) (l : list A) (l' : list B) : Prop`,
     "the pair (x,y) occurs at the same position in l and l'". -/
@@ -57,7 +179,7 @@ def In2 {α β : Type} (x : α) (y : β) (l : List α) (l' : List β) : Prop :=
 /-! ## Section 1 : general list/predicate helper lemmas (helper_lemmas.v:8-411ish) -/
 
 /-- Rocq `helper_lemmas.v:16` `leadd`. -/
-theorem leadd (i n : Nat) : i ≤ i + n := sorry
+theorem leadd (i n : Nat) : i ≤ i + n := by omega
 
 /-- Rocq `helper_lemmas.v:25` `list_update_func_split`. -/
 theorem list_update_func_split {α : Type} (x x' : List α) (idx : Nat) (f : α → α) :
@@ -69,7 +191,11 @@ theorem list_update_func_split_strong {α : Type} (x x' : List α) (idx : Nat) (
 
 /-- Rocq `helper_lemmas.v:64` `length_app_lt`. -/
 theorem length_app_lt {α : Type} (l l' l1' l2' : List α) :
-    l.length = l1'.length → l' = l1' ++ l2' → l.length ≤ l'.length := sorry
+    l.length = l1'.length → l' = l1' ++ l2' → l.length ≤ l'.length := by
+  intro hlen heq
+  subst heq
+  rw [List.length_append]
+  omega
 
 -- `nth_is_same_as_seq_nth` (helper_lemmas.v:86) NOT PORTED: pure bridge between Coq's
 -- stdlib `List.nth` and mathcomp's `seq.nth`; Lean has one list library, no counterpart needed.
@@ -105,7 +231,66 @@ theorem length_app_nil {α : Type} (l' l1' l2' : List α) :
     helper_lemmas.v:144, which only differs by a stdlib/mathcomp `List.nth`↔`nth` bridge not
     needed here — an "obvious optimization" collapsing two Rocq lemmas into one Lean lemma.) -/
 theorem Forall_nth' {α : Type} [Inhabited α] (l : List α) (R : α → Prop) :
-    Forall R l → ∀ i, i < l.length → R (lookup_total l i) := sorry
+    Forall R l → ∀ i, i < l.length → R (lookup_total l i) := by
+  intro h i hi
+  simp only [lookup_total, getElem!_pos l i hi]
+  exact h (l[i]'hi) (List.getElem_mem hi)
+
+/-- Membership of the same-index pair in a `zip`, given both bounds. The
+    missing half of "Template B": `Forall₂`'s zip representation makes
+    *pointwise* facts free but says nothing index-correlated until you can
+    exhibit the pair. New project-local infrastructure (bundle16). -/
+theorem mem_zip_getElem! {α β : Type} [Inhabited α] [Inhabited β] (l : List α) :
+    ∀ (l' : List β) (i : Nat), i < l.length → i < l'.length → (l[i]!, l'[i]!) ∈ l.zip l' := by
+  induction l with
+  | nil => intro l' i hi _; simp at hi
+  | cons a l ih =>
+    intro l' i hi hi'
+    cases l' with
+    | nil => simp at hi'
+    | cons b l' =>
+      cases i with
+      | zero => simp
+      | succ j =>
+        simp only [List.zip_cons_cons, List.mem_cons]
+        exact Or.inr (by simpa using ih l' j (by simpa using hi) (by simpa using hi'))
+
+/-- Index-wise consequence of `Forall₂`, *with* the length hypothesis supplied
+    explicitly. This is the usable form of `Forall2_nth` below: that lemma's
+    Rocq statement *derives* `l.length = l'.length` from `Forall2`, which this
+    codebase's zip-based `Forall₂` cannot do (see its own note), so callers
+    pass the length in instead — every call site has it. -/
+theorem Forall2_nth_of_length {α β : Type} [Inhabited α] [Inhabited β] {R : α → β → Prop}
+    (l : List α) (l' : List β) (h : Forall₂ R l l') (hlen : l.length = l'.length)
+    (i : Nat) (hi : i < l.length) : R (l[i]!) (l'[i]!) :=
+  h _ (mem_zip_getElem! l l' i hi (hlen ▸ hi))
+
+theorem mem_zip_modify_right {α β : Type} [Inhabited α] [Inhabited β] (g : β → β)
+    (l : List α) :
+    ∀ (ts : List β) (idx : Nat) (p : α × β), p ∈ l.zip (ts.modify idx g) →
+      p ∈ l.zip ts ∨
+        (p.1 = l[idx]! ∧ p.2 = g (ts[idx]!) ∧ (l[idx]!, ts[idx]!) ∈ l.zip ts) := by
+  induction l with
+  | nil => intro ts idx p hp; simp at hp
+  | cons a l ih =>
+    intro ts idx p hp
+    cases ts with
+    | nil => simp at hp
+    | cons b ts =>
+      cases idx with
+      | zero =>
+        simp only [List.modify_zero_cons, List.zip_cons_cons, List.mem_cons] at hp
+        rcases hp with rfl | hp
+        · exact Or.inr ⟨by simp, by simp, by simp⟩
+        · exact Or.inl (by simp [hp])
+      | succ i =>
+        simp only [List.modify_succ_cons, List.zip_cons_cons, List.mem_cons] at hp
+        rcases hp with rfl | hp
+        · exact Or.inl (by simp)
+        · rcases ih ts i p hp with h | ⟨h1, h2, h3⟩
+          · exact Or.inl (by simp [h])
+          · exact Or.inr ⟨by simpa using h1, by simpa using h2,
+              by simpa using List.mem_cons_of_mem (a, b) h3⟩
 
 /-- Rocq `helper_lemmas.v:153` `Forall2_nth`. (Merged with `Forall2_nth2`, helper_lemmas.v:167,
     which only differs in whether the index bound is stated over `l` or `l'`; both hold since
@@ -129,7 +314,19 @@ theorem lookup_list_update_func {α : Type} [Inhabited α] (x : α) (f : α → 
 
 /-- Rocq `helper_lemmas.v:270` `In2_split`. -/
 theorem In2_split {α β : Type} (x : α) (y : β) (l : List α) (l' : List β) :
-    In2 x y l l' → x ∈ l ∧ y ∈ l' := sorry
+    In2 x y l l' → x ∈ l ∧ y ∈ l' := by
+  induction l generalizing l' with
+  | nil => cases l' <;> (intro h; simp only [In2] at h)
+  | cons a as ih =>
+    cases l' with
+    | nil => intro h; simp only [In2] at h
+    | cons b bs =>
+      intro h
+      simp only [In2] at h
+      rcases h with ⟨ha, hb⟩ | h
+      · subst ha; subst hb; exact ⟨List.mem_cons_self, List.mem_cons_self⟩
+      · obtain ⟨hx, hy⟩ := ih bs h
+        exact ⟨List.mem_cons_of_mem _ hx, List.mem_cons_of_mem _ hy⟩
 
 /-- Rocq `helper_lemmas.v:286` `Forall2_forall2`. -/
 theorem Forall2_forall2 {α β : Type} (l : List α) (l' : List β) (R : α → β → Prop) :
@@ -183,15 +380,39 @@ theorem Forall2_list_update_both {α β : Type} [Inhabited α] [Inhabited β]
 
 /-- Rocq `helper_lemmas.v:479` `list_update_length`. -/
 theorem list_update_length {α : Type} (l : List α) (i : Nat) (x : α) :
-    (list_update l i x).length = l.length := sorry
+    (list_update l i x).length = l.length := List.length_set
 
 /-- Rocq `helper_lemmas.v:492` `list_update_length_func`. -/
 theorem list_update_length_func {α : Type} (l : List α) (f : α → α) (i : Nat) :
-    (list_update_func l i f).length = l.length := sorry
+    (list_update_func l i f).length = l.length := List.length_modify f l i
 
-/-- Rocq `helper_lemmas.v:504` `list_slice_update_length`. -/
+/-- Rocq `helper_lemmas.v:504` `list_slice_update_length`. Unconditional (2026-09-30
+    resync — see `list_slice_update`'s own comment): the old `take`/`append`/`drop`-based
+    `def` needed `n = l'.length` as a side hypothesis for this to hold; the redefinition
+    matching Rocq's actual structurally-recursive algorithm does not. -/
 theorem list_slice_update_length {α : Type} (l l' : List α) (i n : Nat) :
-    n = l'.length → (list_slice_update l i n l').length = l.length := sorry
+    (list_slice_update l i n l').length = l.length := by
+  induction l, i, n, l' using list_slice_update.induct
+  all_goals (first | rfl | simp_all [list_slice_update])
+
+/-- Not a Rocq port — new project-local infrastructure (bundle15, needed by
+    `ExtensionLemmas.lean`'s `store_none_mem_extension`/`construct_meminsts`:
+    a `memory.store`/`memory.init` writes a slice of fresh, already-known-
+    well-formed bytes into an existing, already-well-formed byte buffer; the
+    result is well-formed pointwise). Same proof technique as
+    `list_slice_update_length` above (`induction ... using
+    list_slice_update.induct`), since `Forall P` pointwise-respects the same
+    "copy old / splice in new / stop early" recursion that length does. -/
+theorem list_slice_update_forall {α : Type} {P : α → Prop} (l l' : List α) (i n : Nat)
+    (hl : Forall P l) (hl' : Forall P l') : Forall P (list_slice_update l i n l') := by
+  induction l, i, n, l' using list_slice_update.induct with
+  | _ => first
+    | (simp_all [list_slice_update, Forall])
+    | (intro z hz
+       simp only [list_slice_update, List.mem_cons] at hz
+       rcases hz with rfl | hz'
+       · simp_all [Forall, List.mem_cons]
+       · simp_all [Forall, List.mem_cons])
 
 /-! ## Section 3 : list append/split lemmas (helper_lemmas.v:523-604) -/
 
@@ -234,7 +455,9 @@ theorem empty_append {α : Type} (i j : List α) :
 
 /-- Rocq `helper_lemmas.v:582` `lookup_app`. -/
 theorem lookup_app {α : Type} [Inhabited α] (l l' : List α) (n : Nat) :
-    n < l.length → lookup_total l n = lookup_total (l ++ l') n := sorry
+    n < l.length → lookup_total l n = lookup_total (l ++ l') n := by
+  intro h
+  simp [lookup_total, List.getElem!_eq_getElem?_getD, List.getElem?_append_left h]
 
 -- helper_lemmas.v:597-604 (`app_left_single_nil`, `app_right_nil`, `app_left_nil`) NOT PORTED:
 -- the Rocq author's own comment flags these as ssreflect-rewriting-recognition workarounds
@@ -263,7 +486,7 @@ theorem option_some_orElse {α : Type} (b : α) (c : Option α) :
 /-! ## Section 6 : arithmetic helper lemmas (helper_lemmas.v:626-755) -/
 
 /-- Rocq `helper_lemmas.v:626` `add_false`. -/
-theorem add_false (n m : Nat) : n + (m + 1) ≠ n := sorry
+theorem add_false (n m : Nat) : n + (m + 1) ≠ n := by omega
 
 /-- Rocq `helper_lemmas.v:742` `add_sub`. -/
 theorem add_sub (a b : Nat) : a + b - b = a := by omega
@@ -273,14 +496,8 @@ theorem add_sub' (a b : Nat) : a + b - a = b := by omega
 
 /-! ## Section 7 : list-concatenation cancellation (helper_lemmas.v:637-683) -/
 
-/-- Rocq `helper_lemmas.v:637` `concat_cancel_last_n`. Rocq states this monomorphically for
-    `list valtype`; generalized to `{α : Type}` here since the proof never uses anything
-    `valtype`-specific (an "obvious optimization" per project policy). Semantically the same
-    fact as `size_eq_cat` below (subtyping.v's/extension_lemmas.v's polymorphic twin, proved
-    via `take`/`drop` in Rocq rather than direct induction) — in Lean only one needs a real
-    proof; the other can be derived from it. -/
-theorem concat_cancel_last_n {α : Type} (l1 l2 l3 l4 : List α) :
-    l1 ++ l2 = l3 ++ l4 → l2.length = l4.length → l1 = l3 ∧ l2 = l4 := sorry
+-- `concat_cancel_last_n` (helper_lemmas.v:637) moved below `size_eq_cat`, which it's now
+-- derived from directly (both need `take_size_cat`/`drop_size_cat`, defined further down).
 
 /-! ## Section 8 : context/prepend_label helpers (helper_lemmas.v:718-740) -/
 
@@ -291,11 +508,13 @@ def prepend_label (C : context) (t : resulttype) : context := { C with LABELS :=
 
 /-- Rocq `helper_lemmas.v:721` `lookup_label_0`. -/
 theorem lookup_label_0 (C : context) (t : resulttype) :
-    lookup_total (prepend_label C t).LABELS 0 = t := sorry
+    lookup_total (prepend_label C t).LABELS 0 = t := by
+  simp [lookup_total, prepend_label]
 
 /-- Rocq `helper_lemmas.v:727` `lookup_label_1`. -/
 theorem lookup_label_1 (C : context) (t : resulttype) (n : Nat) :
-    lookup_total (prepend_label C t).LABELS (n + 1) = lookup_total C.LABELS n := sorry
+    lookup_total (prepend_label C t).LABELS (n + 1) = lookup_total C.LABELS n := by
+  simp [lookup_total, prepend_label]
 
 /-! ## Section 9 : more seq/arithmetic lemmas (helper_lemmas.v:757-850) -/
 
@@ -342,10 +561,21 @@ theorem size_eq_cat {α : Type} (l1 l2 l1' l2' : List α) :
     rwa [drop_size_cat] at h
   exact ⟨h1.symm, h2.symm⟩
 
+/-- Rocq `helper_lemmas.v:637` `concat_cancel_last_n`. Rocq states this monomorphically for
+    `list valtype`; generalized to `{α : Type}` here since the proof never uses anything
+    `valtype`-specific (an "obvious optimization" per project policy). Semantically the same
+    fact as `size_eq_cat` above — derived from it directly. -/
+theorem concat_cancel_last_n {α : Type} (l1 l2 l3 l4 : List α) :
+    l1 ++ l2 = l3 ++ l4 → l2.length = l4.length → l1 = l3 ∧ l2 = l4 := fun heq hlen =>
+  size_eq_cat l2 l4 l1 l3 hlen heq
+
 -- `size_cons` (helper_lemmas.v:833) NOT PORTED: trivial `List.length_cons`, already in Lean core.
 
 /-- Rocq `helper_lemmas.v:837` `ltsize`. -/
-theorem ltsize {α : Type} (x : Nat) (s s2 : List α) : x < s.length → x < (s ++ s2).length := sorry
+theorem ltsize {α : Type} (x : Nat) (s s2 : List α) : x < s.length → x < (s ++ s2).length := by
+  intro h
+  have := sizecat_le1 s s2
+  omega
 
 -- `repeat_size` (helper_lemmas.v:849) NOT PORTED: trivial `List.length_replicate`, already in
 -- Lean core.

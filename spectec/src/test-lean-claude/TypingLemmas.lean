@@ -351,7 +351,9 @@ def ai_principal_typing (v_S : store) (v_C : context) (v_ai : admininstr) (v_ft 
       v_C.TABLES[proj_uN_0 x]? = some (tabletype.mk_tabletype lim reftype.FUNCREF) ∧
       v_C.TYPES[proj_uN_0 y]? = some (mkFunctype t1s t2s)
   | admininstr.RETURN =>
-    ∃ t1s ts t2s : List valtype, v_ft = mkFunctype (t1s ++ ts) t2s ∧ v_C.RETURN = some (list.mk_list ts)
+    ∃ t1s ts t2s : List valtype, v_ft = mkFunctype (t1s ++ ts) t2s ∧ v_C.RETURN = some (list.mk_list ts) ∧
+      -- TODO FROM USER: Investigate to what extent we can just use Instr_ok for these, e.g. CONST
+      Instr_ok v_C instr.RETURN (mkFunctype (t1s ++ ts) t2s)
   | admininstr.CONST nt c => v_ft = mkFunctype [] [valtype_numtype nt] ∧ wf_num_ nt c
   | admininstr.UNOP nt _ => v_ft = mkFunctype [valtype_numtype nt] [valtype_numtype nt]
   | admininstr.BINOP nt _ => v_ft = mkFunctype [valtype_numtype nt, valtype_numtype nt] [valtype_numtype nt]
@@ -374,7 +376,8 @@ def ai_principal_typing (v_S : store) (v_C : context) (v_ai : admininstr) (v_ft 
   | admininstr.GLOBAL_GET x =>
     ∃ (t : valtype) (m : «mut»), v_ft = mkFunctype [] [t] ∧ v_C.GLOBALS[proj_uN_0 x]? = some (globaltype.mk_globaltype m t)
   | admininstr.GLOBAL_SET x =>
-    ∃ (t : valtype) (m : «mut»), v_ft = mkFunctype [t] [] ∧ v_C.GLOBALS[proj_uN_0 x]? = some (globaltype.mk_globaltype m t)
+    ∃ (t : valtype), v_ft = mkFunctype [t] [] ∧
+      v_C.GLOBALS[proj_uN_0 x]? = some (globaltype.mk_globaltype (some r_MUT.MUT) t)
   | admininstr.TABLE_GET x =>
     ∃ (rt : reftype) (lim : limits),
       v_ft = mkFunctype [valtype.I32] [valtype_reftype rt] ∧ v_C.TABLES[proj_uN_0 x]? = some (tabletype.mk_tabletype lim rt)
@@ -443,10 +446,11 @@ def ai_principal_typing (v_S : store) (v_C : context) (v_ai : admininstr) (v_ft 
       v_ft = mkFunctype [] ts ∧ t's.length = n_ ∧
       Instrs_ok2 v_S v_C (instrs.map admininstr_instr) (mkFunctype t's ts) ∧
       Instrs_ok2 v_S { v_C with LABELS := (list.mk_list t's) :: v_C.LABELS } admininstrs (mkFunctype [] ts)
-  | admininstr.FRAME_ _ f admininstrs =>
+  | admininstr.FRAME_ v_n f admininstrs =>
     ∃ (ts : List valtype) (c' : context),
       v_ft = mkFunctype [] ts ∧ Frame_ok v_S f c' ∧
-      Expr_ok2 v_S { c' with RETURN := some (list.mk_list ts) } admininstrs (list.mk_list ts)
+      Expr_ok2 v_S { c' with RETURN := some (list.mk_list ts) } admininstrs (list.mk_list ts) ∧
+      ts.length = v_n
   | admininstr.TRAP => True
   | admininstr.EXTEND _ _ => False
   | _ => True
@@ -545,6 +549,7 @@ theorem instr_typing_inversion (v_C : context) (v_instr : instr) (t1s t2s : List
   case «return»
       t1s' ts wf_return RETURN_gives_ts wf_c =>
     exists t1s', t2s
+    exact ⟨rfl, Instr_ok.return v_C t1s' ts t2s RETURN_gives_ts wf_c wf_return⟩
 
   case const
       nt n wf_const wf_c =>
@@ -720,7 +725,7 @@ theorem ai_typing_inversion (v_S : store) (v_C : context) (v_ai : admininstr) (t
   case Instr_ok2_frame v_n f ais t_lst c' hframe hexpr hwfS hwfC' hwfai hwfCtx hlen hwfC =>
     refine ⟨[], t_lst, ?_, ?_⟩
     case refine_1 =>
-      exact ⟨t_lst, c', rfl, hframe, hexpr⟩
+      exact ⟨t_lst, c', rfl, hframe, hexpr, hlen.symm⟩
     case refine_2 =>
       exact instrtype_sub_refl _
   case label v_n instrs ais out_ts lab_ts hwfS hwfai hwfCtx hlen instrs_ok ais_ok hwfC =>

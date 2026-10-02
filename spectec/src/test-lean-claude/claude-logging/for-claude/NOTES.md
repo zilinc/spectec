@@ -1,7 +1,292 @@
 # Notes for a future Claude session — READ THIS FIRST
 
-Last updated: 2026-09-30 (bundle13 — same session as bundle9/10/11/12,
-continuing directly; see `claude-logging/verbatim_dialogue_log/bundle13`).
+Last updated: 2026-10-02 (bundle16 — same session as bundle9-15,
+continuing directly; see `claude-logging/verbatim_dialogue_log/bundle16`).
+First bundle run on **Opus 5** (bundles 1-15 were Sonnet 5).
+
+> **If you read nothing else, read
+> `verbatim_dialogue_log/bundle16/user_requested_documents/insights_for_next_turn.md`.**
+> It is long on purpose and it contains the Lean-4 elaboration facts that
+> account for essentially all the wasted effort in bundles 15-16.
+
+## ✅ 2026-10-02 UPDATE (bundle16) — 56 sorries closed; 83 → 27; `t_preservation` PROVED
+
+**Headline**: `ExtensionLemmas.lean` 50 → **2**, `TypePreservation.lean` 8 → **3**,
+`TypePreservationPure.lean` 10 → **7**, `HelperLemmas.lean` 15 → 15 (but +6 new
+lemmas). Project total **83 → 27**, of which only **5 are genuine remaining
+work** (all `TypePreservationPure.lean`); the rest are 5 deliberate
+Rocq-`Admitted` mirrors, 2 unprovable-as-stated signatures upstream has dropped,
+and the 15 dead `HelperLemmas` `nat→N`-refactor lemmas.
+**`t_preservation` — "the ultimate goal of project" per the Rocq source — is
+proved**, as is every lemma on its critical path that is both provable and inside
+the editable directory.
+
+### What unlocked it (in order of leverage)
+
+1. **"Template C": the four `Externaddr_invert_funcs`/`_tables`/`_mems`/`_globals`
+   lemmas** (`extension_lemmas.v:1065-1159`) had **no Lean counterpart at all**.
+   Porting them (as `_aux` lemmas over general indices + equational premises,
+   Lean's encoding of Rocq `dependent induction`) directly or transitively
+   unblocked ~30 lemmas: `Extend_store_ref` and its whole cascade, all four
+   `minst_invert_*`, all four `addrs_*`, all four `addrss_*`,
+   `Extend_store_exts`, `Extend_store_moduleinst`, `Extend_store_funcinst(s)`,
+   and finally `Extend_store_ais`.
+2. **The real explanation of bundle15's "`obtain` loses identifiers" mystery.**
+   It was never an `obtain` bug and `cases … with | Ctor …` does not fix it. Two
+   separate facts were being conflated: (a) Lean cannot dependently eliminate a
+   hypothesis whose inductive **index is an opaque term** (`l[i]!`, `p.1`,
+   `x.TYPE`, anything `OMap`/`Option.map` over a variable); (b) a constructor
+   argument that unification **assigns to an existing variable keeps its slot but
+   loses your name for it**, so you get `Unknown identifier` at the *use* site
+   with no error on the `cases` line. The general fix for (a) is to **do the
+   inversion once in a separate lemma whose arguments are all bare variables**,
+   then apply it at the opaque site. `ExtensionLemmas.lean` now has a labelled
+   section of such inverters. All three lemmas bundle15 flagged
+   (`minst_invert_elems`, `store_none_mem_extension`,
+   `table_grow_table_extension`) fell immediately once this was understood; their
+   doc comments have been rewritten from FLAGGED to RESOLVED explaining why.
+3. **"Template B": the `List.modify` ↔ zip bridge** (`mem_modify`,
+   `mem_zip_modify`, `mem_zip_modify_right`, `mem_zip_modify₂`,
+   `mem_zip_getElem!`, `Forall2_nth_of_length`, all in `HelperLemmas.lean`).
+   This is what the whole `construct_*` family needed; all 7 are now proved,
+   including both `_grow`-suffixed ones.
+4. **Lean already generates the mutual recursor Rocq needs a `Scheme` for.**
+   `@Instrs_ok2.rec` takes the store as a **parameter** (so it stays fixed) plus
+   three motives and 12 minor premises. `Extend_store_ais` — v5's single hardest
+   entry — is a direct term-mode application of it and went through first try.
+
+### Also proved this bundle (highlights)
+
+`reduce_inst_unchanged` (uniform `Step` induction: 20 of 23 rules leave the frame
+alone), `t_preservation_vs_type'` (ditto, with `ctxt_label`/`ctxt_instrs` using
+the IH and `local_set` using Template B), `t_preservation_vs_type`,
+`step_moduleinst`, `lookup_global`, `bt_inversion`, `s_invert_funcs`/`_globals`/
+`_mems`/`_tables`, and the `select` cluster in `TypePreservationPure.lean`.
+
+### Still open (and why)
+
+- **5 genuine**: `Step_pure__br_zero_preserves`, `_br_succ_`, `_br_table_lt_`,
+  `_br_table_ge_`, `_return_label_`. Each needs the typing-inversion +
+  subtyping-composition machinery, which is **fully present**; see
+  `bundle16/user_requested_documents/proof_prioritization_v6.md` for a
+  step-by-step route per lemma and the already-proved templates to copy.
+- **5 deliberate gaps** mirroring Rocq `Admitted`s: `store_extension_reduce`,
+  `t_read_preservation`, `t_preservation_type`, `t_pure_preservation`,
+  `Step_pure__return_frame_preserves`.
+- **2 bad signatures**: `Val_ok_store` (needs `wf_store` premises it doesn't
+  have; dropped upstream) and `funcinst_same` (zip-based `Forall₂` doesn't force
+  equal length; dropped upstream). Analysed in `extension_lemmas_triage_v2.md`.
+- **15 dead** `HelperLemmas` lemmas; several are unprovable as stated for the
+  same `Forall₂`-length reason, and their usable replacements now exist.
+
+### Verified
+`lake build` clean. `#print axioms TLC.t_preservation` ⇒
+`[propext, sorryAx, Classical.choice, Quot.sound]` — the only non-standard
+dependency is `sorryAx`, from the Rocq-`Admitted` mirrors plus `Step_is_wf`
+(which is `sorry` in the *generated* `wasm2.0.lean`, outside the editable
+directory). Safety check clean after every batch; the only out-of-target git
+entries (`spectec/test-lean/todaywasm*.lean`) were verified byte-identical
+before and after this bundle's work, i.e. pre-existing and not ours.
+
+## ✅ 2026-10-01 UPDATE (bundle15) — first "pass A" (trivial-first sweep); 26 sorries fixed
+
+**New working mode, starting this bundle**: the user now alternates between
+"pass A" (fill every trivial/easy proof remaining, stop at the first thing
+that's genuinely complex) and "pass B" (attack 1+ complex proofs directly).
+This was pass A #1. **Key finding, answered directly for the user**: the
+`proof_prioritization_v4.md` "Suggested order" section is NOT the full
+remaining-work picture — it only covers `TypePreservationPure.lean`.
+`ExtensionLemmas.lean` (76 sorries, untriaged until this bundle) is the
+actual largest remaining pool, bigger than everything else combined. See
+`proof_prioritization_v5.md`/`proof_dependencies_v4.md` (this bundle) for
+the corrected full picture.
+
+**Dispatched a background triage agent** for `ExtensionLemmas.lean`'s 76
+sorries (same pattern as bundle13's signature audit) — rated every one
+Trivial/Easy/Moderate/Hard against its Rocq proof, with same-file
+dependencies and two reusable proof templates identified. Report:
+`bundle15/user_requested_documents/extension_lemmas_triage_v1.md`. Counts:
+25 Trivial, 27 Easy, 17 Moderate, 7 Hard.
+
+**Executed**, this bundle: all 15 standalone-Trivial `ExtensionLemmas.lean`
+lemmas, `limits_sub_refl`/`_trans`, `externtype_sub_refl`/`_trans`,
+`minst_invert_datas`, `store_typed_exterval_types` (9 more Easy/Trivial),
+plus 4 of the 7 "Template A" (`holds_upto`-under-`list_update_func`)
+lemmas: `global_set_global_extension`, `elem_drop_elem_extension`,
+`data_drop_data_extension`, `memory_grow_mem_extension`. Also cleared 12
+more `HelperLemmas.lean` lemmas (`leadd`, `lookup_app`,
+`list_update_length`/`_func`, `lookup_label_0`/`_1`, `add_false`,
+`concat_cancel_last_n`, `ltsize`, `length_app_lt`, `Forall_nth'`,
+`In2_split`) and 4 `TypePreservation.lean` ones (`zero_is_well_formed`,
+`num_default_is_well_formed` — Rocq's version is commented out, not
+`Admitted`, but had a complete draft proof right there in the comment, so
+proved it for real rather than leaving it `sorry`, same precedent as
+`return_frame_preserves` — plus both `inst_t_context_*_empty`). **26 total
+`sorry`s closed project-wide this bundle, 109 → 83.**
+
+**New project-local infrastructure added** (`HelperLemmas.lean`, not Rocq
+ports): `getElem!_modify_eq_or_ne` (the `[a]!`-indexed characterization of
+`List.modify` — "Template A"'s core tool, built from Lean core's
+`getElem_modify_eq`/`_ne`) and `list_slice_update_forall` (pointwise-`Forall`
+preservation under `list_slice_update`, same `induction ... using
+list_slice_update.induct` technique as `list_slice_update_length`).
+
+**3 lemmas flagged and left `sorry` per explicit user instruction**
+("if you're experiencing issues with a particular proof, skip it and flag
+it" — now standing guidance for the rest of this working style, not just
+that one instance): `minst_invert_elems`, `store_none_mem_extension`,
+`table_grow_table_extension`. All three hit the same family of
+`obtain`/`cases`-on-dependent-structure elaboration friction (see next
+paragraph for the pattern finally identified) at a point past reasonable
+effort; each has a doc-comment explaining exactly where it got stuck, so a
+fresh attempt doesn't have to rediscover the dead end.
+
+**Tactic-idiom finding, worth remembering for every future `cases` on an
+indexed `Prop`-valued inductive whose index is itself a non-trivial
+expression** (a record literal built from several destructured pieces, an
+opaque `getElem!` application, etc.): `obtain ⟨names...⟩ := h` repeatedly
+produced "Unknown identifier" errors at the *use site* (not the `obtain`
+line itself) for names that looked correctly bound — confirmed via
+`table_set_table_extension`, where switching the exact same extraction
+from `obtain ⟨hwftt⟩ := hwft` to `cases hwft with | tableinst_case_ _ _
+hwftt => ...` fixed it immediately, no other change. **Default to `cases
+h with | Ctor names... => ...` over `obtain ⟨names...⟩ := h` for this
+class of extraction from now on** — `obtain` seems to have some
+elaboration-order fragility here that `cases ... with` doesn't share. This
+didn't fully rescue `minst_invert_elems` (a *different* failure mode —
+`Eleminst_ok`'s index being the literally-opaque `v_S.ELEMS[p.1]!` term,
+not just a multi-piece destructured literal — still unresolved) but is
+worth trying first on anything similar before reaching for `generalize`/
+`set`.
+
+**Also discovered**: `cases`/`obtain`'s positional binder-naming for a
+constructor with N explicit args + M hypotheses needs `N` leading `_`s
+before the first hypothesis name, not just a count of the hypotheses
+themselves — missed this repeatedly on `Moduleinst_ok` (14 explicit list
+args) and `Store_ok` (12 explicit list args) before noticing. When unsure,
+the fastest way to get the real position is a deliberate type-mismatch
+(`exact trivial`) read via `lake build`'s own output (not just the IDE
+diagnostic hook, which sometimes only shows the goal, not full context) —
+only works reliably for *application* type mismatches (e.g. `hbound p.1`
+with wrong-typed `p.1`), not bare term mismatches.
+
+Updated tally: `HelperLemmas.lean` 15 (dead cluster, down from 27 at
+bundle13's start), `Subtyping.lean` 0, `TypingLemmas.lean` 0,
+`TypePreservationPure.lean` 10 (unchanged — no trivial items left there,
+confirmed by rechecking each of the 8 genuine remaining targets),
+`ExtensionLemmas.lean` 50 (down from 76), `TypePreservation.lean` 8 (down
+from 12). **313 total declarations project-wide, 83 still `sorry`.**
+
+## What's next (post-bundle15)
+
+Per `proof_prioritization_v5.md`: more pass-A execution on
+`ExtensionLemmas.lean`'s remaining ~27 Easy-tier items (the
+`Extend_store_ref` cascade — `Extend_store_refs`/`_refs'`/`_val`/`_vals`,
+gated on `Extend_store_externaddrs_func` — and the `Extend_store_eleminst`/
+`_datainst`/`_tableinst`/`_globalinst` families) is the natural continuation,
+OR building "Template C" (porting Rocq's `Externaddr_invert_funcs`/`_tables`/
+`_mems`/`_globals`, which don't exist in this codebase at all yet) first,
+which the triage report says would drop ~9 Moderate/Hard lemmas down a
+tier in one move. The 3 flagged lemmas are worth one more fresh attempt
+each with the `cases ... with` idiom now established. `TypePreservationPure.lean`'s
+9 genuine remaining targets (all Moderate-or-harder, per bundle13's own
+recheck) are the natural pass-B material whenever the user calls for one.
+
+## ✅ 2026-09-30 UPDATE (bundle13 continued) — signature audit landed: 12 findings, 11 fixed
+
+The background signature-audit agent (dispatched earlier this bundle)
+finished: **12 genuine mismatches found** across ~260 cited declarations,
+plus 20 orphaned citations (informational, content still sound). Full
+report: `bundle13/user_requested_documents/signature_audit_v1.md`.
+`Subtyping.lean` and `TypePreservationPure.lean` came back **completely
+clean** (0 mismatches each) — strong evidence those two files' porting
+was careful.
+
+**Triaged and fixed 11 of 12 same-bundle** (all were either `sorry`'d
+signature-only fixes, or — for the `ai_principal_typing` cases — a `def`
+whose consuming *proofs* needed a small, mechanically-derivable patch,
+verified safe by rebuilding after each):
+
+- **GLOBAL_SET soundness gap** (`TypingLemmas.lean`'s `ai_principal_typing`):
+  was quantifying over any mutability, so it would have accepted
+  `GLOBAL_SET` on an *immutable* global. Pinned to `some r_MUT.MUT`,
+  matching `Instr_ok`'s own `global_set` constructor (which already had
+  the pin — the generic `simp_all` pipeline in `instr_typing_inversion`
+  picked it up with zero further changes needed).
+- **RETURN missing conjunct**: `ai_principal_typing`'s `RETURN` case was
+  missing `Instr_ok v_C RETURN (...)` (effectively `wf_context`/`wf_instr`
+  content). Added; had to hand-supply the reconstructed `Instr_ok.return`
+  term in `instr_typing_inversion`'s `case «return»` (the generic
+  `simp_all` pipeline doesn't synthesize new terms, only rewrites).
+- **FRAME_ missing arity conjunct**: `ai_principal_typing`'s `FRAME_` case
+  discarded its own arity argument via `_` (LABEL_'s sibling case, for
+  contrast, correctly binds and uses its own). Rebound it as `v_n`, added
+  `ts.length = v_n`. `ai_typing_inversion`'s `Instr_ok2_frame` case already
+  had exactly the needed fact bound as `hlen` (just needed `.symm`, same
+  direction convention as the LABEL_ case above it) — trivial patch once
+  found. **Also had to patch this bundle's own freshly-written
+  `Step_pure__frame_vals_preserves`** (proved earlier this same bundle) to
+  destructure one more (discarded) component — a nice concrete
+  confirmation that the audit and the proof-writing happened in the same
+  bundle for a reason.
+- **`wf_config` missing from 4 `TypePreservation.lean` signatures**
+  (`store_extension_reduce`, `t_read_preservation`, `step_moduleinst`,
+  `t_preservation_type`) — systemic, same root pattern, all still `sorry`,
+  zero-risk mechanical fix (added as first hypothesis, matching Rocq's
+  order).
+- **Hard-coded-`Option` bug, 3 more instances** (`s_invert_mems`,
+  `s_invert_tables`, `memory_grow_mem_extension` in `ExtensionLemmas.lean`)
+  — same bug class already caught once for `construct_meminsts_grow`
+  earlier this bundle, but these 3 weren't. Generalized all three to a
+  real `Option Nat` for the declared-max field, matching Rocq's
+  `option_map`/`option_to_list` shape. Lean gotcha: `∃ (a) (b : Option T)
+  (c), ...` (typed binder sandwiched between untyped ones) doesn't parse
+  — `unexpected token '('` — needed to type every binder in the tuple once
+  one of them needed an explicit type.
+- **`list_slice_update` genuinely wrong, not just under-hypothesized**:
+  the `take`/`append`/`drop`-based `def` is only length-preserving when
+  `n = update_l.length`; Rocq's real `Fixpoint` (`wasm.v:66-74`) recurses
+  element-by-element and stops early (returning the untouched remainder)
+  the moment either the index countdown or `update_l` itself runs out —
+  unconditionally length-preserving by construction, and NOT the same
+  function in general (only agrees at the `n = update_l.length` call
+  sites this codebase actually uses). Redefined to match Rocq's real
+  recursion exactly; `list_slice_update_length` now provable *without* the
+  side hypothesis it used to need — proved via `induction ... using
+  list_slice_update.induct` (Lean's auto-generated equation-compiler
+  induction principle) + `all_goals (first | rfl | simp_all [...])`.
+  Guessing the auto-generated case *names* (`case1`, `case2`, ...) and
+  their exact bound-variable lists was unreliable and cost a few failed
+  attempts — landed on letting `all_goals` handle it generically instead
+  of naming cases, which sidesteps the guessing entirely. Worth
+  remembering as the default move for any future `.induct`-based proof in
+  this codebase.
+- **Not changed, confirmed correct-as-is**: the `STORE`-packed-float case
+  (Lean's stricter reading is right; current upstream Rocq's `Instr_ok`
+  and `ai_principal_typing` are mutually inconsistent for this one case,
+  a live Rocq WIP-leftover, not a Lean bug — no Lean change, worth
+  reporting upstream).
+- **Doc-accuracy fix**: `TypePreservation.lean`'s header claimed "only 3
+  lemmas are `Admitted`" out of 13; `num_default_is_well_formed`'s cited
+  Rocq declaration is actually entirely *commented out*, not `Admitted` —
+  neither the "3" nor the "10 `Qed`'d." Corrected the header to say so.
+
+**Rebuilt clean after every single edit in this sequence** (not just at
+the end) — `TypingLemmas.lean`/`Subtyping.lean` stayed at 0 sorries
+throughout, confirming none of the `ai_principal_typing` fixes silently
+broke either fully-proved file.
+
+Updated tally after all of this: `HelperLemmas.lean` 27 (was 28 — 
+`list_slice_update_length` now real), `Subtyping.lean` 0, `TypingLemmas.lean`
+0, `TypePreservationPure.lean` 10, `ExtensionLemmas.lean` 76,
+`TypePreservation.lean` 12. **350 total declarations, 125 still `sorry`.**
+
+Not yet done: nothing from the audit remains outstanding. The 20 orphaned
+citations (`HelperLemmas.lean`'s dead `nat→N`-refactor cluster, already
+tracked as "dead, not blocking anything" per `proof_dependencies_v3.md`;
+1 in `TypePreservation.lean`, the doc fix above) are informational only,
+content already verified sound, no further action needed unless a future
+lemma actually needs one of the dead cluster as a building block.
 
 ## ✅ 2026-09-30 UPDATE (bundle13) — resync onto `rocq-backend-proof-final`
 

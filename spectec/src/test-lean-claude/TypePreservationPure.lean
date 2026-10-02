@@ -89,7 +89,90 @@ theorem Step_pure__select_preserves_helper (v_S : store) (v_C : context)
     (v_val_1 v_val_2 : val) (v_c : num_) (v_t : Option (List valtype)) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr_val v_val_1, admininstr_val v_val_2,
       admininstr.CONST numtype.I32 v_c, admininstr.SELECT v_t] v_ft →
-    Instrs_ok2 v_S v_C [admininstr_val v_val_1] v_ft ∧ Instrs_ok2 v_S v_C [admininstr_val v_val_2] v_ft := sorry
+    Instrs_ok2 v_S v_C [admininstr_val v_val_1] v_ft ∧ Instrs_ok2 v_S v_C [admininstr_val v_val_2] v_ft := by
+  intro h
+  obtain ⟨t1, t2⟩ := v_ft
+  obtain ⟨t1s⟩ := t1
+  obtain ⟨t2s⟩ := t2
+  obtain ⟨hwfC, hwfS, _⟩ := ainstrs_ok_context_store_wf v_S v_C _ (mkFunctype t1s t2s) h
+  -- peel the four-instruction sequence apart
+  have heq1 : [admininstr_val v_val_1, admininstr_val v_val_2,
+      admininstr.CONST numtype.I32 v_c, admininstr.SELECT v_t]
+      = [admininstr_val v_val_1] ++ [admininstr_val v_val_2,
+        admininstr.CONST numtype.I32 v_c, admininstr.SELECT v_t] := rfl
+  rw [heq1] at h
+  obtain ⟨ta, h_r1, h_v1⟩ :=
+    ais_seq_typing_inversion v_S v_C _ (admininstr_val v_val_1) t1s t2s h
+  have heq2 : [admininstr_val v_val_2, admininstr.CONST numtype.I32 v_c, admininstr.SELECT v_t]
+      = [admininstr_val v_val_2] ++ [admininstr.CONST numtype.I32 v_c, admininstr.SELECT v_t] := rfl
+  rw [heq2] at h_r1
+  obtain ⟨tb, h_r2, h_v2⟩ :=
+    ais_seq_typing_inversion v_S v_C _ (admininstr_val v_val_2) ta t2s h_r1
+  have heq3 : [admininstr.CONST numtype.I32 v_c, admininstr.SELECT v_t]
+      = [admininstr.CONST numtype.I32 v_c] ++ [admininstr.SELECT v_t] := rfl
+  rw [heq3] at h_r2
+  obtain ⟨tc, h_sel, h_const⟩ :=
+    ais_seq_typing_inversion v_S v_C _ (admininstr.CONST numtype.I32 v_c) tb t2s h_r2
+  obtain ⟨tv1, hsub_v1, hvok1⟩ := ais_single_val_typing_inversion v_S v_C v_val_1 t1s ta h_v1
+  obtain ⟨tv2, hsub_v2, hvok2⟩ := ais_single_val_typing_inversion v_S v_C v_val_2 ta tb h_v2
+  obtain ⟨_, _, hconst_pt, hsub_const⟩ :=
+    ais_single_typing_inversion v_S v_C (admininstr.CONST numtype.I32 v_c) tb tc h_const
+  unfold ai_principal_typing at hconst_pt
+  obtain ⟨hconst_eq, _⟩ := hconst_pt
+  unfold mkFunctype at hconst_eq
+  simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hconst_eq
+  obtain ⟨ec1, ec2⟩ := hconst_eq
+  subst ec1; subst ec2
+  obtain ⟨tsel1, tsel2, hsel_pt, hsub_sel⟩ :=
+    ais_single_typing_inversion v_S v_C (admininstr.SELECT v_t) tc t2s h_sel
+  -- `SELECT`'s principal type is `[t,t,I32] -> [t]` in both the annotated and the
+  -- unannotated case (the remaining annotation shapes are ruled out as `False`)
+  have hsel : ∃ tt : valtype, tsel1 = [tt, tt, valtype.I32] ∧ tsel2 = [tt] := by
+    rcases v_t with _ | lst
+    · simp only [ai_principal_typing] at hsel_pt
+      obtain ⟨tt, _, he, _, _⟩ := hsel_pt
+      unfold mkFunctype at he
+      simp only [functype.mk_functype.injEq, list.mk_list.injEq] at he
+      exact ⟨tt, he.1, he.2⟩
+    · rcases lst with _ | ⟨tt, rest⟩
+      · simp only [ai_principal_typing] at hsel_pt
+      · rcases rest with _ | ⟨x, rest'⟩
+        · simp only [ai_principal_typing] at hsel_pt
+          unfold mkFunctype at hsel_pt
+          simp only [functype.mk_functype.injEq, list.mk_list.injEq] at hsel_pt
+          exact ⟨tt, hsel_pt.1, hsel_pt.2⟩
+        · simp only [ai_principal_typing] at hsel_pt
+  obtain ⟨tt, es1, es2⟩ := hsel
+  subst es1; subst es2
+  -- compose the four subtyping steps
+  have hc1 : instrtype_sub (mkFunctype [] ([tv1] ++ [tv2])) (mkFunctype t1s tb) :=
+    (instrtype_sub_compose_ge [] [tv1] [] [] [tv2] t1s ta tb (by simpa using hsub_v1) hsub_v2 rfl).1
+  have hc2 : instrtype_sub (mkFunctype [] ([tv1, tv2] ++ [valtype_numtype numtype.I32]))
+      (mkFunctype t1s tc) :=
+    (instrtype_sub_compose_ge [] [tv1, tv2] [] [] [valtype_numtype numtype.I32] t1s tb tc
+      (by simpa using hc1) hsub_const rfl).1
+  obtain ⟨hfinal, hrsub⟩ :=
+    instrtype_sub_compose_eq [] [tv1, tv2, valtype.I32] [tt, tt, valtype.I32] [tt] t1s tc t2s
+      (by simpa [valtype_numtype] using hc2) hsub_sel rfl
+  -- neither value's type can be BOT, so the select's `t` *is* both of them
+  have hnb : Forall (fun v_t => v_t ≠ valtype.BOT) [tv1, tv2, valtype.I32] := by
+    intro x hx
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+    rcases hx with hx | hx | hx
+    · rw [hx]; exact Val_ok_non_bot v_S v_val_1 tv1 hvok1
+    · rw [hx]; exact Val_ok_non_bot v_S v_val_2 tv2 hvok2
+    · rw [hx]; simp
+  have heqts := resulttype_sub_non_bot [tv1, tv2, valtype.I32] [tt, tt, valtype.I32] hnb hrsub
+  injection heqts with e1 r1
+  injection r1 with e2 _
+  rw [e1] at hvok1
+  rw [e2] at hvok2
+  exact ⟨construct_ais_subtyping v_S v_C [admininstr_val v_val_1] [] [tt] t1s t2s
+      (construct_ais_typing_single v_S v_C (admininstr_val v_val_1) [] [tt]
+        (construct_ai_val v_S v_C v_val_1 tt hvok1 hwfC hwfS)) hfinal,
+    construct_ais_subtyping v_S v_C [admininstr_val v_val_2] [] [tt] t1s t2s
+      (construct_ais_typing_single v_S v_C (admininstr_val v_val_2) [] [tt]
+        (construct_ai_val v_S v_C v_val_2 tt hvok2 hwfC hwfS)) hfinal⟩
 
 /-- Rocq `type_preservation_pure.v:130` `Step_pure__select_true_preserves`. -/
 theorem Step_pure__select_true_preserves (v_S : store) (v_C : context)
@@ -98,7 +181,8 @@ theorem Step_pure__select_true_preserves (v_S : store) (v_C : context)
       admininstr.CONST numtype.I32 v_c, admininstr.SELECT v_t] v_ft →
     Step_pure [admininstr_val v_val_1, admininstr_val v_val_2, admininstr.CONST numtype.I32 v_c,
       admininstr.SELECT v_t] [admininstr_val v_val_1] →
-    Instrs_ok2 v_S v_C [admininstr_val v_val_1] v_ft := sorry
+    Instrs_ok2 v_S v_C [admininstr_val v_val_1] v_ft := fun h _ =>
+  (Step_pure__select_preserves_helper v_S v_C v_val_1 v_val_2 v_c v_t v_ft h).1
 
 /-- Rocq `type_preservation_pure.v:140` `Step_pure__select_false_preserves`. -/
 theorem Step_pure__select_false_preserves (v_S : store) (v_C : context)
@@ -107,7 +191,8 @@ theorem Step_pure__select_false_preserves (v_S : store) (v_C : context)
       admininstr.CONST numtype.I32 v_c, admininstr.SELECT v_t] v_ft →
     Step_pure [admininstr_val v_val_1, admininstr_val v_val_2, admininstr.CONST numtype.I32 v_c,
       admininstr.SELECT v_t] [admininstr_val v_val_2] →
-    Instrs_ok2 v_S v_C [admininstr_val v_val_2] v_ft := sorry
+    Instrs_ok2 v_S v_C [admininstr_val v_val_2] v_ft := fun h _ =>
+  (Step_pure__select_preserves_helper v_S v_C v_val_1 v_val_2 v_c v_t v_ft h).2
 
 /-- Rocq `type_preservation_pure.v:150` `Step_pure__if_preserves_helper`. Rocq's
     `join_subtyping_le Hsub0 Hsub` step is `instrtype_sub_compose_le` applied to `CONST`'s
@@ -383,7 +468,7 @@ theorem Step_pure__frame_vals_preserves (v_S : store) (v_C : context) (v_n : n) 
   obtain ⟨t1s_sup, t2s_sub, hprincipal, hsub⟩ :=
     ais_single_typing_inversion v_S v_C (admininstr.FRAME_ v_n v_f (v_val.map admininstr_val)) t1s t2s h
   unfold ai_principal_typing at hprincipal
-  obtain ⟨ts, c', heq, hframe, hexpr⟩ := hprincipal
+  obtain ⟨ts, c', heq, hframe, hexpr, _hlen⟩ := hprincipal
   unfold mkFunctype at heq
   simp only [functype.mk_functype.injEq, list.mk_list.injEq] at heq
   obtain ⟨e1, e2⟩ := heq
