@@ -801,7 +801,30 @@ and create_upd_exp
            Example (terminal):     s[.MEMS[x].BYTES[i : j] = b*]
              prev = elem_1.BYTES,  e1 = i,  e2 = j,  operation_on_old_val _ = b*
            Example (non-terminal): s[.MEMS[i : n][k] = mi]
-             prev = s.MEMS,  rest = [IdxSeg k],  operation_on_old_val _ = mi *)
+             prev = s.MEMS,  rest = [IdxSeg k],  operation_on_old_val _ = mi
+
+           The read side above (drop_e1/old_slice) is already safe as-is: take/drop
+           saturate at prev's real length rather than growing anything. The WRITE
+           side below is NOT naturally safe if taken naively as
+             (prev.take e1 ++ new_middle) ++ prev.drop (e1 + e2)
+           -- that formula is only length-preserving when new_middle's actual
+           length equals e2 exactly. It doesn't in general (e.g. an
+           out-of-bounds memory store, where e1 + |new_middle| > prev.length):
+           .take saturates and .drop past the end returns [], so the naive
+           result would be LONGER than prev. This is a real soundness bug (it
+           lets $with_mem grow a memory's BYTES list on an OOB store), not a
+           cosmetic one, so the write side clamps the offset and the effective
+           write length against prev's real length before splicing -- this is
+           the Lean-combinator analogue of Rocq's `list_slice_update`, which is
+           unconditionally length-preserving because it recurses structurally
+           on the list itself. Clamping against new_middle's ACTUAL length
+           (rather than trusting e2_t) is what makes this correct generally,
+           not just for $with_mem: e.g. wasm-1.0's module-instantiation rules
+           reach this same arm with the length written as `|a*|` (tied to the
+           replacement list by construction), and the ExtE/"append" call path
+           (see create_exp's ExtE arm above) deliberately makes new_middle
+           longer than old_slice -- both are handled uniformly by clamping on
+           new_middle.length instead of on a declared/assumed length. *)
         let e1_t : term = create_exp e1 in
         (* e1_t : term  ----  e.g.  i *)
         let e2_t : term = create_exp e2 in
@@ -816,21 +839,17 @@ and create_upd_exp
         (* old_slice : term  ----  e.g.  (elem_1.BYTES.drop i).take j  = bytes[i..i+j) *)
         let new_middle : term = go old_slice rest in
         (* new_middle : term  ----  terminal: b*;  non-terminal: List.modify old_slice k ... *)
-        let prefix : term =
-          FunApp (DotProj (prev, Ident "take"),
-                  NonEmptyList.from_list_unsafe [Term e1_t]) in
-        (* prefix : term  ----  e.g.  elem_1.BYTES.take i *)
-        let e1_plus_e2 : term = BinaryInfixFunApp (Term e1_t, Ident "+", Term e2_t) in
-        (* e1_plus_e2 : term  ----  e.g.  i + j *)
-        let suffix : term =
-          FunApp (DotProj (prev, Ident "drop"),
-                  NonEmptyList.from_list_unsafe [Term e1_plus_e2]) in
-        (* suffix : term  ----  e.g.  elem_1.BYTES.drop (i + j) *)
-        BinaryInfixFunApp (
-          Term (BinaryInfixFunApp (Term prefix, Ident "++", Term new_middle)),
-          Ident "++",
-          Term suffix)
-        (* result : term  ----  e.g.  (elem_1.BYTES.take i ++ bs) ++ (elem_1.BYTES.drop (i + j)) *)
+        FunApp (Ident "splice", NonEmptyList.from_list_unsafe [Term prev; Term new_middle; Term e1_t])
+        (* result : term  ----  e.g.  splice elem_1.BYTES b* i. `splice` (prologue
+           helper, lean_builder.ml) clamps the offset and the effective write
+           length against prev's real length before splicing, so this can never
+           grow past prev -- the Lean-combinator analogue of Rocq's
+           `list_slice_update`. It clamps against new_middle's ACTUAL length
+           (not e2_t), which is what makes it correct generally, not just for
+           $with_mem: e.g. wasm-1.0's module-instantiation rules reach this
+           same arm with the length written as `|a*|`, and the ExtE/"append"
+           call path (see create_exp's ExtE arm above) deliberately makes
+           new_middle longer than old_slice -- both are handled uniformly. *)
   in
   go (create_exp root) (flatten_path p)
 
@@ -2946,6 +2965,7 @@ let prologue : command list =
     list_ap;
     option_ap;
     rat_to_nat;
+    splice;
   ]
 
 let create_script (il : script) : _script =

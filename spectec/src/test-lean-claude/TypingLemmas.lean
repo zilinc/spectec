@@ -764,6 +764,47 @@ theorem ai_typing_inversion (v_S : store) (v_C : context) (v_ai : admininstr) (t
     case refine_1 => trivial
     case refine_2 => exact instrtype_sub_refl _
 
+/-- Rocq `typing_lemmas.v:790` `ai_typing_inversion'` (added bundle18). The no-slack
+    special case of `ai_typing_inversion` for an embedded plain instruction: an `Instr_ok2`
+    derivation for `admininstr_instr v_instr` can only come from `Instr_ok2.plain` (or, for
+    `REF_NULL`, from `Instr_ok2.ref`), so it hands back `Instr_ok` at the *same* type. -/
+theorem ai_typing_inversion' (v_S : store) (v_C : context) (v_instr : instr) (t1s t2s : List valtype) :
+    Instr_ok2 v_S v_C (admininstr_instr v_instr) (mkFunctype t1s t2s) →
+    Instr_ok v_C v_instr (mkFunctype t1s t2s) := by
+  -- Rocq destructs both instructions (68×68); here the generalized index equation is pushed
+  -- through `instr_of`, which inverts `admininstr_instr` and is `none` on the
+  -- administrative-only constructors.
+  intro h
+  generalize hai : admininstr_instr v_instr = ai at h
+  generalize hft : mkFunctype t1s t2s = ft at h
+  have hof : instr_of ai = some v_instr := by rw [← hai]; exact instr_of_admininstr_instr v_instr
+  cases h with
+  | plain C i t1 t2 hok _ _ _ =>
+    rw [instr_of_admininstr_instr] at hof
+    injection hof with hi
+    subst hi
+    simp only [mkFunctype, functype.mk_functype.injEq, list.mk_list.injEq] at hft
+    obtain ⟨e1, e2⟩ := hft
+    subst e1; subst e2
+    exact hok
+  | ref C r rt href _ hwfC =>
+    cases r with
+    | REF_NULL rt' =>
+      simp only [admininstr_ref, instr_of] at hof
+      injection hof with hi
+      subst hi
+      cases href
+      simp only [mkFunctype, functype.mk_functype.injEq, list.mk_list.injEq] at hft
+      obtain ⟨e1, e2⟩ := hft
+      subst e1; subst e2
+      exact Instr_ok.ref_null v_C _ hwfC (by constructor)
+    | REF_FUNC_ADDR a => simp [admininstr_ref, instr_of] at hof
+    | REF_HOST_ADDR a => simp [admininstr_ref, instr_of] at hof
+  | label => simp [instr_of] at hof
+  | Instr_ok2_frame => simp [instr_of] at hof
+  | call_addr => simp [instr_of] at hof
+  | trap => simp [instr_of] at hof
+
 /-! ## Single/seq/append composition — surface and administrative, both directions
     (typing_lemmas.v:852-1218) -/
 
@@ -1495,6 +1536,104 @@ theorem construct_ais_compose (v_S : store) (v_C : context) (v_ais1 v_ais2 : Lis
   obtain ⟨hwfC1, hwfS1, hwfF1⟩ := ainstrs_ok_context_store_wf v_S v_C v_ais1 (mkFunctype t1s t2s) h1
   obtain ⟨hwfC2, hwfS2, hwfF2⟩ := ainstrs_ok_context_store_wf v_S v_C v_ais2 (mkFunctype t2s t3s) h2
   exact Instrs_ok2.seq v_S v_C v_ais1 v_ais2 t1s t3s t2s h1 h2 hwfS1 hwfC1 hwfF1 hwfF2
+
+/-! ### Moving typing derivations between `instr` and `admininstr_instr`
+    (typing_lemmas.v:1412-1585, added bundle18) -/
+
+/-- Rocq `typing_lemmas.v:1412` `wf_admininstr_instr`. The `→` direction already existed
+    here as `wf_instr_admininstr` (bundle5); this is Rocq's `↔`. -/
+theorem wf_admininstr_instr (i : instr) : wf_instr i ↔ wf_admininstr (admininstr_instr i) := by
+  refine ⟨wf_instr_admininstr i, fun h => ?_⟩
+  cases i <;> cases h <;> constructor <;> assumption
+
+/-- Rocq `typing_lemmas.v:1428` `seq_mid_not_null`. -/
+theorem seq_mid_not_null {A : Type} (a : A) (l l' : List A) : l ++ [a] ++ l' ≠ [] := by
+  intro h
+  simp at h
+
+/-- Rocq `typing_lemmas.v:1436` `construct_instr_from_ai`. -/
+theorem construct_instr_from_ai (v_S : store) (v_C : context) (v_instr : instr) (ts1 ts2 : List valtype) :
+    wf_store v_S → Instrs_ok v_C [v_instr] (mkFunctype ts1 ts2) →
+    Instrs_ok2 v_S v_C [admininstr_instr v_instr] (mkFunctype ts1 ts2) := by
+  -- Rocq inducts on the `Instrs_ok` derivation; going through the principal (sub)typing of
+  -- the single instruction instead avoids re-doing the seq/sub/frame bookkeeping.
+  intro hS h
+  obtain ⟨t1, t2, hok, hsub⟩ := instrs_single_typing_inversion v_C v_instr ts1 ts2 h
+  obtain ⟨hC, hi⟩ := instr_ok_context_wf v_C v_instr _ hok
+  exact construct_ais_subtyping v_S v_C [admininstr_instr v_instr] t1 t2 ts1 ts2
+    (construct_ais_typing_single v_S v_C _ t1 t2 (Instr_ok2.plain v_S v_C v_instr t1 t2 hok hS hC hi)) hsub
+
+/-- Rocq `typing_lemmas.v:1483` `construct_instr_from_ai_single`. -/
+theorem construct_instr_from_ai_single (v_S : store) (v_C : context) (v_instr : instr) (ts1 ts2 : List valtype) :
+    wf_store v_S → Instr_ok v_C v_instr (mkFunctype ts1 ts2) →
+    Instr_ok2 v_S v_C (admininstr_instr v_instr) (mkFunctype ts1 ts2) := by
+  intro hS h
+  obtain ⟨hC, hi⟩ := instr_ok_context_wf v_C v_instr _ h
+  exact Instr_ok2.plain v_S v_C v_instr ts1 ts2 h hS hC hi
+
+/-- Rocq `typing_lemmas.v:1493` `construct_instrs_from_ais`. -/
+theorem construct_instrs_from_ais (v_S : store) (v_C : context) (v_instrs : List instr) (ts1 ts2 : List valtype) :
+    wf_store v_S → Instrs_ok v_C v_instrs (mkFunctype ts1 ts2) →
+    Instrs_ok2 v_S v_C (v_instrs.map admininstr_instr) (mkFunctype ts1 ts2) := by
+  intro hS
+  induction v_instrs generalizing ts1 ts2 with
+  | nil =>
+    intro h
+    obtain ⟨hC, hsub⟩ := (instrs_empty_typing v_C ts1 ts2).mp h
+    exact (ais_empty_typing v_S v_C ts1 ts2).mpr ⟨hC, hS, hsub⟩
+  | cons i is ih =>
+    intro h
+    obtain ⟨t3s, htail, hhead⟩ := instrs_seq_typing_inversion v_C is i ts1 ts2 (by simpa using h)
+    have := construct_ais_compose v_S v_C [admininstr_instr i] (is.map admininstr_instr) ts1 t3s ts2
+      (construct_instr_from_ai v_S v_C i ts1 t3s hS hhead) (ih t3s ts2 htail)
+    simpa using this
+
+/-- `Instrs_ok` counterpart of `construct_ais_subtyping` (Lean-only helper, bundle18): frame
+    by the shared prefix, then `sub` both sides. Rocq gets the same effect inside its
+    `dependent induction` proofs of `revert_to_*`. -/
+theorem construct_instrs_subtyping (v_C : context) (v_instrs : List instr) (ts1 ts2 ts1' ts2' : List valtype) :
+    Instrs_ok v_C v_instrs (mkFunctype ts1 ts2) →
+    instrtype_sub (mkFunctype ts1 ts2) (mkFunctype ts1' ts2') →
+    Instrs_ok v_C v_instrs (mkFunctype ts1' ts2') := by
+  intro hi hsub
+  obtain ⟨ts_sub, ts, ts1_sub, ts2_sup, heq1, heq2, hsub_ts, hsub1, hsub2⟩ := hsub
+  subst heq1
+  subst heq2
+  obtain ⟨hwfC, hwfF⟩ := instrs_ok_context_wf v_C v_instrs (mkFunctype ts1 ts2) hi
+  have hframe := Instrs_ok.frame v_C v_instrs ts_sub ts1 ts2 hi hwfC hwfF
+  exact Instrs_ok.sub v_C v_instrs (ts_sub ++ ts1_sub) (ts ++ ts2_sup) (ts_sub ++ ts1) (ts_sub ++ ts2)
+    hframe
+    (resulttype_sub_app ts_sub ts1_sub ts_sub ts1 (resulttype_sub_refl ts_sub) hsub1)
+    (resulttype_sub_app ts_sub ts2 ts ts2_sup hsub_ts hsub2)
+    hwfC hwfF
+
+/-- Rocq `typing_lemmas.v:1513` `revert_to_instr_from_ai`. -/
+theorem revert_to_instr_from_ai (v_S : store) (v_C : context) (v_instr : instr) (t1s t2s : List valtype) :
+    Instrs_ok2 v_S v_C [admininstr_instr v_instr] (mkFunctype t1s t2s) →
+    Instrs_ok v_C [v_instr] (mkFunctype t1s t2s) := by
+  intro h
+  obtain ⟨t1, t2, hok2, hsub⟩ := ais_single_typing_inversion' v_S v_C (admininstr_instr v_instr) t1s t2s h
+  exact construct_instrs_subtyping v_C [v_instr] t1 t2 t1s t2s
+    (construct_instrs_typing_single v_C v_instr t1 t2 (ai_typing_inversion' v_S v_C v_instr t1 t2 hok2)) hsub
+
+/-- Rocq `typing_lemmas.v:1559` `revert_to_instrs_from_ais`. -/
+theorem revert_to_instrs_from_ais (v_S : store) (v_C : context) (v_instrs : List instr) (t1s t2s : List valtype) :
+    Instrs_ok2 v_S v_C (v_instrs.map admininstr_instr) (mkFunctype t1s t2s) →
+    Instrs_ok v_C v_instrs (mkFunctype t1s t2s) := by
+  induction v_instrs generalizing t1s t2s with
+  | nil =>
+    intro h
+    obtain ⟨hC, _, hsub⟩ := (ais_empty_typing v_S v_C t1s t2s).mp h
+    exact (instrs_empty_typing v_C t1s t2s).mpr ⟨hC, hsub⟩
+  | cons i is ih =>
+    intro h
+    obtain ⟨t3s, htail, hhead⟩ :=
+      ais_seq_typing_inversion v_S v_C (is.map admininstr_instr) (admininstr_instr i) t1s t2s (by simpa using h)
+    have h1 := revert_to_instr_from_ai v_S v_C i t1s t3s hhead
+    have h2 := ih t3s t2s htail
+    obtain ⟨hC, hf1⟩ := instrs_ok_context_wf v_C [i] _ h1
+    obtain ⟨_, hf2⟩ := instrs_ok_context_wf v_C is _ h2
+    exact Instrs_ok.seq v_C [i] is t1s t2s t3s h1 h2 hC hf1 hf2
 
 /-- Rocq `typing_lemmas.v:1453` `construct_ai_const_I32`. -/
 theorem construct_ai_const_I32 (v_S : store) (v_C : context) (v_num : num_) :

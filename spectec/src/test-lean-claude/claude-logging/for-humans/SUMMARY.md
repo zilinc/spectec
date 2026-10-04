@@ -1,6 +1,65 @@
 # Progress summary (human-readable)
 
-**Last updated:** 2026-09-23, session 1 (resumed once after a VSCode crash).
+**Last updated:** 2026-10-04 (bundle19). The sections below the first one are the
+original session-1 summary, kept for history; for the step-by-step record see each
+`verbatim_dialogue_log/bundleN/response_N.md`.
+
+## Latest (2026-10-04, bundle19)
+
+- **Preservation is proved**, apart from generated well-formedness facts that the Rocq
+  proof also leaves unproved. The last real proof, `t_read_preservation` (all 47 read-only
+  reduction rules), is done, and the main preservation file has no `sorry` left.
+- **The generated file `wasm2.0.lean`:** all 89 well-formedness theorems that Rocq proves
+  are now proved in Lean too. The 63 still open are exactly the ones Rocq leaves
+  `Admitted`.
+- **What preservation still rests on:** 33 generated theorems, all unproved in Rocq as well.
+  - `Step_read_is_wf`: false in the known 4 GiB-memory corner case (spec fix pending).
+  - 32 facts that numeric operations (`iand`, `fabs`, `lanes`, ...) return valid values.
+    The generated Lean leaves those operations undefined (`opaque`), so the facts can't be
+    proved there, but none of them is false.
+- **The user's fixes worked.** `rat_to_nat` now has a real definition. The locals
+  hypothesis now uses `Vals_ok`, which adds the length fact.
+- **One maintenance cost:** the proofs sit inside the generated file, so regenerating it
+  erases them. `bundle19/user_requested_documents/wasm2.0_hand_edits.patch` puts them back
+  (tested).
+
+## Previous (2026-10-03, bundle18)
+
+- **Preservation is nearly done.** 18 `sorry`s remain (was 26). 16 are dead helpers nobody
+  uses. Of the other two, `t_read_preservation` is real work (47 small cases, plan written),
+  and `rat_to_nat_natCast` can't be proved until the backend gives `rat_to_nat` a real
+  definition.
+- **Newly proved:** `store_extension_reduce` (a step extends the store and keeps it valid),
+  `t_pure_preservation`, `t_preservation_type`, and all the SIMD lemmas.
+- **The user's two changes were correct**: the `br_table_ge` premise was redundant, and the
+  `splice`-based regeneration fixed the store bug found in bundle17.
+- **Known limit**: `memory.fill`/`memory.copy`/`memory.init` on a full 4 GiB memory can push
+  the out-of-range constant `2^32`. In that corner case preservation is false, in Rocq too.
+  This is a spec issue.
+
+## Previous (2026-10-02, bundle17)
+
+- **Where the port stands**: the helper, subtyping and typing-lemma files are complete;
+  the store-extension file has one leftover `sorry` (a lemma upstream deleted); the
+  pure-preservation file has 7 and the main preservation file 3; plus 15 dead helper
+  lemmas. The top-level preservation theorem typechecks, but on top of `sorry`s.
+- **Correction**: earlier reports said 5 of the remaining preservation lemmas were
+  deliberately left open because the Rocq proof left them open. That was out of date:
+  upstream Rocq has proved all of them, including every SIMD (vector) case, since
+  2026-09-22. So the Lean port has more to do than reported: about 70 Rocq
+  declarations are not yet in Lean, mostly the SIMD preservation lemmas.
+- **Problem found, needs a decision**: the Lean code generator writes "overwrite
+  bytes i..i+j of memory" in a way that makes memory *grow* if the write is out of
+  bounds. Rocq's generator writes it in a way that never changes the length. Because the
+  spec's store rule doesn't itself check bounds, in the Lean model an out-of-bounds store
+  can produce a memory of an invalid size, so **the preservation theorem is actually
+  false in the Lean model as generated.** Proposed fixes are in
+  `verbatim_dialogue_log/bundle17/user_requested_documents/with_mem_slice_update_issue.md`.
+- Upstream itself documents a small spec corner case (an address overflow in the bulk
+  memory instructions) that also breaks preservation, in both Rocq and Lean.
+- Work stopped at that point to report, per the standing instructions. No Lean files
+  were changed this turn.
+
 
 ## What this is
 

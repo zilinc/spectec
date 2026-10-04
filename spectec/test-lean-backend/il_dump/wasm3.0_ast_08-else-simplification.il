@@ -1068,21 +1068,17 @@
       (Seq (Atom POS) Arg)
       (TupE (CaseE (Seq (Atom SUBNORM) Arg) (TupE (NumE (Nat 0)))))
     )
-  )
-)
-(HintD (RelH "fzero_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fzero_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "N" (VarT "N")) (typbind "ret_val" (VarT "fN")))
-  (RuleD
-    "fzero_is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg)
-    (TupE (VarE "N") (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "fzero" (ExpA (VarE "N")))))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+    (RulePr
+      "wf_fN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          (Seq (Atom POS) Arg)
+          (TupE (CaseE (Seq (Atom SUBNORM) Arg) (TupE (NumE (Nat 0)))))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "fzero" (hint "show" "+ 0")))
@@ -1105,33 +1101,22 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "fnat_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fnat_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "nat" nat)
-    (typbind "ret_val" (VarT "fN"))
-  )
-  (RuleD
-    "fnat_is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "nat" nat)
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "nat") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fnat" (ExpA (VarE "N")) (ExpA (VarE "nat")))
+    (RulePr
+      "wf_fN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          (Seq (Atom POS) Arg)
+          (TupE
+            (CaseE
+              (Seq (Atom NORM) Arg Arg)
+              (TupE (VarE "n") (CvtE nat int (NumE (Nat 0))))
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (HintD (DecH "fnat" (hint "show" "+ %2")))
@@ -1151,21 +1136,22 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "fone_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fone_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "N" (VarT "N")) (typbind "ret_val" (VarT "fN")))
-  (RuleD
-    "fone_is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg)
-    (TupE (VarE "N") (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "fone" (ExpA (VarE "N")))))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+    (RulePr
+      "wf_fN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          (Seq (Atom POS) Arg)
+          (TupE
+            (CaseE
+              (Seq (Atom NORM) Arg Arg)
+              (TupE (NumE (Nat 1)) (CvtE nat int (NumE (Nat 0))))
+            )
+          )
+        )
+      )
+    )
   )
 )
 (HintD (DecH "fone" (hint "show" "+ 1")))
@@ -1303,6 +1289,33 @@
           )
         )
       )
+      (IterPr
+        (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "concat_"
+            (TypA (VarT "byte"))
+            (ExpA
+              (IterE
+                (CallE "utf8" (ExpA (ListE (VarE "ch"))))
+                List
+                (iterexp "ch" (VarE "ch*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (IterPr
+          (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
+          List
+          (iterexp "iter" (CallE "utf8" (ExpA (ListE (VarE "ch")))))
+        )
+        List
+        (iterexp "ch" (VarE "ch*"))
+      )
     )
     (DefD
       (ExpP "ch" (VarT "char"))
@@ -1359,6 +1372,8 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
     )
     (DefD
       (ExpP "ch" (VarT "char"))
@@ -1442,6 +1457,9 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_3")))
     )
     (DefD
       (ExpP "ch" (VarT "char"))
@@ -1506,37 +1524,10 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "utf8_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "utf8_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "char") List))
-      (typbind "ret_val*" (IterT (VarT "byte") List))
-    )
-    (RuleD
-      "utf8_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "char") List))
-      (ExpP "ret_val*" (IterT (VarT "byte") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
-      (IterPr
-        (RulePr "wf_char" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE EqOp bool (VarE "ret_val*") (CallE "utf8" (ExpA (VarE "var_0*"))))
-      )
-      (IterPr
-        (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
-      )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_3")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_4")))
     )
   )
 )
@@ -1694,6 +1685,17 @@
           (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "funcsxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externidx" (VarT "externidx"))
@@ -1708,41 +1710,16 @@
         "funcsxx"
         (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "funcsxx_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "funcsxx_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externidx") List))
-      (typbind "ret_val*" (IterT (VarT "typeidx") List))
-    )
-    (RuleD
-      "funcsxx_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externidx") List))
-      (ExpP "ret_val*" (IterT (VarT "typeidx") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externidx" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "funcsxx" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "funcsxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -1770,6 +1747,17 @@
           (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "globalsxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externidx" (VarT "externidx"))
@@ -1784,41 +1772,16 @@
         "globalsxx"
         (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "globalsxx_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "globalsxx_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externidx") List))
-      (typbind "ret_val*" (IterT (VarT "globalidx") List))
-    )
-    (RuleD
-      "globalsxx_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externidx") List))
-      (ExpP "ret_val*" (IterT (VarT "globalidx") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externidx" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "globalsxx" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "globalsxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -1848,6 +1811,17 @@
           (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "tablesxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externidx" (VarT "externidx"))
@@ -1862,41 +1836,16 @@
         "tablesxx"
         (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "tablesxx_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "tablesxx_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externidx") List))
-      (typbind "ret_val*" (IterT (VarT "tableidx") List))
-    )
-    (RuleD
-      "tablesxx_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externidx") List))
-      (ExpP "ret_val*" (IterT (VarT "tableidx") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externidx" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "tablesxx" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "tablesxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -1926,6 +1875,17 @@
           (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "memsxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externidx" (VarT "externidx"))
@@ -1940,41 +1900,16 @@
         "memsxx"
         (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "memsxx_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "memsxx_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externidx") List))
-      (typbind "ret_val*" (IterT (VarT "memidx") List))
-    )
-    (RuleD
-      "memsxx_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externidx") List))
-      (ExpP "ret_val*" (IterT (VarT "memidx") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externidx" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "memsxx" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "memsxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -2002,6 +1937,17 @@
           (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "tagsxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externidx" (VarT "externidx"))
@@ -2016,41 +1962,16 @@
         "tagsxx"
         (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "tagsxx_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "tagsxx_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externidx") List))
-      (typbind "ret_val*" (IterT (VarT "tagidx") List))
-    )
-    (RuleD
-      "tagsxx_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externidx") List))
-      (ExpP "ret_val*" (IterT (VarT "tagidx") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externidx" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "tagsxx" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "tagsxx"
+            (ExpA (IterE (VarE "xx") List (iterexp "xx" (VarE "xx*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -2175,38 +2096,26 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-  (DefD (ExpP "free" (VarT "free")) (ExpA (OptE (VarE "free"))) (VarE "free"))
-)
-(HintD (RelH "free_opt_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_opt_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "var_0?" (IterT (VarT "free") Opt))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_opt_is_wf_0"
-    (ExpP "var_0?" (IterT (VarT "free") Opt))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "var_0?") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "var_0")))
-      Opt
-      (iterexp "var_0" (VarE "var_0?"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_opt" (ExpA (VarE "var_0?")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
+  (DefD (ExpP "free" (VarT "free")) (ExpA (OptE (VarE "free"))) (VarE "free"))
 )
 (RecD
   (DecD
@@ -2227,6 +2136,24 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "free" (VarT "free"))
@@ -2244,38 +2171,16 @@
           (ExpA (IterE (VarE "free'") List (iterexp "free'" (VarE "free'*"))))
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "free_list_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_list_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "free") List))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_list_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "free") List))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val"))
-      (IterPr
-        (RulePr "wf_free" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_list" (ExpA (VarE "var_0*")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA (IterE (VarE "free'") List (iterexp "free'" (VarE "free'*"))))
+          )
         )
       )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
     )
   )
 )
@@ -2298,29 +2203,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_typeidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_typeidx_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "typeidx" (VarT "typeidx")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_typeidx_is_wf_0"
-    (ExpP "typeidx" (VarT "typeidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "typeidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "typeidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE (VarE "typeidx")))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2342,29 +2242,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_funcidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_funcidx_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "funcidx" (VarT "funcidx")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_funcidx_is_wf_0"
-    (ExpP "funcidx" (VarT "funcidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "funcidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "funcidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_funcidx" (ExpA (VarE "funcidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE (VarE "funcidx")))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2386,32 +2281,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_globalidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_globalidx_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "globalidx" (VarT "globalidx"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_globalidx_is_wf_0"
-    (ExpP "globalidx" (VarT "globalidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "globalidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "globalidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_globalidx" (ExpA (VarE "globalidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE (VarE "globalidx")))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2433,32 +2320,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_tableidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_tableidx_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "tableidx" (VarT "tableidx"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_tableidx_is_wf_0"
-    (ExpP "tableidx" (VarT "tableidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "tableidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tableidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_tableidx" (ExpA (VarE "tableidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE (VarE "tableidx")))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2480,29 +2359,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_memidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_memidx_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "memidx" (VarT "memidx")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_memidx_is_wf_0"
-    (ExpP "memidx" (VarT "memidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "memidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "memidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_memidx" (ExpA (VarE "memidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE (VarE "memidx")))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2524,29 +2398,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_elemidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_elemidx_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "elemidx" (VarT "elemidx")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_elemidx_is_wf_0"
-    (ExpP "elemidx" (VarT "elemidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "elemidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "elemidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_elemidx" (ExpA (VarE "elemidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE (VarE "elemidx")))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2568,29 +2437,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_dataidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_dataidx_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "dataidx" (VarT "dataidx")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_dataidx_is_wf_0"
-    (ExpP "dataidx" (VarT "dataidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "dataidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "dataidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_dataidx" (ExpA (VarE "dataidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE (VarE "dataidx")))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2612,32 +2476,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_localidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_localidx_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "localidx" (VarT "localidx"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_localidx_is_wf_0"
-    (ExpP "localidx" (VarT "localidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "localidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "localidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_localidx" (ExpA (VarE "localidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE (VarE "localidx")))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2659,32 +2515,24 @@
       (expfield (Atom LABELS) (ListE (VarE "labelidx")))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_labelidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_labelidx_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "labelidx" (VarT "labelidx"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_labelidx_is_wf_0"
-    (ExpP "labelidx" (VarT "labelidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "labelidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "labelidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_labelidx" (ExpA (VarE "labelidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE (VarE "labelidx")))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2706,29 +2554,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE (VarE "tagidx")))
     )
-  )
-)
-(HintD (RelH "free_tagidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_tagidx_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "tagidx" (VarT "tagidx")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_tagidx_is_wf_0"
-    (ExpP "tagidx" (VarT "tagidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "tagidx") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tagidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_tagidx" (ExpA (VarE "tagidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE (VarE "tagidx")))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -2739,52 +2582,51 @@
     (ExpP "funcidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom FUNC) Arg) (TupE (VarE "funcidx"))))
     (CallE "free_funcidx" (ExpA (VarE "funcidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_funcidx" (ExpA (VarE "funcidx"))))
+    )
   )
   (DefD
     (ExpP "globalidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom GLOBAL) Arg) (TupE (VarE "globalidx"))))
     (CallE "free_globalidx" (ExpA (VarE "globalidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_globalidx" (ExpA (VarE "globalidx"))))
+    )
   )
   (DefD
     (ExpP "tableidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom TABLE) Arg) (TupE (VarE "tableidx"))))
     (CallE "free_tableidx" (ExpA (VarE "tableidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+    )
   )
   (DefD
     (ExpP "memidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom MEM) Arg) (TupE (VarE "memidx"))))
     (CallE "free_memidx" (ExpA (VarE "memidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+    )
   )
   (DefD
     (ExpP "tagidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom TAG) Arg) (TupE (VarE "tagidx"))))
     (CallE "free_tagidx" (ExpA (VarE "tagidx")))
-  )
-)
-(HintD (RelH "free_externidx_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_externidx_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "externidx" (VarT "externidx"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_externidx_is_wf_0"
-    (ExpP "externidx" (VarT "externidx"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "externidx") (VarE "ret_val"))
-    (RulePr "wf_externidx" (Seq Arg) (TupE (VarE "externidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_externidx" (ExpA (VarE "externidx")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tagidx" (ExpA (VarE "tagidx"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (TypD "null" (InstD (VariantT (typcase (Atom NULL) (TupT)))))
@@ -3292,20 +3134,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom ANY) (TupE)))
     )
-  )
-)
-(HintD (RelH "ANYREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ANYREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "ANYREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "ANYREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom ANY) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "ANYREF" (hint "show" "ANYREF")))
@@ -3317,20 +3155,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom EQ) (TupE)))
     )
-  )
-)
-(HintD (RelH "EQREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "EQREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "EQREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "EQREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom EQ) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "EQREF" (hint "show" "EQREF")))
@@ -3342,20 +3176,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom I31) (TupE)))
     )
-  )
-)
-(HintD (RelH "I31REF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "I31REF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "I31REF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "I31REF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom I31) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "I31REF" (hint "show" "I31REF")))
@@ -3367,20 +3197,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom STRUCT) (TupE)))
     )
-  )
-)
-(HintD (RelH "STRUCTREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "STRUCTREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "STRUCTREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "STRUCTREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom STRUCT) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "STRUCTREF" (hint "show" "STRUCTREF")))
@@ -3392,20 +3218,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom ARRAY) (TupE)))
     )
-  )
-)
-(HintD (RelH "ARRAYREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ARRAYREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "ARRAYREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "ARRAYREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom ARRAY) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "ARRAYREF" (hint "show" "ARRAYREF")))
@@ -3417,20 +3239,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom FUNC) (TupE)))
     )
-  )
-)
-(HintD (RelH "FUNCREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "FUNCREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "FUNCREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "FUNCREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom FUNC) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "FUNCREF" (hint "show" "FUNCREF")))
@@ -3442,20 +3260,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom EXN) (TupE)))
     )
-  )
-)
-(HintD (RelH "EXNREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "EXNREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "EXNREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "EXNREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom EXN) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "EXNREF" (hint "show" "EXNREF")))
@@ -3467,20 +3281,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom EXTERN) (TupE)))
     )
-  )
-)
-(HintD (RelH "EXTERNREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "EXTERNREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "EXTERNREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "EXTERNREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom EXTERN) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "EXTERNREF" (hint "show" "EXTERNREF")))
@@ -3492,20 +3302,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom NONE) (TupE)))
     )
-  )
-)
-(HintD (RelH "NULLREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "NULLREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "NULLREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "NULLREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom NONE) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "NULLREF" (hint "show" "NULLREF")))
@@ -3517,20 +3323,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom NOFUNC) (TupE)))
     )
-  )
-)
-(HintD (RelH "NULLFUNCREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "NULLFUNCREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "NULLFUNCREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "NULLFUNCREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom NOFUNC) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "NULLFUNCREF" (hint "show" "NULLFUNCREF")))
@@ -3542,20 +3344,16 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom NOEXN) (TupE)))
     )
-  )
-)
-(HintD (RelH "NULLEXNREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "NULLEXNREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "NULLEXNREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "NULLEXNREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom NOEXN) (TupE)))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "NULLEXNREF" (hint "show" "NULLEXNREF")))
@@ -3567,20 +3365,19 @@
       (Seq (Atom REF) Arg Arg)
       (TupE (OptE (CaseE (Atom NULL) (TupE))) (CaseE (Atom NOEXTERN) (TupE)))
     )
-  )
-)
-(HintD (RelH "NULLEXTERNREF_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "NULLEXTERNREF_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "reftype")))
-  (RuleD
-    "NULLEXTERNREF_is_wf_0"
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "NULLEXTERNREF")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE
+            (OptE (CaseE (Atom NULL) (TupE)))
+            (CaseE (Atom NOEXTERN) (TupE))
+          )
+        )
+      )
+    )
   )
 )
 (HintD (DecH "NULLEXTERNREF" (hint "show" "NULLEXTERNREF")))
@@ -4200,32 +3997,7 @@
     (ExpP "packtype" (VarT "packtype"))
     (ExpA (SubE (VarT "packtype") (VarT "storagetype") (VarE "packtype")))
     (CaseE (Atom I32) (TupE))
-  )
-)
-(HintD (RelH "unpack_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "unpack_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "storagetype" (VarT "storagetype"))
-    (typbind "ret_val" (VarT "valtype"))
-  )
-  (RuleD
-    "unpack_is_wf_0"
-    (ExpP "storagetype" (VarT "storagetype"))
-    (ExpP "ret_val" (VarT "valtype"))
-    (Seq Arg Arg)
-    (TupE (VarE "storagetype") (VarE "ret_val"))
-    (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "unpack" (ExpA (VarE "storagetype")))
-      )
-    )
-    (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_valtype" (Seq Arg) (TupE (CaseE (Atom I32) (TupE))))
   )
 )
 (DecD
@@ -4341,6 +4113,11 @@
       )
     )
     (CaseE (Seq (Atom REF) Arg Arg) (TupE (OptE) (VarE "ht_1")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE (CaseE (Seq (Atom REF) Arg Arg) (TupE (OptE) (VarE "ht_1"))))
+    )
   )
   (DefD
     (ExpP "null_1?" (IterT (VarT "null") Opt))
@@ -4363,35 +4140,19 @@
         (VarE "ht_1")
       )
     )
-  )
-)
-(HintD (RelH "diffrt_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "diffrt_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "reftype" (VarT "reftype"))
-    (typbind "reftype_0" (VarT "reftype"))
-    (typbind "ret_val" (VarT "reftype"))
-  )
-  (RuleD
-    "diffrt_is_wf_0"
-    (ExpP "reftype" (VarT "reftype"))
-    (ExpP "reftype_0" (VarT "reftype"))
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "reftype") (VarE "reftype_0") (VarE "ret_val"))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "reftype")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "reftype_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "diffrt" (ExpA (VarE "reftype")) (ExpA (VarE "reftype_0")))
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom REF) Arg Arg)
+          (TupE
+            (IterE (VarE "null_1") Opt (iterexp "null_1" (VarE "null_1?")))
+            (VarE "ht_1")
+          )
+        )
       )
     )
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "diffrt" (hint "show" "% \\ %") (hint "macro" "\"reftypediff\"")))
@@ -4429,6 +4190,17 @@
           (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "tagsxt"
+            (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externtype" (VarT "externtype"))
@@ -4443,41 +4215,16 @@
         "tagsxt"
         (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "tagsxt_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "tagsxt_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externtype") List))
-      (typbind "ret_val*" (IterT (VarT "tagtype") List))
-    )
-    (RuleD
-      "tagsxt_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externtype") List))
-      (ExpP "ret_val*" (IterT (VarT "tagtype") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "tagsxt" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "tagsxt"
+            (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -4505,6 +4252,17 @@
           (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "globalsxt"
+            (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externtype" (VarT "externtype"))
@@ -4519,41 +4277,16 @@
         "globalsxt"
         (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "globalsxt_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "globalsxt_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externtype") List))
-      (typbind "ret_val*" (IterT (VarT "globaltype") List))
-    )
-    (RuleD
-      "globalsxt_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externtype") List))
-      (ExpP "ret_val*" (IterT (VarT "globaltype") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "globalsxt" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "globalsxt"
+            (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -4583,6 +4316,17 @@
           (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "memsxt"
+            (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externtype" (VarT "externtype"))
@@ -4597,41 +4341,16 @@
         "memsxt"
         (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "memsxt_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "memsxt_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externtype") List))
-      (typbind "ret_val*" (IterT (VarT "memtype") List))
-    )
-    (RuleD
-      "memsxt_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externtype") List))
-      (ExpP "ret_val*" (IterT (VarT "memtype") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "memsxt" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "memsxt"
+            (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -4659,6 +4378,17 @@
           (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "tablesxt"
+            (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "externtype" (VarT "externtype"))
@@ -4673,41 +4403,16 @@
         "tablesxt"
         (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "tablesxt_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "tablesxt_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externtype") List))
-      (typbind "ret_val*" (IterT (VarT "tabletype") List))
-    )
-    (RuleD
-      "tablesxt_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externtype") List))
-      (ExpP "ret_val*" (IterT (VarT "tabletype") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "tablesxt" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "tablesxt"
+            (ExpA (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -4810,6 +4515,20 @@
           )
         )
       )
+      (RulePr
+        "wf_typeuse"
+        (Seq Arg)
+        (TupE
+          (TheE
+            (CallE
+              "subst_typevar"
+              (ExpA (VarE "tv"))
+              (ExpA (IterE (VarE "tv'") List (iterexp "tv'" (VarE "tv'*"))))
+              (ExpA (IterE (VarE "tu'") List (iterexp "tu'" (VarE "tu'*"))))
+            )
+          )
+        )
+      )
     )
     (DefD
       (ExpP "x0" (VarT "typevar"))
@@ -4820,55 +4539,6 @@
       (ExpA (VarE "x2"))
       (OptE)
       ElsePr
-    )
-  )
-)
-(RecD
-  (HintD (RelH "subst_typevar_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_typevar_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "typevar" (VarT "typevar"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "typeuse"))
-    )
-    (RuleD
-      "subst_typevar_is_wf_0"
-      (ExpP "typevar" (VarT "typevar"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "typeuse"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "typevar") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "typevar")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (TheE
-            (CallE
-              "subst_typevar"
-              (ExpA (VarE "typevar"))
-              (ExpA (VarE "var_0*"))
-              (ExpA (VarE "var_1*"))
-            )
-          )
-        )
-      )
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "ret_val")))
     )
   )
 )
@@ -4915,6 +4585,40 @@
         (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
         (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
       )
+      (IterPr
+        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (ProjE
+            (TheE
+              (CallE
+                "minus_recs"
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
+            0
+          )
+        )
+      )
+      (IterPr
+        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (ProjE
+            (TheE
+              (CallE
+                "minus_recs"
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
+            1
+          )
+        )
+      )
     )
     (DefD
       (ExpP "x" (VarT "uN"))
@@ -4958,6 +4662,45 @@
           )
         )
       )
+      (IterPr
+        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (ProjE
+            (TheE
+              (CallE
+                "minus_recs"
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
+            0
+          )
+        )
+      )
+      (IterPr
+        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (ProjE
+            (TheE
+              (CallE
+                "minus_recs"
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
+            1
+          )
+        )
+      )
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE (CaseE (Seq (Atom _IDX) Arg) (TupE (VarE "x"))))
+      )
     )
     (DefD
       (ExpP "x0" (IterT (VarT "typevar") List))
@@ -4966,68 +4709,6 @@
       (ExpA (VarE "x1"))
       (OptE)
       ElsePr
-    )
-  )
-)
-(RecD
-  (HintD (RelH "minus_recs_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "minus_recs_is_wf"
-    (Seq Arg Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (IterT (VarT "typevar") List))
-          (typbind "_" (IterT (VarT "typeuse") List))
-        )
-      )
-    )
-    (RuleD
-      "minus_recs_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (IterT (VarT "typevar") List))
-          (typbind "_" (IterT (VarT "typeuse") List))
-        )
-      )
-      (Seq Arg Arg Arg)
-      (TupE (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (TheE
-            (CallE "minus_recs" (ExpA (VarE "var_0*")) (ExpA (VarE "var_1*")))
-          )
-        )
-      )
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "iter")))
-        List
-        (iterexp "iter" (ProjE (VarE "ret_val") 0))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "iter")))
-        List
-        (iterexp "iter" (ProjE (VarE "ret_val") 1))
-      )
     )
   )
 )
@@ -5101,6 +4782,20 @@
           (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
         )
       )
+      (RulePr
+        "wf_typeuse"
+        (Seq Arg)
+        (TupE
+          (TheE
+            (CallE
+              "subst_typevar"
+              (ExpA (VarE "tv'"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
+          )
+        )
+      )
     )
     (DefD
       (ExpP "dt" (VarT "deftype"))
@@ -5143,6 +4838,20 @@
             (ExpA (VarE "tv'"))
             (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
             (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+          )
+        )
+      )
+      (RulePr
+        "wf_typeuse"
+        (Seq Arg)
+        (TupE
+          (TheE
+            (CallE
+              "subst_typevar"
+              (ExpA (VarE "tv'"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
           )
         )
       )
@@ -5209,6 +4918,24 @@
           )
         )
       )
+      (RulePr
+        "wf_reftype"
+        (Seq Arg)
+        (TupE
+          (CaseE
+            (Seq (Atom REF) Arg Arg)
+            (TupE
+              (IterE (VarE "null") Opt (iterexp "null" (VarE "null?")))
+              (CallE
+                "subst_heaptype"
+                (ExpA (VarE "ht"))
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
+          )
+        )
+      )
     )
   )
   (DecD
@@ -5270,6 +4997,18 @@
           (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
         )
       )
+      (RulePr
+        "wf_reftype"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "subst_reftype"
+            (ExpA (VarE "rt"))
+            (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+            (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "tv*" (IterT (VarT "typevar") List))
@@ -5278,6 +5017,7 @@
       (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
       (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
       (CaseE (Atom BOT) (TupE))
+      (RulePr "wf_valtype" (Seq Arg) (TupE (CaseE (Atom BOT) (TupE))))
     )
   )
   (DecD
@@ -5301,6 +5041,18 @@
           (ExpA (VarE "t"))
           (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
           (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+        )
+      )
+      (RulePr
+        "wf_valtype"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "subst_valtype"
+            (ExpA (VarE "t"))
+            (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+            (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+          )
         )
       )
     )
@@ -5357,6 +5109,24 @@
           )
         )
       )
+      (RulePr
+        "wf_fieldtype"
+        (Seq Arg)
+        (TupE
+          (CaseE
+            (Seq Arg Arg)
+            (TupE
+              (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+              (CallE
+                "subst_storagetype"
+                (ExpA (VarE "zt"))
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
+          )
+        )
+      )
     )
   )
   (DecD
@@ -5402,6 +5172,36 @@
           )
         )
       )
+      (RulePr
+        "wf_comptype"
+        (Seq Arg)
+        (TupE
+          (CaseE
+            (Seq (Atom STRUCT) Arg)
+            (TupE
+              (CaseE
+                Arg
+                (TupE
+                  (IterE
+                    (CallE
+                      "subst_fieldtype"
+                      (ExpA (VarE "ft"))
+                      (ExpA
+                        (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*")))
+                      )
+                      (ExpA
+                        (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*")))
+                      )
+                    )
+                    List
+                    (iterexp "ft" (VarE "ft*"))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
     )
     (DefD
       (ExpP "ft" (VarT "fieldtype"))
@@ -5418,6 +5218,23 @@
             (ExpA (VarE "ft"))
             (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
             (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+          )
+        )
+      )
+      (RulePr
+        "wf_comptype"
+        (Seq Arg)
+        (TupE
+          (CaseE
+            (Seq (Atom ARRAY) Arg)
+            (TupE
+              (CallE
+                "subst_fieldtype"
+                (ExpA (VarE "ft"))
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
           )
         )
       )
@@ -5479,6 +5296,55 @@
           )
         )
       )
+      (RulePr
+        "wf_comptype"
+        (Seq Arg)
+        (TupE
+          (CaseE
+            (Infix (Seq (Atom FUNC) Arg) -> Arg)
+            (TupE
+              (CaseE
+                Arg
+                (TupE
+                  (IterE
+                    (CallE
+                      "subst_valtype"
+                      (ExpA (VarE "t_1"))
+                      (ExpA
+                        (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*")))
+                      )
+                      (ExpA
+                        (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*")))
+                      )
+                    )
+                    List
+                    (iterexp "t_1" (VarE "t_1*"))
+                  )
+                )
+              )
+              (CaseE
+                Arg
+                (TupE
+                  (IterE
+                    (CallE
+                      "subst_valtype"
+                      (ExpA (VarE "t_2"))
+                      (ExpA
+                        (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*")))
+                      )
+                      (ExpA
+                        (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*")))
+                      )
+                    )
+                    List
+                    (iterexp "t_2" (VarE "t_2*"))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
     )
   )
   (DecD
@@ -5524,6 +5390,34 @@
             (ExpA (VarE "ct"))
             (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
             (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+          )
+        )
+      )
+      (RulePr
+        "wf_subtype"
+        (Seq Arg)
+        (TupE
+          (CaseE
+            (Seq (Atom SUB) Arg Arg Arg)
+            (TupE
+              (IterE (VarE "final") Opt (iterexp "final" (VarE "final?")))
+              (IterE
+                (CallE
+                  "subst_typeuse"
+                  (ExpA (VarE "tu'"))
+                  (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                  (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+                )
+                List
+                (iterexp "tu'" (VarE "tu'*"))
+              )
+              (CallE
+                "subst_comptype"
+                (ExpA (VarE "ct"))
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
           )
         )
       )
@@ -5585,6 +5479,40 @@
           )
         )
       )
+      (IterPr
+        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (ProjE
+            (TheE
+              (CallE
+                "minus_recs"
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
+            0
+          )
+        )
+      )
+      (IterPr
+        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (ProjE
+            (TheE
+              (CallE
+                "minus_recs"
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+            )
+            1
+          )
+        )
+      )
     )
   )
   (DecD
@@ -5613,373 +5541,6 @@
           (VarE "i")
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "subst_typeuse_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_typeuse_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "typeuse" (VarT "typeuse"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "typeuse"))
-    )
-    (RuleD
-      "subst_typeuse_is_wf_0"
-      (ExpP "typeuse" (VarT "typeuse"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "typeuse"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "typeuse") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "typeuse")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "subst_typeuse"
-            (ExpA (VarE "typeuse"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "subst_heaptype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_heaptype_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "heaptype" (VarT "heaptype"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "heaptype"))
-    )
-    (RuleD
-      "subst_heaptype_is_wf_0"
-      (ExpP "heaptype" (VarT "heaptype"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "heaptype"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "heaptype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_heaptype" (Seq Arg) (TupE (VarE "heaptype")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "subst_heaptype"
-            (ExpA (VarE "heaptype"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_heaptype" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "subst_reftype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_reftype_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "reftype" (VarT "reftype"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "reftype"))
-    )
-    (RuleD
-      "subst_reftype_is_wf_0"
-      (ExpP "reftype" (VarT "reftype"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "reftype"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "reftype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "reftype")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "subst_reftype"
-            (ExpA (VarE "reftype"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "subst_valtype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_valtype_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "valtype" (VarT "valtype"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "valtype"))
-    )
-    (RuleD
-      "subst_valtype_is_wf_0"
-      (ExpP "valtype" (VarT "valtype"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "valtype"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "valtype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "valtype")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "subst_valtype"
-            (ExpA (VarE "valtype"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "subst_storagetype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_storagetype_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "storagetype" (VarT "storagetype"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "storagetype"))
-    )
-    (RuleD
-      "subst_storagetype_is_wf_0"
-      (ExpP "storagetype" (VarT "storagetype"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "storagetype"))
-      (Seq Arg Arg Arg Arg)
-      (TupE
-        (VarE "storagetype")
-        (VarE "var_0*")
-        (VarE "var_1*")
-        (VarE "ret_val")
-      )
-      (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "subst_storagetype"
-            (ExpA (VarE "storagetype"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "subst_fieldtype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_fieldtype_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "fieldtype" (VarT "fieldtype"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "fieldtype"))
-    )
-    (RuleD
-      "subst_fieldtype_is_wf_0"
-      (ExpP "fieldtype" (VarT "fieldtype"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "fieldtype"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "fieldtype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_fieldtype" (Seq Arg) (TupE (VarE "fieldtype")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "subst_fieldtype"
-            (ExpA (VarE "fieldtype"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_fieldtype" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "subst_comptype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_comptype_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "comptype" (VarT "comptype"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "comptype"))
-    )
-    (RuleD
-      "subst_comptype_is_wf_0"
-      (ExpP "comptype" (VarT "comptype"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "comptype"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "comptype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_comptype" (Seq Arg) (TupE (VarE "comptype")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "subst_comptype"
-            (ExpA (VarE "comptype"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_comptype" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "subst_subtype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "subst_subtype_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "subtype" (VarT "subtype"))
-      (typbind "var_0*" (IterT (VarT "typevar") List))
-      (typbind "var_1*" (IterT (VarT "typeuse") List))
-      (typbind "ret_val" (VarT "subtype"))
-    )
-    (RuleD
-      "subst_subtype_is_wf_0"
-      (ExpP "subtype" (VarT "subtype"))
-      (ExpP "var_0*" (IterT (VarT "typevar") List))
-      (ExpP "var_1*" (IterT (VarT "typeuse") List))
-      (ExpP "ret_val" (VarT "subtype"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "subtype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_subtype" (Seq Arg) (TupE (VarE "subtype")))
-      (IterPr
-        (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "subst_subtype"
-            (ExpA (VarE "subtype"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_subtype" (Seq Arg) (TupE (VarE "ret_val")))
     )
   )
 )
@@ -6084,51 +5645,18 @@
       (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
       (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_tagtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_tagtype_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "tagtype" (VarT "tagtype"))
-    (typbind "var_0*" (IterT (VarT "typevar") List))
-    (typbind "var_1*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "tagtype"))
-  )
-  (RuleD
-    "subst_tagtype_is_wf_0"
-    (ExpP "tagtype" (VarT "tagtype"))
-    (ExpP "var_0*" (IterT (VarT "typevar") List))
-    (ExpP "var_1*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "tagtype"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "tagtype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-    (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "tagtype")))
-    (IterPr
-      (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_typeuse"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_tagtype"
-          (ExpA (VarE "tagtype"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
+          "subst_typeuse"
+          (ExpA (VarE "tu'"))
+          (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+          (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
         )
       )
     )
-    (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -6165,51 +5693,24 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "subst_globaltype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_globaltype_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "globaltype" (VarT "globaltype"))
-    (typbind "var_0*" (IterT (VarT "typevar") List))
-    (typbind "var_1*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "globaltype"))
-  )
-  (RuleD
-    "subst_globaltype_is_wf_0"
-    (ExpP "globaltype" (VarT "globaltype"))
-    (ExpP "var_0*" (IterT (VarT "typevar") List))
-    (ExpP "var_1*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "globaltype"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "globaltype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-    (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "globaltype")))
-    (IterPr
-      (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "subst_globaltype"
-          (ExpA (VarE "globaltype"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
+    (RulePr
+      "wf_globaltype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg Arg)
+          (TupE
+            (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+            (CallE
+              "subst_valtype"
+              (ExpA (VarE "t"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -6234,51 +5735,11 @@
     (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
     (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
     (CaseE (Seq Arg Arg (Atom PAGE)) (TupE (VarE "at") (VarE "lim")))
-  )
-)
-(HintD (RelH "subst_memtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_memtype_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "memtype" (VarT "memtype"))
-    (typbind "var_0*" (IterT (VarT "typevar") List))
-    (typbind "var_1*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "memtype"))
-  )
-  (RuleD
-    "subst_memtype_is_wf_0"
-    (ExpP "memtype" (VarT "memtype"))
-    (ExpP "var_0*" (IterT (VarT "typevar") List))
-    (ExpP "var_1*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "memtype"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "memtype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-    (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "memtype")))
-    (IterPr
-      (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
+    (RulePr
+      "wf_memtype"
+      (Seq Arg)
+      (TupE (CaseE (Seq Arg Arg (Atom PAGE)) (TupE (VarE "at") (VarE "lim"))))
     )
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "subst_memtype"
-          (ExpA (VarE "memtype"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
-        )
-      )
-    )
-    (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -6312,51 +5773,25 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "subst_tabletype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_tabletype_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "tabletype" (VarT "tabletype"))
-    (typbind "var_0*" (IterT (VarT "typevar") List))
-    (typbind "var_1*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "tabletype"))
-  )
-  (RuleD
-    "subst_tabletype_is_wf_0"
-    (ExpP "tabletype" (VarT "tabletype"))
-    (ExpP "var_0*" (IterT (VarT "typevar") List))
-    (ExpP "var_1*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "tabletype"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "tabletype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-    (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "tabletype")))
-    (IterPr
-      (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "subst_tabletype"
-          (ExpA (VarE "tabletype"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
+    (RulePr
+      "wf_tabletype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg Arg Arg)
+          (TupE
+            (VarE "at")
+            (VarE "lim")
+            (CallE
+              "subst_reftype"
+              (ExpA (VarE "rt"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -6390,6 +5825,23 @@
         )
       )
     )
+    (RulePr
+      "wf_externtype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom TAG) Arg)
+          (TupE
+            (CallE
+              "subst_tagtype"
+              (ExpA (VarE "jt"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "gt" (VarT "globaltype"))
@@ -6406,6 +5858,23 @@
           (ExpA (VarE "gt"))
           (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
           (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+        )
+      )
+    )
+    (RulePr
+      "wf_externtype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom GLOBAL) Arg)
+          (TupE
+            (CallE
+              "subst_globaltype"
+              (ExpA (VarE "gt"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
+          )
         )
       )
     )
@@ -6428,6 +5897,23 @@
         )
       )
     )
+    (RulePr
+      "wf_externtype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom TABLE) Arg)
+          (TupE
+            (CallE
+              "subst_tabletype"
+              (ExpA (VarE "tt"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "mt" (VarT "memtype"))
@@ -6444,6 +5930,23 @@
           (ExpA (VarE "mt"))
           (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
           (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+        )
+      )
+    )
+    (RulePr
+      "wf_externtype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom MEM) Arg)
+          (TupE
+            (CallE
+              "subst_memtype"
+              (ExpA (VarE "mt"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
+          )
         )
       )
     )
@@ -6466,51 +5969,23 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "subst_externtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_externtype_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "externtype" (VarT "externtype"))
-    (typbind "var_0*" (IterT (VarT "typevar") List))
-    (typbind "var_1*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "externtype"))
-  )
-  (RuleD
-    "subst_externtype_is_wf_0"
-    (ExpP "externtype" (VarT "externtype"))
-    (ExpP "var_0*" (IterT (VarT "typevar") List))
-    (ExpP "var_1*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "externtype"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "externtype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-    (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "externtype")))
-    (IterPr
-      (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "subst_externtype"
-          (ExpA (VarE "externtype"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
+    (RulePr
+      "wf_externtype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom FUNC) Arg)
+          (TupE
+            (CallE
+              "subst_typeuse"
+              (ExpA (VarE "tu'"))
+              (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+              (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -6567,51 +6042,37 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "subst_moduletype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_moduletype_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "moduletype" (VarT "moduletype"))
-    (typbind "var_0*" (IterT (VarT "typevar") List))
-    (typbind "var_1*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "moduletype"))
-  )
-  (RuleD
-    "subst_moduletype_is_wf_0"
-    (ExpP "moduletype" (VarT "moduletype"))
-    (ExpP "var_0*" (IterT (VarT "typevar") List))
-    (ExpP "var_1*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "moduletype"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "moduletype") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-    (RulePr "wf_moduletype" (Seq Arg) (TupE (VarE "moduletype")))
-    (IterPr
-      (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "subst_moduletype"
-          (ExpA (VarE "moduletype"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
+    (RulePr
+      "wf_moduletype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg -> Arg)
+          (TupE
+            (IterE
+              (CallE
+                "subst_externtype"
+                (ExpA (VarE "xt_1"))
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+              List
+              (iterexp "xt_1" (VarE "xt_1*"))
+            )
+            (IterE
+              (CallE
+                "subst_externtype"
+                (ExpA (VarE "xt_2"))
+                (ExpA (IterE (VarE "tv") List (iterexp "tv" (VarE "tv*"))))
+                (ExpA (IterE (VarE "tu") List (iterexp "tu" (VarE "tu*"))))
+              )
+              List
+              (iterexp "xt_2" (VarE "xt_2*"))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_moduletype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -6645,43 +6106,35 @@
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_all_valtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_all_valtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "var_0*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "valtype"))
-  )
-  (RuleD
-    "subst_all_valtype_is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "var_0*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "valtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "valtype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "valtype")))
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_valtype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_all_valtype"
-          (ExpA (VarE "valtype"))
-          (ExpA (VarE "var_0*"))
+          "subst_valtype"
+          (ExpA (VarE "t"))
+          (ExpA
+            (IterE
+              (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+              (ListN (VarE "n") "i")
+            )
+          )
+          (ExpA
+            (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*")))
+          )
         )
       )
     )
-    (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
+    )
   )
 )
 (HintD
@@ -6714,43 +6167,35 @@
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_all_reftype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_all_reftype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "reftype" (VarT "reftype"))
-    (typbind "var_0*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "reftype"))
-  )
-  (RuleD
-    "subst_all_reftype_is_wf_0"
-    (ExpP "reftype" (VarT "reftype"))
-    (ExpP "var_0*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "reftype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "reftype")))
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_all_reftype"
-          (ExpA (VarE "reftype"))
-          (ExpA (VarE "var_0*"))
+          "subst_reftype"
+          (ExpA (VarE "rt"))
+          (ExpA
+            (IterE
+              (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+              (ListN (VarE "n") "i")
+            )
+          )
+          (ExpA
+            (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*")))
+          )
         )
       )
     )
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
+    )
   )
 )
 (HintD
@@ -6782,6 +6227,16 @@
         )
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
+    )
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
     )
   )
 )
@@ -6815,43 +6270,35 @@
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_all_tagtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_all_tagtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "tagtype" (VarT "tagtype"))
-    (typbind "var_0*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "tagtype"))
-  )
-  (RuleD
-    "subst_all_tagtype_is_wf_0"
-    (ExpP "tagtype" (VarT "tagtype"))
-    (ExpP "var_0*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "tagtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "tagtype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "tagtype")))
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_typeuse"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_all_tagtype"
-          (ExpA (VarE "tagtype"))
-          (ExpA (VarE "var_0*"))
+          "subst_tagtype"
+          (ExpA (VarE "jt"))
+          (ExpA
+            (IterE
+              (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+              (ListN (VarE "n") "i")
+            )
+          )
+          (ExpA
+            (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*")))
+          )
         )
       )
     )
-    (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
+    )
   )
 )
 (HintD
@@ -6884,43 +6331,35 @@
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_all_globaltype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_all_globaltype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "globaltype" (VarT "globaltype"))
-    (typbind "var_0*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "globaltype"))
-  )
-  (RuleD
-    "subst_all_globaltype_is_wf_0"
-    (ExpP "globaltype" (VarT "globaltype"))
-    (ExpP "var_0*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "globaltype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "globaltype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "globaltype")))
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_globaltype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_all_globaltype"
-          (ExpA (VarE "globaltype"))
-          (ExpA (VarE "var_0*"))
+          "subst_globaltype"
+          (ExpA (VarE "gt"))
+          (ExpA
+            (IterE
+              (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+              (ListN (VarE "n") "i")
+            )
+          )
+          (ExpA
+            (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*")))
+          )
         )
       )
     )
-    (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
+    )
   )
 )
 (HintD
@@ -6953,43 +6392,35 @@
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_all_memtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_all_memtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "memtype" (VarT "memtype"))
-    (typbind "var_0*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "memtype"))
-  )
-  (RuleD
-    "subst_all_memtype_is_wf_0"
-    (ExpP "memtype" (VarT "memtype"))
-    (ExpP "var_0*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "memtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "memtype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "memtype")))
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_memtype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_all_memtype"
-          (ExpA (VarE "memtype"))
-          (ExpA (VarE "var_0*"))
+          "subst_memtype"
+          (ExpA (VarE "mt"))
+          (ExpA
+            (IterE
+              (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+              (ListN (VarE "n") "i")
+            )
+          )
+          (ExpA
+            (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*")))
+          )
         )
       )
     )
-    (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
+    )
   )
 )
 (HintD
@@ -7022,43 +6453,35 @@
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_all_tabletype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_all_tabletype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "tabletype" (VarT "tabletype"))
-    (typbind "var_0*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "tabletype"))
-  )
-  (RuleD
-    "subst_all_tabletype_is_wf_0"
-    (ExpP "tabletype" (VarT "tabletype"))
-    (ExpP "var_0*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "tabletype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "tabletype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "tabletype")))
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_tabletype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_all_tabletype"
-          (ExpA (VarE "tabletype"))
-          (ExpA (VarE "var_0*"))
+          "subst_tabletype"
+          (ExpA (VarE "tt"))
+          (ExpA
+            (IterE
+              (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+              (ListN (VarE "n") "i")
+            )
+          )
+          (ExpA
+            (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*")))
+          )
         )
       )
     )
-    (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
+    )
   )
 )
 (HintD
@@ -7091,43 +6514,35 @@
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_all_externtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_all_externtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "externtype" (VarT "externtype"))
-    (typbind "var_0*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "externtype"))
-  )
-  (RuleD
-    "subst_all_externtype_is_wf_0"
-    (ExpP "externtype" (VarT "externtype"))
-    (ExpP "var_0*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "externtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "externtype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "externtype")))
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_externtype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_all_externtype"
-          (ExpA (VarE "externtype"))
-          (ExpA (VarE "var_0*"))
+          "subst_externtype"
+          (ExpA (VarE "xt"))
+          (ExpA
+            (IterE
+              (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+              (ListN (VarE "n") "i")
+            )
+          )
+          (ExpA
+            (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*")))
+          )
         )
       )
     )
-    (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
+    )
   )
 )
 (HintD
@@ -7160,43 +6575,35 @@
       )
       (ExpA (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*"))))
     )
-  )
-)
-(HintD (RelH "subst_all_moduletype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "subst_all_moduletype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "moduletype" (VarT "moduletype"))
-    (typbind "var_0*" (IterT (VarT "typeuse") List))
-    (typbind "ret_val" (VarT "moduletype"))
-  )
-  (RuleD
-    "subst_all_moduletype_is_wf_0"
-    (ExpP "moduletype" (VarT "moduletype"))
-    (ExpP "var_0*" (IterT (VarT "typeuse") List))
-    (ExpP "ret_val" (VarT "moduletype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "moduletype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_moduletype" (Seq Arg) (TupE (VarE "moduletype")))
-    (IterPr
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_moduletype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "subst_all_moduletype"
-          (ExpA (VarE "moduletype"))
-          (ExpA (VarE "var_0*"))
+          "subst_moduletype"
+          (ExpA (VarE "mmt"))
+          (ExpA
+            (IterE
+              (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+              (ListN (VarE "n") "i")
+            )
+          )
+          (ExpA
+            (IterE (VarE "tu") (ListN (VarE "n")) (iterexp "tu" (VarE "tu*")))
+          )
         )
       )
     )
-    (RulePr "wf_moduletype" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_typevar"
+        (Seq Arg)
+        (TupE
+          (CaseE (Seq (Atom _IDX) Arg) (TupE (CaseE Arg (TupE (VarE "i")))))
+        )
+      )
+      (ListN (VarE "n") "i")
+    )
   )
 )
 (HintD
@@ -7333,6 +6740,11 @@
         )
       )
     )
+    (IterPr
+      (RulePr "wf_subtype" (Seq Arg) (TupE (VarE "subtype")))
+      List
+      (iterexp "subtype" (VarE "subtype*"))
+    )
   )
 )
 (HintD (DecH "rollrt" (hint "show" "$roll_(%, %)") (hint "macro" "\"rollrt\"")))
@@ -7401,6 +6813,11 @@
         )
       )
     )
+    (IterPr
+      (RulePr "wf_subtype" (Seq Arg) (TupE (VarE "subtype")))
+      List
+      (iterexp "subtype" (VarE "subtype*"))
+    )
   )
 )
 (HintD
@@ -7464,6 +6881,11 @@
         )
       )
     )
+    (IterPr
+      (RulePr "wf_subtype" (Seq Arg) (TupE (VarE "subtype")))
+      List
+      (iterexp "subtype" (VarE "subtype*"))
+    )
   )
 )
 (HintD
@@ -7501,31 +6923,6 @@
     )
   )
 )
-(HintD (RelH "unrolldt_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "unrolldt_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "deftype" (VarT "deftype"))
-    (typbind "ret_val" (VarT "subtype"))
-  )
-  (RuleD
-    "unrolldt_is_wf_0"
-    (ExpP "deftype" (VarT "deftype"))
-    (ExpP "ret_val" (VarT "subtype"))
-    (Seq Arg Arg)
-    (TupE (VarE "deftype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "unrolldt" (ExpA (VarE "deftype")))
-      )
-    )
-    (RulePr "wf_subtype" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD
   (DecH "unrolldt" (hint "show" "$unroll(%)") (hint "macro" "\"unrolldt\""))
 )
@@ -7548,31 +6945,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_addrtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_addrtype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "addrtype" (VarT "addrtype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_addrtype_is_wf_0"
-    (ExpP "addrtype" (VarT "addrtype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "addrtype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_addrtype" (ExpA (VarE "addrtype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -7594,28 +6984,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_numtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_numtype_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "numtype" (VarT "numtype")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_numtype_is_wf_0"
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "numtype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_numtype" (ExpA (VarE "numtype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -7637,31 +7023,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_packtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_packtype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "packtype" (VarT "packtype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_packtype_is_wf_0"
-    (ExpP "packtype" (VarT "packtype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "packtype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_packtype" (ExpA (VarE "packtype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -7672,36 +7051,21 @@
     (ExpP "numtype" (VarT "numtype"))
     (ExpA (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype")))
     (CallE "free_numtype" (ExpA (VarE "numtype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+    )
   )
   (DefD
     (ExpP "packtype" (VarT "packtype"))
     (ExpA (SubE (VarT "packtype") (VarT "lanetype") (VarE "packtype")))
     (CallE "free_packtype" (ExpA (VarE "packtype")))
-  )
-)
-(HintD (RelH "free_lanetype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_lanetype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "lanetype" (VarT "lanetype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_lanetype_is_wf_0"
-    (ExpP "lanetype" (VarT "lanetype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "lanetype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_lanetype" (ExpA (VarE "lanetype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_packtype" (ExpA (VarE "packtype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -7723,28 +7087,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_vectype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_vectype_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "vectype" (VarT "vectype")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_vectype_is_wf_0"
-    (ExpP "vectype" (VarT "vectype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "vectype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_vectype" (ExpA (VarE "vectype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -7755,36 +7115,21 @@
     (ExpP "numtype" (VarT "numtype"))
     (ExpA (SubE (VarT "numtype") (VarT "consttype") (VarE "numtype")))
     (CallE "free_numtype" (ExpA (VarE "numtype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+    )
   )
   (DefD
     (ExpP "vectype" (VarT "vectype"))
     (ExpA (SubE (VarT "vectype") (VarT "consttype") (VarE "vectype")))
     (CallE "free_vectype" (ExpA (VarE "vectype")))
-  )
-)
-(HintD (RelH "free_consttype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_consttype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "consttype" (VarT "consttype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_consttype_is_wf_0"
-    (ExpP "consttype" (VarT "consttype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "consttype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_consttype" (ExpA (VarE "consttype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -7806,31 +7151,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_absheaptype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_absheaptype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "absheaptype" (VarT "absheaptype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_absheaptype_is_wf_0"
-    (ExpP "absheaptype" (VarT "absheaptype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "absheaptype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_absheaptype" (ExpA (VarE "absheaptype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -7841,6 +7179,11 @@
     (ExpP "typeidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom _IDX) Arg) (TupE (VarE "typeidx"))))
     (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+    )
   )
   (DefD
     (ExpP "n" nat)
@@ -7857,29 +7200,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_typevar_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_typevar_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "typevar" (VarT "typevar")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_typevar_is_wf_0"
-    (ExpP "typevar" (VarT "typevar"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "typevar") (VarE "ret_val"))
-    (RulePr "wf_typevar" (Seq Arg) (TupE (VarE "typevar")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_typevar" (ExpA (VarE "typevar")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (RecD
@@ -7891,11 +7229,21 @@
       (ExpP "absheaptype" (VarT "absheaptype"))
       (ExpA (SubE (VarT "absheaptype") (VarT "heaptype") (VarE "absheaptype")))
       (CallE "free_absheaptype" (ExpA (VarE "absheaptype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_absheaptype" (ExpA (VarE "absheaptype"))))
+      )
     )
     (DefD
       (ExpP "typeuse" (VarT "typeuse"))
       (ExpA (SubE (VarT "typeuse") (VarT "heaptype") (VarE "typeuse")))
       (CallE "free_typeuse" (ExpA (VarE "typeuse")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeuse" (ExpA (VarE "typeuse"))))
+      )
     )
   )
   (DecD
@@ -7915,6 +7263,11 @@
         )
       )
       (CallE "free_heaptype" (ExpA (VarE "heaptype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_heaptype" (ExpA (VarE "heaptype"))))
+      )
     )
   )
   (DecD
@@ -7925,11 +7278,21 @@
       (ExpP "typevar" (VarT "typevar"))
       (ExpA (SubE (VarT "typevar") (VarT "typeuse") (VarE "typevar")))
       (CallE "free_typevar" (ExpA (VarE "typevar")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typevar" (ExpA (VarE "typevar"))))
+      )
     )
     (DefD
       (ExpP "deftype" (VarT "deftype"))
       (ExpA (SubE (VarT "deftype") (VarT "typeuse") (VarE "deftype")))
       (CallE "free_deftype" (ExpA (VarE "deftype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_deftype" (ExpA (VarE "deftype"))))
+      )
     )
   )
   (DecD
@@ -7940,16 +7303,31 @@
       (ExpP "numtype" (VarT "numtype"))
       (ExpA (SubE (VarT "numtype") (VarT "valtype") (VarE "numtype")))
       (CallE "free_numtype" (ExpA (VarE "numtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+      )
     )
     (DefD
       (ExpP "vectype" (VarT "vectype"))
       (ExpA (SubE (VarT "vectype") (VarT "valtype") (VarE "vectype")))
       (CallE "free_vectype" (ExpA (VarE "vectype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
     )
     (DefD
       (ExpP "reftype" (VarT "reftype"))
       (ExpA (SubE (VarT "reftype") (VarT "valtype") (VarE "reftype")))
       (CallE "free_reftype" (ExpA (VarE "reftype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_reftype" (ExpA (VarE "reftype"))))
+      )
     )
     (DefD
       (ExpA (CaseE (Atom BOT) (TupE)))
@@ -7964,6 +7342,24 @@
         (expfield (Atom LOCALS) (ListE))
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
       )
     )
   )
@@ -7991,6 +7387,31 @@
           )
         )
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA
+              (IterE
+                (CallE "free_valtype" (ExpA (VarE "valtype")))
+                List
+                (iterexp "valtype" (VarE "valtype*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE (CallE "free_valtype" (ExpA (VarE "valtype"))))
+        )
+        List
+        (iterexp "valtype" (VarE "valtype*"))
+      )
     )
   )
   (DecD
@@ -8001,11 +7422,21 @@
       (ExpP "valtype" (VarT "valtype"))
       (ExpA (SubE (VarT "valtype") (VarT "storagetype") (VarE "valtype")))
       (CallE "free_valtype" (ExpA (VarE "valtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_valtype" (ExpA (VarE "valtype"))))
+      )
     )
     (DefD
       (ExpP "packtype" (VarT "packtype"))
       (ExpA (SubE (VarT "packtype") (VarT "storagetype") (VarE "packtype")))
       (CallE "free_packtype" (ExpA (VarE "packtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_packtype" (ExpA (VarE "packtype"))))
+      )
     )
   )
   (DecD
@@ -8025,6 +7456,11 @@
         )
       )
       (CallE "free_storagetype" (ExpA (VarE "storagetype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_storagetype" (ExpA (VarE "storagetype"))))
+      )
     )
   )
   (DecD
@@ -8060,11 +7496,41 @@
           )
         )
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA
+              (IterE
+                (CallE "free_fieldtype" (ExpA (VarE "fieldtype")))
+                List
+                (iterexp "fieldtype" (VarE "fieldtype*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE (CallE "free_fieldtype" (ExpA (VarE "fieldtype"))))
+        )
+        List
+        (iterexp "fieldtype" (VarE "fieldtype*"))
+      )
     )
     (DefD
       (ExpP "fieldtype" (VarT "fieldtype"))
       (ExpA (CaseE (Seq (Atom ARRAY) Arg) (TupE (VarE "fieldtype"))))
       (CallE "free_fieldtype" (ExpA (VarE "fieldtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_fieldtype" (ExpA (VarE "fieldtype"))))
+      )
     )
     (DefD
       (ExpP "resulttype_1" (VarT "list" (TypA (VarT "valtype"))))
@@ -8078,6 +7544,16 @@
       (CompE
         (CallE "free_resulttype" (ExpA (VarE "resulttype_1")))
         (CallE "free_resulttype" (ExpA (VarE "resulttype_2")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_resulttype" (ExpA (VarE "resulttype_1"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_resulttype" (ExpA (VarE "resulttype_2"))))
       )
     )
   )
@@ -8111,6 +7587,36 @@
           )
         )
         (CallE "free_comptype" (ExpA (VarE "comptype")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA
+              (IterE
+                (CallE "free_typeuse" (ExpA (VarE "typeuse")))
+                List
+                (iterexp "typeuse" (VarE "typeuse*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE (CallE "free_typeuse" (ExpA (VarE "typeuse"))))
+        )
+        List
+        (iterexp "typeuse" (VarE "typeuse*"))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_comptype" (ExpA (VarE "comptype"))))
       )
     )
   )
@@ -8147,6 +7653,31 @@
           )
         )
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA
+              (IterE
+                (CallE "free_subtype" (ExpA (VarE "subtype")))
+                List
+                (iterexp "subtype" (VarE "subtype*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE (CallE "free_subtype" (ExpA (VarE "subtype"))))
+        )
+        List
+        (iterexp "subtype" (VarE "subtype*"))
+      )
     )
   )
   (DecD
@@ -8160,291 +7691,11 @@
         (CaseE (Seq (Atom _DEF) Arg Arg) (TupE (VarE "rectype") (VarE "n")))
       )
       (CallE "free_rectype" (ExpA (VarE "rectype")))
-    )
-  )
-)
-(RecD
-  (HintD (RelH "free_heaptype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_heaptype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "heaptype" (VarT "heaptype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_heaptype_is_wf_0"
-      (ExpP "heaptype" (VarT "heaptype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "heaptype") (VarE "ret_val"))
-      (RulePr "wf_heaptype" (Seq Arg) (TupE (VarE "heaptype")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_heaptype" (ExpA (VarE "heaptype")))
-        )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_rectype" (ExpA (VarE "rectype"))))
       )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_reftype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_reftype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "reftype" (VarT "reftype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_reftype_is_wf_0"
-      (ExpP "reftype" (VarT "reftype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "reftype") (VarE "ret_val"))
-      (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "reftype")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_reftype" (ExpA (VarE "reftype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_typeuse_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_typeuse_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "typeuse" (VarT "typeuse"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_typeuse_is_wf_0"
-      (ExpP "typeuse" (VarT "typeuse"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "typeuse") (VarE "ret_val"))
-      (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "typeuse")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_typeuse" (ExpA (VarE "typeuse")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_valtype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_valtype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "valtype" (VarT "valtype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_valtype_is_wf_0"
-      (ExpP "valtype" (VarT "valtype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "valtype") (VarE "ret_val"))
-      (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "valtype")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_valtype" (ExpA (VarE "valtype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_resulttype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_resulttype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "resulttype" (VarT "resulttype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_resulttype_is_wf_0"
-      (ExpP "resulttype" (VarT "resulttype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "resulttype") (VarE "ret_val"))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_resulttype" (ExpA (VarE "resulttype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_storagetype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_storagetype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "storagetype" (VarT "storagetype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_storagetype_is_wf_0"
-      (ExpP "storagetype" (VarT "storagetype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "storagetype") (VarE "ret_val"))
-      (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_storagetype" (ExpA (VarE "storagetype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_fieldtype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_fieldtype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "fieldtype" (VarT "fieldtype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_fieldtype_is_wf_0"
-      (ExpP "fieldtype" (VarT "fieldtype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "fieldtype") (VarE "ret_val"))
-      (RulePr "wf_fieldtype" (Seq Arg) (TupE (VarE "fieldtype")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_fieldtype" (ExpA (VarE "fieldtype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_comptype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_comptype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "comptype" (VarT "comptype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_comptype_is_wf_0"
-      (ExpP "comptype" (VarT "comptype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "comptype") (VarE "ret_val"))
-      (RulePr "wf_comptype" (Seq Arg) (TupE (VarE "comptype")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_comptype" (ExpA (VarE "comptype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_subtype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_subtype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "subtype" (VarT "subtype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_subtype_is_wf_0"
-      (ExpP "subtype" (VarT "subtype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "subtype") (VarE "ret_val"))
-      (RulePr "wf_subtype" (Seq Arg) (TupE (VarE "subtype")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_subtype" (ExpA (VarE "subtype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_rectype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_rectype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "rectype" (VarT "rectype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_rectype_is_wf_0"
-      (ExpP "rectype" (VarT "rectype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "rectype") (VarE "ret_val"))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_rectype" (ExpA (VarE "rectype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_deftype_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_deftype_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "deftype" (VarT "deftype"))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_deftype_is_wf_0"
-      (ExpP "deftype" (VarT "deftype"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "deftype") (VarE "ret_val"))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_deftype" (ExpA (VarE "deftype")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
     )
   )
 )
@@ -8456,29 +7707,11 @@
     (ExpP "deftype" (VarT "deftype"))
     (ExpA (SubE (VarT "deftype") (VarT "typeuse") (VarE "deftype")))
     (CallE "free_deftype" (ExpA (VarE "deftype")))
-  )
-)
-(HintD (RelH "free_tagtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_tagtype_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "tagtype" (VarT "tagtype")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_tagtype_is_wf_0"
-    (ExpP "tagtype" (VarT "tagtype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "tagtype") (VarE "ret_val"))
-    (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "tagtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_tagtype" (ExpA (VarE "tagtype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_deftype" (ExpA (VarE "deftype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -8498,32 +7731,11 @@
       )
     )
     (CallE "free_valtype" (ExpA (VarE "valtype")))
-  )
-)
-(HintD (RelH "free_globaltype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_globaltype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "globaltype" (VarT "globaltype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_globaltype_is_wf_0"
-    (ExpP "globaltype" (VarT "globaltype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "globaltype") (VarE "ret_val"))
-    (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "globaltype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_globaltype" (ExpA (VarE "globaltype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_valtype" (ExpA (VarE "valtype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -8537,29 +7749,11 @@
       (CaseE (Seq Arg Arg (Atom PAGE)) (TupE (VarE "addrtype") (VarE "limits")))
     )
     (CallE "free_addrtype" (ExpA (VarE "addrtype")))
-  )
-)
-(HintD (RelH "free_memtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_memtype_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "memtype" (VarT "memtype")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_memtype_is_wf_0"
-    (ExpP "memtype" (VarT "memtype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "memtype") (VarE "ret_val"))
-    (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "memtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_memtype" (ExpA (VarE "memtype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_addrtype" (ExpA (VarE "addrtype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -8580,32 +7774,16 @@
       (CallE "free_addrtype" (ExpA (VarE "addrtype")))
       (CallE "free_reftype" (ExpA (VarE "reftype")))
     )
-  )
-)
-(HintD (RelH "free_tabletype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_tabletype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "tabletype" (VarT "tabletype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_tabletype_is_wf_0"
-    (ExpP "tabletype" (VarT "tabletype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "tabletype") (VarE "ret_val"))
-    (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "tabletype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_tabletype" (ExpA (VarE "tabletype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_addrtype" (ExpA (VarE "addrtype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_reftype" (ExpA (VarE "reftype"))))
+    )
   )
 )
 (DecD
@@ -8626,31 +7804,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_datatype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_datatype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "datatype" (VarT "datatype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_datatype_is_wf_0"
-    (ExpP "datatype" (VarT "datatype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "datatype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_datatype" (ExpA (VarE "datatype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -8661,32 +7832,11 @@
     (ExpP "reftype" (VarT "reftype"))
     (ExpA (VarE "reftype"))
     (CallE "free_reftype" (ExpA (VarE "reftype")))
-  )
-)
-(HintD (RelH "free_elemtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_elemtype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "elemtype" (VarT "elemtype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_elemtype_is_wf_0"
-    (ExpP "elemtype" (VarT "elemtype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "elemtype") (VarE "ret_val"))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "elemtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_elemtype" (ExpA (VarE "elemtype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_reftype" (ExpA (VarE "reftype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -8697,52 +7847,51 @@
     (ExpP "tagtype" (VarT "typeuse"))
     (ExpA (CaseE (Seq (Atom TAG) Arg) (TupE (VarE "tagtype"))))
     (CallE "free_tagtype" (ExpA (VarE "tagtype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tagtype" (ExpA (VarE "tagtype"))))
+    )
   )
   (DefD
     (ExpP "globaltype" (VarT "globaltype"))
     (ExpA (CaseE (Seq (Atom GLOBAL) Arg) (TupE (VarE "globaltype"))))
     (CallE "free_globaltype" (ExpA (VarE "globaltype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_globaltype" (ExpA (VarE "globaltype"))))
+    )
   )
   (DefD
     (ExpP "memtype" (VarT "memtype"))
     (ExpA (CaseE (Seq (Atom MEM) Arg) (TupE (VarE "memtype"))))
     (CallE "free_memtype" (ExpA (VarE "memtype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_memtype" (ExpA (VarE "memtype"))))
+    )
   )
   (DefD
     (ExpP "tabletype" (VarT "tabletype"))
     (ExpA (CaseE (Seq (Atom TABLE) Arg) (TupE (VarE "tabletype"))))
     (CallE "free_tabletype" (ExpA (VarE "tabletype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tabletype" (ExpA (VarE "tabletype"))))
+    )
   )
   (DefD
     (ExpP "typeuse" (VarT "typeuse"))
     (ExpA (CaseE (Seq (Atom FUNC) Arg) (TupE (VarE "typeuse"))))
     (CallE "free_typeuse" (ExpA (VarE "typeuse")))
-  )
-)
-(HintD (RelH "free_externtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_externtype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "externtype" (VarT "externtype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_externtype_is_wf_0"
-    (ExpP "externtype" (VarT "externtype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "externtype") (VarE "ret_val"))
-    (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "externtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_externtype" (ExpA (VarE "externtype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_typeuse" (ExpA (VarE "typeuse"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -8791,32 +7940,56 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "free_moduletype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_moduletype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "moduletype" (VarT "moduletype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_moduletype_is_wf_0"
-    (ExpP "moduletype" (VarT "moduletype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "moduletype") (VarE "ret_val"))
-    (RulePr "wf_moduletype" (Seq Arg) (TupE (VarE "moduletype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_moduletype" (ExpA (VarE "moduletype")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_externtype" (ExpA (VarE "externtype_1")))
+              List
+              (iterexp "externtype_1" (VarE "externtype_1*"))
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_externtype" (ExpA (VarE "externtype_1"))))
+      )
+      List
+      (iterexp "externtype_1" (VarE "externtype_1*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_externtype" (ExpA (VarE "externtype_2")))
+              List
+              (iterexp "externtype_2" (VarE "externtype_2*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_externtype" (ExpA (VarE "externtype_2"))))
+      )
+      List
+      (iterexp "externtype_2" (VarE "externtype_2*"))
+    )
   )
 )
 (TypD
@@ -10394,22 +9567,7 @@
       )
     )
     (CaseE Arg (TupE (VarE "N")))
-  )
-)
-(HintD (RelH "dim_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "dim_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "shape" (VarT "shape")) (typbind "ret_val" (VarT "dim")))
-  (RuleD
-    "dim_is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "ret_val" (VarT "dim"))
-    (Seq Arg Arg)
-    (TupE (VarE "shape") (VarE "ret_val"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "dim" (ExpA (VarE "shape")))))
-    (RulePr "wf_dim" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_dim" (Seq Arg) (TupE (CaseE Arg (TupE (VarE "N")))))
   )
 )
 (HintD (DecH "dim" (hint "macro" "\"shdim\"")))
@@ -16191,20 +15349,16 @@
       (expfield (Atom ALIGN) (CaseE Arg (TupE (NumE (Nat 0)))))
       (expfield (Atom OFFSET) (CaseE Arg (TupE (NumE (Nat 0)))))
     )
-  )
-)
-(HintD (RelH "memarg0_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "memarg0_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "memarg")))
-  (RuleD
-    "memarg0_is_wf_0"
-    (ExpP "ret_val" (VarT "memarg"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "memarg0")))
-    (RulePr "wf_memarg" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_memarg"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom ALIGN) (CaseE Arg (TupE (NumE (Nat 0)))))
+          (expfield (Atom OFFSET) (CaseE Arg (TupE (NumE (Nat 0)))))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "memarg0" (hint "show" "{}")))
@@ -16221,6 +15375,13 @@
       (CaseE (Seq (Atom mk_lit__0) Arg Arg) (TupE (VarE "numtype") (VarE "c")))
     )
     (OptE (CaseE (Seq (Atom CONST) Arg Arg) (TupE (VarE "numtype") (VarE "c"))))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE (Seq (Atom CONST) Arg Arg) (TupE (VarE "numtype") (VarE "c")))
+      )
+    )
   )
   (DefD
     (ExpP "vectype" (VarT "vectype"))
@@ -16232,6 +15393,13 @@
     (OptE
       (CaseE (Seq (Atom VCONST) Arg Arg) (TupE (VarE "vectype") (VarE "c")))
     )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE (Seq (Atom VCONST) Arg Arg) (TupE (VarE "vectype") (VarE "c")))
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "consttype"))
@@ -16240,41 +15408,6 @@
     (ExpA (VarE "x1"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "const_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "const_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "consttype" (VarT "consttype"))
-    (typbind "lit_" (VarT "lit_"))
-    (typbind "ret_val" (VarT "instr"))
-  )
-  (RuleD
-    "const_is_wf_0"
-    (ExpP "consttype" (VarT "consttype"))
-    (ExpP "lit_" (VarT "lit_"))
-    (ExpP "ret_val" (VarT "instr"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "consttype") (VarE "lit_") (VarE "ret_val"))
-    (RulePr
-      "wf_lit_"
-      (Seq Arg Arg)
-      (TupE
-        (SubE (VarT "consttype") (VarT "storagetype") (VarE "consttype"))
-        (VarE "lit_")
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE (CallE "const" (ExpA (VarE "consttype")) (ExpA (VarE "lit_"))))
-      )
-    )
-    (RulePr "wf_instr" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "const" (hint "partial" "{}")))
@@ -16288,29 +15421,11 @@
     (ExpP "dim" (VarT "dim"))
     (ExpA (CaseE (Seq Arg (Atom X) Arg) (TupE (VarE "lanetype") (VarE "dim"))))
     (CallE "free_lanetype" (ExpA (VarE "lanetype")))
-  )
-)
-(HintD (RelH "free_shape_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_shape_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "shape" (VarT "shape")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_shape_is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "shape") (VarE "ret_val"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_shape" (ExpA (VarE "shape")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_lanetype" (ExpA (VarE "lanetype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -16337,37 +15452,41 @@
         )
       )
     )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_opt"
+          (ExpA
+            (IterE
+              (CallE "free_valtype" (ExpA (VarE "valtype")))
+              Opt
+              (iterexp "valtype" (VarE "valtype?"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_valtype" (ExpA (VarE "valtype"))))
+      )
+      Opt
+      (iterexp "valtype" (VarE "valtype?"))
+    )
   )
   (DefD
     (ExpP "typeidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom _IDX) Arg) (TupE (VarE "typeidx"))))
     (CallE "free_typeidx" (ExpA (VarE "typeidx")))
-  )
-)
-(HintD (RelH "free_blocktype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_blocktype_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "blocktype" (VarT "blocktype"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_blocktype_is_wf_0"
-    (ExpP "blocktype" (VarT "blocktype"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "blocktype") (VarE "ret_val"))
-    (RulePr "wf_blocktype" (Seq Arg) (TupE (VarE "blocktype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_blocktype" (ExpA (VarE "blocktype")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -16387,6 +15506,16 @@
       (CallE "free_tagidx" (ExpA (VarE "tagidx")))
       (CallE "free_labelidx" (ExpA (VarE "labelidx")))
     )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tagidx" (ExpA (VarE "tagidx"))))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+    )
   )
   (DefD
     (ExpP "tagidx" (VarT "uN"))
@@ -16401,39 +15530,36 @@
       (CallE "free_tagidx" (ExpA (VarE "tagidx")))
       (CallE "free_labelidx" (ExpA (VarE "labelidx")))
     )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tagidx" (ExpA (VarE "tagidx"))))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+    )
   )
   (DefD
     (ExpP "labelidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom CATCH_ALL) Arg) (TupE (VarE "labelidx"))))
     (CallE "free_labelidx" (ExpA (VarE "labelidx")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+    )
   )
   (DefD
     (ExpP "labelidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom CATCH_ALL_REF) Arg) (TupE (VarE "labelidx"))))
     (CallE "free_labelidx" (ExpA (VarE "labelidx")))
-  )
-)
-(HintD (RelH "free_catch_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_catch_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "catch" (VarT "catch")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_catch_is_wf_0"
-    (ExpP "catch" (VarT "catch"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "catch") (VarE "ret_val"))
-    (RulePr "wf_catch" (Seq Arg) (TupE (VarE "catch")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_catch" (ExpA (VarE "catch")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (RecD
@@ -16461,6 +15587,23 @@
             (VarE "labelidx'")
             List
             (iterexp "labelidx'" (VarE "labelidx'*"))
+          )
+        )
+      )
+      (IterPr
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "shift_labelidxs"
+            (ExpA
+              (IterE
+                (VarE "labelidx'")
+                List
+                (iterexp "labelidx'" (VarE "labelidx'*"))
+              )
+            )
           )
         )
       )
@@ -16507,41 +15650,44 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "shift_labelidxs_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "shift_labelidxs_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "labelidx") List))
-      (typbind "ret_val*" (IterT (VarT "labelidx") List))
-    )
-    (RuleD
-      "shift_labelidxs_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "labelidx") List))
-      (ExpP "ret_val*" (IterT (VarT "labelidx") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "var_0")))
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "shift_labelidxs" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "shift_labelidxs"
+            (ExpA
+              (IterE
+                (VarE "labelidx'")
+                List
+                (iterexp "labelidx'" (VarE "labelidx'*"))
+              )
+            )
+          )
         )
       )
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 32))
+          (CaseE
+            Arg
+            (TupE
+              (CvtE
+                int
+                nat
+                (BinE
+                  SubOp
+                  int
+                  (CvtE nat int (ProjE (UncaseE (VarE "labelidx") Arg) 0))
+                  (CvtE nat int (NumE (Nat 1)))
+                )
+              )
+            )
+          )
+        )
       )
     )
   )
@@ -16565,6 +15711,24 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpA (CaseE (Atom UNREACHABLE) (TupE)))
@@ -16580,6 +15744,24 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpA (CaseE (Atom DROP) (TupE)))
@@ -16594,6 +15776,24 @@
         (expfield (Atom LOCALS) (ListE))
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
       )
     )
     (DefD
@@ -16633,6 +15833,64 @@
           )
         )
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_opt"
+            (ExpA
+              (IterE
+                (CallE
+                  "free_list"
+                  (ExpA
+                    (IterE
+                      (CallE "free_valtype" (ExpA (VarE "valtype")))
+                      List
+                      (iterexp "valtype" (VarE "valtype*"))
+                    )
+                  )
+                )
+                Opt
+                (iterexp "valtype*" (VarE "valtype*?"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE
+            (CallE
+              "free_list"
+              (ExpA
+                (IterE
+                  (CallE "free_valtype" (ExpA (VarE "valtype")))
+                  List
+                  (iterexp "valtype" (VarE "valtype*"))
+                )
+              )
+            )
+          )
+        )
+        Opt
+        (iterexp "valtype*" (VarE "valtype*?"))
+      )
+      (IterPr
+        (IterPr
+          (RulePr
+            "wf_free"
+            (Seq Arg)
+            (TupE (CallE "free_valtype" (ExpA (VarE "valtype"))))
+          )
+          List
+          (iterexp "valtype" (VarE "valtype*"))
+        )
+        Opt
+        (iterexp "valtype*" (VarE "valtype*?"))
+      )
     )
     (DefD
       (ExpP "blocktype" (VarT "blocktype"))
@@ -16653,6 +15911,21 @@
           (ExpA (IterE (VarE "instr") List (iterexp "instr" (VarE "instr*"))))
         )
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_blocktype" (ExpA (VarE "blocktype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_block"
+            (ExpA (IterE (VarE "instr") List (iterexp "instr" (VarE "instr*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "blocktype" (VarT "blocktype"))
@@ -16671,6 +15944,21 @@
         (CallE
           "free_block"
           (ExpA (IterE (VarE "instr") List (iterexp "instr" (VarE "instr*"))))
+        )
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_blocktype" (ExpA (VarE "blocktype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_block"
+            (ExpA (IterE (VarE "instr") List (iterexp "instr" (VarE "instr*"))))
+          )
         )
       )
     )
@@ -16709,16 +15997,63 @@
           )
         )
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_blocktype" (ExpA (VarE "blocktype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_block"
+            (ExpA
+              (IterE
+                (VarE "instr_1")
+                List
+                (iterexp "instr_1" (VarE "instr_1*"))
+              )
+            )
+          )
+        )
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_block"
+            (ExpA
+              (IterE
+                (VarE "instr_2")
+                List
+                (iterexp "instr_2" (VarE "instr_2*"))
+              )
+            )
+          )
+        )
+      )
     )
     (DefD
       (ExpP "labelidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom BR) Arg) (TupE (VarE "labelidx"))))
       (CallE "free_labelidx" (ExpA (VarE "labelidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+      )
     )
     (DefD
       (ExpP "labelidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom BR_IF) Arg) (TupE (VarE "labelidx"))))
       (CallE "free_labelidx" (ExpA (VarE "labelidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+      )
     )
     (DefD
       (ExpP "labelidx*" (IterT (VarT "labelidx") List))
@@ -16749,16 +16084,56 @@
         )
         (CallE "free_labelidx" (ExpA (VarE "labelidx'")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA
+              (IterE
+                (CallE "free_labelidx" (ExpA (VarE "labelidx")))
+                List
+                (iterexp "labelidx" (VarE "labelidx*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+        )
+        List
+        (iterexp "labelidx" (VarE "labelidx*"))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx'"))))
+      )
     )
     (DefD
       (ExpP "labelidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom BR_ON_NULL) Arg) (TupE (VarE "labelidx"))))
       (CallE "free_labelidx" (ExpA (VarE "labelidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+      )
     )
     (DefD
       (ExpP "labelidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom BR_ON_NON_NULL) Arg) (TupE (VarE "labelidx"))))
       (CallE "free_labelidx" (ExpA (VarE "labelidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+      )
     )
     (DefD
       (ExpP "labelidx" (VarT "uN"))
@@ -16776,6 +16151,21 @@
           (CallE "free_reftype" (ExpA (VarE "reftype_1")))
         )
         (CallE "free_reftype" (ExpA (VarE "reftype_2")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_reftype" (ExpA (VarE "reftype_1"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_reftype" (ExpA (VarE "reftype_2"))))
       )
     )
     (DefD
@@ -16795,16 +16185,41 @@
         )
         (CallE "free_reftype" (ExpA (VarE "reftype_2")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_labelidx" (ExpA (VarE "labelidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_reftype" (ExpA (VarE "reftype_1"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_reftype" (ExpA (VarE "reftype_2"))))
+      )
     )
     (DefD
       (ExpP "funcidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom CALL) Arg) (TupE (VarE "funcidx"))))
       (CallE "free_funcidx" (ExpA (VarE "funcidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_funcidx" (ExpA (VarE "funcidx"))))
+      )
     )
     (DefD
       (ExpP "typeuse" (VarT "typeuse"))
       (ExpA (CaseE (Seq (Atom CALL_REF) Arg) (TupE (VarE "typeuse"))))
       (CallE "free_typeuse" (ExpA (VarE "typeuse")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeuse" (ExpA (VarE "typeuse"))))
+      )
     )
     (DefD
       (ExpP "tableidx" (VarT "uN"))
@@ -16818,6 +16233,16 @@
       (CompE
         (CallE "free_tableidx" (ExpA (VarE "tableidx")))
         (CallE "free_typeuse" (ExpA (VarE "typeuse")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeuse" (ExpA (VarE "typeuse"))))
       )
     )
     (DefD
@@ -16834,16 +16259,44 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "funcidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom RETURN_CALL) Arg) (TupE (VarE "funcidx"))))
       (CallE "free_funcidx" (ExpA (VarE "funcidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_funcidx" (ExpA (VarE "funcidx"))))
+      )
     )
     (DefD
       (ExpP "typeuse" (VarT "typeuse"))
       (ExpA (CaseE (Seq (Atom RETURN_CALL_REF) Arg) (TupE (VarE "typeuse"))))
       (CallE "free_typeuse" (ExpA (VarE "typeuse")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeuse" (ExpA (VarE "typeuse"))))
+      )
     )
     (DefD
       (ExpP "tableidx" (VarT "uN"))
@@ -16858,11 +16311,26 @@
         (CallE "free_tableidx" (ExpA (VarE "tableidx")))
         (CallE "free_typeuse" (ExpA (VarE "typeuse")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeuse" (ExpA (VarE "typeuse"))))
+      )
     )
     (DefD
       (ExpP "tagidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom THROW) Arg) (TupE (VarE "tagidx"))))
       (CallE "free_tagidx" (ExpA (VarE "tagidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tagidx" (ExpA (VarE "tagidx"))))
+      )
     )
     (DefD
       (ExpA (CaseE (Atom THROW_REF) (TupE)))
@@ -16877,6 +16345,24 @@
         (expfield (Atom LOCALS) (ListE))
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
       )
     )
     (DefD
@@ -16923,6 +16409,61 @@
           )
         )
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_blocktype" (ExpA (VarE "blocktype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA
+              (IterE
+                (CallE "free_catch" (ExpA (VarE "catch")))
+                List
+                (iterexp "catch" (VarE "catch*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE (CallE "free_catch" (ExpA (VarE "catch"))))
+        )
+        List
+        (iterexp "catch" (VarE "catch*"))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA
+              (IterE
+                (CallE "free_instr" (ExpA (VarE "instr")))
+                List
+                (iterexp "instr" (VarE "instr*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE (CallE "free_instr" (ExpA (VarE "instr"))))
+        )
+        List
+        (iterexp "instr" (VarE "instr*"))
+      )
     )
     (DefD
       (ExpP "numtype" (VarT "numtype"))
@@ -16934,6 +16475,11 @@
         )
       )
       (CallE "free_numtype" (ExpA (VarE "numtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+      )
     )
     (DefD
       (ExpP "numtype" (VarT "numtype"))
@@ -16942,6 +16488,11 @@
         (CaseE (Seq (Atom UNOP) Arg Arg) (TupE (VarE "numtype") (VarE "unop")))
       )
       (CallE "free_numtype" (ExpA (VarE "numtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+      )
     )
     (DefD
       (ExpP "numtype" (VarT "numtype"))
@@ -16953,6 +16504,11 @@
         )
       )
       (CallE "free_numtype" (ExpA (VarE "numtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+      )
     )
     (DefD
       (ExpP "numtype" (VarT "numtype"))
@@ -16964,6 +16520,11 @@
         )
       )
       (CallE "free_numtype" (ExpA (VarE "numtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+      )
     )
     (DefD
       (ExpP "numtype" (VarT "numtype"))
@@ -16975,6 +16536,11 @@
         )
       )
       (CallE "free_numtype" (ExpA (VarE "numtype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+      )
     )
     (DefD
       (ExpP "numtype_1" (VarT "numtype"))
@@ -16990,6 +16556,16 @@
         (CallE "free_numtype" (ExpA (VarE "numtype_1")))
         (CallE "free_numtype" (ExpA (VarE "numtype_2")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype_1"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype_2"))))
+      )
     )
     (DefD
       (ExpP "vectype" (VarT "vectype"))
@@ -17001,6 +16577,11 @@
         )
       )
       (CallE "free_vectype" (ExpA (VarE "vectype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
     )
     (DefD
       (ExpP "vectype" (VarT "vectype"))
@@ -17012,6 +16593,11 @@
         )
       )
       (CallE "free_vectype" (ExpA (VarE "vectype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
     )
     (DefD
       (ExpP "vectype" (VarT "vectype"))
@@ -17023,6 +16609,11 @@
         )
       )
       (CallE "free_vectype" (ExpA (VarE "vectype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
     )
     (DefD
       (ExpP "vectype" (VarT "vectype"))
@@ -17034,6 +16625,11 @@
         )
       )
       (CallE "free_vectype" (ExpA (VarE "vectype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
     )
     (DefD
       (ExpP "vectype" (VarT "vectype"))
@@ -17045,6 +16641,11 @@
         )
       )
       (CallE "free_vectype" (ExpA (VarE "vectype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
     )
     (DefD
       (ExpP "shape" (VarT "shape"))
@@ -17053,6 +16654,11 @@
         (CaseE (Seq (Atom VUNOP) Arg Arg) (TupE (VarE "shape") (VarE "vunop")))
       )
       (CallE "free_shape" (ExpA (VarE "shape")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape"))))
+      )
     )
     (DefD
       (ExpP "shape" (VarT "shape"))
@@ -17064,6 +16670,11 @@
         )
       )
       (CallE "free_shape" (ExpA (VarE "shape")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape"))))
+      )
     )
     (DefD
       (ExpP "shape" (VarT "shape"))
@@ -17075,6 +16686,11 @@
         )
       )
       (CallE "free_shape" (ExpA (VarE "shape")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape"))))
+      )
     )
     (DefD
       (ExpP "shape" (VarT "shape"))
@@ -17086,6 +16702,11 @@
         )
       )
       (CallE "free_shape" (ExpA (VarE "shape")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape"))))
+      )
     )
     (DefD
       (ExpP "shape" (VarT "shape"))
@@ -17097,6 +16718,11 @@
         )
       )
       (CallE "free_shape" (ExpA (VarE "shape")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape"))))
+      )
     )
     (DefD
       (ExpP "ishape" (VarT "ishape"))
@@ -17108,11 +16734,25 @@
         )
       )
       (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape") Arg) 0)))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape") Arg) 0)))
+        )
+      )
     )
     (DefD
       (ExpP "ishape" (VarT "ishape"))
       (ExpA (CaseE (Seq (Atom VBITMASK) Arg) (TupE (VarE "ishape"))))
       (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape") Arg) 0)))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape") Arg) 0)))
+        )
+      )
     )
     (DefD
       (ExpP "bshape" (VarT "bshape"))
@@ -17124,6 +16764,13 @@
         )
       )
       (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "bshape") Arg) 0)))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "bshape") Arg) 0)))
+        )
+      )
     )
     (DefD
       (ExpP "bshape" (VarT "bshape"))
@@ -17138,6 +16785,13 @@
         )
       )
       (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "bshape") Arg) 0)))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "bshape") Arg) 0)))
+        )
+      )
     )
     (DefD
       (ExpP "ishape_1" (VarT "ishape"))
@@ -17152,6 +16806,20 @@
       (CompE
         (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0)))
         (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0)))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0)))
+        )
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0)))
+        )
       )
     )
     (DefD
@@ -17168,6 +16836,20 @@
         (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0)))
         (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0)))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0)))
+        )
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0)))
+        )
+      )
     )
     (DefD
       (ExpP "ishape_1" (VarT "ishape"))
@@ -17182,6 +16864,20 @@
       (CompE
         (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0)))
         (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0)))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0)))
+        )
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0)))
+        )
       )
     )
     (DefD
@@ -17198,6 +16894,20 @@
         (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0)))
         (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0)))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0)))
+        )
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE "free_shape" (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0)))
+        )
+      )
     )
     (DefD
       (ExpP "shape_1" (VarT "shape"))
@@ -17213,11 +16923,26 @@
         (CallE "free_shape" (ExpA (VarE "shape_1")))
         (CallE "free_shape" (ExpA (VarE "shape_2")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape_1"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape_2"))))
+      )
     )
     (DefD
       (ExpP "shape" (VarT "shape"))
       (ExpA (CaseE (Seq (Atom VSPLAT) Arg) (TupE (VarE "shape"))))
       (CallE "free_shape" (ExpA (VarE "shape")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape"))))
+      )
     )
     (DefD
       (ExpP "shape" (VarT "shape"))
@@ -17234,6 +16959,11 @@
         )
       )
       (CallE "free_shape" (ExpA (VarE "shape")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape"))))
+      )
     )
     (DefD
       (ExpP "shape" (VarT "shape"))
@@ -17245,11 +16975,21 @@
         )
       )
       (CallE "free_shape" (ExpA (VarE "shape")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_shape" (ExpA (VarE "shape"))))
+      )
     )
     (DefD
       (ExpP "heaptype" (VarT "heaptype"))
       (ExpA (CaseE (Seq (Atom REF.NULL) Arg) (TupE (VarE "heaptype"))))
       (CallE "free_heaptype" (ExpA (VarE "heaptype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_heaptype" (ExpA (VarE "heaptype"))))
+      )
     )
     (DefD
       (ExpA (CaseE (Atom REF.IS_NULL) (TupE)))
@@ -17264,6 +17004,24 @@
         (expfield (Atom LOCALS) (ListE))
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
       )
     )
     (DefD
@@ -17280,6 +17038,24 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpA (CaseE (Atom REF.EQ) (TupE)))
@@ -17295,21 +17071,54 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "reftype" (VarT "reftype"))
       (ExpA (CaseE (Seq (Atom REF.TEST) Arg) (TupE (VarE "reftype"))))
       (CallE "free_reftype" (ExpA (VarE "reftype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_reftype" (ExpA (VarE "reftype"))))
+      )
     )
     (DefD
       (ExpP "reftype" (VarT "reftype"))
       (ExpA (CaseE (Seq (Atom REF.CAST) Arg) (TupE (VarE "reftype"))))
       (CallE "free_reftype" (ExpA (VarE "reftype")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_reftype" (ExpA (VarE "reftype"))))
+      )
     )
     (DefD
       (ExpP "funcidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom REF.FUNC) Arg) (TupE (VarE "funcidx"))))
       (CallE "free_funcidx" (ExpA (VarE "funcidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_funcidx" (ExpA (VarE "funcidx"))))
+      )
     )
     (DefD
       (ExpA (CaseE (Atom REF.I31) (TupE)))
@@ -17324,6 +17133,24 @@
         (expfield (Atom LOCALS) (ListE))
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
       )
     )
     (DefD
@@ -17341,16 +17168,44 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom STRUCT.NEW) Arg) (TupE (VarE "typeidx"))))
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom STRUCT.NEW_DEFAULT) Arg) (TupE (VarE "typeidx"))))
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "sx?" (IterT (VarT "sx") Opt))
@@ -17367,6 +17222,11 @@
         )
       )
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
@@ -17378,16 +17238,31 @@
         )
       )
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom ARRAY.NEW) Arg) (TupE (VarE "typeidx"))))
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom ARRAY.NEW_DEFAULT) Arg) (TupE (VarE "typeidx"))))
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
@@ -17399,6 +17274,11 @@
         )
       )
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
@@ -17412,6 +17292,16 @@
       (CompE
         (CallE "free_typeidx" (ExpA (VarE "typeidx")))
         (CallE "free_dataidx" (ExpA (VarE "dataidx")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_dataidx" (ExpA (VarE "dataidx"))))
       )
     )
     (DefD
@@ -17427,6 +17317,16 @@
         (CallE "free_typeidx" (ExpA (VarE "typeidx")))
         (CallE "free_elemidx" (ExpA (VarE "elemidx")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_elemidx" (ExpA (VarE "elemidx"))))
+      )
     )
     (DefD
       (ExpP "sx?" (IterT (VarT "sx") Opt))
@@ -17441,11 +17341,21 @@
         )
       )
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom ARRAY.SET) Arg) (TupE (VarE "typeidx"))))
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpA (CaseE (Atom ARRAY.LEN) (TupE)))
@@ -17461,11 +17371,34 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom ARRAY.FILL) Arg) (TupE (VarE "typeidx"))))
       (CallE "free_typeidx" (ExpA (VarE "typeidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx_1" (VarT "uN"))
@@ -17479,6 +17412,16 @@
       (CompE
         (CallE "free_typeidx" (ExpA (VarE "typeidx_1")))
         (CallE "free_typeidx" (ExpA (VarE "typeidx_2")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx_1"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx_2"))))
       )
     )
     (DefD
@@ -17494,6 +17437,16 @@
         (CallE "free_typeidx" (ExpA (VarE "typeidx")))
         (CallE "free_dataidx" (ExpA (VarE "dataidx")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_dataidx" (ExpA (VarE "dataidx"))))
+      )
     )
     (DefD
       (ExpP "typeidx" (VarT "uN"))
@@ -17507,6 +17460,16 @@
       (CompE
         (CallE "free_typeidx" (ExpA (VarE "typeidx")))
         (CallE "free_elemidx" (ExpA (VarE "elemidx")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_elemidx" (ExpA (VarE "elemidx"))))
       )
     )
     (DefD
@@ -17523,6 +17486,24 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpA (CaseE (Atom ANY.CONVERT_EXTERN) (TupE)))
@@ -17538,56 +17519,124 @@
         (expfield (Atom LABELS) (ListE))
         (expfield (Atom TAGS) (ListE))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom TAGS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "localidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom LOCAL.GET) Arg) (TupE (VarE "localidx"))))
       (CallE "free_localidx" (ExpA (VarE "localidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_localidx" (ExpA (VarE "localidx"))))
+      )
     )
     (DefD
       (ExpP "localidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom LOCAL.SET) Arg) (TupE (VarE "localidx"))))
       (CallE "free_localidx" (ExpA (VarE "localidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_localidx" (ExpA (VarE "localidx"))))
+      )
     )
     (DefD
       (ExpP "localidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom LOCAL.TEE) Arg) (TupE (VarE "localidx"))))
       (CallE "free_localidx" (ExpA (VarE "localidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_localidx" (ExpA (VarE "localidx"))))
+      )
     )
     (DefD
       (ExpP "globalidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom GLOBAL.GET) Arg) (TupE (VarE "globalidx"))))
       (CallE "free_globalidx" (ExpA (VarE "globalidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_globalidx" (ExpA (VarE "globalidx"))))
+      )
     )
     (DefD
       (ExpP "globalidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom GLOBAL.SET) Arg) (TupE (VarE "globalidx"))))
       (CallE "free_globalidx" (ExpA (VarE "globalidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_globalidx" (ExpA (VarE "globalidx"))))
+      )
     )
     (DefD
       (ExpP "tableidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom TABLE.GET) Arg) (TupE (VarE "tableidx"))))
       (CallE "free_tableidx" (ExpA (VarE "tableidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+      )
     )
     (DefD
       (ExpP "tableidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom TABLE.SET) Arg) (TupE (VarE "tableidx"))))
       (CallE "free_tableidx" (ExpA (VarE "tableidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+      )
     )
     (DefD
       (ExpP "tableidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom TABLE.SIZE) Arg) (TupE (VarE "tableidx"))))
       (CallE "free_tableidx" (ExpA (VarE "tableidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+      )
     )
     (DefD
       (ExpP "tableidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom TABLE.GROW) Arg) (TupE (VarE "tableidx"))))
       (CallE "free_tableidx" (ExpA (VarE "tableidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+      )
     )
     (DefD
       (ExpP "tableidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom TABLE.FILL) Arg) (TupE (VarE "tableidx"))))
       (CallE "free_tableidx" (ExpA (VarE "tableidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+      )
     )
     (DefD
       (ExpP "tableidx_1" (VarT "uN"))
@@ -17601,6 +17650,16 @@
       (CompE
         (CallE "free_tableidx" (ExpA (VarE "tableidx_1")))
         (CallE "free_tableidx" (ExpA (VarE "tableidx_2")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx_1"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx_2"))))
       )
     )
     (DefD
@@ -17616,11 +17675,26 @@
         (CallE "free_tableidx" (ExpA (VarE "tableidx")))
         (CallE "free_elemidx" (ExpA (VarE "elemidx")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_elemidx" (ExpA (VarE "elemidx"))))
+      )
     )
     (DefD
       (ExpP "elemidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom ELEM.DROP) Arg) (TupE (VarE "elemidx"))))
       (CallE "free_elemidx" (ExpA (VarE "elemidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_elemidx" (ExpA (VarE "elemidx"))))
+      )
     )
     (DefD
       (ExpP "numtype" (VarT "numtype"))
@@ -17641,6 +17715,16 @@
       (CompE
         (CallE "free_numtype" (ExpA (VarE "numtype")))
         (CallE "free_memidx" (ExpA (VarE "memidx")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
       )
     )
     (DefD
@@ -17663,6 +17747,16 @@
         (CallE "free_numtype" (ExpA (VarE "numtype")))
         (CallE "free_memidx" (ExpA (VarE "memidx")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_numtype" (ExpA (VarE "numtype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+      )
     )
     (DefD
       (ExpP "vectype" (VarT "vectype"))
@@ -17683,6 +17777,16 @@
       (CompE
         (CallE "free_vectype" (ExpA (VarE "vectype")))
         (CallE "free_memidx" (ExpA (VarE "memidx")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
       )
     )
     (DefD
@@ -17707,6 +17811,16 @@
         (CallE "free_vectype" (ExpA (VarE "vectype")))
         (CallE "free_memidx" (ExpA (VarE "memidx")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+      )
     )
     (DefD
       (ExpP "vectype" (VarT "vectype"))
@@ -17721,6 +17835,16 @@
       (CompE
         (CallE "free_vectype" (ExpA (VarE "vectype")))
         (CallE "free_memidx" (ExpA (VarE "memidx")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
       )
     )
     (DefD
@@ -17745,21 +17869,46 @@
         (CallE "free_vectype" (ExpA (VarE "vectype")))
         (CallE "free_memidx" (ExpA (VarE "memidx")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_vectype" (ExpA (VarE "vectype"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+      )
     )
     (DefD
       (ExpP "memidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom MEMORY.SIZE) Arg) (TupE (VarE "memidx"))))
       (CallE "free_memidx" (ExpA (VarE "memidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+      )
     )
     (DefD
       (ExpP "memidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom MEMORY.GROW) Arg) (TupE (VarE "memidx"))))
       (CallE "free_memidx" (ExpA (VarE "memidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+      )
     )
     (DefD
       (ExpP "memidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom MEMORY.FILL) Arg) (TupE (VarE "memidx"))))
       (CallE "free_memidx" (ExpA (VarE "memidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+      )
     )
     (DefD
       (ExpP "memidx_1" (VarT "uN"))
@@ -17773,6 +17922,16 @@
       (CompE
         (CallE "free_memidx" (ExpA (VarE "memidx_1")))
         (CallE "free_memidx" (ExpA (VarE "memidx_2")))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx_1"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx_2"))))
       )
     )
     (DefD
@@ -17788,11 +17947,26 @@
         (CallE "free_memidx" (ExpA (VarE "memidx")))
         (CallE "free_dataidx" (ExpA (VarE "dataidx")))
       )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+      )
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_dataidx" (ExpA (VarE "dataidx"))))
+      )
     )
     (DefD
       (ExpP "dataidx" (VarT "uN"))
       (ExpA (CaseE (Seq (Atom DATA.DROP) Arg) (TupE (VarE "dataidx"))))
       (CallE "free_dataidx" (ExpA (VarE "dataidx")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_dataidx" (ExpA (VarE "dataidx"))))
+      )
     )
   )
   (DecD
@@ -17820,61 +17994,39 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "free_instr_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_instr_is_wf"
-    (Seq Arg Arg)
-    (TupT (typbind "instr" (VarT "instr")) (typbind "ret_val" (VarT "free")))
-    (RuleD
-      "free_instr_is_wf_0"
-      (ExpP "instr" (VarT "instr"))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "instr") (VarE "ret_val"))
-      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "instr")))
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_instr" (ExpA (VarE "instr")))
-        )
-      )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
-    )
-  )
-  (HintD (RelH "free_block_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "free_block_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "instr") List))
-      (typbind "ret_val" (VarT "free"))
-    )
-    (RuleD
-      "free_block_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "instr") List))
-      (ExpP "ret_val" (VarT "free"))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val"))
       (IterPr
-        (RulePr "wf_instr" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "free_block" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE "shift_labelidxs" (ExpA (DotE (VarE "free") (Atom LABELS))))
         )
       )
-      (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "free_list"
+            (ExpA
+              (IterE
+                (CallE "free_instr" (ExpA (VarE "instr")))
+                List
+                (iterexp "instr" (VarE "instr*"))
+              )
+            )
+          )
+        )
+      )
+      (IterPr
+        (RulePr
+          "wf_free"
+          (Seq Arg)
+          (TupE (CallE "free_instr" (ExpA (VarE "instr"))))
+        )
+        List
+        (iterexp "instr" (VarE "instr*"))
+      )
     )
   )
 )
@@ -17895,28 +18047,31 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "free_expr_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_expr_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "expr" (VarT "expr")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_expr_is_wf_0"
-    (ExpP "expr" (VarT "expr"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "expr") (VarE "ret_val"))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_instr" (ExpA (VarE "instr")))
+              List
+              (iterexp "instr" (VarE "instr*"))
+            )
+          )
+        )
+      )
+    )
     (IterPr
-      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "expr")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_instr" (ExpA (VarE "instr"))))
+      )
       List
-      (iterexp "expr" (VarE "expr"))
+      (iterexp "instr" (VarE "instr*"))
     )
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "free_expr" (ExpA (VarE "expr"))))
-    )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (TypD
@@ -18467,23 +18622,11 @@
     (ExpP "rectype" (VarT "rectype"))
     (ExpA (CaseE (Seq (Atom TYPE) Arg) (TupE (VarE "rectype"))))
     (CallE "free_rectype" (ExpA (VarE "rectype")))
-  )
-)
-(HintD (RelH "free_type_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_type_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "type" (VarT "type")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_type_is_wf_0"
-    (ExpP "type" (VarT "type"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "type") (VarE "ret_val"))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "free_type" (ExpA (VarE "type"))))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_rectype" (ExpA (VarE "rectype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -18494,24 +18637,11 @@
     (ExpP "tagtype" (VarT "typeuse"))
     (ExpA (CaseE (Seq (Atom TAG) Arg) (TupE (VarE "tagtype"))))
     (CallE "free_tagtype" (ExpA (VarE "tagtype")))
-  )
-)
-(HintD (RelH "free_tag_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_tag_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "tag" (VarT "tag")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_tag_is_wf_0"
-    (ExpP "tag" (VarT "tag"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "tag") (VarE "ret_val"))
-    (RulePr "wf_tag" (Seq Arg) (TupE (VarE "tag")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "free_tag" (ExpA (VarE "tag"))))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tagtype" (ExpA (VarE "tagtype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -18531,29 +18661,12 @@
       (CallE "free_globaltype" (ExpA (VarE "globaltype")))
       (CallE "free_expr" (ExpA (VarE "expr")))
     )
-  )
-)
-(HintD (RelH "free_global_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_global_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "global" (VarT "global")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_global_is_wf_0"
-    (ExpP "global" (VarT "global"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "global") (VarE "ret_val"))
-    (RulePr "wf_global" (Seq Arg) (TupE (VarE "global")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_global" (ExpA (VarE "global")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_globaltype" (ExpA (VarE "globaltype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_free" (Seq Arg) (TupE (CallE "free_expr" (ExpA (VarE "expr")))))
   )
 )
 (DecD
@@ -18564,24 +18677,11 @@
     (ExpP "memtype" (VarT "memtype"))
     (ExpA (CaseE (Seq (Atom MEMORY) Arg) (TupE (VarE "memtype"))))
     (CallE "free_memtype" (ExpA (VarE "memtype")))
-  )
-)
-(HintD (RelH "free_mem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_mem_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "mem" (VarT "mem")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_mem_is_wf_0"
-    (ExpP "mem" (VarT "mem"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "mem") (VarE "ret_val"))
-    (RulePr "wf_mem" (Seq Arg) (TupE (VarE "mem")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "free_mem" (ExpA (VarE "mem"))))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_memtype" (ExpA (VarE "memtype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -18598,29 +18698,12 @@
       (CallE "free_tabletype" (ExpA (VarE "tabletype")))
       (CallE "free_expr" (ExpA (VarE "expr")))
     )
-  )
-)
-(HintD (RelH "free_table_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_table_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "table" (VarT "table")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_table_is_wf_0"
-    (ExpP "table" (VarT "table"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "table") (VarE "ret_val"))
-    (RulePr "wf_table" (Seq Arg) (TupE (VarE "table")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_table" (ExpA (VarE "table")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tabletype" (ExpA (VarE "tabletype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_free" (Seq Arg) (TupE (CallE "free_expr" (ExpA (VarE "expr")))))
   )
 )
 (DecD
@@ -18631,29 +18714,7 @@
     (ExpP "t" (VarT "valtype"))
     (ExpA (CaseE (Seq (Atom LOCAL) Arg) (TupE (VarE "t"))))
     (CallE "free_valtype" (ExpA (VarE "t")))
-  )
-)
-(HintD (RelH "free_local_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_local_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "local" (VarT "local")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_local_is_wf_0"
-    (ExpP "local" (VarT "local"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "local") (VarE "ret_val"))
-    (RulePr "wf_local" (Seq Arg) (TupE (VarE "local")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_local" (ExpA (VarE "local")))
-      )
-    )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_free" (Seq Arg) (TupE (CallE "free_valtype" (ExpA (VarE "t")))))
   )
 )
 (DecD
@@ -18694,24 +18755,41 @@
         (ListE)
       )
     )
-  )
-)
-(HintD (RelH "free_func_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_func_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "func" (VarT "func")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_func_is_wf_0"
-    (ExpP "func" (VarT "func"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "func") (VarE "ret_val"))
-    (RulePr "wf_func" (Seq Arg) (TupE (VarE "func")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "free_func" (ExpA (VarE "func"))))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_typeidx" (ExpA (VarE "typeidx"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_local" (ExpA (VarE "local")))
+              List
+              (iterexp "local" (VarE "local*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_local" (ExpA (VarE "local"))))
+      )
+      List
+      (iterexp "local" (VarE "local*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_block" (ExpA (VarE "expr"))))
+    )
   )
 )
 (DecD
@@ -18728,6 +18806,12 @@
       (CallE "free_memidx" (ExpA (VarE "memidx")))
       (CallE "free_expr" (ExpA (VarE "expr")))
     )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_memidx" (ExpA (VarE "memidx"))))
+    )
+    (RulePr "wf_free" (Seq Arg) (TupE (CallE "free_expr" (ExpA (VarE "expr")))))
   )
   (DefD
     (ExpA (CaseE (Atom PASSIVE) (TupE)))
@@ -18743,32 +18827,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_datamode_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_datamode_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "datamode" (VarT "datamode"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_datamode_is_wf_0"
-    (ExpP "datamode" (VarT "datamode"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "datamode") (VarE "ret_val"))
-    (RulePr "wf_datamode" (Seq Arg) (TupE (VarE "datamode")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_datamode" (ExpA (VarE "datamode")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -18788,24 +18864,11 @@
       )
     )
     (CallE "free_datamode" (ExpA (VarE "datamode")))
-  )
-)
-(HintD (RelH "free_data_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_data_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "data" (VarT "data")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_data_is_wf_0"
-    (ExpP "data" (VarT "data"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "data") (VarE "ret_val"))
-    (RulePr "wf_data" (Seq Arg) (TupE (VarE "data")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "free_data" (ExpA (VarE "data"))))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_datamode" (ExpA (VarE "datamode"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -18822,6 +18885,12 @@
       (CallE "free_tableidx" (ExpA (VarE "tableidx")))
       (CallE "free_expr" (ExpA (VarE "expr")))
     )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_tableidx" (ExpA (VarE "tableidx"))))
+    )
+    (RulePr "wf_free" (Seq Arg) (TupE (CallE "free_expr" (ExpA (VarE "expr")))))
   )
   (DefD
     (ExpA (CaseE (Atom PASSIVE) (TupE)))
@@ -18836,6 +18905,24 @@
       (expfield (Atom LOCALS) (ListE))
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
+      )
     )
   )
   (DefD
@@ -18852,32 +18939,24 @@
       (expfield (Atom LABELS) (ListE))
       (expfield (Atom TAGS) (ListE))
     )
-  )
-)
-(HintD (RelH "free_elemmode_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_elemmode_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "elemmode" (VarT "elemmode"))
-    (typbind "ret_val" (VarT "free"))
-  )
-  (RuleD
-    "free_elemmode_is_wf_0"
-    (ExpP "elemmode" (VarT "elemmode"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "elemmode") (VarE "ret_val"))
-    (RulePr "wf_elemmode" (Seq Arg) (TupE (VarE "elemmode")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_elemmode" (ExpA (VarE "elemmode")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TYPES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom LOCALS) (ListE))
+          (expfield (Atom LABELS) (ListE))
+          (expfield (Atom TAGS) (ListE))
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -18914,24 +18993,41 @@
       )
       (CallE "free_elemmode" (ExpA (VarE "elemmode")))
     )
-  )
-)
-(HintD (RelH "free_elem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_elem_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "elem" (VarT "elem")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_elem_is_wf_0"
-    (ExpP "elem" (VarT "elem"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "elem") (VarE "ret_val"))
-    (RulePr "wf_elem" (Seq Arg) (TupE (VarE "elem")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "free_elem" (ExpA (VarE "elem"))))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_reftype" (ExpA (VarE "reftype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_expr" (ExpA (VarE "expr")))
+              List
+              (iterexp "expr" (VarE "expr*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_expr" (ExpA (VarE "expr"))))
+      )
+      List
+      (iterexp "expr" (VarE "expr*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_elemmode" (ExpA (VarE "elemmode"))))
+    )
   )
 )
 (DecD
@@ -18942,29 +19038,11 @@
     (ExpP "funcidx" (VarT "uN"))
     (ExpA (CaseE (Seq (Atom START) Arg) (TupE (VarE "funcidx"))))
     (CallE "free_funcidx" (ExpA (VarE "funcidx")))
-  )
-)
-(HintD (RelH "free_start_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_start_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "start" (VarT "start")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_start_is_wf_0"
-    (ExpP "start" (VarT "start"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "start") (VarE "ret_val"))
-    (RulePr "wf_start" (Seq Arg) (TupE (VarE "start")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_start" (ExpA (VarE "start")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_funcidx" (ExpA (VarE "funcidx"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -18982,29 +19060,11 @@
       )
     )
     (CallE "free_externtype" (ExpA (VarE "externtype")))
-  )
-)
-(HintD (RelH "free_import_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_import_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "import" (VarT "import")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_import_is_wf_0"
-    (ExpP "import" (VarT "import"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "import") (VarE "ret_val"))
-    (RulePr "wf_import" (Seq Arg) (TupE (VarE "import")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_import" (ExpA (VarE "import")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_externtype" (ExpA (VarE "externtype"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -19021,29 +19081,11 @@
       )
     )
     (CallE "free_externidx" (ExpA (VarE "externidx")))
-  )
-)
-(HintD (RelH "free_export_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_export_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "export" (VarT "export")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_export_is_wf_0"
-    (ExpP "export" (VarT "export"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "export") (VarE "ret_val"))
-    (RulePr "wf_export" (Seq Arg) (TupE (VarE "export")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_export" (ExpA (VarE "export")))
-      )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_externidx" (ExpA (VarE "externidx"))))
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -19246,29 +19288,273 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "free_module_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "free_module_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "module" (VarT "module")) (typbind "ret_val" (VarT "free")))
-  (RuleD
-    "free_module_is_wf_0"
-    (ExpP "module" (VarT "module"))
-    (ExpP "ret_val" (VarT "free"))
-    (Seq Arg Arg)
-    (TupE (VarE "module") (VarE "ret_val"))
-    (RulePr "wf_module" (Seq Arg) (TupE (VarE "module")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "free_module" (ExpA (VarE "module")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_type" (ExpA (VarE "type")))
+              List
+              (iterexp "type" (VarE "type*"))
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_free" (Seq Arg) (TupE (VarE "ret_val")))
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_type" (ExpA (VarE "type"))))
+      )
+      List
+      (iterexp "type" (VarE "type*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_tag" (ExpA (VarE "tag")))
+              List
+              (iterexp "tag" (VarE "tag*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_free" (Seq Arg) (TupE (CallE "free_tag" (ExpA (VarE "tag")))))
+      List
+      (iterexp "tag" (VarE "tag*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_global" (ExpA (VarE "global")))
+              List
+              (iterexp "global" (VarE "global*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_global" (ExpA (VarE "global"))))
+      )
+      List
+      (iterexp "global" (VarE "global*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_mem" (ExpA (VarE "mem")))
+              List
+              (iterexp "mem" (VarE "mem*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_free" (Seq Arg) (TupE (CallE "free_mem" (ExpA (VarE "mem")))))
+      List
+      (iterexp "mem" (VarE "mem*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_table" (ExpA (VarE "table")))
+              List
+              (iterexp "table" (VarE "table*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_table" (ExpA (VarE "table"))))
+      )
+      List
+      (iterexp "table" (VarE "table*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_func" (ExpA (VarE "func")))
+              List
+              (iterexp "func" (VarE "func*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_func" (ExpA (VarE "func"))))
+      )
+      List
+      (iterexp "func" (VarE "func*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_data" (ExpA (VarE "data")))
+              List
+              (iterexp "data" (VarE "data*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_data" (ExpA (VarE "data"))))
+      )
+      List
+      (iterexp "data" (VarE "data*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_elem" (ExpA (VarE "elem")))
+              List
+              (iterexp "elem" (VarE "elem*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_elem" (ExpA (VarE "elem"))))
+      )
+      List
+      (iterexp "elem" (VarE "elem*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_opt"
+          (ExpA
+            (IterE
+              (CallE "free_start" (ExpA (VarE "start")))
+              Opt
+              (iterexp "start" (VarE "start?"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_start" (ExpA (VarE "start"))))
+      )
+      Opt
+      (iterexp "start" (VarE "start?"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_import" (ExpA (VarE "import")))
+              List
+              (iterexp "import" (VarE "import*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_import" (ExpA (VarE "import"))))
+      )
+      List
+      (iterexp "import" (VarE "import*"))
+    )
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_export" (ExpA (VarE "export")))
+              List
+              (iterexp "export" (VarE "export*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_export" (ExpA (VarE "export"))))
+      )
+      List
+      (iterexp "export" (VarE "export*"))
+    )
   )
 )
 (DecD
@@ -19279,35 +19565,10 @@
     (ExpP "module" (VarT "module"))
     (ExpA (VarE "module"))
     (DotE (CallE "free_module" (ExpA (VarE "module"))) (Atom FUNCS))
-  )
-)
-(HintD (RelH "funcidx_module_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "funcidx_module_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "module" (VarT "module"))
-    (typbind "ret_val*" (IterT (VarT "funcidx") List))
-  )
-  (RuleD
-    "funcidx_module_is_wf_0"
-    (ExpP "module" (VarT "module"))
-    (ExpP "ret_val*" (IterT (VarT "funcidx") List))
-    (Seq Arg Arg)
-    (TupE (VarE "module") (VarE "ret_val*"))
-    (RulePr "wf_module" (Seq Arg) (TupE (VarE "module")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "funcidx_module" (ExpA (VarE "module")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE (CallE "free_module" (ExpA (VarE "module"))))
     )
   )
 )
@@ -19338,39 +19599,30 @@
       )
       (Atom DATAS)
     )
-  )
-)
-(HintD (RelH "dataidx_funcs_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "dataidx_funcs_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "var_0*" (IterT (VarT "func") List))
-    (typbind "ret_val*" (IterT (VarT "dataidx") List))
-  )
-  (RuleD
-    "dataidx_funcs_is_wf_0"
-    (ExpP "var_0*" (IterT (VarT "func") List))
-    (ExpP "ret_val*" (IterT (VarT "dataidx") List))
-    (Seq Arg Arg)
-    (TupE (VarE "var_0*") (VarE "ret_val*"))
-    (IterPr
-      (RulePr "wf_func" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "dataidx_funcs" (ExpA (VarE "var_0*")))
+    (RulePr
+      "wf_free"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "free_list"
+          (ExpA
+            (IterE
+              (CallE "free_func" (ExpA (VarE "func")))
+              List
+              (iterexp "func" (VarE "func*"))
+            )
+          )
+        )
       )
     )
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
+      (RulePr
+        "wf_free"
+        (Seq Arg)
+        (TupE (CallE "free_func" (ExpA (VarE "func"))))
+      )
       List
-      (iterexp "ret_val" (VarE "ret_val*"))
+      (iterexp "func" (VarE "func*"))
     )
   )
 )
@@ -19607,6 +19859,29 @@
         (ExpA (IterE (VarE "x") List (iterexp "x" (VarE "x*"))))
         (ExpA (IterE (VarE "lct") List (iterexp "lct" (VarE "lct*"))))
       )
+      (RulePr
+        "wf_context"
+        (Seq Arg)
+        (TupE
+          (TheE
+            (CallE
+              "with_locals"
+              (ExpA
+                (UpdE
+                  (VarE "C")
+                  (IdxP
+                    (DotP RootP (Atom LOCALS))
+                    (ProjE (UncaseE (VarE "x_1") Arg) 0)
+                  )
+                  (VarE "lct_1")
+                )
+              )
+              (ExpA (IterE (VarE "x") List (iterexp "x" (VarE "x*"))))
+              (ExpA (IterE (VarE "lct") List (iterexp "lct" (VarE "lct*"))))
+            )
+          )
+        )
+      )
     )
     (DefD
       (ExpP "x0" (VarT "context"))
@@ -19617,55 +19892,6 @@
       (ExpA (VarE "x2"))
       (OptE)
       ElsePr
-    )
-  )
-)
-(RecD
-  (HintD (RelH "with_locals_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "with_locals_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "context" (VarT "context"))
-      (typbind "var_0*" (IterT (VarT "localidx") List))
-      (typbind "var_1*" (IterT (VarT "localtype") List))
-      (typbind "ret_val" (VarT "context"))
-    )
-    (RuleD
-      "with_locals_is_wf_0"
-      (ExpP "context" (VarT "context"))
-      (ExpP "var_0*" (IterT (VarT "localidx") List))
-      (ExpP "var_1*" (IterT (VarT "localtype") List))
-      (ExpP "ret_val" (VarT "context"))
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "context") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_context" (Seq Arg) (TupE (VarE "context")))
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_localtype" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (TheE
-            (CallE
-              "with_locals"
-              (ExpA (VarE "context"))
-              (ExpA (VarE "var_0*"))
-              (ExpA (VarE "var_1*"))
-            )
-          )
-        )
-      )
-      (RulePr "wf_context" (Seq Arg) (TupE (VarE "ret_val")))
     )
   )
 )
@@ -19743,35 +19969,23 @@
       (IterE (VarE "dt") List (iterexp "dt" (VarE "dt*")))
       (CallE "clos_deftypes" (ExpA (DotE (VarE "C") (Atom TYPES))))
     )
-  )
-)
-(HintD (RelH "clos_valtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "clos_valtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "context" (VarT "context"))
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "ret_val" (VarT "valtype"))
-  )
-  (RuleD
-    "clos_valtype_is_wf_0"
-    (ExpP "context" (VarT "context"))
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "ret_val" (VarT "valtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "context") (VarE "valtype") (VarE "ret_val"))
-    (RulePr "wf_context" (Seq Arg) (TupE (VarE "context")))
-    (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "valtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "clos_valtype" (ExpA (VarE "context")) (ExpA (VarE "valtype")))
+    (RulePr
+      "wf_valtype"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "subst_all_valtype"
+          (ExpA (VarE "t"))
+          (ExpA
+            (IterE
+              (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+              List
+              (iterexp "dt" (VarE "dt*"))
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -19840,35 +20054,23 @@
       (IterE (VarE "dt") List (iterexp "dt" (VarE "dt*")))
       (CallE "clos_deftypes" (ExpA (DotE (VarE "C") (Atom TYPES))))
     )
-  )
-)
-(HintD (RelH "clos_tagtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "clos_tagtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "context" (VarT "context"))
-    (typbind "tagtype" (VarT "tagtype"))
-    (typbind "ret_val" (VarT "tagtype"))
-  )
-  (RuleD
-    "clos_tagtype_is_wf_0"
-    (ExpP "context" (VarT "context"))
-    (ExpP "tagtype" (VarT "tagtype"))
-    (ExpP "ret_val" (VarT "tagtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "context") (VarE "tagtype") (VarE "ret_val"))
-    (RulePr "wf_context" (Seq Arg) (TupE (VarE "context")))
-    (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "tagtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "clos_tagtype" (ExpA (VarE "context")) (ExpA (VarE "tagtype")))
+    (RulePr
+      "wf_typeuse"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "subst_all_tagtype"
+          (ExpA (VarE "jt"))
+          (ExpA
+            (IterE
+              (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+              List
+              (iterexp "dt" (VarE "dt*"))
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -19903,39 +20105,23 @@
       (IterE (VarE "dt") List (iterexp "dt" (VarE "dt*")))
       (CallE "clos_deftypes" (ExpA (DotE (VarE "C") (Atom TYPES))))
     )
-  )
-)
-(HintD (RelH "clos_externtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "clos_externtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "context" (VarT "context"))
-    (typbind "externtype" (VarT "externtype"))
-    (typbind "ret_val" (VarT "externtype"))
-  )
-  (RuleD
-    "clos_externtype_is_wf_0"
-    (ExpP "context" (VarT "context"))
-    (ExpP "externtype" (VarT "externtype"))
-    (ExpP "ret_val" (VarT "externtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "context") (VarE "externtype") (VarE "ret_val"))
-    (RulePr "wf_context" (Seq Arg) (TupE (VarE "context")))
-    (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "externtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_externtype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "clos_externtype"
-          (ExpA (VarE "context"))
-          (ExpA (VarE "externtype"))
+          "subst_all_externtype"
+          (ExpA (VarE "xt"))
+          (ExpA
+            (IterE
+              (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+              List
+              (iterexp "dt" (VarE "dt*"))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -19970,39 +20156,23 @@
       (IterE (VarE "dt") List (iterexp "dt" (VarE "dt*")))
       (CallE "clos_deftypes" (ExpA (DotE (VarE "C") (Atom TYPES))))
     )
-  )
-)
-(HintD (RelH "clos_moduletype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "clos_moduletype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "context" (VarT "context"))
-    (typbind "moduletype" (VarT "moduletype"))
-    (typbind "ret_val" (VarT "moduletype"))
-  )
-  (RuleD
-    "clos_moduletype_is_wf_0"
-    (ExpP "context" (VarT "context"))
-    (ExpP "moduletype" (VarT "moduletype"))
-    (ExpP "ret_val" (VarT "moduletype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "context") (VarE "moduletype") (VarE "ret_val"))
-    (RulePr "wf_context" (Seq Arg) (TupE (VarE "context")))
-    (RulePr "wf_moduletype" (Seq Arg) (TupE (VarE "moduletype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_moduletype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "clos_moduletype"
-          (ExpA (VarE "context"))
-          (ExpA (VarE "moduletype"))
+          "subst_all_moduletype"
+          (ExpA (VarE "mmt"))
+          (ExpA
+            (IterE
+              (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+              List
+              (iterexp "dt" (VarE "dt*"))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_moduletype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -20198,6 +20368,11 @@
     (ExpA (VarE "C"))
     (ExpA (SubE (VarT "deftype") (VarT "heaptype") (VarE "deftype")))
     (CallE "unrolldt" (ExpA (VarE "deftype")))
+    (RulePr
+      "wf_subtype"
+      (Seq Arg)
+      (TupE (CallE "unrolldt" (ExpA (VarE "deftype"))))
+    )
   )
   (DefD
     (ExpP "C" (VarT "context"))
@@ -20213,6 +20388,21 @@
         )
       )
     )
+    (RulePr
+      "wf_subtype"
+      (Seq Arg)
+      (TupE
+        (CallE
+          "unrolldt"
+          (ExpA
+            (IdxE
+              (DotE (VarE "C") (Atom TYPES))
+              (ProjE (UncaseE (VarE "typeidx") Arg) 0)
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "C" (VarT "context"))
@@ -20220,35 +20410,6 @@
     (ExpA (VarE "C"))
     (ExpA (CaseE (Seq (Atom REC) Arg) (TupE (VarE "i"))))
     (IdxE (DotE (VarE "C") (Atom RECS)) (VarE "i"))
-  )
-)
-(HintD (RelH "unrollht__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "unrollht__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "context" (VarT "context"))
-    (typbind "heaptype" (VarT "heaptype"))
-    (typbind "ret_val" (VarT "subtype"))
-  )
-  (RuleD
-    "unrollht__is_wf_0"
-    (ExpP "context" (VarT "context"))
-    (ExpP "heaptype" (VarT "heaptype"))
-    (ExpP "ret_val" (VarT "subtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "context") (VarE "heaptype") (VarE "ret_val"))
-    (RulePr "wf_context" (Seq Arg) (TupE (VarE "context")))
-    (RulePr "wf_heaptype" (Seq Arg) (TupE (VarE "heaptype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "unrollht_" (ExpA (VarE "context")) (ExpA (VarE "heaptype")))
-      )
-    )
-    (RulePr "wf_subtype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (RecD
@@ -20502,13 +20663,17 @@
     (RuleD
       ""
       (ExpP "C" (VarT "context"))
+      (ExpP "mut?" (IterT (VarT "mut") Opt))
       (ExpP "storagetype" (VarT "storagetype"))
       (Infix Arg |- (Infix Arg : (Atom OK)))
       (TupE
         (VarE "C")
         (CaseE
           (Seq Arg Arg)
-          (TupE (OptE (CaseE (Atom MUT) (TupE))) (VarE "storagetype"))
+          (TupE
+            (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+            (VarE "storagetype")
+          )
         )
       )
       (RulePr
@@ -20523,7 +20688,10 @@
         (TupE
           (CaseE
             (Seq Arg Arg)
-            (TupE (OptE (CaseE (Atom MUT) (TupE))) (VarE "storagetype"))
+            (TupE
+              (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+              (VarE "storagetype")
+            )
           )
         )
       )
@@ -20721,6 +20889,7 @@
     (RuleD
       ""
       (ExpP "C" (VarT "context"))
+      (ExpP "final?" (IterT (VarT "final") Opt))
       (ExpP "typeuse*" (IterT (VarT "typeuse") List))
       (ExpP "comptype" (VarT "comptype"))
       (ExpP "i" nat)
@@ -20732,7 +20901,7 @@
         (CaseE
           (Seq (Atom SUB) Arg Arg Arg)
           (TupE
-            (OptE (CaseE (Atom FINAL) (TupE)))
+            (IterE (VarE "final") Opt (iterexp "final" (VarE "final?")))
             (IterE (VarE "typeuse") List (iterexp "typeuse" (VarE "typeuse*")))
             (VarE "comptype")
           )
@@ -20829,7 +20998,7 @@
           (CaseE
             (Seq (Atom SUB) Arg Arg Arg)
             (TupE
-              (OptE (CaseE (Atom FINAL) (TupE)))
+              (IterE (VarE "final") Opt (iterexp "final" (VarE "final?")))
               (IterE
                 (VarE "typeuse")
                 List
@@ -22102,6 +22271,7 @@
     (RuleD
       "null"
       (ExpP "C" (VarT "context"))
+      (ExpP "null?" (IterT (VarT "null") Opt))
       (ExpP "ht_1" (VarT "heaptype"))
       (ExpP "ht_2" (VarT "heaptype"))
       (Infix Arg |- (Infix Arg <: Arg))
@@ -22109,7 +22279,10 @@
         (VarE "C")
         (CaseE
           (Seq (Atom REF) Arg Arg)
-          (TupE (OptE (CaseE (Atom NULL) (TupE))) (VarE "ht_1"))
+          (TupE
+            (IterE (VarE "null") Opt (iterexp "null" (VarE "null?")))
+            (VarE "ht_1")
+          )
         )
         (CaseE
           (Seq (Atom REF) Arg Arg)
@@ -22128,7 +22301,10 @@
         (TupE
           (CaseE
             (Seq (Atom REF) Arg Arg)
-            (TupE (OptE (CaseE (Atom NULL) (TupE))) (VarE "ht_1"))
+            (TupE
+              (IterE (VarE "null") Opt (iterexp "null" (VarE "null?")))
+              (VarE "ht_1")
+            )
           )
         )
       )
@@ -22691,6 +22867,7 @@
   (RuleD
     ""
     (ExpP "C" (VarT "context"))
+    (ExpP "final?" (IterT (VarT "final") Opt))
     (ExpP "x*" (IterT (VarT "idx") List))
     (ExpP "comptype" (VarT "comptype"))
     (ExpP "x_0" (VarT "idx"))
@@ -22702,7 +22879,7 @@
       (CaseE
         (Seq (Atom SUB) Arg Arg Arg)
         (TupE
-          (OptE (CaseE (Atom FINAL) (TupE)))
+          (IterE (VarE "final") Opt (iterexp "final" (VarE "final?")))
           (IterE
             (CaseE (Seq (Atom _IDX) Arg) (TupE (VarE "x")))
             List
@@ -22803,7 +22980,7 @@
         (CaseE
           (Seq (Atom SUB) Arg Arg Arg)
           (TupE
-            (OptE (CaseE (Atom FINAL) (TupE)))
+            (IterE (VarE "final") Opt (iterexp "final" (VarE "final?")))
             (IterE
               (CaseE (Seq (Atom _IDX) Arg) (TupE (VarE "x")))
               List
@@ -23163,11 +23340,15 @@
   (RuleD
     ""
     (ExpP "C" (VarT "context"))
+    (ExpP "mut?" (IterT (VarT "mut") Opt))
     (ExpP "t" (VarT "valtype"))
     (Infix Arg |- (Infix Arg : (Atom OK)))
     (TupE
       (VarE "C")
-      (CaseE (Seq Arg Arg) (TupE (OptE (CaseE (Atom MUT) (TupE))) (VarE "t")))
+      (CaseE
+        (Seq Arg Arg)
+        (TupE (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?"))) (VarE "t"))
+      )
     )
     (RulePr
       "Valtype_ok"
@@ -23179,7 +23360,13 @@
       "wf_globaltype"
       (Seq Arg)
       (TupE
-        (CaseE (Seq Arg Arg) (TupE (OptE (CaseE (Atom MUT) (TupE))) (VarE "t")))
+        (CaseE
+          (Seq Arg Arg)
+          (TupE
+            (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+            (VarE "t")
+          )
+        )
       )
     )
   )
@@ -24700,12 +24887,55 @@
         )
       )
     )
+    (RulePr
+      "wf_val"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (VarE "Inn") (CaseE Arg (TupE (NumE (Nat 0)))))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
     (ExpA (SubE (VarT "Fnn") (VarT "valtype") (VarE "Fnn")))
     (OptE
       (OptE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+            (CaseE
+              (Seq (Atom mk_num__1) Arg Arg)
+              (TupE
+                (VarE "Fnn")
+                (CallE
+                  "fzero"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val"
+      (Seq Arg)
+      (TupE
         (CaseE
           (Seq (Atom CONST) Arg Arg)
           (TupE
@@ -24741,6 +24971,16 @@
         )
       )
     )
+    (RulePr
+      "wf_val"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom VCONST) Arg Arg)
+          (TupE (VarE "Vnn") (CaseE Arg (TupE (NumE (Nat 0)))))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "ht" (VarT "heaptype"))
@@ -24751,6 +24991,7 @@
       )
     )
     (OptE (OptE (CaseE (Atom REF.NULL_ADDR) (TupE))))
+    (RulePr "wf_val" (Seq Arg) (TupE (CaseE (Atom REF.NULL_ADDR) (TupE))))
   )
   (DefD
     (ExpP "ht" (VarT "heaptype"))
@@ -24758,36 +24999,6 @@
     (OptE (OptE))
   )
   (DefD (ExpP "x0" (VarT "valtype")) (ExpA (VarE "x0")) (OptE) ElsePr)
-)
-(HintD (RelH "default__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "default__is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "ret_val?" (IterT (VarT "val") Opt))
-  )
-  (RuleD
-    "default__is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "ret_val?" (IterT (VarT "val") Opt))
-    (Seq Arg Arg)
-    (TupE (VarE "valtype") (VarE "ret_val?"))
-    (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "valtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (TheE (CallE "default_" (ExpA (VarE "valtype"))))
-      )
-    )
-    (IterPr
-      (RulePr "wf_val" (Seq Arg) (TupE (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
-    )
-  )
 )
 (RelD
   "Defaultable"
@@ -24883,6 +25094,7 @@
         (CallE "unpack" (ExpA (VarE "zt")))
       )
     )
+    (RulePr "wf_valtype" (Seq Arg) (TupE (CallE "unpack" (ExpA (VarE "zt")))))
   )
 )
 (RecD
@@ -26271,6 +26483,7 @@
       (ExpP "l" (VarT "labelidx"))
       (ExpP "t*" (IterT (VarT "valtype") List))
       (ExpP "ht" (VarT "heaptype"))
+      (ExpP "null?" (IterT (VarT "null") Opt))
       (Infix Arg |- (Infix Arg : Arg))
       (TupE
         (VarE "C")
@@ -26313,7 +26526,10 @@
                 (ListE
                   (CaseE
                     (Seq (Atom REF) Arg Arg)
-                    (TupE (OptE (CaseE (Atom NULL) (TupE))) (VarE "ht"))
+                    (TupE
+                      (IterE (VarE "null") Opt (iterexp "null" (VarE "null?")))
+                      (VarE "ht")
+                    )
                   )
                 )
               )
@@ -36439,6 +36655,7 @@
     (ExpP "C" (VarT "context"))
     (ExpP "globaltype" (VarT "globaltype"))
     (ExpP "expr" (VarT "expr"))
+    (ExpP "mut?" (IterT (VarT "mut") Opt))
     (ExpP "t" (VarT "valtype"))
     (Infix Arg |- (Infix Arg : Arg))
     (TupE
@@ -36459,7 +36676,13 @@
         EqOp
         bool
         (VarE "globaltype")
-        (CaseE (Seq Arg Arg) (TupE (OptE (CaseE (Atom MUT) (TupE))) (VarE "t")))
+        (CaseE
+          (Seq Arg Arg)
+          (TupE
+            (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+            (VarE "t")
+          )
+        )
       )
     )
     (RulePr
@@ -36482,7 +36705,13 @@
       "wf_globaltype"
       (Seq Arg)
       (TupE
-        (CaseE (Seq Arg Arg) (TupE (OptE (CaseE (Atom MUT) (TupE))) (VarE "t")))
+        (CaseE
+          (Seq Arg Arg)
+          (TupE
+            (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+            (VarE "t")
+          )
+        )
       )
     )
   )
@@ -37809,35 +38038,111 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "funcidx_nonfuncs_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "funcidx_nonfuncs_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "nonfuncs" (VarT "nonfuncs"))
-    (typbind "ret_val*" (IterT (VarT "funcidx") List))
-  )
-  (RuleD
-    "funcidx_nonfuncs_is_wf_0"
-    (ExpP "nonfuncs" (VarT "nonfuncs"))
-    (ExpP "ret_val*" (IterT (VarT "funcidx") List))
-    (Seq Arg Arg)
-    (TupE (VarE "nonfuncs") (VarE "ret_val*"))
-    (RulePr "wf_nonfuncs" (Seq Arg) (TupE (VarE "nonfuncs")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "funcidx_nonfuncs" (ExpA (VarE "nonfuncs")))
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "funcidx_module"
+          (ExpA
+            (CaseE
+              (Seq (Atom MODULE) Arg Arg Arg Arg Arg Arg Arg Arg Arg Arg Arg)
+              (TupE
+                (CaseE Arg (TupE (ListE)))
+                (CaseE Arg (TupE (ListE)))
+                (CaseE Arg (TupE (ListE)))
+                (CaseE
+                  Arg
+                  (TupE
+                    (IterE
+                      (VarE "global")
+                      List
+                      (iterexp "global" (VarE "global*"))
+                    )
+                  )
+                )
+                (CaseE
+                  Arg
+                  (TupE (IterE (VarE "mem") List (iterexp "mem" (VarE "mem*"))))
+                )
+                (CaseE
+                  Arg
+                  (TupE
+                    (IterE
+                      (VarE "table")
+                      List
+                      (iterexp "table" (VarE "table*"))
+                    )
+                  )
+                )
+                (CaseE Arg (TupE (ListE)))
+                (CaseE Arg (TupE (ListE)))
+                (CaseE
+                  Arg
+                  (TupE
+                    (IterE (VarE "elem") List (iterexp "elem" (VarE "elem*")))
+                  )
+                )
+                (IterE (VarE "start") Opt (iterexp "start" (VarE "start?")))
+                (CaseE
+                  Arg
+                  (TupE
+                    (IterE
+                      (VarE "export")
+                      List
+                      (iterexp "export" (VarE "export*"))
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
       )
     )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
+    (RulePr
+      "wf_module"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom MODULE) Arg Arg Arg Arg Arg Arg Arg Arg Arg Arg Arg)
+          (TupE
+            (CaseE Arg (TupE (ListE)))
+            (CaseE Arg (TupE (ListE)))
+            (CaseE Arg (TupE (ListE)))
+            (CaseE
+              Arg
+              (TupE
+                (IterE (VarE "global") List (iterexp "global" (VarE "global*")))
+              )
+            )
+            (CaseE
+              Arg
+              (TupE (IterE (VarE "mem") List (iterexp "mem" (VarE "mem*"))))
+            )
+            (CaseE
+              Arg
+              (TupE
+                (IterE (VarE "table") List (iterexp "table" (VarE "table*")))
+              )
+            )
+            (CaseE Arg (TupE (ListE)))
+            (CaseE Arg (TupE (ListE)))
+            (CaseE
+              Arg
+              (TupE (IterE (VarE "elem") List (iterexp "elem" (VarE "elem*"))))
+            )
+            (IterE (VarE "start") Opt (iterexp "start" (VarE "start?")))
+            (CaseE
+              Arg
+              (TupE
+                (IterE (VarE "export") List (iterexp "export" (VarE "export*")))
+              )
+            )
+          )
+        )
+      )
     )
   )
 )
@@ -38712,206 +39017,30 @@
 )
 (HintD (DecH "relaxed4" (hint "show" "$relaxed(%1)#`[%3, %4, %5, %6]")))
 (DecD "R_fmadd" (VarT "relaxed2"))
-(HintD (RelH "R_fmadd_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_fmadd_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed2")))
-  (RuleD
-    "R_fmadd_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed2"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_fmadd")))
-    (RulePr "wf_relaxed2" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_fmadd" (hint "builtin" "{}")))
 (DecD "R_fmin" (VarT "relaxed4"))
-(HintD (RelH "R_fmin_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_fmin_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed4")))
-  (RuleD
-    "R_fmin_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed4"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_fmin")))
-    (RulePr "wf_relaxed4" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_fmin" (hint "builtin" "{}")))
 (DecD "R_fmax" (VarT "relaxed4"))
-(HintD (RelH "R_fmax_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_fmax_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed4")))
-  (RuleD
-    "R_fmax_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed4"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_fmax")))
-    (RulePr "wf_relaxed4" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_fmax" (hint "builtin" "{}")))
 (DecD "R_idot" (VarT "relaxed2"))
-(HintD (RelH "R_idot_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_idot_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed2")))
-  (RuleD
-    "R_idot_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed2"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_idot")))
-    (RulePr "wf_relaxed2" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_idot" (hint "builtin" "{}")))
 (DecD "R_iq15mulr" (VarT "relaxed2"))
-(HintD (RelH "R_iq15mulr_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_iq15mulr_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed2")))
-  (RuleD
-    "R_iq15mulr_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed2"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_iq15mulr")))
-    (RulePr "wf_relaxed2" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_iq15mulr" (hint "builtin" "{}")))
 (DecD "R_trunc_u" (VarT "relaxed4"))
-(HintD (RelH "R_trunc_u_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_trunc_u_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed4")))
-  (RuleD
-    "R_trunc_u_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed4"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_trunc_u")))
-    (RulePr "wf_relaxed4" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_trunc_u" (hint "builtin" "{}")))
 (DecD "R_trunc_s" (VarT "relaxed2"))
-(HintD (RelH "R_trunc_s_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_trunc_s_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed2")))
-  (RuleD
-    "R_trunc_s_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed2"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_trunc_s")))
-    (RulePr "wf_relaxed2" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_trunc_s" (hint "builtin" "{}")))
 (DecD "R_swizzle" (VarT "relaxed2"))
-(HintD (RelH "R_swizzle_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_swizzle_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed2")))
-  (RuleD
-    "R_swizzle_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed2"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_swizzle")))
-    (RulePr "wf_relaxed2" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_swizzle" (hint "builtin" "{}")))
 (DecD "R_laneselect" (VarT "relaxed2"))
-(HintD (RelH "R_laneselect_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "R_laneselect_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "relaxed2")))
-  (RuleD
-    "R_laneselect_is_wf_0"
-    (ExpP "ret_val" (VarT "relaxed2"))
-    (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "R_laneselect")))
-    (RulePr "wf_relaxed2" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "R_laneselect" (hint "builtin" "{}")))
 (DecD "s33_to_u32" (ExpP "s33" (VarT "s33")) (VarT "u32"))
-(HintD (RelH "s33_to_u32_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "s33_to_u32_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "s33" (VarT "s33")) (typbind "ret_val" (VarT "u32")))
-  (RuleD
-    "s33_to_u32_is_wf_0"
-    (ExpP "s33" (VarT "s33"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg)
-    (TupE (VarE "s33") (VarE "ret_val"))
-    (RulePr "wf_sN" (Seq Arg Arg) (TupE (NumE (Nat 33)) (VarE "s33")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "s33_to_u32" (ExpA (VarE "s33"))))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
 (HintD (DecH "s33_to_u32" (hint "show" "%")))
 (DecD
   "ibits_"
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN"))
   (IterT (VarT "bit") List)
-)
-(HintD (RelH "ibits__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ibits__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val*" (IterT (VarT "bit") List))
-  )
-  (RuleD
-    "ibits__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val*" (IterT (VarT "bit") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val*"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "ibits_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_bit" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (HintD
   (DecH
@@ -38926,38 +39055,6 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "bit") List)
 )
-(HintD (RelH "fbits__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fbits__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "bit") List))
-  )
-  (RuleD
-    "fbits__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "bit") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fbits_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_bit" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD
   (DecH
     "fbits_"
@@ -38970,38 +39067,6 @@
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN"))
   (IterT (VarT "byte") List)
-)
-(HintD (RelH "ibytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ibytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "ibytes__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val*"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "ibytes_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (HintD
   (DecH
@@ -39016,38 +39081,6 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "byte") List)
 )
-(HintD (RelH "fbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "fbytes__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fbytes_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD
   (DecH
     "fbytes_"
@@ -39059,49 +39092,8 @@
   "nbytes_"
   (ExpP "numtype" (VarT "numtype"))
   (ExpP "num_" (VarT "num_"))
-  (IterT (IterT (VarT "byte") List) Opt)
-  (DefD
-    (ExpP "x0" (VarT "numtype"))
-    (ExpP "x1" (VarT "num_"))
-    (ExpA (VarE "x0"))
-    (ExpA (VarE "x1"))
-    (OptE)
-    ElsePr
-  )
+  (IterT (VarT "byte") List)
 )
-(HintD (RelH "nbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "nbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "numtype" (VarT "numtype"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "nbytes__is_wf_0"
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "numtype") (VarE "num_") (VarE "ret_val*"))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE (CallE "nbytes_" (ExpA (VarE "numtype")) (ExpA (VarE "num_"))))
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
-(HintD (DecH "nbytes_" (hint "partial" "{}")))
 (HintD
   (DecH "nbytes_" (hint "show" "$bytes_(%, %)") (hint "inverse" "$inv_nbytes_"))
 )
@@ -39111,42 +39103,6 @@
   (ExpP "vec_" (VarT "vec_"))
   (IterT (VarT "byte") List)
 )
-(HintD (RelH "vbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "vectype" (VarT "vectype"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "vbytes__is_wf_0"
-    (ExpP "vectype" (VarT "vectype"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "vectype") (VarE "vec_") (VarE "ret_val*"))
-    (RulePr
-      "wf_uN"
-      (Seq Arg Arg)
-      (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "vec_"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "vbytes_" (ExpA (VarE "vectype")) (ExpA (VarE "vec_")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD
   (DecH "vbytes_" (hint "show" "$bytes_(%, %)") (hint "inverse" "$inv_vbytes_"))
 )
@@ -39154,52 +39110,8 @@
   "zbytes_"
   (ExpP "storagetype" (VarT "storagetype"))
   (ExpP "lit_" (VarT "lit_"))
-  (IterT (IterT (VarT "byte") List) Opt)
-  (DefD
-    (ExpP "x0" (VarT "storagetype"))
-    (ExpP "x1" (VarT "lit_"))
-    (ExpA (VarE "x0"))
-    (ExpA (VarE "x1"))
-    (OptE)
-    ElsePr
-  )
+  (IterT (VarT "byte") List)
 )
-(HintD (RelH "zbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "zbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "storagetype" (VarT "storagetype"))
-    (typbind "lit_" (VarT "lit_"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "zbytes__is_wf_0"
-    (ExpP "storagetype" (VarT "storagetype"))
-    (ExpP "lit_" (VarT "lit_"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "storagetype") (VarE "lit_") (VarE "ret_val*"))
-    (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-    (RulePr "wf_lit_" (Seq Arg Arg) (TupE (VarE "storagetype") (VarE "lit_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE "zbytes_" (ExpA (VarE "storagetype")) (ExpA (VarE "lit_")))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
-(HintD (DecH "zbytes_" (hint "partial" "{}")))
 (HintD
   (DecH "zbytes_" (hint "show" "$bytes_(%, %)") (hint "inverse" "$inv_zbytes_"))
 )
@@ -39207,53 +39119,8 @@
   "cbytes_"
   (ExpP "Cnn" (VarT "Cnn"))
   (ExpP "lit_" (VarT "lit_"))
-  (IterT (IterT (VarT "byte") List) Opt)
-  (DefD
-    (ExpP "x0" (VarT "Cnn"))
-    (ExpP "x1" (VarT "lit_"))
-    (ExpA (VarE "x0"))
-    (ExpA (VarE "x1"))
-    (OptE)
-    ElsePr
-  )
+  (IterT (VarT "byte") List)
 )
-(HintD (RelH "cbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "cbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "Cnn" (VarT "Cnn"))
-    (typbind "lit_" (VarT "lit_"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "cbytes__is_wf_0"
-    (ExpP "Cnn" (VarT "Cnn"))
-    (ExpP "lit_" (VarT "lit_"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "Cnn") (VarE "lit_") (VarE "ret_val*"))
-    (RulePr
-      "wf_lit_"
-      (Seq Arg Arg)
-      (TupE (SubE (VarT "Cnn") (VarT "storagetype") (VarE "Cnn")) (VarE "lit_"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE (CallE "cbytes_" (ExpA (VarE "Cnn")) (ExpA (VarE "lit_"))))
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
-(HintD (DecH "cbytes_" (hint "partial" "{}")))
 (HintD
   (DecH "cbytes_" (hint "show" "$bytes_(%, %)") (hint "inverse" "$inv_cbytes_"))
 )
@@ -39263,76 +39130,12 @@
   (ExpP "_" (IterT (VarT "bit") List))
   (VarT "iN")
 )
-(HintD (RelH "inv_ibits__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_ibits__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "bit") List))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "inv_ibits__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "bit") List))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_bit" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_ibits_" (ExpA (VarE "N")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "inv_ibits_" (hint "show" "$bits_($IN(%))^- 1#((%))")))
 (DecD
   "inv_fbits_"
   (ExpP "N" (VarT "N"))
   (ExpP "_" (IterT (VarT "bit") List))
   (VarT "fN")
-)
-(HintD (RelH "inv_fbits__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_fbits__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "bit") List))
-    (typbind "ret_val" (VarT "fN"))
-  )
-  (RuleD
-    "inv_fbits__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "bit") List))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_bit" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_fbits_" (ExpA (VarE "N")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (HintD (DecH "inv_fbits_" (hint "show" "$bits_($FN(%))^- 1#((%))")))
 (DecD
@@ -39341,76 +39144,12 @@
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "iN")
 )
-(HintD (RelH "inv_ibytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_ibytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "inv_ibytes__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_ibytes_" (ExpA (VarE "N")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "inv_ibytes_" (hint "show" "$bytes_($IN(%))^- 1#((%))")))
 (DecD
   "inv_fbytes_"
   (ExpP "N" (VarT "N"))
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "fN")
-)
-(HintD (RelH "inv_fbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_fbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "fN"))
-  )
-  (RuleD
-    "inv_fbytes__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_fbytes_" (ExpA (VarE "N")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (HintD (DecH "inv_fbytes_" (hint "show" "$bytes_($FN(%))^- 1#((%))")))
 (DecD
@@ -39419,80 +39158,12 @@
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "num_")
 )
-(HintD (RelH "inv_nbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_nbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "numtype" (VarT "numtype"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "num_"))
-  )
-  (RuleD
-    "inv_nbytes__is_wf_0"
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "num_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "numtype") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_nbytes_" (ExpA (VarE "numtype")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "inv_nbytes_" (hint "show" "$bytes_(%)^- 1#((%))")))
 (DecD
   "inv_vbytes_"
   (ExpP "vectype" (VarT "vectype"))
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "vec_")
-)
-(HintD (RelH "inv_vbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_vbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "vectype" (VarT "vectype"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "inv_vbytes__is_wf_0"
-    (ExpP "vectype" (VarT "vectype"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "vectype") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_vbytes_" (ExpA (VarE "vectype")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr
-      "wf_uN"
-      (Seq Arg Arg)
-      (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "ret_val"))
-    )
-  )
 )
 (HintD (DecH "inv_vbytes_" (hint "show" "$bytes_(%)^- 1#((%))")))
 (DecD
@@ -39501,88 +39172,12 @@
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "lit_")
 )
-(HintD (RelH "inv_zbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_zbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "storagetype" (VarT "storagetype"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "lit_"))
-  )
-  (RuleD
-    "inv_zbytes__is_wf_0"
-    (ExpP "storagetype" (VarT "storagetype"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "lit_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "storagetype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_zbytes_" (ExpA (VarE "storagetype")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr
-      "wf_lit_"
-      (Seq Arg Arg)
-      (TupE (VarE "storagetype") (VarE "ret_val"))
-    )
-  )
-)
 (HintD (DecH "inv_zbytes_" (hint "show" "$bytes_(%)^- 1#((%))")))
 (DecD
   "inv_cbytes_"
   (ExpP "Cnn" (VarT "Cnn"))
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "lit_")
-)
-(HintD (RelH "inv_cbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_cbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "Cnn" (VarT "Cnn"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "lit_"))
-  )
-  (RuleD
-    "inv_cbytes__is_wf_0"
-    (ExpP "Cnn" (VarT "Cnn"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "lit_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "Cnn") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_cbytes_" (ExpA (VarE "Cnn")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr
-      "wf_lit_"
-      (Seq Arg Arg)
-      (TupE
-        (SubE (VarT "Cnn") (VarT "storagetype") (VarE "Cnn"))
-        (VarE "ret_val")
-      )
-    )
-  )
 )
 (HintD (DecH "inv_cbytes_" (hint "show" "$bytes_(%)^- 1#((%))")))
 (HintD (DecH "ibits_" (hint "builtin" "{}")))
@@ -39800,6 +39395,17 @@
       (Seq (Atom mk_lane__2) Arg Arg)
       (TupE (VarE "Jnn") (CaseE Arg (TupE (NumE (Nat 0)))))
     )
+    (RulePr
+      "wf_lane_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+        (CaseE
+          (Seq (Atom mk_lane__2) Arg Arg)
+          (TupE (VarE "Jnn") (CaseE Arg (TupE (NumE (Nat 0)))))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -39825,26 +39431,34 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "zero_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "zero_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "lanetype" (VarT "lanetype"))
-    (typbind "ret_val" (VarT "lane_"))
-  )
-  (RuleD
-    "zero_is_wf_0"
-    (ExpP "lanetype" (VarT "lanetype"))
-    (ExpP "ret_val" (VarT "lane_"))
-    (Seq Arg Arg)
-    (TupE (VarE "lanetype") (VarE "ret_val"))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "zero" (ExpA (VarE "lanetype"))))
+    (RulePr
+      "wf_lane_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+        (CaseE
+          (Seq (Atom mk_lane__0) Arg Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+            (CaseE
+              (Seq (Atom mk_num__1) Arg Arg)
+              (TupE
+                (VarE "Fnn")
+                (CallE
+                  "fzero"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
     )
-    (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "lanetype") (VarE "ret_val")))
   )
 )
 (HintD (DecH "zero" (hint "show" "0")))
@@ -40053,34 +39667,33 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ineg__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ineg__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ineg__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ineg_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CvtE
+              int
+              nat
+              (BinE
+                ModOp
+                int
+                (BinE
+                  SubOp
+                  int
+                  (CvtE nat int (BinE PowOp nat (NumE (Nat 2)) (VarE "N")))
+                  (CvtE nat int (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                )
+                (CvtE nat int (BinE PowOp nat (NumE (Nat 2)) (VarE "N")))
+              )
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (DecD
@@ -40107,123 +39720,16 @@
       (VarE "i_1")
       (CallE "ineg_" (ExpA (VarE "N")) (ExpA (VarE "i_1")))
     )
-  )
-)
-(HintD (RelH "iabs__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iabs__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iabs__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "iabs_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (VarE "N") (CallE "ineg_" (ExpA (VarE "N")) (ExpA (VarE "i_1"))))
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (DecD "iclz_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "iclz__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iclz__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iclz__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "iclz_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD "ictz_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "ictz__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ictz__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ictz__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ictz_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD "ipopcnt_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "ipopcnt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ipopcnt__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ipopcnt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ipopcnt_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "iextend_"
   (ExpP "N" (VarT "N"))
@@ -40247,6 +39753,24 @@
           nat
           (ProjE (UncaseE (VarE "i") Arg) 0)
           (BinE PowOp nat (NumE (Nat 2)) (VarE "M"))
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (BinE
+              ModOp
+              nat
+              (ProjE (UncaseE (VarE "i") Arg) 0)
+              (BinE PowOp nat (NumE (Nat 2)) (VarE "M"))
+            )
+          )
         )
       )
     )
@@ -40282,44 +39806,36 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "iextend__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iextend__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "M" (VarT "M"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iextend__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "M" (VarT "M"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "M") (VarE "sx") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iextend_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "M"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "inv_signed_"
+              (ExpA (VarE "N"))
+              (ExpA
+                (CallE
+                  "signed_"
+                  (ExpA (VarE "M"))
+                  (ExpA
+                    (BinE
+                      ModOp
+                      nat
+                      (ProjE (UncaseE (VarE "i") Arg) 0)
+                      (BinE PowOp nat (NumE (Nat 2)) (VarE "M"))
+                    )
+                  )
+                )
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (HintD (DecH "iextend_" (hint "show" "$iextend_((%, %))^(%)#((%))")))
@@ -40352,42 +39868,29 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "iadd__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iadd__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iadd__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iadd_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (BinE
+              ModOp
+              nat
+              (BinE
+                AddOp
+                nat
+                (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                (ProjE (UncaseE (VarE "i_2") Arg) 0)
+              )
+              (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (DecD
@@ -40432,42 +39935,42 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "isub__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "isub__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "isub__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "isub_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CvtE
+              int
+              nat
+              (BinE
+                ModOp
+                int
+                (BinE
+                  SubOp
+                  int
+                  (CvtE
+                    nat
+                    int
+                    (BinE
+                      AddOp
+                      nat
+                      (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+                      (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                    )
+                  )
+                  (CvtE nat int (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                )
+                (CvtE nat int (BinE PowOp nat (NumE (Nat 2)) (VarE "N")))
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (DecD
@@ -40499,42 +40002,29 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "imul__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "imul__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "imul__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "imul_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (BinE
+              ModOp
+              nat
+              (BinE
+                MulOp
+                nat
+                (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                (ProjE (UncaseE (VarE "i_2") Arg) 0)
+              )
+              (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (DecD
@@ -40576,6 +40066,33 @@
                   rat
                   (CvtE nat rat (ProjE (UncaseE (VarE "i_1") Arg) 0))
                   (CvtE nat rat (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CvtE
+              int
+              nat
+              (CallE
+                "truncz"
+                (ExpA
+                  (BinE
+                    DivOp
+                    rat
+                    (CvtE nat rat (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                    (CvtE nat rat (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                  )
                 )
               )
             )
@@ -40698,48 +40215,50 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "idiv__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "idiv__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
-  )
-  (RuleD
-    "idiv__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val?"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (CallE
-          "idiv_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "inv_signed_"
+              (ExpA (VarE "N"))
+              (ExpA
+                (CallE
+                  "truncz"
+                  (ExpA
+                    (BinE
+                      DivOp
+                      rat
+                      (CvtE
+                        int
+                        rat
+                        (CallE
+                          "signed_"
+                          (ExpA (VarE "N"))
+                          (ExpA (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                        )
+                      )
+                      (CvtE
+                        int
+                        rat
+                        (CallE
+                          "signed_"
+                          (ExpA (VarE "N"))
+                          (ExpA (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
         )
       )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
     )
   )
 )
@@ -40797,6 +40316,51 @@
                           rat
                           (CvtE nat rat (ProjE (UncaseE (VarE "i_1") Arg) 0))
                           (CvtE nat rat (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CvtE
+              int
+              nat
+              (BinE
+                SubOp
+                int
+                (CvtE nat int (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                (CvtE
+                  nat
+                  int
+                  (BinE
+                    MulOp
+                    nat
+                    (ProjE (UncaseE (VarE "i_2") Arg) 0)
+                    (CvtE
+                      int
+                      nat
+                      (CallE
+                        "truncz"
+                        (ExpA
+                          (BinE
+                            DivOp
+                            rat
+                            (CvtE nat rat (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                            (CvtE nat rat (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                          )
                         )
                       )
                     )
@@ -40888,48 +40452,44 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "irem__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irem__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
-  )
-  (RuleD
-    "irem__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val?"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (CallE
-          "irem_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "inv_signed_"
+              (ExpA (VarE "N"))
+              (ExpA
+                (BinE
+                  SubOp
+                  int
+                  (VarE "j_1")
+                  (BinE
+                    MulOp
+                    int
+                    (VarE "j_2")
+                    (CallE
+                      "truncz"
+                      (ExpA
+                        (BinE
+                          DivOp
+                          rat
+                          (CvtE int rat (VarE "j_1"))
+                          (CvtE int rat (VarE "j_2"))
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
         )
       )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
     )
   )
 )
@@ -41005,45 +40565,6 @@
     )
   )
 )
-(HintD (RelH "imin__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "imin__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "imin__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "imin_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "imin_" (hint "show" "$imin__#%2#$_(%1, %3, %4)")))
 (DecD
   "imax_"
@@ -41116,45 +40637,6 @@
     )
   )
 )
-(HintD (RelH "imax__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "imax__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "imax__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "imax_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "imax_" (hint "show" "$imax__#%2#$_(%1, %3, %4)")))
 (DecD
   "iadd_sat_"
@@ -41186,6 +40668,34 @@
                 nat
                 (ProjE (UncaseE (VarE "i_1") Arg) 0)
                 (ProjE (UncaseE (VarE "i_2") Arg) 0)
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "sat_u_"
+              (ExpA (VarE "N"))
+              (ExpA
+                (CvtE
+                  nat
+                  int
+                  (BinE
+                    AddOp
+                    nat
+                    (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                    (ProjE (UncaseE (VarE "i_2") Arg) 0)
+                  )
+                )
               )
             )
           )
@@ -41232,45 +40742,44 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "iadd_sat__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iadd_sat__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iadd_sat__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iadd_sat_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "inv_signed_"
+              (ExpA (VarE "N"))
+              (ExpA
+                (CallE
+                  "sat_s_"
+                  (ExpA (VarE "N"))
+                  (ExpA
+                    (BinE
+                      AddOp
+                      int
+                      (CallE
+                        "signed_"
+                        (ExpA (VarE "N"))
+                        (ExpA (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                      )
+                      (CallE
+                        "signed_"
+                        (ExpA (VarE "N"))
+                        (ExpA (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (HintD (DecH "iadd_sat_" (hint "show" "$iadd__sat__#%2#$_(%1, %3, %4)")))
@@ -41301,6 +40810,30 @@
               int
               (CvtE nat int (ProjE (UncaseE (VarE "i_1") Arg) 0))
               (CvtE nat int (ProjE (UncaseE (VarE "i_2") Arg) 0))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "sat_u_"
+              (ExpA (VarE "N"))
+              (ExpA
+                (BinE
+                  SubOp
+                  int
+                  (CvtE nat int (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                  (CvtE nat int (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                )
+              )
             )
           )
         )
@@ -41346,45 +40879,44 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "isub_sat__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "isub_sat__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "isub_sat__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "isub_sat_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "inv_signed_"
+              (ExpA (VarE "N"))
+              (ExpA
+                (CallE
+                  "sat_s_"
+                  (ExpA (VarE "N"))
+                  (ExpA
+                    (BinE
+                      SubOp
+                      int
+                      (CallE
+                        "signed_"
+                        (ExpA (VarE "N"))
+                        (ExpA (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                      )
+                      (CallE
+                        "signed_"
+                        (ExpA (VarE "N"))
+                        (ExpA (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (HintD (DecH "isub_sat_" (hint "show" "$isub__sat__#%2#$_(%1, %3, %4)")))
@@ -41396,45 +40928,6 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "iq15mulr_sat__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iq15mulr_sat__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iq15mulr_sat__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iq15mulr_sat_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD
   (DecH "iq15mulr_sat_" (hint "show" "$iq15mulr__sat__#%2#$_(%1, %3, %4)"))
 )
@@ -41445,49 +40938,6 @@
   (ExpP "iN" (VarT "iN"))
   (ExpP "iN" (VarT "iN"))
   (IterT (VarT "iN") List)
-)
-(HintD (RelH "irelaxed_q15mulr__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irelaxed_q15mulr__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val*" (IterT (VarT "iN") List))
-  )
-  (RuleD
-    "irelaxed_q15mulr__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val*" (IterT (VarT "iN") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val*"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "irelaxed_q15mulr_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (HintD
   (DecH
@@ -41503,146 +40953,15 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "iavgr__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iavgr__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iavgr__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iavgr_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "iavgr_" (hint "show" "$iavgr__#%2#$_(%1, %3, %4)")))
 (DecD "inot_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "inot__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inot__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "inot__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inot_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD "irev_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "irev__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irev__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "irev__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "irev_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "iand_"
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN"))
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
-)
-(HintD (RelH "iand__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iand__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iand__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iand_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (DecD
   "iandnot_"
@@ -41651,79 +40970,12 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "iandnot__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iandnot__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iandnot__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iandnot_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "ior_"
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN"))
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
-)
-(HintD (RelH "ior__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ior__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ior__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ior_" (ExpA (VarE "N")) (ExpA (VarE "iN")) (ExpA (VarE "iN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (DecD
   "ixor_"
@@ -41732,79 +40984,12 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "ixor__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ixor__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ixor__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ixor_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "ishl_"
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN"))
   (ExpP "u32" (VarT "u32"))
   (VarT "iN")
-)
-(HintD (RelH "ishl__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ishl__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "u32" (VarT "u32"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ishl__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "u32" (VarT "u32"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "u32") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "u32")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ishl_" (ExpA (VarE "N")) (ExpA (VarE "iN")) (ExpA (VarE "u32")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (DecD
   "ishr_"
@@ -41814,45 +40999,6 @@
   (ExpP "u32" (VarT "u32"))
   (VarT "iN")
 )
-(HintD (RelH "ishr__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ishr__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "u32" (VarT "u32"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ishr__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "u32" (VarT "u32"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "u32") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "u32")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ishr_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "u32"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "ishr_" (hint "show" "$ishr__#%2#$_(%1, %3, %4)")))
 (DecD
   "irotl_"
@@ -41861,84 +41007,12 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "irotl__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irotl__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "irotl__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "irotl_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "irotr_"
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN"))
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
-)
-(HintD (RelH "irotr__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irotr__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "irotr__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "irotr_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (DecD
   "ibitselect_"
@@ -41948,46 +41022,6 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "ibitselect__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ibitselect__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "iN_1" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ibitselect__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "iN_1" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "iN_1") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_1")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ibitselect_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-          (ExpA (VarE "iN_1"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "irelaxed_laneselect_"
   (ExpP "N" (VarT "N"))
@@ -41995,50 +41029,6 @@
   (ExpP "iN" (VarT "iN"))
   (ExpP "iN" (VarT "iN"))
   (IterT (VarT "iN") List)
-)
-(HintD (RelH "irelaxed_laneselect__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irelaxed_laneselect__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "iN_1" (VarT "iN"))
-    (typbind "ret_val*" (IterT (VarT "iN") List))
-  )
-  (RuleD
-    "irelaxed_laneselect__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "iN_1" (VarT "iN"))
-    (ExpP "ret_val*" (IterT (VarT "iN") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "iN_1") (VarE "ret_val*"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_1")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "irelaxed_laneselect_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-          (ExpA (VarE "iN_1"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "ieqz_"
@@ -42061,34 +41051,29 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ieqz__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ieqz__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ieqz__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ieqz_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  EqOp
+                  bool
+                  (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                  (NumE (Nat 0))
+                )
+              )
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -42112,34 +41097,29 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "inez__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inez__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "inez__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inez_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  NeOp
+                  bool
+                  (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                  (NumE (Nat 0))
+                )
+              )
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -42159,37 +41139,19 @@
       Arg
       (TupE (CallE "bool" (ExpA (CmpE EqOp bool (VarE "i_1") (VarE "i_2")))))
     )
-  )
-)
-(HintD (RelH "ieq__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ieq__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ieq__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ieq_" (ExpA (VarE "N")) (ExpA (VarE "iN")) (ExpA (VarE "iN_0")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE "bool" (ExpA (CmpE EqOp bool (VarE "i_1") (VarE "i_2"))))
+          )
+        )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -42209,37 +41171,19 @@
       Arg
       (TupE (CallE "bool" (ExpA (CmpE NeOp bool (VarE "i_1") (VarE "i_2")))))
     )
-  )
-)
-(HintD (RelH "ine__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ine__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ine__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ine_" (ExpA (VarE "N")) (ExpA (VarE "iN")) (ExpA (VarE "iN_0")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE "bool" (ExpA (CmpE NeOp bool (VarE "i_1") (VarE "i_2"))))
+          )
+        )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -42268,6 +41212,29 @@
               nat
               (ProjE (UncaseE (VarE "i_1") Arg) 0)
               (ProjE (UncaseE (VarE "i_2") Arg) 0)
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  LtOp
+                  nat
+                  (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                  (ProjE (UncaseE (VarE "i_2") Arg) 0)
+                )
+              )
             )
           )
         )
@@ -42306,45 +41273,37 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ilt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ilt__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ilt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ilt_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  LtOp
+                  int
+                  (CallE
+                    "signed_"
+                    (ExpA (VarE "N"))
+                    (ExpA (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                  )
+                  (CallE
+                    "signed_"
+                    (ExpA (VarE "N"))
+                    (ExpA (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                  )
+                )
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "ilt_" (hint "show" "$ilt__#%2#$_(%1, %3, %4)")))
@@ -42379,6 +41338,29 @@
         )
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  GtOp
+                  nat
+                  (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                  (ProjE (UncaseE (VarE "i_2") Arg) 0)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "N" nat)
@@ -42412,45 +41394,37 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "igt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "igt__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "igt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "igt_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  GtOp
+                  int
+                  (CallE
+                    "signed_"
+                    (ExpA (VarE "N"))
+                    (ExpA (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                  )
+                  (CallE
+                    "signed_"
+                    (ExpA (VarE "N"))
+                    (ExpA (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                  )
+                )
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "igt_" (hint "show" "$igt__#%2#$_(%1, %3, %4)")))
@@ -42485,6 +41459,29 @@
         )
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  LeOp
+                  nat
+                  (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                  (ProjE (UncaseE (VarE "i_2") Arg) 0)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "N" nat)
@@ -42518,45 +41515,37 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ile__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ile__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ile__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ile_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  LeOp
+                  int
+                  (CallE
+                    "signed_"
+                    (ExpA (VarE "N"))
+                    (ExpA (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                  )
+                  (CallE
+                    "signed_"
+                    (ExpA (VarE "N"))
+                    (ExpA (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                  )
+                )
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "ile_" (hint "show" "$ile__#%2#$_(%1, %3, %4)")))
@@ -42591,6 +41580,29 @@
         )
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  GeOp
+                  nat
+                  (ProjE (UncaseE (VarE "i_1") Arg) 0)
+                  (ProjE (UncaseE (VarE "i_2") Arg) 0)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "N" nat)
@@ -42624,45 +41636,37 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ige__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ige__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ige__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ige_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  GeOp
+                  int
+                  (CallE
+                    "signed_"
+                    (ExpA (VarE "N"))
+                    (ExpA (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                  )
+                  (CallE
+                    "signed_"
+                    (ExpA (VarE "N"))
+                    (ExpA (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                  )
+                )
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "ige_" (hint "show" "$ige__#%2#$_(%1, %3, %4)")))
@@ -42690,75 +41694,11 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fabs__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fabs__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fabs__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fabs_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fneg_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fneg__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fneg__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fneg__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fneg_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fsqrt_"
@@ -42766,75 +41706,11 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fsqrt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fsqrt__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fsqrt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fsqrt_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fceil_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fceil__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fceil__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fceil__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fceil_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "ffloor_"
@@ -42842,113 +41718,17 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "ffloor__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ffloor__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "ffloor__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "ffloor_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "ftrunc_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "ftrunc__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ftrunc__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "ftrunc__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "ftrunc_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fnearest_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fnearest__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fnearest__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fnearest__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fnearest_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fadd_"
@@ -42957,92 +41737,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fadd__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fadd__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fadd__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fadd_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fsub_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fsub__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fsub__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fsub__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fsub_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fmul_"
@@ -43051,92 +41751,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fmul__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fmul__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fmul__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fmul_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fdiv_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fdiv__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fdiv__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fdiv__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fdiv_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fmin_"
@@ -43145,92 +41765,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fmin__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fmin__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fmin__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fmin_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fmax_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fmax__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fmax__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fmax__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fmax_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fpmin_"
@@ -43239,46 +41779,6 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fpmin__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fpmin__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fpmin__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fpmin_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fpmax_"
   (ExpP "N" (VarT "N"))
@@ -43286,92 +41786,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fpmax__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fpmax__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fpmax__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fpmax_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "frelaxed_min_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "frelaxed_min__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "frelaxed_min__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "frelaxed_min__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "frelaxed_min_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (HintD (DecH "frelaxed_min_" (hint "show" "$frelaxed__min_(%, %, %)")))
 (DecD
@@ -43381,46 +41801,6 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "frelaxed_max__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "frelaxed_max__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "frelaxed_max__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "frelaxed_max_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "frelaxed_max_" (hint "show" "$frelaxed__max_(%, %, %)")))
 (DecD
   "fcopysign_"
@@ -43429,83 +41809,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fcopysign__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fcopysign__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fcopysign__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fcopysign_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "feq_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
-)
-(HintD (RelH "feq__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "feq__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "feq__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "feq_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
 )
 (DecD
   "fne_"
@@ -43514,74 +41823,12 @@
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
 )
-(HintD (RelH "fne__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fne__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "fne__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fne_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
 (DecD
   "flt_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
-)
-(HintD (RelH "flt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "flt__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "flt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "flt_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
 )
 (DecD
   "fgt_"
@@ -43590,37 +41837,6 @@
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
 )
-(HintD (RelH "fgt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fgt__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "fgt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fgt_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
 (DecD
   "fle_"
   (ExpP "N" (VarT "N"))
@@ -43628,74 +41844,12 @@
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
 )
-(HintD (RelH "fle__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fle__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "fle__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fle_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
 (DecD
   "fge_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
-)
-(HintD (RelH "fge__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fge__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "fge__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fge_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
 )
 (DecD
   "frelaxed_madd_"
@@ -43705,50 +41859,6 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "frelaxed_madd__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "frelaxed_madd__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "fN_1" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "frelaxed_madd__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "fN_1" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "fN_1") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_1")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "frelaxed_madd_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-          (ExpA (VarE "fN_1"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "frelaxed_madd_" (hint "show" "$frelaxed__madd_(%, %, %)")))
 (DecD
   "frelaxed_nmadd_"
@@ -43757,50 +41867,6 @@
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "frelaxed_nmadd__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "frelaxed_nmadd__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "fN_1" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "frelaxed_nmadd__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "fN_1" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "fN_1") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_1")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "frelaxed_nmadd_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-          (ExpA (VarE "fN_1"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (HintD (DecH "frelaxed_nmadd_" (hint "show" "$frelaxed__nmadd_(%, %, %)")))
 (HintD (DecH "fabs_" (hint "builtin" "{}")))
@@ -43836,36 +41902,6 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "wrap___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "wrap___is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "wrap___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "M") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "wrap__" (ExpA (VarE "M")) (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "extend__"
   (ExpP "M" (VarT "M"))
@@ -43873,44 +41909,6 @@
   (ExpP "sx" (VarT "sx"))
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
-)
-(HintD (RelH "extend___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "extend___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "extend___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "M") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "extend__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (HintD (DecH "extend__" (hint "show" "$extend_((%, %))^(%)#((%))")))
 (DecD
@@ -43921,48 +41919,6 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "iN") Opt)
 )
-(HintD (RelH "trunc___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "trunc___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
-  )
-  (RuleD
-    "trunc___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "fN") (VarE "ret_val?"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "M") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (CallE
-          "trunc__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "fN"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
-    )
-  )
-)
 (HintD (DecH "trunc__" (hint "show" "$trunc_((%, %))^(%)#((%))")))
 (DecD
   "trunc_sat__"
@@ -43972,48 +41928,6 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "iN") Opt)
 )
-(HintD (RelH "trunc_sat___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "trunc_sat___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
-  )
-  (RuleD
-    "trunc_sat___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "fN") (VarE "ret_val?"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "M") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (CallE
-          "trunc_sat__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "fN"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
-    )
-  )
-)
 (HintD (DecH "trunc_sat__" (hint "show" "$trunc__sat_((%, %))^(%)#((%))")))
 (DecD
   "relaxed_trunc__"
@@ -44022,48 +41936,6 @@
   (ExpP "sx" (VarT "sx"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "iN") Opt)
-)
-(HintD (RelH "relaxed_trunc___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "relaxed_trunc___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
-  )
-  (RuleD
-    "relaxed_trunc___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "fN") (VarE "ret_val?"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "M") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (CallE
-          "relaxed_trunc__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "fN"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
-    )
-  )
 )
 (HintD
   (DecH "relaxed_trunc__" (hint "show" "$relaxed__trunc_((%, %))^(%)#((%))"))
@@ -44075,90 +41947,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "demote___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "demote___is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "demote___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "M") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "demote__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "promote__"
   (ExpP "M" (VarT "M"))
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "promote___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "promote___is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "promote___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "M") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "promote__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "convert__"
@@ -44167,44 +41961,6 @@
   (ExpP "sx" (VarT "sx"))
   (ExpP "iN" (VarT "iN"))
   (VarT "fN")
-)
-(HintD (RelH "convert___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "convert___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "fN"))
-  )
-  (RuleD
-    "convert___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "M") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "convert__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-        )
-      )
-    )
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (HintD (DecH "convert__" (hint "show" "$convert_((%, %))^(%)#((%))")))
 (DecD
@@ -44215,100 +41971,14 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "narrow___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "narrow___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "narrow___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "M") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "narrow__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "narrow__" (hint "show" "$narrow_((%, %))^(%)#(%)")))
 (DecD
   "reinterpret__"
   (ExpP "numtype_1" (VarT "numtype"))
   (ExpP "numtype_2" (VarT "numtype"))
   (ExpP "num_" (VarT "num_"))
-  (IterT (VarT "num_") Opt)
-  (DefD
-    (ExpP "x0" (VarT "numtype"))
-    (ExpP "x1" (VarT "numtype"))
-    (ExpP "x2" (VarT "num_"))
-    (ExpA (VarE "x0"))
-    (ExpA (VarE "x1"))
-    (ExpA (VarE "x2"))
-    (OptE)
-    ElsePr
-  )
+  (VarT "num_")
 )
-(HintD (RelH "reinterpret___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "reinterpret___is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "numtype_1" (VarT "numtype"))
-    (typbind "numtype_2" (VarT "numtype"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "ret_val" (VarT "num_"))
-  )
-  (RuleD
-    "reinterpret___is_wf_0"
-    (ExpP "numtype_1" (VarT "numtype"))
-    (ExpP "numtype_2" (VarT "numtype"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "ret_val" (VarT "num_"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "numtype_1") (VarE "numtype_2") (VarE "num_") (VarE "ret_val"))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype_1") (VarE "num_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "reinterpret__"
-            (ExpA (VarE "numtype_1"))
-            (ExpA (VarE "numtype_2"))
-            (ExpA (VarE "num_"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype_2") (VarE "ret_val")))
-  )
-)
-(HintD (DecH "reinterpret__" (hint "partial" "{}")))
 (HintD (DecH "wrap__" (hint "builtin" "{}")))
 (HintD (DecH "extend__" (hint "builtin" "{}")))
 (HintD (DecH "trunc__" (hint "builtin" "{}")))
@@ -44331,6 +42001,17 @@
     (ExpA (VarE "c"))
     (OptE
       (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "numtype") (VarE "c")))
+    )
+    (RulePr
+      "wf_lane_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype"))
+        (CaseE
+          (Seq (Atom mk_lane__0) Arg Arg)
+          (TupE (VarE "numtype") (VarE "c"))
+        )
+      )
     )
   )
   (DefD
@@ -44373,6 +42054,41 @@
         )
       )
     )
+    (RulePr
+      "wf_lane_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "packtype") (VarT "lanetype") (VarE "packtype"))
+        (CaseE
+          (Seq (Atom mk_lane__1) Arg Arg)
+          (TupE
+            (VarE "packtype")
+            (CallE
+              "wrap__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA
+                    (CallE
+                      "lunpack"
+                      (ExpA
+                        (SubE
+                          (VarT "packtype")
+                          (VarT "lanetype")
+                          (VarE "packtype")
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+              (ExpA (CallE "psize" (ExpA (VarE "packtype"))))
+              (ExpA (VarE "c"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "lanetype"))
@@ -44381,38 +42097,6 @@
     (ExpA (VarE "x1"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "lpacknum__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "lpacknum__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "lanetype" (VarT "lanetype"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "ret_val" (VarT "lane_"))
-  )
-  (RuleD
-    "lpacknum__is_wf_0"
-    (ExpP "lanetype" (VarT "lanetype"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "ret_val" (VarT "lane_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "lanetype") (VarE "num_") (VarE "ret_val"))
-    (RulePr
-      "wf_num_"
-      (Seq Arg Arg)
-      (TupE (CallE "lunpack" (ExpA (VarE "lanetype"))) (VarE "num_"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE (CallE "lpacknum_" (ExpA (VarE "lanetype")) (ExpA (VarE "num_"))))
-      )
-    )
-    (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "lanetype") (VarE "ret_val")))
   )
 )
 (HintD (DecH "lpacknum_" (hint "partial" "{}")))
@@ -44477,6 +42161,41 @@
         )
       )
     )
+    (RulePr
+      "wf_lit_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "packtype") (VarT "storagetype") (VarE "packtype"))
+        (CaseE
+          (Seq (Atom mk_lit__2) Arg Arg)
+          (TupE
+            (VarE "packtype")
+            (CallE
+              "wrap__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA
+                    (CallE
+                      "lunpack"
+                      (ExpA
+                        (SubE
+                          (VarT "packtype")
+                          (VarT "lanetype")
+                          (VarE "packtype")
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+              (ExpA (CallE "psize" (ExpA (VarE "packtype"))))
+              (ExpA (VarE "c"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "storagetype"))
@@ -44485,52 +42204,6 @@
     (ExpA (VarE "x1"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "cpacknum__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "cpacknum__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "storagetype" (VarT "storagetype"))
-    (typbind "lit_" (VarT "lit_"))
-    (typbind "ret_val" (VarT "lit_"))
-  )
-  (RuleD
-    "cpacknum__is_wf_0"
-    (ExpP "storagetype" (VarT "storagetype"))
-    (ExpP "lit_" (VarT "lit_"))
-    (ExpP "ret_val" (VarT "lit_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "storagetype") (VarE "lit_") (VarE "ret_val"))
-    (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-    (RulePr
-      "wf_lit_"
-      (Seq Arg Arg)
-      (TupE
-        (SubE
-          (VarT "consttype")
-          (VarT "storagetype")
-          (TheE (CallE "cunpack" (ExpA (VarE "storagetype"))))
-        )
-        (VarE "lit_")
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE "cpacknum_" (ExpA (VarE "storagetype")) (ExpA (VarE "lit_")))
-        )
-      )
-    )
-    (RulePr
-      "wf_lit_"
-      (Seq Arg Arg)
-      (TupE (VarE "storagetype") (VarE "ret_val"))
-    )
   )
 )
 (HintD (DecH "cpacknum_" (hint "partial" "{}")))
@@ -44592,6 +42265,45 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE
+          "lunpack"
+          (ExpA (SubE (VarT "packtype") (VarT "lanetype") (VarE "packtype")))
+        )
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "extend__"
+              (ExpA (CallE "psize" (ExpA (VarE "packtype"))))
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA
+                    (CallE
+                      "lunpack"
+                      (ExpA
+                        (SubE
+                          (VarT "packtype")
+                          (VarT "lanetype")
+                          (VarE "packtype")
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+              (ExpA (CaseE (Atom U) (TupE)))
+              (ExpA (VarE "c"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "lanetype"))
@@ -44600,40 +42312,6 @@
     (ExpA (VarE "x1"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "lunpacknum__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "lunpacknum__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "lanetype" (VarT "lanetype"))
-    (typbind "lane_" (VarT "lane_"))
-    (typbind "ret_val" (VarT "num_"))
-  )
-  (RuleD
-    "lunpacknum__is_wf_0"
-    (ExpP "lanetype" (VarT "lanetype"))
-    (ExpP "lane_" (VarT "lane_"))
-    (ExpP "ret_val" (VarT "num_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "lanetype") (VarE "lane_") (VarE "ret_val"))
-    (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "lanetype") (VarE "lane_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE "lunpacknum_" (ExpA (VarE "lanetype")) (ExpA (VarE "lane_")))
-        )
-      )
-    )
-    (RulePr
-      "wf_num_"
-      (Seq Arg Arg)
-      (TupE (CallE "lunpack" (ExpA (VarE "lanetype"))) (VarE "ret_val"))
-    )
   )
 )
 (HintD (DecH "lunpacknum_" (hint "partial" "{}")))
@@ -44700,6 +42378,59 @@
         )
       )
     )
+    (RulePr
+      "wf_lit_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE
+          (VarT "consttype")
+          (VarT "storagetype")
+          (TheE
+            (CallE
+              "cunpack"
+              (ExpA
+                (SubE (VarT "packtype") (VarT "storagetype") (VarE "packtype"))
+              )
+            )
+          )
+        )
+        (CaseE
+          (Seq (Atom mk_lit__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE
+                (CaseE (Atom I32) (TupE))
+                (CallE
+                  "extend__"
+                  (ExpA (CallE "psize" (ExpA (VarE "packtype"))))
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE
+                          "lunpack"
+                          (ExpA
+                            (SubE
+                              (VarT "packtype")
+                              (VarT "lanetype")
+                              (VarE "packtype")
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                  (ExpA (CaseE (Atom U) (TupE)))
+                  (ExpA (VarE "c"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "storagetype"))
@@ -44708,48 +42439,6 @@
     (ExpA (VarE "x1"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "cunpacknum__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "cunpacknum__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "storagetype" (VarT "storagetype"))
-    (typbind "lit_" (VarT "lit_"))
-    (typbind "ret_val" (VarT "lit_"))
-  )
-  (RuleD
-    "cunpacknum__is_wf_0"
-    (ExpP "storagetype" (VarT "storagetype"))
-    (ExpP "lit_" (VarT "lit_"))
-    (ExpP "ret_val" (VarT "lit_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "storagetype") (VarE "lit_") (VarE "ret_val"))
-    (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-    (RulePr "wf_lit_" (Seq Arg Arg) (TupE (VarE "storagetype") (VarE "lit_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE "cunpacknum_" (ExpA (VarE "storagetype")) (ExpA (VarE "lit_")))
-        )
-      )
-    )
-    (RulePr
-      "wf_lit_"
-      (Seq Arg Arg)
-      (TupE
-        (SubE
-          (VarT "consttype")
-          (VarT "storagetype")
-          (TheE (CallE "cunpack" (ExpA (VarE "storagetype"))))
-        )
-        (VarE "ret_val")
-      )
-    )
   )
 )
 (HintD (DecH "cunpacknum_" (hint "partial" "{}")))
@@ -44779,6 +42468,29 @@
     (ExpA (CaseE (Seq (Atom mk_num__0) Arg Arg) (TupE (VarE "Inn") (VarE "i"))))
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "iclz_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
         (CaseE
           (Seq (Atom mk_num__0) Arg Arg)
           (TupE
@@ -44829,6 +42541,29 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ictz_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -44843,6 +42578,29 @@
     (ExpA (CaseE (Seq (Atom mk_num__0) Arg Arg) (TupE (VarE "Inn") (VarE "i"))))
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ipopcnt_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
         (CaseE
           (Seq (Atom mk_num__0) Arg Arg)
           (TupE
@@ -44899,6 +42657,31 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "iextend_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "M"))
+              (ExpA (CaseE (Atom S) (TupE)))
+              (ExpA (VarE "i"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -44930,6 +42713,60 @@
             )
             (ExpA (VarE "f"))
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
         )
       )
     )
@@ -44967,6 +42804,60 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -44998,6 +42889,60 @@
             )
             (ExpA (VarE "f"))
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
         )
       )
     )
@@ -45035,6 +42980,60 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -45066,6 +43065,60 @@
             )
             (ExpA (VarE "f"))
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
         )
       )
     )
@@ -45103,6 +43156,60 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -45137,6 +43244,60 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "numtype"))
@@ -45147,48 +43308,6 @@
     (ExpA (VarE "x2"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "unop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "unop__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "numtype" (VarT "numtype"))
-    (typbind "unop_" (VarT "unop_"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "ret_val*" (IterT (VarT "num_") List))
-  )
-  (RuleD
-    "unop__is_wf_0"
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "unop_" (VarT "unop_"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "ret_val*" (IterT (VarT "num_") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "numtype") (VarE "unop_") (VarE "num_") (VarE "ret_val*"))
-    (RulePr "wf_unop_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "unop_")))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "unop_"
-            (ExpA (VarE "numtype"))
-            (ExpA (VarE "unop_"))
-            (ExpA (VarE "num_"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "unop_" (hint "partial" "{}")))
@@ -45219,6 +43338,30 @@
     )
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "iadd_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (VarE "i_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
         (CaseE
           (Seq (Atom mk_num__0) Arg Arg)
           (TupE
@@ -45277,6 +43420,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "isub_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (VarE "i_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -45297,6 +43464,30 @@
     )
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "imul_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (VarE "i_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
         (CaseE
           (Seq (Atom mk_num__0) Arg Arg)
           (TupE
@@ -45361,6 +43552,66 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+          )
+          (VarE "iter")
+        )
+      )
+      Opt
+      (iterexp
+        "iter"
+        (CallE
+          "idiv_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "i_1"))
+          (ExpA (VarE "i_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+          (CaseE
+            (Seq (Atom mk_num__0) Arg Arg)
+            (TupE (VarE "Inn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (LiftE
+          (CallE
+            "idiv_"
+            (ExpA
+              (CallE
+                "sizenn"
+                (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "i_1"))
+            (ExpA (VarE "i_2"))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -45406,6 +43657,66 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+          )
+          (VarE "iter")
+        )
+      )
+      Opt
+      (iterexp
+        "iter"
+        (CallE
+          "irem_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "i_1"))
+          (ExpA (VarE "i_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+          (CaseE
+            (Seq (Atom mk_num__0) Arg Arg)
+            (TupE (VarE "Inn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (LiftE
+          (CallE
+            "irem_"
+            (ExpA
+              (CallE
+                "sizenn"
+                (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "i_1"))
+            (ExpA (VarE "i_2"))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -45426,6 +43737,30 @@
     )
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "iand_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (VarE "i_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
         (CaseE
           (Seq (Atom mk_num__0) Arg Arg)
           (TupE
@@ -45484,6 +43819,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ior_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (VarE "i_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -45523,6 +43882,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ixor_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (VarE "i_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -45543,6 +43926,30 @@
     )
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ishl_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (CaseE Arg (TupE (ProjE (UncaseE (VarE "i_2") Arg) 0))))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
         (CaseE
           (Seq (Atom mk_num__0) Arg Arg)
           (TupE
@@ -45603,6 +44010,31 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ishr_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "i_1"))
+              (ExpA (CaseE Arg (TupE (ProjE (UncaseE (VarE "i_2") Arg) 0))))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -45642,6 +44074,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "irotl_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (VarE "i_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -45662,6 +44118,30 @@
     )
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "irotr_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "i_1"))
+              (ExpA (VarE "i_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
         (CaseE
           (Seq (Atom mk_num__0) Arg Arg)
           (TupE
@@ -45722,6 +44202,62 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -45760,6 +44296,62 @@
             (ExpA (VarE "f_1"))
             (ExpA (VarE "f_2"))
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
         )
       )
     )
@@ -45804,6 +44396,62 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -45842,6 +44490,62 @@
             (ExpA (VarE "f_1"))
             (ExpA (VarE "f_2"))
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
         )
       )
     )
@@ -45886,6 +44590,62 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -45924,6 +44684,62 @@
             (ExpA (VarE "f_1"))
             (ExpA (VarE "f_2"))
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
         )
       )
     )
@@ -45968,6 +44784,62 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "numtype"))
@@ -45980,58 +44852,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "binop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "binop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "numtype" (VarT "numtype"))
-    (typbind "binop_" (VarT "binop_"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "num__0" (VarT "num_"))
-    (typbind "ret_val*" (IterT (VarT "num_") List))
-  )
-  (RuleD
-    "binop__is_wf_0"
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "binop_" (VarT "binop_"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "num__0" (VarT "num_"))
-    (ExpP "ret_val*" (IterT (VarT "num_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "numtype")
-      (VarE "binop_")
-      (VarE "num_")
-      (VarE "num__0")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_binop_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "binop_")))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num_")))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "binop_"
-            (ExpA (VarE "numtype"))
-            (ExpA (VarE "binop_"))
-            (ExpA (VarE "num_"))
-            (ExpA (VarE "num__0"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "binop_" (hint "partial" "{}")))
@@ -46065,6 +44885,23 @@
         (ExpA (VarE "i"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "ieqz_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "i"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "numtype"))
@@ -46075,44 +44912,6 @@
     (ExpA (VarE "x2"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "testop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "testop__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "numtype" (VarT "numtype"))
-    (typbind "testop_" (VarT "testop_"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "testop__is_wf_0"
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "testop_" (VarT "testop_"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "numtype") (VarE "testop_") (VarE "num_") (VarE "ret_val"))
-    (RulePr "wf_testop_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "testop_")))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "testop_"
-            (ExpA (VarE "numtype"))
-            (ExpA (VarE "testop_"))
-            (ExpA (VarE "num_"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "testop_" (hint "partial" "{}")))
@@ -46154,6 +44953,24 @@
         (ExpA (VarE "i_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "ieq_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "i_1"))
+          (ExpA (VarE "i_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -46183,6 +45000,24 @@
         )
         (ExpA (VarE "i_1"))
         (ExpA (VarE "i_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "ine_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "i_1"))
+          (ExpA (VarE "i_2"))
+        )
       )
     )
   )
@@ -46218,6 +45053,25 @@
         (ExpA (VarE "i_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "ilt_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "i_1"))
+          (ExpA (VarE "i_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -46249,6 +45103,25 @@
         (ExpA (VarE "sx"))
         (ExpA (VarE "i_1"))
         (ExpA (VarE "i_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "igt_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "i_1"))
+          (ExpA (VarE "i_2"))
+        )
       )
     )
   )
@@ -46284,6 +45157,25 @@
         (ExpA (VarE "i_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "ile_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "i_1"))
+          (ExpA (VarE "i_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "addrtype"))
@@ -46317,6 +45209,25 @@
         (ExpA (VarE "i_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "ige_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "i_1"))
+          (ExpA (VarE "i_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -46346,6 +45257,24 @@
         )
         (ExpA (VarE "f_1"))
         (ExpA (VarE "f_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "feq_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
       )
     )
   )
@@ -46379,6 +45308,24 @@
         (ExpA (VarE "f_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "fne_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -46408,6 +45355,24 @@
         )
         (ExpA (VarE "f_1"))
         (ExpA (VarE "f_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "flt_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
       )
     )
   )
@@ -46441,6 +45406,24 @@
         (ExpA (VarE "f_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "fgt_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -46470,6 +45453,24 @@
         )
         (ExpA (VarE "f_1"))
         (ExpA (VarE "f_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "fle_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
       )
     )
   )
@@ -46503,6 +45504,24 @@
         (ExpA (VarE "f_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "fge_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+          (ExpA (VarE "f_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "numtype"))
@@ -46515,54 +45534,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "relop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "relop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "numtype" (VarT "numtype"))
-    (typbind "relop_" (VarT "relop_"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "num__0" (VarT "num_"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "relop__is_wf_0"
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "relop_" (VarT "relop_"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "num__0" (VarT "num_"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "numtype")
-      (VarE "relop_")
-      (VarE "num_")
-      (VarE "num__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_relop_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "relop_")))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num_")))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "relop_"
-            (ExpA (VarE "numtype"))
-            (ExpA (VarE "relop_"))
-            (ExpA (VarE "num_"))
-            (ExpA (VarE "num__0"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "relop_" (hint "partial" "{}")))
@@ -46625,6 +45596,40 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn_2")
+            (CallE
+              "extend__"
+              (ExpA
+                (CallE
+                  "sizenn1"
+                  (ExpA
+                    (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_1"))
+                  )
+                )
+              )
+              (ExpA
+                (CallE
+                  "sizenn2"
+                  (ExpA
+                    (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
+                  )
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "i_1"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn_1" (VarT "addrtype"))
@@ -46643,6 +45648,39 @@
     )
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn_2")
+            (CallE
+              "wrap__"
+              (ExpA
+                (CallE
+                  "sizenn1"
+                  (ExpA
+                    (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_1"))
+                  )
+                )
+              )
+              (ExpA
+                (CallE
+                  "sizenn2"
+                  (ExpA
+                    (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
+                  )
+                )
+              )
+              (ExpA (VarE "i_1"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
         (CaseE
           (Seq (Atom mk_num__0) Arg Arg)
           (TupE
@@ -46725,6 +45763,76 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      Opt
+      (iterexp
+        "iter"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "sizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "sizenn2"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "f_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
+          (CaseE
+            (Seq (Atom mk_num__0) Arg Arg)
+            (TupE (VarE "Inn_2") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (LiftE
+          (CallE
+            "trunc__"
+            (ExpA
+              (CallE
+                "sizenn1"
+                (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+              )
+            )
+            (ExpA
+              (CallE
+                "sizenn2"
+                (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "f_1"))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn_1" (VarT "Fnn"))
@@ -46779,6 +45887,76 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      Opt
+      (iterexp
+        "iter"
+        (CallE
+          "trunc_sat__"
+          (ExpA
+            (CallE
+              "sizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "sizenn2"
+              (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "f_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
+          (CaseE
+            (Seq (Atom mk_num__0) Arg Arg)
+            (TupE (VarE "Inn_2") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (LiftE
+          (CallE
+            "trunc_sat__"
+            (ExpA
+              (CallE
+                "sizenn1"
+                (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+              )
+            )
+            (ExpA
+              (CallE
+                "sizenn2"
+                (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "f_1"))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn_1" (VarT "addrtype"))
@@ -46802,6 +45980,38 @@
     )
     (OptE
       (ListE
+        (CaseE
+          (Seq (Atom mk_num__1) Arg Arg)
+          (TupE
+            (VarE "Fnn_2")
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "sizenn1"
+                  (ExpA
+                    (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_1"))
+                  )
+                )
+              )
+              (ExpA
+                (CallE
+                  "sizenn2"
+                  (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "i_1"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
         (CaseE
           (Seq (Atom mk_num__1) Arg Arg)
           (TupE
@@ -46873,6 +46083,72 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn2"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "promote__"
+          (ExpA
+            (CallE
+              "sizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "sizenn2"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn_2") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "promote__"
+          (ExpA
+            (CallE
+              "sizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "sizenn2"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn_1" (VarT "Fnn"))
@@ -46917,6 +46193,72 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn2"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "demote__"
+          (ExpA
+            (CallE
+              "sizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "sizenn2"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn_2") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "demote__"
+          (ExpA
+            (CallE
+              "sizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "sizenn2"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+            )
+          )
+          (ExpA (VarE "f_1"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn_1" (VarT "addrtype"))
@@ -46933,11 +46275,8 @@
     (ExpA
       (CaseE (Seq (Atom mk_num__0) Arg Arg) (TupE (VarE "Inn_1") (VarE "i_1")))
     )
-    (IterE
-      (ListE (VarE "iter_val#3"))
-      Opt
-      (iterexp
-        "iter_val#3"
+    (OptE
+      (ListE
         (CallE
           "reinterpret__"
           (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_1")))
@@ -46965,6 +46304,35 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
+        (CallE
+          "reinterpret__"
+          (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_1")))
+          (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (VarE "Inn_1") (VarE "i_1"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_1"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE (VarE "Inn_1") (VarE "i_1"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn_1" (VarT "Fnn"))
@@ -46981,11 +46349,8 @@
     (ExpA
       (CaseE (Seq (Atom mk_num__1) Arg Arg) (TupE (VarE "Fnn_1") (VarE "f_1")))
     )
-    (IterE
-      (ListE (VarE "iter_val#4"))
-      Opt
-      (iterexp
-        "iter_val#4"
+    (OptE
+      (ListE
         (CallE
           "reinterpret__"
           (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
@@ -47013,6 +46378,35 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
+        (CallE
+          "reinterpret__"
+          (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+          (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_num__1) Arg Arg)
+              (TupE (VarE "Fnn_1") (VarE "f_1"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1"))
+        (CaseE
+          (Seq (Atom mk_num__1) Arg Arg)
+          (TupE (VarE "Fnn_1") (VarE "f_1"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "numtype"))
@@ -47027,65 +46421,6 @@
     ElsePr
   )
 )
-(HintD (RelH "cvtop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "cvtop___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "numtype_1" (VarT "numtype"))
-    (typbind "numtype_2" (VarT "numtype"))
-    (typbind "cvtop__" (VarT "cvtop__"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "ret_val*" (IterT (VarT "num_") List))
-  )
-  (RuleD
-    "cvtop___is_wf_0"
-    (ExpP "numtype_1" (VarT "numtype"))
-    (ExpP "numtype_2" (VarT "numtype"))
-    (ExpP "cvtop__" (VarT "cvtop__"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "ret_val*" (IterT (VarT "num_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "numtype_1")
-      (VarE "numtype_2")
-      (VarE "cvtop__")
-      (VarE "num_")
-      (VarE "ret_val*")
-    )
-    (RulePr
-      "wf_cvtop__"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "numtype_1") (VarE "numtype_2") (VarE "cvtop__"))
-    )
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype_1") (VarE "num_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "cvtop__"
-            (ExpA (VarE "numtype_1"))
-            (ExpA (VarE "numtype_2"))
-            (ExpA (VarE "cvtop__"))
-            (ExpA (VarE "num_"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr
-        "wf_num_"
-        (Seq Arg Arg)
-        (TupE (VarE "numtype_2") (VarE "ret_val"))
-      )
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "cvtop__" (hint "partial" "{}")))
 (HintD (DecH "cvtop__" (hint "show" "%3#$__(%1, %2, %4)")))
 (DecD
@@ -47094,86 +46429,12 @@
   (ExpP "vec_" (VarT "vec_"))
   (IterT (VarT "lane_") List)
 )
-(HintD (RelH "lanes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "lanes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "lane_") List))
-  )
-  (RuleD
-    "lanes__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "lane_") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "ret_val*"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "lanes_" (ExpA (VarE "shape")) (ExpA (VarE "vec_")))
-      )
-    )
-    (IterPr
-      (RulePr
-        "wf_lane_"
-        (Seq Arg Arg)
-        (TupE (CallE "lanetype" (ExpA (VarE "shape"))) (VarE "ret_val"))
-      )
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "lanes_" (hint "inverse" "$inv_lanes_")))
 (DecD
   "inv_lanes_"
   (ExpP "shape" (VarT "shape"))
   (ExpP "_" (IterT (VarT "lane_") List))
   (VarT "vec_")
-)
-(HintD (RelH "inv_lanes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_lanes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "var_0*" (IterT (VarT "lane_") List))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "inv_lanes__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "var_0*" (IterT (VarT "lane_") List))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (IterPr
-      (RulePr
-        "wf_lane_"
-        (Seq Arg Arg)
-        (TupE (CallE "lanetype" (ExpA (VarE "shape"))) (VarE "var_0"))
-      )
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_lanes_" (ExpA (VarE "shape")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-  )
 )
 (HintD (DecH "inv_lanes_" (hint "show" "$lanes_(%)^(- 1)#((%))")))
 (HintD (DecH "lanes_" (hint "builtin" "{}")))
@@ -47761,46 +47022,11 @@
       )
       (CaseE Arg (TupE (NumE (Nat 0))))
     )
-  )
-)
-(HintD (RelH "iswizzle_lane__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iswizzle_lane__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "iN") List))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iswizzle_lane__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "iN") List))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "iN") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (VarE "N") (CaseE Arg (TupE (NumE (Nat 0)))))
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iswizzle_lane_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "iN"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (DecD
@@ -47858,46 +47084,36 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "irelaxed_swizzle_lane__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irelaxed_swizzle_lane__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "iN") List))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "irelaxed_swizzle_lane__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "iN") List))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "iN") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
         (CallE
-          "irelaxed_swizzle_lane_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "iN"))
+          "relaxed2"
+          (ExpA (CallE "R_swizzle"))
+          (TypA (VarT "iN"))
+          (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
+          (ExpA
+            (IdxE
+              (IterE (VarE "c") List (iterexp "c" (VarE "c*")))
+              (BinE
+                ModOp
+                nat
+                (ProjE (UncaseE (VarE "i") Arg) 0)
+                (LenE (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+    (RulePr "wf_relaxed2" (Seq Arg) (TupE (CallE "R_swizzle")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (VarE "N") (CaseE Arg (TupE (NumE (Nat 0)))))
+    )
   )
 )
 (DecD
@@ -47981,6 +47197,133 @@
         (iterexp "c_1" (VarE "c_1*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          )
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -47990,48 +47333,6 @@
     (ExpA (VarE "x2"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "ivunop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivunop__is_wf"
-  (DefP "f_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "ivunop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP "f_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "ret_val*"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "ivunop_"
-            (ExpA (VarE "shape"))
-            (DefA "f_")
-            (ExpA (VarE "vec_"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "ivunop_" (hint "partial" "{}")))
@@ -48151,6 +47452,182 @@
       )
     )
     (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 128))
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+        )
+      )
+      List
+      (iterexp "c*" (VarE "c**"))
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_lane_"
+          (Seq Arg Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "setproduct_"
+          (TypA (VarT "lane_"))
+          (ExpA
+            (IterE
+              (IterE
+                (CaseE
+                  (Seq (Atom mk_lane__0) Arg Arg)
+                  (TupE
+                    (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+                    (CaseE
+                      (Seq (Atom mk_num__1) Arg Arg)
+                      (TupE (VarE "Fnn") (VarE "iter_0"))
+                    )
+                  )
+                )
+                List
+                (iterexp
+                  "iter_0"
+                  (CallE
+                    "f_"
+                    (ExpA
+                      (CallE
+                        "sizenn"
+                        (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+                      )
+                    )
+                    (ExpA
+                      (TheE
+                        (CallE
+                          "proj_num__1"
+                          (ExpA
+                            (TheE (CallE "proj_lane__0" (ExpA (VarE "c_1"))))
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+              List
+              (iterexp "c_1" (VarE "c_1*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_fN"
+          (Seq Arg Arg)
+          (TupE
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "sizenn"
+                (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+              )
+            )
+            (ExpA
+              (TheE
+                (CallE
+                  "proj_num__1"
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "c_1")))))
+                )
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
       (IterPr
         (RulePr
           "wf_lane_"
@@ -48193,51 +47670,6 @@
       )
       List
       (iterexp "c_1" (VarE "c_1*"))
-    )
-  )
-)
-(HintD (RelH "fvunop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fvunop__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (IterT (VarT "fN") List)
-  )
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "fvunop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "fN" (VarT "fN"))
-      (IterT (VarT "fN") List)
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "ret_val*"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fvunop_" (ExpA (VarE "shape")) (DefA "f_") (ExpA (VarE "vec_")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
     )
   )
 )
@@ -48355,6 +47787,173 @@
         (iterexp "c_2" (VarE "c_2*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          )
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -48366,64 +47965,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "ivbinop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivbinop__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN" (VarT "iN"))
-    (VarT "iN")
-  )
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "ivbinop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "iN" (VarT "iN"))
-      (VarT "iN")
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "vec__0") (VarE "ret_val*"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "ivbinop_"
-            (ExpA (VarE "shape"))
-            (DefA "f_")
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "ivbinop_" (hint "partial" "{}")))
@@ -48547,6 +48088,174 @@
         (iterexp "c_2" (VarE "c_2*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          )
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -48560,75 +48269,6 @@
     (ExpA (VarE "x4"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "ivbinopsx__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivbinopsx__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN" (VarT "iN"))
-    (VarT "iN")
-  )
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "ivbinopsx__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "sx" (VarT "sx"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "iN" (VarT "iN"))
-      (VarT "iN")
-    )
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "sx")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "ivbinopsx_"
-            (ExpA (VarE "shape"))
-            (DefA "f_")
-            (ExpA (VarE "sx"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "ivbinopsx_" (hint "partial" "{}")))
@@ -48764,6 +48404,206 @@
       )
     )
     (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 128))
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+        )
+      )
+      List
+      (iterexp "c*" (VarE "c**"))
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_lane_"
+          (Seq Arg Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "setproduct_"
+          (TypA (VarT "lane_"))
+          (ExpA
+            (IterE
+              (IterE
+                (CaseE
+                  (Seq (Atom mk_lane__2) Arg Arg)
+                  (TupE (VarE "Jnn") (VarE "iter_0"))
+                )
+                List
+                (iterexp
+                  "iter_0"
+                  (CallE
+                    "f_"
+                    (ExpA
+                      (CallE
+                        "lsizenn"
+                        (ExpA
+                          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                        )
+                      )
+                    )
+                    (ExpA (VarE "sx"))
+                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+                  )
+                )
+              )
+              List
+              (iterexp "c_1" (VarE "c_1*"))
+              (iterexp "c_2" (VarE "c_2*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_uN"
+          (Seq Arg Arg)
+          (TupE
+            (CallE
+              "lsize"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+            )
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
       (IterPr
         (RulePr
           "wf_lane_"
@@ -48796,73 +48636,6 @@
       List
       (iterexp "c_1" (VarE "c_1*"))
       (iterexp "c_2" (VarE "c_2*"))
-    )
-  )
-)
-(HintD (RelH "ivbinopsxnd__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivbinopsxnd__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN" (VarT "iN"))
-    (IterT (VarT "iN") List)
-  )
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "ivbinopsxnd__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "sx" (VarT "sx"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "iN" (VarT "iN"))
-      (IterT (VarT "iN") List)
-    )
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "sx")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "ivbinopsxnd_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
     )
   )
 )
@@ -49012,6 +48785,240 @@
       )
     )
     (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 128))
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+        )
+      )
+      List
+      (iterexp "c*" (VarE "c**"))
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_lane_"
+          (Seq Arg Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "setproduct_"
+          (TypA (VarT "lane_"))
+          (ExpA
+            (IterE
+              (IterE
+                (CaseE
+                  (Seq (Atom mk_lane__0) Arg Arg)
+                  (TupE
+                    (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+                    (CaseE
+                      (Seq (Atom mk_num__1) Arg Arg)
+                      (TupE (VarE "Fnn") (VarE "iter_0"))
+                    )
+                  )
+                )
+                List
+                (iterexp
+                  "iter_0"
+                  (CallE
+                    "f_"
+                    (ExpA
+                      (CallE
+                        "sizenn"
+                        (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+                      )
+                    )
+                    (ExpA
+                      (TheE
+                        (CallE
+                          "proj_num__1"
+                          (ExpA
+                            (TheE (CallE "proj_lane__0" (ExpA (VarE "c_1"))))
+                          )
+                        )
+                      )
+                    )
+                    (ExpA
+                      (TheE
+                        (CallE
+                          "proj_num__1"
+                          (ExpA
+                            (TheE (CallE "proj_lane__0" (ExpA (VarE "c_2"))))
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+              List
+              (iterexp "c_1" (VarE "c_1*"))
+              (iterexp "c_2" (VarE "c_2*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_fN"
+          (Seq Arg Arg)
+          (TupE
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "sizenn"
+                (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+              )
+            )
+            (ExpA
+              (TheE
+                (CallE
+                  "proj_num__1"
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "c_1")))))
+                )
+              )
+            )
+            (ExpA
+              (TheE
+                (CallE
+                  "proj_num__1"
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "c_2")))))
+                )
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
       (IterPr
         (RulePr
           "wf_lane_"
@@ -49063,62 +49070,6 @@
       List
       (iterexp "c_1" (VarE "c_1*"))
       (iterexp "c_2" (VarE "c_2*"))
-    )
-  )
-)
-(HintD (RelH "fvbinop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fvbinop__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN" (VarT "fN"))
-    (IterT (VarT "fN") List)
-  )
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "fvbinop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "fN" (VarT "fN"))
-      (ExpP "fN" (VarT "fN"))
-      (IterT (VarT "fN") List)
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "vec__0") (VarE "ret_val*"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fvbinop_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
     )
   )
 )
@@ -49271,6 +49222,246 @@
       )
     )
     (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 128))
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+        )
+      )
+      List
+      (iterexp "c*" (VarE "c**"))
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_3"))
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_lane_"
+          (Seq Arg Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "setproduct_"
+          (TypA (VarT "lane_"))
+          (ExpA
+            (IterE
+              (IterE
+                (CaseE
+                  (Seq (Atom mk_lane__2) Arg Arg)
+                  (TupE (VarE "Jnn") (VarE "iter_0"))
+                )
+                List
+                (iterexp
+                  "iter_0"
+                  (CallE
+                    "f_"
+                    (ExpA
+                      (CallE
+                        "lsizenn"
+                        (ExpA
+                          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                        )
+                      )
+                    )
+                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_3")))))
+                  )
+                )
+              )
+              List
+              (iterexp "c_1" (VarE "c_1*"))
+              (iterexp "c_2" (VarE "c_2*"))
+              (iterexp "c_3" (VarE "c_3*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_uN"
+          (Seq Arg Arg)
+          (TupE
+            (CallE
+              "lsize"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+            )
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_3")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+      (iterexp "c_3" (VarE "c_3*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
       (IterPr
         (RulePr
           "wf_lane_"
@@ -49304,74 +49495,6 @@
       (iterexp "c_1" (VarE "c_1*"))
       (iterexp "c_2" (VarE "c_2*"))
       (iterexp "c_3" (VarE "c_3*"))
-    )
-  )
-)
-(HintD (RelH "ivternopnd__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivternopnd__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN" (VarT "iN"))
-    (IterT (VarT "iN") List)
-  )
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "vec__1" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "ivternopnd__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "iN" (VarT "iN"))
-      (IterT (VarT "iN") List)
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "vec__1" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "vec__1")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__1")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "ivternopnd_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-          (ExpA (VarE "vec__1"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
     )
   )
 )
@@ -49551,6 +49674,298 @@
       )
     )
     (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 128))
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+        )
+      )
+      List
+      (iterexp "c*" (VarE "c**"))
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_3"))
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_lane_"
+          (Seq Arg Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "setproduct_"
+          (TypA (VarT "lane_"))
+          (ExpA
+            (IterE
+              (IterE
+                (CaseE
+                  (Seq (Atom mk_lane__0) Arg Arg)
+                  (TupE
+                    (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+                    (CaseE
+                      (Seq (Atom mk_num__1) Arg Arg)
+                      (TupE (VarE "Fnn") (VarE "iter_0"))
+                    )
+                  )
+                )
+                List
+                (iterexp
+                  "iter_0"
+                  (CallE
+                    "f_"
+                    (ExpA
+                      (CallE
+                        "sizenn"
+                        (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+                      )
+                    )
+                    (ExpA
+                      (TheE
+                        (CallE
+                          "proj_num__1"
+                          (ExpA
+                            (TheE (CallE "proj_lane__0" (ExpA (VarE "c_1"))))
+                          )
+                        )
+                      )
+                    )
+                    (ExpA
+                      (TheE
+                        (CallE
+                          "proj_num__1"
+                          (ExpA
+                            (TheE (CallE "proj_lane__0" (ExpA (VarE "c_2"))))
+                          )
+                        )
+                      )
+                    )
+                    (ExpA
+                      (TheE
+                        (CallE
+                          "proj_num__1"
+                          (ExpA
+                            (TheE (CallE "proj_lane__0" (ExpA (VarE "c_3"))))
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+              List
+              (iterexp "c_1" (VarE "c_1*"))
+              (iterexp "c_2" (VarE "c_2*"))
+              (iterexp "c_3" (VarE "c_3*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr
+          "wf_fN"
+          (Seq Arg Arg)
+          (TupE
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+            (VarE "iter")
+          )
+        )
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "sizenn"
+                (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+              )
+            )
+            (ExpA
+              (TheE
+                (CallE
+                  "proj_num__1"
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "c_1")))))
+                )
+              )
+            )
+            (ExpA
+              (TheE
+                (CallE
+                  "proj_num__1"
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "c_2")))))
+                )
+              )
+            )
+            (ExpA
+              (TheE
+                (CallE
+                  "proj_num__1"
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "c_3")))))
+                )
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+      (iterexp "c_3" (VarE "c_3*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
       (IterPr
         (RulePr
           "wf_lane_"
@@ -49611,74 +50026,6 @@
       (iterexp "c_1" (VarE "c_1*"))
       (iterexp "c_2" (VarE "c_2*"))
       (iterexp "c_3" (VarE "c_3*"))
-    )
-  )
-)
-(HintD (RelH "fvternop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fvternop__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN" (VarT "fN"))
-    (IterT (VarT "fN") List)
-  )
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "vec__1" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "fvternop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "fN" (VarT "fN"))
-      (ExpP "fN" (VarT "fN"))
-      (ExpP "fN" (VarT "fN"))
-      (IterT (VarT "fN") List)
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "vec__1" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "vec__1")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__1")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fvternop_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-          (ExpA (VarE "vec__1"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
     )
   )
 )
@@ -49815,6 +50162,199 @@
         (iterexp "c_2" (VarE "c_2*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          )
+          (CallE
+            "extend__"
+            (ExpA (NumE (Nat 1)))
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (CaseE (Atom S) (TupE)))
+            (ExpA
+              (CaseE
+                Arg
+                (TupE
+                  (ProjE
+                    (UncaseE
+                      (CallE
+                        "f_"
+                        (ExpA
+                          (CallE
+                            "lsizenn"
+                            (ExpA
+                              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                            )
+                          )
+                        )
+                        (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+                        (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+                      )
+                      Arg
+                    )
+                    0
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
     (IterPr
       (RulePr
         "wf_uN"
@@ -49851,58 +50391,6 @@
       (iterexp "c_1" (VarE "c_1*"))
       (iterexp "c_2" (VarE "c_2*"))
     )
-  )
-)
-(HintD (RelH "ivrelop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivrelop__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN" (VarT "iN"))
-    (VarT "u32")
-  )
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "ivrelop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "iN" (VarT "iN"))
-      (VarT "u32")
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "vec__0") (VarE "ret_val"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ivrelop_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -50044,6 +50532,200 @@
         (iterexp "c_2" (VarE "c_2*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          )
+          (CallE
+            "extend__"
+            (ExpA (NumE (Nat 1)))
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (CaseE (Atom S) (TupE)))
+            (ExpA
+              (CaseE
+                Arg
+                (TupE
+                  (ProjE
+                    (UncaseE
+                      (CallE
+                        "f_"
+                        (ExpA
+                          (CallE
+                            "lsizenn"
+                            (ExpA
+                              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                            )
+                          )
+                        )
+                        (ExpA (VarE "sx"))
+                        (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+                        (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+                      )
+                      Arg
+                    )
+                    0
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
     (IterPr
       (RulePr
         "wf_uN"
@@ -50081,69 +50763,6 @@
       (iterexp "c_1" (VarE "c_1*"))
       (iterexp "c_2" (VarE "c_2*"))
     )
-  )
-)
-(HintD (RelH "ivrelopsx__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivrelopsx__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN" (VarT "iN"))
-    (VarT "u32")
-  )
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "ivrelopsx__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "sx" (VarT "sx"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "iN" (VarT "iN"))
-      (VarT "u32")
-    )
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "sx")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ivrelopsx_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -50319,6 +50938,242 @@
       )
     )
     (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__0) Arg Arg)
+                (TupE
+                  (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+                  (CaseE
+                    (Seq (Atom mk_num__0) Arg Arg)
+                    (TupE
+                      (VarE "Inn")
+                      (CaseE Arg (TupE (ProjE (UncaseE (VarE "c") Arg) 0)))
+                    )
+                  )
+                )
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (CallE
+            "extend__"
+            (ExpA (NumE (Nat 1)))
+            (ExpA
+              (CallE
+                "sizenn"
+                (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+              )
+            )
+            (ExpA (CaseE (Atom S) (TupE)))
+            (ExpA
+              (CaseE
+                Arg
+                (TupE
+                  (ProjE
+                    (UncaseE
+                      (CallE
+                        "f_"
+                        (ExpA
+                          (CallE
+                            "sizenn"
+                            (ExpA
+                              (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+                            )
+                          )
+                        )
+                        (ExpA
+                          (TheE
+                            (CallE
+                              "proj_num__1"
+                              (ExpA
+                                (TheE
+                                  (CallE "proj_lane__0" (ExpA (VarE "c_1")))
+                                )
+                              )
+                            )
+                          )
+                        )
+                        (ExpA
+                          (TheE
+                            (CallE
+                              "proj_num__1"
+                              (ExpA
+                                (TheE
+                                  (CallE "proj_lane__0" (ExpA (VarE "c_2")))
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                      Arg
+                    )
+                    0
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_lane__0) Arg Arg)
+            (TupE
+              (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn"))
+              (CaseE
+                (Seq (Atom mk_num__0) Arg Arg)
+                (TupE
+                  (VarE "Inn")
+                  (CaseE Arg (TupE (ProjE (UncaseE (VarE "c") Arg) 0)))
+                )
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
+    (RulePr
       "wf_shape"
       (Seq Arg)
       (TupE
@@ -50383,58 +51238,6 @@
       (iterexp "c_1" (VarE "c_1*"))
       (iterexp "c_2" (VarE "c_2*"))
     )
-  )
-)
-(HintD (RelH "fvrelop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fvrelop__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN" (VarT "fN"))
-    (VarT "u32")
-  )
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "fvrelop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "fN" (VarT "fN"))
-      (ExpP "fN" (VarT "fN"))
-      (VarT "u32")
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "vec__0") (VarE "ret_val"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "fvrelop_"
-          (ExpA (VarE "shape"))
-          (DefA "f_")
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -50532,6 +51335,134 @@
         (iterexp "c_1" (VarE "c_1*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          )
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+            (ExpA (VarE "i"))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -50543,60 +51474,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "ivshiftop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivshiftop__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "u32" (VarT "u32"))
-    (VarT "iN")
-  )
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "u32" (VarT "u32"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "ivshiftop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "u32" (VarT "u32"))
-      (VarT "iN")
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "u32" (VarT "u32"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "u32") (VarE "ret_val"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "u32")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "ivshiftop_"
-            (ExpA (VarE "shape"))
-            (DefA "f_")
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "u32"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "ivshiftop_" (hint "partial" "{}")))
@@ -50701,6 +51578,135 @@
         (iterexp "c_1" (VarE "c_1*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          )
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+            (ExpA (VarE "i"))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -50714,71 +51720,6 @@
     (ExpA (VarE "x4"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "ivshiftopsx__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivshiftopsx__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "u32" (VarT "u32"))
-    (VarT "iN")
-  )
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "u32" (VarT "u32"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "ivshiftopsx__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "sx" (VarT "sx"))
-      (ExpP "iN" (VarT "iN"))
-      (ExpP "u32" (VarT "u32"))
-      (VarT "iN")
-    )
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "u32" (VarT "u32"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "sx")
-      (VarE "vec_")
-      (VarE "u32")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "u32")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "ivshiftopsx_"
-            (ExpA (VarE "shape"))
-            (DefA "f_")
-            (ExpA (VarE "sx"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "u32"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "ivshiftopsx_" (hint "partial" "{}")))
@@ -50872,6 +51813,58 @@
         )
       )
     )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "c")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE "irev_" (ExpA (NumE (Nat 32))) (ExpA (VarE "c")))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_bit" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp "iter" (CallE "ibits_" (ExpA (NumE (Nat 32))) (ExpA (VarE "c"))))
+    )
     (RulePr
       "wf_shape"
       (Seq Arg)
@@ -50921,35 +51914,6 @@
       (iterexp "c_1" (VarE "c_1*"))
     )
     (RulePr "wf_bit" (Seq Arg) (TupE (CaseE Arg (TupE (NumE (Nat 0))))))
-  )
-)
-(HintD (RelH "ivbitmaskop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivbitmaskop__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ivbitmaskop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "ret_val"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ivbitmaskop_" (ExpA (VarE "shape")) (ExpA (VarE "vec_")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -51069,6 +52033,178 @@
         (iterexp "c_2" (VarE "c_2*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          )
+          (CallE
+            "f_"
+            (ExpA
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+            (ExpA
+              (IterE
+                (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1"))))
+                List
+                (iterexp "c_1" (VarE "c_1*"))
+              )
+            )
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "c")))
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -51080,60 +52216,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "ivswizzlop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivswizzlop__is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "_" (IterT (VarT "iN") List))
-    (ExpP "iN" (VarT "iN"))
-    (VarT "iN")
-  )
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "ivswizzlop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "_" (IterT (VarT "iN") List))
-      (ExpP "iN" (VarT "iN"))
-      (VarT "iN")
-    )
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vec_") (VarE "vec__0") (VarE "ret_val"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "ivswizzlop_"
-            (ExpA (VarE "shape"))
-            (DefA "f_")
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "ivswizzlop_" (hint "partial" "{}")))
@@ -51223,6 +52305,115 @@
         (iterexp "i" (VarE "i*"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -51235,59 +52426,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "ivshufflop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivshufflop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "var_0*" (IterT (VarT "laneidx") List))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "ivshufflop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "var_0*" (IterT (VarT "laneidx") List))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "var_0*")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 8)) (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "ivshufflop_"
-            (ExpA (VarE "shape"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "ivshufflop_" (hint "partial" "{}")))
@@ -51310,52 +52448,17 @@
         (ExpA (VarE "v"))
       )
     )
-  )
-)
-(HintD (RelH "vvunop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vvunop__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "vectype" (VarT "vectype"))
-    (typbind "vvunop" (VarT "vvunop"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "vvunop__is_wf_0"
-    (ExpP "vectype" (VarT "vectype"))
-    (ExpP "vvunop" (VarT "vvunop"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "vectype") (VarE "vvunop") (VarE "vec_") (VarE "ret_val*"))
     (RulePr
       "wf_uN"
       (Seq Arg Arg)
-      (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "vec_"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
+      (TupE
+        (CallE "vsize" (ExpA (VarE "Vnn")))
         (CallE
-          "vvunop_"
-          (ExpA (VarE "vectype"))
-          (ExpA (VarE "vvunop"))
-          (ExpA (VarE "vec_"))
+          "inot_"
+          (ExpA (CallE "vsizenn" (ExpA (VarE "Vnn"))))
+          (ExpA (VarE "v"))
         )
       )
-    )
-    (IterPr
-      (RulePr
-        "wf_uN"
-        (Seq Arg Arg)
-        (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "ret_val"))
-      )
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
     )
   )
 )
@@ -51383,6 +52486,19 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "vsize" (ExpA (VarE "Vnn")))
+        (CallE
+          "iand_"
+          (ExpA (CallE "vsizenn" (ExpA (VarE "Vnn"))))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Vnn" (VarT "vectype"))
@@ -51398,6 +52514,19 @@
         (ExpA (CallE "vsizenn" (ExpA (VarE "Vnn"))))
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "vsize" (ExpA (VarE "Vnn")))
+        (CallE
+          "iandnot_"
+          (ExpA (CallE "vsizenn" (ExpA (VarE "Vnn"))))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
       )
     )
   )
@@ -51417,6 +52546,19 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "vsize" (ExpA (VarE "Vnn")))
+        (CallE
+          "ior_"
+          (ExpA (CallE "vsizenn" (ExpA (VarE "Vnn"))))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Vnn" (VarT "vectype"))
@@ -51434,66 +52576,18 @@
         (ExpA (VarE "v_2"))
       )
     )
-  )
-)
-(HintD (RelH "vvbinop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vvbinop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "vectype" (VarT "vectype"))
-    (typbind "vvbinop" (VarT "vvbinop"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "vvbinop__is_wf_0"
-    (ExpP "vectype" (VarT "vectype"))
-    (ExpP "vvbinop" (VarT "vvbinop"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "vectype")
-      (VarE "vvbinop")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val*")
-    )
     (RulePr
       "wf_uN"
       (Seq Arg Arg)
-      (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "vec_"))
-    )
-    (RulePr
-      "wf_uN"
-      (Seq Arg Arg)
-      (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "vec__0"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
+      (TupE
+        (CallE "vsize" (ExpA (VarE "Vnn")))
         (CallE
-          "vvbinop_"
-          (ExpA (VarE "vectype"))
-          (ExpA (VarE "vvbinop"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
+          "ixor_"
+          (ExpA (CallE "vsizenn" (ExpA (VarE "Vnn"))))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
         )
       )
-    )
-    (IterPr
-      (RulePr
-        "wf_uN"
-        (Seq Arg Arg)
-        (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "ret_val"))
-      )
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
     )
   )
 )
@@ -51525,75 +52619,19 @@
         (ExpA (VarE "v_3"))
       )
     )
-  )
-)
-(HintD (RelH "vvternop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vvternop__is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "vectype" (VarT "vectype"))
-    (typbind "vvternop" (VarT "vvternop"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "vec__1" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "vvternop__is_wf_0"
-    (ExpP "vectype" (VarT "vectype"))
-    (ExpP "vvternop" (VarT "vvternop"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "vec__1" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "vectype")
-      (VarE "vvternop")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "vec__1")
-      (VarE "ret_val*")
-    )
     (RulePr
       "wf_uN"
       (Seq Arg Arg)
-      (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "vec_"))
-    )
-    (RulePr
-      "wf_uN"
-      (Seq Arg Arg)
-      (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "vec__0"))
-    )
-    (RulePr
-      "wf_uN"
-      (Seq Arg Arg)
-      (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "vec__1"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
+      (TupE
+        (CallE "vsize" (ExpA (VarE "Vnn")))
         (CallE
-          "vvternop_"
-          (ExpA (VarE "vectype"))
-          (ExpA (VarE "vvternop"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-          (ExpA (VarE "vec__1"))
+          "ibitselect_"
+          (ExpA (CallE "vsizenn" (ExpA (VarE "Vnn"))))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+          (ExpA (VarE "v_3"))
         )
       )
-    )
-    (IterPr
-      (RulePr
-        "wf_uN"
-        (Seq Arg Arg)
-        (TupE (CallE "vsize" (ExpA (VarE "vectype"))) (VarE "ret_val"))
-      )
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
     )
   )
 )
@@ -51640,6 +52678,40 @@
         (ExpA (VarE "v"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvunop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fabs_")
+          (ExpA (VarE "v"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -51675,6 +52747,40 @@
         )
         (DefA "fneg_")
         (ExpA (VarE "v"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvunop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fneg_")
+          (ExpA (VarE "v"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -51714,6 +52820,40 @@
         (ExpA (VarE "v"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvunop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fsqrt_")
+          (ExpA (VarE "v"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -51749,6 +52889,40 @@
         )
         (DefA "fceil_")
         (ExpA (VarE "v"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvunop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fceil_")
+          (ExpA (VarE "v"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -51788,6 +52962,40 @@
         (ExpA (VarE "v"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvunop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "ffloor_")
+          (ExpA (VarE "v"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -51823,6 +53031,40 @@
         )
         (DefA "ftrunc_")
         (ExpA (VarE "v"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvunop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "ftrunc_")
+          (ExpA (VarE "v"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -51862,6 +53104,40 @@
         (ExpA (VarE "v"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvunop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fnearest_")
+          (ExpA (VarE "v"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -51896,6 +53172,42 @@
       )
       (DefA "iabs_")
       (ExpA (VarE "v"))
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivunop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "iabs_")
+            (ExpA (VarE "v"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
     )
   )
   (DefD
@@ -51932,6 +53244,42 @@
       (DefA "ineg_")
       (ExpA (VarE "v"))
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivunop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "ineg_")
+            (ExpA (VarE "v"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -51967,6 +53315,42 @@
       (DefA "ipopcnt_")
       (ExpA (VarE "v"))
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivunop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "ipopcnt_")
+            (ExpA (VarE "v"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -51977,49 +53361,6 @@
     (ExpA (VarE "x2"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vunop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vunop__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vunop_" (VarT "vunop_"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "vunop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "vunop_" (VarT "vunop_"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "shape") (VarE "vunop_") (VarE "vec_") (VarE "ret_val*"))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_vunop_" (Seq Arg Arg) (TupE (VarE "shape") (VarE "vunop_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "vunop_"
-            (ExpA (VarE "shape"))
-            (ExpA (VarE "vunop_"))
-            (ExpA (VarE "vec_"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "vunop_" (hint "partial" "{}")))
@@ -52068,6 +53409,43 @@
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "iadd_")
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -52106,6 +53484,43 @@
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "isub_")
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -52143,6 +53558,43 @@
       (DefA "imul_")
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "imul_")
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
     )
   )
   (DefD
@@ -52188,6 +53640,44 @@
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinopsx_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "iadd_sat_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -52231,6 +53721,44 @@
       (ExpA (VarE "sx"))
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinopsx_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "isub_sat_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
     )
   )
   (DefD
@@ -52276,6 +53804,44 @@
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinopsx_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "imin_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -52320,6 +53886,44 @@
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinopsx_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "imax_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -52358,6 +53962,44 @@
       (ExpA (CaseE (Atom U) (TupE)))
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinopsx_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "iavgr_")
+            (ExpA (CaseE (Atom U) (TupE)))
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
     )
   )
   (DefD
@@ -52401,6 +54043,44 @@
       (ExpA (CaseE (Atom S) (TupE)))
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "ivbinopsx_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "iq15mulr_sat_")
+            (ExpA (CaseE (Atom S) (TupE)))
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
     )
   )
   (DefD
@@ -52447,6 +54127,42 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "ivbinopsxnd_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "irelaxed_q15mulr_")
+          (ExpA (CaseE (Atom S) (TupE)))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -52485,6 +54201,41 @@
         (DefA "fadd_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fadd_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -52527,6 +54278,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fsub_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -52565,6 +54351,41 @@
         (DefA "fmul_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fmul_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -52607,6 +54428,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fdiv_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -52645,6 +54501,41 @@
         (DefA "fmin_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fmin_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -52687,6 +54578,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fmax_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -52725,6 +54651,41 @@
         (DefA "fpmin_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fpmin_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -52767,6 +54728,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fpmax_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -52805,6 +54801,41 @@
         (DefA "frelaxed_min_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "frelaxed_min_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -52847,6 +54878,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvbinop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "frelaxed_max_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -52859,59 +54925,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vbinop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vbinop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vbinop_" (VarT "vbinop_"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "vbinop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "vbinop_" (VarT "vbinop_"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "vbinop_")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_vbinop_" (Seq Arg Arg) (TupE (VarE "shape") (VarE "vbinop_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "vbinop_"
-            (ExpA (VarE "shape"))
-            (ExpA (VarE "vbinop_"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "vbinop_" (hint "partial" "{}")))
@@ -52966,6 +54979,42 @@
         (ExpA (VarE "v_3"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "ivternopnd_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "irelaxed_laneselect_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+          (ExpA (VarE "v_3"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -53007,6 +55056,42 @@
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
         (ExpA (VarE "v_3"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvternop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "frelaxed_madd_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+          (ExpA (VarE "v_3"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -53052,6 +55137,42 @@
         (ExpA (VarE "v_3"))
       )
     )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fvternop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "frelaxed_nmadd_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+          (ExpA (VarE "v_3"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -53066,64 +55187,6 @@
     (ExpA (VarE "x4"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vternop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vternop__is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vternop_" (VarT "vternop_"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "vec__1" (VarT "vec_"))
-    (typbind "ret_val*" (IterT (VarT "vec_") List))
-  )
-  (RuleD
-    "vternop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "vternop_" (VarT "vternop_"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "vec__1" (VarT "vec_"))
-    (ExpP "ret_val*" (IterT (VarT "vec_") List))
-    (Seq Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "vternop_")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "vec__1")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_vternop_" (Seq Arg Arg) (TupE (VarE "shape") (VarE "vternop_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__1")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "vternop_"
-            (ExpA (VarE "shape"))
-            (ExpA (VarE "vternop_"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-            (ExpA (VarE "vec__1"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "vternop_" (hint "partial" "{}")))
@@ -53174,6 +55237,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivrelop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "ieq_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -53212,6 +55310,41 @@
         (DefA "ine_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivrelop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "ine_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -53260,6 +55393,42 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivrelopsx_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "ilt_")
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -53304,6 +55473,42 @@
         (ExpA (VarE "sx"))
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivrelopsx_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "igt_")
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -53352,6 +55557,42 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivrelopsx_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "ile_")
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -53398,6 +55639,42 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivrelopsx_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "ige_")
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -53436,6 +55713,41 @@
         (DefA "feq_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "fvrelop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "feq_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -53478,6 +55790,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "fvrelop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fne_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -53516,6 +55863,41 @@
         (DefA "flt_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "fvrelop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "flt_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -53558,6 +55940,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "fvrelop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fgt_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -53596,6 +56013,41 @@
         (DefA "fle_")
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "fvrelop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fle_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
       )
     )
   )
@@ -53638,6 +56090,41 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "fvrelop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (DefA "fge_")
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -53650,55 +56137,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vrelop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vrelop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape" (VarT "shape"))
-    (typbind "vrelop_" (VarT "vrelop_"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vrelop__is_wf_0"
-    (ExpP "shape" (VarT "shape"))
-    (ExpP "vrelop_" (VarT "vrelop_"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape")
-      (VarE "vrelop_")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-    (RulePr "wf_vrelop_" (Seq Arg Arg) (TupE (VarE "shape") (VarE "vrelop_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "vrelop_"
-            (ExpA (VarE "shape"))
-            (ExpA (VarE "vrelop_"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "vrelop_" (hint "partial" "{}")))
@@ -53774,6 +56212,52 @@
         )
         (ExpA (VarE "sx"))
         (ExpA (VarE "c_1"))
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (CallE
+          "lsize"
+          (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+        )
+        (CallE
+          "extend__"
+          (ExpA
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "c_1"))
+        )
+      )
+    )
+    (RulePr
+      "wf_lane_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE
+          "lanetype"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+        )
+        (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn_2") (VarE "c")))
       )
     )
   )
@@ -53856,6 +56340,61 @@
         )
         (ExpA (VarE "sx"))
         (ExpA (VarE "c_1"))
+      )
+    )
+    (RulePr
+      "wf_fN"
+      (Seq Arg Arg)
+      (TupE
+        (CallE
+          "lsizenn2"
+          (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2")))
+        )
+        (CallE
+          "convert__"
+          (ExpA
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "c_1"))
+        )
+      )
+    )
+    (RulePr
+      "wf_lane_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE
+          "lanetype"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+        )
+        (CaseE
+          (Seq (Atom mk_lane__0) Arg Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
+            (CaseE
+              (Seq (Atom mk_num__1) Arg Arg)
+              (TupE (VarE "Fnn_2") (VarE "c"))
+            )
+          )
+        )
       )
     )
   )
@@ -53953,6 +56492,72 @@
         (ExpA (VarE "c_1"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      Opt
+      (iterexp
+        "iter"
+        (CallE
+          "trunc_sat__"
+          (ExpA
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn_2")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "c_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_lane__0) Arg Arg)
+            (TupE
+              (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
+              (CaseE
+                (Seq (Atom mk_num__0) Arg Arg)
+                (TupE (VarE "Inn_2") (VarE "c"))
+              )
+            )
+          )
+        )
+      )
+      Opt
+      (iterexp "c" (VarE "c?"))
+    )
   )
   (DefD
     (ExpP "Fnn_1" (VarT "Fnn"))
@@ -54048,6 +56653,72 @@
         (ExpA (VarE "c_1"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      Opt
+      (iterexp
+        "iter"
+        (CallE
+          "relaxed_trunc__"
+          (ExpA
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn_2")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "c_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "addrtype") (VarT "lanetype") (VarE "Inn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_lane__0) Arg Arg)
+            (TupE
+              (SubE (VarT "addrtype") (VarT "numtype") (VarE "Inn_2"))
+              (CaseE
+                (Seq (Atom mk_num__0) Arg Arg)
+                (TupE (VarE "Inn_2") (VarE "c"))
+              )
+            )
+          )
+        )
+      )
+      Opt
+      (iterexp "c" (VarE "c?"))
+    )
   )
   (DefD
     (ExpP "Fnn_1" (VarT "Fnn"))
@@ -54131,6 +56802,71 @@
         )
         (ExpA (VarE "c_1"))
       )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsizenn2"
+            (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "demote__"
+          (ExpA
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2")))
+            )
+          )
+          (ExpA (VarE "c_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_lane__0) Arg Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
+              (CaseE
+                (Seq (Atom mk_num__1) Arg Arg)
+                (TupE (VarE "Fnn_2") (VarE "c"))
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
     )
   )
   (DefD
@@ -54216,6 +56952,71 @@
         (ExpA (VarE "c_1"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsizenn2"
+            (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "promote__"
+          (ExpA
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1")))
+            )
+          )
+          (ExpA
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2")))
+            )
+          )
+          (ExpA (VarE "c_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_lane__0) Arg Arg)
+            (TupE
+              (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
+              (CaseE
+                (Seq (Atom mk_num__1) Arg Arg)
+                (TupE (VarE "Fnn_2") (VarE "c"))
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
   )
   (DefD
     (ExpP "x0" (VarT "shape"))
@@ -54228,71 +57029,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "lcvtop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "lcvtop___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape_1" (VarT "shape"))
-    (typbind "shape_2" (VarT "shape"))
-    (typbind "vcvtop__" (VarT "vcvtop__"))
-    (typbind "lane_" (VarT "lane_"))
-    (typbind "ret_val*" (IterT (VarT "lane_") List))
-  )
-  (RuleD
-    "lcvtop___is_wf_0"
-    (ExpP "shape_1" (VarT "shape"))
-    (ExpP "shape_2" (VarT "shape"))
-    (ExpP "vcvtop__" (VarT "vcvtop__"))
-    (ExpP "lane_" (VarT "lane_"))
-    (ExpP "ret_val*" (IterT (VarT "lane_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape_1")
-      (VarE "shape_2")
-      (VarE "vcvtop__")
-      (VarE "lane_")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
-    (RulePr
-      "wf_vcvtop__"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "shape_1") (VarE "shape_2") (VarE "vcvtop__"))
-    )
-    (RulePr
-      "wf_lane_"
-      (Seq Arg Arg)
-      (TupE (CallE "lanetype" (ExpA (VarE "shape_1"))) (VarE "lane_"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "lcvtop__"
-            (ExpA (VarE "shape_1"))
-            (ExpA (VarE "shape_2"))
-            (ExpA (VarE "vcvtop__"))
-            (ExpA (VarE "lane_"))
-          )
-        )
-      )
-    )
-    (IterPr
-      (RulePr
-        "wf_lane_"
-        (Seq Arg Arg)
-        (TupE (CallE "lanetype" (ExpA (VarE "shape_2"))) (VarE "ret_val"))
-      )
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "lcvtop__" (hint "partial" "{}")))
@@ -54446,6 +57182,130 @@
         )
       )
     )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "v")))
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "Lnn_2") (VarE "iter")))
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "setproduct_"
+          (TypA (VarT "lane_"))
+          (ExpA
+            (IterE
+              (TheE
+                (CallE
+                  "lcvtop__"
+                  (ExpA
+                    (CaseE
+                      (Seq Arg (Atom X) Arg)
+                      (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+                    )
+                  )
+                  (ExpA
+                    (CaseE
+                      (Seq Arg (Atom X) Arg)
+                      (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+                    )
+                  )
+                  (ExpA (VarE "vcvtop"))
+                  (ExpA (VarE "c_1"))
+                )
+              )
+              List
+              (iterexp "c_1" (VarE "c_1*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "Lnn_2") (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (TheE
+            (CallE
+              "lcvtop__"
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+                )
+              )
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+                )
+              )
+              (ExpA (VarE "vcvtop"))
+              (ExpA (VarE "c_1"))
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 128))
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+        )
+      )
+      List
+      (iterexp "c*" (VarE "c**"))
+    )
     (RulePr
       "wf_shape"
       (Seq Arg)
@@ -54593,6 +57453,130 @@
         )
       )
     )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "v")))
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "Lnn_2") (VarE "iter")))
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "setproduct_"
+          (TypA (VarT "lane_"))
+          (ExpA
+            (IterE
+              (TheE
+                (CallE
+                  "lcvtop__"
+                  (ExpA
+                    (CaseE
+                      (Seq Arg (Atom X) Arg)
+                      (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+                    )
+                  )
+                  (ExpA
+                    (CaseE
+                      (Seq Arg (Atom X) Arg)
+                      (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+                    )
+                  )
+                  (ExpA (VarE "vcvtop"))
+                  (ExpA (VarE "c_1"))
+                )
+              )
+              List
+              (iterexp "c_1" (VarE "c_1*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "Lnn_2") (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (TheE
+            (CallE
+              "lcvtop__"
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+                )
+              )
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+                )
+              )
+              (ExpA (VarE "vcvtop"))
+              (ExpA (VarE "c_1"))
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 128))
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+        )
+      )
+      List
+      (iterexp "c*" (VarE "c**"))
+    )
     (RulePr
       "wf_shape"
       (Seq Arg)
@@ -54736,6 +57720,141 @@
         )
       )
     )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "v")))
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "Lnn_2") (VarE "iter")))
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "setproduct_"
+          (TypA (VarT "lane_"))
+          (ExpA
+            (CatE
+              (IterE
+                (TheE
+                  (CallE
+                    "lcvtop__"
+                    (ExpA
+                      (CaseE
+                        (Seq Arg (Atom X) Arg)
+                        (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+                      )
+                    )
+                    (ExpA
+                      (CaseE
+                        (Seq Arg (Atom X) Arg)
+                        (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+                      )
+                    )
+                    (ExpA (VarE "vcvtop"))
+                    (ExpA (VarE "c_1"))
+                  )
+                )
+                List
+                (iterexp "c_1" (VarE "c_1*"))
+              )
+              (IterE
+                (ListE (CallE "zero" (ExpA (VarE "Lnn_2"))))
+                (ListN (VarE "M_1"))
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "Lnn_2") (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (TheE
+            (CallE
+              "lcvtop__"
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+                )
+              )
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+                )
+              )
+              (ExpA (VarE "vcvtop"))
+              (ExpA (VarE "c_1"))
+            )
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (RulePr
+      "wf_lane_"
+      (Seq Arg Arg)
+      (TupE (VarE "Lnn_2") (CallE "zero" (ExpA (VarE "Lnn_2"))))
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (NumE (Nat 128))
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+        )
+      )
+      List
+      (iterexp "c*" (VarE "c**"))
+    )
     (RulePr
       "wf_shape"
       (Seq Arg)
@@ -54768,59 +57887,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vcvtop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vcvtop___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape_1" (VarT "shape"))
-    (typbind "shape_2" (VarT "shape"))
-    (typbind "vcvtop__" (VarT "vcvtop__"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vcvtop___is_wf_0"
-    (ExpP "shape_1" (VarT "shape"))
-    (ExpP "shape_2" (VarT "shape"))
-    (ExpP "vcvtop__" (VarT "vcvtop__"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape_1")
-      (VarE "shape_2")
-      (VarE "vcvtop__")
-      (VarE "vec_")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
-    (RulePr
-      "wf_vcvtop__"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "shape_1") (VarE "shape_2") (VarE "vcvtop__"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "vcvtop__"
-            (ExpA (VarE "shape_1"))
-            (ExpA (VarE "shape_2"))
-            (ExpA (VarE "vcvtop__"))
-            (ExpA (VarE "vec_"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "vcvtop__" (hint "partial" "{}")))
@@ -54874,6 +57940,43 @@
       (ExpA (VarE "v"))
       (ExpA (VarE "i"))
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (TheE
+          (CallE
+            "ivshiftop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "ishl_")
+            (ExpA (VarE "v"))
+            (ExpA (VarE "i"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Jnn" (VarT "Jnn"))
@@ -54923,6 +58026,44 @@
       (ExpA (VarE "v"))
       (ExpA (VarE "i"))
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (TheE
+          (CallE
+            "ivshiftopsx_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                  (CaseE Arg (TupE (VarE "M")))
+                )
+              )
+            )
+            (DefA "ishr_")
+            (ExpA (VarE "sx"))
+            (ExpA (VarE "v"))
+            (ExpA (VarE "i"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "ishape"))
@@ -54935,59 +58076,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vshiftop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vshiftop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "ishape" (VarT "ishape"))
-    (typbind "vshiftop_" (VarT "vshiftop_"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "u32" (VarT "u32"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vshiftop__is_wf_0"
-    (ExpP "ishape" (VarT "ishape"))
-    (ExpP "vshiftop_" (VarT "vshiftop_"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "u32" (VarT "u32"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "ishape")
-      (VarE "vshiftop_")
-      (VarE "vec_")
-      (VarE "u32")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape")))
-    (RulePr
-      "wf_vshiftop_"
-      (Seq Arg Arg)
-      (TupE (VarE "ishape") (VarE "vshiftop_"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "u32")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "vshiftop_"
-            (ExpA (VarE "ishape"))
-            (ExpA (VarE "vshiftop_"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "u32"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "vshiftop_" (hint "partial" "{}")))
@@ -55029,35 +58117,39 @@
       )
       (ExpA (VarE "v"))
     )
-  )
-)
-(HintD (RelH "vbitmaskop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vbitmaskop__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "ishape" (VarT "ishape"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "vbitmaskop__is_wf_0"
-    (ExpP "ishape" (VarT "ishape"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "ishape") (VarE "vec_") (VarE "ret_val"))
-    (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "vbitmaskop_" (ExpA (VarE "ishape")) (ExpA (VarE "vec_")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CallE
+          "ivbitmaskop_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "M")))
+              )
+            )
+          )
+          (ExpA (VarE "v"))
+        )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+            (CaseE Arg (TupE (VarE "M")))
+          )
+        )
+      )
+    )
   )
 )
 (HintD (DecH "vbitmaskop_" (hint "show" "VBITMASK#$_(%1, %2)")))
@@ -55103,6 +58195,37 @@
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (TheE
+          (CallE
+            "ivswizzlop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (DefA "iswizzle_lane_")
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (VarE "M"))))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "M" nat)
@@ -55139,6 +58262,37 @@
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (TheE
+          (CallE
+            "ivswizzlop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (DefA "irelaxed_swizzle_lane_")
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (VarE "M"))))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "bshape"))
@@ -55151,59 +58305,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vswizzlop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vswizzlop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "bshape" (VarT "bshape"))
-    (typbind "vswizzlop_" (VarT "vswizzlop_"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vswizzlop__is_wf_0"
-    (ExpP "bshape" (VarT "bshape"))
-    (ExpP "vswizzlop_" (VarT "vswizzlop_"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "bshape")
-      (VarE "vswizzlop_")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_bshape" (Seq Arg) (TupE (VarE "bshape")))
-    (RulePr
-      "wf_vswizzlop_"
-      (Seq Arg Arg)
-      (TupE (VarE "bshape") (VarE "vswizzlop_"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "vswizzlop_"
-            (ExpA (VarE "bshape"))
-            (ExpA (VarE "vswizzlop_"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "vswizzlop_" (hint "partial" "{}")))
@@ -55246,6 +58347,37 @@
       (ExpA (VarE "v_1"))
       (ExpA (VarE "v_2"))
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (TheE
+          (CallE
+            "ivshufflop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (ExpA (IterE (VarE "i") List (iterexp "i" (VarE "i*"))))
+            (ExpA (VarE "v_1"))
+            (ExpA (VarE "v_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (VarE "M"))))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "bshape"))
@@ -55258,59 +58390,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vshufflop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vshufflop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "bshape" (VarT "bshape"))
-    (typbind "var_0*" (IterT (VarT "laneidx") List))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vshufflop__is_wf_0"
-    (ExpP "bshape" (VarT "bshape"))
-    (ExpP "var_0*" (IterT (VarT "laneidx") List))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "bshape")
-      (VarE "var_0*")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_bshape" (Seq Arg) (TupE (VarE "bshape")))
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 8)) (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "vshufflop_"
-            (ExpA (VarE "bshape"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD
@@ -55473,6 +58552,183 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                  (CaseE Arg (TupE (VarE "M_1")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                  (CaseE Arg (TupE (VarE "M_1")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (CallE
+            "narrow__"
+            (ExpA
+              (CallE
+                "lsize"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+            )
+            (ExpA
+              (CallE
+                "lsize"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (CallE
+            "narrow__"
+            (ExpA
+              (CallE
+                "lsize"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+            )
+            (ExpA
+              (CallE
+                "lsize"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+          (ExpA
+            (CatE
+              (IterE
+                (CaseE
+                  (Seq (Atom mk_lane__2) Arg Arg)
+                  (TupE (VarE "Jnn_2") (VarE "c'_1"))
+                )
+                List
+                (iterexp "c'_1" (VarE "c'_1*"))
+              )
+              (IterE
+                (CaseE
+                  (Seq (Atom mk_lane__2) Arg Arg)
+                  (TupE (VarE "Jnn_2") (VarE "c'_2"))
+                )
+                List
+                (iterexp "c'_2" (VarE "c'_2*"))
+              )
+            )
+          )
+        )
+      )
+    )
     (RulePr
       "wf_shape"
       (Seq Arg)
@@ -55553,57 +58809,6 @@
     )
   )
 )
-(HintD (RelH "vnarrowop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vnarrowop___is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape_1" (VarT "shape"))
-    (typbind "shape_2" (VarT "shape"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vnarrowop___is_wf_0"
-    (ExpP "shape_1" (VarT "shape"))
-    (ExpP "shape_2" (VarT "shape"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape_1")
-      (VarE "shape_2")
-      (VarE "sx")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "vnarrowop__"
-          (ExpA (VarE "shape_1"))
-          (ExpA (VarE "shape_2"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
-  )
-)
 (HintD (DecH "vnarrowop__" (hint "show" "VNARROW#$__(%1, %2)^(%3)#((%4, %5))")))
 (DecD
   "ivadd_pairwise_"
@@ -55651,41 +58856,41 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ivadd_pairwise__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivadd_pairwise__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "iN") List))
-    (typbind "ret_val*" (IterT (VarT "iN") List))
-  )
-  (RuleD
-    "ivadd_pairwise__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "iN") List))
-    (ExpP "ret_val*" (IterT (VarT "iN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "ret_val*"))
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "ivadd_pairwise_" (ExpA (VarE "N")) (ExpA (VarE "var_0*")))
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (VarE "N")
+          (CallE
+            "iadd_"
+            (ExpA (VarE "N"))
+            (ExpA (CaseE Arg (TupE (VarE "j_1"))))
+            (ExpA (CaseE Arg (TupE (VarE "j_2"))))
+          )
+        )
       )
+      List
+      (iterexp "j_1" (VarE "j_1*"))
+      (iterexp "j_2" (VarE "j_2*"))
     )
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE (VarE "N") (CaseE Arg (TupE (VarE "j_1"))))
+      )
       List
-      (iterexp "ret_val" (VarE "ret_val*"))
+      (iterexp "j_1" (VarE "j_1*"))
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE (VarE "N") (CaseE Arg (TupE (VarE "j_2"))))
+      )
+      List
+      (iterexp "j_2" (VarE "j_2*"))
     )
   )
 )
@@ -55812,6 +59017,170 @@
       )
     )
     (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn_2") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                  (CaseE Arg (TupE (VarE "M_1")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (CallE
+            "extend__"
+            (ExpA
+              (CallE
+                "lsizenn1"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+            )
+            (ExpA
+              (CallE
+                "lsizenn2"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+              )
+            )
+            (ExpA (VarE "sx"))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "f_"
+          (ExpA
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+            )
+          )
+          (ExpA (IterE (VarE "c'_1") List (iterexp "c'_1" (VarE "c'_1*"))))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_lane__2) Arg Arg)
+            (TupE (VarE "Jnn_2") (VarE "c"))
+          )
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
+    (RulePr
       "wf_shape"
       (Seq Arg)
       (TupE
@@ -55824,65 +59193,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ivextunop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivextunop___is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "_" (IterT (VarT "iN") List))
-    (IterT (VarT "iN") List)
-  )
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape_1" (VarT "shape"))
-    (typbind "shape_2" (VarT "shape"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "ivextunop___is_wf_0"
-    (ExpP "shape_1" (VarT "shape"))
-    (ExpP "shape_2" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "_" (IterT (VarT "iN") List))
-      (IterT (VarT "iN") List)
-    )
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape_1")
-      (VarE "shape_2")
-      (VarE "sx")
-      (VarE "vec_")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ivextunop__"
-          (ExpA (VarE "shape_1"))
-          (ExpA (VarE "shape_2"))
-          (DefA "f_")
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "vec_"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -55966,6 +59276,63 @@
         (ExpA (VarE "v_1"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivextunop__"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+          (DefA "ivadd_pairwise_")
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "ishape"))
@@ -55978,59 +59345,6 @@
     (ExpA (VarE "x3"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vextunop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vextunop___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "ishape_1" (VarT "ishape"))
-    (typbind "ishape_2" (VarT "ishape"))
-    (typbind "vextunop__" (VarT "vextunop__"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vextunop___is_wf_0"
-    (ExpP "ishape_1" (VarT "ishape"))
-    (ExpP "ishape_2" (VarT "ishape"))
-    (ExpP "vextunop__" (VarT "vextunop__"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "ishape_1")
-      (VarE "ishape_2")
-      (VarE "vextunop__")
-      (VarE "vec_")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
-    (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
-    (RulePr
-      "wf_vextunop__"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "ishape_1") (VarE "ishape_2") (VarE "vextunop__"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "vextunop__"
-            (ExpA (VarE "ishape_1"))
-            (ExpA (VarE "ishape_2"))
-            (ExpA (VarE "vextunop__"))
-            (ExpA (VarE "vec_"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "vextunop__" (hint "partial" "{}")))
@@ -56085,53 +59399,70 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ivdot__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivdot__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "iN") List))
-    (typbind "var_1*" (IterT (VarT "iN") List))
-    (typbind "ret_val*" (IterT (VarT "iN") List))
-  )
-  (RuleD
-    "ivdot__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "iN") List))
-    (ExpP "var_1*" (IterT (VarT "iN") List))
-    (ExpP "ret_val*" (IterT (VarT "iN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val*"))
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_0")))
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "j_1")))
       List
-      (iterexp "var_0" (VarE "var_0*"))
+      (iterexp "j_1" (VarE "j_1*"))
     )
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_1")))
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "j_2")))
       List
-      (iterexp "var_1" (VarE "var_1*"))
+      (iterexp "j_2" (VarE "j_2*"))
     )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (VarE "N")
+          (CallE
+            "iadd_"
+            (ExpA (VarE "N"))
+            (ExpA (VarE "j_1"))
+            (ExpA (VarE "j_2"))
+          )
+        )
+      )
+      List
+      (iterexp "j_1" (VarE "j_1*"))
+      (iterexp "j_2" (VarE "j_2*"))
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iter")))
+      List
+      (iterexp
+        "iter"
         (CallE
-          "ivdot_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
+          "concat_"
+          (TypA (VarT "iN"))
+          (ExpA
+            (IterE
+              (ListE (VarE "j_1") (VarE "j_2"))
+              List
+              (iterexp "j_1" (VarE "j_1*"))
+              (iterexp "j_2" (VarE "j_2*"))
+            )
+          )
         )
       )
     )
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (VarE "N")
+          (CallE
+            "imul_"
+            (ExpA (VarE "N"))
+            (ExpA (VarE "i_1"))
+            (ExpA (VarE "i_2"))
+          )
+        )
+      )
       List
-      (iterexp "ret_val" (VarE "ret_val*"))
+      (iterexp "i_1" (VarE "i_1*"))
+      (iterexp "i_2" (VarE "i_2*"))
     )
   )
 )
@@ -56191,53 +59522,71 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ivdot_sat__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivdot_sat__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "iN") List))
-    (typbind "var_1*" (IterT (VarT "iN") List))
-    (typbind "ret_val*" (IterT (VarT "iN") List))
-  )
-  (RuleD
-    "ivdot_sat__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "iN") List))
-    (ExpP "var_1*" (IterT (VarT "iN") List))
-    (ExpP "ret_val*" (IterT (VarT "iN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val*"))
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_0")))
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "j_1")))
       List
-      (iterexp "var_0" (VarE "var_0*"))
+      (iterexp "j_1" (VarE "j_1*"))
     )
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_1")))
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "j_2")))
       List
-      (iterexp "var_1" (VarE "var_1*"))
+      (iterexp "j_2" (VarE "j_2*"))
     )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (VarE "N")
+          (CallE
+            "iadd_sat_"
+            (ExpA (VarE "N"))
+            (ExpA (CaseE (Atom S) (TupE)))
+            (ExpA (VarE "j_1"))
+            (ExpA (VarE "j_2"))
+          )
+        )
+      )
+      List
+      (iterexp "j_1" (VarE "j_1*"))
+      (iterexp "j_2" (VarE "j_2*"))
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iter")))
+      List
+      (iterexp
+        "iter"
         (CallE
-          "ivdot_sat_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
+          "concat_"
+          (TypA (VarT "iN"))
+          (ExpA
+            (IterE
+              (ListE (VarE "j_1") (VarE "j_2"))
+              List
+              (iterexp "j_1" (VarE "j_1*"))
+              (iterexp "j_2" (VarE "j_2*"))
+            )
+          )
         )
       )
     )
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (VarE "N")
+          (CallE
+            "imul_"
+            (ExpA (VarE "N"))
+            (ExpA (VarE "i_1"))
+            (ExpA (VarE "i_2"))
+          )
+        )
+      )
       List
-      (iterexp "ret_val" (VarE "ret_val*"))
+      (iterexp "i_1" (VarE "i_1*"))
+      (iterexp "i_2" (VarE "i_2*"))
     )
   )
 )
@@ -56427,6 +59776,240 @@
       )
     )
     (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "inv_lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_lane__2) Arg Arg)
+                (TupE (VarE "Jnn_2") (VarE "c"))
+              )
+              List
+              (iterexp "c" (VarE "c*"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                  (CaseE Arg (TupE (VarE "M_1")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA (VarE "v_1"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                  (CaseE Arg (TupE (VarE "M_1")))
+                )
+              )
+            )
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (CallE
+            "extend__"
+            (ExpA
+              (CallE
+                "lsizenn1"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+            )
+            (ExpA
+              (CallE
+                "lsizenn2"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+              )
+            )
+            (ExpA (VarE "sx_1"))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_1")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_1" (VarE "c_1*"))
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (CallE
+            "extend__"
+            (ExpA
+              (CallE
+                "lsizenn1"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+            )
+            (ExpA
+              (CallE
+                "lsizenn2"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+              )
+            )
+            (ExpA (VarE "sx_2"))
+            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "c_2")))))
+          )
+        )
+      )
+      List
+      (iterexp "c_2" (VarE "c_2*"))
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lsize"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "f_"
+          (ExpA
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+            )
+          )
+          (ExpA (IterE (VarE "c'_1") List (iterexp "c'_1" (VarE "c'_1*"))))
+          (ExpA (IterE (VarE "c'_2") List (iterexp "c'_2" (VarE "c'_2*"))))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_lane_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "lanetype"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_lane__2) Arg Arg)
+            (TupE (VarE "Jnn_2") (VarE "c"))
+          )
+        )
+      )
+      List
+      (iterexp "c" (VarE "c*"))
+    )
+    (RulePr
       "wf_shape"
       (Seq Arg)
       (TupE
@@ -56439,86 +60022,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "ivextbinop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivextbinop___is_wf"
-  (DefP
-    "f_"
-    (ExpP "N" (VarT "N"))
-    (ExpP "_" (IterT (VarT "iN") List))
-    (ExpP "_" (IterT (VarT "iN") List))
-    (IterT (VarT "iN") List)
-  )
-  (Seq Arg Arg Arg Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "shape_1" (VarT "shape"))
-    (typbind "shape_2" (VarT "shape"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "sx_0" (VarT "sx"))
-    (typbind "laneidx" (VarT "laneidx"))
-    (typbind "laneidx_0" (VarT "laneidx"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "ivextbinop___is_wf_0"
-    (ExpP "shape_1" (VarT "shape"))
-    (ExpP "shape_2" (VarT "shape"))
-    (DefP
-      "f_"
-      (ExpP "N" (VarT "N"))
-      (ExpP "_" (IterT (VarT "iN") List))
-      (ExpP "_" (IterT (VarT "iN") List))
-      (IterT (VarT "iN") List)
-    )
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "sx_0" (VarT "sx"))
-    (ExpP "laneidx" (VarT "laneidx"))
-    (ExpP "laneidx_0" (VarT "laneidx"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "shape_1")
-      (VarE "shape_2")
-      (VarE "sx")
-      (VarE "sx_0")
-      (VarE "laneidx")
-      (VarE "laneidx_0")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
-    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 8)) (VarE "laneidx")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 8)) (VarE "laneidx_0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ivextbinop__"
-          (ExpA (VarE "shape_1"))
-          (ExpA (VarE "shape_2"))
-          (DefA "f_")
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "sx_0"))
-          (ExpA (VarE "laneidx"))
-          (ExpA (VarE "laneidx_0"))
-          (ExpA (VarE "vec_"))
-          (ExpA (VarE "vec__0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (DecD
@@ -56540,53 +60043,23 @@
       (iterexp "i_1" (VarE "i_1*"))
       (iterexp "i_2" (VarE "i_2*"))
     )
-  )
-)
-(HintD (RelH "ivmul__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ivmul__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "iN") List))
-    (typbind "var_1*" (IterT (VarT "iN") List))
-    (typbind "ret_val*" (IterT (VarT "iN") List))
-  )
-  (RuleD
-    "ivmul__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "iN") List))
-    (ExpP "var_1*" (IterT (VarT "iN") List))
-    (ExpP "ret_val*" (IterT (VarT "iN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val*"))
     (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "ivmul_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (VarE "N")
+          (CallE
+            "imul_"
+            (ExpA (VarE "N"))
+            (ExpA (VarE "i_1"))
+            (ExpA (VarE "i_2"))
+          )
         )
       )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
       List
-      (iterexp "ret_val" (VarE "ret_val*"))
+      (iterexp "i_1" (VarE "i_1*"))
+      (iterexp "i_2" (VarE "i_2*"))
     )
   )
 )
@@ -56691,6 +60164,102 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivextbinop__"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+          (DefA "ivmul_")
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "sx"))
+          (ExpA
+            (CaseE
+              Arg
+              (TupE
+                (CallE
+                  "half"
+                  (ExpA (VarE "half"))
+                  (ExpA (NumE (Nat 0)))
+                  (ExpA (VarE "M_2"))
+                )
+              )
+            )
+          )
+          (ExpA (CaseE Arg (TupE (VarE "M_2"))))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 8))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "half"
+              (ExpA (VarE "half"))
+              (ExpA (NumE (Nat 0)))
+              (ExpA (VarE "M_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (NumE (Nat 8)) (CaseE Arg (TupE (VarE "M_2"))))
+    )
   )
   (DefD
     (ExpP "Jnn_1" (VarT "Jnn"))
@@ -56770,6 +60339,77 @@
         (ExpA (VarE "v_1"))
         (ExpA (VarE "v_2"))
       )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivextbinop__"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+          (DefA "ivdot_")
+          (ExpA (CaseE (Atom S) (TupE)))
+          (ExpA (CaseE (Atom S) (TupE)))
+          (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
+          (ExpA (CaseE Arg (TupE (VarE "M_1"))))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (NumE (Nat 8)) (CaseE Arg (TupE (NumE (Nat 0)))))
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (NumE (Nat 8)) (CaseE Arg (TupE (VarE "M_1"))))
     )
   )
   (DefD
@@ -56859,6 +60499,86 @@
         (ExpA (VarE "v_2"))
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (CallE
+          "ivextbinop__"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
+          (DefA "ivdot_sat_")
+          (ExpA (CaseE (Atom S) (TupE)))
+          (ExpA
+            (CallE
+              "relaxed2"
+              (ExpA (CallE "R_idot"))
+              (TypA (VarT "sx"))
+              (ExpA (CaseE (Atom S) (TupE)))
+              (ExpA (CaseE (Atom U) (TupE)))
+            )
+          )
+          (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
+          (ExpA (CaseE Arg (TupE (VarE "M_1"))))
+          (ExpA (VarE "v_1"))
+          (ExpA (VarE "v_2"))
+        )
+      )
+    )
+    (RulePr "wf_relaxed2" (Seq Arg) (TupE (CallE "R_idot")))
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (NumE (Nat 8)) (CaseE Arg (TupE (NumE (Nat 0)))))
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (NumE (Nat 8)) (CaseE Arg (TupE (VarE "M_1"))))
+    )
   )
   (DefD
     (ExpP "x0" (VarT "ishape"))
@@ -56873,64 +60593,6 @@
     (ExpA (VarE "x4"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vextbinop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vextbinop___is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "ishape_1" (VarT "ishape"))
-    (typbind "ishape_2" (VarT "ishape"))
-    (typbind "vextbinop__" (VarT "vextbinop__"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vextbinop___is_wf_0"
-    (ExpP "ishape_1" (VarT "ishape"))
-    (ExpP "ishape_2" (VarT "ishape"))
-    (ExpP "vextbinop__" (VarT "vextbinop__"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "ishape_1")
-      (VarE "ishape_2")
-      (VarE "vextbinop__")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
-    (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
-    (RulePr
-      "wf_vextbinop__"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "ishape_1") (VarE "ishape_2") (VarE "vextbinop__"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "vextbinop__"
-            (ExpA (VarE "ishape_1"))
-            (ExpA (VarE "ishape_2"))
-            (ExpA (VarE "vextbinop__"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "vextbinop__" (hint "partial" "{}")))
@@ -57144,6 +60806,146 @@
         )
       )
     )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "c")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (TheE
+          (CallE
+            "vextbinop__"
+            (ExpA
+              (CaseE
+                Arg
+                (TupE
+                  (CaseE
+                    (Seq Arg (Atom X) Arg)
+                    (TupE
+                      (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                      (CaseE Arg (TupE (VarE "M_1")))
+                    )
+                  )
+                )
+              )
+            )
+            (ExpA
+              (CaseE
+                Arg
+                (TupE
+                  (CaseE
+                    (Seq Arg (Atom X) Arg)
+                    (TupE
+                      (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                      (CaseE Arg (TupE (VarE "M")))
+                    )
+                  )
+                )
+              )
+            )
+            (ExpA
+              (CaseE
+                (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+                (TupE
+                  (VarE "Jnn_1")
+                  (VarE "M_1")
+                  (VarE "Jnn")
+                  (VarE "M")
+                  (CaseE (Seq (Atom RELAXED_DOT) (Atom S)) (TupE))
+                )
+              )
+            )
+            (ExpA (VarE "c_1"))
+            (ExpA (VarE "c_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 128))
+        (TheE
+          (CallE
+            "vextunop__"
+            (ExpA
+              (CaseE
+                Arg
+                (TupE
+                  (CaseE
+                    (Seq Arg (Atom X) Arg)
+                    (TupE
+                      (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                      (CaseE Arg (TupE (VarE "M")))
+                    )
+                  )
+                )
+              )
+            )
+            (ExpA
+              (CaseE
+                Arg
+                (TupE
+                  (CaseE
+                    (Seq Arg (Atom X) Arg)
+                    (TupE
+                      (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                      (CaseE Arg (TupE (VarE "M_2")))
+                    )
+                  )
+                )
+              )
+            )
+            (ExpA
+              (CaseE
+                (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
+                (TupE
+                  (VarE "Jnn")
+                  (VarE "M")
+                  (VarE "Jnn_2")
+                  (VarE "M_2")
+                  (CaseE
+                    (Seq (Atom EXTADD_PAIRWISE) Arg)
+                    (TupE (CaseE (Atom S) (TupE)))
+                  )
+                )
+              )
+            )
+            (ExpA (VarE "c'"))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (TheE
+          (CallE
+            "vbinop_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
+                )
+              )
+            )
+            (ExpA
+              (CaseE
+                (Seq (Atom mk_vbinop__0) Arg Arg Arg)
+                (TupE (VarE "Jnn_2") (VarE "M_2") (CaseE (Atom ADD) (TupE)))
+              )
+            )
+            (ExpA (VarE "c''"))
+            (ExpA (VarE "c_3"))
+          )
+        )
+      )
+    )
     (RulePr
       "wf_ishape"
       (Seq Arg)
@@ -57327,69 +61129,6 @@
     (ExpA (VarE "x5"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "vextternop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "vextternop___is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "ishape_1" (VarT "ishape"))
-    (typbind "ishape_2" (VarT "ishape"))
-    (typbind "vextternop__" (VarT "vextternop__"))
-    (typbind "vec_" (VarT "vec_"))
-    (typbind "vec__0" (VarT "vec_"))
-    (typbind "vec__1" (VarT "vec_"))
-    (typbind "ret_val" (VarT "vec_"))
-  )
-  (RuleD
-    "vextternop___is_wf_0"
-    (ExpP "ishape_1" (VarT "ishape"))
-    (ExpP "ishape_2" (VarT "ishape"))
-    (ExpP "vextternop__" (VarT "vextternop__"))
-    (ExpP "vec_" (VarT "vec_"))
-    (ExpP "vec__0" (VarT "vec_"))
-    (ExpP "vec__1" (VarT "vec_"))
-    (ExpP "ret_val" (VarT "vec_"))
-    (Seq Arg Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "ishape_1")
-      (VarE "ishape_2")
-      (VarE "vextternop__")
-      (VarE "vec_")
-      (VarE "vec__0")
-      (VarE "vec__1")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
-    (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
-    (RulePr
-      "wf_vextternop__"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "ishape_1") (VarE "ishape_2") (VarE "vextternop__"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__1")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "vextternop__"
-            (ExpA (VarE "ishape_1"))
-            (ExpA (VarE "ishape_2"))
-            (ExpA (VarE "vextternop__"))
-            (ExpA (VarE "vec_"))
-            (ExpA (VarE "vec__0"))
-            (ExpA (VarE "vec__1"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "vextternop__" (hint "partial" "{}")))
@@ -58329,6 +62068,24 @@
         )
       )
     )
+    (RulePr
+      "wf_fieldval"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom PACK) Arg Arg)
+          (TupE
+            (VarE "packtype")
+            (CallE
+              "wrap__"
+              (ExpA (NumE (Nat 32)))
+              (ExpA (CallE "psize" (ExpA (VarE "packtype"))))
+              (ExpA (VarE "i"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "storagetype"))
@@ -58337,37 +62094,6 @@
     (ExpA (VarE "x1"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "packfield__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "packfield__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "storagetype" (VarT "storagetype"))
-    (typbind "val" (VarT "val"))
-    (typbind "ret_val" (VarT "fieldval"))
-  )
-  (RuleD
-    "packfield__is_wf_0"
-    (ExpP "storagetype" (VarT "storagetype"))
-    (ExpP "val" (VarT "val"))
-    (ExpP "ret_val" (VarT "fieldval"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "storagetype") (VarE "val") (VarE "ret_val"))
-    (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "val")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE "packfield_" (ExpA (VarE "storagetype")) (ExpA (VarE "val")))
-        )
-      )
-    )
-    (RulePr "wf_fieldval" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -58420,6 +62146,31 @@
         )
       )
     )
+    (RulePr
+      "wf_val"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE
+                (CaseE (Atom I32) (TupE))
+                (CallE
+                  "extend__"
+                  (ExpA (CallE "psize" (ExpA (VarE "packtype"))))
+                  (ExpA (NumE (Nat 32)))
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "i"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "x0" (VarT "storagetype"))
@@ -58430,49 +62181,6 @@
     (ExpA (VarE "x2"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "unpackfield__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "unpackfield__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "storagetype" (VarT "storagetype"))
-    (typbind "var_0?" (IterT (VarT "sx") Opt))
-    (typbind "fieldval" (VarT "fieldval"))
-    (typbind "ret_val" (VarT "val"))
-  )
-  (RuleD
-    "unpackfield__is_wf_0"
-    (ExpP "storagetype" (VarT "storagetype"))
-    (ExpP "var_0?" (IterT (VarT "sx") Opt))
-    (ExpP "fieldval" (VarT "fieldval"))
-    (ExpP "ret_val" (VarT "val"))
-    (Seq Arg Arg Arg Arg)
-    (TupE
-      (VarE "storagetype")
-      (VarE "var_0?")
-      (VarE "fieldval")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_storagetype" (Seq Arg) (TupE (VarE "storagetype")))
-    (RulePr "wf_fieldval" (Seq Arg) (TupE (VarE "fieldval")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "unpackfield_"
-            (ExpA (VarE "storagetype"))
-            (ExpA (VarE "var_0?"))
-            (ExpA (VarE "fieldval"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -58698,24 +62406,6 @@
     (VarE "s")
   )
 )
-(HintD (RelH "store_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "store_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "state" (VarT "state")) (typbind "ret_val" (VarT "store")))
-  (RuleD
-    "store_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val" (VarT "store"))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "store" (ExpA (VarE "state"))))
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "store" (hint "show" "%.STORE") (hint "macro" "\"Z%\"")))
 (DecD
   "frame"
@@ -58726,24 +62416,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (VarE "f")
-  )
-)
-(HintD (RelH "frame_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "frame_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "state" (VarT "state")) (typbind "ret_val" (VarT "frame")))
-  (RuleD
-    "frame_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val" (VarT "frame"))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "frame" (ExpA (VarE "state"))))
-    )
-    (RulePr "wf_frame" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "frame" (hint "show" "%.FRAME") (hint "macro" "\"Z%\"")))
@@ -58770,32 +62442,6 @@
     (DotE (VarE "f") (Atom MODULE))
   )
 )
-(HintD (RelH "moduleinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "moduleinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val" (VarT "moduleinst"))
-  )
-  (RuleD
-    "moduleinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val" (VarT "moduleinst"))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "moduleinst" (ExpA (VarE "state")))
-      )
-    )
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "moduleinst" (hint "show" "%.MODULE") (hint "macro" "\"Z%\"")))
 (DecD
   "taginst"
@@ -58806,31 +62452,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (DotE (VarE "s") (Atom TAGS))
-  )
-)
-(HintD (RelH "taginst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "taginst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "taginst") List))
-  )
-  (RuleD
-    "taginst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "taginst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val*") (CallE "taginst" (ExpA (VarE "state"))))
-    )
-    (IterPr
-      (RulePr "wf_taginst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "taginst" (hint "show" "%.TAGS") (hint "macro" "\"Z%\"")))
@@ -58845,36 +62466,6 @@
     (DotE (VarE "s") (Atom GLOBALS))
   )
 )
-(HintD (RelH "globalinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "globalinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "globalinst") List))
-  )
-  (RuleD
-    "globalinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "globalinst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "globalinst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_globalinst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "globalinst" (hint "show" "%.GLOBALS") (hint "macro" "\"Z%\"")))
 (DecD
   "meminst"
@@ -58885,31 +62476,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (DotE (VarE "s") (Atom MEMS))
-  )
-)
-(HintD (RelH "meminst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "meminst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "meminst") List))
-  )
-  (RuleD
-    "meminst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "meminst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val*") (CallE "meminst" (ExpA (VarE "state"))))
-    )
-    (IterPr
-      (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "meminst" (hint "show" "%.MEMS") (hint "macro" "\"Z%\"")))
@@ -58924,36 +62490,6 @@
     (DotE (VarE "s") (Atom TABLES))
   )
 )
-(HintD (RelH "tableinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "tableinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "tableinst") List))
-  )
-  (RuleD
-    "tableinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "tableinst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "tableinst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "tableinst" (hint "show" "%.TABLES") (hint "macro" "\"Z%\"")))
 (DecD
   "funcinst"
@@ -58964,36 +62500,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (DotE (VarE "s") (Atom FUNCS))
-  )
-)
-(HintD (RelH "funcinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "funcinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "funcinst") List))
-  )
-  (RuleD
-    "funcinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "funcinst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "funcinst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_funcinst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "funcinst" (hint "show" "%.FUNCS") (hint "macro" "\"Z%\"")))
@@ -59008,36 +62514,6 @@
     (DotE (VarE "s") (Atom DATAS))
   )
 )
-(HintD (RelH "datainst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "datainst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "datainst") List))
-  )
-  (RuleD
-    "datainst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "datainst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "datainst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_datainst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "datainst" (hint "show" "%.DATAS") (hint "macro" "\"Z%\"")))
 (DecD
   "eleminst"
@@ -59048,36 +62524,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (DotE (VarE "s") (Atom ELEMS))
-  )
-)
-(HintD (RelH "eleminst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "eleminst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "eleminst") List))
-  )
-  (RuleD
-    "eleminst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "eleminst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "eleminst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_eleminst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "eleminst" (hint "show" "%.ELEMS") (hint "macro" "\"Z%\"")))
@@ -59092,36 +62538,6 @@
     (DotE (VarE "s") (Atom STRUCTS))
   )
 )
-(HintD (RelH "structinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "structinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "structinst") List))
-  )
-  (RuleD
-    "structinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "structinst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "structinst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_structinst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "structinst" (hint "show" "%.STRUCTS") (hint "macro" "\"Z%\"")))
 (DecD
   "arrayinst"
@@ -59132,36 +62548,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (DotE (VarE "s") (Atom ARRAYS))
-  )
-)
-(HintD (RelH "arrayinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "arrayinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "arrayinst") List))
-  )
-  (RuleD
-    "arrayinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "arrayinst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "arrayinst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_arrayinst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "arrayinst" (hint "show" "%.ARRAYS") (hint "macro" "\"Z%\"")))
@@ -59176,31 +62562,6 @@
     (DotE (VarE "s") (Atom EXNS))
   )
 )
-(HintD (RelH "exninst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "exninst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "exninst") List))
-  )
-  (RuleD
-    "exninst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "exninst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val*") (CallE "exninst" (ExpA (VarE "state"))))
-    )
-    (IterPr
-      (RulePr "wf_exninst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "exninst" (hint "show" "%.EXNS") (hint "macro" "\"Z%\"")))
 (DecD
   "fof"
@@ -59210,22 +62571,7 @@
     (ExpP "z" (VarT "state"))
     (ExpA (VarE "z"))
     (CallE "frame" (ExpA (VarE "z")))
-  )
-)
-(HintD (RelH "fof_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fof_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "state" (VarT "state")) (typbind "ret_val" (VarT "frame")))
-  (RuleD
-    "fof_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val" (VarT "frame"))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "fof" (ExpA (VarE "state")))))
-    (RulePr "wf_frame" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "frame" (ExpA (VarE "z")))))
   )
 )
 (DecD
@@ -59242,6 +62588,7 @@
       (DotE (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom MODULE)) (Atom TYPES))
       (ProjE (UncaseE (VarE "x") Arg) 0)
     )
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "type" (hint "show" "%.TYPES[%]") (hint "macro" "\"Z%\"")))
@@ -59253,22 +62600,7 @@
     (ExpP "z" (VarT "state"))
     (ExpA (VarE "z"))
     (CallE "store" (ExpA (VarE "z")))
-  )
-)
-(HintD (RelH "sof_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "sof_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "state" (VarT "state")) (typbind "ret_val" (VarT "store")))
-  (RuleD
-    "sof_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val" (VarT "store"))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "sof" (ExpA (VarE "state")))))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_store" (Seq Arg) (TupE (CallE "store" (ExpA (VarE "z")))))
   )
 )
 (DecD
@@ -59288,35 +62620,8 @@
         (ProjE (UncaseE (VarE "x") Arg) 0)
       )
     )
-  )
-)
-(HintD (RelH "tag_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "tag_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "tagidx" (VarT "tagidx"))
-    (typbind "ret_val" (VarT "taginst"))
-  )
-  (RuleD
-    "tag_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "tagidx" (VarT "tagidx"))
-    (ExpP "ret_val" (VarT "taginst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "tagidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tagidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "tag" (ExpA (VarE "state")) (ExpA (VarE "tagidx")))
-      )
-    )
-    (RulePr "wf_taginst" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_store" (Seq Arg) (TupE (CallE "sof" (ExpA (VarE "z")))))
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "tag" (hint "show" "%.TAGS[%]") (hint "macro" "\"Z%\"")))
@@ -59340,35 +62645,8 @@
         (ProjE (UncaseE (VarE "x") Arg) 0)
       )
     )
-  )
-)
-(HintD (RelH "global_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "global_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "globalidx" (VarT "globalidx"))
-    (typbind "ret_val" (VarT "globalinst"))
-  )
-  (RuleD
-    "global_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "globalidx" (VarT "globalidx"))
-    (ExpP "ret_val" (VarT "globalinst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "globalidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "globalidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "global" (ExpA (VarE "state")) (ExpA (VarE "globalidx")))
-      )
-    )
-    (RulePr "wf_globalinst" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_store" (Seq Arg) (TupE (CallE "sof" (ExpA (VarE "z")))))
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "global" (hint "show" "%.GLOBALS[%]") (hint "macro" "\"Z%\"")))
@@ -59389,35 +62667,8 @@
         (ProjE (UncaseE (VarE "x") Arg) 0)
       )
     )
-  )
-)
-(HintD (RelH "mem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "mem_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "memidx" (VarT "memidx"))
-    (typbind "ret_val" (VarT "meminst"))
-  )
-  (RuleD
-    "mem_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "memidx" (VarT "memidx"))
-    (ExpP "ret_val" (VarT "meminst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "memidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "memidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "mem" (ExpA (VarE "state")) (ExpA (VarE "memidx")))
-      )
-    )
-    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_store" (Seq Arg) (TupE (CallE "sof" (ExpA (VarE "z")))))
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "mem" (hint "show" "%.MEMS[%]") (hint "macro" "\"Z%\"")))
@@ -59441,35 +62692,8 @@
         (ProjE (UncaseE (VarE "x") Arg) 0)
       )
     )
-  )
-)
-(HintD (RelH "table_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "table_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "tableidx" (VarT "tableidx"))
-    (typbind "ret_val" (VarT "tableinst"))
-  )
-  (RuleD
-    "table_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "tableidx" (VarT "tableidx"))
-    (ExpP "ret_val" (VarT "tableinst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "tableidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tableidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "table" (ExpA (VarE "state")) (ExpA (VarE "tableidx")))
-      )
-    )
-    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_store" (Seq Arg) (TupE (CallE "sof" (ExpA (VarE "z")))))
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "table" (hint "show" "%.TABLES[%]") (hint "macro" "\"Z%\"")))
@@ -59490,35 +62714,8 @@
         (ProjE (UncaseE (VarE "x") Arg) 0)
       )
     )
-  )
-)
-(HintD (RelH "func_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "func_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "funcidx" (VarT "funcidx"))
-    (typbind "ret_val" (VarT "funcinst"))
-  )
-  (RuleD
-    "func_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "funcidx" (VarT "funcidx"))
-    (ExpP "ret_val" (VarT "funcinst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "funcidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "funcidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "func" (ExpA (VarE "state")) (ExpA (VarE "funcidx")))
-      )
-    )
-    (RulePr "wf_funcinst" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_store" (Seq Arg) (TupE (CallE "sof" (ExpA (VarE "z")))))
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "func" (hint "show" "%.FUNCS[%]") (hint "macro" "\"Z%\"")))
@@ -59539,35 +62736,8 @@
         (ProjE (UncaseE (VarE "x") Arg) 0)
       )
     )
-  )
-)
-(HintD (RelH "data_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "data_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "dataidx" (VarT "dataidx"))
-    (typbind "ret_val" (VarT "datainst"))
-  )
-  (RuleD
-    "data_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "dataidx" (VarT "dataidx"))
-    (ExpP "ret_val" (VarT "datainst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "dataidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "dataidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "data" (ExpA (VarE "state")) (ExpA (VarE "dataidx")))
-      )
-    )
-    (RulePr "wf_datainst" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_store" (Seq Arg) (TupE (CallE "sof" (ExpA (VarE "z")))))
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "data" (hint "show" "%.DATAS[%]") (hint "macro" "\"Z%\"")))
@@ -59588,35 +62758,8 @@
         (ProjE (UncaseE (VarE "x") Arg) 0)
       )
     )
-  )
-)
-(HintD (RelH "elem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "elem_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "tableidx" (VarT "tableidx"))
-    (typbind "ret_val" (VarT "eleminst"))
-  )
-  (RuleD
-    "elem_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "tableidx" (VarT "tableidx"))
-    (ExpP "ret_val" (VarT "eleminst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "tableidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tableidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "elem" (ExpA (VarE "state")) (ExpA (VarE "tableidx")))
-      )
-    )
-    (RulePr "wf_eleminst" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr "wf_store" (Seq Arg) (TupE (CallE "sof" (ExpA (VarE "z")))))
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "elem" (hint "show" "%.ELEMS[%]") (hint "macro" "\"Z%\"")))
@@ -59634,39 +62777,7 @@
       (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom LOCALS))
       (ProjE (UncaseE (VarE "x") Arg) 0)
     )
-  )
-)
-(HintD (RelH "local_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "local_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "localidx" (VarT "localidx"))
-    (typbind "ret_val?" (IterT (VarT "val") Opt))
-  )
-  (RuleD
-    "local_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "localidx" (VarT "localidx"))
-    (ExpP "ret_val?" (IterT (VarT "val") Opt))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "localidx") (VarE "ret_val?"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "localidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (CallE "local" (ExpA (VarE "state")) (ExpA (VarE "localidx")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_val" (Seq Arg) (TupE (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
-    )
+    (RulePr "wf_frame" (Seq Arg) (TupE (CallE "fof" (ExpA (VarE "z")))))
   )
 )
 (HintD (DecH "local" (hint "show" "%.LOCALS[%]") (hint "macro" "\"Z%\"")))
@@ -59696,43 +62807,26 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "with_local_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_local_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "localidx" (VarT "localidx"))
-    (typbind "val" (VarT "val"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_local_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "localidx" (VarT "localidx"))
-    (ExpP "val" (VarT "val"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "localidx") (VarE "val") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "localidx")))
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "val")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_local"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "localidx"))
-          (ExpA (VarE "val"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (CallE "sof" (ExpA (VarE "z")))
+            (UpdE
+              (CallE "fof" (ExpA (VarE "z")))
+              (IdxP
+                (DotP RootP (Atom LOCALS))
+                (ProjE (UncaseE (VarE "x") Arg) 0)
+              )
+              (OptE (VarE "v"))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -59779,43 +62873,35 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_global_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_global_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "globalidx" (VarT "globalidx"))
-    (typbind "val" (VarT "val"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_global_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "globalidx" (VarT "globalidx"))
-    (ExpP "val" (VarT "val"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "globalidx") (VarE "val") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "globalidx")))
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "val")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_global"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "globalidx"))
-          (ExpA (VarE "val"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (DotP
+                (IdxP
+                  (DotP RootP (Atom GLOBALS))
+                  (IdxE
+                    (DotE
+                      (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom MODULE))
+                      (Atom GLOBALS)
+                    )
+                    (ProjE (UncaseE (VarE "x") Arg) 0)
+                  )
+                )
+                (Atom VALUE)
+              )
+              (VarE "v")
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -59868,52 +62954,38 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_table_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_table_is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "tableidx" (VarT "tableidx"))
-    (typbind "nat" nat)
-    (typbind "ref" (VarT "ref"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_table_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "tableidx" (VarT "tableidx"))
-    (ExpP "nat" nat)
-    (ExpP "ref" (VarT "ref"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "state")
-      (VarE "tableidx")
-      (VarE "nat")
-      (VarE "ref")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tableidx")))
-    (RulePr "wf_ref" (Seq Arg) (TupE (VarE "ref")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_table"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "tableidx"))
-          (ExpA (VarE "nat"))
-          (ExpA (VarE "ref"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (IdxP
+                (DotP
+                  (IdxP
+                    (DotP RootP (Atom TABLES))
+                    (IdxE
+                      (DotE
+                        (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom MODULE))
+                        (Atom TABLES)
+                      )
+                      (ProjE (UncaseE (VarE "x") Arg) 0)
+                    )
+                  )
+                  (Atom REFS)
+                )
+                (VarE "i")
+              )
+              (VarE "r")
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -59957,43 +63029,32 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_tableinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_tableinst_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "tableidx" (VarT "tableidx"))
-    (typbind "tableinst" (VarT "tableinst"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_tableinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "tableidx" (VarT "tableidx"))
-    (ExpP "tableinst" (VarT "tableinst"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "tableidx") (VarE "tableinst") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tableidx")))
-    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "tableinst")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_tableinst"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "tableidx"))
-          (ExpA (VarE "tableinst"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (IdxP
+                (DotP RootP (Atom TABLES))
+                (IdxE
+                  (DotE
+                    (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom MODULE))
+                    (Atom TABLES)
+                  )
+                  (ProjE (UncaseE (VarE "x") Arg) 0)
+                )
+              )
+              (VarE "ti")
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60050,60 +63111,39 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_mem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_mem_is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "memidx" (VarT "memidx"))
-    (typbind "nat" nat)
-    (typbind "nat_0" nat)
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_mem_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "memidx" (VarT "memidx"))
-    (ExpP "nat" nat)
-    (ExpP "nat_0" nat)
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "state")
-      (VarE "memidx")
-      (VarE "nat")
-      (VarE "nat_0")
-      (VarE "var_0*")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "memidx")))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_mem"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "memidx"))
-          (ExpA (VarE "nat"))
-          (ExpA (VarE "nat_0"))
-          (ExpA (VarE "var_0*"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (SliceP
+                (DotP
+                  (IdxP
+                    (DotP RootP (Atom MEMS))
+                    (IdxE
+                      (DotE
+                        (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom MODULE))
+                        (Atom MEMS)
+                      )
+                      (ProjE (UncaseE (VarE "x") Arg) 0)
+                    )
+                  )
+                  (Atom BYTES)
+                )
+                (VarE "i")
+                (VarE "j")
+              )
+              (IterE (VarE "b") List (iterexp "b" (VarE "b*")))
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60147,43 +63187,32 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_meminst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_meminst_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "memidx" (VarT "memidx"))
-    (typbind "meminst" (VarT "meminst"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_meminst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "memidx" (VarT "memidx"))
-    (ExpP "meminst" (VarT "meminst"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "memidx") (VarE "meminst") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "memidx")))
-    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "meminst")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_meminst"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "memidx"))
-          (ExpA (VarE "meminst"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (IdxP
+                (DotP RootP (Atom MEMS))
+                (IdxE
+                  (DotE
+                    (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom MODULE))
+                    (Atom MEMS)
+                  )
+                  (ProjE (UncaseE (VarE "x") Arg) 0)
+                )
+              )
+              (VarE "mi")
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60230,47 +63259,35 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_elem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_elem_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "elemidx" (VarT "elemidx"))
-    (typbind "var_0*" (IterT (VarT "ref") List))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_elem_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "elemidx" (VarT "elemidx"))
-    (ExpP "var_0*" (IterT (VarT "ref") List))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "elemidx") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "elemidx")))
-    (IterPr
-      (RulePr "wf_ref" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_elem"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "elemidx"))
-          (ExpA (VarE "var_0*"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (DotP
+                (IdxP
+                  (DotP RootP (Atom ELEMS))
+                  (IdxE
+                    (DotE
+                      (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom MODULE))
+                      (Atom ELEMS)
+                    )
+                    (ProjE (UncaseE (VarE "x") Arg) 0)
+                  )
+                )
+                (Atom REFS)
+              )
+              (IterE (VarE "r") List (iterexp "r" (VarE "r*")))
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60317,47 +63334,35 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_data_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_data_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "dataidx" (VarT "dataidx"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_data_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "dataidx" (VarT "dataidx"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "dataidx") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "dataidx")))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_data"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "dataidx"))
-          (ExpA (VarE "var_0*"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (DotP
+                (IdxP
+                  (DotP RootP (Atom DATAS))
+                  (IdxE
+                    (DotE
+                      (DotE (CallE "fof" (ExpA (VarE "z"))) (Atom MODULE))
+                      (Atom DATAS)
+                    )
+                    (ProjE (UncaseE (VarE "x") Arg) 0)
+                  )
+                )
+                (Atom BYTES)
+              )
+              (IterE (VarE "b") List (iterexp "b" (VarE "b*")))
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60398,51 +63403,29 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_struct_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_struct_is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "structaddr" (VarT "structaddr"))
-    (typbind "nat" nat)
-    (typbind "fieldval" (VarT "fieldval"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_struct_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "structaddr" (VarT "structaddr"))
-    (ExpP "nat" nat)
-    (ExpP "fieldval" (VarT "fieldval"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "state")
-      (VarE "structaddr")
-      (VarE "nat")
-      (VarE "fieldval")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_fieldval" (Seq Arg) (TupE (VarE "fieldval")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_struct"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "structaddr"))
-          (ExpA (VarE "nat"))
-          (ExpA (VarE "fieldval"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (IdxP
+                (DotP
+                  (IdxP (DotP RootP (Atom STRUCTS)) (VarE "a"))
+                  (Atom FIELDS)
+                )
+                (VarE "i")
+              )
+              (VarE "fv")
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60483,51 +63466,29 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "with_array_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_array_is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "arrayaddr" (VarT "arrayaddr"))
-    (typbind "nat" nat)
-    (typbind "fieldval" (VarT "fieldval"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_array_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "arrayaddr" (VarT "arrayaddr"))
-    (ExpP "nat" nat)
-    (ExpP "fieldval" (VarT "fieldval"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "state")
-      (VarE "arrayaddr")
-      (VarE "nat")
-      (VarE "fieldval")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_fieldval" (Seq Arg) (TupE (VarE "fieldval")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_array"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "arrayaddr"))
-          (ExpA (VarE "nat"))
-          (ExpA (VarE "fieldval"))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (CallE "sof" (ExpA (VarE "z")))
+              (IdxP
+                (DotP
+                  (IdxP (DotP RootP (Atom ARRAYS)) (VarE "a"))
+                  (Atom FIELDS)
+                )
+                (VarE "i")
+              )
+              (VarE "fv")
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60559,39 +63520,23 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "add_structinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "add_structinst_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "var_0*" (IterT (VarT "structinst") List))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "add_structinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "var_0*" (IterT (VarT "structinst") List))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IterPr
-      (RulePr "wf_structinst" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "add_structinst" (ExpA (VarE "state")) (ExpA (VarE "var_0*")))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (ExtE
+              (CallE "sof" (ExpA (VarE "z")))
+              (DotP RootP (Atom STRUCTS))
+              (IterE (VarE "si") List (iterexp "si" (VarE "si*")))
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
+        )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60623,39 +63568,23 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "add_arrayinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "add_arrayinst_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "var_0*" (IterT (VarT "arrayinst") List))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "add_arrayinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "var_0*" (IterT (VarT "arrayinst") List))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IterPr
-      (RulePr "wf_arrayinst" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "add_arrayinst" (ExpA (VarE "state")) (ExpA (VarE "var_0*")))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (ExtE
+              (CallE "sof" (ExpA (VarE "z")))
+              (DotP RootP (Atom ARRAYS))
+              (IterE (VarE "ai") List (iterexp "ai" (VarE "ai*")))
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
+        )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60687,39 +63616,23 @@
         (CallE "fof" (ExpA (VarE "z")))
       )
     )
-  )
-)
-(HintD (RelH "add_exninst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "add_exninst_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "var_0*" (IterT (VarT "exninst") List))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "add_exninst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "var_0*" (IterT (VarT "exninst") List))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IterPr
-      (RulePr "wf_exninst" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "add_exninst" (ExpA (VarE "state")) (ExpA (VarE "var_0*")))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (ExtE
+              (CallE "sof" (ExpA (VarE "z")))
+              (DotP RootP (Atom EXNS))
+              (IterE (VarE "exn") List (iterexp "exn" (VarE "exn*")))
+            )
+            (CallE "fof" (ExpA (VarE "z")))
+          )
+        )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -60855,6 +63768,7 @@
         )
       )
     )
+    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "tableinst'")))
     (RulePr
       "wf_tableinst"
       (Seq Arg)
@@ -60926,44 +63840,6 @@
     (ExpA (VarE "x2"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "growtable_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "growtable_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "tableinst" (VarT "tableinst"))
-    (typbind "nat" nat)
-    (typbind "ref" (VarT "ref"))
-    (typbind "ret_val" (VarT "tableinst"))
-  )
-  (RuleD
-    "growtable_is_wf_0"
-    (ExpP "tableinst" (VarT "tableinst"))
-    (ExpP "nat" nat)
-    (ExpP "ref" (VarT "ref"))
-    (ExpP "ret_val" (VarT "tableinst"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "tableinst") (VarE "nat") (VarE "ref") (VarE "ret_val"))
-    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "tableinst")))
-    (RulePr "wf_ref" (Seq Arg) (TupE (VarE "ref")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "growtable"
-            (ExpA (VarE "tableinst"))
-            (ExpA (VarE "nat"))
-            (ExpA (VarE "ref"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "growtable" (hint "partial" "{}")))
@@ -61110,6 +63986,7 @@
         )
       )
     )
+    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "meminst'")))
     (RulePr
       "wf_meminst"
       (Seq Arg)
@@ -61187,34 +64064,6 @@
     (ExpA (VarE "x1"))
     (OptE)
     ElsePr
-  )
-)
-(HintD (RelH "growmem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "growmem_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "meminst" (VarT "meminst"))
-    (typbind "nat" nat)
-    (typbind "ret_val" (VarT "meminst"))
-  )
-  (RuleD
-    "growmem_is_wf_0"
-    (ExpP "meminst" (VarT "meminst"))
-    (ExpP "nat" nat)
-    (ExpP "ret_val" (VarT "meminst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "meminst") (VarE "nat") (VarE "ret_val"))
-    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "meminst")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE (CallE "growmem" (ExpA (VarE "meminst")) (ExpA (VarE "nat"))))
-      )
-    )
-    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "growmem" (hint "partial" "{}")))
@@ -62093,39 +64942,23 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "inst_valtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inst_valtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "ret_val" (VarT "valtype"))
-  )
-  (RuleD
-    "inst_valtype_is_wf_0"
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "ret_val" (VarT "valtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "moduleinst") (VarE "valtype") (VarE "ret_val"))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-    (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "valtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_valtype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "inst_valtype"
-          (ExpA (VarE "moduleinst"))
-          (ExpA (VarE "valtype"))
+          "subst_all_valtype"
+          (ExpA (VarE "t"))
+          (ExpA
+            (SubE
+              (IterT (VarT "deftype") List)
+              (IterT (VarT "typeuse") List)
+              (DotE (VarE "moduleinst") (Atom TYPES))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_valtype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -62156,39 +64989,23 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "inst_reftype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inst_reftype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind "reftype" (VarT "reftype"))
-    (typbind "ret_val" (VarT "reftype"))
-  )
-  (RuleD
-    "inst_reftype_is_wf_0"
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "reftype" (VarT "reftype"))
-    (ExpP "ret_val" (VarT "reftype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "moduleinst") (VarE "reftype") (VarE "ret_val"))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "reftype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_reftype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "inst_reftype"
-          (ExpA (VarE "moduleinst"))
-          (ExpA (VarE "reftype"))
+          "subst_all_reftype"
+          (ExpA (VarE "rt"))
+          (ExpA
+            (SubE
+              (IterT (VarT "deftype") List)
+              (IterT (VarT "typeuse") List)
+              (DotE (VarE "moduleinst") (Atom TYPES))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -62219,39 +65036,23 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "inst_globaltype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inst_globaltype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind "globaltype" (VarT "globaltype"))
-    (typbind "ret_val" (VarT "globaltype"))
-  )
-  (RuleD
-    "inst_globaltype_is_wf_0"
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "globaltype" (VarT "globaltype"))
-    (ExpP "ret_val" (VarT "globaltype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "moduleinst") (VarE "globaltype") (VarE "ret_val"))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-    (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "globaltype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_globaltype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "inst_globaltype"
-          (ExpA (VarE "moduleinst"))
-          (ExpA (VarE "globaltype"))
+          "subst_all_globaltype"
+          (ExpA (VarE "gt"))
+          (ExpA
+            (SubE
+              (IterT (VarT "deftype") List)
+              (IterT (VarT "typeuse") List)
+              (DotE (VarE "moduleinst") (Atom TYPES))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -62282,39 +65083,23 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "inst_memtype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inst_memtype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind "memtype" (VarT "memtype"))
-    (typbind "ret_val" (VarT "memtype"))
-  )
-  (RuleD
-    "inst_memtype_is_wf_0"
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "memtype" (VarT "memtype"))
-    (ExpP "ret_val" (VarT "memtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "moduleinst") (VarE "memtype") (VarE "ret_val"))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-    (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "memtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_memtype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "inst_memtype"
-          (ExpA (VarE "moduleinst"))
-          (ExpA (VarE "memtype"))
+          "subst_all_memtype"
+          (ExpA (VarE "mt"))
+          (ExpA
+            (SubE
+              (IterT (VarT "deftype") List)
+              (IterT (VarT "typeuse") List)
+              (DotE (VarE "moduleinst") (Atom TYPES))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -62345,39 +65130,23 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "inst_tabletype_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inst_tabletype_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind "tabletype" (VarT "tabletype"))
-    (typbind "ret_val" (VarT "tabletype"))
-  )
-  (RuleD
-    "inst_tabletype_is_wf_0"
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "tabletype" (VarT "tabletype"))
-    (ExpP "ret_val" (VarT "tabletype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "moduleinst") (VarE "tabletype") (VarE "ret_val"))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-    (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "tabletype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
+    (RulePr
+      "wf_tabletype"
+      (Seq Arg)
+      (TupE
         (CallE
-          "inst_tabletype"
-          (ExpA (VarE "moduleinst"))
-          (ExpA (VarE "tabletype"))
+          "subst_all_tabletype"
+          (ExpA (VarE "tt"))
+          (ExpA
+            (SubE
+              (IterT (VarT "deftype") List)
+              (IterT (VarT "typeuse") List)
+              (DotE (VarE "moduleinst") (Atom TYPES))
+            )
+          )
         )
       )
     )
-    (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD
@@ -67960,6 +70729,26 @@
       )
     )
     (RulePr
+      "wf_instrtype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ->_ (Seq Arg Arg))
+          (TupE
+            (CaseE
+              Arg
+              (TupE (IterE (VarE "t_1") List (iterexp "t_1" (VarE "t_1*"))))
+            )
+            (ListE)
+            (CaseE
+              Arg
+              (TupE (IterE (VarE "t_2") List (iterexp "t_2" (VarE "t_2*"))))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
       "wf_comptype"
       (Seq Arg)
       (TupE
@@ -68000,35 +70789,23 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "blocktype__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "blocktype__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "blocktype" (VarT "blocktype"))
-    (typbind "ret_val" (VarT "instrtype"))
-  )
-  (RuleD
-    "blocktype__is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "blocktype" (VarT "blocktype"))
-    (ExpP "ret_val" (VarT "instrtype"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "blocktype") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_blocktype" (Seq Arg) (TupE (VarE "blocktype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "blocktype_" (ExpA (VarE "state")) (ExpA (VarE "blocktype")))
+    (RulePr
+      "wf_instrtype"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ->_ (Seq Arg Arg))
+          (TupE
+            (CaseE Arg (TupE (ListE)))
+            (ListE)
+            (CaseE
+              Arg
+              (TupE (LiftE (IterE (VarE "t") Opt (iterexp "t" (VarE "t?")))))
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_instrtype" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (RelD
@@ -78916,7 +81693,7 @@
       (CmpE
         EqOp
         bool
-        (TheE (CallE "nbytes_" (ExpA (VarE "nt")) (ExpA (VarE "c"))))
+        (CallE "nbytes_" (ExpA (VarE "nt")) (ExpA (VarE "c")))
         (SliceE
           (DotE (CallE "mem" (ExpA (VarE "z")) (ExpA (VarE "x"))) (Atom BYTES))
           (BinE
@@ -78944,10 +81721,7 @@
     (IterPr
       (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
       List
-      (iterexp
-        "iter"
-        (TheE (CallE "nbytes_" (ExpA (VarE "nt")) (ExpA (VarE "c"))))
-      )
+      (iterexp "iter" (CallE "nbytes_" (ExpA (VarE "nt")) (ExpA (VarE "c"))))
     )
     (RulePr
       "wf_meminst"
@@ -84928,7 +87702,7 @@
           (TypA (VarT "byte"))
           (ExpA
             (IterE
-              (TheE (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c"))))
+              (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c")))
               (ListN (VarE "n"))
               (iterexp "c" (VarE "c*"))
             )
@@ -85023,7 +87797,7 @@
           (TypA (VarT "byte"))
           (ExpA
             (IterE
-              (TheE (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c"))))
+              (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c")))
               (ListN (VarE "n"))
               (iterexp "c" (VarE "c*"))
             )
@@ -85047,10 +87821,7 @@
       (IterPr
         (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp
-          "iter"
-          (TheE (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c"))))
-        )
+        (iterexp "iter" (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c"))))
       )
       (ListN (VarE "n"))
       (iterexp "c" (VarE "c*"))
@@ -89074,7 +91845,7 @@
       (CmpE
         EqOp
         bool
-        (TheE (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c"))))
+        (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c")))
         (SliceE
           (DotE (CallE "data" (ExpA (VarE "z")) (ExpA (VarE "y"))) (Atom BYTES))
           (ProjE (UncaseE (TheE (CallE "proj_num__0" (ExpA (VarE "j")))) Arg) 0)
@@ -89122,10 +91893,7 @@
     (IterPr
       (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
       List
-      (iterexp
-        "iter"
-        (TheE (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c"))))
-      )
+      (iterexp "iter" (CallE "zbytes_" (ExpA (VarE "zt")) (ExpA (VarE "c"))))
     )
     (RulePr
       "wf_datainst"
@@ -91190,16 +93958,13 @@
           EqOp
           bool
           (IterE (VarE "b") List (iterexp "b" (VarE "b*")))
-          (TheE (CallE "nbytes_" (ExpA (VarE "nt")) (ExpA (VarE "c"))))
+          (CallE "nbytes_" (ExpA (VarE "nt")) (ExpA (VarE "c")))
         )
       )
       (IterPr
         (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp
-          "iter"
-          (TheE (CallE "nbytes_" (ExpA (VarE "nt")) (ExpA (VarE "c"))))
-        )
+        (iterexp "iter" (CallE "nbytes_" (ExpA (VarE "nt")) (ExpA (VarE "c"))))
       )
       (RulePr
         "wf_config"
@@ -94063,45 +96828,28 @@
       )
     )
     (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TAGS) (ListE (VarE "taginst")))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom STRUCTS) (ListE))
+          (expfield (Atom ARRAYS) (ListE))
+          (expfield (Atom EXNS) (ListE))
+        )
+      )
+    )
+    (RulePr
       "wf_taginst"
       (Seq Arg)
       (TupE (StrE (expfield (Atom TYPE) (VarE "tagtype"))))
     )
-  )
-)
-(HintD (RelH "alloctag_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "alloctag_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "tagtype" (VarT "tagtype"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "tagaddr")))
-    )
-  )
-  (RuleD
-    "alloctag_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "tagtype" (VarT "tagtype"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "tagaddr")))
-    )
-    (Seq Arg Arg Arg)
-    (TupE (VarE "store") (VarE "tagtype") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "tagtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "alloctag" (ExpA (VarE "store")) (ExpA (VarE "tagtype")))
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -94158,53 +96906,33 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "alloctags_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "alloctags_is_wf"
-    (Seq Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "tagtype") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "tagaddr") List))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE (CallE "alloctag" (ExpA (VarE "s")) (ExpA (VarE "tagtype"))) 0)
         )
       )
-    )
-    (RuleD
-      "alloctags_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "tagtype") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "tagaddr") List))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "alloctags"
+              (ExpA (VarE "s_1"))
+              (ExpA
+                (IterE
+                  (VarE "tagtype'")
+                  List
+                  (iterexp "tagtype'" (VarE "tagtype'*"))
+                )
+              )
+            )
+            0
+          )
         )
       )
-      (Seq Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "ret_val"))
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_typeuse" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "alloctags" (ExpA (VarE "store")) (ExpA (VarE "var_0*")))
-        )
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
     )
   )
 )
@@ -94259,6 +96987,24 @@
       )
     )
     (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TAGS) (ListE))
+          (expfield (Atom GLOBALS) (ListE (VarE "globalinst")))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom STRUCTS) (ListE))
+          (expfield (Atom ARRAYS) (ListE))
+          (expfield (Atom EXNS) (ListE))
+        )
+      )
+    )
+    (RulePr
       "wf_globalinst"
       (Seq Arg)
       (TupE
@@ -94268,49 +97014,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocglobal_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocglobal_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "globaltype" (VarT "globaltype"))
-    (typbind "val" (VarT "val"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "globaladdr")))
-    )
-  )
-  (RuleD
-    "allocglobal_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "globaltype" (VarT "globaltype"))
-    (ExpP "val" (VarT "val"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "globaladdr")))
-    )
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "globaltype") (VarE "val") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "globaltype")))
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "val")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "allocglobal"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "globaltype"))
-          (ExpA (VarE "val"))
-        )
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -94387,65 +97090,42 @@
           (ExpA (IterE (VarE "val'") List (iterexp "val'" (VarE "val'*"))))
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "allocglobals_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "allocglobals_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "globaltype") List))
-      (typbind "var_1*" (IterT (VarT "val") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "globaladdr") List))
-        )
-      )
-    )
-    (RuleD
-      "allocglobals_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "globaltype") List))
-      (ExpP "var_1*" (IterT (VarT "val") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "globaladdr") List))
-        )
-      )
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_val" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "allocglobals"
-            (ExpA (VarE "store"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocglobal"
+              (ExpA (VarE "s"))
+              (ExpA (VarE "globaltype"))
+              (ExpA (VarE "val"))
+            )
+            0
           )
         )
       )
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocglobals"
+              (ExpA (VarE "s_1"))
+              (ExpA
+                (IterE
+                  (VarE "globaltype'")
+                  List
+                  (iterexp "globaltype'" (VarE "globaltype'*"))
+                )
+              )
+              (ExpA (IterE (VarE "val'") List (iterexp "val'" (VarE "val'*"))))
+            )
+            0
+          )
+        )
+      )
     )
   )
 )
@@ -94538,6 +97218,24 @@
       )
     )
     (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TAGS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom MEMS) (ListE (VarE "meminst")))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom STRUCTS) (ListE))
+          (expfield (Atom ARRAYS) (ListE))
+          (expfield (Atom EXNS) (ListE))
+        )
+      )
+    )
+    (RulePr
       "wf_meminst"
       (Seq Arg)
       (TupE
@@ -94575,41 +97273,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocmem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocmem_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "memtype" (VarT "memtype"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "memaddr")))
-    )
-  )
-  (RuleD
-    "allocmem_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "memtype" (VarT "memtype"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "memaddr")))
-    )
-    (Seq Arg Arg Arg)
-    (TupE (VarE "store") (VarE "memtype") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "memtype")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "allocmem" (ExpA (VarE "store")) (ExpA (VarE "memtype")))
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -94666,53 +97329,33 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "allocmems_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "allocmems_is_wf"
-    (Seq Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "memtype") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "memaddr") List))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE (CallE "allocmem" (ExpA (VarE "s")) (ExpA (VarE "memtype"))) 0)
         )
       )
-    )
-    (RuleD
-      "allocmems_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "memtype") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "memaddr") List))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocmems"
+              (ExpA (VarE "s_1"))
+              (ExpA
+                (IterE
+                  (VarE "memtype'")
+                  List
+                  (iterexp "memtype'" (VarE "memtype'*"))
+                )
+              )
+            )
+            0
+          )
         )
       )
-      (Seq Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "ret_val"))
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "allocmems" (ExpA (VarE "store")) (ExpA (VarE "var_0*")))
-        )
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
     )
   )
 )
@@ -94801,6 +97444,24 @@
       )
     )
     (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TAGS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom TABLES) (ListE (VarE "tableinst")))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom STRUCTS) (ListE))
+          (expfield (Atom ARRAYS) (ListE))
+          (expfield (Atom EXNS) (ListE))
+        )
+      )
+    )
+    (RulePr
       "wf_tableinst"
       (Seq Arg)
       (TupE
@@ -94829,49 +97490,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "alloctable_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "alloctable_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "tabletype" (VarT "tabletype"))
-    (typbind "ref" (VarT "ref"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "tableaddr")))
-    )
-  )
-  (RuleD
-    "alloctable_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "tabletype" (VarT "tabletype"))
-    (ExpP "ref" (VarT "ref"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "tableaddr")))
-    )
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "tabletype") (VarE "ref") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "tabletype")))
-    (RulePr "wf_ref" (Seq Arg) (TupE (VarE "ref")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "alloctable"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "tabletype"))
-          (ExpA (VarE "ref"))
-        )
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -94948,65 +97566,42 @@
           (ExpA (IterE (VarE "ref'") List (iterexp "ref'" (VarE "ref'*"))))
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "alloctables_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "alloctables_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "tabletype") List))
-      (typbind "var_1*" (IterT (VarT "ref") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "tableaddr") List))
-        )
-      )
-    )
-    (RuleD
-      "alloctables_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "tabletype") List))
-      (ExpP "var_1*" (IterT (VarT "ref") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "tableaddr") List))
-        )
-      )
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_tabletype" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (RulePr "wf_ref" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "alloctables"
-            (ExpA (VarE "store"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "alloctable"
+              (ExpA (VarE "s"))
+              (ExpA (VarE "tabletype"))
+              (ExpA (VarE "ref"))
+            )
+            0
           )
         )
       )
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "alloctables"
+              (ExpA (VarE "s_1"))
+              (ExpA
+                (IterE
+                  (VarE "tabletype'")
+                  List
+                  (iterexp "tabletype'" (VarE "tabletype'*"))
+                )
+              )
+              (ExpA (IterE (VarE "ref'") List (iterexp "ref'" (VarE "ref'*"))))
+            )
+            0
+          )
+        )
+      )
     )
   )
 )
@@ -95065,6 +97660,24 @@
       )
     )
     (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TAGS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom FUNCS) (ListE (VarE "funcinst")))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom STRUCTS) (ListE))
+          (expfield (Atom ARRAYS) (ListE))
+          (expfield (Atom EXNS) (ListE))
+        )
+      )
+    )
+    (RulePr
       "wf_funcinst"
       (Seq Arg)
       (TupE
@@ -95075,58 +97688,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocfunc_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocfunc_is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "deftype" (VarT "deftype"))
-    (typbind "funccode" (VarT "funccode"))
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "funcaddr")))
-    )
-  )
-  (RuleD
-    "allocfunc_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "deftype" (VarT "deftype"))
-    (ExpP "funccode" (VarT "funccode"))
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "funcaddr")))
-    )
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "store")
-      (VarE "deftype")
-      (VarE "funccode")
-      (VarE "moduleinst")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_funccode" (Seq Arg) (TupE (VarE "funccode")))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "allocfunc"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "deftype"))
-          (ExpA (VarE "funccode"))
-          (ExpA (VarE "moduleinst"))
-        )
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -95225,74 +97786,50 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "allocfuncs_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "allocfuncs_is_wf"
-    (Seq Arg Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "deftype") List))
-      (typbind "var_1*" (IterT (VarT "funccode") List))
-      (typbind "var_2*" (IterT (VarT "moduleinst") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "funcaddr") List))
-        )
-      )
-    )
-    (RuleD
-      "allocfuncs_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "deftype") List))
-      (ExpP "var_1*" (IterT (VarT "funccode") List))
-      (ExpP "var_2*" (IterT (VarT "moduleinst") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "funcaddr") List))
-        )
-      )
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE
-        (VarE "store")
-        (VarE "var_0*")
-        (VarE "var_1*")
-        (VarE "var_2*")
-        (VarE "ret_val")
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_funccode" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IterPr
-        (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "var_2")))
-        List
-        (iterexp "var_2" (VarE "var_2*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "allocfuncs"
-            (ExpA (VarE "store"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-            (ExpA (VarE "var_2*"))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocfunc"
+              (ExpA (VarE "s"))
+              (ExpA (VarE "dt"))
+              (ExpA (VarE "funccode"))
+              (ExpA (VarE "moduleinst"))
+            )
+            0
           )
         )
       )
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocfuncs"
+              (ExpA (VarE "s_1"))
+              (ExpA (IterE (VarE "dt'") List (iterexp "dt'" (VarE "dt'*"))))
+              (ExpA
+                (IterE
+                  (VarE "funccode'")
+                  List
+                  (iterexp "funccode'" (VarE "funccode'*"))
+                )
+              )
+              (ExpA
+                (IterE
+                  (VarE "moduleinst'")
+                  List
+                  (iterexp "moduleinst'" (VarE "moduleinst'*"))
+                )
+              )
+            )
+            0
+          )
+        )
+      )
     )
   )
 )
@@ -95348,6 +97885,24 @@
       )
     )
     (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TAGS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom DATAS) (ListE (VarE "datainst")))
+          (expfield (Atom ELEMS) (ListE))
+          (expfield (Atom STRUCTS) (ListE))
+          (expfield (Atom ARRAYS) (ListE))
+          (expfield (Atom EXNS) (ListE))
+        )
+      )
+    )
+    (RulePr
       "wf_datainst"
       (Seq Arg)
       (TupE
@@ -95359,52 +97914,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocdata_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocdata_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "datatype" (VarT "datatype"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "dataaddr")))
-    )
-  )
-  (RuleD
-    "allocdata_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "datatype" (VarT "datatype"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "dataaddr")))
-    )
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "datatype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "allocdata"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "datatype"))
-          (ExpA (VarE "var_0*"))
-        )
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -95481,64 +97990,42 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "allocdatas_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "allocdatas_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "datatype") List))
-      (typbind "var_1**" (IterT (IterT (VarT "byte") List) List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "dataaddr") List))
-        )
-      )
-    )
-    (RuleD
-      "allocdatas_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "datatype") List))
-      (ExpP "var_1**" (IterT (IterT (VarT "byte") List) List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "dataaddr") List))
-        )
-      )
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "var_1**") (VarE "ret_val"))
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (IterPr
-          (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_1")))
-          List
-          (iterexp "var_1" (VarE "var_1*"))
-        )
-        List
-        (iterexp "var_1*" (VarE "var_1**"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "allocdatas"
-            (ExpA (VarE "store"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1**"))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocdata"
+              (ExpA (VarE "s"))
+              (ExpA (VarE "ok"))
+              (ExpA (IterE (VarE "b") List (iterexp "b" (VarE "b*"))))
+            )
+            0
           )
         )
       )
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocdatas"
+              (ExpA (VarE "s_1"))
+              (ExpA (IterE (VarE "ok'") List (iterexp "ok'" (VarE "ok'*"))))
+              (ExpA
+                (IterE
+                  (IterE (VarE "b'") List (iterexp "b'" (VarE "b'*")))
+                  List
+                  (iterexp "b'*" (VarE "b'**"))
+                )
+              )
+            )
+            0
+          )
+        )
+      )
     )
   )
 )
@@ -95596,6 +98083,24 @@
       )
     )
     (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom TAGS) (ListE))
+          (expfield (Atom GLOBALS) (ListE))
+          (expfield (Atom MEMS) (ListE))
+          (expfield (Atom TABLES) (ListE))
+          (expfield (Atom FUNCS) (ListE))
+          (expfield (Atom DATAS) (ListE))
+          (expfield (Atom ELEMS) (ListE (VarE "eleminst")))
+          (expfield (Atom STRUCTS) (ListE))
+          (expfield (Atom ARRAYS) (ListE))
+          (expfield (Atom EXNS) (ListE))
+        )
+      )
+    )
+    (RulePr
       "wf_eleminst"
       (Seq Arg)
       (TupE
@@ -95608,53 +98113,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocelem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocelem_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "elemtype" (VarT "elemtype"))
-    (typbind "var_0*" (IterT (VarT "ref") List))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "elemaddr")))
-    )
-  )
-  (RuleD
-    "allocelem_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "elemtype" (VarT "elemtype"))
-    (ExpP "var_0*" (IterT (VarT "ref") List))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "elemaddr")))
-    )
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "elemtype") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "elemtype")))
-    (IterPr
-      (RulePr "wf_ref" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "allocelem"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "elemtype"))
-          (ExpA (VarE "var_0*"))
-        )
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -95731,69 +98189,42 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "allocelems_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "allocelems_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "elemtype") List))
-      (typbind "var_1**" (IterT (IterT (VarT "ref") List) List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "elemaddr") List))
-        )
-      )
-    )
-    (RuleD
-      "allocelems_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "elemtype") List))
-      (ExpP "var_1**" (IterT (IterT (VarT "ref") List) List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "elemaddr") List))
-        )
-      )
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "var_1**") (VarE "ret_val"))
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_reftype" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (IterPr
-          (RulePr "wf_ref" (Seq Arg) (TupE (VarE "var_1")))
-          List
-          (iterexp "var_1" (VarE "var_1*"))
-        )
-        List
-        (iterexp "var_1*" (VarE "var_1**"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "allocelems"
-            (ExpA (VarE "store"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1**"))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocelem"
+              (ExpA (VarE "s"))
+              (ExpA (VarE "rt"))
+              (ExpA (IterE (VarE "ref") List (iterexp "ref" (VarE "ref*"))))
+            )
+            0
           )
         )
       )
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocelems"
+              (ExpA (VarE "s_1"))
+              (ExpA (IterE (VarE "rt'") List (iterexp "rt'" (VarE "rt'*"))))
+              (ExpA
+                (IterE
+                  (IterE (VarE "ref'") List (iterexp "ref'" (VarE "ref'*")))
+                  List
+                  (iterexp "ref'*" (VarE "ref'**"))
+                )
+              )
+            )
+            0
+          )
+        )
+      )
     )
   )
 )
@@ -95835,6 +98266,27 @@
         )
       )
     )
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom TAG) Arg)
+              (TupE
+                (IdxE
+                  (DotE (VarE "moduleinst") (Atom TAGS))
+                  (ProjE (UncaseE (VarE "x") Arg) 0)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "moduleinst" (VarT "moduleinst"))
@@ -95857,6 +98309,27 @@
             (IdxE
               (DotE (VarE "moduleinst") (Atom GLOBALS))
               (ProjE (UncaseE (VarE "x") Arg) 0)
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom GLOBAL) Arg)
+              (TupE
+                (IdxE
+                  (DotE (VarE "moduleinst") (Atom GLOBALS))
+                  (ProjE (UncaseE (VarE "x") Arg) 0)
+                )
+              )
             )
           )
         )
@@ -95889,6 +98362,27 @@
         )
       )
     )
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom MEM) Arg)
+              (TupE
+                (IdxE
+                  (DotE (VarE "moduleinst") (Atom MEMS))
+                  (ProjE (UncaseE (VarE "x") Arg) 0)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "moduleinst" (VarT "moduleinst"))
@@ -95911,6 +98405,27 @@
             (IdxE
               (DotE (VarE "moduleinst") (Atom TABLES))
               (ProjE (UncaseE (VarE "x") Arg) 0)
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom TABLE) Arg)
+              (TupE
+                (IdxE
+                  (DotE (VarE "moduleinst") (Atom TABLES))
+                  (ProjE (UncaseE (VarE "x") Arg) 0)
+                )
+              )
             )
           )
         )
@@ -95943,35 +98458,27 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocexport_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocexport_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind "export" (VarT "export"))
-    (typbind "ret_val" (VarT "exportinst"))
-  )
-  (RuleD
-    "allocexport_is_wf_0"
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "export" (VarT "export"))
-    (ExpP "ret_val" (VarT "exportinst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "moduleinst") (VarE "export") (VarE "ret_val"))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-    (RulePr "wf_export" (Seq Arg) (TupE (VarE "export")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "allocexport" (ExpA (VarE "moduleinst")) (ExpA (VarE "export")))
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom FUNC) Arg)
+              (TupE
+                (IdxE
+                  (DotE (VarE "moduleinst") (Atom FUNCS))
+                  (ProjE (UncaseE (VarE "x") Arg) 0)
+                )
+              )
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_exportinst" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "allocexport" (hint "show" "$allocexport(moduleinst, %2)")))
@@ -95990,42 +98497,20 @@
       List
       (iterexp "export" (VarE "export*"))
     )
-  )
-)
-(HintD (RelH "allocexports_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocexports_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind "var_0*" (IterT (VarT "export") List))
-    (typbind "ret_val*" (IterT (VarT "exportinst") List))
-  )
-  (RuleD
-    "allocexports_is_wf_0"
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "var_0*" (IterT (VarT "export") List))
-    (ExpP "ret_val*" (IterT (VarT "exportinst") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "moduleinst") (VarE "var_0*") (VarE "ret_val*"))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
     (IterPr
-      (RulePr "wf_export" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "allocexports" (ExpA (VarE "moduleinst")) (ExpA (VarE "var_0*")))
+      (RulePr
+        "wf_exportinst"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "allocexport"
+            (ExpA (VarE "moduleinst"))
+            (ExpA (VarE "export"))
+          )
+        )
       )
-    )
-    (IterPr
-      (RulePr "wf_exportinst" (Seq Arg) (TupE (VarE "ret_val")))
       List
-      (iterexp "ret_val" (VarE "ret_val*"))
+      (iterexp "export" (VarE "export*"))
     )
   )
 )
@@ -96656,6 +99141,411 @@
         )
       )
     )
+    (RulePr "wf_store" (Seq Arg) (TupE (VarE "s_7")))
+    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
+    (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "alloctags"
+            (ExpA (VarE "s"))
+            (ExpA
+              (IterE
+                (CallE
+                  "subst_all_tagtype"
+                  (ExpA (VarE "tagtype"))
+                  (ExpA
+                    (IterE
+                      (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                      List
+                      (iterexp "dt" (VarE "dt*"))
+                    )
+                  )
+                )
+                List
+                (iterexp "tagtype" (VarE "tagtype*"))
+              )
+            )
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_typeuse"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "subst_all_tagtype"
+            (ExpA (VarE "tagtype"))
+            (ExpA
+              (IterE
+                (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                List
+                (iterexp "dt" (VarE "dt*"))
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "tagtype" (VarE "tagtype*"))
+    )
+    (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocglobals"
+            (ExpA (VarE "s_1"))
+            (ExpA
+              (IterE
+                (CallE
+                  "subst_all_globaltype"
+                  (ExpA (VarE "globaltype"))
+                  (ExpA
+                    (IterE
+                      (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                      List
+                      (iterexp "dt" (VarE "dt*"))
+                    )
+                  )
+                )
+                List
+                (iterexp "globaltype" (VarE "globaltype*"))
+              )
+            )
+            (ExpA (IterE (VarE "val_G") List (iterexp "val_G" (VarE "val_G*"))))
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_globaltype"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "subst_all_globaltype"
+            (ExpA (VarE "globaltype"))
+            (ExpA
+              (IterE
+                (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                List
+                (iterexp "dt" (VarE "dt*"))
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "globaltype" (VarE "globaltype*"))
+    )
+    (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocmems"
+            (ExpA (VarE "s_2"))
+            (ExpA
+              (IterE
+                (CallE
+                  "subst_all_memtype"
+                  (ExpA (VarE "memtype"))
+                  (ExpA
+                    (IterE
+                      (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                      List
+                      (iterexp "dt" (VarE "dt*"))
+                    )
+                  )
+                )
+                List
+                (iterexp "memtype" (VarE "memtype*"))
+              )
+            )
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_memtype"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "subst_all_memtype"
+            (ExpA (VarE "memtype"))
+            (ExpA
+              (IterE
+                (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                List
+                (iterexp "dt" (VarE "dt*"))
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "memtype" (VarE "memtype*"))
+    )
+    (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "alloctables"
+            (ExpA (VarE "s_3"))
+            (ExpA
+              (IterE
+                (CallE
+                  "subst_all_tabletype"
+                  (ExpA (VarE "tabletype"))
+                  (ExpA
+                    (IterE
+                      (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                      List
+                      (iterexp "dt" (VarE "dt*"))
+                    )
+                  )
+                )
+                List
+                (iterexp "tabletype" (VarE "tabletype*"))
+              )
+            )
+            (ExpA (IterE (VarE "ref_T") List (iterexp "ref_T" (VarE "ref_T*"))))
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_tabletype"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "subst_all_tabletype"
+            (ExpA (VarE "tabletype"))
+            (ExpA
+              (IterE
+                (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                List
+                (iterexp "dt" (VarE "dt*"))
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "tabletype" (VarE "tabletype*"))
+    )
+    (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocdatas"
+            (ExpA (VarE "s_4"))
+            (ExpA
+              (IterE
+                (CaseE (Atom OK) (TupE))
+                (ListN
+                  (LenE
+                    (IterE (VarE "data") List (iterexp "data" (VarE "data*")))
+                  )
+                )
+              )
+            )
+            (ExpA
+              (IterE
+                (IterE (VarE "byte") List (iterexp "byte" (VarE "byte*")))
+                List
+                (iterexp "byte*" (VarE "byte**"))
+              )
+            )
+          )
+          0
+        )
+      )
+    )
+    (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocelems"
+            (ExpA (VarE "s_5"))
+            (ExpA
+              (IterE
+                (CallE
+                  "subst_all_reftype"
+                  (ExpA (VarE "elemtype"))
+                  (ExpA
+                    (IterE
+                      (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                      List
+                      (iterexp "dt" (VarE "dt*"))
+                    )
+                  )
+                )
+                List
+                (iterexp "elemtype" (VarE "elemtype*"))
+              )
+            )
+            (ExpA
+              (IterE
+                (IterE (VarE "ref_E") List (iterexp "ref_E" (VarE "ref_E*")))
+                List
+                (iterexp "ref_E*" (VarE "ref_E**"))
+              )
+            )
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_reftype"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "subst_all_reftype"
+            (ExpA (VarE "elemtype"))
+            (ExpA
+              (IterE
+                (SubE (VarT "deftype") (VarT "typeuse") (VarE "dt"))
+                List
+                (iterexp "dt" (VarE "dt*"))
+              )
+            )
+          )
+        )
+      )
+      List
+      (iterexp "elemtype" (VarE "elemtype*"))
+    )
+    (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocfuncs"
+            (ExpA (VarE "s_6"))
+            (ExpA
+              (IterE
+                (IdxE
+                  (IterE (VarE "dt") List (iterexp "dt" (VarE "dt*")))
+                  (ProjE (UncaseE (VarE "x") Arg) 0)
+                )
+                List
+                (iterexp "x" (VarE "x*"))
+              )
+            )
+            (ExpA
+              (IterE
+                (CaseE
+                  (Seq (Atom FUNC) Arg Arg Arg)
+                  (TupE
+                    (VarE "x")
+                    (IterE
+                      (VarE "local")
+                      List
+                      (iterexp "local" (VarE "local*"))
+                    )
+                    (VarE "expr_F")
+                  )
+                )
+                List
+                (iterexp "expr_F" (VarE "expr_F*"))
+                (iterexp "local*" (VarE "local**"))
+                (iterexp "x" (VarE "x*"))
+              )
+            )
+            (ExpA
+              (IterE
+                (VarE "moduleinst")
+                (ListN
+                  (LenE
+                    (IterE (VarE "func") List (iterexp "func" (VarE "func*")))
+                  )
+                )
+              )
+            )
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_exportinst" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "allocexports"
+          (ExpA
+            (StrE
+              (expfield (Atom TYPES) (ListE))
+              (expfield
+                (Atom TAGS)
+                (CatE
+                  (IterE (VarE "aa_I") List (iterexp "aa_I" (VarE "aa_I*")))
+                  (IterE (VarE "aa") List (iterexp "aa" (VarE "aa*")))
+                )
+              )
+              (expfield
+                (Atom GLOBALS)
+                (CatE
+                  (IterE (VarE "ga_I") List (iterexp "ga_I" (VarE "ga_I*")))
+                  (IterE (VarE "ga") List (iterexp "ga" (VarE "ga*")))
+                )
+              )
+              (expfield
+                (Atom MEMS)
+                (CatE
+                  (IterE (VarE "ma_I") List (iterexp "ma_I" (VarE "ma_I*")))
+                  (IterE (VarE "ma") List (iterexp "ma" (VarE "ma*")))
+                )
+              )
+              (expfield
+                (Atom TABLES)
+                (CatE
+                  (IterE (VarE "ta_I") List (iterexp "ta_I" (VarE "ta_I*")))
+                  (IterE (VarE "ta") List (iterexp "ta" (VarE "ta*")))
+                )
+              )
+              (expfield
+                (Atom FUNCS)
+                (CatE
+                  (IterE (VarE "fa_I") List (iterexp "fa_I" (VarE "fa_I*")))
+                  (IterE (VarE "fa") List (iterexp "fa" (VarE "fa*")))
+                )
+              )
+              (expfield (Atom DATAS) (ListE))
+              (expfield (Atom ELEMS) (ListE))
+              (expfield (Atom EXPORTS) (ListE))
+            )
+          )
+          (ExpA
+            (IterE (VarE "export") List (iterexp "export" (VarE "export*")))
+          )
+        )
+      )
+    )
     (RulePr
       "wf_module"
       (Seq Arg)
@@ -96930,85 +99820,6 @@
     )
   )
 )
-(HintD (RelH "allocmodule_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocmodule_is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "module" (VarT "module"))
-    (typbind "var_0*" (IterT (VarT "externaddr") List))
-    (typbind "var_1*" (IterT (VarT "val") List))
-    (typbind "var_2*" (IterT (VarT "ref") List))
-    (typbind "var_3**" (IterT (IterT (VarT "ref") List) List))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "moduleinst")))
-    )
-  )
-  (RuleD
-    "allocmodule_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "module" (VarT "module"))
-    (ExpP "var_0*" (IterT (VarT "externaddr") List))
-    (ExpP "var_1*" (IterT (VarT "val") List))
-    (ExpP "var_2*" (IterT (VarT "ref") List))
-    (ExpP "var_3**" (IterT (IterT (VarT "ref") List) List))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "moduleinst")))
-    )
-    (Seq Arg Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "store")
-      (VarE "module")
-      (VarE "var_0*")
-      (VarE "var_1*")
-      (VarE "var_2*")
-      (VarE "var_3**")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_module" (Seq Arg) (TupE (VarE "module")))
-    (IterPr
-      (RulePr "wf_val" (Seq Arg) (TupE (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IterPr
-      (RulePr "wf_ref" (Seq Arg) (TupE (VarE "var_2")))
-      List
-      (iterexp "var_2" (VarE "var_2*"))
-    )
-    (IterPr
-      (IterPr
-        (RulePr "wf_ref" (Seq Arg) (TupE (VarE "var_3")))
-        List
-        (iterexp "var_3" (VarE "var_3*"))
-      )
-      List
-      (iterexp "var_3*" (VarE "var_3**"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "allocmodule"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "module"))
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
-          (ExpA (VarE "var_2*"))
-          (ExpA (VarE "var_3**"))
-        )
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (ProjE (VarE "ret_val") 1)))
-  )
-)
 (DecD
   "rundata_"
   (ExpP "dataidx" (VarT "dataidx"))
@@ -97079,38 +99890,49 @@
         (CaseE (Seq (Atom DATA.DROP) Arg) (TupE (VarE "x")))
       )
     )
-  )
-)
-(HintD (RelH "rundata__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "rundata__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "dataidx" (VarT "dataidx"))
-    (typbind "data" (VarT "data"))
-    (typbind "ret_val*" (IterT (VarT "instr") List))
-  )
-  (RuleD
-    "rundata__is_wf_0"
-    (ExpP "dataidx" (VarT "dataidx"))
-    (ExpP "data" (VarT "data"))
-    (ExpP "ret_val*" (IterT (VarT "instr") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "dataidx") (VarE "data") (VarE "ret_val*"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "dataidx")))
-    (RulePr "wf_data" (Seq Arg) (TupE (VarE "data")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "rundata_" (ExpA (VarE "dataidx")) (ExpA (VarE "data")))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+            )
+          )
+        )
       )
     )
-    (IterPr
-      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (VarE "n"))))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE (Seq (Atom MEMORY.INIT) Arg Arg) (TupE (VarE "y") (VarE "x")))
+      )
+    )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE (CaseE (Seq (Atom DATA.DROP) Arg) (TupE (VarE "x"))))
     )
   )
 )
@@ -97154,6 +99976,11 @@
       )
     )
     (ListE (CaseE (Seq (Atom ELEM.DROP) Arg) (TupE (VarE "x"))))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE (CaseE (Seq (Atom ELEM.DROP) Arg) (TupE (VarE "x"))))
+    )
   )
   (DefD
     (ExpP "x" (VarT "uN"))
@@ -97206,38 +100033,49 @@
         (CaseE (Seq (Atom ELEM.DROP) Arg) (TupE (VarE "x")))
       )
     )
-  )
-)
-(HintD (RelH "runelem__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "runelem__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "elemidx" (VarT "elemidx"))
-    (typbind "elem" (VarT "elem"))
-    (typbind "ret_val*" (IterT (VarT "instr") List))
-  )
-  (RuleD
-    "runelem__is_wf_0"
-    (ExpP "elemidx" (VarT "elemidx"))
-    (ExpP "elem" (VarT "elem"))
-    (ExpP "ret_val*" (IterT (VarT "instr") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "elemidx") (VarE "elem") (VarE "ret_val*"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "elemidx")))
-    (RulePr "wf_elem" (Seq Arg) (TupE (VarE "elem")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "runelem_" (ExpA (VarE "elemidx")) (ExpA (VarE "elem")))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+            )
+          )
+        )
       )
     )
-    (IterPr
-      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (VarE "n"))))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE (Seq (Atom TABLE.INIT) Arg Arg) (TupE (VarE "y") (VarE "x")))
+      )
+    )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE (CaseE (Seq (Atom ELEM.DROP) Arg) (TupE (VarE "x"))))
     )
   )
 )
@@ -97294,62 +100132,40 @@
           (ExpA (IterE (VarE "expr'") List (iterexp "expr'" (VarE "expr'*"))))
         )
       )
+      (RulePr "wf_ref" (Seq Arg) (TupE (VarE "ref")))
       (RulePr "wf_state" (Seq Arg) (TupE (VarE "z'")))
-    )
-  )
-)
-(RecD
-  (HintD (RelH "evalexprs_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "evalexprs_is_wf"
-    (Seq Arg Arg Arg)
-    (TupT
-      (typbind "state" (VarT "state"))
-      (typbind "var_0*" (IterT (VarT "expr") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "state"))
-          (typbind "_" (IterT (VarT "ref") List))
+      (RulePr
+        "wf_state"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "evalexprs"
+              (ExpA (VarE "z'"))
+              (ExpA
+                (IterE (VarE "expr'") List (iterexp "expr'" (VarE "expr'*")))
+              )
+            )
+            0
+          )
         )
       )
-    )
-    (RuleD
-      "evalexprs_is_wf_0"
-      (ExpP "state" (VarT "state"))
-      (ExpP "var_0*" (IterT (VarT "expr") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "state"))
-          (typbind "_" (IterT (VarT "ref") List))
-        )
-      )
-      (Seq Arg Arg Arg)
-      (TupE (VarE "state") (VarE "var_0*") (VarE "ret_val"))
-      (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-      (IterPr
-        (IterPr
-          (RulePr "wf_instr" (Seq Arg) (TupE (VarE "var_0")))
-          List
-          (iterexp "var_0" (VarE "var_0"))
-        )
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "evalexprs" (ExpA (VarE "state")) (ExpA (VarE "var_0*")))
-        )
-      )
-      (RulePr "wf_state" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
       (IterPr
         (RulePr "wf_ref" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "iter" (ProjE (VarE "ret_val") 1))
+        (iterexp
+          "iter"
+          (ProjE
+            (CallE
+              "evalexprs"
+              (ExpA (VarE "z'"))
+              (ExpA
+                (IterE (VarE "expr'") List (iterexp "expr'" (VarE "expr'*")))
+              )
+            )
+            1
+          )
+        )
       )
     )
   )
@@ -97430,61 +100246,55 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "evalexprss_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "evalexprss_is_wf"
-    (Seq Arg Arg Arg)
-    (TupT
-      (typbind "state" (VarT "state"))
-      (typbind "var_0**" (IterT (IterT (VarT "expr") List) List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "state"))
-          (typbind "_" (IterT (IterT (VarT "ref") List) List))
-        )
-      )
-    )
-    (RuleD
-      "evalexprss_is_wf_0"
-      (ExpP "state" (VarT "state"))
-      (ExpP "var_0**" (IterT (IterT (VarT "expr") List) List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "state"))
-          (typbind "_" (IterT (IterT (VarT "ref") List) List))
-        )
-      )
-      (Seq Arg Arg Arg)
-      (TupE (VarE "state") (VarE "var_0**") (VarE "ret_val"))
-      (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-      (IterPr
-        (IterPr
-          (IterPr
-            (RulePr "wf_instr" (Seq Arg) (TupE (VarE "var_0")))
-            List
-            (iterexp "var_0" (VarE "var_0"))
+      (RulePr
+        "wf_state"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "evalexprs"
+              (ExpA (VarE "z"))
+              (ExpA (IterE (VarE "expr") List (iterexp "expr" (VarE "expr*"))))
+            )
+            0
           )
-          List
-          (iterexp "var_0" (VarE "var_0*"))
         )
+      )
+      (IterPr
+        (RulePr "wf_ref" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0*" (VarE "var_0**"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "evalexprss" (ExpA (VarE "state")) (ExpA (VarE "var_0**")))
+        (iterexp
+          "iter"
+          (ProjE
+            (CallE
+              "evalexprs"
+              (ExpA (VarE "z"))
+              (ExpA (IterE (VarE "expr") List (iterexp "expr" (VarE "expr*"))))
+            )
+            1
+          )
         )
       )
-      (RulePr "wf_state" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr
+        "wf_state"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "evalexprss"
+              (ExpA (VarE "z'"))
+              (ExpA
+                (IterE
+                  (IterE (VarE "expr'") List (iterexp "expr'" (VarE "expr'*")))
+                  List
+                  (iterexp "expr'*" (VarE "expr'**"))
+                )
+              )
+            )
+            0
+          )
+        )
+      )
       (IterPr
         (IterPr
           (RulePr "wf_ref" (Seq Arg) (TupE (VarE "iter")))
@@ -97492,7 +100302,23 @@
           (iterexp "iter" (VarE "iter"))
         )
         List
-        (iterexp "iter" (ProjE (VarE "ret_val") 1))
+        (iterexp
+          "iter"
+          (ProjE
+            (CallE
+              "evalexprss"
+              (ExpA (VarE "z'"))
+              (ExpA
+                (IterE
+                  (IterE (VarE "expr'") List (iterexp "expr'" (VarE "expr'*")))
+                  List
+                  (iterexp "expr'*" (VarE "expr'**"))
+                )
+              )
+            )
+            1
+          )
+        )
       )
     )
   )
@@ -97581,7 +100407,82 @@
           (ExpA (IterE (VarE "expr'") List (iterexp "expr'" (VarE "expr'*"))))
         )
       )
+      (RulePr "wf_val" (Seq Arg) (TupE (VarE "val")))
       (RulePr "wf_state" (Seq Arg) (TupE (VarE "z'")))
+      (RulePr
+        "wf_store"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "allocglobal"
+              (ExpA (VarE "s"))
+              (ExpA (VarE "gt"))
+              (ExpA (VarE "val"))
+            )
+            0
+          )
+        )
+      )
+      (RulePr
+        "wf_state"
+        (Seq Arg)
+        (TupE
+          (ProjE
+            (CallE
+              "evalglobals"
+              (ExpA
+                (CaseE
+                  (Infix Arg ; Arg)
+                  (TupE
+                    (VarE "s'")
+                    (ExtE
+                      (VarE "f")
+                      (DotP (DotP RootP (Atom MODULE)) (Atom GLOBALS))
+                      (ListE (VarE "a"))
+                    )
+                  )
+                )
+              )
+              (ExpA (IterE (VarE "gt'") List (iterexp "gt'" (VarE "gt'*"))))
+              (ExpA
+                (IterE (VarE "expr'") List (iterexp "expr'" (VarE "expr'*")))
+              )
+            )
+            0
+          )
+        )
+      )
+      (IterPr
+        (RulePr "wf_val" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (ProjE
+            (CallE
+              "evalglobals"
+              (ExpA
+                (CaseE
+                  (Infix Arg ; Arg)
+                  (TupE
+                    (VarE "s'")
+                    (ExtE
+                      (VarE "f")
+                      (DotP (DotP RootP (Atom MODULE)) (Atom GLOBALS))
+                      (ListE (VarE "a"))
+                    )
+                  )
+                )
+              )
+              (ExpA (IterE (VarE "gt'") List (iterexp "gt'" (VarE "gt'*"))))
+              (ExpA
+                (IterE (VarE "expr'") List (iterexp "expr'" (VarE "expr'*")))
+              )
+            )
+            1
+          )
+        )
+      )
       (RulePr
         "wf_state"
         (Seq Arg)
@@ -97603,74 +100504,6 @@
             )
           )
         )
-      )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "evalglobals_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "evalglobals_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "state" (VarT "state"))
-      (typbind "var_0*" (IterT (VarT "globaltype") List))
-      (typbind "var_1*" (IterT (VarT "expr") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "state"))
-          (typbind "_" (IterT (VarT "val") List))
-        )
-      )
-    )
-    (RuleD
-      "evalglobals_is_wf_0"
-      (ExpP "state" (VarT "state"))
-      (ExpP "var_0*" (IterT (VarT "globaltype") List))
-      (ExpP "var_1*" (IterT (VarT "expr") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "state"))
-          (typbind "_" (IterT (VarT "val") List))
-        )
-      )
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "state") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-      (IterPr
-        (RulePr "wf_globaltype" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (IterPr
-          (RulePr "wf_instr" (Seq Arg) (TupE (VarE "var_1")))
-          List
-          (iterexp "var_1" (VarE "var_1"))
-        )
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE
-            "evalglobals"
-            (ExpA (VarE "state"))
-            (ExpA (VarE "var_0*"))
-            (ExpA (VarE "var_1*"))
-          )
-        )
-      )
-      (RulePr "wf_state" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
-      (IterPr
-        (RulePr "wf_val" (Seq Arg) (TupE (VarE "iter")))
-        List
-        (iterexp "iter" (ProjE (VarE "ret_val") 1))
       )
     )
   )
@@ -98123,6 +100956,341 @@
     )
     (RulePr "wf_state" (Seq Arg) (TupE (VarE "z")))
     (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "evalglobals"
+            (ExpA (VarE "z"))
+            (ExpA
+              (IterE
+                (VarE "globaltype")
+                List
+                (iterexp "globaltype" (VarE "globaltype*"))
+              )
+            )
+            (ExpA
+              (IterE (VarE "expr_G") List (iterexp "expr_G" (VarE "expr_G*")))
+            )
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_val" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (ProjE
+          (CallE
+            "evalglobals"
+            (ExpA (VarE "z"))
+            (ExpA
+              (IterE
+                (VarE "globaltype")
+                List
+                (iterexp "globaltype" (VarE "globaltype*"))
+              )
+            )
+            (ExpA
+              (IterE (VarE "expr_G") List (iterexp "expr_G" (VarE "expr_G*")))
+            )
+          )
+          1
+        )
+      )
+    )
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "evalexprs"
+            (ExpA (VarE "z'"))
+            (ExpA
+              (IterE (VarE "expr_T") List (iterexp "expr_T" (VarE "expr_T*")))
+            )
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_ref" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (ProjE
+          (CallE
+            "evalexprs"
+            (ExpA (VarE "z'"))
+            (ExpA
+              (IterE (VarE "expr_T") List (iterexp "expr_T" (VarE "expr_T*")))
+            )
+          )
+          1
+        )
+      )
+    )
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "evalexprss"
+            (ExpA (VarE "z''"))
+            (ExpA
+              (IterE
+                (IterE (VarE "expr_E") List (iterexp "expr_E" (VarE "expr_E*")))
+                List
+                (iterexp "expr_E*" (VarE "expr_E**"))
+              )
+            )
+          )
+          0
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_ref" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp "iter" (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (ProjE
+          (CallE
+            "evalexprss"
+            (ExpA (VarE "z''"))
+            (ExpA
+              (IterE
+                (IterE (VarE "expr_E") List (iterexp "expr_E" (VarE "expr_E*")))
+                List
+                (iterexp "expr_E*" (VarE "expr_E**"))
+              )
+            )
+          )
+          1
+        )
+      )
+    )
+    (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocmodule"
+            (ExpA (VarE "s'''"))
+            (ExpA (VarE "module"))
+            (ExpA
+              (IterE
+                (VarE "externaddr")
+                List
+                (iterexp "externaddr" (VarE "externaddr*"))
+              )
+            )
+            (ExpA (IterE (VarE "val_G") List (iterexp "val_G" (VarE "val_G*"))))
+            (ExpA (IterE (VarE "ref_T") List (iterexp "ref_T" (VarE "ref_T*"))))
+            (ExpA
+              (IterE
+                (IterE (VarE "ref_E") List (iterexp "ref_E" (VarE "ref_E*")))
+                List
+                (iterexp "ref_E*" (VarE "ref_E**"))
+              )
+            )
+          )
+          0
+        )
+      )
+    )
+    (RulePr
+      "wf_moduleinst"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocmodule"
+            (ExpA (VarE "s'''"))
+            (ExpA (VarE "module"))
+            (ExpA
+              (IterE
+                (VarE "externaddr")
+                List
+                (iterexp "externaddr" (VarE "externaddr*"))
+              )
+            )
+            (ExpA (IterE (VarE "val_G") List (iterexp "val_G" (VarE "val_G*"))))
+            (ExpA (IterE (VarE "ref_T") List (iterexp "ref_T" (VarE "ref_T*"))))
+            (ExpA
+              (IterE
+                (IterE (VarE "ref_E") List (iterexp "ref_E" (VarE "ref_E*")))
+                List
+                (iterexp "ref_E*" (VarE "ref_E**"))
+              )
+            )
+          )
+          1
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "concat_"
+          (TypA (VarT "instr"))
+          (ExpA
+            (IterE
+              (CallE
+                "rundata_"
+                (ExpA (CaseE Arg (TupE (VarE "i_D"))))
+                (ExpA
+                  (IdxE
+                    (IterE (VarE "data") List (iterexp "data" (VarE "data*")))
+                    (VarE "i_D")
+                  )
+                )
+              )
+              (ListN
+                (LenE
+                  (IterE (VarE "data") List (iterexp "data" (VarE "data*")))
+                )
+                "i_D"
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_instr" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "rundata_"
+            (ExpA (CaseE Arg (TupE (VarE "i_D"))))
+            (ExpA
+              (IdxE
+                (IterE (VarE "data") List (iterexp "data" (VarE "data*")))
+                (VarE "i_D")
+              )
+            )
+          )
+        )
+      )
+      (ListN
+        (LenE (IterE (VarE "data") List (iterexp "data" (VarE "data*"))))
+        "i_D"
+      )
+    )
+    (IterPr
+      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "concat_"
+          (TypA (VarT "instr"))
+          (ExpA
+            (IterE
+              (CallE
+                "runelem_"
+                (ExpA (CaseE Arg (TupE (VarE "i_E"))))
+                (ExpA
+                  (IdxE
+                    (IterE (VarE "elem") List (iterexp "elem" (VarE "elem*")))
+                    (VarE "i_E")
+                  )
+                )
+              )
+              (ListN
+                (LenE
+                  (IterE (VarE "elem") List (iterexp "elem" (VarE "elem*")))
+                )
+                "i_E"
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_instr" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "runelem_"
+            (ExpA (CaseE Arg (TupE (VarE "i_E"))))
+            (ExpA
+              (IdxE
+                (IterE (VarE "elem") List (iterexp "elem" (VarE "elem*")))
+                (VarE "i_E")
+              )
+            )
+          )
+        )
+      )
+      (ListN
+        (LenE (IterE (VarE "elem") List (iterexp "elem" (VarE "elem*"))))
+        "i_E"
+      )
+    )
+    (RulePr
+      "wf_config"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (CaseE
+              (Infix Arg ; Arg)
+              (TupE
+                (VarE "s''''")
+                (StrE
+                  (expfield (Atom LOCALS) (ListE))
+                  (expfield (Atom MODULE) (VarE "moduleinst"))
+                )
+              )
+            )
+            (CatE
+              (IterE
+                (VarE "instr_E")
+                List
+                (iterexp "instr_E" (VarE "instr_E*"))
+              )
+              (CatE
+                (IterE
+                  (VarE "instr_D")
+                  List
+                  (iterexp "instr_D" (VarE "instr_D*"))
+                )
+                (LiftE
+                  (IterE
+                    (VarE "instr_S")
+                    Opt
+                    (iterexp "instr_S" (VarE "instr_S?"))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
       "wf_moduletype"
       (Seq Arg)
       (TupE
@@ -98389,42 +101557,6 @@
     )
   )
 )
-(HintD (RelH "instantiate_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "instantiate_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "module" (VarT "module"))
-    (typbind "var_0*" (IterT (VarT "externaddr") List))
-    (typbind "ret_val" (VarT "config"))
-  )
-  (RuleD
-    "instantiate_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "module" (VarT "module"))
-    (ExpP "var_0*" (IterT (VarT "externaddr") List))
-    (ExpP "ret_val" (VarT "config"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "module") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_module" (Seq Arg) (TupE (VarE "module")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "instantiate"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "module"))
-          (ExpA (VarE "var_0*"))
-        )
-      )
-    )
-    (RulePr "wf_config" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (DecD
   "invoke"
   (ExpP "store" (VarT "store"))
@@ -98525,6 +101657,63 @@
       (iterexp "val" (VarE "val*"))
     )
     (RulePr
+      "wf_config"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (CaseE
+              (Infix Arg ; Arg)
+              (TupE
+                (VarE "s")
+                (StrE
+                  (expfield (Atom LOCALS) (ListE))
+                  (expfield
+                    (Atom MODULE)
+                    (StrE
+                      (expfield (Atom TYPES) (ListE))
+                      (expfield (Atom TAGS) (ListE))
+                      (expfield (Atom GLOBALS) (ListE))
+                      (expfield (Atom MEMS) (ListE))
+                      (expfield (Atom TABLES) (ListE))
+                      (expfield (Atom FUNCS) (ListE))
+                      (expfield (Atom DATAS) (ListE))
+                      (expfield (Atom ELEMS) (ListE))
+                      (expfield (Atom EXPORTS) (ListE))
+                    )
+                  )
+                )
+              )
+            )
+            (CatE
+              (IterE
+                (SubE (VarT "val") (VarT "instr") (VarE "val"))
+                List
+                (iterexp "val" (VarE "val*"))
+              )
+              (ListE
+                (CaseE (Seq (Atom REF.FUNC_ADDR) Arg) (TupE (VarE "funcaddr")))
+                (CaseE
+                  (Seq (Atom CALL_REF) Arg)
+                  (TupE
+                    (SubE
+                      (VarT "deftype")
+                      (VarT "typeuse")
+                      (DotE
+                        (IdxE (DotE (VarE "s") (Atom FUNCS)) (VarE "funcaddr"))
+                        (Atom TYPE)
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
       "wf_comptype"
       (Seq Arg)
       (TupE
@@ -98543,46 +101732,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "invoke_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "invoke_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "funcaddr" (VarT "funcaddr"))
-    (typbind "var_0*" (IterT (VarT "val") List))
-    (typbind "ret_val" (VarT "config"))
-  )
-  (RuleD
-    "invoke_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "funcaddr" (VarT "funcaddr"))
-    (ExpP "var_0*" (IterT (VarT "val") List))
-    (ExpP "ret_val" (VarT "config"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "funcaddr") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (IterPr
-      (RulePr "wf_val" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "invoke"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "funcaddr"))
-          (ExpA (VarE "var_0*"))
-        )
-      )
-    )
-    (RulePr "wf_config" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "cont" (hint "macro" "none")))
@@ -98620,33 +101769,6 @@
 (TypD "nopt" (InstD (AliasT (IterT (VarT "u32") List))))
 (HintD (TypH "nopt" (hint "show" "n?")))
 (DecD "ieee_" (ExpP "N" (VarT "N")) (ExpP "rat" rat) (VarT "fNmag"))
-(HintD (RelH "ieee__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ieee__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "rat" rat)
-    (typbind "ret_val" (VarT "fNmag"))
-  )
-  (RuleD
-    "ieee__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "rat" rat)
-    (ExpP "ret_val" (VarT "fNmag"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "rat") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ieee_" (ExpA (VarE "N")) (ExpA (VarE "rat")))
-      )
-    )
-    (RulePr "wf_fNmag" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (TypD
   "idctxt"
   (InstD
@@ -98839,6 +101961,26 @@
         (expfield (Atom FIELDS) (ListE))
         (expfield (Atom TYPEDEFS) (ListE))
       )
+      (RulePr
+        "wf_idctxt"
+        (Seq Arg)
+        (TupE
+          (StrE
+            (expfield (Atom TYPES) (ListE))
+            (expfield (Atom TAGS) (ListE))
+            (expfield (Atom GLOBALS) (ListE))
+            (expfield (Atom MEMS) (ListE))
+            (expfield (Atom TABLES) (ListE))
+            (expfield (Atom FUNCS) (ListE))
+            (expfield (Atom DATAS) (ListE))
+            (expfield (Atom ELEMS) (ListE))
+            (expfield (Atom LOCALS) (ListE))
+            (expfield (Atom LABELS) (ListE))
+            (expfield (Atom FIELDS) (ListE))
+            (expfield (Atom TYPEDEFS) (ListE))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "I" (VarT "idctxt"))
@@ -98856,38 +101998,16 @@
           (ExpA (IterE (VarE "I'") List (iterexp "I'" (VarE "I'*"))))
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "concat_idctxt_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "concat_idctxt_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "idctxt") List))
-      (typbind "ret_val" (VarT "idctxt"))
-    )
-    (RuleD
-      "concat_idctxt_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "idctxt") List))
-      (ExpP "ret_val" (VarT "idctxt"))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val"))
-      (IterPr
-        (RulePr "wf_idctxt" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val")
-          (CallE "concat_idctxt" (ExpA (VarE "var_0*")))
+      (RulePr
+        "wf_idctxt"
+        (Seq Arg)
+        (TupE
+          (CallE
+            "concat_idctxt"
+            (ExpA (IterE (VarE "I'") List (iterexp "I'" (VarE "I'*"))))
+          )
         )
       )
-      (RulePr "wf_idctxt" (Seq Arg) (TupE (VarE "ret_val")))
     )
   )
 )
@@ -99549,6 +102669,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_import" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "importsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -99563,41 +102694,16 @@
         "importsd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "importsd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "importsd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "import") List))
-    )
-    (RuleD
-      "importsd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "import") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_import" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "importsd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "importsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_import" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -99627,6 +102733,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_tag" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "tagsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -99641,41 +102758,16 @@
         "tagsd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "tagsd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "tagsd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "tag") List))
-    )
-    (RuleD
-      "tagsd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "tag") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_tag" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "tagsd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "tagsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_tag" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -99703,6 +102795,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_global" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "globalsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -99717,41 +102820,16 @@
         "globalsd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "globalsd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "globalsd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "global") List))
-    )
-    (RuleD
-      "globalsd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "global") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_global" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "globalsd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "globalsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_global" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -99781,6 +102859,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_mem" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "memsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -99795,41 +102884,16 @@
         "memsd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "memsd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "memsd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "mem") List))
-    )
-    (RuleD
-      "memsd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "mem") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_mem" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "memsd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "memsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_mem" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -99857,6 +102921,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_table" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "tablesd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -99871,41 +102946,16 @@
         "tablesd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "tablesd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "tablesd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "table") List))
-    )
-    (RuleD
-      "tablesd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "table") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_table" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "tablesd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "tablesd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_table" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -99933,6 +102983,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_func" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "funcsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -99947,41 +103008,16 @@
         "funcsd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "funcsd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "funcsd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "func") List))
-    )
-    (RuleD
-      "funcsd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "func") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_func" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "funcsd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "funcsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_func" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -100009,6 +103045,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_data" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "datasd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -100023,41 +103070,16 @@
         "datasd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "datasd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "datasd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "data") List))
-    )
-    (RuleD
-      "datasd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "data") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_data" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "datasd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "datasd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_data" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -100085,6 +103107,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_elem" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "elemsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -100099,41 +103132,16 @@
         "elemsd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "elemsd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "elemsd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "elem") List))
-    )
-    (RuleD
-      "elemsd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "elem") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_elem" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "elemsd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "elemsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_elem" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -100161,6 +103169,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_start" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "startsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -100175,41 +103194,16 @@
         "startsd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "startsd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "startsd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "start") List))
-    )
-    (RuleD
-      "startsd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "start") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_start" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "startsd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "startsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_start" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -100237,6 +103231,17 @@
           (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
         )
       )
+      (IterPr
+        (RulePr "wf_export" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "exportsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
+        )
+      )
     )
     (DefD
       (ExpP "decl" (VarT "decl"))
@@ -100251,41 +103256,16 @@
         "exportsd"
         (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "exportsd_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "exportsd_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "decl") List))
-      (typbind "ret_val*" (IterT (VarT "export") List))
-    )
-    (RuleD
-      "exportsd_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "decl") List))
-      (ExpP "ret_val*" (IterT (VarT "export") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_decl" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_export" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (VarE "ret_val*")
-          (CallE "exportsd" (ExpA (VarE "var_0*")))
+        (iterexp
+          "iter"
+          (CallE
+            "exportsd"
+            (ExpA (IterE (VarE "decl'") List (iterexp "decl'" (VarE "decl'*"))))
+          )
         )
-      )
-      (IterPr
-        (RulePr "wf_export" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
       )
     )
   )
@@ -100310,6 +103290,17 @@
           (ExpA (IterE (VarE "decl") List (iterexp "decl" (VarE "decl*"))))
         )
         (ListE)
+      )
+    )
+    (IterPr
+      (RulePr "wf_import" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "importsd"
+          (ExpA (IterE (VarE "decl") List (iterexp "decl" (VarE "decl*"))))
+        )
       )
     )
   )
@@ -100422,6 +103413,84 @@
           )
         )
         (ListE)
+      )
+    )
+    (IterPr
+      (RulePr "wf_import" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "importsd"
+          (ExpA
+            (IterE (VarE "decl_1") List (iterexp "decl_1" (VarE "decl_1*")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_tag" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "tagsd"
+          (ExpA
+            (IterE (VarE "decl_1") List (iterexp "decl_1" (VarE "decl_1*")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_global" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "globalsd"
+          (ExpA
+            (IterE (VarE "decl_1") List (iterexp "decl_1" (VarE "decl_1*")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_mem" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "memsd"
+          (ExpA
+            (IterE (VarE "decl_1") List (iterexp "decl_1" (VarE "decl_1*")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_table" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "tablesd"
+          (ExpA
+            (IterE (VarE "decl_1") List (iterexp "decl_1" (VarE "decl_1*")))
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_func" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "funcsd"
+          (ExpA
+            (IterE (VarE "decl_1") List (iterexp "decl_1" (VarE "decl_1*")))
+          )
+        )
       )
     )
   )
@@ -106430,24 +109499,6 @@
 )
 (HintD (RelH "NotationReduct" (hint "tabular" "{}")))
 (DecD "instrdots" (IterT (VarT "instr") List))
-(HintD (RelH "instrdots_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "instrdots_is_wf"
-  (Seq Arg)
-  (TupT (typbind "ret_val*" (IterT (VarT "instr") List)))
-  (RuleD
-    "instrdots_is_wf_0"
-    (ExpP "ret_val*" (IterT (VarT "instr") List))
-    (Seq Arg)
-    (TupE (VarE "ret_val*"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val*") (CallE "instrdots")))
-    (IterPr
-      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "instrdots" (hint "show" "...")))
 (TypD
   "label"

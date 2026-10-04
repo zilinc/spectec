@@ -1998,7 +1998,6 @@
             (typbind "memarg" (VarT "memarg"))
           )
           (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-          (ExpP "valtype?" (IterT (VarT "valtype") Opt))
           (IterPr
             (IfPr
               (BinE
@@ -2024,7 +2023,6 @@
             Opt
             (iterexp "Inn" (VarE "Inn?"))
             (iterexp "sz" (VarE "sz?"))
-            (iterexp "valtype" (VarE "valtype?"))
           )
         )
         (typcase (Atom MEMORY.SIZE) (TupT))
@@ -5903,7 +5901,6 @@
   (ExpP "val_" (VarT "val_" (ExpA (VarE "valtype_1"))))
   (VarT "val_" (ExpA (VarE "valtype_2")))
 )
-(HintD (DecH "reinterpret__" (hint "partial" "{}")))
 (DecD
   "trunc__"
   (ExpP "M" (VarT "M"))
@@ -6267,7 +6264,6 @@
   (ExpP "val_" (VarT "val_" (ExpA (VarE "valtype"))))
   (IterT (VarT "byte") List)
 )
-(HintD (DecH "bytes_" (hint "partial" "{}")))
 (HintD (DecH "bytes_" (hint "inverse" "$inv_bytes_")))
 (DecD
   "inv_ibytes_"
@@ -6656,7 +6652,6 @@
             (typbind "memarg" (VarT "memarg"))
           )
           (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-          (ExpP "valtype?" (IterT (VarT "valtype") Opt))
           (IterPr
             (IfPr
               (BinE
@@ -6682,7 +6677,6 @@
             Opt
             (iterexp "Inn" (VarE "Inn?"))
             (iterexp "sz" (VarE "sz?"))
-            (iterexp "valtype" (VarE "valtype?"))
           )
         )
         (typcase (Atom MEMORY.SIZE) (TupT))

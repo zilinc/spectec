@@ -2815,8 +2815,8 @@ relation Resulttype_ok: `%|-%:OK`(context, resulttype)
 ;; ../specification/wasm-3.0/2.1-validation.types.spectec:92.1-92.104
 relation Fieldtype_ok: `%|-%:OK`(context, fieldtype)
   ;; ../specification/wasm-3.0/2.1-validation.types.spectec:130.1-132.43
-  rule _{C : context, storagetype : storagetype}:
-    `%|-%:OK`(C, `%%`_fieldtype(MUT_mut?{}, storagetype))
+  rule _{C : context, `mut?` : mut?, storagetype : storagetype}:
+    `%|-%:OK`(C, `%%`_fieldtype(mut?{mut <- `mut?`}, storagetype))
     -- Storagetype_ok: `%|-%:OK`(C, storagetype)
 
 ;; ../specification/wasm-3.0/2.1-validation.types.spectec:93.1-93.106
@@ -2852,8 +2852,8 @@ relation Comptype_ok: `%|-%:OK`(context, comptype)
 ;; ../specification/wasm-3.0/2.1-validation.types.spectec:97.1-97.126
 relation Subtype_ok2: `%|-%:%`(context, subtype, oktypenat)
   ;; ../specification/wasm-3.0/2.1-validation.types.spectec:167.1-176.49
-  rule _{C : context, `typeuse*` : typeuse*, comptype : comptype, i : nat, `comptype'*` : comptype*, `typeuse'**` : typeuse**}:
-    `%|-%:%`(C, SUB_subtype(FINAL_final?{}, typeuse*{typeuse <- `typeuse*`}, comptype), OK_oktypenat(i))
+  rule _{C : context, `final?` : final?, `typeuse*` : typeuse*, comptype : comptype, i : nat, `comptype'*` : comptype*, `typeuse'**` : typeuse**}:
+    `%|-%:%`(C, SUB_subtype(final?{final <- `final?`}, typeuse*{typeuse <- `typeuse*`}, comptype), OK_oktypenat(i))
     -- if (|typeuse*{typeuse <- `typeuse*`}| <= 1)
     -- (Typeuse_ok: `%|-%:OK`(C, typeuse))*{typeuse <- `typeuse*`}
     -- (if $before(typeuse, i))*{typeuse <- `typeuse*`}
@@ -3028,8 +3028,8 @@ relation Reftype_sub: `%|-%<:%`(context, reftype, reftype)
     -- Heaptype_sub: `%|-%<:%`(C, ht_1, ht_2)
 
   ;; ../specification/wasm-3.0/2.2-validation.subtyping.spectec:109.1-111.37
-  rule null{C : context, ht_1 : heaptype, ht_2 : heaptype}:
-    `%|-%<:%`(C, REF_reftype(NULL_null?{}, ht_1), REF_reftype(?(NULL_null), ht_2))
+  rule null{C : context, `null?` : null?, ht_1 : heaptype, ht_2 : heaptype}:
+    `%|-%<:%`(C, REF_reftype(null?{null <- `null?`}, ht_1), REF_reftype(?(NULL_null), ht_2))
     -- Heaptype_sub: `%|-%<:%`(C, ht_1, ht_2)
 
 ;; ../specification/wasm-3.0/2.2-validation.subtyping.spectec:11.1-11.103
@@ -3121,8 +3121,8 @@ syntax oktypeidx =
 ;; ../specification/wasm-3.0/2.1-validation.types.spectec:95.1-95.126
 relation Subtype_ok: `%|-%:%`(context, subtype, oktypeidx)
   ;; ../specification/wasm-3.0/2.1-validation.types.spectec:149.1-156.49
-  rule _{C : context, `x*` : idx*, comptype : comptype, x_0 : idx, `comptype'*` : comptype*, `yy**` : typeuse**}:
-    `%|-%:%`(C, SUB_subtype(FINAL_final?{}, _IDX_typeuse(x)*{x <- `x*`}, comptype), OK_oktypeidx(x_0))
+  rule _{C : context, `final?` : final?, `x*` : idx*, comptype : comptype, x_0 : idx, `comptype'*` : comptype*, `yy**` : typeuse**}:
+    `%|-%:%`(C, SUB_subtype(final?{final <- `final?`}, _IDX_typeuse(x)*{x <- `x*`}, comptype), OK_oktypeidx(x_0))
     -- if (|x*{x <- `x*`}| <= 1)
     -- (if (x!`%`_idx.0 < x_0!`%`_idx.0))*{x <- `x*`}
     -- (if ($unrolldt(C.TYPES_context[x!`%`_idx.0]) = SUB_subtype(?(), yy*{yy <- `yy*`}, comptype')))*{comptype' <- `comptype'*`, x <- `x*`, `yy*` <- `yy**`}
@@ -3164,8 +3164,8 @@ relation Tagtype_ok: `%|-%:OK`(context, tagtype)
 ;; ../specification/wasm-3.0/2.1-validation.types.spectec:208.1-208.100
 relation Globaltype_ok: `%|-%:OK`(context, globaltype)
   ;; ../specification/wasm-3.0/2.1-validation.types.spectec:224.1-226.29
-  rule _{C : context, t : valtype}:
-    `%|-%:OK`(C, `%%`_globaltype(MUT_mut?{}, t))
+  rule _{C : context, `mut?` : mut?, t : valtype}:
+    `%|-%:OK`(C, `%%`_globaltype(mut?{mut <- `mut?`}, t))
     -- Valtype_ok: `%|-%:OK`(C, t)
 
 ;; ../specification/wasm-3.0/2.1-validation.types.spectec:209.1-209.97
@@ -3442,9 +3442,9 @@ relation Instr_ok: `%|-%:%`(context, instr, instrtype)
     -- Heaptype_ok: `%|-%:OK`(C, ht)
 
   ;; ../specification/wasm-3.0/2.3-validation.instructions.spectec:92.1-94.40
-  rule br_on_non_null{C : context, l : labelidx, `t*` : valtype*, ht : heaptype}:
+  rule br_on_non_null{C : context, l : labelidx, `t*` : valtype*, ht : heaptype, `null?` : null?}:
     `%|-%:%`(C, BR_ON_NON_NULL_instr(l), `%->_%%`_instrtype(`%`_resulttype(t*{t <- `t*`} ++ [REF_valtype(?(NULL_null), ht)]), [], `%`_resulttype(t*{t <- `t*`})))
-    -- if (C.LABELS_context[l!`%`_labelidx.0] = `%`_resulttype(t*{t <- `t*`} ++ [REF_valtype(NULL_null?{}, ht)]))
+    -- if (C.LABELS_context[l!`%`_labelidx.0] = `%`_resulttype(t*{t <- `t*`} ++ [REF_valtype(null?{null <- `null?`}, ht)]))
 
   ;; ../specification/wasm-3.0/2.3-validation.instructions.spectec:96.1-102.34
   rule br_on_cast{C : context, l : labelidx, rt_1 : reftype, rt_2 : reftype, `t*` : valtype*, rt : reftype}:
@@ -4106,10 +4106,10 @@ relation Tag_ok: `%|-%:%`(context, tag, tagtype)
 ;; ../specification/wasm-3.0/2.4-validation.modules.spectec:9.1-9.99
 relation Global_ok: `%|-%:%`(context, global, globaltype)
   ;; ../specification/wasm-3.0/2.4-validation.modules.spectec:30.1-34.40
-  rule _{C : context, globaltype : globaltype, expr : expr, t : valtype}:
+  rule _{C : context, globaltype : globaltype, expr : expr, `mut?` : mut?, t : valtype}:
     `%|-%:%`(C, GLOBAL_global(globaltype, expr), globaltype)
     -- Globaltype_ok: `%|-%:OK`(C, globaltype)
-    -- if (globaltype = `%%`_globaltype(MUT_mut?{}, t))
+    -- if (globaltype = `%%`_globaltype(mut?{mut <- `mut?`}, t))
     -- Expr_ok_const: `%|-%:%CONST`(C, expr, t)
 
 ;; ../specification/wasm-3.0/2.4-validation.modules.spectec:10.1-10.96

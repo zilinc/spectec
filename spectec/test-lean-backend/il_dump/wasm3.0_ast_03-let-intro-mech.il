@@ -11358,13 +11358,17 @@
     (RuleD
       ""
       (ExpP "C" (VarT "context"))
+      (ExpP "mut?" (IterT (VarT "mut") Opt))
       (ExpP "storagetype" (VarT "storagetype"))
       (Infix Arg |- (Infix Arg : (Atom OK)))
       (TupE
         (VarE "C")
         (CaseE
           (Seq Arg Arg)
-          (TupE (IterE (CaseE (Atom MUT) (TupE)) Opt) (VarE "storagetype"))
+          (TupE
+            (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+            (VarE "storagetype")
+          )
         )
       )
       (RulePr
@@ -11515,6 +11519,7 @@
     (RuleD
       ""
       (ExpP "C" (VarT "context"))
+      (ExpP "final?" (IterT (VarT "final") Opt))
       (ExpP "typeuse*" (IterT (VarT "typeuse") List))
       (ExpP "comptype" (VarT "comptype"))
       (ExpP "i" nat)
@@ -11526,7 +11531,7 @@
         (CaseE
           (Seq (Atom SUB) Arg Arg Arg)
           (TupE
-            (IterE (CaseE (Atom FINAL) (TupE)) Opt)
+            (IterE (VarE "final") Opt (iterexp "final" (VarE "final?")))
             (IterE (VarE "typeuse") List (iterexp "typeuse" (VarE "typeuse*")))
             (VarE "comptype")
           )
@@ -12442,6 +12447,7 @@
     (RuleD
       "null"
       (ExpP "C" (VarT "context"))
+      (ExpP "null?" (IterT (VarT "null") Opt))
       (ExpP "ht_1" (VarT "heaptype"))
       (ExpP "ht_2" (VarT "heaptype"))
       (Infix Arg |- (Infix Arg <: Arg))
@@ -12449,7 +12455,10 @@
         (VarE "C")
         (CaseE
           (Seq (Atom REF) Arg Arg)
-          (TupE (IterE (CaseE (Atom NULL) (TupE)) Opt) (VarE "ht_1"))
+          (TupE
+            (IterE (VarE "null") Opt (iterexp "null" (VarE "null?")))
+            (VarE "ht_1")
+          )
         )
         (CaseE
           (Seq (Atom REF) Arg Arg)
@@ -12901,6 +12910,7 @@
   (RuleD
     ""
     (ExpP "C" (VarT "context"))
+    (ExpP "final?" (IterT (VarT "final") Opt))
     (ExpP "x*" (IterT (VarT "idx") List))
     (ExpP "comptype" (VarT "comptype"))
     (ExpP "x_0" (VarT "idx"))
@@ -12912,7 +12922,7 @@
       (CaseE
         (Seq (Atom SUB) Arg Arg Arg)
         (TupE
-          (IterE (CaseE (Atom FINAL) (TupE)) Opt)
+          (IterE (VarE "final") Opt (iterexp "final" (VarE "final?")))
           (IterE
             (CaseE (Seq (Atom _IDX) Arg) (TupE (VarE "x")))
             List
@@ -13236,13 +13246,14 @@
   (RuleD
     ""
     (ExpP "C" (VarT "context"))
+    (ExpP "mut?" (IterT (VarT "mut") Opt))
     (ExpP "t" (VarT "valtype"))
     (Infix Arg |- (Infix Arg : (Atom OK)))
     (TupE
       (VarE "C")
       (CaseE
         (Seq Arg Arg)
-        (TupE (IterE (CaseE (Atom MUT) (TupE)) Opt) (VarE "t"))
+        (TupE (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?"))) (VarE "t"))
       )
     )
     (RulePr
@@ -15245,6 +15256,7 @@
       (ExpP "l" (VarT "labelidx"))
       (ExpP "t*" (IterT (VarT "valtype") List))
       (ExpP "ht" (VarT "heaptype"))
+      (ExpP "null?" (IterT (VarT "null") Opt))
       (Infix Arg |- (Infix Arg : Arg))
       (TupE
         (VarE "C")
@@ -15287,7 +15299,10 @@
                 (ListE
                   (CaseE
                     (Seq (Atom REF) Arg Arg)
-                    (TupE (IterE (CaseE (Atom NULL) (TupE)) Opt) (VarE "ht"))
+                    (TupE
+                      (IterE (VarE "null") Opt (iterexp "null" (VarE "null?")))
+                      (VarE "ht")
+                    )
                   )
                 )
               )
@@ -20840,6 +20855,7 @@
     (ExpP "C" (VarT "context"))
     (ExpP "globaltype" (VarT "globaltype"))
     (ExpP "expr" (VarT "expr"))
+    (ExpP "mut?" (IterT (VarT "mut") Opt))
     (ExpP "t" (VarT "valtype"))
     (Infix Arg |- (Infix Arg : Arg))
     (TupE
@@ -20862,7 +20878,10 @@
         (VarE "globaltype")
         (CaseE
           (Seq Arg Arg)
-          (TupE (IterE (CaseE (Atom MUT) (TupE)) Opt) (VarE "t"))
+          (TupE
+            (IterE (VarE "mut") Opt (iterexp "mut" (VarE "mut?")))
+            (VarE "t")
+          )
         )
       )
     )

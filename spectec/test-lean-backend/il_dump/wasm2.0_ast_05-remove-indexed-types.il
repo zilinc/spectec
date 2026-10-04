@@ -869,21 +869,22 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "fone_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fone_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "N" (VarT "N")) (typbind "ret_val" (VarT "fN")))
-  (RuleD
-    "fone_is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg)
-    (TupE (VarE "N") (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "fone" (ExpA (VarE "N")))))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+    (RulePr
+      "wf_fN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          (Seq (Atom POS) Arg)
+          (TupE
+            (CaseE
+              (Seq (Atom NORM) Arg Arg)
+              (TupE (NumE (Nat 1)) (CvtE nat int (NumE (Nat 0))))
+            )
+          )
+        )
+      )
+    )
   )
 )
 (HintD (DecH "fone" (hint "show" "+ 1")))
@@ -968,6 +969,7 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b")))
       (RulePr
         "wf_byte"
         (Seq Arg)
@@ -1031,6 +1033,8 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
     )
     (DefD
       (ExpP "ch" (VarT "char"))
@@ -1134,6 +1138,9 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_3")))
     )
     (DefD
       (ExpP "ch" (VarT "char"))
@@ -1237,6 +1244,10 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_3")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_4")))
     )
     (DefD
       (ExpP "ch*" (IterT (VarT "char") List))
@@ -1252,36 +1263,32 @@
           )
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "utf8_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "utf8_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "char") List))
-      (typbind "ret_val*" (IterT (VarT "byte") List))
-    )
-    (RuleD
-      "utf8_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "char") List))
-      (ExpP "ret_val*" (IterT (VarT "byte") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
       (IterPr
-        (RulePr "wf_char" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr
-        (CmpE EqOp bool (VarE "ret_val*") (CallE "utf8" (ExpA (VarE "var_0*"))))
+        (iterexp
+          "iter"
+          (CallE
+            "concat_"
+            (TypA (VarT "byte"))
+            (ExpA
+              (IterE
+                (CallE "utf8" (ExpA (ListE (VarE "ch"))))
+                List
+                (iterexp "ch" (VarE "ch*"))
+              )
+            )
+          )
+        )
       )
       (IterPr
-        (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
+        (IterPr
+          (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
+          List
+          (iterexp "iter" (CallE "utf8" (ExpA (ListE (VarE "ch")))))
+        )
         List
-        (iterexp "ret_val" (VarE "ret_val*"))
+        (iterexp "ch" (VarE "ch*"))
       )
     )
   )
@@ -1652,6 +1659,41 @@
   )
 )
 (HintD (RelH "wf_dim" (hint "wf-relation" "dim")))
+(DecD
+  "psize"
+  (ExpP "packtype" (VarT "packtype"))
+  nat
+  (DefD (ExpA (CaseE (Atom I8) (TupE))) (NumE (Nat 8)))
+  (DefD (ExpA (CaseE (Atom I16) (TupE))) (NumE (Nat 16)))
+)
+(DecD
+  "size"
+  (ExpP "valtype" (VarT "valtype"))
+  nat
+  (DefD (ExpA (CaseE (Atom I32) (TupE))) (NumE (Nat 32)))
+  (DefD (ExpA (CaseE (Atom I64) (TupE))) (NumE (Nat 64)))
+  (DefD (ExpA (CaseE (Atom F32) (TupE))) (NumE (Nat 32)))
+  (DefD (ExpA (CaseE (Atom F64) (TupE))) (NumE (Nat 64)))
+  (DefD (ExpA (CaseE (Atom V128) (TupE))) (NumE (Nat 128)))
+)
+(DecD
+  "lsize"
+  (ExpP "lanetype" (VarT "lanetype"))
+  nat
+  (DefD
+    (ExpP "numtype" (VarT "numtype"))
+    (ExpA (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype")))
+    (CallE
+      "size"
+      (ExpA (SubE (VarT "numtype") (VarT "valtype") (VarE "numtype")))
+    )
+  )
+  (DefD
+    (ExpP "packtype" (VarT "packtype"))
+    (ExpA (SubE (VarT "packtype") (VarT "lanetype") (VarE "packtype")))
+    (CallE "psize" (ExpA (VarE "packtype")))
+  )
+)
 (TypD
   "shape"
   (InstD
@@ -1677,6 +1719,19 @@
     (Seq Arg)
     (TupE (CaseE (Seq Arg (Atom X) Arg) (TupE (VarE "lanetype") (VarE "dim"))))
     (RulePr "wf_dim" (Seq Arg) (TupE (VarE "dim")))
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (BinE
+          MulOp
+          nat
+          (CallE "lsize" (ExpA (VarE "lanetype")))
+          (ProjE (UncaseE (VarE "dim") Arg) 0)
+        )
+        (NumE (Nat 128))
+      )
+    )
   )
 )
 (HintD (RelH "wf_shape" (hint "wf-relation" "shape")))
@@ -1696,43 +1751,15 @@
     (VarE "Lnn")
   )
 )
-(DecD
-  "size"
-  (ExpP "valtype" (VarT "valtype"))
-  nat
-  (DefD (ExpA (CaseE (Atom I32) (TupE))) (NumE (Nat 32)))
-  (DefD (ExpA (CaseE (Atom I64) (TupE))) (NumE (Nat 64)))
-  (DefD (ExpA (CaseE (Atom F32) (TupE))) (NumE (Nat 32)))
-  (DefD (ExpA (CaseE (Atom F64) (TupE))) (NumE (Nat 64)))
-  (DefD (ExpA (CaseE (Atom V128) (TupE))) (NumE (Nat 128)))
-)
 (HintD (DecH "size" (hint "show" "|%|") (hint "partial" "{}")))
 (DecD
-  "psize"
-  (ExpP "packtype" (VarT "packtype"))
+  "vsize"
+  (ExpP "vectype" (VarT "vectype"))
   nat
-  (DefD (ExpA (CaseE (Atom I8) (TupE))) (NumE (Nat 8)))
-  (DefD (ExpA (CaseE (Atom I16) (TupE))) (NumE (Nat 16)))
+  (DefD (ExpA (CaseE (Atom V128) (TupE))) (NumE (Nat 128)))
 )
+(HintD (DecH "vsize" (hint "show" "|%|")))
 (HintD (DecH "psize" (hint "show" "|%|")))
-(DecD
-  "lsize"
-  (ExpP "lanetype" (VarT "lanetype"))
-  nat
-  (DefD
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpA (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype")))
-    (CallE
-      "size"
-      (ExpA (SubE (VarT "numtype") (VarT "valtype") (VarE "numtype")))
-    )
-  )
-  (DefD
-    (ExpP "packtype" (VarT "packtype"))
-    (ExpA (SubE (VarT "packtype") (VarT "lanetype") (VarE "packtype")))
-    (CallE "psize" (ExpA (VarE "packtype")))
-  )
-)
 (HintD (DecH "lsize" (hint "show" "|%|")))
 (DecD
   "isize"
@@ -1975,21 +2002,11 @@
     (VariantT
       (typcase
         (Seq (Atom mk_lane__0) Arg Arg)
-        (TupT
-          (typbind "numtype" (VarT "numtype"))
-          (typbind "var_x" (VarT "num_"))
-        )
+        (TupT (typbind "Jnn" (VarT "Jnn")) (typbind "var_x" (VarT "iN")))
       )
       (typcase
         (Seq (Atom mk_lane__1) Arg Arg)
-        (TupT
-          (typbind "packtype" (VarT "packtype"))
-          (typbind "var_x" (VarT "pack_"))
-        )
-      )
-      (typcase
-        (Seq (Atom mk_lane__2) Arg Arg)
-        (TupT (typbind "Jnn" (VarT "Jnn")) (typbind "var_x" (VarT "iN")))
+        (TupT (typbind "Fnn" (VarT "Fnn")) (typbind "var_x" (VarT "fN")))
       )
     )
   )
@@ -2001,62 +2018,12 @@
   (RuleD
     "lane__case_0"
     (ExpP "lanetype" (VarT "lanetype"))
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "var_x" (VarT "num_"))
-    (Seq Arg Arg)
-    (TupE
-      (VarE "lanetype")
-      (CaseE
-        (Seq (Atom mk_lane__0) Arg Arg)
-        (TupE (VarE "numtype") (VarE "var_x"))
-      )
-    )
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "var_x")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "lanetype")
-        (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype"))
-      )
-    )
-  )
-  (RuleD
-    "lane__case_1"
-    (ExpP "lanetype" (VarT "lanetype"))
-    (ExpP "packtype" (VarT "packtype"))
-    (ExpP "var_x" (VarT "pack_"))
-    (Seq Arg Arg)
-    (TupE
-      (VarE "lanetype")
-      (CaseE
-        (Seq (Atom mk_lane__1) Arg Arg)
-        (TupE (VarE "packtype") (VarE "var_x"))
-      )
-    )
-    (RulePr
-      "wf_uN"
-      (Seq Arg Arg)
-      (TupE (CallE "psize" (ExpA (VarE "packtype"))) (VarE "var_x"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "lanetype")
-        (SubE (VarT "packtype") (VarT "lanetype") (VarE "packtype"))
-      )
-    )
-  )
-  (RuleD
-    "lane__case_2"
-    (ExpP "lanetype" (VarT "lanetype"))
     (ExpP "Jnn" (VarT "Jnn"))
     (ExpP "var_x" (VarT "iN"))
     (Seq Arg Arg)
     (TupE
       (VarE "lanetype")
-      (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "var_x")))
+      (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "Jnn") (VarE "var_x")))
     )
     (RulePr
       "wf_uN"
@@ -2078,20 +2045,47 @@
       )
     )
   )
+  (RuleD
+    "lane__case_1"
+    (ExpP "lanetype" (VarT "lanetype"))
+    (ExpP "Fnn" (VarT "Fnn"))
+    (ExpP "var_x" (VarT "fN"))
+    (Seq Arg Arg)
+    (TupE
+      (VarE "lanetype")
+      (CaseE (Seq (Atom mk_lane__1) Arg Arg) (TupE (VarE "Fnn") (VarE "var_x")))
+    )
+    (RulePr
+      "wf_fN"
+      (Seq Arg Arg)
+      (TupE
+        (CallE
+          "sizenn"
+          (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+        )
+        (VarE "var_x")
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "lanetype")
+        (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+      )
+    )
+  )
 )
 (HintD (RelH "wf_lane_" (hint "wf-relation" "lane_")))
 (DecD
   "proj_lane__0"
   (ExpP "var_x" (VarT "lane_"))
-  (IterT (VarT "num_") Opt)
+  (IterT (VarT "iN") Opt)
   (DefD
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "var_x" (VarT "num_"))
+    (ExpP "Jnn" (VarT "Jnn"))
+    (ExpP "var_x" (VarT "iN"))
     (ExpA
-      (CaseE
-        (Seq (Atom mk_lane__0) Arg Arg)
-        (TupE (VarE "numtype") (VarE "var_x"))
-      )
+      (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "Jnn") (VarE "var_x")))
     )
     (OptE (VarE "var_x"))
   )
@@ -2100,29 +2094,12 @@
 (DecD
   "proj_lane__1"
   (ExpP "var_x" (VarT "lane_"))
-  (IterT (VarT "pack_") Opt)
+  (IterT (VarT "fN") Opt)
   (DefD
-    (ExpP "packtype" (VarT "packtype"))
-    (ExpP "var_x" (VarT "pack_"))
+    (ExpP "Fnn" (VarT "Fnn"))
+    (ExpP "var_x" (VarT "fN"))
     (ExpA
-      (CaseE
-        (Seq (Atom mk_lane__1) Arg Arg)
-        (TupE (VarE "packtype") (VarE "var_x"))
-      )
-    )
-    (OptE (VarE "var_x"))
-  )
-  (DefD (ExpP "var_x" (VarT "lane_")) (ExpA (VarE "var_x")) (OptE))
-)
-(DecD
-  "proj_lane__2"
-  (ExpP "var_x" (VarT "lane_"))
-  (IterT (VarT "iN") Opt)
-  (DefD
-    (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "var_x" (VarT "iN"))
-    (ExpA
-      (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "var_x")))
+      (CaseE (Seq (Atom mk_lane__1) Arg Arg) (TupE (VarE "Fnn") (VarE "var_x")))
     )
     (OptE (VarE "var_x"))
   )
@@ -2131,7 +2108,6 @@
 (HintD (TypH "lane_" (hint "type_family" "{}")))
 (HintD (DecH "proj_lane__0" (hint "tf_projection_func" "{}")))
 (HintD (DecH "proj_lane__1" (hint "tf_projection_func" "{}")))
-(HintD (DecH "proj_lane__2" (hint "tf_projection_func" "{}")))
 (TypD "vec_" (InstD (AliasT (VarT "vN"))))
 (DecD
   "zero"
@@ -3184,8 +3160,9 @@
   (InstD
     (VariantT
       (typcase
-        (Seq Arg (Atom X) Arg)
-        (TupT (typbind "Jnn" (VarT "Jnn")) (typbind "dim" (VarT "dim")))
+        Arg
+        (TupT (typbind "shape" (VarT "shape")))
+        (ExpP "Jnn" (VarT "Jnn"))
       )
     )
   )
@@ -3197,10 +3174,18 @@
   (RuleD
     "ishape_case_0"
     (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "dim" (VarT "dim"))
+    (ExpP "shape" (VarT "shape"))
     (Seq Arg)
-    (TupE (CaseE (Seq Arg (Atom X) Arg) (TupE (VarE "Jnn") (VarE "dim"))))
-    (RulePr "wf_dim" (Seq Arg) (TupE (VarE "dim")))
+    (TupE (CaseE Arg (TupE (VarE "shape"))))
+    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (CallE "lanetype" (ExpA (VarE "shape")))
+        (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+      )
+    )
   )
 )
 (HintD (RelH "wf_ishape" (hint "wf-relation" "ishape")))
@@ -3210,8 +3195,9 @@
   (InstD
     (VariantT
       (typcase
-        (Seq Arg (Atom X) Arg)
-        (TupT (typbind "Fnn" (VarT "Fnn")) (typbind "dim" (VarT "dim")))
+        Arg
+        (TupT (typbind "shape" (VarT "shape")))
+        (ExpP "Fnn" (VarT "Fnn"))
       )
     )
   )
@@ -3223,10 +3209,18 @@
   (RuleD
     "fshape_case_0"
     (ExpP "Fnn" (VarT "Fnn"))
-    (ExpP "dim" (VarT "dim"))
+    (ExpP "shape" (VarT "shape"))
     (Seq Arg)
-    (TupE (CaseE (Seq Arg (Atom X) Arg) (TupE (VarE "Fnn") (VarE "dim"))))
-    (RulePr "wf_dim" (Seq Arg) (TupE (VarE "dim")))
+    (TupE (CaseE Arg (TupE (VarE "shape"))))
+    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (CallE "lanetype" (ExpA (VarE "shape")))
+        (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
+      )
+    )
   )
 )
 (HintD (RelH "wf_fshape" (hint "wf-relation" "fshape")))
@@ -3236,8 +3230,9 @@
   (InstD
     (VariantT
       (typcase
-        (Seq Arg (Atom X) Arg)
-        (TupT (typbind "Pnn" (VarT "Pnn")) (typbind "dim" (VarT "dim")))
+        Arg
+        (TupT (typbind "shape" (VarT "shape")))
+        (ExpP "Pnn" (VarT "Pnn"))
       )
     )
   )
@@ -3249,10 +3244,18 @@
   (RuleD
     "pshape_case_0"
     (ExpP "Pnn" (VarT "Pnn"))
-    (ExpP "dim" (VarT "dim"))
+    (ExpP "shape" (VarT "shape"))
     (Seq Arg)
-    (TupE (CaseE (Seq Arg (Atom X) Arg) (TupE (VarE "Pnn") (VarE "dim"))))
-    (RulePr "wf_dim" (Seq Arg) (TupE (VarE "dim")))
+    (TupE (CaseE Arg (TupE (VarE "shape"))))
+    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (CallE "lanetype" (ExpA (VarE "shape")))
+        (SubE (VarT "packtype") (VarT "lanetype") (VarE "Pnn"))
+      )
+    )
   )
 )
 (HintD (RelH "wf_pshape" (hint "wf-relation" "pshape")))
@@ -4213,20 +4216,73 @@
 (HintD (TypH "half" (hint "desc" "\"lane part\"")))
 (TypD "zero" (InstD (VariantT (typcase (Atom ZERO) (TupT)))))
 (TypD
-  "vcvtop"
+  "vcvtop__Jnn_1_M_1_Jnn_2_M_2"
   (InstD
     (VariantT
       (typcase
         (Seq (Atom EXTEND) Arg Arg)
         (TupT (typbind "half" (VarT "half")) (typbind "sx" (VarT "sx")))
       )
-      (typcase
-        (Seq (Atom TRUNC_SAT) Arg Arg)
-        (TupT
-          (typbind "sx" (VarT "sx"))
-          (typbind "zero?" (IterT (VarT "zero") Opt))
+    )
+  )
+)
+(RelD
+  "wf_vcvtop__Jnn_1_M_1_Jnn_2_M_2"
+  (Seq Arg Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "Jnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "Jnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "vcvtop__Jnn_1_M_1_Jnn_2_M_2"))
+  )
+  (RuleD
+    "vcvtop__Jnn_1_M_1_Jnn_2_M_2_case_0"
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "half" (VarT "half"))
+    (ExpP "sx" (VarT "sx"))
+    (Seq Arg Arg Arg Arg Arg)
+    (TupE
+      (VarE "Jnn_1")
+      (VarE "M_1")
+      (VarE "Jnn_2")
+      (VarE "M_2")
+      (CaseE (Seq (Atom EXTEND) Arg Arg) (TupE (VarE "half") (VarE "sx")))
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (CallE
+          "lsizenn2"
+          (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+        )
+        (BinE
+          MulOp
+          nat
+          (NumE (Nat 2))
+          (CallE
+            "lsizenn1"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+          )
         )
       )
+    )
+  )
+)
+(HintD
+  (RelH
+    "wf_vcvtop__Jnn_1_M_1_Jnn_2_M_2"
+    (hint "wf-relation" "vcvtop__Jnn_1_M_1_Jnn_2_M_2")
+  )
+)
+(TypD
+  "vcvtop__Jnn_1_M_1_Fnn_2_M_2"
+  (InstD
+    (VariantT
       (typcase
         (Seq (Atom CONVERT) Arg Arg)
         (TupT
@@ -4234,11 +4290,745 @@
           (typbind "sx" (VarT "sx"))
         )
       )
+    )
+  )
+)
+(RelD
+  "wf_vcvtop__Jnn_1_M_1_Fnn_2_M_2"
+  (Seq Arg Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "Jnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "Fnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "vcvtop__Jnn_1_M_1_Fnn_2_M_2"))
+  )
+  (RuleD
+    "vcvtop__Jnn_1_M_1_Fnn_2_M_2_case_0"
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "half?" (IterT (VarT "half") Opt))
+    (ExpP "sx" (VarT "sx"))
+    (Seq Arg Arg Arg Arg Arg)
+    (TupE
+      (VarE "Jnn_1")
+      (VarE "M_1")
+      (VarE "Fnn_2")
+      (VarE "M_2")
+      (CaseE (Seq (Atom CONVERT) Arg Arg) (TupE (VarE "half?") (VarE "sx")))
+    )
+    (IfPr
+      (BinE
+        OrOp
+        bool
+        (BinE
+          AndOp
+          bool
+          (BinE
+            AndOp
+            bool
+            (CmpE
+              EqOp
+              bool
+              (CallE
+                "sizenn2"
+                (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+              )
+              (CallE
+                "lsizenn1"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+            )
+            (CmpE
+              EqOp
+              bool
+              (CallE
+                "lsizenn1"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+              (NumE (Nat 32))
+            )
+          )
+          (CmpE
+            EqOp
+            bool
+            (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
+            (OptE)
+          )
+        )
+        (BinE
+          AndOp
+          bool
+          (CmpE
+            EqOp
+            bool
+            (CallE
+              "sizenn2"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+            )
+            (BinE
+              MulOp
+              nat
+              (NumE (Nat 2))
+              (CallE
+                "lsizenn1"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+            )
+          )
+          (CmpE
+            EqOp
+            bool
+            (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
+            (OptE (CaseE (Atom LOW) (TupE)))
+          )
+        )
+      )
+    )
+  )
+)
+(HintD
+  (RelH
+    "wf_vcvtop__Jnn_1_M_1_Fnn_2_M_2"
+    (hint "wf-relation" "vcvtop__Jnn_1_M_1_Fnn_2_M_2")
+  )
+)
+(TypD
+  "vcvtop__Fnn_1_M_1_Jnn_2_M_2"
+  (InstD
+    (VariantT
+      (typcase
+        (Seq (Atom TRUNC_SAT) Arg Arg)
+        (TupT
+          (typbind "sx" (VarT "sx"))
+          (typbind "zero?" (IterT (VarT "zero") Opt))
+        )
+      )
+    )
+  )
+)
+(RelD
+  "wf_vcvtop__Fnn_1_M_1_Jnn_2_M_2"
+  (Seq Arg Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "Fnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "Jnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "vcvtop__Fnn_1_M_1_Jnn_2_M_2"))
+  )
+  (RuleD
+    "vcvtop__Fnn_1_M_1_Jnn_2_M_2_case_0"
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "sx" (VarT "sx"))
+    (ExpP "zero?" (IterT (VarT "zero") Opt))
+    (Seq Arg Arg Arg Arg Arg)
+    (TupE
+      (VarE "Fnn_1")
+      (VarE "M_1")
+      (VarE "Jnn_2")
+      (VarE "M_2")
+      (CaseE (Seq (Atom TRUNC_SAT) Arg Arg) (TupE (VarE "sx") (VarE "zero?")))
+    )
+    (IfPr
+      (BinE
+        OrOp
+        bool
+        (BinE
+          AndOp
+          bool
+          (BinE
+            AndOp
+            bool
+            (CmpE
+              EqOp
+              bool
+              (CallE
+                "sizenn1"
+                (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+              )
+              (CallE
+                "lsizenn2"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+              )
+            )
+            (CmpE
+              EqOp
+              bool
+              (CallE
+                "lsizenn2"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+              )
+              (NumE (Nat 32))
+            )
+          )
+          (CmpE
+            EqOp
+            bool
+            (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
+            (OptE)
+          )
+        )
+        (BinE
+          AndOp
+          bool
+          (CmpE
+            EqOp
+            bool
+            (CallE
+              "sizenn1"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+            )
+            (BinE
+              MulOp
+              nat
+              (NumE (Nat 2))
+              (CallE
+                "lsizenn2"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+              )
+            )
+          )
+          (CmpE
+            EqOp
+            bool
+            (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
+            (OptE (CaseE (Atom ZERO) (TupE)))
+          )
+        )
+      )
+    )
+  )
+)
+(HintD
+  (RelH
+    "wf_vcvtop__Fnn_1_M_1_Jnn_2_M_2"
+    (hint "wf-relation" "vcvtop__Fnn_1_M_1_Jnn_2_M_2")
+  )
+)
+(TypD
+  "vcvtop__Fnn_1_M_1_Fnn_2_M_2"
+  (InstD
+    (VariantT
       (typcase (Seq (Atom DEMOTE) Arg) (TupT (typbind "zero" (VarT "zero"))))
       (typcase (Seq (Atom PROMOTE) (Atom LOW)) (TupT))
     )
   )
 )
+(RelD
+  "wf_vcvtop__Fnn_1_M_1_Fnn_2_M_2"
+  (Seq Arg Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "Fnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "Fnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "vcvtop__Fnn_1_M_1_Fnn_2_M_2"))
+  )
+  (RuleD
+    "vcvtop__Fnn_1_M_1_Fnn_2_M_2_case_0"
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "zero" (VarT "zero"))
+    (Seq Arg Arg Arg Arg Arg)
+    (TupE
+      (VarE "Fnn_1")
+      (VarE "M_1")
+      (VarE "Fnn_2")
+      (VarE "M_2")
+      (CaseE (Seq (Atom DEMOTE) Arg) (TupE (VarE "zero")))
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (CallE
+          "sizenn1"
+          (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+        )
+        (BinE
+          MulOp
+          nat
+          (NumE (Nat 2))
+          (CallE
+            "sizenn2"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "vcvtop__Fnn_1_M_1_Fnn_2_M_2_case_1"
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" (VarT "M"))
+    (Seq Arg Arg Arg Arg Arg)
+    (TupE
+      (VarE "Fnn_1")
+      (VarE "M_1")
+      (VarE "Fnn_2")
+      (VarE "M_2")
+      (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE))
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (BinE
+          MulOp
+          nat
+          (NumE (Nat 2))
+          (CallE
+            "sizenn1"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1")))
+          )
+        )
+        (CallE
+          "sizenn2"
+          (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2")))
+        )
+      )
+    )
+  )
+)
+(HintD
+  (RelH
+    "wf_vcvtop__Fnn_1_M_1_Fnn_2_M_2"
+    (hint "wf-relation" "vcvtop__Fnn_1_M_1_Fnn_2_M_2")
+  )
+)
+(TypD
+  "vcvtop__"
+  (InstD
+    (VariantT
+      (typcase
+        (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+        (TupT
+          (typbind "Jnn_1" (VarT "Jnn"))
+          (typbind "M_1" (VarT "M"))
+          (typbind "Jnn_2" (VarT "Jnn"))
+          (typbind "M_2" (VarT "M"))
+          (typbind "var_x" (VarT "vcvtop__Jnn_1_M_1_Jnn_2_M_2"))
+        )
+      )
+      (typcase
+        (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+        (TupT
+          (typbind "Jnn_1" (VarT "Jnn"))
+          (typbind "M_1" (VarT "M"))
+          (typbind "Fnn_2" (VarT "Fnn"))
+          (typbind "M_2" (VarT "M"))
+          (typbind "var_x" (VarT "vcvtop__Jnn_1_M_1_Fnn_2_M_2"))
+        )
+      )
+      (typcase
+        (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+        (TupT
+          (typbind "Fnn_1" (VarT "Fnn"))
+          (typbind "M_1" (VarT "M"))
+          (typbind "Jnn_2" (VarT "Jnn"))
+          (typbind "M_2" (VarT "M"))
+          (typbind "var_x" (VarT "vcvtop__Fnn_1_M_1_Jnn_2_M_2"))
+        )
+      )
+      (typcase
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+        (TupT
+          (typbind "Fnn_1" (VarT "Fnn"))
+          (typbind "M_1" (VarT "M"))
+          (typbind "Fnn_2" (VarT "Fnn"))
+          (typbind "M_2" (VarT "M"))
+          (typbind "var_x" (VarT "vcvtop__Fnn_1_M_1_Fnn_2_M_2"))
+        )
+      )
+    )
+  )
+)
+(RelD
+  "wf_vcvtop__"
+  (Seq Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "shape"))
+    (typbind "_" (VarT "shape"))
+    (typbind "_" (VarT "vcvtop__"))
+  )
+  (RuleD
+    "vcvtop___case_0"
+    (ExpP "shape_1" (VarT "shape"))
+    (ExpP "shape_2" (VarT "shape"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vcvtop__Jnn_1_M_1_Jnn_2_M_2"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (VarE "shape_1")
+      (VarE "shape_2")
+      (CaseE
+        (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
+      )
+    )
+    (RulePr
+      "wf_vcvtop__Jnn_1_M_1_Jnn_2_M_2"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "Jnn_1")
+        (VarE "M_1")
+        (VarE "Jnn_2")
+        (VarE "M_2")
+        (VarE "var_x")
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "shape_1")
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
+          )
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "shape_2")
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "vcvtop___case_1"
+    (ExpP "shape_1" (VarT "shape"))
+    (ExpP "shape_2" (VarT "shape"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vcvtop__Jnn_1_M_1_Fnn_2_M_2"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (VarE "shape_1")
+      (VarE "shape_2")
+      (CaseE
+        (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
+      )
+    )
+    (RulePr
+      "wf_vcvtop__Jnn_1_M_1_Fnn_2_M_2"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "Jnn_1")
+        (VarE "M_1")
+        (VarE "Fnn_2")
+        (VarE "M_2")
+        (VarE "var_x")
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "shape_1")
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
+          )
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "shape_2")
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "vcvtop___case_2"
+    (ExpP "shape_1" (VarT "shape"))
+    (ExpP "shape_2" (VarT "shape"))
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vcvtop__Fnn_1_M_1_Jnn_2_M_2"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (VarE "shape_1")
+      (VarE "shape_2")
+      (CaseE
+        (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
+      )
+    )
+    (RulePr
+      "wf_vcvtop__Fnn_1_M_1_Jnn_2_M_2"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "Fnn_1")
+        (VarE "M_1")
+        (VarE "Jnn_2")
+        (VarE "M_2")
+        (VarE "var_x")
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "shape_1")
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
+          )
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "shape_2")
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "vcvtop___case_3"
+    (ExpP "shape_1" (VarT "shape"))
+    (ExpP "shape_2" (VarT "shape"))
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vcvtop__Fnn_1_M_1_Fnn_2_M_2"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (VarE "shape_1")
+      (VarE "shape_2")
+      (CaseE
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
+      )
+    )
+    (RulePr
+      "wf_vcvtop__Fnn_1_M_1_Fnn_2_M_2"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "Fnn_1")
+        (VarE "M_1")
+        (VarE "Fnn_2")
+        (VarE "M_2")
+        (VarE "var_x")
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "shape_1")
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
+          )
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "shape_2")
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE
+            (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
+          )
+        )
+      )
+    )
+  )
+)
+(HintD (RelH "wf_vcvtop__" (hint "wf-relation" "vcvtop__")))
+(DecD
+  "proj_vcvtop___0"
+  (ExpP "var_x" (VarT "vcvtop__"))
+  (IterT (VarT "vcvtop__Jnn_1_M_1_Jnn_2_M_2") Opt)
+  (DefD
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vcvtop__Jnn_1_M_1_Jnn_2_M_2"))
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
+      )
+    )
+    (OptE (VarE "var_x"))
+  )
+  (DefD (ExpP "var_x" (VarT "vcvtop__")) (ExpA (VarE "var_x")) (OptE))
+)
+(DecD
+  "proj_vcvtop___1"
+  (ExpP "var_x" (VarT "vcvtop__"))
+  (IterT (VarT "vcvtop__Jnn_1_M_1_Fnn_2_M_2") Opt)
+  (DefD
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vcvtop__Jnn_1_M_1_Fnn_2_M_2"))
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
+      )
+    )
+    (OptE (VarE "var_x"))
+  )
+  (DefD (ExpP "var_x" (VarT "vcvtop__")) (ExpA (VarE "var_x")) (OptE))
+)
+(DecD
+  "proj_vcvtop___2"
+  (ExpP "var_x" (VarT "vcvtop__"))
+  (IterT (VarT "vcvtop__Fnn_1_M_1_Jnn_2_M_2") Opt)
+  (DefD
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vcvtop__Fnn_1_M_1_Jnn_2_M_2"))
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
+      )
+    )
+    (OptE (VarE "var_x"))
+  )
+  (DefD (ExpP "var_x" (VarT "vcvtop__")) (ExpA (VarE "var_x")) (OptE))
+)
+(DecD
+  "proj_vcvtop___3"
+  (ExpP "var_x" (VarT "vcvtop__"))
+  (IterT (VarT "vcvtop__Fnn_1_M_1_Fnn_2_M_2") Opt)
+  (DefD
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vcvtop__Fnn_1_M_1_Fnn_2_M_2"))
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
+      )
+    )
+    (OptE (VarE "var_x"))
+  )
+  (DefD (ExpP "var_x" (VarT "vcvtop__")) (ExpA (VarE "var_x")) (OptE))
+)
+(HintD (TypH "vcvtop__" (hint "type_family" "{}")))
+(HintD (DecH "proj_vcvtop___0" (hint "tf_projection_func" "{}")))
+(HintD (DecH "proj_vcvtop___1" (hint "tf_projection_func" "{}")))
+(HintD (DecH "proj_vcvtop___2" (hint "tf_projection_func" "{}")))
+(HintD (DecH "proj_vcvtop___3" (hint "tf_projection_func" "{}")))
+(HintD (TypH "vcvtop__" (hint "macro" "{\"%\" \"V%\"}")))
 (TypD
   "vshiftop_Jnn_N"
   (InstD
@@ -4287,8 +5077,16 @@
         bool
         (VarE "ishape")
         (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "N"))))
+          Arg
+          (TupE
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "N")))
+              )
+            )
+          )
         )
       )
     )
@@ -4315,7 +5113,7 @@
 (HintD (TypH "vshiftop_" (hint "type_family" "{}")))
 (HintD (DecH "proj_vshiftop__0" (hint "tf_projection_func" "{}")))
 (TypD
-  "vextunop_Jnn_N"
+  "vextunop__Jnn_1_M_1_Jnn_2_M_2"
   (InstD
     (VariantT
       (typcase
@@ -4326,22 +5124,28 @@
   )
 )
 (RelD
-  "wf_vextunop_Jnn_N"
-  (Seq Arg Arg Arg)
+  "wf_vextunop__Jnn_1_M_1_Jnn_2_M_2"
+  (Seq Arg Arg Arg Arg Arg)
   (TupT
     (typbind "_" (VarT "Jnn"))
-    (typbind "_" (VarT "N"))
-    (typbind "_" (VarT "vextunop_Jnn_N"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "Jnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "vextunop__Jnn_1_M_1_Jnn_2_M_2"))
   )
   (RuleD
-    "vextunop_Jnn_N_case_0"
-    (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "N" (VarT "N"))
+    "vextunop__Jnn_1_M_1_Jnn_2_M_2_case_0"
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
     (ExpP "sx" (VarT "sx"))
-    (Seq Arg Arg Arg)
+    (Seq Arg Arg Arg Arg Arg)
     (TupE
-      (VarE "Jnn")
-      (VarE "N")
+      (VarE "Jnn_1")
+      (VarE "M_1")
+      (VarE "Jnn_2")
+      (VarE "M_2")
       (CaseE (Seq (Atom EXTADD_PAIRWISE) Arg) (TupE (VarE "sx")))
     )
     (IfPr
@@ -4352,98 +5156,187 @@
           LeOp
           nat
           (NumE (Nat 16))
-          (CallE
-            "lsizenn"
-            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+          (BinE
+            MulOp
+            nat
+            (NumE (Nat 2))
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+            )
           )
         )
-        (CmpE
-          LeOp
-          nat
-          (CallE
-            "lsizenn"
-            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+        (BinE
+          AndOp
+          bool
+          (CmpE
+            EqOp
+            bool
+            (BinE
+              MulOp
+              nat
+              (NumE (Nat 2))
+              (CallE
+                "lsizenn1"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+              )
+            )
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+            )
           )
-          (NumE (Nat 32))
+          (CmpE
+            LeOp
+            nat
+            (CallE
+              "lsizenn2"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+            )
+            (NumE (Nat 32))
+          )
         )
       )
     )
   )
 )
-(HintD (RelH "wf_vextunop_Jnn_N" (hint "wf-relation" "vextunop_Jnn_N")))
+(HintD
+  (RelH
+    "wf_vextunop__Jnn_1_M_1_Jnn_2_M_2"
+    (hint "wf-relation" "vextunop__Jnn_1_M_1_Jnn_2_M_2")
+  )
+)
 (TypD
-  "vextunop_"
+  "vextunop__"
   (InstD
     (VariantT
       (typcase
-        (Seq (Atom mk_vextunop__0) Arg Arg Arg)
+        (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
         (TupT
-          (typbind "Jnn" (VarT "Jnn"))
-          (typbind "N" (VarT "N"))
-          (typbind "var_x" (VarT "vextunop_Jnn_N"))
+          (typbind "Jnn_1" (VarT "Jnn"))
+          (typbind "M_1" (VarT "M"))
+          (typbind "Jnn_2" (VarT "Jnn"))
+          (typbind "M_2" (VarT "M"))
+          (typbind "var_x" (VarT "vextunop__Jnn_1_M_1_Jnn_2_M_2"))
         )
       )
     )
   )
 )
 (RelD
-  "wf_vextunop_"
-  (Seq Arg Arg)
-  (TupT (typbind "_" (VarT "ishape")) (typbind "_" (VarT "vextunop_")))
+  "wf_vextunop__"
+  (Seq Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "ishape"))
+    (typbind "_" (VarT "ishape"))
+    (typbind "_" (VarT "vextunop__"))
+  )
   (RuleD
-    "vextunop__case_0"
-    (ExpP "ishape" (VarT "ishape"))
-    (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_x" (VarT "vextunop_Jnn_N"))
-    (Seq Arg Arg)
+    "vextunop___case_0"
+    (ExpP "ishape_1" (VarT "ishape"))
+    (ExpP "ishape_2" (VarT "ishape"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vextunop__Jnn_1_M_1_Jnn_2_M_2"))
+    (Seq Arg Arg Arg)
     (TupE
-      (VarE "ishape")
+      (VarE "ishape_1")
+      (VarE "ishape_2")
       (CaseE
-        (Seq (Atom mk_vextunop__0) Arg Arg Arg)
-        (TupE (VarE "Jnn") (VarE "N") (VarE "var_x"))
+        (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
       )
     )
     (RulePr
-      "wf_vextunop_Jnn_N"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "Jnn") (VarE "N") (VarE "var_x"))
+      "wf_vextunop__Jnn_1_M_1_Jnn_2_M_2"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "Jnn_1")
+        (VarE "M_1")
+        (VarE "Jnn_2")
+        (VarE "M_2")
+        (VarE "var_x")
+      )
     )
     (IfPr
       (CmpE
         EqOp
         bool
-        (VarE "ishape")
+        (VarE "ishape_1")
         (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "N"))))
+          Arg
+          (TupE
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "ishape_2")
+        (CaseE
+          Arg
+          (TupE
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
         )
       )
     )
   )
 )
-(HintD (RelH "wf_vextunop_" (hint "wf-relation" "vextunop_")))
+(HintD (RelH "wf_vextunop__" (hint "wf-relation" "vextunop__")))
 (DecD
-  "proj_vextunop__0"
-  (ExpP "var_x" (VarT "vextunop_"))
-  (VarT "vextunop_Jnn_N")
+  "proj_vextunop___0"
+  (ExpP "var_x" (VarT "vextunop__"))
+  (VarT "vextunop__Jnn_1_M_1_Jnn_2_M_2")
   (DefD
-    (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_x" (VarT "vextunop_Jnn_N"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vextunop__Jnn_1_M_1_Jnn_2_M_2"))
     (ExpA
       (CaseE
-        (Seq (Atom mk_vextunop__0) Arg Arg Arg)
-        (TupE (VarE "Jnn") (VarE "N") (VarE "var_x"))
+        (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
       )
     )
     (VarE "var_x")
   )
 )
-(HintD (TypH "vextunop_" (hint "type_family" "{}")))
-(HintD (DecH "proj_vextunop__0" (hint "tf_projection_func" "{}")))
+(HintD (TypH "vextunop__" (hint "type_family" "{}")))
+(HintD (DecH "proj_vextunop___0" (hint "tf_projection_func" "{}")))
+(HintD (TypH "vextunop__" (hint "macro" "{\"%\" \"V%\"}")))
 (TypD
-  "vextbinop_Jnn_N"
+  "vextbinop__Jnn_1_M_1_Jnn_2_M_2"
   (InstD
     (VariantT
       (typcase
@@ -4455,117 +5348,247 @@
   )
 )
 (RelD
-  "wf_vextbinop_Jnn_N"
-  (Seq Arg Arg Arg)
+  "wf_vextbinop__Jnn_1_M_1_Jnn_2_M_2"
+  (Seq Arg Arg Arg Arg Arg)
   (TupT
     (typbind "_" (VarT "Jnn"))
-    (typbind "_" (VarT "N"))
-    (typbind "_" (VarT "vextbinop_Jnn_N"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "Jnn"))
+    (typbind "_" (VarT "M"))
+    (typbind "_" (VarT "vextbinop__Jnn_1_M_1_Jnn_2_M_2"))
   )
   (RuleD
-    "vextbinop_Jnn_N_case_0"
-    (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "N" (VarT "N"))
+    "vextbinop__Jnn_1_M_1_Jnn_2_M_2_case_0"
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
     (ExpP "half" (VarT "half"))
     (ExpP "sx" (VarT "sx"))
-    (Seq Arg Arg Arg)
+    (Seq Arg Arg Arg Arg Arg)
     (TupE
-      (VarE "Jnn")
-      (VarE "N")
+      (VarE "Jnn_1")
+      (VarE "M_1")
+      (VarE "Jnn_2")
+      (VarE "M_2")
       (CaseE (Seq (Atom EXTMUL) Arg Arg) (TupE (VarE "half") (VarE "sx")))
+    )
+    (IfPr
+      (BinE
+        AndOp
+        bool
+        (CmpE
+          EqOp
+          bool
+          (BinE
+            MulOp
+            nat
+            (NumE (Nat 2))
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+            )
+          )
+          (CallE
+            "lsizenn2"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+        )
+        (CmpE
+          GeOp
+          nat
+          (CallE
+            "lsizenn2"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (NumE (Nat 16))
+        )
+      )
     )
   )
   (RuleD
-    "vextbinop_Jnn_N_case_1"
-    (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "N" (VarT "N"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "Jnn") (VarE "N") (CaseE (Seq (Atom DOT) (Atom S)) (TupE)))
+    "vextbinop__Jnn_1_M_1_Jnn_2_M_2_case_1"
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (Seq Arg Arg Arg Arg Arg)
+    (TupE
+      (VarE "Jnn_1")
+      (VarE "M_1")
+      (VarE "Jnn_2")
+      (VarE "M_2")
+      (CaseE (Seq (Atom DOT) (Atom S)) (TupE))
+    )
     (IfPr
-      (CmpE
-        EqOp
+      (BinE
+        AndOp
         bool
-        (CallE
-          "lsizenn"
-          (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+        (CmpE
+          EqOp
+          bool
+          (BinE
+            MulOp
+            nat
+            (NumE (Nat 2))
+            (CallE
+              "lsizenn1"
+              (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
+            )
+          )
+          (CallE
+            "lsizenn2"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
         )
-        (NumE (Nat 32))
+        (CmpE
+          EqOp
+          bool
+          (CallE
+            "lsizenn2"
+            (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+          )
+          (NumE (Nat 32))
+        )
       )
     )
   )
 )
-(HintD (RelH "wf_vextbinop_Jnn_N" (hint "wf-relation" "vextbinop_Jnn_N")))
+(HintD
+  (RelH
+    "wf_vextbinop__Jnn_1_M_1_Jnn_2_M_2"
+    (hint "wf-relation" "vextbinop__Jnn_1_M_1_Jnn_2_M_2")
+  )
+)
 (TypD
-  "vextbinop_"
+  "vextbinop__"
   (InstD
     (VariantT
       (typcase
-        (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+        (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
         (TupT
-          (typbind "Jnn" (VarT "Jnn"))
-          (typbind "N" (VarT "N"))
-          (typbind "var_x" (VarT "vextbinop_Jnn_N"))
+          (typbind "Jnn_1" (VarT "Jnn"))
+          (typbind "M_1" (VarT "M"))
+          (typbind "Jnn_2" (VarT "Jnn"))
+          (typbind "M_2" (VarT "M"))
+          (typbind "var_x" (VarT "vextbinop__Jnn_1_M_1_Jnn_2_M_2"))
         )
       )
     )
   )
 )
 (RelD
-  "wf_vextbinop_"
-  (Seq Arg Arg)
-  (TupT (typbind "_" (VarT "ishape")) (typbind "_" (VarT "vextbinop_")))
+  "wf_vextbinop__"
+  (Seq Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "ishape"))
+    (typbind "_" (VarT "ishape"))
+    (typbind "_" (VarT "vextbinop__"))
+  )
   (RuleD
-    "vextbinop__case_0"
-    (ExpP "ishape" (VarT "ishape"))
-    (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_x" (VarT "vextbinop_Jnn_N"))
-    (Seq Arg Arg)
+    "vextbinop___case_0"
+    (ExpP "ishape_1" (VarT "ishape"))
+    (ExpP "ishape_2" (VarT "ishape"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vextbinop__Jnn_1_M_1_Jnn_2_M_2"))
+    (Seq Arg Arg Arg)
     (TupE
-      (VarE "ishape")
+      (VarE "ishape_1")
+      (VarE "ishape_2")
       (CaseE
-        (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
-        (TupE (VarE "Jnn") (VarE "N") (VarE "var_x"))
+        (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
       )
     )
     (RulePr
-      "wf_vextbinop_Jnn_N"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "Jnn") (VarE "N") (VarE "var_x"))
+      "wf_vextbinop__Jnn_1_M_1_Jnn_2_M_2"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "Jnn_1")
+        (VarE "M_1")
+        (VarE "Jnn_2")
+        (VarE "M_2")
+        (VarE "var_x")
+      )
     )
     (IfPr
       (CmpE
         EqOp
         bool
-        (VarE "ishape")
+        (VarE "ishape_1")
         (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "N"))))
+          Arg
+          (TupE
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
+              )
+            )
+          )
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "ishape_2")
+        (CaseE
+          Arg
+          (TupE
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                (CaseE Arg (TupE (VarE "M_2")))
+              )
+            )
+          )
         )
       )
     )
   )
 )
-(HintD (RelH "wf_vextbinop_" (hint "wf-relation" "vextbinop_")))
+(HintD (RelH "wf_vextbinop__" (hint "wf-relation" "vextbinop__")))
 (DecD
-  "proj_vextbinop__0"
-  (ExpP "var_x" (VarT "vextbinop_"))
-  (VarT "vextbinop_Jnn_N")
+  "proj_vextbinop___0"
+  (ExpP "var_x" (VarT "vextbinop__"))
+  (VarT "vextbinop__Jnn_1_M_1_Jnn_2_M_2")
   (DefD
-    (ExpP "Jnn" (VarT "Jnn"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_x" (VarT "vextbinop_Jnn_N"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" (VarT "M"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" (VarT "M"))
+    (ExpP "var_x" (VarT "vextbinop__Jnn_1_M_1_Jnn_2_M_2"))
     (ExpA
       (CaseE
-        (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
-        (TupE (VarE "Jnn") (VarE "N") (VarE "var_x"))
+        (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (VarE "var_x")
+        )
       )
     )
     (VarE "var_x")
   )
 )
-(HintD (TypH "vextbinop_" (hint "type_family" "{}")))
-(HintD (DecH "proj_vextbinop__0" (hint "tf_projection_func" "{}")))
+(HintD (TypH "vextbinop__" (hint "type_family" "{}")))
+(HintD (DecH "proj_vextbinop___0" (hint "tf_projection_func" "{}")))
+(HintD (TypH "vextbinop__" (hint "macro" "{\"%\" \"V%\"}")))
 (TypD
   "memarg"
   (InstD
@@ -4698,18 +5721,78 @@
 (HintD (TypH "loadop_" (hint "type_family" "{}")))
 (HintD (DecH "proj_loadop__0" (hint "tf_projection_func" "{}")))
 (TypD
-  "vloadop"
+  "vloadop_"
   (InstD
     (VariantT
       (typcase
         (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-        (TupT (typbind "_" nat) (typbind "_" nat) (typbind "sx" (VarT "sx")))
+        (TupT
+          (typbind "sz" (VarT "sz"))
+          (typbind "M" (VarT "M"))
+          (typbind "sx" (VarT "sx"))
+        )
       )
-      (typcase (Seq (Atom SPLAT) Arg) (TupT (typbind "_" nat)))
-      (typcase (Seq (Atom ZERO) Arg) (TupT (typbind "_" nat)))
+      (typcase (Seq (Atom SPLAT) Arg) (TupT (typbind "sz" (VarT "sz"))))
+      (typcase (Seq (Atom ZERO) Arg) (TupT (typbind "sz" (VarT "sz"))))
     )
   )
 )
+(RelD
+  "wf_vloadop_"
+  (Seq Arg Arg)
+  (TupT (typbind "_" (VarT "vectype")) (typbind "_" (VarT "vloadop_")))
+  (RuleD
+    "vloadop__case_0"
+    (ExpP "vectype" (VarT "vectype"))
+    (ExpP "sz" (VarT "sz"))
+    (ExpP "M" (VarT "M"))
+    (ExpP "sx" (VarT "sx"))
+    (Seq Arg Arg)
+    (TupE
+      (VarE "vectype")
+      (CaseE
+        (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
+        (TupE (VarE "sz") (VarE "M") (VarE "sx"))
+      )
+    )
+    (RulePr "wf_sz" (Seq Arg) (TupE (VarE "sz")))
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (CvtE
+          nat
+          rat
+          (BinE MulOp nat (ProjE (UncaseE (VarE "sz") Arg) 0) (VarE "M"))
+        )
+        (BinE
+          DivOp
+          rat
+          (CvtE nat rat (CallE "vsize" (ExpA (VarE "vectype"))))
+          (CvtE nat rat (NumE (Nat 2)))
+        )
+      )
+    )
+  )
+  (RuleD
+    "vloadop__case_1"
+    (ExpP "vectype" (VarT "vectype"))
+    (ExpP "sz" (VarT "sz"))
+    (Seq Arg Arg)
+    (TupE (VarE "vectype") (CaseE (Seq (Atom SPLAT) Arg) (TupE (VarE "sz"))))
+    (RulePr "wf_sz" (Seq Arg) (TupE (VarE "sz")))
+  )
+  (RuleD
+    "vloadop__case_2"
+    (ExpP "vectype" (VarT "vectype"))
+    (ExpP "sz" (VarT "sz"))
+    (Seq Arg Arg)
+    (TupE (VarE "vectype") (CaseE (Seq (Atom ZERO) Arg) (TupE (VarE "sz"))))
+    (RulePr "wf_sz" (Seq Arg) (TupE (VarE "sz")))
+    (IfPr (CmpE GeOp nat (ProjE (UncaseE (VarE "sz") Arg) 0) (NumE (Nat 32))))
+  )
+)
+(HintD (RelH "wf_vloadop_" (hint "wf-relation" "vloadop_")))
 (TypD
   "blocktype"
   (InstD
@@ -4940,7 +6023,6 @@
             (typbind "sx?" (IterT (VarT "sx") Opt))
             (typbind "laneidx" (VarT "laneidx"))
           )
-          (ExpP "numtype" (VarT "numtype"))
         )
         (typcase
           (Seq (Atom VREPLACE_LANE) Arg Arg)
@@ -4954,7 +6036,7 @@
           (TupT
             (typbind "ishape_1" (VarT "ishape"))
             (typbind "ishape_2" (VarT "ishape"))
-            (typbind "_" (VarT "vextunop_"))
+            (typbind "_" (VarT "vextunop__"))
           )
         )
         (typcase
@@ -4962,7 +6044,7 @@
           (TupT
             (typbind "ishape_1" (VarT "ishape"))
             (typbind "ishape_2" (VarT "ishape"))
-            (typbind "_" (VarT "vextbinop_"))
+            (typbind "_" (VarT "vextbinop__"))
           )
         )
         (typcase
@@ -4976,9 +6058,9 @@
         (typcase
           (Seq (Atom VCVTOP) Arg Arg Arg)
           (TupT
-            (typbind "shape" (VarT "shape"))
-            (typbind "shape" (VarT "shape"))
-            (typbind "vcvtop" (VarT "vcvtop"))
+            (typbind "shape_1" (VarT "shape"))
+            (typbind "shape_2" (VarT "shape"))
+            (typbind "_" (VarT "vcvtop__"))
           )
         )
         (typcase
@@ -5064,13 +6146,12 @@
             (typbind "memarg" (VarT "memarg"))
           )
           (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-          (ExpP "numtype?" (IterT (VarT "numtype") Opt))
         )
         (typcase
           (Seq (Atom VLOAD) Arg Arg Arg)
           (TupT
             (typbind "vectype" (VarT "vectype"))
-            (typbind "vloadop?" (IterT (VarT "vloadop") Opt))
+            (typbind "_" (IterT (VarT "vloadop_") Opt))
             (typbind "memarg" (VarT "memarg"))
           )
         )
@@ -5488,8 +6569,16 @@
           bool
           (VarE "ishape")
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
         )
       )
@@ -5520,8 +6609,16 @@
             bool
             (VarE "ishape")
             (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+              Arg
+              (TupE
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE
+                    (CaseE (Atom I8) (TupE))
+                    (CaseE Arg (TupE (NumE (Nat 16))))
+                  )
+                )
+              )
             )
           )
           (CmpE
@@ -5548,7 +6645,6 @@
     )
     (RuleD
       "instr_case_34"
-      (ExpP "numtype" (VarT "numtype"))
       (ExpP "shape" (VarT "shape"))
       (ExpP "sx?" (IterT (VarT "sx") Opt))
       (ExpP "laneidx" (VarT "laneidx"))
@@ -5565,11 +6661,14 @@
         (BinE
           EquivOp
           bool
-          (CmpE
-            EqOp
-            bool
+          (MemE
             (CallE "lanetype" (ExpA (VarE "shape")))
-            (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype"))
+            (ListE
+              (CaseE (Atom I32) (TupE))
+              (CaseE (Atom I64) (TupE))
+              (CaseE (Atom F32) (TupE))
+              (CaseE (Atom F64) (TupE))
+            )
           )
           (CmpE
             EqOp
@@ -5598,7 +6697,7 @@
       "instr_case_36"
       (ExpP "ishape_1" (VarT "ishape"))
       (ExpP "ishape_2" (VarT "ishape"))
-      (ExpP "var_0" (VarT "vextunop_"))
+      (ExpP "var_0" (VarT "vextunop__"))
       (Seq Arg)
       (TupE
         (CaseE
@@ -5609,45 +6708,16 @@
       (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
       (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
       (RulePr
-        "wf_vextunop_"
-        (Seq Arg Arg)
-        (TupE (VarE "ishape_1") (VarE "var_0"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (CallE
-            "lsize"
-            (ExpA
-              (CallE
-                "lanetype"
-                (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_1")))
-              )
-            )
-          )
-          (BinE
-            MulOp
-            nat
-            (NumE (Nat 2))
-            (CallE
-              "lsize"
-              (ExpA
-                (CallE
-                  "lanetype"
-                  (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_2")))
-                )
-              )
-            )
-          )
-        )
+        "wf_vextunop__"
+        (Seq Arg Arg Arg)
+        (TupE (VarE "ishape_2") (VarE "ishape_1") (VarE "var_0"))
       )
     )
     (RuleD
       "instr_case_37"
       (ExpP "ishape_1" (VarT "ishape"))
       (ExpP "ishape_2" (VarT "ishape"))
-      (ExpP "var_0" (VarT "vextbinop_"))
+      (ExpP "var_0" (VarT "vextbinop__"))
       (Seq Arg)
       (TupE
         (CaseE
@@ -5658,38 +6728,9 @@
       (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
       (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
       (RulePr
-        "wf_vextbinop_"
-        (Seq Arg Arg)
-        (TupE (VarE "ishape_1") (VarE "var_0"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (CallE
-            "lsize"
-            (ExpA
-              (CallE
-                "lanetype"
-                (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_1")))
-              )
-            )
-          )
-          (BinE
-            MulOp
-            nat
-            (NumE (Nat 2))
-            (CallE
-              "lsize"
-              (ExpA
-                (CallE
-                  "lanetype"
-                  (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_2")))
-                )
-              )
-            )
-          )
-        )
+        "wf_vextbinop__"
+        (Seq Arg Arg Arg)
+        (TupE (VarE "ishape_2") (VarE "ishape_1") (VarE "var_0"))
       )
     )
     (RuleD
@@ -5718,7 +6759,7 @@
               (ExpA
                 (CallE
                   "lanetype"
-                  (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_2")))
+                  (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0))
                 )
               )
             )
@@ -5731,9 +6772,7 @@
                 (ExpA
                   (CallE
                     "lanetype"
-                    (ExpA
-                      (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_1"))
-                    )
+                    (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0))
                   )
                 )
               )
@@ -5751,9 +6790,7 @@
                 (ExpA
                   (CallE
                     "lanetype"
-                    (ExpA
-                      (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_1"))
-                    )
+                    (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0))
                   )
                 )
               )
@@ -5765,18 +6802,23 @@
     )
     (RuleD
       "instr_case_39"
-      (ExpP "shape" (VarT "shape"))
-      (ExpP "shape_0" (VarT "shape"))
-      (ExpP "vcvtop" (VarT "vcvtop"))
+      (ExpP "shape_1" (VarT "shape"))
+      (ExpP "shape_2" (VarT "shape"))
+      (ExpP "var_0" (VarT "vcvtop__"))
       (Seq Arg)
       (TupE
         (CaseE
           (Seq (Atom VCVTOP) Arg Arg Arg)
-          (TupE (VarE "shape") (VarE "shape_0") (VarE "vcvtop"))
+          (TupE (VarE "shape_1") (VarE "shape_2") (VarE "var_0"))
         )
       )
-      (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-      (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_0")))
+      (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
+      (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
+      (RulePr
+        "wf_vcvtop__"
+        (Seq Arg Arg Arg)
+        (TupE (VarE "shape_2") (VarE "shape_1") (VarE "var_0"))
+      )
     )
     (RuleD
       "instr_case_40"
@@ -5923,7 +6965,6 @@
     (RuleD
       "instr_case_57"
       (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-      (ExpP "numtype?" (IterT (VarT "numtype") Opt))
       (ExpP "numtype" (VarT "numtype"))
       (ExpP "sz?" (IterT (VarT "sz") Opt))
       (ExpP "memarg" (VarT "memarg"))
@@ -5964,21 +7005,29 @@
         )
         Opt
         (iterexp "Inn" (VarE "Inn?"))
-        (iterexp "numtype" (VarE "numtype?"))
         (iterexp "sz" (VarE "sz?"))
       )
     )
     (RuleD
       "instr_case_58"
       (ExpP "vectype" (VarT "vectype"))
-      (ExpP "vloadop?" (IterT (VarT "vloadop") Opt))
+      (ExpP "var_0?" (IterT (VarT "vloadop_") Opt))
       (ExpP "memarg" (VarT "memarg"))
       (Seq Arg)
       (TupE
         (CaseE
           (Seq (Atom VLOAD) Arg Arg Arg)
-          (TupE (VarE "vectype") (VarE "vloadop?") (VarE "memarg"))
+          (TupE (VarE "vectype") (VarE "var_0?") (VarE "memarg"))
         )
+      )
+      (IterPr
+        (RulePr
+          "wf_vloadop_"
+          (Seq Arg Arg)
+          (TupE (VarE "vectype") (VarE "var_0"))
+        )
+        Opt
+        (iterexp "var_0" (VarE "var_0?"))
       )
       (RulePr "wf_memarg" (Seq Arg) (TupE (VarE "memarg")))
     )
@@ -8962,6 +10011,33 @@
         )
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CvtE
+              int
+              nat
+              (CallE
+                "truncz"
+                (ExpA
+                  (BinE
+                    DivOp
+                    rat
+                    (CvtE nat rat (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                    (CvtE nat rat (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "N" nat)
@@ -9077,48 +10153,50 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "idiv__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "idiv__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
-  )
-  (RuleD
-    "idiv__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val?"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (CallE
-          "idiv_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "inv_signed_"
+              (ExpA (VarE "N"))
+              (ExpA
+                (CallE
+                  "truncz"
+                  (ExpA
+                    (BinE
+                      DivOp
+                      rat
+                      (CvtE
+                        int
+                        rat
+                        (CallE
+                          "signed_"
+                          (ExpA (VarE "N"))
+                          (ExpA (ProjE (UncaseE (VarE "i_1") Arg) 0))
+                        )
+                      )
+                      (CvtE
+                        int
+                        rat
+                        (CallE
+                          "signed_"
+                          (ExpA (VarE "N"))
+                          (ExpA (ProjE (UncaseE (VarE "i_2") Arg) 0))
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
         )
       )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
     )
   )
 )
@@ -9753,6 +10831,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "iadd_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "Inn"))
@@ -9790,6 +10892,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "isub_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "Inn"))
@@ -9823,6 +10949,30 @@
             )
             (ExpA (VarE "iN_1"))
             (ExpA (VarE "iN_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "imul_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
           )
         )
       )
@@ -9874,6 +11024,103 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")) (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "list_"
+          (TypA (VarT "num_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_num__0) Arg Arg)
+                (TupE (VarE "Inn") (VarE "iter_0"))
+              )
+              Opt
+              (iterexp
+                "iter_0"
+                (CallE
+                  "idiv_"
+                  (ExpA
+                    (CallE
+                      "sizenn"
+                      (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "iN_1"))
+                  (ExpA (VarE "iN_2"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "Inn") (VarT "valtype") (VarE "Inn")))
+          )
+          (VarE "iter")
+        )
+      )
+      Opt
+      (iterexp
+        "iter"
+        (CallE
+          "idiv_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "iN_1"))
+          (ExpA (VarE "iN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+          (CaseE
+            (Seq (Atom mk_num__0) Arg Arg)
+            (TupE (VarE "Inn") (VarE "iter_0"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0"
+        (CallE
+          "idiv_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "iN_1"))
+          (ExpA (VarE "iN_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "Inn"))
@@ -9921,6 +11168,103 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")) (VarE "iter"))
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "list_"
+          (TypA (VarT "num_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_num__0) Arg Arg)
+                (TupE (VarE "Inn") (VarE "iter_0"))
+              )
+              Opt
+              (iterexp
+                "iter_0"
+                (CallE
+                  "irem_"
+                  (ExpA
+                    (CallE
+                      "sizenn"
+                      (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "iN_1"))
+                  (ExpA (VarE "iN_2"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (SubE (VarT "Inn") (VarT "valtype") (VarE "Inn")))
+          )
+          (VarE "iter")
+        )
+      )
+      Opt
+      (iterexp
+        "iter"
+        (CallE
+          "irem_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "iN_1"))
+          (ExpA (VarE "iN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+          (CaseE
+            (Seq (Atom mk_num__0) Arg Arg)
+            (TupE (VarE "Inn") (VarE "iter_0"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0"
+        (CallE
+          "irem_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "iN_1"))
+          (ExpA (VarE "iN_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "Inn"))
@@ -9954,6 +11298,30 @@
             )
             (ExpA (VarE "iN_1"))
             (ExpA (VarE "iN_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "iand_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
           )
         )
       )
@@ -9995,6 +11363,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ior_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "Inn"))
@@ -10032,6 +11424,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ixor_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "Inn"))
@@ -10065,6 +11481,30 @@
             )
             (ExpA (VarE "iN_1"))
             (ExpA (CaseE Arg (TupE (ProjE (UncaseE (VarE "iN_2") Arg) 0))))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ishl_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (CaseE Arg (TupE (ProjE (UncaseE (VarE "iN_2") Arg) 0))))
+            )
           )
         )
       )
@@ -10108,6 +11548,31 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "ishr_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN_1"))
+              (ExpA (CaseE Arg (TupE (ProjE (UncaseE (VarE "iN_2") Arg) 0))))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Inn" (VarT "Inn"))
@@ -10141,6 +11606,30 @@
             )
             (ExpA (VarE "iN_1"))
             (ExpA (VarE "iN_2"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "irotl_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
           )
         )
       )
@@ -10182,6 +11671,30 @@
         )
       )
     )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE
+        (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
+        (CaseE
+          (Seq (Atom mk_num__0) Arg Arg)
+          (TupE
+            (VarE "Inn")
+            (CallE
+              "irotr_"
+              (ExpA
+                (CallE
+                  "sizenn"
+                  (ExpA (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn")))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -10202,6 +11715,62 @@
     )
     (IterE
       (CaseE (Seq (Atom mk_num__1) Arg Arg) (TupE (VarE "Fnn") (VarE "iter_0")))
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
       List
       (iterexp
         "iter_0"
@@ -10254,6 +11823,62 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -10274,6 +11899,62 @@
     )
     (IterE
       (CaseE (Seq (Atom mk_num__1) Arg Arg) (TupE (VarE "Fnn") (VarE "iter_0")))
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
       List
       (iterexp
         "iter_0"
@@ -10326,6 +12007,62 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -10346,6 +12083,62 @@
     )
     (IterE
       (CaseE (Seq (Atom mk_num__1) Arg Arg) (TupE (VarE "Fnn") (VarE "iter_0")))
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
       List
       (iterexp
         "iter_0"
@@ -10398,6 +12191,62 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (DefD
     (ExpP "Fnn" (VarT "Fnn"))
@@ -10434,55 +12283,61 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "binop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "binop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "numtype" (VarT "numtype"))
-    (typbind "binop_" (VarT "binop_"))
-    (typbind "num_" (VarT "num_"))
-    (typbind "num__0" (VarT "num_"))
-    (typbind "ret_val*" (IterT (VarT "num_") List))
-  )
-  (RuleD
-    "binop__is_wf_0"
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "binop_" (VarT "binop_"))
-    (ExpP "num_" (VarT "num_"))
-    (ExpP "num__0" (VarT "num_"))
-    (ExpP "ret_val*" (IterT (VarT "num_") List))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "numtype")
-      (VarE "binop_")
-      (VarE "num_")
-      (VarE "num__0")
-      (VarE "ret_val*")
-    )
-    (RulePr "wf_binop_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "binop_")))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num_")))
-    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "num__0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "sizenn"
+            (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+          )
+          (VarE "iter")
+        )
+      )
+      List
+      (iterexp
+        "iter"
         (CallE
-          "binop_"
-          (ExpA (VarE "numtype"))
-          (ExpA (VarE "binop_"))
-          (ExpA (VarE "num_"))
-          (ExpA (VarE "num__0"))
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
     (IterPr
-      (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype") (VarE "ret_val")))
+      (RulePr
+        "wf_num_"
+        (Seq Arg Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
+          (CaseE
+            (Seq (Atom mk_num__1) Arg Arg)
+            (TupE (VarE "Fnn") (VarE "iter_0"))
+          )
+        )
+      )
       List
-      (iterexp "ret_val" (VarE "ret_val*"))
+      (iterexp
+        "iter_0"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "sizenn"
+              (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
     )
   )
 )
@@ -12034,7 +13889,6 @@
     (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "numtype_2") (VarE "ret_val")))
   )
 )
-(HintD (DecH "reinterpret__" (hint "partial" "{}")))
 (DecD
   "trunc__"
   (ExpP "M" (VarT "M"))
@@ -12882,7 +14736,6 @@
     )
   )
 )
-(HintD (DecH "nbytes_" (hint "partial" "{}")))
 (HintD
   (DecH "nbytes_" (hint "show" "$bytes_(%, %)") (hint "inverse" "$inv_nbytes_"))
 )
@@ -14202,11 +16055,21 @@
   (ExpP "num_" (VarT "num_"))
   (VarT "lane_")
   (DefD
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "c" (VarT "num_"))
-    (ExpA (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype")))
-    (ExpA (VarE "c"))
-    (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "numtype") (VarE "c")))
+    (ExpP "Inn" (VarT "Inn"))
+    (ExpP "c" (VarT "uN"))
+    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn")))
+    (ExpA (CaseE (Seq (Atom mk_num__0) Arg Arg) (TupE (VarE "Inn") (VarE "c"))))
+    (CaseE
+      (Seq (Atom mk_lane__0) Arg Arg)
+      (TupE (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn")) (VarE "c"))
+    )
+  )
+  (DefD
+    (ExpP "Fnn" (VarT "Fnn"))
+    (ExpP "c" (VarT "fN"))
+    (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn")))
+    (ExpA (CaseE (Seq (Atom mk_num__1) Arg Arg) (TupE (VarE "Fnn") (VarE "c"))))
+    (CaseE (Seq (Atom mk_lane__1) Arg Arg) (TupE (VarE "Fnn") (VarE "c")))
   )
   (DefD
     (ExpP "packtype" (VarT "packtype"))
@@ -14219,9 +16082,9 @@
       )
     )
     (CaseE
-      (Seq (Atom mk_lane__1) Arg Arg)
+      (Seq (Atom mk_lane__0) Arg Arg)
       (TupE
-        (VarE "packtype")
+        (SubE (VarT "packtype") (VarT "Jnn") (VarE "packtype"))
         (CallE
           "wrap__"
           (ExpA
@@ -14292,13 +16155,25 @@
   (ExpP "lane_" (VarT "lane_"))
   (VarT "num_")
   (DefD
-    (ExpP "numtype" (VarT "numtype"))
-    (ExpP "c" (VarT "num_"))
-    (ExpA (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype")))
+    (ExpP "Inn" (VarT "Inn"))
+    (ExpP "c" (VarT "uN"))
+    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn")))
     (ExpA
-      (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "numtype") (VarE "c")))
+      (CaseE
+        (Seq (Atom mk_lane__0) Arg Arg)
+        (TupE (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn")) (VarE "c"))
+      )
     )
-    (VarE "c")
+    (CaseE (Seq (Atom mk_num__0) Arg Arg) (TupE (VarE "Inn") (VarE "c")))
+  )
+  (DefD
+    (ExpP "Fnn" (VarT "Fnn"))
+    (ExpP "c" (VarT "fN"))
+    (ExpA (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn")))
+    (ExpA
+      (CaseE (Seq (Atom mk_lane__1) Arg Arg) (TupE (VarE "Fnn") (VarE "c")))
+    )
+    (CaseE (Seq (Atom mk_num__1) Arg Arg) (TupE (VarE "Fnn") (VarE "c")))
   )
   (DefD
     (ExpP "packtype" (VarT "packtype"))
@@ -14306,8 +16181,11 @@
     (ExpA (SubE (VarT "packtype") (VarT "lanetype") (VarE "packtype")))
     (ExpA
       (CaseE
-        (Seq (Atom mk_lane__1) Arg Arg)
-        (TupE (VarE "packtype") (VarE "c"))
+        (Seq (Atom mk_lane__0) Arg Arg)
+        (TupE
+          (SubE (VarT "packtype") (VarT "Jnn") (VarE "packtype"))
+          (VarE "c")
+        )
       )
     )
     (CaseE
@@ -14471,97 +16349,428 @@
 (HintD (DecH "inv_lanes_" (hint "builtin" "{}")))
 (DecD
   "zeroop"
-  (ExpP "vcvtop" (VarT "vcvtop"))
+  (ExpP "shape_1" (VarT "shape"))
+  (ExpP "shape_2" (VarT "shape"))
+  (ExpP "vcvtop__" (VarT "vcvtop__"))
   (IterT (VarT "zero") Opt)
   (DefD
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" nat)
     (ExpP "half" (VarT "half"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpA (CaseE (Seq (Atom EXTEND) Arg Arg) (TupE (VarE "half") (VarE "sx"))))
-    (OptE)
-  )
-  (DefD
-    (ExpP "half?" (IterT (VarT "half") Opt))
     (ExpP "sx" (VarT "sx"))
     (ExpA
       (CaseE
-        (Seq (Atom CONVERT) Arg Arg)
+        (Seq Arg (Atom X) Arg)
         (TupE
-          (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
-          (VarE "sx")
+          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom EXTEND) Arg Arg) (TupE (VarE "half") (VarE "sx")))
         )
       )
     )
     (OptE)
   )
   (DefD
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" nat)
+    (ExpP "half?" (IterT (VarT "half") Opt))
+    (ExpP "sx" (VarT "sx"))
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE
+            (Seq (Atom CONVERT) Arg Arg)
+            (TupE
+              (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
+              (VarE "sx")
+            )
+          )
+        )
+      )
+    )
+    (OptE)
+  )
+  (DefD
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" nat)
     (ExpP "sx" (VarT "sx"))
     (ExpP "zero?" (IterT (VarT "zero") Opt))
     (ExpA
       (CaseE
-        (Seq (Atom TRUNC_SAT) Arg Arg)
+        (Seq Arg (Atom X) Arg)
         (TupE
-          (VarE "sx")
-          (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (CaseE
+            (Seq (Atom TRUNC_SAT) Arg Arg)
+            (TupE
+              (VarE "sx")
+              (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
+            )
+          )
         )
       )
     )
     (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
   )
   (DefD
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" nat)
     (ExpP "zero" (VarT "zero"))
-    (ExpA (CaseE (Seq (Atom DEMOTE) Arg) (TupE (VarE "zero"))))
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom DEMOTE) Arg) (TupE (VarE "zero")))
+        )
+      )
+    )
     (OptE (VarE "zero"))
   )
-  (DefD (ExpA (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE))) (OptE))
+  (DefD
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" nat)
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE))
+        )
+      )
+    )
+    (OptE)
+  )
 )
+(HintD (DecH "zeroop" (hint "partial" "{}")))
 (DecD
   "halfop"
-  (ExpP "vcvtop" (VarT "vcvtop"))
+  (ExpP "shape_1" (VarT "shape"))
+  (ExpP "shape_2" (VarT "shape"))
+  (ExpP "vcvtop__" (VarT "vcvtop__"))
   (IterT (VarT "half") Opt)
   (DefD
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" nat)
     (ExpP "half" (VarT "half"))
     (ExpP "sx" (VarT "sx"))
-    (ExpA (CaseE (Seq (Atom EXTEND) Arg Arg) (TupE (VarE "half") (VarE "sx"))))
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom EXTEND) Arg Arg) (TupE (VarE "half") (VarE "sx")))
+        )
+      )
+    )
     (OptE (VarE "half"))
   )
   (DefD
+    (ExpP "Jnn_1" (VarT "Jnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" nat)
     (ExpP "half?" (IterT (VarT "half") Opt))
     (ExpP "sx" (VarT "sx"))
     (ExpA
       (CaseE
-        (Seq (Atom CONVERT) Arg Arg)
+        (Seq Arg (Atom X) Arg)
         (TupE
-          (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
-          (VarE "sx")
+          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE
+            (Seq (Atom CONVERT) Arg Arg)
+            (TupE
+              (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
+              (VarE "sx")
+            )
+          )
         )
       )
     )
     (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
   )
   (DefD
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "M_2" nat)
     (ExpP "sx" (VarT "sx"))
     (ExpP "zero?" (IterT (VarT "zero") Opt))
     (ExpA
       (CaseE
-        (Seq (Atom TRUNC_SAT) Arg Arg)
+        (Seq Arg (Atom X) Arg)
         (TupE
-          (VarE "sx")
-          (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (CaseE
+            (Seq (Atom TRUNC_SAT) Arg Arg)
+            (TupE
+              (VarE "sx")
+              (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
+            )
+          )
         )
       )
     )
     (OptE)
   )
   (DefD
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" nat)
     (ExpP "zero" (VarT "zero"))
-    (ExpA (CaseE (Seq (Atom DEMOTE) Arg) (TupE (VarE "zero"))))
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom DEMOTE) Arg) (TupE (VarE "zero")))
+        )
+      )
+    )
     (OptE)
   )
   (DefD
-    (ExpA (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE)))
+    (ExpP "Fnn_1" (VarT "Fnn"))
+    (ExpP "M_1" nat)
+    (ExpP "Fnn_2" (VarT "Fnn"))
+    (ExpP "M_2" nat)
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_1"))
+          (CaseE Arg (TupE (VarE "M_1")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE
+          (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn_2"))
+          (CaseE Arg (TupE (VarE "M_2")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE))
+        )
+      )
+    )
     (OptE (CaseE (Atom LOW) (TupE)))
   )
 )
+(HintD (DecH "halfop" (hint "partial" "{}")))
 (DecD
   "half"
   (ExpP "half" (VarT "half"))
@@ -14975,7 +17184,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -14986,7 +17195,7 @@
                       (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                     )
                   )
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -15027,7 +17236,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -15038,7 +17247,7 @@
                     (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                   )
                 )
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
               )
             )
           )
@@ -15101,7 +17310,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -15112,7 +17321,7 @@
                       (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                     )
                   )
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -15153,7 +17362,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -15164,7 +17373,7 @@
                     (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                   )
                 )
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
               )
             )
           )
@@ -15227,7 +17436,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -15238,7 +17447,7 @@
                       (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                     )
                   )
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -15279,7 +17488,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -15290,7 +17499,7 @@
                     (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                   )
                 )
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
               )
             )
           )
@@ -15350,14 +17559,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -15370,16 +17573,7 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -15430,14 +17624,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -15452,14 +17640,7 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
           )
         )
       )
@@ -15517,14 +17698,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -15537,16 +17712,7 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -15597,14 +17763,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -15619,14 +17779,7 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
           )
         )
       )
@@ -15684,14 +17837,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -15704,16 +17851,7 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -15764,14 +17902,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -15786,14 +17918,7 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
           )
         )
       )
@@ -15851,14 +17976,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -15871,16 +17990,7 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -15931,14 +18041,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -15953,14 +18057,7 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
           )
         )
       )
@@ -16018,14 +18115,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -16038,16 +18129,7 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -16098,14 +18180,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -16120,14 +18196,7 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
           )
         )
       )
@@ -16185,14 +18254,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -16205,16 +18268,7 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -16265,14 +18319,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -16287,14 +18335,7 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
           )
         )
       )
@@ -16352,14 +18393,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -16372,16 +18407,7 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
                 )
               )
             )
@@ -16432,14 +18458,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -16454,14 +18474,7 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
           )
         )
       )
@@ -16591,7 +18604,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -16602,8 +18615,8 @@
                       (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                     )
                   )
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -16645,7 +18658,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -16656,8 +18669,8 @@
                     (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                   )
                 )
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -16739,7 +18752,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -16750,8 +18763,8 @@
                       (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                     )
                   )
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -16793,7 +18806,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -16804,8 +18817,8 @@
                     (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                   )
                 )
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -16892,7 +18905,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -16904,8 +18917,8 @@
                     )
                   )
                   (ExpA (VarE "sx"))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -16947,7 +18960,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -16959,8 +18972,8 @@
                   )
                 )
                 (ExpA (VarE "sx"))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -17047,7 +19060,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -17059,8 +19072,8 @@
                     )
                   )
                   (ExpA (VarE "sx"))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -17102,7 +19115,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -17114,8 +19127,8 @@
                   )
                 )
                 (ExpA (VarE "sx"))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -17202,7 +19215,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -17214,8 +19227,8 @@
                     )
                   )
                   (ExpA (VarE "sx"))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -17257,7 +19270,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -17269,8 +19282,8 @@
                   )
                 )
                 (ExpA (VarE "sx"))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -17357,7 +19370,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -17369,8 +19382,8 @@
                     )
                   )
                   (ExpA (VarE "sx"))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -17412,7 +19425,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -17424,8 +19437,8 @@
                   )
                 )
                 (ExpA (VarE "sx"))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -17507,7 +19520,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -17518,8 +19531,8 @@
                       (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                     )
                   )
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -17561,7 +19574,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -17572,8 +19585,8 @@
                     (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
                   )
                 )
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -17655,7 +19668,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -17667,8 +19680,8 @@
                     )
                   )
                   (ExpA (CaseE (Atom U) (TupE)))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -17710,7 +19723,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -17722,8 +19735,8 @@
                   )
                 )
                 (ExpA (CaseE (Atom U) (TupE)))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -17809,7 +19822,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
                 (VarE "Jnn")
                 (CallE
@@ -17821,8 +19834,8 @@
                     )
                   )
                   (ExpA (CaseE (Atom S) (TupE)))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                  (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -17864,7 +19877,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -17876,8 +19889,8 @@
                   )
                 )
                 (ExpA (CaseE (Atom S) (TupE)))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
               )
             )
           )
@@ -17956,14 +19969,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -17976,26 +19983,8 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -18047,14 +20036,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -18069,22 +20052,8 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
           )
         )
       )
@@ -18161,14 +20130,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -18181,26 +20144,8 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -18252,14 +20197,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -18274,22 +20213,8 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
           )
         )
       )
@@ -18366,14 +20291,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -18386,26 +20305,8 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -18457,14 +20358,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -18479,22 +20374,8 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
           )
         )
       )
@@ -18571,14 +20452,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -18591,26 +20466,8 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -18662,14 +20519,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -18684,22 +20535,8 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
           )
         )
       )
@@ -18776,14 +20613,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -18796,26 +20627,8 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -18867,14 +20680,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -18889,22 +20696,8 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
           )
         )
       )
@@ -18981,14 +20774,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -19001,26 +20788,8 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -19072,14 +20841,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -19094,22 +20857,8 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
           )
         )
       )
@@ -19186,14 +20935,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -19206,26 +20949,8 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -19277,14 +21002,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -19299,22 +21018,8 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
           )
         )
       )
@@ -19391,14 +21096,8 @@
           (IterE
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__0) Arg Arg)
-                (TupE
-                  (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                  (CaseE
-                    (Seq (Atom mk_num__1) Arg Arg)
-                    (TupE (VarE "Fnn") (VarE "iter_0"))
-                  )
-                )
+                (Seq (Atom mk_lane__1) Arg Arg)
+                (TupE (VarE "Fnn") (VarE "iter_0"))
               )
               List
               (iterexp
@@ -19411,26 +21110,8 @@
                       (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                     )
                   )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                        )
-                      )
-                    )
-                  )
-                  (ExpA
-                    (TheE
-                      (CallE
-                        "proj_num__1"
-                        (ExpA
-                          (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                        )
-                      )
-                    )
-                  )
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                  (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                 )
               )
             )
@@ -19482,14 +21163,8 @@
           (TupE
             (SubE (VarT "Fnn") (VarT "lanetype") (VarE "Fnn"))
             (CaseE
-              (Seq (Atom mk_lane__0) Arg Arg)
-              (TupE
-                (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn"))
-                (CaseE
-                  (Seq (Atom mk_num__1) Arg Arg)
-                  (TupE (VarE "Fnn") (VarE "iter_0"))
-                )
-              )
+              (Seq (Atom mk_lane__1) Arg Arg)
+              (TupE (VarE "Fnn") (VarE "iter_0"))
             )
           )
         )
@@ -19504,22 +21179,8 @@
                 (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
               )
             )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
-                )
-              )
-            )
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__1"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+            (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
           )
         )
       )
@@ -19674,10 +21335,10 @@
                         )
                       )
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -19709,7 +21370,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE (VarE "Jnn") (VarE "lane_3"))
             )
             List
@@ -19752,8 +21413,8 @@
                         )
                       )
                     )
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -19785,7 +21446,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE (VarE "Jnn") (VarE "lane_3"))
           )
         )
@@ -19879,10 +21540,10 @@
                         )
                       )
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -19914,7 +21575,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE (VarE "Jnn") (VarE "lane_3"))
             )
             List
@@ -19957,8 +21618,8 @@
                         )
                       )
                     )
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -19990,7 +21651,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE (VarE "Jnn") (VarE "lane_3"))
           )
         )
@@ -20090,10 +21751,10 @@
                       )
                       (ExpA (VarE "sx"))
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -20125,7 +21786,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE (VarE "Jnn") (VarE "lane_3"))
             )
             List
@@ -20169,8 +21830,8 @@
                       )
                     )
                     (ExpA (VarE "sx"))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -20202,7 +21863,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE (VarE "Jnn") (VarE "lane_3"))
           )
         )
@@ -20302,10 +21963,10 @@
                       )
                       (ExpA (VarE "sx"))
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -20337,7 +21998,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE (VarE "Jnn") (VarE "lane_3"))
             )
             List
@@ -20381,8 +22042,8 @@
                       )
                     )
                     (ExpA (VarE "sx"))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -20414,7 +22075,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE (VarE "Jnn") (VarE "lane_3"))
           )
         )
@@ -20514,10 +22175,10 @@
                       )
                       (ExpA (VarE "sx"))
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -20549,7 +22210,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE (VarE "Jnn") (VarE "lane_3"))
             )
             List
@@ -20593,8 +22254,8 @@
                       )
                     )
                     (ExpA (VarE "sx"))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -20626,7 +22287,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE (VarE "Jnn") (VarE "lane_3"))
           )
         )
@@ -20726,10 +22387,10 @@
                       )
                       (ExpA (VarE "sx"))
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2"))))
+                        (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -20761,7 +22422,7 @@
         (ExpA
           (IterE
             (CaseE
-              (Seq (Atom mk_lane__2) Arg Arg)
+              (Seq (Atom mk_lane__0) Arg Arg)
               (TupE (VarE "Jnn") (VarE "lane_3"))
             )
             List
@@ -20805,8 +22466,8 @@
                       )
                     )
                     (ExpA (VarE "sx"))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_1")))))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "lane_2")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -20838,7 +22499,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE (VarE "Jnn") (VarE "lane_3"))
           )
         )
@@ -20933,28 +22594,10 @@
                         )
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_1")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_2")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -20996,14 +22639,8 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn")
-                    (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                  )
-                )
+                (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+                (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
               )
             )
             List
@@ -21044,26 +22681,8 @@
                         (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                       )
                     )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                          )
-                        )
-                      )
-                    )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                          )
-                        )
-                      )
-                    )
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -21110,14 +22729,8 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn")
-                  (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                )
-              )
+              (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+              (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
             )
           )
         )
@@ -21212,28 +22825,10 @@
                         )
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_1")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_2")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -21275,14 +22870,8 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn")
-                    (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                  )
-                )
+                (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+                (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
               )
             )
             List
@@ -21323,26 +22912,8 @@
                         (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                       )
                     )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                          )
-                        )
-                      )
-                    )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                          )
-                        )
-                      )
-                    )
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -21389,14 +22960,8 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn")
-                  (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                )
-              )
+              (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+              (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
             )
           )
         )
@@ -21491,28 +23056,10 @@
                         )
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_1")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_2")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -21554,14 +23101,8 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn")
-                    (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                  )
-                )
+                (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+                (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
               )
             )
             List
@@ -21602,26 +23143,8 @@
                         (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                       )
                     )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                          )
-                        )
-                      )
-                    )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                          )
-                        )
-                      )
-                    )
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -21668,14 +23191,8 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn")
-                  (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                )
-              )
+              (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+              (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
             )
           )
         )
@@ -21770,28 +23287,10 @@
                         )
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_1")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_2")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -21833,14 +23332,8 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn")
-                    (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                  )
-                )
+                (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+                (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
               )
             )
             List
@@ -21881,26 +23374,8 @@
                         (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                       )
                     )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                          )
-                        )
-                      )
-                    )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                          )
-                        )
-                      )
-                    )
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -21947,14 +23422,8 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn")
-                  (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                )
-              )
+              (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+              (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
             )
           )
         )
@@ -22049,28 +23518,10 @@
                         )
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_1")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_2")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -22112,14 +23563,8 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn")
-                    (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                  )
-                )
+                (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+                (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
               )
             )
             List
@@ -22160,26 +23605,8 @@
                         (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                       )
                     )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                          )
-                        )
-                      )
-                    )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                          )
-                        )
-                      )
-                    )
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -22226,14 +23653,8 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn")
-                  (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                )
-              )
+              (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+              (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
             )
           )
         )
@@ -22328,28 +23749,10 @@
                         )
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_1")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1"))))
                       )
                       (ExpA
-                        (TheE
-                          (CallE
-                            "proj_num__1"
-                            (ExpA
-                              (TheE
-                                (CallE "proj_lane__0" (ExpA (VarE "lane_2")))
-                              )
-                            )
-                          )
-                        )
+                        (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2"))))
                       )
                     )
                     Arg
@@ -22391,14 +23794,8 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn")
-                    (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                  )
-                )
+                (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+                (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
               )
             )
             List
@@ -22439,26 +23836,8 @@
                         (ExpA (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn")))
                       )
                     )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_1"))))
-                          )
-                        )
-                      )
-                    )
-                    (ExpA
-                      (TheE
-                        (CallE
-                          "proj_num__1"
-                          (ExpA
-                            (TheE (CallE "proj_lane__0" (ExpA (VarE "lane_2"))))
-                          )
-                        )
-                      )
-                    )
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_1")))))
+                    (ExpA (TheE (CallE "proj_lane__1" (ExpA (VarE "lane_2")))))
                   )
                   Arg
                 )
@@ -22505,14 +23884,8 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn")
-                  (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
-                )
-              )
+              (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn"))
+              (CaseE Arg (TupE (ProjE (UncaseE (VarE "lane_3") Arg) 0)))
             )
           )
         )
@@ -22572,10 +23945,10 @@
 (HintD (DecH "vrelop_" (hint "partial" "{}")))
 (HintD (DecH "vrelop_" (hint "show" "%2#$_(%1)#(%3, %4)")))
 (DecD
-  "vcvtop__"
+  "lcvtop__"
   (ExpP "shape_1" (VarT "shape"))
   (ExpP "shape_2" (VarT "shape"))
-  (ExpP "vcvtop" (VarT "vcvtop"))
+  (ExpP "vcvtop__" (VarT "vcvtop__"))
   (ExpP "lane_" (VarT "lane_"))
   (IterT (VarT "lane_") List)
   (DefD
@@ -22604,16 +23977,27 @@
         )
       )
     )
-    (ExpA (CaseE (Seq (Atom EXTEND) Arg Arg) (TupE (VarE "half") (VarE "sx"))))
     (ExpA
       (CaseE
-        (Seq (Atom mk_lane__2) Arg Arg)
+        (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom EXTEND) Arg Arg) (TupE (VarE "half") (VarE "sx")))
+        )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_lane__0) Arg Arg)
         (TupE (VarE "Jnn_1") (VarE "iN_1"))
       )
     )
     (ListE
       (CaseE
-        (Seq (Atom mk_lane__2) Arg Arg)
+        (Seq (Atom mk_lane__0) Arg Arg)
         (TupE (VarE "Jnn_2") (VarE "iN_2"))
       )
     )
@@ -22666,29 +24050,32 @@
     )
     (ExpA
       (CaseE
-        (Seq (Atom CONVERT) Arg Arg)
+        (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
         (TupE
-          (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
-          (VarE "sx")
+          (VarE "Jnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE
+            (Seq (Atom CONVERT) Arg Arg)
+            (TupE
+              (IterE (VarE "half") Opt (iterexp "half" (VarE "half?")))
+              (VarE "sx")
+            )
+          )
         )
       )
     )
     (ExpA
       (CaseE
-        (Seq (Atom mk_lane__2) Arg Arg)
+        (Seq (Atom mk_lane__0) Arg Arg)
         (TupE (VarE "Jnn_1") (VarE "iN_1"))
       )
     )
     (ListE
       (CaseE
-        (Seq (Atom mk_lane__0) Arg Arg)
-        (TupE
-          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
-          (CaseE
-            (Seq (Atom mk_num__1) Arg Arg)
-            (TupE (VarE "Fnn_2") (VarE "fN_2"))
-          )
-        )
+        (Seq (Atom mk_lane__1) Arg Arg)
+        (TupE (VarE "Fnn_2") (VarE "fN_2"))
       )
     )
     (LetPr
@@ -22740,23 +24127,26 @@
     )
     (ExpA
       (CaseE
-        (Seq (Atom TRUNC_SAT) Arg Arg)
+        (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
         (TupE
-          (VarE "sx")
-          (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_2"))
+          (VarE "M_2")
+          (CaseE
+            (Seq (Atom TRUNC_SAT) Arg Arg)
+            (TupE
+              (VarE "sx")
+              (IterE (VarE "zero") Opt (iterexp "zero" (VarE "zero?")))
+            )
+          )
         )
       )
     )
     (ExpA
       (CaseE
-        (Seq (Atom mk_lane__0) Arg Arg)
-        (TupE
-          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1"))
-          (CaseE
-            (Seq (Atom mk_num__1) Arg Arg)
-            (TupE (VarE "Fnn_1") (VarE "fN_1"))
-          )
-        )
+        (Seq (Atom mk_lane__1) Arg Arg)
+        (TupE (VarE "Fnn_1") (VarE "fN_1"))
       )
     )
     (CallE
@@ -22766,13 +24156,7 @@
         (IterE
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
-            (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn_2"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE (VarE "Inn_2") (VarE "iN_2"))
-              )
-            )
+            (TupE (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_2")) (VarE "iN_2"))
           )
           Opt
           (iterexp "iN_2" (VarE "iN_2?"))
@@ -22824,29 +24208,28 @@
         )
       )
     )
-    (ExpA (CaseE (Seq (Atom DEMOTE) Arg) (TupE (CaseE (Atom ZERO) (TupE)))))
     (ExpA
       (CaseE
-        (Seq (Atom mk_lane__0) Arg Arg)
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
         (TupE
-          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1"))
-          (CaseE
-            (Seq (Atom mk_num__1) Arg Arg)
-            (TupE (VarE "Fnn_1") (VarE "fN_1"))
-          )
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom DEMOTE) Arg) (TupE (CaseE (Atom ZERO) (TupE))))
         )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_lane__1) Arg Arg)
+        (TupE (VarE "Fnn_1") (VarE "fN_1"))
       )
     )
     (IterE
       (CaseE
-        (Seq (Atom mk_lane__0) Arg Arg)
-        (TupE
-          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
-          (CaseE
-            (Seq (Atom mk_num__1) Arg Arg)
-            (TupE (VarE "Fnn_2") (VarE "fN_2"))
-          )
-        )
+        (Seq (Atom mk_lane__1) Arg Arg)
+        (TupE (VarE "Fnn_2") (VarE "fN_2"))
       )
       List
       (iterexp "fN_2" (VarE "fN_2*"))
@@ -22895,29 +24278,28 @@
         )
       )
     )
-    (ExpA (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE)))
     (ExpA
       (CaseE
-        (Seq (Atom mk_lane__0) Arg Arg)
+        (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
         (TupE
-          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_1"))
-          (CaseE
-            (Seq (Atom mk_num__1) Arg Arg)
-            (TupE (VarE "Fnn_1") (VarE "fN_1"))
-          )
+          (VarE "Fnn_1")
+          (VarE "M_1")
+          (VarE "Fnn_2")
+          (VarE "M_2")
+          (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE))
         )
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq (Atom mk_lane__1) Arg Arg)
+        (TupE (VarE "Fnn_1") (VarE "fN_1"))
       )
     )
     (IterE
       (CaseE
-        (Seq (Atom mk_lane__0) Arg Arg)
-        (TupE
-          (SubE (VarT "Fnn") (VarT "numtype") (VarE "Fnn_2"))
-          (CaseE
-            (Seq (Atom mk_num__1) Arg Arg)
-            (TupE (VarE "Fnn_2") (VarE "fN_2"))
-          )
-        )
+        (Seq (Atom mk_lane__1) Arg Arg)
+        (TupE (VarE "Fnn_2") (VarE "fN_2"))
       )
       List
       (iterexp "fN_2" (VarE "fN_2*"))
@@ -22943,34 +24325,39 @@
     )
   )
 )
-(HintD (RelH "vcvtop___is_wf" (hint "wf-lemma-func" "{}")))
+(HintD (RelH "lcvtop___is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "vcvtop___is_wf"
+  "lcvtop___is_wf"
   (Seq Arg Arg Arg Arg Arg)
   (TupT
     (typbind "shape_1" (VarT "shape"))
     (typbind "shape_2" (VarT "shape"))
-    (typbind "vcvtop" (VarT "vcvtop"))
+    (typbind "vcvtop__" (VarT "vcvtop__"))
     (typbind "lane_" (VarT "lane_"))
     (typbind "ret_val*" (IterT (VarT "lane_") List))
   )
   (RuleD
-    "vcvtop___is_wf_0"
+    "lcvtop___is_wf_0"
     (ExpP "shape_1" (VarT "shape"))
     (ExpP "shape_2" (VarT "shape"))
-    (ExpP "vcvtop" (VarT "vcvtop"))
+    (ExpP "vcvtop__" (VarT "vcvtop__"))
     (ExpP "lane_" (VarT "lane_"))
     (ExpP "ret_val*" (IterT (VarT "lane_") List))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (VarE "shape_1")
       (VarE "shape_2")
-      (VarE "vcvtop")
+      (VarE "vcvtop__")
       (VarE "lane_")
       (VarE "ret_val*")
     )
     (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
     (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
+    (RulePr
+      "wf_vcvtop__"
+      (Seq Arg Arg Arg)
+      (TupE (VarE "shape_1") (VarE "shape_2") (VarE "vcvtop__"))
+    )
     (RulePr
       "wf_lane_"
       (Seq Arg Arg)
@@ -22982,10 +24369,10 @@
         bool
         (VarE "ret_val*")
         (CallE
-          "vcvtop__"
+          "lcvtop__"
           (ExpA (VarE "shape_1"))
           (ExpA (VarE "shape_2"))
-          (ExpA (VarE "vcvtop"))
+          (ExpA (VarE "vcvtop__"))
           (ExpA (VarE "lane_"))
         )
       )
@@ -23001,19 +24388,527 @@
     )
   )
 )
+(HintD (DecH "lcvtop__" (hint "partial" "{}")))
+(HintD (DecH "lcvtop__" (hint "show" "%3#$__(%1, %2)^(%4)#((%5))")))
+(DecD
+  "vcvtop__"
+  (ExpP "shape_1" (VarT "shape"))
+  (ExpP "shape_2" (VarT "shape"))
+  (ExpP "vcvtop__" (VarT "vcvtop__"))
+  (ExpP "vec_" (VarT "vec_"))
+  (VarT "vec_")
+  (DefD
+    (ExpP "Lnn_1" (VarT "lanetype"))
+    (ExpP "M" nat)
+    (ExpP "Lnn_2" (VarT "lanetype"))
+    (ExpP "vcvtop" (VarT "vcvtop__"))
+    (ExpP "v128_1" (VarT "uN"))
+    (ExpP "v128" (VarT "uN"))
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+      )
+    )
+    (ExpA (VarE "vcvtop"))
+    (ExpA (VarE "v128_1"))
+    (VarE "v128")
+    (IfPr
+      (BinE
+        AndOp
+        bool
+        (CmpE
+          EqOp
+          bool
+          (CallE
+            "halfop"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (ExpA (VarE "vcvtop"))
+          )
+          (OptE)
+        )
+        (CmpE
+          EqOp
+          bool
+          (CallE
+            "zeroop"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (ExpA (VarE "vcvtop"))
+          )
+          (OptE)
+        )
+      )
+    )
+    (LetPr
+      (IterE (VarE "c_1") List (iterexp "c_1" (VarE "c_1*")))
+      (CallE
+        "lanes_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+          )
+        )
+        (ExpA (VarE "v128_1"))
+      )
+    )
+    (LetPr
+      (IterE
+        (IterE (VarE "c") List (iterexp "c" (VarE "c*")))
+        List
+        (iterexp "c*" (VarE "c**"))
+      )
+      (CallE
+        "setproduct_"
+        (TypA (VarT "lane_"))
+        (ExpA
+          (IterE
+            (CallE
+              "lcvtop__"
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+                )
+              )
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+                )
+              )
+              (ExpA (VarE "vcvtop"))
+              (ExpA (VarE "c_1"))
+            )
+            List
+            (iterexp "c_1" (VarE "c_1*"))
+          )
+        )
+      )
+    )
+    (IfPr
+      (MemE
+        (VarE "v128")
+        (IterE
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+          List
+          (iterexp "c*" (VarE "c**"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
+        )
+      )
+    )
+  )
+  (DefD
+    (ExpP "Lnn_1" (VarT "lanetype"))
+    (ExpP "M_1" nat)
+    (ExpP "Lnn_2" (VarT "lanetype"))
+    (ExpP "M_2" nat)
+    (ExpP "vcvtop" (VarT "vcvtop__"))
+    (ExpP "v128_1" (VarT "uN"))
+    (ExpP "v128" (VarT "uN"))
+    (ExpP "half" (VarT "half"))
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+      )
+    )
+    (ExpA (VarE "vcvtop"))
+    (ExpA (VarE "v128_1"))
+    (VarE "v128")
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (CallE
+          "halfop"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+            )
+          )
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+            )
+          )
+          (ExpA (VarE "vcvtop"))
+        )
+        (OptE (VarE "half"))
+      )
+    )
+    (LetPr
+      (IterE (VarE "c_1") List (iterexp "c_1" (VarE "c_1*")))
+      (SliceE
+        (CallE
+          "lanes_"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+            )
+          )
+          (ExpA (VarE "v128_1"))
+        )
+        (CallE
+          "half"
+          (ExpA (VarE "half"))
+          (ExpA (NumE (Nat 0)))
+          (ExpA (VarE "M_2"))
+        )
+        (VarE "M_2")
+      )
+    )
+    (LetPr
+      (IterE
+        (IterE (VarE "c") List (iterexp "c" (VarE "c*")))
+        List
+        (iterexp "c*" (VarE "c**"))
+      )
+      (CallE
+        "setproduct_"
+        (TypA (VarT "lane_"))
+        (ExpA
+          (IterE
+            (CallE
+              "lcvtop__"
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+                )
+              )
+              (ExpA
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+                )
+              )
+              (ExpA (VarE "vcvtop"))
+              (ExpA (VarE "c_1"))
+            )
+            List
+            (iterexp "c_1" (VarE "c_1*"))
+          )
+        )
+      )
+    )
+    (IfPr
+      (MemE
+        (VarE "v128")
+        (IterE
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+          List
+          (iterexp "c*" (VarE "c**"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+        )
+      )
+    )
+  )
+  (DefD
+    (ExpP "Lnn_1" (VarT "lanetype"))
+    (ExpP "M_1" nat)
+    (ExpP "Lnn_2" (VarT "lanetype"))
+    (ExpP "M_2" nat)
+    (ExpP "vcvtop" (VarT "vcvtop__"))
+    (ExpP "v128_1" (VarT "uN"))
+    (ExpP "v128" (VarT "uN"))
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+      )
+    )
+    (ExpA
+      (CaseE
+        (Seq Arg (Atom X) Arg)
+        (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+      )
+    )
+    (ExpA (VarE "vcvtop"))
+    (ExpA (VarE "v128_1"))
+    (VarE "v128")
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (CallE
+          "zeroop"
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+            )
+          )
+          (ExpA
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+            )
+          )
+          (ExpA (VarE "vcvtop"))
+        )
+        (OptE (CaseE (Atom ZERO) (TupE)))
+      )
+    )
+    (LetPr
+      (IterE (VarE "c_1") List (iterexp "c_1" (VarE "c_1*")))
+      (CallE
+        "lanes_"
+        (ExpA
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+          )
+        )
+        (ExpA (VarE "v128_1"))
+      )
+    )
+    (LetPr
+      (IterE
+        (IterE (VarE "c") List (iterexp "c" (VarE "c*")))
+        List
+        (iterexp "c*" (VarE "c**"))
+      )
+      (CallE
+        "setproduct_"
+        (TypA (VarT "lane_"))
+        (ExpA
+          (CatE
+            (IterE
+              (CallE
+                "lcvtop__"
+                (ExpA
+                  (CaseE
+                    (Seq Arg (Atom X) Arg)
+                    (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+                  )
+                )
+                (ExpA
+                  (CaseE
+                    (Seq Arg (Atom X) Arg)
+                    (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+                  )
+                )
+                (ExpA (VarE "vcvtop"))
+                (ExpA (VarE "c_1"))
+              )
+              List
+              (iterexp "c_1" (VarE "c_1*"))
+            )
+            (IterE
+              (ListE
+                (CallE
+                  "packnum_"
+                  (ExpA (VarE "Lnn_2"))
+                  (ExpA
+                    (CallE "zero" (ExpA (CallE "unpack" (ExpA (VarE "Lnn_2")))))
+                  )
+                )
+              )
+              (ListN (VarE "M_1"))
+            )
+          )
+        )
+      )
+    )
+    (IfPr
+      (MemE
+        (VarE "v128")
+        (IterE
+          (CallE
+            "inv_lanes_"
+            (ExpA
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+              )
+            )
+            (ExpA (IterE (VarE "c") List (iterexp "c" (VarE "c*"))))
+          )
+          List
+          (iterexp "c*" (VarE "c**"))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
+        )
+      )
+    )
+    (RulePr
+      "wf_shape"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq Arg (Atom X) Arg)
+          (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
+        )
+      )
+    )
+  )
+)
+(HintD (RelH "vcvtop___is_wf" (hint "wf-lemma-func" "{}")))
+(RelD
+  "vcvtop___is_wf"
+  (Seq Arg Arg Arg Arg Arg)
+  (TupT
+    (typbind "shape_1" (VarT "shape"))
+    (typbind "shape_2" (VarT "shape"))
+    (typbind "vcvtop__" (VarT "vcvtop__"))
+    (typbind "vec_" (VarT "vec_"))
+    (typbind "ret_val" (VarT "vec_"))
+  )
+  (RuleD
+    "vcvtop___is_wf_0"
+    (ExpP "shape_1" (VarT "shape"))
+    (ExpP "shape_2" (VarT "shape"))
+    (ExpP "vcvtop__" (VarT "vcvtop__"))
+    (ExpP "vec_" (VarT "vec_"))
+    (ExpP "ret_val" (VarT "vec_"))
+    (Seq Arg Arg Arg Arg Arg)
+    (TupE
+      (VarE "shape_1")
+      (VarE "shape_2")
+      (VarE "vcvtop__")
+      (VarE "vec_")
+      (VarE "ret_val")
+    )
+    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
+    (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
+    (RulePr
+      "wf_vcvtop__"
+      (Seq Arg Arg Arg)
+      (TupE (VarE "shape_1") (VarE "shape_2") (VarE "vcvtop__"))
+    )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (VarE "ret_val")
+        (CallE
+          "vcvtop__"
+          (ExpA (VarE "shape_1"))
+          (ExpA (VarE "shape_2"))
+          (ExpA (VarE "vcvtop__"))
+          (ExpA (VarE "vec_"))
+        )
+      )
+    )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "ret_val")))
+  )
+)
 (HintD (DecH "vcvtop__" (hint "partial" "{}")))
 (HintD (DecH "vcvtop__" (hint "show" "%3#$__(%1, %2)^(%4)#((%5))")))
 (DecD
   "vextunop__"
   (ExpP "ishape_1" (VarT "ishape"))
   (ExpP "ishape_2" (VarT "ishape"))
-  (ExpP "vextunop_" (VarT "vextunop_"))
+  (ExpP "vextunop__" (VarT "vextunop__"))
   (ExpP "vec_" (VarT "vec_"))
   (VarT "vec_")
   (DefD
-    (ExpP "Inn_1" (VarT "Inn"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
     (ExpP "M_1" nat)
-    (ExpP "Inn_2" (VarT "Inn"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
     (ExpP "M_2" nat)
     (ExpP "sx" (VarT "sx"))
     (ExpP "c_1" (VarT "uN"))
@@ -23021,28 +24916,40 @@
     (ExpP "cj_2*" (IterT (VarT "iN") List))
     (ExpA
       (CaseE
-        (Seq Arg (Atom X) Arg)
+        Arg
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_1"))
-          (CaseE Arg (TupE (VarE "M_1")))
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
+            )
+          )
         )
       )
     )
     (ExpA
       (CaseE
-        (Seq Arg (Atom X) Arg)
+        Arg
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_2"))
-          (CaseE Arg (TupE (VarE "M_2")))
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
+          )
         )
       )
     )
     (ExpA
       (CaseE
-        (Seq (Atom mk_vextunop__0) Arg Arg Arg)
+        (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_1"))
+          (VarE "Jnn_1")
           (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
           (CaseE (Seq (Atom EXTADD_PAIRWISE) Arg) (TupE (VarE "sx")))
         )
       )
@@ -23057,8 +24964,8 @@
           (CaseE
             (Seq Arg (Atom X) Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
-              (CaseE Arg (TupE (VarE "M_2")))
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
             )
           )
         )
@@ -23086,25 +24993,18 @@
             "extend__"
             (ExpA
               (CallE
-                "lsizenn2"
-                (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2")))
+                "lsizenn1"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
               )
             )
             (ExpA
               (CallE
-                "lsizenn1"
-                (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1")))
+                "lsizenn2"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
               )
             )
             (ExpA (VarE "sx"))
-            (ExpA
-              (TheE
-                (CallE
-                  "proj_num__0"
-                  (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci")))))
-                )
-              )
-            )
+            (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci")))))
           )
           List
           (iterexp "ci" (VarE "ci*"))
@@ -23119,8 +25019,8 @@
           (CaseE
             (Seq Arg (Atom X) Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-              (CaseE Arg (TupE (VarE "M_1")))
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
             )
           )
         )
@@ -23129,25 +25029,19 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn_1"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn_1")
+                (VarE "Jnn_2")
+                (CallE
+                  "iadd_"
+                  (ExpA
                     (CallE
-                      "iadd_"
+                      "lsizenn2"
                       (ExpA
-                        (CallE
-                          "lsizenn1"
-                          (ExpA
-                            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-                          )
-                        )
+                        (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
                       )
-                      (ExpA (VarE "cj_1"))
-                      (ExpA (VarE "cj_2"))
                     )
                   )
+                  (ExpA (VarE "cj_1"))
+                  (ExpA (VarE "cj_2"))
                 )
               )
             )
@@ -23165,8 +25059,8 @@
         (CaseE
           (Seq Arg (Atom X) Arg)
           (TupE
-            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
           )
         )
       )
@@ -23178,8 +25072,8 @@
         (CaseE
           (Seq Arg (Atom X) Arg)
           (TupE
-            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-            (CaseE Arg (TupE (VarE "M_1")))
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
           )
         )
       )
@@ -23195,8 +25089,8 @@
               (CaseE
                 (Seq Arg (Atom X) Arg)
                 (TupE
-                  (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-                  (CaseE Arg (TupE (VarE "M_1")))
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
                 )
               )
             )
@@ -23204,25 +25098,17 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn_1"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn_1")
+              (VarE "Jnn_2")
+              (CallE
+                "iadd_"
+                (ExpA
                   (CallE
-                    "iadd_"
-                    (ExpA
-                      (CallE
-                        "lsizenn1"
-                        (ExpA
-                          (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-                        )
-                      )
-                    )
-                    (ExpA (VarE "cj_1"))
-                    (ExpA (VarE "cj_2"))
+                    "lsizenn2"
+                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
                   )
                 )
+                (ExpA (VarE "cj_1"))
+                (ExpA (VarE "cj_2"))
               )
             )
           )
@@ -23241,7 +25127,7 @@
   (TupT
     (typbind "ishape_1" (VarT "ishape"))
     (typbind "ishape_2" (VarT "ishape"))
-    (typbind "vextunop_" (VarT "vextunop_"))
+    (typbind "vextunop__" (VarT "vextunop__"))
     (typbind "vec_" (VarT "vec_"))
     (typbind "ret_val" (VarT "vec_"))
   )
@@ -23249,23 +25135,23 @@
     "vextunop___is_wf_0"
     (ExpP "ishape_1" (VarT "ishape"))
     (ExpP "ishape_2" (VarT "ishape"))
-    (ExpP "vextunop_" (VarT "vextunop_"))
+    (ExpP "vextunop__" (VarT "vextunop__"))
     (ExpP "vec_" (VarT "vec_"))
     (ExpP "ret_val" (VarT "vec_"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (VarE "ishape_1")
       (VarE "ishape_2")
-      (VarE "vextunop_")
+      (VarE "vextunop__")
       (VarE "vec_")
       (VarE "ret_val")
     )
     (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
     (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
     (RulePr
-      "wf_vextunop_"
-      (Seq Arg Arg)
-      (TupE (VarE "ishape_1") (VarE "vextunop_"))
+      "wf_vextunop__"
+      (Seq Arg Arg Arg)
+      (TupE (VarE "ishape_1") (VarE "ishape_2") (VarE "vextunop__"))
     )
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
     (IfPr
@@ -23277,7 +25163,7 @@
           "vextunop__"
           (ExpA (VarE "ishape_1"))
           (ExpA (VarE "ishape_2"))
-          (ExpA (VarE "vextunop_"))
+          (ExpA (VarE "vextunop__"))
           (ExpA (VarE "vec_"))
         )
       )
@@ -23291,14 +25177,14 @@
   "vextbinop__"
   (ExpP "ishape_1" (VarT "ishape"))
   (ExpP "ishape_2" (VarT "ishape"))
-  (ExpP "vextbinop_" (VarT "vextbinop_"))
+  (ExpP "vextbinop__" (VarT "vextbinop__"))
   (ExpP "vec_" (VarT "vec_"))
   (ExpP "vec_" (VarT "vec_"))
   (VarT "vec_")
   (DefD
-    (ExpP "Inn_1" (VarT "Inn"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
     (ExpP "M_1" nat)
-    (ExpP "Inn_2" (VarT "Inn"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
     (ExpP "M_2" nat)
     (ExpP "half" (VarT "half"))
     (ExpP "sx" (VarT "sx"))
@@ -23306,28 +25192,40 @@
     (ExpP "c_2" (VarT "uN"))
     (ExpA
       (CaseE
-        (Seq Arg (Atom X) Arg)
+        Arg
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_1"))
-          (CaseE Arg (TupE (VarE "M_1")))
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
+            )
+          )
         )
       )
     )
     (ExpA
       (CaseE
-        (Seq Arg (Atom X) Arg)
+        Arg
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_2"))
-          (CaseE Arg (TupE (VarE "M_2")))
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
+          )
         )
       )
     )
     (ExpA
       (CaseE
-        (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+        (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_1"))
+          (VarE "Jnn_1")
           (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
           (CaseE (Seq (Atom EXTMUL) Arg Arg) (TupE (VarE "half") (VarE "sx")))
         )
       )
@@ -23344,8 +25242,8 @@
             (CaseE
               (Seq Arg (Atom X) Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
-                (CaseE Arg (TupE (VarE "M_2")))
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
               )
             )
           )
@@ -23355,9 +25253,9 @@
           "half"
           (ExpA (VarE "half"))
           (ExpA (NumE (Nat 0)))
-          (ExpA (VarE "M_1"))
+          (ExpA (VarE "M_2"))
         )
-        (VarE "M_1")
+        (VarE "M_2")
       )
     )
     (LetPr
@@ -23369,8 +25267,8 @@
             (CaseE
               (Seq Arg (Atom X) Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
-                (CaseE Arg (TupE (VarE "M_2")))
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                (CaseE Arg (TupE (VarE "M_1")))
               )
             )
           )
@@ -23380,9 +25278,9 @@
           "half"
           (ExpA (VarE "half"))
           (ExpA (NumE (Nat 0)))
-          (ExpA (VarE "M_1"))
+          (ExpA (VarE "M_2"))
         )
-        (VarE "M_1")
+        (VarE "M_2")
       )
     )
     (LetPr
@@ -23393,8 +25291,8 @@
           (CaseE
             (Seq Arg (Atom X) Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-              (CaseE Arg (TupE (VarE "M_1")))
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
             )
           )
         )
@@ -23403,105 +25301,61 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn_1"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn_1")
+                (VarE "Jnn_2")
+                (CallE
+                  "imul_"
+                  (ExpA
                     (CallE
-                      "imul_"
+                      "lsizenn2"
+                      (ExpA
+                        (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "extend__"
                       (ExpA
                         (CallE
                           "lsizenn1"
                           (ExpA
-                            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
+                            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
                           )
                         )
                       )
                       (ExpA
                         (CallE
-                          "extend__"
+                          "lsizenn2"
                           (ExpA
-                            (CallE
-                              "lsizenn2"
-                              (ExpA
-                                (SubE
-                                  (VarT "Inn")
-                                  (VarT "lanetype")
-                                  (VarE "Inn_2")
-                                )
-                              )
-                            )
+                            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
                           )
+                        )
+                      )
+                      (ExpA (VarE "sx"))
+                      (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_1")))))
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "extend__"
+                      (ExpA
+                        (CallE
+                          "lsizenn1"
                           (ExpA
-                            (CallE
-                              "lsizenn1"
-                              (ExpA
-                                (SubE
-                                  (VarT "Inn")
-                                  (VarT "lanetype")
-                                  (VarE "Inn_1")
-                                )
-                              )
-                            )
-                          )
-                          (ExpA (VarE "sx"))
-                          (ExpA
-                            (TheE
-                              (CallE
-                                "proj_num__0"
-                                (ExpA
-                                  (TheE
-                                    (CallE "proj_lane__0" (ExpA (VarE "ci_1")))
-                                  )
-                                )
-                              )
-                            )
+                            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
                           )
                         )
                       )
                       (ExpA
                         (CallE
-                          "extend__"
+                          "lsizenn2"
                           (ExpA
-                            (CallE
-                              "lsizenn2"
-                              (ExpA
-                                (SubE
-                                  (VarT "Inn")
-                                  (VarT "lanetype")
-                                  (VarE "Inn_2")
-                                )
-                              )
-                            )
-                          )
-                          (ExpA
-                            (CallE
-                              "lsizenn1"
-                              (ExpA
-                                (SubE
-                                  (VarT "Inn")
-                                  (VarT "lanetype")
-                                  (VarE "Inn_1")
-                                )
-                              )
-                            )
-                          )
-                          (ExpA (VarE "sx"))
-                          (ExpA
-                            (TheE
-                              (CallE
-                                "proj_num__0"
-                                (ExpA
-                                  (TheE
-                                    (CallE "proj_lane__0" (ExpA (VarE "ci_2")))
-                                  )
-                                )
-                              )
-                            )
+                            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
                           )
                         )
                       )
+                      (ExpA (VarE "sx"))
+                      (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_2")))))
                     )
                   )
                 )
@@ -23521,8 +25375,8 @@
         (CaseE
           (Seq Arg (Atom X) Arg)
           (TupE
-            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
           )
         )
       )
@@ -23534,8 +25388,8 @@
         (CaseE
           (Seq Arg (Atom X) Arg)
           (TupE
-            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-            (CaseE Arg (TupE (VarE "M_1")))
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
           )
         )
       )
@@ -23551,8 +25405,8 @@
               (CaseE
                 (Seq Arg (Atom X) Arg)
                 (TupE
-                  (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-                  (CaseE Arg (TupE (VarE "M_1")))
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
                 )
               )
             )
@@ -23560,105 +25414,59 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn_1"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn_1")
+              (VarE "Jnn_2")
+              (CallE
+                "imul_"
+                (ExpA
                   (CallE
-                    "imul_"
+                    "lsizenn2"
+                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+                  )
+                )
+                (ExpA
+                  (CallE
+                    "extend__"
                     (ExpA
                       (CallE
                         "lsizenn1"
                         (ExpA
-                          (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
+                          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
                         )
                       )
                     )
                     (ExpA
                       (CallE
-                        "extend__"
+                        "lsizenn2"
                         (ExpA
-                          (CallE
-                            "lsizenn2"
-                            (ExpA
-                              (SubE
-                                (VarT "Inn")
-                                (VarT "lanetype")
-                                (VarE "Inn_2")
-                              )
-                            )
-                          )
+                          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
                         )
+                      )
+                    )
+                    (ExpA (VarE "sx"))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_1")))))
+                  )
+                )
+                (ExpA
+                  (CallE
+                    "extend__"
+                    (ExpA
+                      (CallE
+                        "lsizenn1"
                         (ExpA
-                          (CallE
-                            "lsizenn1"
-                            (ExpA
-                              (SubE
-                                (VarT "Inn")
-                                (VarT "lanetype")
-                                (VarE "Inn_1")
-                              )
-                            )
-                          )
-                        )
-                        (ExpA (VarE "sx"))
-                        (ExpA
-                          (TheE
-                            (CallE
-                              "proj_num__0"
-                              (ExpA
-                                (TheE
-                                  (CallE "proj_lane__0" (ExpA (VarE "ci_1")))
-                                )
-                              )
-                            )
-                          )
+                          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
                         )
                       )
                     )
                     (ExpA
                       (CallE
-                        "extend__"
+                        "lsizenn2"
                         (ExpA
-                          (CallE
-                            "lsizenn2"
-                            (ExpA
-                              (SubE
-                                (VarT "Inn")
-                                (VarT "lanetype")
-                                (VarE "Inn_2")
-                              )
-                            )
-                          )
-                        )
-                        (ExpA
-                          (CallE
-                            "lsizenn1"
-                            (ExpA
-                              (SubE
-                                (VarT "Inn")
-                                (VarT "lanetype")
-                                (VarE "Inn_1")
-                              )
-                            )
-                          )
-                        )
-                        (ExpA (VarE "sx"))
-                        (ExpA
-                          (TheE
-                            (CallE
-                              "proj_num__0"
-                              (ExpA
-                                (TheE
-                                  (CallE "proj_lane__0" (ExpA (VarE "ci_2")))
-                                )
-                              )
-                            )
-                          )
+                          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
                         )
                       )
                     )
+                    (ExpA (VarE "sx"))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_2")))))
                   )
                 )
               )
@@ -23672,9 +25480,9 @@
     )
   )
   (DefD
-    (ExpP "Inn_1" (VarT "Inn"))
+    (ExpP "Jnn_1" (VarT "Jnn"))
     (ExpP "M_1" nat)
-    (ExpP "Inn_2" (VarT "Inn"))
+    (ExpP "Jnn_2" (VarT "Jnn"))
     (ExpP "M_2" nat)
     (ExpP "c_1" (VarT "uN"))
     (ExpP "c_2" (VarT "uN"))
@@ -23682,28 +25490,40 @@
     (ExpP "cj_2*" (IterT (VarT "iN") List))
     (ExpA
       (CaseE
-        (Seq Arg (Atom X) Arg)
+        Arg
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_1"))
-          (CaseE Arg (TupE (VarE "M_1")))
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
+            )
+          )
         )
       )
     )
     (ExpA
       (CaseE
-        (Seq Arg (Atom X) Arg)
+        Arg
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_2"))
-          (CaseE Arg (TupE (VarE "M_2")))
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
+            )
+          )
         )
       )
     )
     (ExpA
       (CaseE
-        (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+        (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
         (TupE
-          (SubE (VarT "Inn") (VarT "Jnn") (VarE "Inn_1"))
+          (VarE "Jnn_1")
           (VarE "M_1")
+          (VarE "Jnn_2")
+          (VarE "M_2")
           (CaseE (Seq (Atom DOT) (Atom S)) (TupE))
         )
       )
@@ -23719,8 +25539,8 @@
           (CaseE
             (Seq Arg (Atom X) Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
-              (CaseE Arg (TupE (VarE "M_2")))
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
             )
           )
         )
@@ -23735,8 +25555,8 @@
           (CaseE
             (Seq Arg (Atom X) Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
-              (CaseE Arg (TupE (VarE "M_2")))
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+              (CaseE Arg (TupE (VarE "M_1")))
             )
           )
         )
@@ -23764,8 +25584,8 @@
             "imul_"
             (ExpA
               (CallE
-                "lsizenn1"
-                (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1")))
+                "lsizenn2"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
               )
             )
             (ExpA
@@ -23773,25 +25593,18 @@
                 "extend__"
                 (ExpA
                   (CallE
-                    "lsizenn2"
-                    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2")))
+                    "lsizenn1"
+                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
                   )
                 )
                 (ExpA
                   (CallE
-                    "lsizenn1"
-                    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1")))
+                    "lsizenn2"
+                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
                   )
                 )
                 (ExpA (CaseE (Atom S) (TupE)))
-                (ExpA
-                  (TheE
-                    (CallE
-                      "proj_num__0"
-                      (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_1")))))
-                    )
-                  )
-                )
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_1")))))
               )
             )
             (ExpA
@@ -23799,25 +25612,18 @@
                 "extend__"
                 (ExpA
                   (CallE
-                    "lsizenn2"
-                    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2")))
+                    "lsizenn1"
+                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1")))
                   )
                 )
                 (ExpA
                   (CallE
-                    "lsizenn1"
-                    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1")))
+                    "lsizenn2"
+                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
                   )
                 )
                 (ExpA (CaseE (Atom S) (TupE)))
-                (ExpA
-                  (TheE
-                    (CallE
-                      "proj_num__0"
-                      (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_2")))))
-                    )
-                  )
-                )
+                (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_2")))))
               )
             )
           )
@@ -23835,8 +25641,8 @@
           (CaseE
             (Seq Arg (Atom X) Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-              (CaseE Arg (TupE (VarE "M_1")))
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+              (CaseE Arg (TupE (VarE "M_2")))
             )
           )
         )
@@ -23845,25 +25651,19 @@
             (CaseE
               (Seq (Atom mk_lane__0) Arg Arg)
               (TupE
-                (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn_1"))
-                (CaseE
-                  (Seq (Atom mk_num__0) Arg Arg)
-                  (TupE
-                    (VarE "Inn_1")
+                (VarE "Jnn_2")
+                (CallE
+                  "iadd_"
+                  (ExpA
                     (CallE
-                      "iadd_"
+                      "lsizenn2"
                       (ExpA
-                        (CallE
-                          "lsizenn1"
-                          (ExpA
-                            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-                          )
-                        )
+                        (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
                       )
-                      (ExpA (VarE "cj_1"))
-                      (ExpA (VarE "cj_2"))
                     )
                   )
+                  (ExpA (VarE "cj_1"))
+                  (ExpA (VarE "cj_2"))
                 )
               )
             )
@@ -23881,8 +25681,8 @@
         (CaseE
           (Seq Arg (Atom X) Arg)
           (TupE
-            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+            (CaseE Arg (TupE (VarE "M_1")))
           )
         )
       )
@@ -23894,8 +25694,8 @@
         (CaseE
           (Seq Arg (Atom X) Arg)
           (TupE
-            (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-            (CaseE Arg (TupE (VarE "M_1")))
+            (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+            (CaseE Arg (TupE (VarE "M_2")))
           )
         )
       )
@@ -23911,8 +25711,8 @@
               (CaseE
                 (Seq Arg (Atom X) Arg)
                 (TupE
-                  (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-                  (CaseE Arg (TupE (VarE "M_1")))
+                  (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                  (CaseE Arg (TupE (VarE "M_2")))
                 )
               )
             )
@@ -23920,25 +25720,17 @@
           (CaseE
             (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (SubE (VarT "Inn") (VarT "numtype") (VarE "Inn_1"))
-              (CaseE
-                (Seq (Atom mk_num__0) Arg Arg)
-                (TupE
-                  (VarE "Inn_1")
+              (VarE "Jnn_2")
+              (CallE
+                "iadd_"
+                (ExpA
                   (CallE
-                    "iadd_"
-                    (ExpA
-                      (CallE
-                        "lsizenn1"
-                        (ExpA
-                          (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_1"))
-                        )
-                      )
-                    )
-                    (ExpA (VarE "cj_1"))
-                    (ExpA (VarE "cj_2"))
+                    "lsizenn2"
+                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
                   )
                 )
+                (ExpA (VarE "cj_1"))
+                (ExpA (VarE "cj_2"))
               )
             )
           )
@@ -23957,7 +25749,7 @@
   (TupT
     (typbind "ishape_1" (VarT "ishape"))
     (typbind "ishape_2" (VarT "ishape"))
-    (typbind "vextbinop_" (VarT "vextbinop_"))
+    (typbind "vextbinop__" (VarT "vextbinop__"))
     (typbind "vec_" (VarT "vec_"))
     (typbind "vec__0" (VarT "vec_"))
     (typbind "ret_val" (VarT "vec_"))
@@ -23966,7 +25758,7 @@
     "vextbinop___is_wf_0"
     (ExpP "ishape_1" (VarT "ishape"))
     (ExpP "ishape_2" (VarT "ishape"))
-    (ExpP "vextbinop_" (VarT "vextbinop_"))
+    (ExpP "vextbinop__" (VarT "vextbinop__"))
     (ExpP "vec_" (VarT "vec_"))
     (ExpP "vec__0" (VarT "vec_"))
     (ExpP "ret_val" (VarT "vec_"))
@@ -23974,7 +25766,7 @@
     (TupE
       (VarE "ishape_1")
       (VarE "ishape_2")
-      (VarE "vextbinop_")
+      (VarE "vextbinop__")
       (VarE "vec_")
       (VarE "vec__0")
       (VarE "ret_val")
@@ -23982,9 +25774,9 @@
     (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
     (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
     (RulePr
-      "wf_vextbinop_"
-      (Seq Arg Arg)
-      (TupE (VarE "ishape_1") (VarE "vextbinop_"))
+      "wf_vextbinop__"
+      (Seq Arg Arg Arg)
+      (TupE (VarE "ishape_1") (VarE "ishape_2") (VarE "vextbinop__"))
     )
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec_")))
     (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "vec__0")))
@@ -23997,7 +25789,7 @@
           "vextbinop__"
           (ExpA (VarE "ishape_1"))
           (ExpA (VarE "ishape_2"))
-          (ExpA (VarE "vextbinop_"))
+          (ExpA (VarE "vextbinop__"))
           (ExpA (VarE "vec_"))
           (ExpA (VarE "vec__0"))
         )
@@ -24022,8 +25814,16 @@
     (ExpP "n" nat)
     (ExpA
       (CaseE
-        (Seq Arg (Atom X) Arg)
-        (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "M"))))
+        Arg
+        (TupE
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
+          )
+        )
       )
     )
     (ExpA
@@ -24033,11 +25833,11 @@
       )
     )
     (ExpA
-      (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "lane")))
+      (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "Jnn") (VarE "lane")))
     )
     (ExpA (CaseE Arg (TupE (VarE "n"))))
     (CaseE
-      (Seq (Atom mk_lane__2) Arg Arg)
+      (Seq (Atom mk_lane__0) Arg Arg)
       (TupE
         (VarE "Jnn")
         (CallE
@@ -24062,8 +25862,16 @@
     (ExpP "n" nat)
     (ExpA
       (CaseE
-        (Seq Arg (Atom X) Arg)
-        (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "M"))))
+        Arg
+        (TupE
+          (CaseE
+            (Seq Arg (Atom X) Arg)
+            (TupE
+              (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+              (CaseE Arg (TupE (VarE "M")))
+            )
+          )
+        )
       )
     )
     (ExpA
@@ -24077,11 +25885,11 @@
       )
     )
     (ExpA
-      (CaseE (Seq (Atom mk_lane__2) Arg Arg) (TupE (VarE "Jnn") (VarE "lane")))
+      (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "Jnn") (VarE "lane")))
     )
     (ExpA (CaseE Arg (TupE (VarE "n"))))
     (CaseE
-      (Seq (Atom mk_lane__2) Arg Arg)
+      (Seq (Atom mk_lane__0) Arg Arg)
       (TupE
         (VarE "Jnn")
         (CallE
@@ -24136,10 +25944,7 @@
       "wf_lane_"
       (Seq Arg Arg)
       (TupE
-        (CallE
-          "lanetype"
-          (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape")))
-        )
+        (CallE "lanetype" (ExpA (ProjE (UncaseE (VarE "ishape") Arg) 0)))
         (VarE "lane_")
       )
     )
@@ -24162,10 +25967,7 @@
       "wf_lane_"
       (Seq Arg Arg)
       (TupE
-        (CallE
-          "lanetype"
-          (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape")))
-        )
+        (CallE "lanetype" (ExpA (ProjE (UncaseE (VarE "ishape") Arg) 0)))
         (VarE "ret_val")
       )
     )
@@ -24967,7 +26769,6 @@
             (typbind "sx?" (IterT (VarT "sx") Opt))
             (typbind "laneidx" (VarT "laneidx"))
           )
-          (ExpP "numtype" (VarT "numtype"))
         )
         (typcase
           (Seq (Atom VREPLACE_LANE) Arg Arg)
@@ -24981,7 +26782,7 @@
           (TupT
             (typbind "ishape_1" (VarT "ishape"))
             (typbind "ishape_2" (VarT "ishape"))
-            (typbind "_" (VarT "vextunop_"))
+            (typbind "_" (VarT "vextunop__"))
           )
         )
         (typcase
@@ -24989,7 +26790,7 @@
           (TupT
             (typbind "ishape_1" (VarT "ishape"))
             (typbind "ishape_2" (VarT "ishape"))
-            (typbind "_" (VarT "vextbinop_"))
+            (typbind "_" (VarT "vextbinop__"))
           )
         )
         (typcase
@@ -25003,9 +26804,9 @@
         (typcase
           (Seq (Atom VCVTOP) Arg Arg Arg)
           (TupT
-            (typbind "shape" (VarT "shape"))
-            (typbind "shape" (VarT "shape"))
-            (typbind "vcvtop" (VarT "vcvtop"))
+            (typbind "shape_1" (VarT "shape"))
+            (typbind "shape_2" (VarT "shape"))
+            (typbind "_" (VarT "vcvtop__"))
           )
         )
         (typcase
@@ -25091,13 +26892,12 @@
             (typbind "memarg" (VarT "memarg"))
           )
           (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-          (ExpP "numtype?" (IterT (VarT "numtype") Opt))
         )
         (typcase
           (Seq (Atom VLOAD) Arg Arg Arg)
           (TupT
             (typbind "vectype" (VarT "vectype"))
-            (typbind "vloadop?" (IterT (VarT "vloadop") Opt))
+            (typbind "_" (IterT (VarT "vloadop_") Opt))
             (typbind "memarg" (VarT "memarg"))
           )
         )
@@ -25548,8 +27348,16 @@
           bool
           (VarE "ishape")
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
         )
       )
@@ -25580,8 +27388,16 @@
             bool
             (VarE "ishape")
             (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+              Arg
+              (TupE
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE
+                    (CaseE (Atom I8) (TupE))
+                    (CaseE Arg (TupE (NumE (Nat 16))))
+                  )
+                )
+              )
             )
           )
           (CmpE
@@ -25608,7 +27424,6 @@
     )
     (RuleD
       "admininstr_case_34"
-      (ExpP "numtype" (VarT "numtype"))
       (ExpP "shape" (VarT "shape"))
       (ExpP "sx?" (IterT (VarT "sx") Opt))
       (ExpP "laneidx" (VarT "laneidx"))
@@ -25625,11 +27440,14 @@
         (BinE
           EquivOp
           bool
-          (CmpE
-            EqOp
-            bool
+          (MemE
             (CallE "lanetype" (ExpA (VarE "shape")))
-            (SubE (VarT "numtype") (VarT "lanetype") (VarE "numtype"))
+            (ListE
+              (CaseE (Atom I32) (TupE))
+              (CaseE (Atom I64) (TupE))
+              (CaseE (Atom F32) (TupE))
+              (CaseE (Atom F64) (TupE))
+            )
           )
           (CmpE
             EqOp
@@ -25658,7 +27476,7 @@
       "admininstr_case_36"
       (ExpP "ishape_1" (VarT "ishape"))
       (ExpP "ishape_2" (VarT "ishape"))
-      (ExpP "var_0" (VarT "vextunop_"))
+      (ExpP "var_0" (VarT "vextunop__"))
       (Seq Arg)
       (TupE
         (CaseE
@@ -25669,45 +27487,16 @@
       (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
       (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
       (RulePr
-        "wf_vextunop_"
-        (Seq Arg Arg)
-        (TupE (VarE "ishape_1") (VarE "var_0"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (CallE
-            "lsize"
-            (ExpA
-              (CallE
-                "lanetype"
-                (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_1")))
-              )
-            )
-          )
-          (BinE
-            MulOp
-            nat
-            (NumE (Nat 2))
-            (CallE
-              "lsize"
-              (ExpA
-                (CallE
-                  "lanetype"
-                  (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_2")))
-                )
-              )
-            )
-          )
-        )
+        "wf_vextunop__"
+        (Seq Arg Arg Arg)
+        (TupE (VarE "ishape_2") (VarE "ishape_1") (VarE "var_0"))
       )
     )
     (RuleD
       "admininstr_case_37"
       (ExpP "ishape_1" (VarT "ishape"))
       (ExpP "ishape_2" (VarT "ishape"))
-      (ExpP "var_0" (VarT "vextbinop_"))
+      (ExpP "var_0" (VarT "vextbinop__"))
       (Seq Arg)
       (TupE
         (CaseE
@@ -25718,38 +27507,9 @@
       (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_1")))
       (RulePr "wf_ishape" (Seq Arg) (TupE (VarE "ishape_2")))
       (RulePr
-        "wf_vextbinop_"
-        (Seq Arg Arg)
-        (TupE (VarE "ishape_1") (VarE "var_0"))
-      )
-      (IfPr
-        (CmpE
-          EqOp
-          bool
-          (CallE
-            "lsize"
-            (ExpA
-              (CallE
-                "lanetype"
-                (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_1")))
-              )
-            )
-          )
-          (BinE
-            MulOp
-            nat
-            (NumE (Nat 2))
-            (CallE
-              "lsize"
-              (ExpA
-                (CallE
-                  "lanetype"
-                  (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_2")))
-                )
-              )
-            )
-          )
-        )
+        "wf_vextbinop__"
+        (Seq Arg Arg Arg)
+        (TupE (VarE "ishape_2") (VarE "ishape_1") (VarE "var_0"))
       )
     )
     (RuleD
@@ -25778,7 +27538,7 @@
               (ExpA
                 (CallE
                   "lanetype"
-                  (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_2")))
+                  (ExpA (ProjE (UncaseE (VarE "ishape_2") Arg) 0))
                 )
               )
             )
@@ -25791,9 +27551,7 @@
                 (ExpA
                   (CallE
                     "lanetype"
-                    (ExpA
-                      (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_1"))
-                    )
+                    (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0))
                   )
                 )
               )
@@ -25811,9 +27569,7 @@
                 (ExpA
                   (CallE
                     "lanetype"
-                    (ExpA
-                      (SubE (VarT "ishape") (VarT "shape") (VarE "ishape_1"))
-                    )
+                    (ExpA (ProjE (UncaseE (VarE "ishape_1") Arg) 0))
                   )
                 )
               )
@@ -25825,18 +27581,23 @@
     )
     (RuleD
       "admininstr_case_39"
-      (ExpP "shape" (VarT "shape"))
-      (ExpP "shape_0" (VarT "shape"))
-      (ExpP "vcvtop" (VarT "vcvtop"))
+      (ExpP "shape_1" (VarT "shape"))
+      (ExpP "shape_2" (VarT "shape"))
+      (ExpP "var_0" (VarT "vcvtop__"))
       (Seq Arg)
       (TupE
         (CaseE
           (Seq (Atom VCVTOP) Arg Arg Arg)
-          (TupE (VarE "shape") (VarE "shape_0") (VarE "vcvtop"))
+          (TupE (VarE "shape_1") (VarE "shape_2") (VarE "var_0"))
         )
       )
-      (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape")))
-      (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_0")))
+      (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_1")))
+      (RulePr "wf_shape" (Seq Arg) (TupE (VarE "shape_2")))
+      (RulePr
+        "wf_vcvtop__"
+        (Seq Arg Arg Arg)
+        (TupE (VarE "shape_2") (VarE "shape_1") (VarE "var_0"))
+      )
     )
     (RuleD
       "admininstr_case_40"
@@ -25987,7 +27748,6 @@
     (RuleD
       "admininstr_case_57"
       (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-      (ExpP "numtype?" (IterT (VarT "numtype") Opt))
       (ExpP "numtype" (VarT "numtype"))
       (ExpP "sz?" (IterT (VarT "sz") Opt))
       (ExpP "memarg" (VarT "memarg"))
@@ -26028,21 +27788,29 @@
         )
         Opt
         (iterexp "Inn" (VarE "Inn?"))
-        (iterexp "numtype" (VarE "numtype?"))
         (iterexp "sz" (VarE "sz?"))
       )
     )
     (RuleD
       "admininstr_case_58"
       (ExpP "vectype" (VarT "vectype"))
-      (ExpP "vloadop?" (IterT (VarT "vloadop") Opt))
+      (ExpP "var_0?" (IterT (VarT "vloadop_") Opt))
       (ExpP "memarg" (VarT "memarg"))
       (Seq Arg)
       (TupE
         (CaseE
           (Seq (Atom VLOAD) Arg Arg Arg)
-          (TupE (VarE "vectype") (VarE "vloadop?") (VarE "memarg"))
+          (TupE (VarE "vectype") (VarE "var_0?") (VarE "memarg"))
         )
+      )
+      (IterPr
+        (RulePr
+          "wf_vloadop_"
+          (Seq Arg Arg)
+          (TupE (VarE "vectype") (VarE "var_0"))
+        )
+        Opt
+        (iterexp "var_0" (VarE "var_0?"))
       )
       (RulePr "wf_memarg" (Seq Arg) (TupE (VarE "memarg")))
     )
@@ -28022,6 +29790,14 @@
       )
       Opt
       (iterexp "j" (VarE "j?"))
+    )
+    (IfPr
+      (CmpE
+        LeOp
+        rat
+        (VarE "i'")
+        (CvtE nat rat (BinE PowOp nat (NumE (Nat 2)) (NumE (Nat 16))))
+      )
     )
     (IfPr
       (CmpE
@@ -30618,10 +32394,7 @@
               (NumE (Nat 2))
               (ProjE
                 (UncaseE
-                  (CallE
-                    "dim"
-                    (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "sh")))
-                  )
+                  (CallE "dim" (ExpA (ProjE (UncaseE (VarE "sh") Arg) 0)))
                   Arg
                 )
                 0
@@ -30636,9 +32409,7 @@
       (RulePr
         "wf_dim"
         (Seq Arg)
-        (TupE
-          (CallE "dim" (ExpA (SubE (VarT "ishape") (VarT "shape") (VarE "sh"))))
-        )
+        (TupE (CallE "dim" (ExpA (ProjE (UncaseE (VarE "sh") Arg) 0))))
       )
       (RulePr
         "wf_instr"
@@ -30801,7 +32572,7 @@
       (ExpP "C" (VarT "context"))
       (ExpP "sh_1" (VarT "ishape"))
       (ExpP "sh_2" (VarT "ishape"))
-      (ExpP "vextunop" (VarT "vextunop_"))
+      (ExpP "vextunop" (VarT "vextunop__"))
       (Infix Arg |- (Infix Arg : Arg))
       (TupE
         (VarE "C")
@@ -30834,7 +32605,7 @@
       (ExpP "C" (VarT "context"))
       (ExpP "sh_1" (VarT "ishape"))
       (ExpP "sh_2" (VarT "ishape"))
-      (ExpP "vextbinop" (VarT "vextbinop_"))
+      (ExpP "vextbinop" (VarT "vextbinop__"))
       (Infix Arg |- (Infix Arg : Arg))
       (TupE
         (VarE "C")
@@ -30910,7 +32681,7 @@
       (ExpP "C" (VarT "context"))
       (ExpP "sh_1" (VarT "shape"))
       (ExpP "sh_2" (VarT "shape"))
-      (ExpP "vcvtop" (VarT "vcvtop"))
+      (ExpP "vcvtop" (VarT "vcvtop__"))
       (Infix Arg |- (Infix Arg : Arg))
       (TupE
         (VarE "C")
@@ -32074,7 +33845,70 @@
       )
     )
     (RuleD
-      "vload"
+      "vload-val"
+      (ExpP "C" (VarT "context"))
+      (ExpP "memarg" (VarT "memarg"))
+      (ExpP "mt" (VarT "memtype"))
+      (Infix Arg |- (Infix Arg : Arg))
+      (TupE
+        (VarE "C")
+        (CaseE
+          (Seq (Atom VLOAD) Arg Arg Arg)
+          (TupE (CaseE (Atom V128) (TupE)) (OptE) (VarE "memarg"))
+        )
+        (CaseE
+          (Infix Arg -> Arg)
+          (TupE
+            (CaseE Arg (TupE (ListE (CaseE (Atom I32) (TupE)))))
+            (CaseE Arg (TupE (ListE (CaseE (Atom V128) (TupE)))))
+          )
+        )
+      )
+      (IfPr
+        (CmpE
+          EqOp
+          bool
+          (IdxE (DotE (VarE "C") (Atom MEMS)) (NumE (Nat 0)))
+          (VarE "mt")
+        )
+      )
+      (IfPr
+        (CmpE
+          LeOp
+          rat
+          (CvtE
+            nat
+            rat
+            (BinE
+              PowOp
+              nat
+              (NumE (Nat 2))
+              (ProjE (UncaseE (DotE (VarE "memarg") (Atom ALIGN)) Arg) 0)
+            )
+          )
+          (BinE
+            DivOp
+            rat
+            (CvtE nat rat (CallE "size" (ExpA (CaseE (Atom V128) (TupE)))))
+            (CvtE nat rat (NumE (Nat 8)))
+          )
+        )
+      )
+      (RulePr "wf_context" (Seq Arg) (TupE (VarE "C")))
+      (RulePr "wf_memtype" (Seq Arg) (TupE (VarE "mt")))
+      (RulePr
+        "wf_instr"
+        (Seq Arg)
+        (TupE
+          (CaseE
+            (Seq (Atom VLOAD) Arg Arg Arg)
+            (TupE (CaseE (Atom V128) (TupE)) (OptE) (VarE "memarg"))
+          )
+        )
+      )
+    )
+    (RuleD
+      "vload-pack"
       (ExpP "C" (VarT "context"))
       (ExpP "M" (VarT "M"))
       (ExpP "N" (VarT "N"))
@@ -32091,7 +33925,7 @@
             (OptE
               (CaseE
                 (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-                (TupE (VarE "M") (VarE "N") (VarE "sx"))
+                (TupE (CaseE Arg (TupE (VarE "M"))) (VarE "N") (VarE "sx"))
               )
             )
             (VarE "memarg")
@@ -32153,7 +33987,7 @@
               (OptE
                 (CaseE
                   (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-                  (TupE (VarE "M") (VarE "N") (VarE "sx"))
+                  (TupE (CaseE Arg (TupE (VarE "M"))) (VarE "N") (VarE "sx"))
                 )
               )
               (VarE "memarg")
@@ -32175,7 +34009,12 @@
           (Seq (Atom VLOAD) Arg Arg Arg)
           (TupE
             (CaseE (Atom V128) (TupE))
-            (OptE (CaseE (Seq (Atom SPLAT) Arg) (TupE (VarE "n"))))
+            (OptE
+              (CaseE
+                (Seq (Atom SPLAT) Arg)
+                (TupE (CaseE Arg (TupE (VarE "n"))))
+              )
+            )
             (VarE "memarg")
           )
         )
@@ -32227,7 +34066,12 @@
             (Seq (Atom VLOAD) Arg Arg Arg)
             (TupE
               (CaseE (Atom V128) (TupE))
-              (OptE (CaseE (Seq (Atom SPLAT) Arg) (TupE (VarE "n"))))
+              (OptE
+                (CaseE
+                  (Seq (Atom SPLAT) Arg)
+                  (TupE (CaseE Arg (TupE (VarE "n"))))
+                )
+              )
               (VarE "memarg")
             )
           )
@@ -32247,7 +34091,9 @@
           (Seq (Atom VLOAD) Arg Arg Arg)
           (TupE
             (CaseE (Atom V128) (TupE))
-            (OptE (CaseE (Seq (Atom ZERO) Arg) (TupE (VarE "n"))))
+            (OptE
+              (CaseE (Seq (Atom ZERO) Arg) (TupE (CaseE Arg (TupE (VarE "n")))))
+            )
             (VarE "memarg")
           )
         )
@@ -32299,7 +34145,12 @@
             (Seq (Atom VLOAD) Arg Arg Arg)
             (TupE
               (CaseE (Atom V128) (TupE))
-              (OptE (CaseE (Seq (Atom ZERO) Arg) (TupE (VarE "n"))))
+              (OptE
+                (CaseE
+                  (Seq (Atom ZERO) Arg)
+                  (TupE (CaseE Arg (TupE (VarE "n"))))
+                )
+              )
               (VarE "memarg")
             )
           )
@@ -33151,7 +35002,6 @@
       (Infix Arg |- (Infix Arg : Arg))
       (TupE
         (CompE
-          (VarE "C")
           (StrE
             (expfield (Atom TYPES) (ListE))
             (expfield (Atom FUNCS) (ListE))
@@ -33186,6 +35036,7 @@
               )
             )
           )
+          (VarE "C")
         )
         (VarE "expr")
         (CaseE
@@ -34552,7 +36403,7 @@
     (ExpP "instr'*" (IterT (VarT "instr") List))
     (ExpP "val'*" (IterT (VarT "val") List))
     (ExpP "val*" (IterT (VarT "val") List))
-    (ExpP "instr*" (IterT (VarT "instr") List))
+    (ExpP "admininstr*" (IterT (VarT "admininstr") List))
     (Infix Arg ~> Arg)
     (TupE
       (ListE
@@ -34583,9 +36434,9 @@
                 )
               )
               (IterE
-                (SubE (VarT "instr") (VarT "admininstr") (VarE "instr"))
+                (VarE "admininstr")
                 List
-                (iterexp "instr" (VarE "instr*"))
+                (iterexp "admininstr" (VarE "admininstr*"))
               )
             )
           )
@@ -34611,7 +36462,7 @@
     (ExpP "instr'*" (IterT (VarT "instr") List))
     (ExpP "val*" (IterT (VarT "val") List))
     (ExpP "l" (VarT "labelidx"))
-    (ExpP "instr*" (IterT (VarT "instr") List))
+    (ExpP "admininstr*" (IterT (VarT "admininstr") List))
     (Infix Arg ~> Arg)
     (TupE
       (ListE
@@ -34647,9 +36498,9 @@
                 )
               )
               (IterE
-                (SubE (VarT "instr") (VarT "admininstr") (VarE "instr"))
+                (VarE "admininstr")
                 List
-                (iterexp "instr" (VarE "instr*"))
+                (iterexp "admininstr" (VarE "admininstr*"))
               )
             )
           )
@@ -34816,7 +36667,7 @@
     (ExpP "f" (VarT "frame"))
     (ExpP "val'*" (IterT (VarT "val") List))
     (ExpP "val*" (IterT (VarT "val") List))
-    (ExpP "instr*" (IterT (VarT "instr") List))
+    (ExpP "admininstr*" (IterT (VarT "admininstr") List))
     (Infix Arg ~> Arg)
     (TupE
       (ListE
@@ -34842,9 +36693,9 @@
                 (ListE (CaseE (Atom RETURN) (TupE)))
               )
               (IterE
-                (SubE (VarT "instr") (VarT "admininstr") (VarE "instr"))
+                (VarE "admininstr")
                 List
-                (iterexp "instr" (VarE "instr*"))
+                (iterexp "admininstr" (VarE "admininstr*"))
               )
             )
           )
@@ -34862,7 +36713,7 @@
     (ExpP "n" (VarT "n"))
     (ExpP "instr'*" (IterT (VarT "instr") List))
     (ExpP "val*" (IterT (VarT "val") List))
-    (ExpP "instr*" (IterT (VarT "instr") List))
+    (ExpP "admininstr*" (IterT (VarT "admininstr") List))
     (Infix Arg ~> Arg)
     (TupE
       (ListE
@@ -34881,9 +36732,9 @@
                 (ListE (CaseE (Atom RETURN) (TupE)))
               )
               (IterE
-                (SubE (VarT "instr") (VarT "admininstr") (VarE "instr"))
+                (VarE "admininstr")
                 List
-                (iterexp "instr" (VarE "instr*"))
+                (iterexp "admininstr" (VarE "admininstr*"))
               )
             )
           )
@@ -34902,7 +36753,7 @@
   (RuleD
     "trap-vals"
     (ExpP "val*" (IterT (VarT "val") List))
-    (ExpP "instr*" (IterT (VarT "instr") List))
+    (ExpP "admininstr*" (IterT (VarT "admininstr") List))
     (Infix Arg ~> Arg)
     (TupE
       (CatE
@@ -34914,9 +36765,9 @@
         (CatE
           (ListE (CaseE (Atom TRAP) (TupE)))
           (IterE
-            (SubE (VarT "instr") (VarT "admininstr") (VarE "instr"))
+            (VarE "admininstr")
             List
-            (iterexp "instr" (VarE "instr*"))
+            (iterexp "admininstr" (VarE "admininstr*"))
           )
         )
       )
@@ -34935,7 +36786,11 @@
         (CmpE
           NeOp
           bool
-          (IterE (VarE "instr") List (iterexp "instr" (VarE "instr*")))
+          (IterE
+            (VarE "admininstr")
+            List
+            (iterexp "admininstr" (VarE "admininstr*"))
+          )
           (ListE)
         )
       )
@@ -35119,6 +36974,7 @@
         )
       )
     )
+    (RulePr "wf_num_" (Seq Arg Arg) (TupE (CaseE (Atom I32) (TupE)) (VarE "c")))
   )
   (RuleD
     "relop"
@@ -35155,6 +37011,7 @@
         )
       )
     )
+    (RulePr "wf_num_" (Seq Arg Arg) (TupE (CaseE (Atom I32) (TupE)) (VarE "c")))
   )
   (RuleD
     "cvtop-val"
@@ -35443,6 +37300,7 @@
         )
       )
     )
+    (RulePr "wf_num_" (Seq Arg Arg) (TupE (CaseE (Atom I32) (TupE)) (VarE "c")))
     (RulePr
       "wf_uN"
       (Seq Arg Arg)
@@ -35658,7 +37516,7 @@
           NeOp
           bool
           (ProjE
-            (UncaseE (TheE (CallE "proj_lane__2" (ExpA (VarE "ci_1")))) Arg)
+            (UncaseE (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_1")))) Arg)
             0
           )
           (NumE (Nat 0))
@@ -35820,8 +37678,16 @@
           (Seq (Atom VSHIFTOP) Arg Arg)
           (TupE
             (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "N"))))
+              Arg
+              (TupE
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE
+                    (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                    (CaseE Arg (TupE (VarE "N")))
+                  )
+                )
+              )
             )
             (VarE "vshiftop")
           )
@@ -35876,8 +37742,16 @@
                 "vshiftop_"
                 (ExpA
                   (CaseE
-                    (Seq Arg (Atom X) Arg)
-                    (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "N"))))
+                    Arg
+                    (TupE
+                      (CaseE
+                        (Seq Arg (Atom X) Arg)
+                        (TupE
+                          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                          (CaseE Arg (TupE (VarE "N")))
+                        )
+                      )
+                    )
                   )
                 )
                 (ExpA (VarE "vshiftop"))
@@ -35932,8 +37806,16 @@
       (Seq Arg)
       (TupE
         (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "N"))))
+          Arg
+          (TupE
+            (CaseE
+              (Seq Arg (Atom X) Arg)
+              (TupE
+                (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                (CaseE Arg (TupE (VarE "N")))
+              )
+            )
+          )
         )
       )
     )
@@ -35961,8 +37843,16 @@
           (Seq (Atom VBITMASK) Arg)
           (TupE
             (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Jnn") (CaseE Arg (TupE (VarE "N"))))
+              Arg
+              (TupE
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE
+                    (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn"))
+                    (CaseE Arg (TupE (VarE "N")))
+                  )
+                )
+              )
             )
           )
         )
@@ -36026,7 +37916,7 @@
                         )
                       )
                       (ExpA (CaseE (Atom S) (TupE)))
-                      (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "ci_1")))))
+                      (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_1")))))
                       (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
                     )
                     Arg
@@ -36056,6 +37946,7 @@
         )
       )
     )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ci")))
     (RulePr
       "wf_shape"
       (Seq Arg)
@@ -36090,7 +37981,7 @@
                       )
                     )
                     (ExpA (CaseE (Atom S) (TupE)))
-                    (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "ci_1")))))
+                    (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_1")))))
                     (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
                   )
                   Arg
@@ -36131,10 +38022,15 @@
           (Seq (Atom VSWIZZLE) Arg)
           (TupE
             (CaseE
-              (Seq Arg (Atom X) Arg)
+              Arg
               (TupE
-                (SubE (VarT "packtype") (VarT "Jnn") (VarE "Pnn"))
-                (CaseE Arg (TupE (VarE "M")))
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE
+                    (SubE (VarT "packtype") (VarT "lanetype") (VarE "Pnn"))
+                    (CaseE Arg (TupE (VarE "M")))
+                  )
+                )
               )
             )
           )
@@ -36174,7 +38070,7 @@
         (IterE (VarE "c'") List (iterexp "c'" (VarE "c'*")))
         (CatE
           (IterE
-            (TheE (CallE "proj_lane__1" (ExpA (VarE "iter_0"))))
+            (TheE (CallE "proj_lane__0" (ExpA (VarE "iter_0"))))
             List
             (iterexp
               "iter_0"
@@ -36230,16 +38126,16 @@
           (ExpA
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__1) Arg Arg)
+                (Seq (Atom mk_lane__0) Arg Arg)
                 (TupE
-                  (VarE "Pnn")
+                  (SubE (VarT "packtype") (VarT "Jnn") (VarE "Pnn"))
                   (IdxE
                     (IterE (VarE "c'") List (iterexp "c'" (VarE "c'*")))
                     (ProjE
                       (UncaseE
                         (TheE
                           (CallE
-                            "proj_lane__1"
+                            "proj_lane__0"
                             (ExpA
                               (IdxE
                                 (IterE
@@ -36304,16 +38200,16 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__1) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (VarE "Pnn")
+              (SubE (VarT "packtype") (VarT "Jnn") (VarE "Pnn"))
               (IdxE
                 (IterE (VarE "c'") List (iterexp "c'" (VarE "c'*")))
                 (ProjE
                   (UncaseE
                     (TheE
                       (CallE
-                        "proj_lane__1"
+                        "proj_lane__0"
                         (ExpA
                           (IdxE
                             (IterE (VarE "ci") List (iterexp "ci" (VarE "ci*")))
@@ -36359,10 +38255,15 @@
           (Seq (Atom VSHUFFLE) Arg Arg)
           (TupE
             (CaseE
-              (Seq Arg (Atom X) Arg)
+              Arg
               (TupE
-                (SubE (VarT "packtype") (VarT "Jnn") (VarE "Pnn"))
-                (CaseE Arg (TupE (VarE "N")))
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE
+                    (SubE (VarT "packtype") (VarT "lanetype") (VarE "Pnn"))
+                    (CaseE Arg (TupE (VarE "N")))
+                  )
+                )
               )
             )
             (IterE (VarE "i") List (iterexp "i" (VarE "i*")))
@@ -36382,8 +38283,11 @@
         bool
         (IterE
           (CaseE
-            (Seq (Atom mk_lane__1) Arg Arg)
-            (TupE (VarE "Pnn") (VarE "c'"))
+            (Seq (Atom mk_lane__0) Arg Arg)
+            (TupE
+              (SubE (VarT "packtype") (VarT "Jnn") (VarE "Pnn"))
+              (VarE "c'")
+            )
           )
           List
           (iterexp "c'" (VarE "c'*"))
@@ -36437,9 +38341,9 @@
           (ExpA
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__1) Arg Arg)
+                (Seq (Atom mk_lane__0) Arg Arg)
                 (TupE
-                  (VarE "Pnn")
+                  (SubE (VarT "packtype") (VarT "Jnn") (VarE "Pnn"))
                   (IdxE
                     (IterE (VarE "c'") List (iterexp "c'" (VarE "c'*")))
                     (ProjE
@@ -36479,8 +38383,11 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__1) Arg Arg)
-            (TupE (VarE "Pnn") (VarE "c'"))
+            (Seq (Atom mk_lane__0) Arg Arg)
+            (TupE
+              (SubE (VarT "packtype") (VarT "Jnn") (VarE "Pnn"))
+              (VarE "c'")
+            )
           )
         )
       )
@@ -36518,9 +38425,9 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__1) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
-              (VarE "Pnn")
+              (SubE (VarT "packtype") (VarT "Jnn") (VarE "Pnn"))
               (IdxE
                 (IterE (VarE "c'") List (iterexp "c'" (VarE "c'*")))
                 (ProjE
@@ -36639,42 +38546,29 @@
       (CmpE
         EqOp
         bool
-        (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "nt") (VarE "c_2")))
-        (IdxE
-          (CallE
-            "lanes_"
-            (ExpA
-              (CaseE
-                (Seq Arg (Atom X) Arg)
-                (TupE
-                  (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt"))
-                  (CaseE Arg (TupE (VarE "N")))
-                )
-              )
-            )
-            (ExpA (VarE "c_1"))
-          )
-          (ProjE (UncaseE (VarE "i") Arg) 0)
-        )
-      )
-    )
-    (RulePr
-      "wf_lane_"
-      (Seq Arg Arg)
-      (TupE
+        (VarE "c_2")
         (CallE
-          "lanetype"
+          "unpacknum_"
+          (ExpA (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt")))
           (ExpA
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE
-                (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt"))
-                (CaseE Arg (TupE (VarE "N")))
+            (IdxE
+              (CallE
+                "lanes_"
+                (ExpA
+                  (CaseE
+                    (Seq Arg (Atom X) Arg)
+                    (TupE
+                      (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt"))
+                      (CaseE Arg (TupE (VarE "N")))
+                    )
+                  )
+                )
+                (ExpA (VarE "c_1"))
               )
+              (ProjE (UncaseE (VarE "i") Arg) 0)
             )
           )
         )
-        (CaseE (Seq (Atom mk_lane__0) Arg Arg) (TupE (VarE "nt") (VarE "c_2")))
       )
     )
     (RulePr
@@ -36741,7 +38635,7 @@
           (ExpA
             (TheE
               (CallE
-                "proj_lane__1"
+                "proj_lane__0"
                 (ExpA
                   (IdxE
                     (CallE
@@ -36769,6 +38663,11 @@
           )
         )
       )
+    )
+    (RulePr
+      "wf_num_"
+      (Seq Arg Arg)
+      (TupE (CaseE (Atom I32) (TupE)) (VarE "c_2"))
     )
     (RulePr
       "wf_shape"
@@ -36867,9 +38766,9 @@
   (RuleD
     "vextunop"
     (ExpP "c_1" (VarT "vec_"))
-    (ExpP "sh_1" (VarT "ishape"))
     (ExpP "sh_2" (VarT "ishape"))
-    (ExpP "vextunop" (VarT "vextunop_"))
+    (ExpP "sh_1" (VarT "ishape"))
+    (ExpP "vextunop" (VarT "vextunop__"))
     (ExpP "c" (VarT "vec_"))
     (Infix Arg ~> Arg)
     (TupE
@@ -36880,7 +38779,7 @@
         )
         (CaseE
           (Seq (Atom VEXTUNOP) Arg Arg Arg)
-          (TupE (VarE "sh_1") (VarE "sh_2") (VarE "vextunop"))
+          (TupE (VarE "sh_2") (VarE "sh_1") (VarE "vextunop"))
         )
       )
       (ListE
@@ -36909,9 +38808,9 @@
     "vextbinop"
     (ExpP "c_1" (VarT "vec_"))
     (ExpP "c_2" (VarT "vec_"))
-    (ExpP "sh_1" (VarT "ishape"))
     (ExpP "sh_2" (VarT "ishape"))
-    (ExpP "vextbinop" (VarT "vextbinop_"))
+    (ExpP "sh_1" (VarT "ishape"))
+    (ExpP "vextbinop" (VarT "vextbinop__"))
     (ExpP "c" (VarT "vec_"))
     (Infix Arg ~> Arg)
     (TupE
@@ -36926,7 +38825,7 @@
         )
         (CaseE
           (Seq (Atom VEXTBINOP) Arg Arg Arg)
-          (TupE (VarE "sh_1") (VarE "sh_2") (VarE "vextbinop"))
+          (TupE (VarE "sh_2") (VarE "sh_1") (VarE "vextbinop"))
         )
       )
       (ListE
@@ -36981,12 +38880,28 @@
           (Seq (Atom VNARROW) Arg Arg Arg)
           (TupE
             (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Jnn_2") (CaseE Arg (TupE (VarE "N_2"))))
+              Arg
+              (TupE
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE
+                    (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+                    (CaseE Arg (TupE (VarE "N_2")))
+                  )
+                )
+              )
             )
             (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Jnn_1") (CaseE Arg (TupE (VarE "N_1"))))
+              Arg
+              (TupE
+                (CaseE
+                  (Seq Arg (Atom X) Arg)
+                  (TupE
+                    (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_1"))
+                    (CaseE Arg (TupE (VarE "N_1")))
+                  )
+                )
+              )
             )
             (VarE "sx")
           )
@@ -37060,7 +38975,7 @@
               )
             )
             (ExpA (VarE "sx"))
-            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "ci_1")))))
+            (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_1")))))
           )
           List
           (iterexp "ci_1" (VarE "ci_1*"))
@@ -37088,7 +39003,7 @@
               )
             )
             (ExpA (VarE "sx"))
-            (ExpA (TheE (CallE "proj_lane__2" (ExpA (VarE "ci_2")))))
+            (ExpA (TheE (CallE "proj_lane__0" (ExpA (VarE "ci_2")))))
           )
           List
           (iterexp "ci_2" (VarE "ci_2*"))
@@ -37115,7 +39030,7 @@
             (CatE
               (IterE
                 (CaseE
-                  (Seq (Atom mk_lane__2) Arg Arg)
+                  (Seq (Atom mk_lane__0) Arg Arg)
                   (TupE (VarE "Jnn_2") (VarE "cj_1"))
                 )
                 List
@@ -37123,7 +39038,7 @@
               )
               (IterE
                 (CaseE
-                  (Seq (Atom mk_lane__2) Arg Arg)
+                  (Seq (Atom mk_lane__0) Arg Arg)
                   (TupE (VarE "Jnn_2") (VarE "cj_2"))
                 )
                 List
@@ -37224,7 +39139,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE (VarE "Jnn_2") (VarE "cj_1"))
           )
         )
@@ -37250,7 +39165,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE (VarE "Jnn_2") (VarE "cj_2"))
           )
         )
@@ -37260,15 +39175,12 @@
     )
   )
   (RuleD
-    "vcvtop-full"
+    "vcvtop"
     (ExpP "c_1" (VarT "vec_"))
-    (ExpP "Lnn_2" (VarT "Lnn"))
-    (ExpP "M" (VarT "M"))
-    (ExpP "Lnn_1" (VarT "Lnn"))
-    (ExpP "vcvtop" (VarT "vcvtop"))
+    (ExpP "sh_2" (VarT "shape"))
+    (ExpP "sh_1" (VarT "shape"))
+    (ExpP "vcvtop" (VarT "vcvtop__"))
     (ExpP "c" (VarT "vec_"))
-    (ExpP "ci*" (IterT (VarT "lane_") List))
-    (ExpP "cj**" (IterT (IterT (VarT "lane_") List) List))
     (Infix Arg ~> Arg)
     (TupE
       (ListE
@@ -37278,17 +39190,7 @@
         )
         (CaseE
           (Seq (Atom VCVTOP) Arg Arg Arg)
-          (TupE
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
-            )
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
-            )
-            (VarE "vcvtop")
-          )
+          (TupE (VarE "sh_2") (VarE "sh_1") (VarE "vcvtop"))
         )
       )
       (ListE
@@ -37299,543 +39201,16 @@
       )
     )
     (IfPr
-      (BinE
-        AndOp
-        bool
-        (CmpE EqOp bool (CallE "halfop" (ExpA (VarE "vcvtop"))) (OptE))
-        (CmpE EqOp bool (CallE "zeroop" (ExpA (VarE "vcvtop"))) (OptE))
-      )
-    )
-    (IfPr
       (CmpE
         EqOp
         bool
-        (IterE (VarE "ci") List (iterexp "ci" (VarE "ci*")))
+        (VarE "c")
         (CallE
-          "lanes_"
-          (ExpA
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
-            )
-          )
+          "vcvtop__"
+          (ExpA (VarE "sh_1"))
+          (ExpA (VarE "sh_2"))
+          (ExpA (VarE "vcvtop"))
           (ExpA (VarE "c_1"))
-        )
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (IterE
-          (IterE (VarE "cj") List (iterexp "cj" (VarE "cj*")))
-          List
-          (iterexp "cj*" (VarE "cj**"))
-        )
-        (CallE
-          "setproduct_"
-          (TypA (VarT "lane_"))
-          (ExpA
-            (IterE
-              (CallE
-                "vcvtop__"
-                (ExpA
-                  (CaseE
-                    (Seq Arg (Atom X) Arg)
-                    (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
-                  )
-                )
-                (ExpA
-                  (CaseE
-                    (Seq Arg (Atom X) Arg)
-                    (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
-                  )
-                )
-                (ExpA (VarE "vcvtop"))
-                (ExpA (VarE "ci"))
-              )
-              List
-              (iterexp "ci" (VarE "ci*"))
-            )
-          )
-        )
-      )
-    )
-    (IfPr
-      (MemE
-        (VarE "c")
-        (IterE
-          (CallE
-            "inv_lanes_"
-            (ExpA
-              (CaseE
-                (Seq Arg (Atom X) Arg)
-                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
-              )
-            )
-            (ExpA (IterE (VarE "cj") List (iterexp "cj" (VarE "cj*"))))
-          )
-          List
-          (iterexp "cj*" (VarE "cj**"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr
-        "wf_lane_"
-        (Seq Arg Arg)
-        (TupE
-          (CallE
-            "lanetype"
-            (ExpA
-              (CaseE
-                (Seq Arg (Atom X) Arg)
-                (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
-              )
-            )
-          )
-          (VarE "ci")
-        )
-      )
-      List
-      (iterexp "ci" (VarE "ci*"))
-    )
-    (IterPr
-      (IterPr
-        (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "Lnn_2") (VarE "cj")))
-        List
-        (iterexp "cj" (VarE "cj*"))
-      )
-      List
-      (iterexp "cj*" (VarE "cj**"))
-    )
-    (RulePr
-      "wf_shape"
-      (Seq Arg)
-      (TupE
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M"))))
-        )
-      )
-    )
-    (RulePr
-      "wf_shape"
-      (Seq Arg)
-      (TupE
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M"))))
-        )
-      )
-    )
-  )
-  (RuleD
-    "vcvtop-half"
-    (ExpP "c_1" (VarT "vec_"))
-    (ExpP "Lnn_2" (VarT "Lnn"))
-    (ExpP "M_2" (VarT "M"))
-    (ExpP "Lnn_1" (VarT "Lnn"))
-    (ExpP "M_1" (VarT "M"))
-    (ExpP "vcvtop" (VarT "vcvtop"))
-    (ExpP "c" (VarT "vec_"))
-    (ExpP "half" (VarT "half"))
-    (ExpP "ci*" (IterT (VarT "lane_") List))
-    (ExpP "cj**" (IterT (IterT (VarT "lane_") List) List))
-    (Infix Arg ~> Arg)
-    (TupE
-      (ListE
-        (CaseE
-          (Seq (Atom VCONST) Arg Arg)
-          (TupE (CaseE (Atom V128) (TupE)) (VarE "c_1"))
-        )
-        (CaseE
-          (Seq (Atom VCVTOP) Arg Arg Arg)
-          (TupE
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
-            )
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
-            )
-            (VarE "vcvtop")
-          )
-        )
-      )
-      (ListE
-        (CaseE
-          (Seq (Atom VCONST) Arg Arg)
-          (TupE (CaseE (Atom V128) (TupE)) (VarE "c"))
-        )
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (CallE "halfop" (ExpA (VarE "vcvtop")))
-        (OptE (VarE "half"))
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (IterE (VarE "ci") List (iterexp "ci" (VarE "ci*")))
-        (SliceE
-          (CallE
-            "lanes_"
-            (ExpA
-              (CaseE
-                (Seq Arg (Atom X) Arg)
-                (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
-              )
-            )
-            (ExpA (VarE "c_1"))
-          )
-          (CallE
-            "half"
-            (ExpA (VarE "half"))
-            (ExpA (NumE (Nat 0)))
-            (ExpA (VarE "M_2"))
-          )
-          (VarE "M_2")
-        )
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (IterE
-          (IterE (VarE "cj") List (iterexp "cj" (VarE "cj*")))
-          List
-          (iterexp "cj*" (VarE "cj**"))
-        )
-        (CallE
-          "setproduct_"
-          (TypA (VarT "lane_"))
-          (ExpA
-            (IterE
-              (CallE
-                "vcvtop__"
-                (ExpA
-                  (CaseE
-                    (Seq Arg (Atom X) Arg)
-                    (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
-                  )
-                )
-                (ExpA
-                  (CaseE
-                    (Seq Arg (Atom X) Arg)
-                    (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
-                  )
-                )
-                (ExpA (VarE "vcvtop"))
-                (ExpA (VarE "ci"))
-              )
-              List
-              (iterexp "ci" (VarE "ci*"))
-            )
-          )
-        )
-      )
-    )
-    (IfPr
-      (MemE
-        (VarE "c")
-        (IterE
-          (CallE
-            "inv_lanes_"
-            (ExpA
-              (CaseE
-                (Seq Arg (Atom X) Arg)
-                (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
-              )
-            )
-            (ExpA (IterE (VarE "cj") List (iterexp "cj" (VarE "cj*"))))
-          )
-          List
-          (iterexp "cj*" (VarE "cj**"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr
-        "wf_lane_"
-        (Seq Arg Arg)
-        (TupE
-          (CallE
-            "lanetype"
-            (ExpA
-              (CaseE
-                (Seq Arg (Atom X) Arg)
-                (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
-              )
-            )
-          )
-          (VarE "ci")
-        )
-      )
-      List
-      (iterexp "ci" (VarE "ci*"))
-    )
-    (IterPr
-      (IterPr
-        (RulePr "wf_lane_" (Seq Arg Arg) (TupE (VarE "Lnn_2") (VarE "cj")))
-        List
-        (iterexp "cj" (VarE "cj*"))
-      )
-      List
-      (iterexp "cj*" (VarE "cj**"))
-    )
-    (RulePr
-      "wf_shape"
-      (Seq Arg)
-      (TupE
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE (VarE "Lnn_1") (CaseE Arg (TupE (VarE "M_1"))))
-        )
-      )
-    )
-    (RulePr
-      "wf_shape"
-      (Seq Arg)
-      (TupE
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE (VarE "Lnn_2") (CaseE Arg (TupE (VarE "M_2"))))
-        )
-      )
-    )
-  )
-  (RuleD
-    "vcvtop-zero"
-    (ExpP "c_1" (VarT "vec_"))
-    (ExpP "nt_2" (VarT "numtype"))
-    (ExpP "M_2" (VarT "M"))
-    (ExpP "nt_1" (VarT "numtype"))
-    (ExpP "M_1" (VarT "M"))
-    (ExpP "vcvtop" (VarT "vcvtop"))
-    (ExpP "c" (VarT "vec_"))
-    (ExpP "ci*" (IterT (VarT "lane_") List))
-    (ExpP "cj**" (IterT (IterT (VarT "lane_") List) List))
-    (Infix Arg ~> Arg)
-    (TupE
-      (ListE
-        (CaseE
-          (Seq (Atom VCONST) Arg Arg)
-          (TupE (CaseE (Atom V128) (TupE)) (VarE "c_1"))
-        )
-        (CaseE
-          (Seq (Atom VCVTOP) Arg Arg Arg)
-          (TupE
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE
-                (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_2"))
-                (CaseE Arg (TupE (VarE "M_2")))
-              )
-            )
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE
-                (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_1"))
-                (CaseE Arg (TupE (VarE "M_1")))
-              )
-            )
-            (VarE "vcvtop")
-          )
-        )
-      )
-      (ListE
-        (CaseE
-          (Seq (Atom VCONST) Arg Arg)
-          (TupE (CaseE (Atom V128) (TupE)) (VarE "c"))
-        )
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (CallE "zeroop" (ExpA (VarE "vcvtop")))
-        (OptE (CaseE (Atom ZERO) (TupE)))
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (IterE (VarE "ci") List (iterexp "ci" (VarE "ci*")))
-        (CallE
-          "lanes_"
-          (ExpA
-            (CaseE
-              (Seq Arg (Atom X) Arg)
-              (TupE
-                (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_1"))
-                (CaseE Arg (TupE (VarE "M_1")))
-              )
-            )
-          )
-          (ExpA (VarE "c_1"))
-        )
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (IterE
-          (IterE (VarE "cj") List (iterexp "cj" (VarE "cj*")))
-          List
-          (iterexp "cj*" (VarE "cj**"))
-        )
-        (CallE
-          "setproduct_"
-          (TypA (VarT "lane_"))
-          (ExpA
-            (CatE
-              (IterE
-                (CallE
-                  "vcvtop__"
-                  (ExpA
-                    (CaseE
-                      (Seq Arg (Atom X) Arg)
-                      (TupE
-                        (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_1"))
-                        (CaseE Arg (TupE (VarE "M_1")))
-                      )
-                    )
-                  )
-                  (ExpA
-                    (CaseE
-                      (Seq Arg (Atom X) Arg)
-                      (TupE
-                        (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_2"))
-                        (CaseE Arg (TupE (VarE "M_2")))
-                      )
-                    )
-                  )
-                  (ExpA (VarE "vcvtop"))
-                  (ExpA (VarE "ci"))
-                )
-                List
-                (iterexp "ci" (VarE "ci*"))
-              )
-              (IterE
-                (ListE
-                  (CaseE
-                    (Seq (Atom mk_lane__0) Arg Arg)
-                    (TupE (VarE "nt_2") (CallE "zero" (ExpA (VarE "nt_2"))))
-                  )
-                )
-                (ListN (VarE "M_1"))
-              )
-            )
-          )
-        )
-      )
-    )
-    (IfPr
-      (MemE
-        (VarE "c")
-        (IterE
-          (CallE
-            "inv_lanes_"
-            (ExpA
-              (CaseE
-                (Seq Arg (Atom X) Arg)
-                (TupE
-                  (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_2"))
-                  (CaseE Arg (TupE (VarE "M_2")))
-                )
-              )
-            )
-            (ExpA (IterE (VarE "cj") List (iterexp "cj" (VarE "cj*"))))
-          )
-          List
-          (iterexp "cj*" (VarE "cj**"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr
-        "wf_lane_"
-        (Seq Arg Arg)
-        (TupE
-          (CallE
-            "lanetype"
-            (ExpA
-              (CaseE
-                (Seq Arg (Atom X) Arg)
-                (TupE
-                  (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_1"))
-                  (CaseE Arg (TupE (VarE "M_1")))
-                )
-              )
-            )
-          )
-          (VarE "ci")
-        )
-      )
-      List
-      (iterexp "ci" (VarE "ci*"))
-    )
-    (IterPr
-      (IterPr
-        (RulePr
-          "wf_lane_"
-          (Seq Arg Arg)
-          (TupE
-            (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_2"))
-            (VarE "cj")
-          )
-        )
-        List
-        (iterexp "cj" (VarE "cj*"))
-      )
-      List
-      (iterexp "cj*" (VarE "cj**"))
-    )
-    (RulePr
-      "wf_shape"
-      (Seq Arg)
-      (TupE
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_1"))
-            (CaseE Arg (TupE (VarE "M_1")))
-          )
-        )
-      )
-    )
-    (RulePr
-      "wf_shape"
-      (Seq Arg)
-      (TupE
-        (CaseE
-          (Seq Arg (Atom X) Arg)
-          (TupE
-            (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_2"))
-            (CaseE Arg (TupE (VarE "M_2")))
-          )
-        )
-      )
-    )
-    (RulePr
-      "wf_lane_"
-      (Seq Arg Arg)
-      (TupE
-        (SubE (VarT "numtype") (VarT "lanetype") (VarE "nt_2"))
-        (CaseE
-          (Seq (Atom mk_lane__0) Arg Arg)
-          (TupE (VarE "nt_2") (CallE "zero" (ExpA (VarE "nt_2"))))
         )
       )
     )
@@ -39673,6 +41048,7 @@
         )
       )
     )
+    (RulePr "wf_num_" (Seq Arg Arg) (TupE (VarE "nt") (VarE "c")))
     (RulePr
       "wf_uN"
       (Seq Arg Arg)
@@ -39872,6 +41248,7 @@
         )
       )
     )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "n") (VarE "c")))
     (RulePr
       "wf_uN"
       (Seq Arg Arg)
@@ -40015,6 +41392,7 @@
         )
       )
     )
+    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 128)) (VarE "c")))
     (RulePr
       "wf_uN"
       (Seq Arg Arg)
@@ -40047,7 +41425,7 @@
                 (OptE
                   (CaseE
                     (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-                    (TupE (VarE "M") (VarE "N") (VarE "sx"))
+                    (TupE (CaseE Arg (TupE (VarE "M"))) (VarE "N") (VarE "sx"))
                   )
                 )
                 (VarE "ao")
@@ -40132,7 +41510,7 @@
                 (OptE
                   (CaseE
                     (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-                    (TupE (VarE "M") (VarE "N") (VarE "sx"))
+                    (TupE (CaseE Arg (TupE (VarE "M"))) (VarE "N") (VarE "sx"))
                   )
                 )
                 (VarE "ao")
@@ -40229,7 +41607,7 @@
           (ExpA
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__2) Arg Arg)
+                (Seq (Atom mk_lane__0) Arg Arg)
                 (TupE
                   (VarE "Jnn")
                   (CallE
@@ -40284,7 +41662,7 @@
             )
           )
           (CaseE
-            (Seq (Atom mk_lane__2) Arg Arg)
+            (Seq (Atom mk_lane__0) Arg Arg)
             (TupE
               (VarE "Jnn")
               (CallE
@@ -40323,7 +41701,12 @@
               (Seq (Atom VLOAD) Arg Arg Arg)
               (TupE
                 (CaseE (Atom V128) (TupE))
-                (OptE (CaseE (Seq (Atom SPLAT) Arg) (TupE (VarE "N"))))
+                (OptE
+                  (CaseE
+                    (Seq (Atom SPLAT) Arg)
+                    (TupE (CaseE Arg (TupE (VarE "N"))))
+                  )
+                )
                 (VarE "ao")
               )
             )
@@ -40402,7 +41785,12 @@
               (Seq (Atom VLOAD) Arg Arg Arg)
               (TupE
                 (CaseE (Atom V128) (TupE))
-                (OptE (CaseE (Seq (Atom SPLAT) Arg) (TupE (VarE "N"))))
+                (OptE
+                  (CaseE
+                    (Seq (Atom SPLAT) Arg)
+                    (TupE (CaseE Arg (TupE (VarE "N"))))
+                  )
+                )
                 (VarE "ao")
               )
             )
@@ -40485,7 +41873,7 @@
           (ExpA
             (IterE
               (CaseE
-                (Seq (Atom mk_lane__2) Arg Arg)
+                (Seq (Atom mk_lane__0) Arg Arg)
                 (TupE
                   (VarE "Jnn")
                   (CaseE Arg (TupE (ProjE (UncaseE (VarE "j") Arg) 0)))
@@ -40532,7 +41920,7 @@
           )
         )
         (CaseE
-          (Seq (Atom mk_lane__2) Arg Arg)
+          (Seq (Atom mk_lane__0) Arg Arg)
           (TupE
             (VarE "Jnn")
             (CaseE Arg (TupE (ProjE (UncaseE (VarE "j") Arg) 0)))
@@ -40562,7 +41950,12 @@
               (Seq (Atom VLOAD) Arg Arg Arg)
               (TupE
                 (CaseE (Atom V128) (TupE))
-                (OptE (CaseE (Seq (Atom ZERO) Arg) (TupE (VarE "N"))))
+                (OptE
+                  (CaseE
+                    (Seq (Atom ZERO) Arg)
+                    (TupE (CaseE Arg (TupE (VarE "N"))))
+                  )
+                )
                 (VarE "ao")
               )
             )
@@ -40639,7 +42032,12 @@
               (Seq (Atom VLOAD) Arg Arg Arg)
               (TupE
                 (CaseE (Atom V128) (TupE))
-                (OptE (CaseE (Seq (Atom ZERO) Arg) (TupE (VarE "N"))))
+                (OptE
+                  (CaseE
+                    (Seq (Atom ZERO) Arg)
+                    (TupE (CaseE Arg (TupE (VarE "N"))))
+                  )
+                )
                 (VarE "ao")
               )
             )
@@ -40921,7 +42319,7 @@
               )
               (IdxP RootP (ProjE (UncaseE (VarE "j") Arg) 0))
               (CaseE
-                (Seq (Atom mk_lane__2) Arg Arg)
+                (Seq (Atom mk_lane__0) Arg Arg)
                 (TupE
                   (VarE "Jnn")
                   (CaseE Arg (TupE (ProjE (UncaseE (VarE "k") Arg) 0)))
@@ -40967,7 +42365,7 @@
           )
         )
         (CaseE
-          (Seq (Atom mk_lane__2) Arg Arg)
+          (Seq (Atom mk_lane__0) Arg Arg)
           (TupE
             (VarE "Jnn")
             (CaseE Arg (TupE (ProjE (UncaseE (VarE "k") Arg) 0)))
@@ -43575,7 +44973,7 @@
                     (UncaseE
                       (TheE
                         (CallE
-                          "proj_lane__2"
+                          "proj_lane__0"
                           (ExpA
                             (IdxE
                               (CallE
@@ -43622,7 +45020,7 @@
                 (UncaseE
                   (TheE
                     (CallE
-                      "proj_lane__2"
+                      "proj_lane__0"
                       (ExpA
                         (IdxE
                           (CallE
@@ -46617,6 +48015,11 @@
     )
     (ExpA (VarE "i"))
     (ListE (CaseE (Seq (Atom ELEM.DROP) Arg) (TupE (VarE "i"))))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE (CaseE (Seq (Atom ELEM.DROP) Arg) (TupE (VarE "i"))))
+    )
   )
   (DefD
     (ExpP "reftype" (VarT "reftype"))
@@ -46672,38 +48075,49 @@
       (VarE "n")
       (LenE (IterE (VarE "expr") List (iterexp "expr" (VarE "expr*"))))
     )
-  )
-)
-(HintD (RelH "runelem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "runelem_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "elem" (VarT "elem"))
-    (typbind "idx" (VarT "idx"))
-    (typbind "ret_val*" (IterT (VarT "instr") List))
-  )
-  (RuleD
-    "runelem_is_wf_0"
-    (ExpP "elem" (VarT "elem"))
-    (ExpP "idx" (VarT "idx"))
-    (ExpP "ret_val*" (IterT (VarT "instr") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "elem") (VarE "idx") (VarE "ret_val*"))
-    (RulePr "wf_elem" (Seq Arg) (TupE (VarE "elem")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "idx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "runelem" (ExpA (VarE "elem")) (ExpA (VarE "idx")))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+            )
+          )
+        )
       )
     )
-    (IterPr
-      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (VarE "n"))))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE (Seq (Atom TABLE.INIT) Arg Arg) (TupE (VarE "x") (VarE "i")))
+      )
+    )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE (CaseE (Seq (Atom ELEM.DROP) Arg) (TupE (VarE "i"))))
     )
   )
 )
@@ -46778,38 +48192,47 @@
       (VarE "n")
       (LenE (IterE (VarE "byte") List (iterexp "byte" (VarE "byte*"))))
     )
-  )
-)
-(HintD (RelH "rundata_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "rundata_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "data" (VarT "data"))
-    (typbind "idx" (VarT "idx"))
-    (typbind "ret_val*" (IterT (VarT "instr") List))
-  )
-  (RuleD
-    "rundata_is_wf_0"
-    (ExpP "data" (VarT "data"))
-    (ExpP "idx" (VarT "idx"))
-    (ExpP "ret_val*" (IterT (VarT "instr") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "data") (VarE "idx") (VarE "ret_val*"))
-    (RulePr "wf_data" (Seq Arg) (TupE (VarE "data")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "idx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "rundata" (ExpA (VarE "data")) (ExpA (VarE "idx")))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+            )
+          )
+        )
       )
     )
-    (IterPr
-      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_num__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (VarE "n"))))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE (CaseE (Seq (Atom MEMORY.INIT) Arg) (TupE (VarE "i"))))
+    )
+    (RulePr
+      "wf_instr"
+      (Seq Arg)
+      (TupE (CaseE (Seq (Atom DATA.DROP) Arg) (TupE (VarE "i"))))
     )
   )
 )
@@ -47153,6 +48576,189 @@
       (iterexp "val" (VarE "val*"))
     )
     (RulePr
+      "wf_store"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocmodule"
+            (ExpA (VarE "s"))
+            (ExpA (VarE "module"))
+            (ExpA
+              (IterE
+                (VarE "externaddr")
+                List
+                (iterexp "externaddr" (VarE "externaddr*"))
+              )
+            )
+            (ExpA (IterE (VarE "val") List (iterexp "val" (VarE "val*"))))
+            (ExpA
+              (IterE
+                (IterE (VarE "ref") List (iterexp "ref" (VarE "ref*")))
+                List
+                (iterexp "ref*" (VarE "ref**"))
+              )
+            )
+          )
+          0
+        )
+      )
+    )
+    (RulePr
+      "wf_moduleinst"
+      (Seq Arg)
+      (TupE
+        (ProjE
+          (CallE
+            "allocmodule"
+            (ExpA (VarE "s"))
+            (ExpA (VarE "module"))
+            (ExpA
+              (IterE
+                (VarE "externaddr")
+                List
+                (iterexp "externaddr" (VarE "externaddr*"))
+              )
+            )
+            (ExpA (IterE (VarE "val") List (iterexp "val" (VarE "val*"))))
+            (ExpA
+              (IterE
+                (IterE (VarE "ref") List (iterexp "ref" (VarE "ref*")))
+                List
+                (iterexp "ref*" (VarE "ref**"))
+              )
+            )
+          )
+          1
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "concat_"
+          (TypA (VarT "instr"))
+          (ExpA
+            (IterE
+              (CallE
+                "runelem"
+                (ExpA
+                  (IdxE
+                    (IterE (VarE "elem") List (iterexp "elem" (VarE "elem*")))
+                    (VarE "i")
+                  )
+                )
+                (ExpA (CaseE Arg (TupE (VarE "i"))))
+              )
+              (ListN (VarE "n_E") "i")
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_instr" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "runelem"
+            (ExpA
+              (IdxE
+                (IterE (VarE "elem") List (iterexp "elem" (VarE "elem*")))
+                (VarE "i")
+              )
+            )
+            (ExpA (CaseE Arg (TupE (VarE "i"))))
+          )
+        )
+      )
+      (ListN (VarE "n_E") "i")
+    )
+    (IterPr
+      (RulePr "wf_instr" (Seq Arg) (TupE (VarE "iter")))
+      List
+      (iterexp
+        "iter"
+        (CallE
+          "concat_"
+          (TypA (VarT "instr"))
+          (ExpA
+            (IterE
+              (CallE
+                "rundata"
+                (ExpA
+                  (IdxE
+                    (IterE (VarE "data") List (iterexp "data" (VarE "data*")))
+                    (VarE "j")
+                  )
+                )
+                (ExpA (CaseE Arg (TupE (VarE "j"))))
+              )
+              (ListN (VarE "n_D") "j")
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (IterPr
+        (RulePr "wf_instr" (Seq Arg) (TupE (VarE "iter")))
+        List
+        (iterexp
+          "iter"
+          (CallE
+            "rundata"
+            (ExpA
+              (IdxE
+                (IterE (VarE "data") List (iterexp "data" (VarE "data*")))
+                (VarE "j")
+              )
+            )
+            (ExpA (CaseE Arg (TupE (VarE "j"))))
+          )
+        )
+      )
+      (ListN (VarE "n_D") "j")
+    )
+    (RulePr
+      "wf_config"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (CaseE (Infix Arg ; Arg) (TupE (VarE "s'") (VarE "f")))
+            (CatE
+              (IterE
+                (SubE (VarT "instr") (VarT "admininstr") (VarE "instr_E"))
+                List
+                (iterexp "instr_E" (VarE "instr_E*"))
+              )
+              (CatE
+                (IterE
+                  (SubE (VarT "instr") (VarT "admininstr") (VarE "instr_D"))
+                  List
+                  (iterexp "instr_D" (VarE "instr_D*"))
+                )
+                (LiftE
+                  (IterE
+                    (CaseE (Seq (Atom CALL) Arg) (TupE (VarE "x")))
+                    Opt
+                    (iterexp "x" (VarE "x?"))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
       "wf_module"
       (Seq Arg)
       (TupE
@@ -47316,42 +48922,6 @@
       )
       (ListN (VarE "n_D") "j")
     )
-  )
-)
-(HintD (RelH "instantiate_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "instantiate_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "module" (VarT "module"))
-    (typbind "var_0*" (IterT (VarT "externaddr") List))
-    (typbind "ret_val" (VarT "config"))
-  )
-  (RuleD
-    "instantiate_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "module" (VarT "module"))
-    (ExpP "var_0*" (IterT (VarT "externaddr") List))
-    (ExpP "ret_val" (VarT "config"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "module") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_module" (Seq Arg) (TupE (VarE "module")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "instantiate"
-          (ExpA (VarE "store"))
-          (ExpA (VarE "module"))
-          (ExpA (VarE "var_0*"))
-        )
-      )
-    )
-    (RulePr "wf_config" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (DecD
@@ -48107,6 +49677,14 @@
       )
       (CaseE (Atom OK) (TupE))
     )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (LenE (IterE (VarE "b") List (iterexp "b" (VarE "b*"))))
+        (BinE PowOp nat (NumE (Nat 2)) (NumE (Nat 32)))
+      )
+    )
     (RulePr "wf_store" (Seq Arg) (TupE (VarE "s")))
     (RulePr
       "wf_datainst"
@@ -48155,6 +49733,14 @@
       )
       List
       (iterexp "ref" (VarE "ref*"))
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (LenE (IterE (VarE "ref") List (iterexp "ref" (VarE "ref*"))))
+        (BinE PowOp nat (NumE (Nat 2)) (NumE (Nat 32)))
+      )
     )
     (RulePr "wf_store" (Seq Arg) (TupE (VarE "s")))
   )
@@ -48649,8 +50235,8 @@
     (ExpP "s" (VarT "store"))
     (ExpP "val*" (IterT (VarT "val") List))
     (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "C" (VarT "context"))
     (ExpP "t*" (IterT (VarT "valtype") List))
+    (ExpP "C" (VarT "context"))
     (Infix Arg |- (Infix Arg : Arg))
     (TupE
       (VarE "s")
@@ -48662,7 +50248,6 @@
         (expfield (Atom MODULE) (VarE "moduleinst"))
       )
       (CompE
-        (VarE "C")
         (StrE
           (expfield (Atom TYPES) (ListE))
           (expfield (Atom FUNCS) (ListE))
@@ -48678,6 +50263,7 @@
           (expfield (Atom LABELS) (ListE))
           (expfield (Atom RETURN) (OptE))
         )
+        (VarE "C")
       )
     )
     (RulePr
@@ -50949,6 +52535,155 @@
     )
   )
 )
+(HintD (DecH "fzero" (hint "wfopt" "{}")))
+(HintD (DecH "zero" (hint "wfopt" "{}")))
+(HintD (DecH "dim" (hint "wfopt" "{}")))
+(HintD (DecH "concat_bytes" (hint "wfopt" "{}")))
+(HintD (DecH "tablesxt" (hint "wfopt" "{}")))
+(HintD (DecH "memsxt" (hint "wfopt" "{}")))
+(HintD (DecH "dataidx_instr" (hint "wfopt" "{}")))
+(HintD (DecH "dataidx_instrs" (hint "wfopt" "{}")))
+(HintD (DecH "dataidx_expr" (hint "wfopt" "{}")))
+(HintD (DecH "dataidx_func" (hint "wfopt" "{}")))
+(HintD (DecH "dataidx_funcs" (hint "wfopt" "{}")))
+(HintD (DecH "memarg0" (hint "wfopt" "{}")))
+(HintD (DecH "unop_" (hint "wfopt" "{}")))
+(HintD (DecH "iadd_" (hint "wfopt" "{}")))
+(HintD (DecH "imul_" (hint "wfopt" "{}")))
+(HintD (DecH "irem_" (hint "wfopt" "{}")))
+(HintD (DecH "isub_" (hint "wfopt" "{}")))
+(HintD (DecH "ieqz_" (hint "wfopt" "{}")))
+(HintD (DecH "testop_" (hint "wfopt" "{}")))
+(HintD (DecH "ieq_" (hint "wfopt" "{}")))
+(HintD (DecH "ige_" (hint "wfopt" "{}")))
+(HintD (DecH "igt_" (hint "wfopt" "{}")))
+(HintD (DecH "ile_" (hint "wfopt" "{}")))
+(HintD (DecH "ilt_" (hint "wfopt" "{}")))
+(HintD (DecH "ine_" (hint "wfopt" "{}")))
+(HintD (DecH "relop_" (hint "wfopt" "{}")))
+(HintD (DecH "cvtop__" (hint "wfopt" "{}")))
+(HintD (DecH "inez_" (hint "wfopt" "{}")))
+(HintD (DecH "ineg_" (hint "wfopt" "{}")))
+(HintD (DecH "iabs_" (hint "wfopt" "{}")))
+(HintD (DecH "imin_" (hint "wfopt" "{}")))
+(HintD (DecH "imax_" (hint "wfopt" "{}")))
+(HintD (DecH "iadd_sat_" (hint "wfopt" "{}")))
+(HintD (DecH "isub_sat_" (hint "wfopt" "{}")))
+(HintD (DecH "packnum_" (hint "wfopt" "{}")))
+(HintD (DecH "unpacknum_" (hint "wfopt" "{}")))
+(HintD (DecH "vvunop_" (hint "wfopt" "{}")))
+(HintD (DecH "vvbinop_" (hint "wfopt" "{}")))
+(HintD (DecH "vvternop_" (hint "wfopt" "{}")))
+(HintD (DecH "vunop_" (hint "wfopt" "{}")))
+(HintD (DecH "vbinop_" (hint "wfopt" "{}")))
+(HintD (DecH "vrelop_" (hint "wfopt" "{}")))
+(HintD (DecH "lcvtop__" (hint "wfopt" "{}")))
+(HintD (DecH "vcvtop__" (hint "wfopt" "{}")))
+(HintD (DecH "vextunop__" (hint "wfopt" "{}")))
+(HintD (DecH "vextbinop__" (hint "wfopt" "{}")))
+(HintD (DecH "vshiftop_" (hint "wfopt" "{}")))
+(HintD (DecH "default_" (hint "wfopt" "{}")))
+(HintD (DecH "store" (hint "wfopt" "{}")))
+(HintD (DecH "frame" (hint "wfopt" "{}")))
+(HintD (DecH "funcinst" (hint "wfopt" "{}")))
+(HintD (DecH "globalinst" (hint "wfopt" "{}")))
+(HintD (DecH "tableinst" (hint "wfopt" "{}")))
+(HintD (DecH "meminst" (hint "wfopt" "{}")))
+(HintD (DecH "datainst" (hint "wfopt" "{}")))
+(HintD (DecH "moduleinst" (hint "wfopt" "{}")))
+(HintD (DecH "func" (hint "wfopt" "{}")))
+(HintD (DecH "global" (hint "wfopt" "{}")))
+(HintD (DecH "table" (hint "wfopt" "{}")))
+(HintD (DecH "mem" (hint "wfopt" "{}")))
+(HintD (DecH "data" (hint "wfopt" "{}")))
+(HintD (DecH "local" (hint "wfopt" "{}")))
+(HintD (DecH "with_local" (hint "wfopt" "{}")))
+(HintD (DecH "with_global" (hint "wfopt" "{}")))
+(HintD (DecH "with_table" (hint "wfopt" "{}")))
+(HintD (DecH "with_tableinst" (hint "wfopt" "{}")))
+(HintD (DecH "with_mem" (hint "wfopt" "{}")))
+(HintD (DecH "with_meminst" (hint "wfopt" "{}")))
+(HintD (DecH "with_elem" (hint "wfopt" "{}")))
+(HintD (DecH "with_data" (hint "wfopt" "{}")))
+(HintD (DecH "growtable" (hint "wfopt" "{}")))
+(HintD (DecH "growmemory" (hint "wfopt" "{}")))
+(HintD (DecH "allocfunc" (hint "wfopt" "{}")))
+(HintD (DecH "allocfuncs" (hint "wfopt" "{}")))
+(HintD (DecH "allocglobal" (hint "wfopt" "{}")))
+(HintD (DecH "allocglobals" (hint "wfopt" "{}")))
+(HintD (DecH "alloctable" (hint "wfopt" "{}")))
+(HintD (DecH "alloctables" (hint "wfopt" "{}")))
+(HintD (DecH "allocmem" (hint "wfopt" "{}")))
+(HintD (DecH "allocmems" (hint "wfopt" "{}")))
+(HintD (DecH "allocelem" (hint "wfopt" "{}")))
+(HintD (DecH "allocelems" (hint "wfopt" "{}")))
+(HintD (DecH "allocdata" (hint "wfopt" "{}")))
+(HintD (DecH "allocdatas" (hint "wfopt" "{}")))
+(HintD (DecH "instexport" (hint "wfopt" "{}")))
+(HintD (DecH "allocmodule" (hint "wfopt" "{}")))
+(HintD (DecH "invoke" (hint "wfopt" "{}")))
+(HintD (DecH "s33_to_u32" (hint "wfopt" "{}")))
+(HintD (DecH "extend__" (hint "wfopt" "{}")))
+(HintD (DecH "fabs_" (hint "wfopt" "{}")))
+(HintD (DecH "fceil_" (hint "wfopt" "{}")))
+(HintD (DecH "ffloor_" (hint "wfopt" "{}")))
+(HintD (DecH "fnearest_" (hint "wfopt" "{}")))
+(HintD (DecH "fneg_" (hint "wfopt" "{}")))
+(HintD (DecH "fsqrt_" (hint "wfopt" "{}")))
+(HintD (DecH "ftrunc_" (hint "wfopt" "{}")))
+(HintD (DecH "iclz_" (hint "wfopt" "{}")))
+(HintD (DecH "ictz_" (hint "wfopt" "{}")))
+(HintD (DecH "ipopcnt_" (hint "wfopt" "{}")))
+(HintD (DecH "wrap__" (hint "wfopt" "{}")))
+(HintD (DecH "fadd_" (hint "wfopt" "{}")))
+(HintD (DecH "fcopysign_" (hint "wfopt" "{}")))
+(HintD (DecH "fdiv_" (hint "wfopt" "{}")))
+(HintD (DecH "fmax_" (hint "wfopt" "{}")))
+(HintD (DecH "fmin_" (hint "wfopt" "{}")))
+(HintD (DecH "fmul_" (hint "wfopt" "{}")))
+(HintD (DecH "fsub_" (hint "wfopt" "{}")))
+(HintD (DecH "iand_" (hint "wfopt" "{}")))
+(HintD (DecH "ior_" (hint "wfopt" "{}")))
+(HintD (DecH "irotl_" (hint "wfopt" "{}")))
+(HintD (DecH "irotr_" (hint "wfopt" "{}")))
+(HintD (DecH "ishl_" (hint "wfopt" "{}")))
+(HintD (DecH "ishr_" (hint "wfopt" "{}")))
+(HintD (DecH "ixor_" (hint "wfopt" "{}")))
+(HintD (DecH "feq_" (hint "wfopt" "{}")))
+(HintD (DecH "fge_" (hint "wfopt" "{}")))
+(HintD (DecH "fgt_" (hint "wfopt" "{}")))
+(HintD (DecH "fle_" (hint "wfopt" "{}")))
+(HintD (DecH "flt_" (hint "wfopt" "{}")))
+(HintD (DecH "fne_" (hint "wfopt" "{}")))
+(HintD (DecH "convert__" (hint "wfopt" "{}")))
+(HintD (DecH "demote__" (hint "wfopt" "{}")))
+(HintD (DecH "promote__" (hint "wfopt" "{}")))
+(HintD (DecH "reinterpret__" (hint "wfopt" "{}")))
+(HintD (DecH "trunc__" (hint "wfopt" "{}")))
+(HintD (DecH "trunc_sat__" (hint "wfopt" "{}")))
+(HintD (DecH "narrow__" (hint "wfopt" "{}")))
+(HintD (DecH "ibits_" (hint "wfopt" "{}")))
+(HintD (DecH "fbits_" (hint "wfopt" "{}")))
+(HintD (DecH "ibytes_" (hint "wfopt" "{}")))
+(HintD (DecH "fbytes_" (hint "wfopt" "{}")))
+(HintD (DecH "nbytes_" (hint "wfopt" "{}")))
+(HintD (DecH "vbytes_" (hint "wfopt" "{}")))
+(HintD (DecH "inv_ibits_" (hint "wfopt" "{}")))
+(HintD (DecH "inv_fbits_" (hint "wfopt" "{}")))
+(HintD (DecH "inv_ibytes_" (hint "wfopt" "{}")))
+(HintD (DecH "inv_fbytes_" (hint "wfopt" "{}")))
+(HintD (DecH "inv_nbytes_" (hint "wfopt" "{}")))
+(HintD (DecH "inv_vbytes_" (hint "wfopt" "{}")))
+(HintD (DecH "inot_" (hint "wfopt" "{}")))
+(HintD (DecH "irev_" (hint "wfopt" "{}")))
+(HintD (DecH "iandnot_" (hint "wfopt" "{}")))
+(HintD (DecH "ibitselect_" (hint "wfopt" "{}")))
+(HintD (DecH "iavgr_" (hint "wfopt" "{}")))
+(HintD (DecH "iq15mulr_sat_" (hint "wfopt" "{}")))
+(HintD (DecH "fpmin_" (hint "wfopt" "{}")))
+(HintD (DecH "fpmax_" (hint "wfopt" "{}")))
+(HintD (DecH "lanes_" (hint "wfopt" "{}")))
+(HintD (DecH "inv_lanes_" (hint "wfopt" "{}")))
 (GramD
   "Bbyte"
   (VarT "byte")
@@ -54531,7 +56266,11 @@
           (OptE
             (CaseE
               (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-              (TupE (NumE (Nat 8)) (NumE (Nat 8)) (CaseE (Atom S) (TupE)))
+              (TupE
+                (CaseE Arg (TupE (NumE (Nat 8))))
+                (NumE (Nat 8))
+                (CaseE (Atom S) (TupE))
+              )
             )
           )
           (VarE "ao")
@@ -54552,7 +56291,11 @@
           (OptE
             (CaseE
               (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-              (TupE (NumE (Nat 8)) (NumE (Nat 8)) (CaseE (Atom U) (TupE)))
+              (TupE
+                (CaseE Arg (TupE (NumE (Nat 8))))
+                (NumE (Nat 8))
+                (CaseE (Atom U) (TupE))
+              )
             )
           )
           (VarE "ao")
@@ -54573,7 +56316,11 @@
           (OptE
             (CaseE
               (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-              (TupE (NumE (Nat 16)) (NumE (Nat 4)) (CaseE (Atom S) (TupE)))
+              (TupE
+                (CaseE Arg (TupE (NumE (Nat 16))))
+                (NumE (Nat 4))
+                (CaseE (Atom S) (TupE))
+              )
             )
           )
           (VarE "ao")
@@ -54594,7 +56341,11 @@
           (OptE
             (CaseE
               (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-              (TupE (NumE (Nat 16)) (NumE (Nat 4)) (CaseE (Atom U) (TupE)))
+              (TupE
+                (CaseE Arg (TupE (NumE (Nat 16))))
+                (NumE (Nat 4))
+                (CaseE (Atom U) (TupE))
+              )
             )
           )
           (VarE "ao")
@@ -54615,7 +56366,11 @@
           (OptE
             (CaseE
               (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-              (TupE (NumE (Nat 32)) (NumE (Nat 2)) (CaseE (Atom S) (TupE)))
+              (TupE
+                (CaseE Arg (TupE (NumE (Nat 32))))
+                (NumE (Nat 2))
+                (CaseE (Atom S) (TupE))
+              )
             )
           )
           (VarE "ao")
@@ -54636,7 +56391,11 @@
           (OptE
             (CaseE
               (Seq (Atom SHAPE) Arg (Atom X) Arg (Atom _) Arg)
-              (TupE (NumE (Nat 32)) (NumE (Nat 2)) (CaseE (Atom U) (TupE)))
+              (TupE
+                (CaseE Arg (TupE (NumE (Nat 32))))
+                (NumE (Nat 2))
+                (CaseE (Atom U) (TupE))
+              )
             )
           )
           (VarE "ao")
@@ -54654,7 +56413,12 @@
         (Seq (Atom VLOAD) Arg Arg Arg)
         (TupE
           (CaseE (Atom V128) (TupE))
-          (OptE (CaseE (Seq (Atom SPLAT) Arg) (TupE (NumE (Nat 8)))))
+          (OptE
+            (CaseE
+              (Seq (Atom SPLAT) Arg)
+              (TupE (CaseE Arg (TupE (NumE (Nat 8)))))
+            )
+          )
           (VarE "ao")
         )
       )
@@ -54670,7 +56434,12 @@
         (Seq (Atom VLOAD) Arg Arg Arg)
         (TupE
           (CaseE (Atom V128) (TupE))
-          (OptE (CaseE (Seq (Atom SPLAT) Arg) (TupE (NumE (Nat 16)))))
+          (OptE
+            (CaseE
+              (Seq (Atom SPLAT) Arg)
+              (TupE (CaseE Arg (TupE (NumE (Nat 16)))))
+            )
+          )
           (VarE "ao")
         )
       )
@@ -54686,7 +56455,12 @@
         (Seq (Atom VLOAD) Arg Arg Arg)
         (TupE
           (CaseE (Atom V128) (TupE))
-          (OptE (CaseE (Seq (Atom SPLAT) Arg) (TupE (NumE (Nat 32)))))
+          (OptE
+            (CaseE
+              (Seq (Atom SPLAT) Arg)
+              (TupE (CaseE Arg (TupE (NumE (Nat 32)))))
+            )
+          )
           (VarE "ao")
         )
       )
@@ -54702,7 +56476,12 @@
         (Seq (Atom VLOAD) Arg Arg Arg)
         (TupE
           (CaseE (Atom V128) (TupE))
-          (OptE (CaseE (Seq (Atom SPLAT) Arg) (TupE (NumE (Nat 64)))))
+          (OptE
+            (CaseE
+              (Seq (Atom SPLAT) Arg)
+              (TupE (CaseE Arg (TupE (NumE (Nat 64)))))
+            )
+          )
           (VarE "ao")
         )
       )
@@ -54718,7 +56497,12 @@
         (Seq (Atom VLOAD) Arg Arg Arg)
         (TupE
           (CaseE (Atom V128) (TupE))
-          (OptE (CaseE (Seq (Atom ZERO) Arg) (TupE (NumE (Nat 32)))))
+          (OptE
+            (CaseE
+              (Seq (Atom ZERO) Arg)
+              (TupE (CaseE Arg (TupE (NumE (Nat 32)))))
+            )
+          )
           (VarE "ao")
         )
       )
@@ -54734,7 +56518,12 @@
         (Seq (Atom VLOAD) Arg Arg Arg)
         (TupE
           (CaseE (Atom V128) (TupE))
-          (OptE (CaseE (Seq (Atom ZERO) Arg) (TupE (NumE (Nat 64)))))
+          (OptE
+            (CaseE
+              (Seq (Atom ZERO) Arg)
+              (TupE (CaseE Arg (TupE (NumE (Nat 64)))))
+            )
+          )
           (VarE "ao")
         )
       )
@@ -54990,8 +56779,16 @@
         (Seq (Atom VSHUFFLE) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
           (ListE (CaseE Arg (TupE (ProjE (UncaseE (VarE "l") Arg) 0))))
         )
@@ -55336,8 +57133,16 @@
         (Seq (Atom VSWIZZLE) Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
         )
       )
@@ -56707,8 +58512,16 @@
         (Seq (Atom VBITMASK) Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
         )
       )
@@ -56722,12 +58535,28 @@
         (Seq (Atom VNARROW) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
           )
           (CaseE (Atom S) (TupE))
         )
@@ -56742,12 +58571,28 @@
         (Seq (Atom VNARROW) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
           )
           (CaseE (Atom U) (TupE))
         )
@@ -56762,8 +58607,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -56785,8 +58638,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -56808,8 +58669,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -57084,16 +58953,34 @@
         (Seq (Atom VEXTUNOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextunop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
               (CaseE (Atom I16) (TupE))
               (NumE (Nat 8))
               (CaseE
@@ -57114,16 +59001,34 @@
         (Seq (Atom VEXTUNOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextunop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
               (CaseE (Atom I16) (TupE))
               (NumE (Nat 8))
               (CaseE
@@ -57236,8 +59141,16 @@
         (Seq (Atom VBITMASK) Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
           )
         )
       )
@@ -57251,12 +59164,28 @@
         (Seq (Atom VNARROW) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
           )
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
           )
           (CaseE (Atom S) (TupE))
         )
@@ -57271,12 +59200,28 @@
         (Seq (Atom VNARROW) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
           )
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
           )
           (CaseE (Atom U) (TupE))
         )
@@ -57299,8 +59244,17 @@
             (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom S) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom S) (TupE)))
+              )
+            )
           )
         )
       )
@@ -57322,8 +59276,17 @@
             (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom S) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom S) (TupE)))
+              )
+            )
           )
         )
       )
@@ -57345,8 +59308,17 @@
             (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom U) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom U) (TupE)))
+              )
+            )
           )
         )
       )
@@ -57368,8 +59340,17 @@
             (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom U) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom U) (TupE)))
+              )
+            )
           )
         )
       )
@@ -57383,8 +59364,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -57406,8 +59395,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -57429,8 +59426,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -57728,16 +59733,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
               (CaseE (Atom I16) (TupE))
               (NumE (Nat 8))
               (CaseE
@@ -57758,16 +59781,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
               (CaseE (Atom I16) (TupE))
               (NumE (Nat 8))
               (CaseE
@@ -57788,16 +59829,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
               (CaseE (Atom I16) (TupE))
               (NumE (Nat 8))
               (CaseE
@@ -57818,16 +59877,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I8) (TupE)) (CaseE Arg (TupE (NumE (Nat 16)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I8) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 16))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I8) (TupE))
+              (NumE (Nat 16))
               (CaseE (Atom I16) (TupE))
               (NumE (Nat 8))
               (CaseE
@@ -57848,16 +59925,34 @@
         (Seq (Atom VEXTUNOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextunop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
               (CaseE (Atom I32) (TupE))
               (NumE (Nat 4))
               (CaseE
@@ -57878,16 +59973,34 @@
         (Seq (Atom VEXTUNOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextunop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextunop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
               (CaseE (Atom I32) (TupE))
               (NumE (Nat 4))
               (CaseE
@@ -57977,8 +60090,16 @@
         (Seq (Atom VBITMASK) Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
           )
         )
       )
@@ -58000,8 +60121,17 @@
             (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom S) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom S) (TupE)))
+              )
+            )
           )
         )
       )
@@ -58023,8 +60153,17 @@
             (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom S) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom S) (TupE)))
+              )
+            )
           )
         )
       )
@@ -58046,8 +60185,17 @@
             (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom U) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom U) (TupE)))
+              )
+            )
           )
         )
       )
@@ -58069,8 +60217,17 @@
             (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom U) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom U) (TupE)))
+              )
+            )
           )
         )
       )
@@ -58084,8 +60241,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -58107,8 +60272,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -58130,8 +60303,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -58314,16 +60495,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
               (CaseE (Atom I32) (TupE))
               (NumE (Nat 4))
               (CaseE (Seq (Atom DOT) (Atom S)) (TupE))
@@ -58341,16 +60540,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
               (CaseE (Atom I32) (TupE))
               (NumE (Nat 4))
               (CaseE
@@ -58371,16 +60588,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
               (CaseE (Atom I32) (TupE))
               (NumE (Nat 4))
               (CaseE
@@ -58401,16 +60636,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
               (CaseE (Atom I32) (TupE))
               (NumE (Nat 4))
               (CaseE
@@ -58431,16 +60684,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I16) (TupE)) (CaseE Arg (TupE (NumE (Nat 8)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I16) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 8))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I16) (TupE))
+              (NumE (Nat 8))
               (CaseE (Atom I32) (TupE))
               (NumE (Nat 4))
               (CaseE
@@ -58530,8 +60801,16 @@
         (Seq (Atom VBITMASK) Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I64) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 2))))
+                )
+              )
+            )
           )
         )
       )
@@ -58553,8 +60832,17 @@
             (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom S) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom I64) (TupE))
+              (NumE (Nat 2))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom S) (TupE)))
+              )
+            )
           )
         )
       )
@@ -58576,8 +60864,17 @@
             (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom S) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom I64) (TupE))
+              (NumE (Nat 2))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom S) (TupE)))
+              )
+            )
           )
         )
       )
@@ -58599,8 +60896,17 @@
             (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom U) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom I64) (TupE))
+              (NumE (Nat 2))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom LOW) (TupE)) (CaseE (Atom U) (TupE)))
+              )
+            )
           )
         )
       )
@@ -58622,8 +60928,17 @@
             (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom EXTEND) Arg Arg)
-            (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom U) (TupE)))
+            (Seq (Atom mk_vcvtop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom I64) (TupE))
+              (NumE (Nat 2))
+              (CaseE
+                (Seq (Atom EXTEND) Arg Arg)
+                (TupE (CaseE (Atom HIGH) (TupE)) (CaseE (Atom U) (TupE)))
+              )
+            )
           )
         )
       )
@@ -58637,8 +60952,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I64) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 2))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -58660,8 +60983,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I64) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 2))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -58683,8 +61014,16 @@
         (Seq (Atom VSHIFTOP) Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I64) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 2))))
+                )
+              )
+            )
           )
           (CaseE
             (Seq (Atom mk_vshiftop__0) Arg Arg Arg)
@@ -58775,16 +61114,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I64) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 2))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
               (CaseE (Atom I64) (TupE))
               (NumE (Nat 2))
               (CaseE
@@ -58805,16 +61162,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I64) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 2))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
               (CaseE (Atom I64) (TupE))
               (NumE (Nat 2))
               (CaseE
@@ -58835,16 +61210,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I64) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 2))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
               (CaseE (Atom I64) (TupE))
               (NumE (Nat 2))
               (CaseE
@@ -58865,16 +61258,34 @@
         (Seq (Atom VEXTBINOP) Arg Arg Arg)
         (TupE
           (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
-          )
-          (CaseE
-            (Seq Arg (Atom X) Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
-          )
-          (CaseE
-            (Seq (Atom mk_vextbinop__0) Arg Arg Arg)
+            Arg
             (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I64) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 2))))
+                )
+              )
+            )
+          )
+          (CaseE
+            Arg
+            (TupE
+              (CaseE
+                (Seq Arg (Atom X) Arg)
+                (TupE
+                  (CaseE (Atom I32) (TupE))
+                  (CaseE Arg (TupE (NumE (Nat 4))))
+                )
+              )
+            )
+          )
+          (CaseE
+            (Seq (Atom mk_vextbinop___0) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
               (CaseE (Atom I64) (TupE))
               (NumE (Nat 2))
               (CaseE
@@ -59593,8 +62004,17 @@
             (TupE (CaseE (Atom F32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom TRUNC_SAT) Arg Arg)
-            (TupE (CaseE (Atom S) (TupE)) (OptE))
+            (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom F32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom TRUNC_SAT) Arg Arg)
+                (TupE (CaseE (Atom S) (TupE)) (OptE))
+              )
+            )
           )
         )
       )
@@ -59616,8 +62036,17 @@
             (TupE (CaseE (Atom F32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom TRUNC_SAT) Arg Arg)
-            (TupE (CaseE (Atom U) (TupE)) (OptE))
+            (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom F32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom TRUNC_SAT) Arg Arg)
+                (TupE (CaseE (Atom U) (TupE)) (OptE))
+              )
+            )
           )
         )
       )
@@ -59639,8 +62068,17 @@
             (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom CONVERT) Arg Arg)
-            (TupE (OptE) (CaseE (Atom S) (TupE)))
+            (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom F32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom CONVERT) Arg Arg)
+                (TupE (OptE) (CaseE (Atom S) (TupE)))
+              )
+            )
           )
         )
       )
@@ -59662,8 +62100,17 @@
             (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom CONVERT) Arg Arg)
-            (TupE (OptE) (CaseE (Atom U) (TupE)))
+            (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom F32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom CONVERT) Arg Arg)
+                (TupE (OptE) (CaseE (Atom U) (TupE)))
+              )
+            )
           )
         )
       )
@@ -59685,8 +62132,17 @@
             (TupE (CaseE (Atom F64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
           )
           (CaseE
-            (Seq (Atom TRUNC_SAT) Arg Arg)
-            (TupE (CaseE (Atom S) (TupE)) (OptE (CaseE (Atom ZERO) (TupE))))
+            (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom F64) (TupE))
+              (NumE (Nat 2))
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom TRUNC_SAT) Arg Arg)
+                (TupE (CaseE (Atom S) (TupE)) (OptE (CaseE (Atom ZERO) (TupE))))
+              )
+            )
           )
         )
       )
@@ -59708,8 +62164,17 @@
             (TupE (CaseE (Atom F64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
           )
           (CaseE
-            (Seq (Atom TRUNC_SAT) Arg Arg)
-            (TupE (CaseE (Atom U) (TupE)) (OptE (CaseE (Atom ZERO) (TupE))))
+            (Seq (Atom mk_vcvtop___2) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom F64) (TupE))
+              (NumE (Nat 2))
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE
+                (Seq (Atom TRUNC_SAT) Arg Arg)
+                (TupE (CaseE (Atom U) (TupE)) (OptE (CaseE (Atom ZERO) (TupE))))
+              )
+            )
           )
         )
       )
@@ -59731,8 +62196,17 @@
             (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom CONVERT) Arg Arg)
-            (TupE (OptE (CaseE (Atom LOW) (TupE))) (CaseE (Atom S) (TupE)))
+            (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom F64) (TupE))
+              (NumE (Nat 2))
+              (CaseE
+                (Seq (Atom CONVERT) Arg Arg)
+                (TupE (OptE (CaseE (Atom LOW) (TupE))) (CaseE (Atom S) (TupE)))
+              )
+            )
           )
         )
       )
@@ -59754,8 +62228,17 @@
             (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
           (CaseE
-            (Seq (Atom CONVERT) Arg Arg)
-            (TupE (OptE (CaseE (Atom LOW) (TupE))) (CaseE (Atom U) (TupE)))
+            (Seq (Atom mk_vcvtop___1) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom F64) (TupE))
+              (NumE (Nat 2))
+              (CaseE
+                (Seq (Atom CONVERT) Arg Arg)
+                (TupE (OptE (CaseE (Atom LOW) (TupE))) (CaseE (Atom U) (TupE)))
+              )
+            )
           )
         )
       )
@@ -59776,7 +62259,16 @@
             (Seq Arg (Atom X) Arg)
             (TupE (CaseE (Atom F64) (TupE)) (CaseE Arg (TupE (NumE (Nat 2)))))
           )
-          (CaseE (Seq (Atom DEMOTE) Arg) (TupE (CaseE (Atom ZERO) (TupE))))
+          (CaseE
+            (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom F64) (TupE))
+              (NumE (Nat 2))
+              (CaseE (Atom F32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Seq (Atom DEMOTE) Arg) (TupE (CaseE (Atom ZERO) (TupE))))
+            )
+          )
         )
       )
     )
@@ -59796,7 +62288,16 @@
             (Seq Arg (Atom X) Arg)
             (TupE (CaseE (Atom F32) (TupE)) (CaseE Arg (TupE (NumE (Nat 4)))))
           )
-          (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE))
+          (CaseE
+            (Seq (Atom mk_vcvtop___3) Arg Arg Arg Arg Arg)
+            (TupE
+              (CaseE (Atom F32) (TupE))
+              (NumE (Nat 4))
+              (CaseE (Atom F64) (TupE))
+              (NumE (Nat 2))
+              (CaseE (Seq (Atom PROMOTE) (Atom LOW)) (TupE))
+            )
+          )
         )
       )
     )

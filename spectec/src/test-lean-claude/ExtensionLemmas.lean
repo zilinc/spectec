@@ -1039,23 +1039,6 @@ theorem Extend_store_refl {s : store} (h : wf_store s) : Extend_store s s := by
       (forall_range_refl_noWf elems Extend_eleminst extend_eleminst_refl_0)
       hwf hwf
 
-/-- Rocq `funcinst_same` at the pre-resync revision. **Not found under this
-    name (or an obvious renaming) in the current upstream source** —
-    flagged, not removed; the representational-gap caveat below (about
-    `Forall₂`'s zip-based definition not forcing equal length) may have
-    been resolved differently upstream (e.g. inside the new proofs of
-    `Extend_store_funcinst`/`Extend_store_ref`) — worth checking those
-    proofs directly before re-deriving a fix here.
-
-    **CAVEAT (not present in Rocq)**: `wasm2.0.lean`'s `Forall₂` is a
-    zip-based `def` (`∀ t ∈ xs.zip ys, P t.1 t.2`, see
-    `ExtendedDeriveDecEq.lean`), which does NOT force `f1.length = f2.length`
-    the way Rocq's inductive `Forall2` does — so `Forall₂ Extend_funcinst f1
-    f2` alone is satisfiable even when `f1`/`f2` have different lengths.
-    This lemma is therefore NOT provable as literally stated below without
-    an extra length hypothesis; left as `sorry` deliberately. -/
-theorem funcinst_same (f1 f2 : List funcinst) : Forall₂ Extend_funcinst f1 f2 → f1 = f2 := sorry
-
 /-! ## `Extend_store` preserves `Ref_ok`/`Val_ok` (2026-09-24: RENAMED only,
     `store_extension_*` → `Extend_store_*`; one new lemma `Extend_store_refs'`
     added upstream) -/
@@ -1072,6 +1055,30 @@ theorem extend_funcinst_eq (f1 f2 : funcinst) : Extend_funcinst f1 f2 → f1 = f
   intro h
   cases h
   rfl
+
+/-- Rocq `funcinst_same` at the pre-resync revision. **Not found under this
+    name (or an obvious renaming) in the current upstream source** —
+    flagged, not removed.
+
+    **Strengthened over a literal transcription**, same move as `Vals_ok`
+    (`TypingLemmas.lean`) and for the same reason: `wasm2.0.lean`'s
+    `Forall₂` is a zip-based `def` (`∀ t ∈ xs.zip ys, P t.1 t.2`), which does
+    NOT force `f1.length = f2.length` the way Rocq's inductive `Forall2`
+    does — so `Forall₂ Extend_funcinst f1 f2` alone is satisfiable even when
+    `f1`/`f2` have different lengths, and the lemma is unprovable as
+    literally stated without an extra length hypothesis. Takes `hlen`
+    explicitly instead (trivial or already available at every use site, per
+    the same analysis as `Vals_ok`). Proved via the `Forall₂`/Mathlib
+    `List.Forall₂` bridge (`HelperLemmas.to_mathlib_forall₂`): once lengths
+    are known equal, Mathlib's inductive `List.Forall₂` is available, and
+    `Extend_funcinst`-pointwise-implies-`Eq` (`extend_funcinst_eq`) plus
+    `List.forall₂_eq_eq_eq` collapses it to `f1 = f2` directly. -/
+theorem funcinst_same (f1 f2 : List funcinst) (hlen : f1.length = f2.length) :
+    Forall₂ Extend_funcinst f1 f2 → f1 = f2 := by
+  intro h
+  have h' : List.Forall₂ Extend_funcinst f1 f2 := to_mathlib_forall₂ hlen h
+  have h'' : List.Forall₂ (· = ·) f1 f2 := h'.imp (fun a b hab => extend_funcinst_eq a b hab)
+  rwa [List.forall₂_eq_eq_eq] at h''
 
 /-- The last two hypotheses of `Extend_store`'s constructor are `wf_store s`
     and `wf_store s'`; Rocq's `invert_extend_store` tactic surfaces them as
@@ -2146,41 +2153,25 @@ theorem construct_meminsts (s : store) (ts : List memtype) (ma : Nat) (v_mt : me
   · rw [h1]
     exact meminst_ok_store s _ p.2 v_i v_nb (h _ h2) hwfnb
 
-/-- Rocq `construct_meminsts_grow` (2026-09-30 `rocq-backend-proof-final`
-    resync). **No longer `Admitted` upstream** — the prior gap (`lim_old +
-    v_n ≤ 2^16`, the hard page-count cap baked into `Memtype_ok` via
-    `Limits_ok _ (2^16)`; see `Limits_ok`/`Memtype_ok` in `wasm2.0.lean`)
-    is now closed because `$growmemory` itself gained a matching
-    `-- if i' <= $(2^16)` side condition (`5-runtime-aux.spectec`), which
-    Rocq's proof consumes directly instead of deriving it. Mirrored here as
-    a new `lim_old + v_n ≤ 2 ^ 16` hypothesis (added last among the
-    Nat-valued premises, matching Rocq's new `HBound` position just before
-    the `minsts = ...` binder). Still `Nat`-based rather than Rocq's `Q`,
-    per the pre-existing representational note (unaffected by this resync).
-    **Now a genuine target** (previously permanently blocked) — not yet
-    attempted for real: the Rocq proof's own route is pure `Q`/`Z`
-    rational-conversion bookkeeping that has no Lean counterpart to mirror,
-    and this codebase's zip-based `Forall₂` (unlike Rocq's inductive
-    `Forall2`) doesn't support the same structural induction Rocq's proof
-    uses without first separately establishing `s.MEMS.length = ts.length`
-    (the same class of gap as `Vals_ok`/`Vals_ok_non_bot`, see
-    `HelperLemmas.lean`'s `Forall₂` bridge) — flagged for a focused future
-    pass rather than rushed here. (Separately, pre-existing and unrelated to
-    this resync: this signature hard-codes the declared-max limit as always
-    present (`some (uN.mk_uN v_j)`) where Rocq's `v_j_opt` is a genuine
-    `Option`; not fixed here, flagged in the audit notes.) -/
+/-- Rocq `extension_lemmas.v:2918` `construct_meminsts_grow`. `Qed` upstream, proved here.
+    The `lim_old + v_n ≤ 2 ^ 16` premise mirrors `$growmemory`'s `-- if i' <= $(2^16)` side
+    condition. `Nat`-based rather than Rocq's `Q` (byte counts and page counts are naturals
+    in this model). Bundle18: the declared max is now a genuine `Option` (`v_j_opt`), as in
+    Rocq; it used to be hard-coded to `some (uN.mk_uN v_j)`, which made the lemma unusable for
+    memories without a declared maximum. The proof follows `construct_tableinsts_grow`. -/
 theorem construct_meminsts_grow (s : store) (ts : List memtype) (ma : Nat) (b_lst : List byte)
-    (lim_old v_n v_j : Nat) (minsts : List meminst) :
+    (lim_old v_n : Nat) (v_j_opt : Option uN) (minsts : List meminst) :
     Forall wf_meminst minsts →
     Forall₂ (fun v ty => Meminst_ok s v ty) s.MEMS ts →
-    lookup_total s.MEMS ma = meminst.MKmeminst (memtype.PAGE (limits.mk_limits (uN.mk_uN lim_old) (some (uN.mk_uN v_j)))) b_lst →
-    lim_old = b_lst.length / (64 * Ki) → lim_old + v_n ≤ v_j → lim_old + v_n ≤ 2 ^ 16 →
+    lookup_total s.MEMS ma = meminst.MKmeminst (memtype.PAGE (limits.mk_limits (uN.mk_uN lim_old) v_j_opt)) b_lst →
+    lim_old = b_lst.length / (64 * Ki) →
+    Forall (fun v_j => lim_old + v_n ≤ (proj_uN_0 v_j)) (Option.toList v_j_opt) → lim_old + v_n ≤ 2 ^ 16 →
     minsts = list_update_func s.MEMS ma (fun _ =>
-      meminst.MKmeminst (memtype.PAGE (limits.mk_limits (uN.mk_uN (lim_old + v_n)) (some (uN.mk_uN v_j))))
+      meminst.MKmeminst (memtype.PAGE (limits.mk_limits (uN.mk_uN (lim_old + v_n)) v_j_opt))
         (b_lst ++ List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0))) →
     Forall₂ (fun v ty => Meminst_ok s v ty) minsts
-      (list_update_func ts ma (fun _ => memtype.PAGE (limits.mk_limits (uN.mk_uN (lim_old + v_n)) (some (uN.mk_uN v_j))))) := by
-  intro hwfm h hlk _ hle1 hle2 heq p hp
+      (list_update_func ts ma (fun _ => memtype.PAGE (limits.mk_limits (uN.mk_uN (lim_old + v_n)) v_j_opt))) := by
+  intro hwfm h hlk _ hrange hle2 heq p hp
   subst heq
   rcases mem_zip_modify₂ _ _ s.MEMS ts ma p hp with hp' | ⟨h1, h2, h3⟩
   · exact h p hp'
@@ -2195,29 +2186,30 @@ theorem construct_meminsts_grow (s : store) (ts : List memtype) (ma : Nat) (b_ls
     injection hA1 with hn
     subst hn
     subst hB
-    -- the declared max really is `some v_j`
-    rcases m_opt with _ | mm0
-    · simp at hA2
-    · have hmm : v_j = mm0 := by simpa using hA2
-      subst hmm
-      -- old `Memtype_ok` bounds the declared max by 2^16
-      have holdlim : Limits_ok (limits.mk_limits (uN.mk_uN lim_old) ((some v_j).map uN.mk_uN)) (2 ^ 16) := by
-        cases hmtok with | mk_Memtype_ok _ hl _ => exact hl
-      have hjbound := (limits_ok_invert _ _ holdlim lim_old (some v_j) rfl).2 v_j (by simp)
-      obtain ⟨hwflim2, _, hwfmt2, _⟩ :=
-        wf_meminst_parts (lim_old + v_n) (some (uN.mk_uN v_j))
-          (b_lst ++ List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0)) hwfp1
-      rw [h1, h2]
-      refine Meminst_ok.mk_Meminst_ok s (lim_old + v_n) (some v_j)
-        (b_lst ++ List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0)) ?_ ?_ hwfS hwfp1 hwfmt2
-      · refine Memtype_ok.mk_Memtype_ok _
-          (Limits_ok.mk_Limits_ok (lim_old + v_n) (some v_j) (2 ^ 16) hle2 ?_ hwflim2) hwfmt2
-        intro x hx
-        simp only [Option.toList, List.mem_singleton] at hx
-        subst hx
-        exact ⟨hle1, hjbound.2⟩
-      · simp only [List.length_append, List.length_replicate, hblen]
-        exact (Nat.add_mul lim_old v_n (64 * Ki)).symm
+    subst hA2
+    -- old `Memtype_ok` bounds the declared max (if any) by 2^16
+    have holdlim : Limits_ok (limits.mk_limits (uN.mk_uN lim_old) (m_opt.map uN.mk_uN)) (2 ^ 16) := by
+      cases hmtok with | mk_Memtype_ok _ hl _ => exact hl
+    have hjbound := (limits_ok_invert _ _ holdlim lim_old m_opt rfl).2
+    obtain ⟨hwflim2, _, hwfmt2, _⟩ :=
+      wf_meminst_parts (lim_old + v_n) (m_opt.map uN.mk_uN)
+        (b_lst ++ List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0)) hwfp1
+    rw [h1, h2]
+    refine Meminst_ok.mk_Meminst_ok s (lim_old + v_n) m_opt
+      (b_lst ++ List.replicate (v_n * (64 * Ki)) (byte.mk_byte 0)) ?_ ?_ hwfS hwfp1 hwfmt2
+    · refine Memtype_ok.mk_Memtype_ok _
+        (Limits_ok.mk_Limits_ok (lim_old + v_n) m_opt (2 ^ 16) hle2 ?_ hwflim2) hwfmt2
+      intro mm hmm
+      refine ⟨?_, (hjbound mm hmm).2⟩
+      have hmem : uN.mk_uN mm ∈ Option.toList (m_opt.map uN.mk_uN) := by
+        rcases m_opt with _ | mm0
+        · simp at hmm
+        · simp only [Option.toList_some, List.mem_singleton] at hmm
+          subst hmm
+          simp
+      exact hrange _ hmem
+    · simp only [List.length_append, List.length_replicate, hblen]
+      exact (Nat.add_mul lim_old v_n (64 * Ki)).symm
 
 /-- Rocq `construct_datainsts`. Unaffected by the resync. `data.drop`
     preserves data typedness trivially. -/

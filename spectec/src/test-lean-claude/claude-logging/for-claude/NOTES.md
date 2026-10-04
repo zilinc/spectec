@@ -1,8 +1,182 @@
 # Notes for a future Claude session — READ THIS FIRST
 
-Last updated: 2026-10-02 (bundle16 — same session as bundle9-15,
-continuing directly; see `claude-logging/verbatim_dialogue_log/bundle16`).
-First bundle run on **Opus 5** (bundles 1-15 were Sonnet 5).
+Last updated: 2026-10-04 (bundle19, same Opus 5.5 session as bundles 17-18; see
+`claude-logging/verbatim_dialogue_log/bundle19`).
+
+> **If you read nothing else, read (in this order)**
+> 1. The bundle19 section just below: preservation is fully proved, apart from generated
+>    `*_is_wf` theorems that Rocq also leaves `Admitted`.
+> 2. `verbatim_dialogue_log/bundle19/user_requested_documents/README_wasm2.0_hand_edits.md`:
+>    the hand-edits to the generated `wasm2.0.lean` and how to re-apply them after the user
+>    regenerates it.
+> 3. `verbatim_dialogue_log/bundle18/user_requested_documents/insights_for_next_turn.md` §4
+>    (Lean techniques, still valid) and
+>    `verbatim_dialogue_log/bundle16/user_requested_documents/insights_for_next_turn.md`
+>    (Lean-4 elaboration facts).
+
+## ✅ 2026-10-04 UPDATE (bundle19) — `t_read_preservation` proved; 89 `wasm2.0.lean` `*_is_wf` proved
+
+The user's answers to the bundle18 blocking issues:
+1. `rat_to_nat` is no longer opaque (`(r.num.tdiv (Int.ofNat r.den)).toNat`), so
+   `TypePreservation.rat_to_nat_natCast` is now `by simp [rat_to_nat]`.
+2. The memory.fill/copy/init `2^32` corner case is known and awaits a spec fix. Leave the
+   unprovable cases as `sorry`.
+3. For the locals length, use `Vals_ok` (done; deviation below).
+
+**New explicit permission (bundle19 prompt):** prove *inside `wasm2.0.lean`* every `sorry`
+theorem whose `wasm.v` counterpart is filled in. So `wasm2.0.lean` may now be edited for that
+purpose; `is_wf_theorems.md`'s older "not ours to edit" note is superseded.
+
+State at the end of bundle19:
+- **`wasm2.0.lean`** has 152 `*_is_wf` theorems:
+  - 89 proved this bundle, which is every one that is `Qed` in Rocq;
+  - 63 still `sorry`, exactly the 63 `Admitted` in `wasm.v` (Rocq's 64th `Admitted`,
+    `res_list_eq_dec`, is a derived instance in Lean);
+  - plus 54 hand-written helper theorems in five blocks, each headed "Hand-written helper
+    lemmas for the `*_is_wf` proofs below (bundle19; not generated)", placed before
+    `fzero_is_wf`, `iadd__is_wf`, `vunop__is_wf`, `store_is_wf` and `Step_pure_is_wf`.
+- **`Step_read_is_wf` and `Step_is_wf`** were moved after `inductive Store_ok` and given Rocq's
+  hand-edited `Store_ok (fun_store z)` premise (see the `Hand-edited (bundle19)` comments).
+  - `Step_is_wf` is proved, with no induction needed: the congruence rules carry the inner
+    `wf_config` premises.
+  - `Step_read_is_wf` stays `sorry`: it is `Admitted` in Rocq and false in the corner case.
+- **Regeneration wipes the proofs**, so `bundle19/user_requested_documents/
+  wasm2.0_hand_edits.patch` re-applies them. It is a diff against the user's generated file
+  (md5 `7d2167da7174a58377a7c6c43bd8cfc1`), tested with `patch -p1` and `git apply`. The base
+  copy exists only in the session scratchpad (`scratchpad/wasm2.0.generated.lean`).
+- **`TypePreservation.lean` has 0 sorries.** `t_read_preservation` is proved for all 47
+  `Step_read` rules.
+  - Its helpers sit just before `t_preservation_type_aux`: `ais_cons_pre`/`ais_*1` chains,
+    the `pt_*` principal-type readers, `ais_seq4_last`, `ais_fill_inv`, `table_refs_ok`,
+    `elem_refs_ok`, `minst_func_externaddr`, `memarg0_align8`, `map_local_inj`,
+    `funcinst_ok_parts`, `func_ok_body`, `default_val_ok`, `default_vals_ok` and
+    `Forall2_app_intro`.
+  - The old `sorry` statement (around line 897) was removed.
+  - **Deviation (documented in its doc comment):** it takes
+    `Vals_ok v_s v_f.LOCALS v_C'.LOCALS`. Rocq takes a bare `Forall2`, whose inductive form
+    implies equal lengths. The caller now passes `hvals` instead of `hvals.2`.
+- **Sorry counts:** `wasm2.0.lean` 63 (Rocq-`Admitted`), `HelperLemmas` 15 (dead),
+  `ExtensionLemmas` 1 (dead `Val_ok_store`); every other file 0. `lake build` is clean (3005
+  jobs).
+- **`#sorry_deps TLC.t_preservation` gives 33:** `Step_read_is_wf` plus 32 numeric-op
+  `*_is_wf` theorems, all `Admitted` in Rocq: `convert__`, `demote__`, `extend__`, `fabs_`,
+  `fceil_`, `ffloor_`, `fnearest_`, `fneg_`, `fsqrt_`, `ftrunc_`, `iand_`, `iandnot_`,
+  `ibitselect_`, `ibytes_`, `iclz_`, `ictz_`, `inot_`, `inv_lanes_`, `ior_`, `ipopcnt_`,
+  `irev_`, `ishl_`, `ishr_`, `ixor_`, `lanes_`, `nbytes_`, `promote__`, `reinterpret__`,
+  `trunc__`, `trunc_sat__`, `vbytes_`, `wrap__`.
+  - Every one of these functions is `opaque`, so the theorems cannot be proved.
+  - Each is satisfiable, so none is false: the function can return 0, `[]`, `none`, or
+    `fN.POS fNmag.INF` (`wf_fNmag N INF` holds for every `N`).
+  - Rocq's `Step_pure_is_wf` uses the same `Admitted` ones (`irev__is_wf`, `lanes__is_wf`,
+    `inv_lanes__is_wf`, and others via `unop__is_wf` and friends).
+  - Per theorem: `t_pure_preservation` depends on 29 of them through the now-proved
+    `Step_pure_is_wf` (before bundle19 it went through that theorem's own `sorry`).
+    `store_extension_reduce` depends on the 4 byte ones (`nbytes_`, `ibytes_`, `vbytes_`,
+    `wrap__`). `t_read_preservation` depends only on `Step_read_is_wf`.
+
+New Lean lessons from bundle19:
+- More auto-promoted leading parameters: `Funcinst_ok` (`s`), `Func_ok` (`C`), `Expr_ok2`
+  (`s`), and `Expr_ok` (`C`, possibly more; `cases hexpr; assumption` sidesteps the count).
+  Count the names in `cases … with` accordingly.
+- **Multi-line structure instances:** put `{` at the end of a line and every field on the
+  following lines at a single indentation. `{ A := …,` followed by a field on a less-indented
+  line is a parse error ("unexpected identifier; expected '}'").
+- `have h := wf_const_num (hwf' _ (by simp))` fails, because the element is a metavariable
+  inside `by`. Use `hwf' _ (List.mem_singleton_self _)`, or give the element explicitly.
+- In `Forall2_nth_of_length … _ (by omega)`, give the index explicitly; otherwise `omega`
+  sees a metavariable.
+- These pairs are definitionally equal, so `exact` works without rewriting:
+  - `{C with LABELS := t :: C.LABELS}` and `{LABELS := [t], …} ++ C`;
+  - the frame/label nest `{LABELS} ++ ({RETURN} ++ ({LOCALS} ++ C0))` and the `Func_ok` body
+    context `{LOCALS, LABELS, RETURN} ++ C0`.
+- When both sides of an equation are variables and later code names one of them, use
+  `rw [e1, e2] at …` rather than `subst`.
+
+Scratch files (session scratchpad, not the repo): `tr/` (t_read_preservation:
+`helpers_tr*.lean`, `body_tr.json`, `gen_tr.py`, `TR1.lean`), `w19/` (wasm2.0 batches and
+generators), `deps/Deps.lean` (`#sorry_deps`).
+
+Still unanswered from bundle18: may the 16 dead sorries be deleted?
+
+## ✅ 2026-10-03 UPDATE (bundle18) — 26 → 18 sorries; `store_extension_reduce` proved
+
+- User changes verified: `br_table_ge`'s extra premise removed (now matches Rocq);
+  `wasm2.0.lean` regenerated with `splice` (clamped, length-preserving;
+  `HelperLemmas.splice_eq_list_slice_update` proves it equals `list_slice_update`).
+- Proved: everything in `TypingLemmas` and `TypePreservationPure` (SIMD section, control
+  lemmas `br_*`/`return_*`, `t_pure_preservation`), and in `TypePreservation`:
+  `t_preservation_type`, `mem_store_extension`, the SIMD load/store lemmas, and
+  `store_extension_reduce` (per-rule lemmas `global_set_store_ok`, `table_set_store_ok`,
+  `table_grow_store_ok`, `elem_drop_store_ok`, `data_drop_store_ok`, `with_mem_store_ok`,
+  `memory_grow_store_ok`, then the induction `store_extension_reduce_aux`).
+- `store_extension_reduce` does **not** use `Step_is_wf` (Rocq's does): new components'
+  wf comes from the instructions, the old store, and `fun_grow*`'s own premises.
+- `ExtensionLemmas.construct_meminsts_grow` generalized to `v_j_opt : Option uN` (Rocq).
+- Remaining sorries: `t_read_preservation` (real work), `rat_to_nat_natCast` (UNPROVABLE:
+  `rat_to_nat` is `opaque` in `wasm2.0.lean`; backend fix), 15 dead `HelperLemmas` +
+  `Val_ok_store` (rule 1).
+- `t_read_preservation`/`t_preservation` are false in the memory.fill/copy/init `i+1 = 2^32`
+  corner case (upstream spec issue; also Rocq). Use `Step_read_is_wf` as Rocq does.
+- Details, techniques, and the plan: bundle18 `insights_for_next_turn.md`.
+
+## ⚠️ 2026-10-02 UPDATE (bundle17) — two corrections, one blocker; no Lean edits this turn
+
+1. **There are no Rocq-`Admitted` preservation lemmas.** Upstream
+   `rocq-backend-proof-final` (tip `95c256c2c`, byte-identical to the local
+   `spectec/test-rocq/theories/`) has zero `Admitted`/`admit` in
+   `type_preservation.v` and `type_preservation_pure.v`, and has had since
+   `a8b585cdb` (2026-09-22). `t_pure_preservation`, `store_extension_reduce`,
+   `t_read_preservation`, `t_preservation_type` and
+   `Step_pure__return_frame_preserves` are all `Qed`, **including every SIMD case**.
+   The "5 deliberate gaps" in bundle16's docs (and the "SIMD is out of scope" stance in
+   the Lean file headers) came from session 1's digest of the old `5b03ae067`
+   checkout; bundle3 noticed the change but the headers were never fixed, and
+   bundle13's resync summary wrongly asserted `store_extension_reduce` "remains
+   `Admitted`". **Treat every "mirrors a Rocq `Admitted`" comment in
+   `TypePreservationPure.lean`/`TypePreservation.lean` as false.** SIMD preservation
+   (47 + 23 missing declarations) is in scope.
+2. **Gap analysis done** (`gap_analysis_v1.md`): ~70 declarations to add (all of
+   `type_preservation_pure.v`'s SIMD section, 23 helpers/SIMD lemmas from
+   `type_preservation.v`, 8 from `typing_lemmas.v`, a handful of
+   helper/extension lemmas), plus one existing signature mismatch the bundle13 audit
+   missed: `Step_pure__br_table_ge_preserves` has an extra premise Rocq does not have.
+   Rocq's `ai_principal_typing` still sends all vector instructions to `_ => True`,
+   so `TypingLemmas.ai_principal_typing` needs no change.
+3. **Blocker (stopped and reported per standing instruction):** Lean's generated
+   `with_mem` renders the spec slice update `BYTES[i : j] = b*` as
+   `(BYTES.take i ++ b*) ++ BYTES.drop (i + j)` (`backend-lean/backend.ml:795-834`),
+   which is **not length-preserving** out of bounds; Rocq uses its recursive
+   `list_slice_update`, which is. The four store `val` rules (`store_num_val`,
+   `store_pack_val`, `vstore_val`, `vstore_lane_val`) have no bounds premise in either
+   model, so in Lean an out-of-bounds store can grow the byte list, breaking
+   `Meminst_ok` (`|BYTES| = n·64Ki`), hence `Store_ok`, hence `Config_ok`. So
+   `store_extension_reduce` (those 4 cases) and `t_preservation` are false in Lean as
+   stated. Loads are unaffected (`nbytes_len` makes the OOB load-val rule unfirable).
+   Everything else in the preservation plan is unaffected. Options listed in the issue
+   doc; **do not attempt those 4 cases until the user decides.**
+4. The user's `funcinst_same` change (added `hlen : f1.length = f2.length`, proof via
+   `to_mathlib_forall₂`) was checked: true, proved, axiom-clean, and faithful to the
+   original Rocq lemma (whose inductive `Forall2` implied equal length). Upstream no
+   longer has the lemma; nothing uses it.
+5. `*_is_wf` log (`is_wf_theorems.md`) brought up to date: `Step_is_wf` is used by
+   `t_preservation` (since bundle16, never logged); upstream's `Step_read_is_wf` is
+   `Admitted` with the author's note that 3 cases are not derivable (a u32 overflow
+   in memory.fill/copy/init rewriting), which also makes `t_preservation` false in a
+   corner case in **both** Rocq and Lean — an upstream spec issue, not ours.
+6. Your three-rule triage of the 26 current `sorry`s is in `gap_analysis_v1.md` §5:
+   16 "mark for deletion" (the 15 dead `HelperLemmas` + `Val_ok_store`), 0 "Rocq
+   `Admitted`", 10 "attempt".
+
+**Lean state**: unchanged from bundle16 apart from the user's own `funcinst_same` edit;
+`lake build` clean (3005 jobs). No `.lean` file was edited by this session.
+
+**Next step when the user says go**: follow `gap_analysis_v1.md` §6 (signatures first,
+then proofs, cheapest first; `store_extension_reduce`'s 4 store-val cases per the
+user's decision).
+
+---
+
+(bundle16's original header, kept for context:)
 
 > **If you read nothing else, read
 > `verbatim_dialogue_log/bundle16/user_requested_documents/insights_for_next_turn.md`.**

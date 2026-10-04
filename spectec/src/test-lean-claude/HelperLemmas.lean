@@ -236,6 +236,12 @@ theorem Forall_nth' {α : Type} [Inhabited α] (l : List α) (R : α → Prop) :
   simp only [lookup_total, getElem!_pos l i hi]
   exact h (l[i]'hi) (List.getElem_mem hi)
 
+/-- Rocq `helper_lemmas.v:141` `Forall_size` (added bundle18). Same statement as
+    `Forall_nth'` above, which is that lemma's name before the upstream `nat`→`N` rework. -/
+theorem Forall_size {α : Type} [Inhabited α] (l : List α) (R : α → Prop) :
+    Forall R l → ∀ i, i < l.length → R (lookup_total l i) :=
+  Forall_nth' l R
+
 /-- Membership of the same-index pair in a `zip`, given both bounds. The
     missing half of "Template B": `Forall₂`'s zip representation makes
     *pointwise* facts free but says nothing index-correlated until you can
@@ -414,6 +420,42 @@ theorem list_slice_update_forall {α : Type} {P : α → Prop} (l l' : List α) 
        · simp_all [Forall, List.mem_cons]
        · simp_all [Forall, List.mem_cons])
 
+
+/-- `splice` (the generated prelude helper behind `$with_mem`, added to `wasm2.0.lean` by the
+    user's bundle18 backend change) agrees with Rocq's `list_slice_update` once the declared
+    slice length is the payload's own length. Not a Rocq lemma: it bridges the Lean
+    backend's rendering of `BYTES[i : j] = b*` to the Rocq backend's, so the Rocq-shaped
+    statements (`store_none_mem_extension`, `construct_meminsts`, `mem_store_extension`, …)
+    apply to the Lean `with_mem`. -/
+theorem splice_eq_list_slice_update {α : Type} (l b : List α) (i : Nat) :
+    splice l b i = list_slice_update l i b.length b := by
+  induction l generalizing b i with
+  | nil => simp [splice, list_slice_update]
+  | cons x l' ih =>
+    cases b with
+    | nil => simp [splice, list_slice_update]
+    | cons y u =>
+      cases i with
+      | zero =>
+        have h := ih u 0
+        simp only [splice] at h ⊢
+        simp only [list_slice_update, List.length_cons]
+        rw [← h]
+        simp [Nat.succ_min_succ]
+      | succ i0 =>
+        have h := ih (y :: u) i0
+        simp only [splice, List.length_cons] at h ⊢
+        simp only [list_slice_update]
+        rw [← h]
+        simp [Nat.succ_min_succ]
+        rw [Nat.add_right_comm]
+        simp
+
+/-- `splice` never changes the length of the list it writes into (Lean-only, bundle18). -/
+theorem splice_length {α : Type} (l b : List α) (i : Nat) : (splice l b i).length = l.length := by
+  rw [splice_eq_list_slice_update]
+  exact list_slice_update_length l b i b.length
+
 /-! ## Section 3 : list append/split lemmas (helper_lemmas.v:523-604) -/
 
 /-- Rocq `helper_lemmas.v:523` `split_append_last`. -/
@@ -505,6 +547,40 @@ theorem add_sub' (a b : Nat) : a + b - a = b := by omega
     `LABELS := [t]` and appends it (fieldwise) onto `v_C`; since Lean's `context.LABELS` is a
     plain `List resulttype` field, this collapses to a direct cons. -/
 def prepend_label (C : context) (t : resulttype) : context := { C with LABELS := t :: C.LABELS }
+
+/-- Rocq `helper_lemmas.v` `prepend_local` (added bundle18). Defined as Rocq's literal
+    `{| …; context_LOCALS := t_lst; … |} @@ v_C`, which is also exactly the context shape
+    the generated `Frame_ok` conclusion uses, so the two unfold to the same term. -/
+def prepend_local (C : context) (t_lst : List valtype) : context :=
+  ({
+    TYPES := [], FUNCS := [], GLOBALS := [], TABLES := [], MEMS := [], ELEMS := [], DATAS := [],
+    LOCALS := t_lst, LABELS := [], RETURN := none } : context) ++ C
+
+/-- Rocq `helper_lemmas.v` `prepend_return` (added bundle18). Rocq's literal
+    `{| …; context_RETURN := Some v_t |} @@ v_C`; the generated `Instr_ok2.Instr_ok2_frame`
+    rule uses exactly this shape for the frame body's context. -/
+def prepend_return (C : context) (t : resulttype) : context :=
+  ({
+    TYPES := [], FUNCS := [], GLOBALS := [], TABLES := [], MEMS := [], ELEMS := [], DATAS := [],
+    LOCALS := [], LABELS := [], RETURN := some t } : context) ++ C
+
+/-- Rocq `helper_lemmas.v` `append_local` (added bundle18): `v_C @@ {| …; context_LOCALS := t_lst; … |}`. -/
+def append_local (C : context) (t_lst : List valtype) : context :=
+  C ++ ({
+    TYPES := [], FUNCS := [], GLOBALS := [], TABLES := [], MEMS := [], ELEMS := [], DATAS := [],
+    LOCALS := t_lst, LABELS := [], RETURN := none } : context)
+
+/-- Rocq `helper_lemmas.v` `append_label` (added bundle18): `v_C @@ {| …; LABELS := [t_lst]; … |}`. -/
+def append_label (C : context) (t : resulttype) : context :=
+  C ++ ({
+    TYPES := [], FUNCS := [], GLOBALS := [], TABLES := [], MEMS := [], ELEMS := [], DATAS := [],
+    LOCALS := [], LABELS := [t], RETURN := none } : context)
+
+/-- Rocq `helper_lemmas.v` `append_return` (added bundle18): `v_C @@ {| …; context_RETURN := Some v_t |}`. -/
+def append_return (C : context) (t : resulttype) : context :=
+  C ++ ({
+    TYPES := [], FUNCS := [], GLOBALS := [], TABLES := [], MEMS := [], ELEMS := [], DATAS := [],
+    LOCALS := [], LABELS := [], RETURN := some t } : context)
 
 /-- Rocq `helper_lemmas.v:721` `lookup_label_0`. -/
 theorem lookup_label_0 (C : context) (t : resulttype) :

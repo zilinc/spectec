@@ -1473,7 +1473,6 @@
             (typbind "memarg" (VarT "memarg"))
           )
           (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-          (ExpP "valtype?" (IterT (VarT "valtype") Opt))
           (IterPr
             (IfPr
               (BinE
@@ -1499,7 +1498,6 @@
             Opt
             (iterexp "Inn" (VarE "Inn?"))
             (iterexp "sz" (VarE "sz?"))
-            (iterexp "valtype" (VarE "valtype?"))
           )
         )
         (typcase (Atom MEMORY.SIZE) (TupT))
@@ -4721,7 +4719,6 @@
             (typbind "memarg" (VarT "memarg"))
           )
           (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-          (ExpP "valtype?" (IterT (VarT "valtype") Opt))
           (IterPr
             (IfPr
               (BinE
@@ -4747,7 +4744,6 @@
             Opt
             (iterexp "Inn" (VarE "Inn?"))
             (iterexp "sz" (VarE "sz?"))
-            (iterexp "valtype" (VarE "valtype?"))
           )
         )
         (typcase (Atom MEMORY.SIZE) (TupT))

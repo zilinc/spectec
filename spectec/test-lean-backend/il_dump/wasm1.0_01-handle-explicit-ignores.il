@@ -442,8 +442,8 @@ syntax instr =
   | `GLOBAL.GET`(globalidx : globalidx)
   | `GLOBAL.SET`(globalidx : globalidx)
   | LOAD(valtype : valtype, loadop_(valtype)?, memarg : memarg)
-  | STORE(valtype : valtype, `sz?` : sz?, memarg : memarg) {`Inn?` : Inn?, `valtype?` : valtype?}
-    -- (if ((valtype = (Inn : Inn <: valtype)) /\ (sz!`%`_sz.0 < $size((Inn : Inn <: valtype)))))?{Inn <- `Inn?`, sz <- `sz?`, valtype <- `valtype?`}
+  | STORE(valtype : valtype, `sz?` : sz?, memarg : memarg) {`Inn?` : Inn?}
+    -- (if ((valtype = (Inn : Inn <: valtype)) /\ (sz!`%`_sz.0 < $size((Inn : Inn <: valtype)))))?{Inn <- `Inn?`, sz <- `sz?`}
   | `MEMORY.SIZE`
   | `MEMORY.GROW`
 }
@@ -1062,8 +1062,8 @@ syntax admininstr =
   | `GLOBAL.GET`(globalidx : globalidx)
   | `GLOBAL.SET`(globalidx : globalidx)
   | LOAD(valtype : valtype, loadop_(valtype)?, memarg : memarg)
-  | STORE(valtype : valtype, `sz?` : sz?, memarg : memarg) {`Inn?` : Inn?, `valtype?` : valtype?}
-    -- (if ((valtype = (Inn : Inn <: valtype)) /\ (sz!`%`_sz.0 < $size((Inn : Inn <: valtype)))))?{Inn <- `Inn?`, sz <- `sz?`, valtype <- `valtype?`}
+  | STORE(valtype : valtype, `sz?` : sz?, memarg : memarg) {`Inn?` : Inn?}
+    -- (if ((valtype = (Inn : Inn <: valtype)) /\ (sz!`%`_sz.0 < $size((Inn : Inn <: valtype)))))?{Inn <- `Inn?`, sz <- `sz?`}
   | `MEMORY.SIZE`
   | `MEMORY.GROW`
   | CALL_ADDR(funcaddr : funcaddr)

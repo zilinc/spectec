@@ -687,66 +687,71 @@
 )
 (TypD "f32" (InstD (AliasT (VarT "fN"))))
 (TypD "f64" (InstD (AliasT (VarT "fN"))))
-(DecD
-  "fzero"
-  (ExpP "N" (VarT "N"))
-  (VarT "fN")
-  (DefD
-    (ExpP "N" nat)
-    (ExpA (VarE "N"))
-    (CaseE
-      (Seq (Atom POS) Arg)
-      (TupE (CaseE (Seq (Atom SUBNORM) Arg) (TupE (NumE (Nat 0)))))
-    )
-  )
-)
-(HintD (RelH "fzero_is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "fzero_is_wf"
+  "fun_fzero"
   (Seq Arg Arg)
-  (TupT (typbind "N" (VarT "N")) (typbind "ret_val" (VarT "fN")))
+  (TupT (typbind "_" (VarT "N")) (typbind "_" (VarT "fN")))
   (RuleD
-    "fzero_is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg)
-    (TupE (VarE "N") (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "fzero" (ExpA (VarE "N")))))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
-(HintD (DecH "fzero" (hint "show" "+ 0")))
-(DecD
-  "fone"
-  (ExpP "N" (VarT "N"))
-  (VarT "fN")
-  (DefD
+    "fun_fzero_case_0"
     (ExpP "N" nat)
-    (ExpA (VarE "N"))
-    (CaseE
-      (Seq (Atom POS) Arg)
+    (Seq Arg Arg)
+    (TupE
+      (VarE "N")
+      (CaseE
+        (Seq (Atom POS) Arg)
+        (TupE (CaseE (Seq (Atom SUBNORM) Arg) (TupE (NumE (Nat 0)))))
+      )
+    )
+    (RulePr
+      "wf_fN"
+      (Seq Arg Arg)
       (TupE
+        (VarE "N")
         (CaseE
-          (Seq (Atom NORM) Arg Arg)
-          (TupE (NumE (Nat 1)) (CvtE nat int (NumE (Nat 0))))
+          (Seq (Atom POS) Arg)
+          (TupE (CaseE (Seq (Atom SUBNORM) Arg) (TupE (NumE (Nat 0)))))
         )
       )
     )
   )
 )
-(HintD (RelH "fone_is_wf" (hint "wf-lemma-func" "{}")))
+(HintD (DecH "fzero" (hint "show" "+ 0")))
 (RelD
-  "fone_is_wf"
+  "fun_fone"
   (Seq Arg Arg)
-  (TupT (typbind "N" (VarT "N")) (typbind "ret_val" (VarT "fN")))
+  (TupT (typbind "_" (VarT "N")) (typbind "_" (VarT "fN")))
   (RuleD
-    "fone_is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "ret_val" (VarT "fN"))
+    "fun_fone_case_0"
+    (ExpP "N" nat)
     (Seq Arg Arg)
-    (TupE (VarE "N") (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "fone" (ExpA (VarE "N")))))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+    (TupE
+      (VarE "N")
+      (CaseE
+        (Seq (Atom POS) Arg)
+        (TupE
+          (CaseE
+            (Seq (Atom NORM) Arg Arg)
+            (TupE (NumE (Nat 1)) (CvtE nat int (NumE (Nat 0))))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_fN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          (Seq (Atom POS) Arg)
+          (TupE
+            (CaseE
+              (Seq (Atom NORM) Arg Arg)
+              (TupE (NumE (Nat 1)) (CvtE nat int (NumE (Nat 0))))
+            )
+          )
+        )
+      )
+    )
   )
 )
 (HintD (DecH "fone" (hint "show" "+ 1")))
@@ -852,6 +857,7 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b")))
       (RulePr
         "wf_byte"
         (Seq Arg)
@@ -931,6 +937,8 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
     )
     (RuleD
       "fun_utf8_case_2"
@@ -1047,6 +1055,9 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_3")))
     )
     (RuleD
       "fun_utf8_case_3"
@@ -1170,16 +1181,54 @@
           )
         )
       )
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_1")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_2")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_3")))
+      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "b_4")))
     )
     (RuleD
       "fun_utf8_case_4"
       (ExpP "ch*" (IterT (VarT "char") List))
+      (ExpP "var_4*" (IterT (IterT (VarT "byte") List) List))
+      (ExpP "var_3*" (IterT (IterT (VarT "byte") List) List))
+      (ExpP "var_2" (IterT (VarT "byte") List))
       (ExpP "var_1*" (IterT (IterT (VarT "byte") List) List))
       (ExpP "var_0" (IterT (VarT "byte") List))
       (Seq Arg Arg)
       (TupE
         (IterE (VarE "ch#1") List (iterexp "ch#1" (VarE "ch*")))
         (VarE "var_0")
+      )
+      (IfPr (CmpE EqOp bool (LenE (VarE "var_4*")) (LenE (VarE "ch*"))))
+      (IterPr
+        (RulePr
+          "fun_utf8"
+          (Seq Arg Arg)
+          (TupE (ListE (VarE "ch#3")) (VarE "var_4"))
+        )
+        List
+        (iterexp "var_4" (VarE "var_4*"))
+        (iterexp "ch#3" (VarE "ch*"))
+      )
+      (IfPr (CmpE EqOp bool (LenE (VarE "var_3*")) (LenE (VarE "ch*"))))
+      (IterPr
+        (RulePr
+          "fun_utf8"
+          (Seq Arg Arg)
+          (TupE (ListE (VarE "ch#2")) (VarE "var_3"))
+        )
+        List
+        (iterexp "var_3" (VarE "var_3*"))
+        (iterexp "ch#2" (VarE "ch*"))
+      )
+      (RulePr
+        "fun_concat_"
+        (TypA (VarT "byte"))
+        (Seq Arg Arg)
+        (TupE
+          (IterE (VarE "var_3") List (iterexp "var_3" (VarE "var_3*")))
+          (VarE "var_2")
+        )
       )
       (IfPr (CmpE EqOp bool (LenE (VarE "var_1*")) (LenE (VarE "ch*"))))
       (IterPr
@@ -1201,36 +1250,19 @@
           (VarE "var_0")
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "utf8_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "utf8_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "char") List))
-      (typbind "ret_val*" (IterT (VarT "byte") List))
-    )
-    (RuleD
-      "utf8_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "char") List))
-      (ExpP "ret_val*" (IterT (VarT "byte") List))
-      (ExpP "var_0" (IterT (VarT "byte") List))
-      (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
-      (RulePr "fun_utf8" (Seq Arg Arg) (TupE (VarE "var_0*") (VarE "var_0")))
       (IterPr
-        (RulePr "wf_char" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter#1")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
+        (iterexp "iter#1" (VarE "var_2"))
       )
-      (IfPr (CmpE EqOp bool (VarE "ret_val*") (VarE "var_0")))
       (IterPr
-        (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
+        (IterPr
+          (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter#2")))
+          List
+          (iterexp "iter#2" (VarE "var_4"))
+        )
         List
-        (iterexp "ret_val" (VarE "ret_val*"))
+        (iterexp "var_4" (VarE "var_4*"))
       )
     )
   )
@@ -2342,7 +2374,6 @@
             (typbind "memarg" (VarT "memarg"))
           )
           (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-          (ExpP "valtype?" (IterT (VarT "valtype") Opt))
         )
         (typcase (Atom MEMORY.SIZE) (TupT))
         (typcase (Atom MEMORY.GROW) (TupT))
@@ -2600,7 +2631,6 @@
     (RuleD
       "instr_case_25"
       (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-      (ExpP "valtype?" (IterT (VarT "valtype") Opt))
       (ExpP "valtype" (VarT "valtype"))
       (ExpP "sz?" (IterT (VarT "sz") Opt))
       (ExpP "memarg" (VarT "memarg"))
@@ -2625,14 +2655,6 @@
           (CmpE EqOp bool (VarE "sz?") (OptE))
         )
       )
-      (IfPr
-        (BinE
-          EquivOp
-          bool
-          (CmpE EqOp bool (VarE "Inn?") (OptE))
-          (CmpE EqOp bool (VarE "valtype?") (OptE))
-        )
-      )
       (IterPr
         (IfPr
           (BinE
@@ -2655,7 +2677,6 @@
         Opt
         (iterexp "Inn" (VarE "Inn?"))
         (iterexp "sz" (VarE "sz?"))
-        (iterexp "valtype" (VarE "valtype?"))
       )
     )
     (RuleD "instr_case_26" (Seq Arg) (TupE (CaseE (Atom MEMORY.SIZE) (TupE))))
@@ -3288,6 +3309,7 @@
       "fun_tablesxt_case_1"
       (ExpP "tt" (VarT "limits"))
       (ExpP "xt*" (IterT (VarT "externtype") List))
+      (ExpP "var_1" (IterT (VarT "tabletype") List))
       (ExpP "var_0" (IterT (VarT "tabletype") List))
       (Seq Arg Arg)
       (TupE
@@ -3301,23 +3323,9 @@
         "fun_tablesxt"
         (Seq Arg Arg)
         (TupE
-          (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*")))
-          (VarE "var_0")
-        )
-      )
-    )
-    (RuleD
-      "fun_tablesxt_case_2"
-      (ExpP "externtype" (VarT "externtype"))
-      (ExpP "xt*" (IterT (VarT "externtype") List))
-      (ExpP "var_0" (IterT (VarT "tabletype") List))
-      (Seq Arg Arg)
-      (TupE
-        (CatE
-          (ListE (VarE "externtype"))
           (IterE (VarE "xt#6") List (iterexp "xt#6" (VarE "xt*")))
+          (VarE "var_1")
         )
-        (VarE "var_0")
       )
       (RulePr
         "fun_tablesxt"
@@ -3327,40 +3335,46 @@
           (VarE "var_0")
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "tablesxt_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "tablesxt_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externtype") List))
-      (typbind "ret_val*" (IterT (VarT "tabletype") List))
+      (IterPr
+        (RulePr "wf_limits" (Seq Arg) (TupE (VarE "iter#3")))
+        List
+        (iterexp "iter#3" (VarE "var_1"))
+      )
     )
     (RuleD
-      "tablesxt_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externtype") List))
-      (ExpP "ret_val*" (IterT (VarT "tabletype") List))
+      "fun_tablesxt_case_2"
+      (ExpP "externtype" (VarT "externtype"))
+      (ExpP "xt*" (IterT (VarT "externtype") List))
+      (ExpP "var_1" (IterT (VarT "tabletype") List))
       (ExpP "var_0" (IterT (VarT "tabletype") List))
       (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
+      (TupE
+        (CatE
+          (ListE (VarE "externtype"))
+          (IterE (VarE "xt#7") List (iterexp "xt#7" (VarE "xt*")))
+        )
+        (VarE "var_0")
+      )
       (RulePr
         "fun_tablesxt"
         (Seq Arg Arg)
-        (TupE (VarE "var_0*") (VarE "var_0"))
+        (TupE
+          (IterE (VarE "xt#8") List (iterexp "xt#8" (VarE "xt*")))
+          (VarE "var_1")
+        )
+      )
+      (RulePr
+        "fun_tablesxt"
+        (Seq Arg Arg)
+        (TupE
+          (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*")))
+          (VarE "var_0")
+        )
       )
       (IterPr
-        (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "var_0")))
+        (RulePr "wf_limits" (Seq Arg) (TupE (VarE "iter#4")))
         List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr (CmpE EqOp bool (VarE "ret_val*") (VarE "var_0")))
-      (IterPr
-        (RulePr "wf_limits" (Seq Arg) (TupE (VarE "ret_val")))
-        List
-        (iterexp "ret_val" (VarE "ret_val*"))
+        (iterexp "iter#4" (VarE "var_1"))
       )
     )
   )
@@ -3379,12 +3393,13 @@
       "fun_memsxt_case_1"
       (ExpP "mt" (VarT "limits"))
       (ExpP "xt*" (IterT (VarT "externtype") List))
+      (ExpP "var_1" (IterT (VarT "memtype") List))
       (ExpP "var_0" (IterT (VarT "memtype") List))
       (Seq Arg Arg)
       (TupE
         (CatE
           (ListE (CaseE (Seq (Atom MEM) Arg) (TupE (VarE "mt"))))
-          (IterE (VarE "xt#7") List (iterexp "xt#7" (VarE "xt*")))
+          (IterE (VarE "xt#9") List (iterexp "xt#9" (VarE "xt*")))
         )
         (CatE (ListE (VarE "mt")) (VarE "var_0"))
       )
@@ -3392,23 +3407,9 @@
         "fun_memsxt"
         (Seq Arg Arg)
         (TupE
-          (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*")))
-          (VarE "var_0")
+          (IterE (VarE "xt#10") List (iterexp "xt#10" (VarE "xt*")))
+          (VarE "var_1")
         )
-      )
-    )
-    (RuleD
-      "fun_memsxt_case_2"
-      (ExpP "externtype" (VarT "externtype"))
-      (ExpP "xt*" (IterT (VarT "externtype") List))
-      (ExpP "var_0" (IterT (VarT "memtype") List))
-      (Seq Arg Arg)
-      (TupE
-        (CatE
-          (ListE (VarE "externtype"))
-          (IterE (VarE "xt#8") List (iterexp "xt#8" (VarE "xt*")))
-        )
-        (VarE "var_0")
       )
       (RulePr
         "fun_memsxt"
@@ -3418,63 +3419,74 @@
           (VarE "var_0")
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "memsxt_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "memsxt_is_wf"
-    (Seq Arg Arg)
-    (TupT
-      (typbind "var_0*" (IterT (VarT "externtype") List))
-      (typbind "ret_val*" (IterT (VarT "memtype") List))
+      (IterPr
+        (RulePr "wf_limits" (Seq Arg) (TupE (VarE "iter#5")))
+        List
+        (iterexp "iter#5" (VarE "var_1"))
+      )
     )
     (RuleD
-      "memsxt_is_wf_0"
-      (ExpP "var_0*" (IterT (VarT "externtype") List))
-      (ExpP "ret_val*" (IterT (VarT "memtype") List))
+      "fun_memsxt_case_2"
+      (ExpP "externtype" (VarT "externtype"))
+      (ExpP "xt*" (IterT (VarT "externtype") List))
+      (ExpP "var_1" (IterT (VarT "memtype") List))
       (ExpP "var_0" (IterT (VarT "memtype") List))
       (Seq Arg Arg)
-      (TupE (VarE "var_0*") (VarE "ret_val*"))
-      (RulePr "fun_memsxt" (Seq Arg Arg) (TupE (VarE "var_0*") (VarE "var_0")))
-      (IterPr
-        (RulePr "wf_externtype" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
+      (TupE
+        (CatE
+          (ListE (VarE "externtype"))
+          (IterE (VarE "xt#11") List (iterexp "xt#11" (VarE "xt*")))
+        )
+        (VarE "var_0")
       )
-      (IfPr (CmpE EqOp bool (VarE "ret_val*") (VarE "var_0")))
+      (RulePr
+        "fun_memsxt"
+        (Seq Arg Arg)
+        (TupE
+          (IterE (VarE "xt#12") List (iterexp "xt#12" (VarE "xt*")))
+          (VarE "var_1")
+        )
+      )
+      (RulePr
+        "fun_memsxt"
+        (Seq Arg Arg)
+        (TupE
+          (IterE (VarE "xt") List (iterexp "xt" (VarE "xt*")))
+          (VarE "var_0")
+        )
+      )
       (IterPr
-        (RulePr "wf_limits" (Seq Arg) (TupE (VarE "ret_val")))
+        (RulePr "wf_limits" (Seq Arg) (TupE (VarE "iter#6")))
         List
-        (iterexp "ret_val" (VarE "ret_val*"))
+        (iterexp "iter#6" (VarE "var_1"))
       )
     )
   )
 )
 (HintD (DecH "memsxt" (hint "show" "$mems(%)")))
-(DecD
-  "memarg0"
-  (VarT "memarg")
-  (DefD
-    (StrE
-      (expfield (Atom ALIGN) (CaseE Arg (TupE (NumE (Nat 0)))))
-      (expfield (Atom OFFSET) (CaseE Arg (TupE (NumE (Nat 0)))))
-    )
-  )
-)
-(HintD (RelH "memarg0_is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "memarg0_is_wf"
+  "fun_memarg0"
   (Seq Arg)
-  (TupT (typbind "ret_val" (VarT "memarg")))
+  (TupT (typbind "_" (VarT "memarg")))
   (RuleD
-    "memarg0_is_wf_0"
-    (ExpP "ret_val" (VarT "memarg"))
+    "fun_memarg0_case_0"
     (Seq Arg)
-    (TupE (VarE "ret_val"))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (CallE "memarg0")))
-    (RulePr "wf_memarg" (Seq Arg) (TupE (VarE "ret_val")))
+    (TupE
+      (StrE
+        (expfield (Atom ALIGN) (CaseE Arg (TupE (NumE (Nat 0)))))
+        (expfield (Atom OFFSET) (CaseE Arg (TupE (NumE (Nat 0)))))
+      )
+    )
+    (RulePr
+      "wf_memarg"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom ALIGN) (CaseE Arg (TupE (NumE (Nat 0)))))
+          (expfield (Atom OFFSET) (CaseE Arg (TupE (NumE (Nat 0)))))
+        )
+      )
+    )
   )
 )
 (HintD (DecH "memarg0" (hint "show" "{}")))
@@ -3670,75 +3682,11 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fabs__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fabs__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fabs__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fabs_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fceil_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fceil__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fceil__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fceil__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fceil_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "ffloor_"
@@ -3746,75 +3694,11 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "ffloor__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ffloor__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "ffloor__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "ffloor_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fnearest_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fnearest__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fnearest__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fnearest__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fnearest_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fneg_"
@@ -3822,75 +3706,11 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fneg__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fneg__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fneg__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fneg_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fsqrt_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fsqrt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fsqrt__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fsqrt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fsqrt_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "ftrunc_"
@@ -3898,942 +3718,2908 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "ftrunc__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ftrunc__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "ftrunc__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "ftrunc_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD "iclz_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "iclz__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iclz__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iclz__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "iclz_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD "ictz_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "ictz__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ictz__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ictz__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ictz_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD "ipopcnt_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "ipopcnt__is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "ipopcnt__is_wf"
+  "fun_unop__before_fun_unop__case_20"
   (Seq Arg Arg Arg)
   (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
+    (typbind "_" (VarT "valtype"))
+    (typbind "_" (VarT "unop_"))
+    (typbind "_" (VarT "val_"))
   )
   (RuleD
-    "ipopcnt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
+    "fun_unop__case_19"
+    (ExpP "fN" (VarT "fN"))
     (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ipopcnt_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
-(DecD
-  "unop_"
-  (ExpP "valtype" (VarT "valtype"))
-  (ExpP "unop_" (VarT "unop_"))
-  (ExpP "val_" (VarT "val_"))
-  (IterT (IterT (VarT "val_") List) Opt)
-  (DefD
-    (ExpP "iN" (VarT "uN"))
-    (ExpA (CaseE (Atom I32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__0) Arg Arg)
-        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom CLZ) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
-        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
-      )
-    )
-    (OptE
-      (ListE
-        (CaseE
-          (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I32) (TupE))
-            (CallE
-              "iclz_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN"))
-            )
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "iN" (VarT "uN"))
-    (ExpA (CaseE (Atom I64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__0) Arg Arg)
-        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom CLZ) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
-        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
-      )
-    )
-    (OptE
-      (ListE
-        (CaseE
-          (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I64) (TupE))
-            (CallE
-              "iclz_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN"))
-            )
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "iN" (VarT "uN"))
-    (ExpA (CaseE (Atom I32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__0) Arg Arg)
-        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom CTZ) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
-        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
-      )
-    )
-    (OptE
-      (ListE
-        (CaseE
-          (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I32) (TupE))
-            (CallE
-              "ictz_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN"))
-            )
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "iN" (VarT "uN"))
-    (ExpA (CaseE (Atom I64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__0) Arg Arg)
-        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom CTZ) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
-        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
-      )
-    )
-    (OptE
-      (ListE
-        (CaseE
-          (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I64) (TupE))
-            (CallE
-              "ictz_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN"))
-            )
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "iN" (VarT "uN"))
-    (ExpA (CaseE (Atom I32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__0) Arg Arg)
-        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom POPCNT) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
-        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
-      )
-    )
-    (OptE
-      (ListE
-        (CaseE
-          (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I32) (TupE))
-            (CallE
-              "ipopcnt_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN"))
-            )
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "iN" (VarT "uN"))
-    (ExpA (CaseE (Atom I64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__0) Arg Arg)
-        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom POPCNT) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
-        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
-      )
-    )
-    (OptE
-      (ListE
-        (CaseE
-          (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I64) (TupE))
-            (CallE
-              "ipopcnt_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN"))
-            )
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom ABS) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#1"))
-        )
-        List
-        (iterexp
-          "iter_0#1"
-          (CallE
-            "fabs_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom ABS) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#2"))
-        )
-        List
-        (iterexp
-          "iter_0#2"
-          (CallE
-            "fabs_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom NEG) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#3"))
-        )
-        List
-        (iterexp
-          "iter_0#3"
-          (CallE
-            "fneg_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom NEG) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#4"))
-        )
-        List
-        (iterexp
-          "iter_0#4"
-          (CallE
-            "fneg_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom SQRT) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#5"))
-        )
-        List
-        (iterexp
-          "iter_0#5"
-          (CallE
-            "fsqrt_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom SQRT) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#6"))
-        )
-        List
-        (iterexp
-          "iter_0#6"
-          (CallE
-            "fsqrt_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom CEIL) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#7"))
-        )
-        List
-        (iterexp
-          "iter_0#7"
-          (CallE
-            "fceil_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom CEIL) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#8"))
-        )
-        List
-        (iterexp
-          "iter_0#8"
-          (CallE
-            "fceil_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom FLOOR) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#9"))
-        )
-        List
-        (iterexp
-          "iter_0#9"
-          (CallE
-            "ffloor_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom FLOOR) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#10"))
-        )
-        List
-        (iterexp
-          "iter_0#10"
-          (CallE
-            "ffloor_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom TRUNC) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#11"))
-        )
-        List
-        (iterexp
-          "iter_0#11"
-          (CallE
-            "ftrunc_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F64) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom TRUNC) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#12"))
-        )
-        List
-        (iterexp
-          "iter_0#12"
-          (CallE
-            "ftrunc_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F32) (TupE)))
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_unop__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom NEAREST) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__1) Arg Arg)
-        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
-      )
-    )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#13"))
-        )
-        List
-        (iterexp
-          "iter_0#13"
-          (CallE
-            "fnearest_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
-              )
-            )
-            (ExpA (VarE "fN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "fN" (VarT "fN"))
-    (ExpA (CaseE (Atom F64) (TupE)))
-    (ExpA
+    (TupE
+      (CaseE (Atom F64) (TupE))
       (CaseE
         (Seq (Atom mk_unop__1) Arg Arg)
         (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom NEAREST) (TupE)))
       )
-    )
-    (ExpA
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
       )
     )
-    (OptE
-      (IterE
-        (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
-          (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#14"))
-        )
-        List
-        (iterexp
-          "iter_0#14"
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
           (CallE
-            "fnearest_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
-              )
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#20")
+        )
+      )
+      List
+      (iterexp
+        "iter#20"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
             )
-            (ExpA (VarE "fN"))
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#27"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#27"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_18"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom NEAREST) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#19")
+        )
+      )
+      List
+      (iterexp
+        "iter#19"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#25"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#25"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_17"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom TRUNC) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#18")
+        )
+      )
+      List
+      (iterexp
+        "iter#18"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#23"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#23"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_16"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom TRUNC) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#17")
+        )
+      )
+      List
+      (iterexp
+        "iter#17"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#21"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#21"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_15"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom FLOOR) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#16")
+        )
+      )
+      List
+      (iterexp
+        "iter#16"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#19"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#19"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_14"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom FLOOR) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#15")
+        )
+      )
+      List
+      (iterexp
+        "iter#15"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#17"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#17"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_13"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom CEIL) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#14")
+        )
+      )
+      List
+      (iterexp
+        "iter#14"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#15"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#15"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_12"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom CEIL) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#13")
+        )
+      )
+      List
+      (iterexp
+        "iter#13"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#13"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#13"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_11"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom SQRT) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#12")
+        )
+      )
+      List
+      (iterexp
+        "iter#12"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#11"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#11"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_10"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom SQRT) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#11")
+        )
+      )
+      List
+      (iterexp
+        "iter#11"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#9"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#9"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_9"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom NEG) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#10")
+        )
+      )
+      List
+      (iterexp
+        "iter#10"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#7"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#7"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_8"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom NEG) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#9")
+        )
+      )
+      List
+      (iterexp
+        "iter#9"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#5"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#5"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_7"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom ABS) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#8")
+        )
+      )
+      List
+      (iterexp
+        "iter#8"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#3"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#3"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_6"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom ABS) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#7")
+        )
+      )
+      List
+      (iterexp
+        "iter#7"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#1"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#1"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_5"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom POPCNT) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ipopcnt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
           )
         )
       )
     )
   )
-  (DefD
-    (ExpP "x0" (VarT "valtype"))
-    (ExpP "x1" (VarT "unop_"))
-    (ExpP "x2" (VarT "val_"))
-    (ExpA (VarE "x0"))
-    (ExpA (VarE "x1"))
-    (ExpA (VarE "x2"))
-    (OptE)
-    ElsePr
-  )
-)
-(HintD (RelH "unop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "unop__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "unop_" (VarT "unop_"))
-    (typbind "val_" (VarT "val_"))
-    (typbind "ret_val*" (IterT (VarT "val_") List))
-  )
   (RuleD
-    "unop__is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "unop_" (VarT "unop_"))
-    (ExpP "val_" (VarT "val_"))
-    (ExpP "ret_val*" (IterT (VarT "val_") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "valtype") (VarE "unop_") (VarE "val_") (VarE "ret_val*"))
-    (RulePr "wf_unop_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "unop_")))
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "val_")))
-    (IfPr
-      (CmpE
-        NeOp
-        bool
-        (CallE
-          "unop_"
-          (ExpA (VarE "valtype"))
-          (ExpA (VarE "unop_"))
-          (ExpA (VarE "val_"))
-        )
-        (OptE)
+    "fun_unop__case_4"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom POPCNT) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
       )
     )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE
-          (CallE
-            "unop_"
-            (ExpA (VarE "valtype"))
-            (ExpA (VarE "unop_"))
-            (ExpA (VarE "val_"))
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ipopcnt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_3"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom CTZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ictz_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_2"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom CTZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ictz_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_1"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom CLZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "iclz_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_0"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom CLZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "iclz_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+)
+(RelD
+  "fun_unop_"
+  (Seq Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "valtype"))
+    (typbind "_" (VarT "unop_"))
+    (typbind "_" (VarT "val_"))
+    (typbind "_" (IterT (IterT (VarT "val_") List) Opt))
+  )
+  (RuleD
+    "fun_unop__case_0"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom CLZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+      )
+      (OptE
+        (ListE
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (CallE
+                "iclz_"
+                (ExpA
+                  (CallE
+                    "size"
+                    (ExpA
+                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+                    )
+                  )
+                )
+                (ExpA (VarE "iN"))
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "iclz_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_1"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom CLZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+      (OptE
+        (ListE
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE
+              (CaseE (Atom I64) (TupE))
+              (CallE
+                "iclz_"
+                (ExpA
+                  (CallE
+                    "size"
+                    (ExpA
+                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+                    )
+                  )
+                )
+                (ExpA (VarE "iN"))
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "iclz_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_2"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom CTZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+      )
+      (OptE
+        (ListE
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (CallE
+                "ictz_"
+                (ExpA
+                  (CallE
+                    "size"
+                    (ExpA
+                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+                    )
+                  )
+                )
+                (ExpA (VarE "iN"))
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ictz_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_3"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom CTZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+      (OptE
+        (ListE
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE
+              (CaseE (Atom I64) (TupE))
+              (CallE
+                "ictz_"
+                (ExpA
+                  (CallE
+                    "size"
+                    (ExpA
+                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+                    )
+                  )
+                )
+                (ExpA (VarE "iN"))
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ictz_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_4"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom POPCNT) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+      )
+      (OptE
+        (ListE
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE
+              (CaseE (Atom I32) (TupE))
+              (CallE
+                "ipopcnt_"
+                (ExpA
+                  (CallE
+                    "size"
+                    (ExpA
+                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+                    )
+                  )
+                )
+                (ExpA (VarE "iN"))
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ipopcnt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_5"
+    (ExpP "iN" (VarT "uN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom POPCNT) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+      (OptE
+        (ListE
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE
+              (CaseE (Atom I64) (TupE))
+              (CallE
+                "ipopcnt_"
+                (ExpA
+                  (CallE
+                    "size"
+                    (ExpA
+                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+                    )
+                  )
+                )
+                (ExpA (VarE "iN"))
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ipopcnt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_6"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom ABS) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#2"))
+          )
+          List
+          (iterexp
+            "iter_0#2"
+            (CallE
+              "fabs_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
           )
         )
       )
     )
     (IterPr
-      (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "ret_val")))
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#7")
+        )
+      )
       List
-      (iterexp "ret_val" (VarE "ret_val*"))
+      (iterexp
+        "iter#7"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#1"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#1"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_7"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom ABS) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#4"))
+          )
+          List
+          (iterexp
+            "iter_0#4"
+            (CallE
+              "fabs_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#8")
+        )
+      )
+      List
+      (iterexp
+        "iter#8"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#3"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#3"
+        (CallE
+          "fabs_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_8"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom NEG) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#6"))
+          )
+          List
+          (iterexp
+            "iter_0#6"
+            (CallE
+              "fneg_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#9")
+        )
+      )
+      List
+      (iterexp
+        "iter#9"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#5"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#5"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_9"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom NEG) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#8"))
+          )
+          List
+          (iterexp
+            "iter_0#8"
+            (CallE
+              "fneg_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#10")
+        )
+      )
+      List
+      (iterexp
+        "iter#10"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#7"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#7"
+        (CallE
+          "fneg_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_10"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom SQRT) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#10"))
+          )
+          List
+          (iterexp
+            "iter_0#10"
+            (CallE
+              "fsqrt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#11")
+        )
+      )
+      List
+      (iterexp
+        "iter#11"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#9"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#9"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_11"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom SQRT) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#12"))
+          )
+          List
+          (iterexp
+            "iter_0#12"
+            (CallE
+              "fsqrt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#12")
+        )
+      )
+      List
+      (iterexp
+        "iter#12"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#11"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#11"
+        (CallE
+          "fsqrt_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_12"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom CEIL) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#14"))
+          )
+          List
+          (iterexp
+            "iter_0#14"
+            (CallE
+              "fceil_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#13")
+        )
+      )
+      List
+      (iterexp
+        "iter#13"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#13"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#13"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_13"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom CEIL) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#16"))
+          )
+          List
+          (iterexp
+            "iter_0#16"
+            (CallE
+              "fceil_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#14")
+        )
+      )
+      List
+      (iterexp
+        "iter#14"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#15"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#15"
+        (CallE
+          "fceil_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_14"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom FLOOR) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#18"))
+          )
+          List
+          (iterexp
+            "iter_0#18"
+            (CallE
+              "ffloor_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#15")
+        )
+      )
+      List
+      (iterexp
+        "iter#15"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#17"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#17"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_15"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom FLOOR) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#20"))
+          )
+          List
+          (iterexp
+            "iter_0#20"
+            (CallE
+              "ffloor_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#16")
+        )
+      )
+      List
+      (iterexp
+        "iter#16"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#19"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#19"
+        (CallE
+          "ffloor_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_16"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom TRUNC) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#22"))
+          )
+          List
+          (iterexp
+            "iter_0#22"
+            (CallE
+              "ftrunc_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#17")
+        )
+      )
+      List
+      (iterexp
+        "iter#17"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#21"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#21"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_17"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom TRUNC) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#24"))
+          )
+          List
+          (iterexp
+            "iter_0#24"
+            (CallE
+              "ftrunc_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#18")
+        )
+      )
+      List
+      (iterexp
+        "iter#18"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#23"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#23"
+        (CallE
+          "ftrunc_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_18"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (CaseE (Atom NEAREST) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#26"))
+          )
+          List
+          (iterexp
+            "iter_0#26"
+            (CallE
+              "fnearest_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#19")
+        )
+      )
+      List
+      (iterexp
+        "iter#19"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#25"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#25"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_19"
+    (ExpP "fN" (VarT "fN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom mk_unop__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (CaseE (Atom NEAREST) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__1) Arg Arg)
+        (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+      )
+      (OptE
+        (IterE
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#28"))
+          )
+          List
+          (iterexp
+            "iter_0#28"
+            (CallE
+              "fnearest_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#20")
+        )
+      )
+      List
+      (iterexp
+        "iter#20"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#27"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#27"
+        (CallE
+          "fnearest_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_unop__case_20"
+    (ExpP "x0" (VarT "valtype"))
+    (ExpP "x1" (VarT "unop_"))
+    (ExpP "x2" (VarT "val_"))
+    (Seq Arg Arg Arg Arg)
+    (TupE (VarE "x0") (VarE "x1") (VarE "x2") (OptE))
+    (NegPr
+      (RulePr
+        "fun_unop__before_fun_unop__case_20"
+        (Seq Arg Arg Arg)
+        (TupE (VarE "x0") (VarE "x1") (VarE "x2"))
+      )
     )
   )
 )
@@ -4846,92 +6632,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fadd__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fadd__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fadd__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fadd_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fcopysign_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fcopysign__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fcopysign__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fcopysign__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fcopysign_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fdiv_"
@@ -4940,92 +6646,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fdiv__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fdiv__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fdiv__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fdiv_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fmax_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fmax__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fmax__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fmax__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fmax_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fmin_"
@@ -5034,92 +6660,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fmin__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fmin__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fmin__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fmin_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "fmul_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "fmul__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fmul__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "fmul__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fmul_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "fsub_"
@@ -5128,111 +6674,65 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "fsub__is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "fsub__is_wf"
+  "fun_iadd_"
   (Seq Arg Arg Arg Arg)
   (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
+    (typbind "_" (VarT "N"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "iN"))
   )
   (RuleD
-    "fsub__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "fsub_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-          (ExpA (VarE "fN_0"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
-(DecD
-  "iadd_"
-  (ExpP "N" (VarT "N"))
-  (ExpP "iN" (VarT "iN"))
-  (ExpP "iN" (VarT "iN"))
-  (VarT "iN")
-  (DefD
+    "fun_iadd__case_0"
     (ExpP "N" nat)
     (ExpP "i_1" (VarT "uN"))
     (ExpP "i_2" (VarT "uN"))
-    (ExpA (VarE "N"))
-    (ExpA (VarE "i_1"))
-    (ExpA (VarE "i_2"))
-    (CaseE
-      Arg
-      (TupE
-        (BinE
-          ModOp
-          nat
-          (BinE
-            AddOp
-            nat
-            (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
-            (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
-          )
-          (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
-        )
-      )
-    )
-  )
-)
-(HintD (RelH "iadd__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iadd__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iadd__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
     (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iadd_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (TupE
+      (VarE "N")
+      (VarE "i_1")
+      (VarE "i_2")
+      (CaseE
+        Arg
+        (TupE
+          (BinE
+            ModOp
+            nat
+            (BinE
+              AddOp
+              nat
+              (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+              (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+            )
+            (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (BinE
+              ModOp
+              nat
+              (BinE
+                AddOp
+                nat
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+              )
+              (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+            )
+          )
+        )
+      )
+    )
   )
 )
 (DecD
@@ -5241,42 +6741,6 @@
   (ExpP "iN" (VarT "iN"))
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
-)
-(HintD (RelH "iand__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "iand__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "iand__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "iand_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (RelD
   "fun_idiv_"
@@ -5313,6 +6777,41 @@
       (VarE "i_1")
       (VarE "i_2")
       (OptE
+        (CaseE
+          Arg
+          (TupE
+            (CvtE
+              int
+              nat
+              (CallE
+                "truncz"
+                (ExpA
+                  (BinE
+                    DivOp
+                    rat
+                    (CvtE
+                      nat
+                      rat
+                      (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                    )
+                    (CvtE
+                      nat
+                      rat
+                      (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
         (CaseE
           Arg
           (TupE
@@ -5469,109 +6968,72 @@
         (VarE "var_0")
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (VarE "N") (CaseE Arg (TupE (VarE "var_0"))))
+    )
   )
 )
-(HintD (RelH "idiv__is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "idiv__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
+  "fun_imul_"
+  (Seq Arg Arg Arg Arg)
   (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
+    (typbind "_" (VarT "N"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "iN"))
   )
   (RuleD
-    "idiv__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (ExpP "var_0" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val?"))
-    (RulePr
-      "fun_idiv_"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "var_0"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val?") (VarE "var_0")))
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
-    )
-  )
-)
-(DecD
-  "imul_"
-  (ExpP "N" (VarT "N"))
-  (ExpP "iN" (VarT "iN"))
-  (ExpP "iN" (VarT "iN"))
-  (VarT "iN")
-  (DefD
+    "fun_imul__case_0"
     (ExpP "N" nat)
     (ExpP "i_1" (VarT "uN"))
     (ExpP "i_2" (VarT "uN"))
-    (ExpA (VarE "N"))
-    (ExpA (VarE "i_1"))
-    (ExpA (VarE "i_2"))
-    (CaseE
-      Arg
-      (TupE
-        (BinE
-          ModOp
-          nat
-          (BinE
-            MulOp
-            nat
-            (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
-            (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
-          )
-          (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
-        )
-      )
-    )
-  )
-)
-(HintD (RelH "imul__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "imul__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "imul__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
     (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "imul_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (TupE
+      (VarE "N")
+      (VarE "i_1")
+      (VarE "i_2")
+      (CaseE
+        Arg
+        (TupE
+          (BinE
+            ModOp
+            nat
+            (BinE
+              MulOp
+              nat
+              (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+              (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+            )
+            (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (BinE
+              ModOp
+              nat
+              (BinE
+                MulOp
+                nat
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+              )
+              (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+            )
+          )
+        )
+      )
+    )
   )
 )
 (DecD
@@ -5580,37 +7042,6 @@
   (ExpP "iN" (VarT "iN"))
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
-)
-(HintD (RelH "ior__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ior__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ior__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ior_" (ExpA (VarE "N")) (ExpA (VarE "iN")) (ExpA (VarE "iN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (RelD
   "fun_irem_"
@@ -5647,6 +7078,59 @@
       (VarE "i_1")
       (VarE "i_2")
       (OptE
+        (CaseE
+          Arg
+          (TupE
+            (CvtE
+              int
+              nat
+              (BinE
+                SubOp
+                int
+                (CvtE nat int (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0))
+                (CvtE
+                  nat
+                  int
+                  (BinE
+                    MulOp
+                    nat
+                    (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+                    (CvtE
+                      int
+                      nat
+                      (CallE
+                        "truncz"
+                        (ExpA
+                          (BinE
+                            DivOp
+                            rat
+                            (CvtE
+                              nat
+                              rat
+                              (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                            )
+                            (CvtE
+                              nat
+                              rat
+                              (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
         (CaseE
           Arg
           (TupE
@@ -5782,41 +7266,10 @@
         (CmpE EqOp bool (VarE "j_2") (VarE "var_2"))
       )
     )
-  )
-)
-(HintD (RelH "irem__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irem__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
-  )
-  (RuleD
-    "irem__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (ExpP "var_0" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val?"))
     (RulePr
-      "fun_irem_"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "var_0"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val?") (VarE "var_0")))
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE (VarE "N") (CaseE Arg (TupE (VarE "var_0"))))
     )
   )
 )
@@ -5827,42 +7280,6 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "irotl__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irotl__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "irotl__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "irotl_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "irotr_"
   (ExpP "N" (VarT "N"))
@@ -5870,79 +7287,12 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "irotr__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "irotr__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "irotr__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "irotr_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "ishl_"
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN"))
   (ExpP "u32" (VarT "u32"))
   (VarT "iN")
-)
-(HintD (RelH "ishl__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ishl__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "u32" (VarT "u32"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ishl__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "u32" (VarT "u32"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "u32") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "u32")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ishl_" (ExpA (VarE "N")) (ExpA (VarE "iN")) (ExpA (VarE "u32")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (DecD
   "ishr_"
@@ -5952,123 +7302,95 @@
   (ExpP "u32" (VarT "u32"))
   (VarT "iN")
 )
-(HintD (RelH "ishr__is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "ishr__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
+  "fun_isub_"
+  (Seq Arg Arg Arg Arg)
   (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "u32" (VarT "u32"))
-    (typbind "ret_val" (VarT "iN"))
+    (typbind "_" (VarT "N"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "iN"))
   )
   (RuleD
-    "ishr__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "u32" (VarT "u32"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "u32") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "u32")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ishr_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "u32"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
-(DecD
-  "isub_"
-  (ExpP "N" (VarT "N"))
-  (ExpP "iN" (VarT "iN"))
-  (ExpP "iN" (VarT "iN"))
-  (VarT "iN")
-  (DefD
+    "fun_isub__case_0"
     (ExpP "N" nat)
     (ExpP "i_1" (VarT "uN"))
     (ExpP "i_2" (VarT "uN"))
-    (ExpA (VarE "N"))
-    (ExpA (VarE "i_1"))
-    (ExpA (VarE "i_2"))
-    (CaseE
-      Arg
-      (TupE
-        (CvtE
-          int
-          nat
-          (BinE
-            ModOp
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (VarE "N")
+      (VarE "i_1")
+      (VarE "i_2")
+      (CaseE
+        Arg
+        (TupE
+          (CvtE
             int
+            nat
             (BinE
-              SubOp
+              ModOp
               int
-              (CvtE
-                nat
+              (BinE
+                SubOp
                 int
-                (BinE
-                  AddOp
+                (CvtE
                   nat
-                  (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
-                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                  int
+                  (BinE
+                    AddOp
+                    nat
+                    (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+                    (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                  )
                 )
+                (CvtE nat int (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0))
               )
-              (CvtE nat int (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0))
+              (CvtE nat int (BinE PowOp nat (NumE (Nat 2)) (VarE "N")))
             )
-            (CvtE nat int (BinE PowOp nat (NumE (Nat 2)) (VarE "N")))
           )
         )
       )
     )
-  )
-)
-(HintD (RelH "isub__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "isub__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "isub__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "isub_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (VarE "N")
+        (CaseE
+          Arg
+          (TupE
+            (CvtE
+              int
+              nat
+              (BinE
+                ModOp
+                int
+                (BinE
+                  SubOp
+                  int
+                  (CvtE
+                    nat
+                    int
+                    (BinE
+                      AddOp
+                      nat
+                      (BinE PowOp nat (NumE (Nat 2)) (VarE "N"))
+                      (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                    )
+                  )
+                  (CvtE
+                    nat
+                    int
+                    (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+                  )
+                )
+                (CvtE nat int (BinE PowOp nat (NumE (Nat 2)) (VarE "N")))
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
   )
 )
 (DecD
@@ -6077,42 +7399,6 @@
   (ExpP "iN" (VarT "iN"))
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
-)
-(HintD (RelH "ixor__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ixor__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "ixor__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "ixor_"
-          (ExpA (VarE "N"))
-          (ExpA (VarE "iN"))
-          (ExpA (VarE "iN_0"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (RelD
   "fun_binop__before_fun_binop__case_38"
@@ -6143,6 +7429,62 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#42")
+        )
+      )
+      List
+      (iterexp
+        "iter#42"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#67"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#67"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_36"
@@ -6162,6 +7504,62 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#41")
+        )
+      )
+      List
+      (iterexp
+        "iter#41"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#65"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#65"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
       )
     )
   )
@@ -6185,6 +7583,62 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#40")
+        )
+      )
+      List
+      (iterexp
+        "iter#40"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#63"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#63"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_34"
@@ -6204,6 +7658,62 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#39")
+        )
+      )
+      List
+      (iterexp
+        "iter#39"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#61"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#61"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
       )
     )
   )
@@ -6227,6 +7737,62 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#38")
+        )
+      )
+      List
+      (iterexp
+        "iter#38"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#59"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#59"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_32"
@@ -6246,6 +7812,62 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#37")
+        )
+      )
+      List
+      (iterexp
+        "iter#37"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#57"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#57"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
       )
     )
   )
@@ -6269,6 +7891,62 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#36")
+        )
+      )
+      List
+      (iterexp
+        "iter#36"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#55"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#55"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_30"
@@ -6288,6 +7966,62 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#35")
+        )
+      )
+      List
+      (iterexp
+        "iter#35"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#53"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#53"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
       )
     )
   )
@@ -6311,6 +8045,62 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#34")
+        )
+      )
+      List
+      (iterexp
+        "iter#34"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#51"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#51"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_28"
@@ -6330,6 +8120,62 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#33")
+        )
+      )
+      List
+      (iterexp
+        "iter#33"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#49"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#49"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
       )
     )
   )
@@ -6353,6 +8199,62 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#32")
+        )
+      )
+      List
+      (iterexp
+        "iter#32"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#47"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#47"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_26"
@@ -6372,6 +8274,62 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#31")
+        )
+      )
+      List
+      (iterexp
+        "iter#31"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#45"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#45"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
       )
     )
   )
@@ -6395,6 +8353,62 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#30")
+        )
+      )
+      List
+      (iterexp
+        "iter#30"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#43"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#43"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_24"
@@ -6414,6 +8428,62 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#29")
+        )
+      )
+      List
+      (iterexp
+        "iter#29"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#41"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#41"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
       )
     )
   )
@@ -6437,6 +8507,30 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "irotr_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_22"
@@ -6456,6 +8550,30 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "irotr_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -6479,6 +8597,30 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "irotl_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_20"
@@ -6498,6 +8640,30 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "irotl_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -6525,6 +8691,36 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ishr_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN_1"))
+              (ExpA
+                (CaseE
+                  Arg
+                  (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_18"
@@ -6550,6 +8746,36 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ishr_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN_1"))
+              (ExpA
+                (CaseE
+                  Arg
+                  (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_17"
@@ -6569,6 +8795,35 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ishl_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA
+                (CaseE
+                  Arg
+                  (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
+                )
+              )
+            )
+          )
+        )
       )
     )
   )
@@ -6592,6 +8847,35 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ishl_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA
+                (CaseE
+                  Arg
+                  (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_15"
@@ -6611,6 +8895,30 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ixor_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -6634,6 +8942,30 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ixor_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_13"
@@ -6653,6 +8985,30 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ior_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -6676,6 +9032,30 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ior_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_11"
@@ -6697,6 +9077,30 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "iand_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_10"
@@ -6716,6 +9120,30 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "iand_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -6744,6 +9172,78 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_irem_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (VarE "iter#27")
+        )
+      )
+      List
+      (iterexp
+        "iter#27"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#38"))
+              )
+              Opt
+              (iterexp "iter_0#38" (VarE "var_0"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          )
+          (VarE "iter#28")
+        )
+      )
+      Opt
+      (iterexp "iter#28" (VarE "var_0"))
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#39"))
+          )
+        )
+      )
+      Opt
+      (iterexp "iter_0#39" (VarE "var_0"))
+    )
   )
   (RuleD
     "fun_binop__case_8"
@@ -6769,6 +9269,78 @@
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
+    )
+    (RulePr
+      "fun_irem_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (VarE "iter#25")
+        )
+      )
+      List
+      (iterexp
+        "iter#25"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#35"))
+              )
+              Opt
+              (iterexp "iter_0#35" (VarE "var_0"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          )
+          (VarE "iter#26")
+        )
+      )
+      Opt
+      (iterexp "iter#26" (VarE "var_0"))
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#36"))
+          )
+        )
+      )
+      Opt
+      (iterexp "iter_0#36" (VarE "var_0"))
     )
   )
   (RuleD
@@ -6796,6 +9368,78 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_idiv_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (VarE "iter#23")
+        )
+      )
+      List
+      (iterexp
+        "iter#23"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#32"))
+              )
+              Opt
+              (iterexp "iter_0#32" (VarE "var_0"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          )
+          (VarE "iter#24")
+        )
+      )
+      Opt
+      (iterexp "iter#24" (VarE "var_0"))
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#33"))
+          )
+        )
+      )
+      Opt
+      (iterexp "iter_0#33" (VarE "var_0"))
+    )
   )
   (RuleD
     "fun_binop__case_6"
@@ -6822,11 +9466,84 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_idiv_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (VarE "iter#21")
+        )
+      )
+      List
+      (iterexp
+        "iter#21"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#29"))
+              )
+              Opt
+              (iterexp "iter_0#29" (VarE "var_0"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          )
+          (VarE "iter#22")
+        )
+      )
+      Opt
+      (iterexp "iter#22" (VarE "var_0"))
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#30"))
+          )
+        )
+      )
+      Opt
+      (iterexp "iter_0#30" (VarE "var_0"))
+    )
   )
   (RuleD
     "fun_binop__case_5"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -6843,11 +9560,36 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_imul_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_4"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -6864,11 +9606,36 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_imul_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_3"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -6885,11 +9652,36 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_isub_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_2"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -6906,11 +9698,36 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_isub_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_1"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -6927,11 +9744,36 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_iadd_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_0"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -6946,6 +9788,30 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "fun_iadd_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
       )
     )
   )
@@ -6964,6 +9830,7 @@
     "fun_binop__case_0"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -6983,23 +9850,32 @@
         (ListE
           (CaseE
             (Seq (Atom mk_val__0) Arg Arg)
-            (TupE
-              (CaseE (Atom I32) (TupE))
-              (CallE
-                "iadd_"
-                (ExpA
-                  (CallE
-                    "size"
-                    (ExpA
-                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
-                    )
-                  )
-                )
-                (ExpA (VarE "iN_1"))
-                (ExpA (VarE "iN_2"))
-              )
-            )
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
           )
+        )
+      )
+    )
+    (RulePr
+      "fun_iadd_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -7008,6 +9884,7 @@
     "fun_binop__case_1"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -7027,23 +9904,32 @@
         (ListE
           (CaseE
             (Seq (Atom mk_val__0) Arg Arg)
-            (TupE
-              (CaseE (Atom I64) (TupE))
-              (CallE
-                "iadd_"
-                (ExpA
-                  (CallE
-                    "size"
-                    (ExpA
-                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
-                    )
-                  )
-                )
-                (ExpA (VarE "iN_1"))
-                (ExpA (VarE "iN_2"))
-              )
-            )
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
           )
+        )
+      )
+    )
+    (RulePr
+      "fun_iadd_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -7052,6 +9938,7 @@
     "fun_binop__case_2"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -7071,23 +9958,32 @@
         (ListE
           (CaseE
             (Seq (Atom mk_val__0) Arg Arg)
-            (TupE
-              (CaseE (Atom I32) (TupE))
-              (CallE
-                "isub_"
-                (ExpA
-                  (CallE
-                    "size"
-                    (ExpA
-                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
-                    )
-                  )
-                )
-                (ExpA (VarE "iN_1"))
-                (ExpA (VarE "iN_2"))
-              )
-            )
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
           )
+        )
+      )
+    )
+    (RulePr
+      "fun_isub_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -7096,6 +9992,7 @@
     "fun_binop__case_3"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -7115,23 +10012,32 @@
         (ListE
           (CaseE
             (Seq (Atom mk_val__0) Arg Arg)
-            (TupE
-              (CaseE (Atom I64) (TupE))
-              (CallE
-                "isub_"
-                (ExpA
-                  (CallE
-                    "size"
-                    (ExpA
-                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
-                    )
-                  )
-                )
-                (ExpA (VarE "iN_1"))
-                (ExpA (VarE "iN_2"))
-              )
-            )
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
           )
+        )
+      )
+    )
+    (RulePr
+      "fun_isub_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -7140,6 +10046,7 @@
     "fun_binop__case_4"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -7159,23 +10066,32 @@
         (ListE
           (CaseE
             (Seq (Atom mk_val__0) Arg Arg)
-            (TupE
-              (CaseE (Atom I32) (TupE))
-              (CallE
-                "imul_"
-                (ExpA
-                  (CallE
-                    "size"
-                    (ExpA
-                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
-                    )
-                  )
-                )
-                (ExpA (VarE "iN_1"))
-                (ExpA (VarE "iN_2"))
-              )
-            )
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
           )
+        )
+      )
+    )
+    (RulePr
+      "fun_imul_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -7184,6 +10100,7 @@
     "fun_binop__case_5"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -7203,23 +10120,32 @@
         (ListE
           (CaseE
             (Seq (Atom mk_val__0) Arg Arg)
-            (TupE
-              (CaseE (Atom I64) (TupE))
-              (CallE
-                "imul_"
-                (ExpA
-                  (CallE
-                    "size"
-                    (ExpA
-                      (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
-                    )
-                  )
-                )
-                (ExpA (VarE "iN_1"))
-                (ExpA (VarE "iN_2"))
-              )
-            )
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
           )
+        )
+      )
+    )
+    (RulePr
+      "fun_imul_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -7256,10 +10182,10 @@
             (IterE
               (CaseE
                 (Seq (Atom mk_val__0) Arg Arg)
-                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#15"))
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#31"))
               )
               Opt
-              (iterexp "iter_0#15" (VarE "var_0"))
+              (iterexp "iter_0#31" (VarE "var_0"))
             )
           )
         )
@@ -7278,6 +10204,64 @@
         (VarE "iN_2")
         (VarE "var_0")
       )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (VarE "iter#21")
+        )
+      )
+      List
+      (iterexp
+        "iter#21"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#29"))
+              )
+              Opt
+              (iterexp "iter_0#29" (VarE "var_0"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          )
+          (VarE "iter#22")
+        )
+      )
+      Opt
+      (iterexp "iter#22" (VarE "var_0"))
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#30"))
+          )
+        )
+      )
+      Opt
+      (iterexp "iter_0#30" (VarE "var_0"))
     )
   )
   (RuleD
@@ -7312,10 +10296,10 @@
             (IterE
               (CaseE
                 (Seq (Atom mk_val__0) Arg Arg)
-                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#16"))
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#34"))
               )
               Opt
-              (iterexp "iter_0#16" (VarE "var_0"))
+              (iterexp "iter_0#34" (VarE "var_0"))
             )
           )
         )
@@ -7334,6 +10318,64 @@
         (VarE "iN_2")
         (VarE "var_0")
       )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (VarE "iter#23")
+        )
+      )
+      List
+      (iterexp
+        "iter#23"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#32"))
+              )
+              Opt
+              (iterexp "iter_0#32" (VarE "var_0"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          )
+          (VarE "iter#24")
+        )
+      )
+      Opt
+      (iterexp "iter#24" (VarE "var_0"))
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#33"))
+          )
+        )
+      )
+      Opt
+      (iterexp "iter_0#33" (VarE "var_0"))
     )
   )
   (RuleD
@@ -7368,10 +10410,10 @@
             (IterE
               (CaseE
                 (Seq (Atom mk_val__0) Arg Arg)
-                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#17"))
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#37"))
               )
               Opt
-              (iterexp "iter_0#17" (VarE "var_0"))
+              (iterexp "iter_0#37" (VarE "var_0"))
             )
           )
         )
@@ -7390,6 +10432,64 @@
         (VarE "iN_2")
         (VarE "var_0")
       )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (VarE "iter#25")
+        )
+      )
+      List
+      (iterexp
+        "iter#25"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#35"))
+              )
+              Opt
+              (iterexp "iter_0#35" (VarE "var_0"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          )
+          (VarE "iter#26")
+        )
+      )
+      Opt
+      (iterexp "iter#26" (VarE "var_0"))
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#36"))
+          )
+        )
+      )
+      Opt
+      (iterexp "iter_0#36" (VarE "var_0"))
     )
   )
   (RuleD
@@ -7424,10 +10524,10 @@
             (IterE
               (CaseE
                 (Seq (Atom mk_val__0) Arg Arg)
-                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#18"))
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#40"))
               )
               Opt
-              (iterexp "iter_0#18" (VarE "var_0"))
+              (iterexp "iter_0#40" (VarE "var_0"))
             )
           )
         )
@@ -7446,6 +10546,64 @@
         (VarE "iN_2")
         (VarE "var_0")
       )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (VarE "iter#27")
+        )
+      )
+      List
+      (iterexp
+        "iter#27"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#38"))
+              )
+              Opt
+              (iterexp "iter_0#38" (VarE "var_0"))
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          )
+          (VarE "iter#28")
+        )
+      )
+      Opt
+      (iterexp "iter#28" (VarE "var_0"))
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#39"))
+          )
+        )
+      )
+      Opt
+      (iterexp "iter_0#39" (VarE "var_0"))
     )
   )
   (RuleD
@@ -7486,6 +10644,30 @@
                 (ExpA (VarE "iN_1"))
                 (ExpA (VarE "iN_2"))
               )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "iand_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
             )
           )
         )
@@ -7535,6 +10717,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "iand_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_12"
@@ -7574,6 +10780,30 @@
                 (ExpA (VarE "iN_1"))
                 (ExpA (VarE "iN_2"))
               )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ior_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
             )
           )
         )
@@ -7623,6 +10853,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ior_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_14"
@@ -7667,6 +10921,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ixor_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_15"
@@ -7706,6 +10984,30 @@
                 (ExpA (VarE "iN_1"))
                 (ExpA (VarE "iN_2"))
               )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ixor_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
             )
           )
         )
@@ -7760,6 +11062,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ishl_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA
+                (CaseE
+                  Arg
+                  (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_17"
@@ -7802,6 +11133,35 @@
                     Arg
                     (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
                   )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ishl_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA
+                (CaseE
+                  Arg
+                  (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
                 )
               )
             )
@@ -7863,6 +11223,36 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "ishr_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN_1"))
+              (ExpA
+                (CaseE
+                  Arg
+                  (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_19"
@@ -7917,6 +11307,36 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "ishr_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN_1"))
+              (ExpA
+                (CaseE
+                  Arg
+                  (TupE (ProjE (CallE "proj_uN_0" (ExpA (VarE "iN_2"))) 0))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_20"
@@ -7956,6 +11376,30 @@
                 (ExpA (VarE "iN_1"))
                 (ExpA (VarE "iN_2"))
               )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "irotl_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
             )
           )
         )
@@ -8005,6 +11449,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "irotl_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_22"
@@ -8044,6 +11512,30 @@
                 (ExpA (VarE "iN_1"))
                 (ExpA (VarE "iN_2"))
               )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "irotr_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
             )
           )
         )
@@ -8093,6 +11585,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "irotr_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "iN_1"))
+              (ExpA (VarE "iN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_binop__case_24"
@@ -8117,11 +11633,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#19"))
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#42"))
           )
           List
           (iterexp
-            "iter_0#19"
+            "iter_0#42"
             (CallE
               "fadd_"
               (ExpA
@@ -8134,6 +11650,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#29")
+        )
+      )
+      List
+      (iterexp
+        "iter#29"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#41"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#41"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8161,11 +11733,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#20"))
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#44"))
           )
           List
           (iterexp
-            "iter_0#20"
+            "iter_0#44"
             (CallE
               "fadd_"
               (ExpA
@@ -8178,6 +11750,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#30")
+        )
+      )
+      List
+      (iterexp
+        "iter#30"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#43"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#43"
+        (CallE
+          "fadd_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8205,11 +11833,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#21"))
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#46"))
           )
           List
           (iterexp
-            "iter_0#21"
+            "iter_0#46"
             (CallE
               "fsub_"
               (ExpA
@@ -8222,6 +11850,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#31")
+        )
+      )
+      List
+      (iterexp
+        "iter#31"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#45"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#45"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8249,11 +11933,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#22"))
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#48"))
           )
           List
           (iterexp
-            "iter_0#22"
+            "iter_0#48"
             (CallE
               "fsub_"
               (ExpA
@@ -8266,6 +11950,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#32")
+        )
+      )
+      List
+      (iterexp
+        "iter#32"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#47"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#47"
+        (CallE
+          "fsub_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8293,11 +12033,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#23"))
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#50"))
           )
           List
           (iterexp
-            "iter_0#23"
+            "iter_0#50"
             (CallE
               "fmul_"
               (ExpA
@@ -8310,6 +12050,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#33")
+        )
+      )
+      List
+      (iterexp
+        "iter#33"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#49"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#49"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8337,11 +12133,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#24"))
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#52"))
           )
           List
           (iterexp
-            "iter_0#24"
+            "iter_0#52"
             (CallE
               "fmul_"
               (ExpA
@@ -8354,6 +12150,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#34")
+        )
+      )
+      List
+      (iterexp
+        "iter#34"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#51"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#51"
+        (CallE
+          "fmul_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8381,11 +12233,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#25"))
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#54"))
           )
           List
           (iterexp
-            "iter_0#25"
+            "iter_0#54"
             (CallE
               "fdiv_"
               (ExpA
@@ -8398,6 +12250,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#35")
+        )
+      )
+      List
+      (iterexp
+        "iter#35"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#53"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#53"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8425,11 +12333,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#26"))
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#56"))
           )
           List
           (iterexp
-            "iter_0#26"
+            "iter_0#56"
             (CallE
               "fdiv_"
               (ExpA
@@ -8442,6 +12350,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#36")
+        )
+      )
+      List
+      (iterexp
+        "iter#36"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#55"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#55"
+        (CallE
+          "fdiv_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8469,11 +12433,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#27"))
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#58"))
           )
           List
           (iterexp
-            "iter_0#27"
+            "iter_0#58"
             (CallE
               "fmin_"
               (ExpA
@@ -8486,6 +12450,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#37")
+        )
+      )
+      List
+      (iterexp
+        "iter#37"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#57"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#57"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8513,11 +12533,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#28"))
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#60"))
           )
           List
           (iterexp
-            "iter_0#28"
+            "iter_0#60"
             (CallE
               "fmin_"
               (ExpA
@@ -8530,6 +12550,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#38")
+        )
+      )
+      List
+      (iterexp
+        "iter#38"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#59"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#59"
+        (CallE
+          "fmin_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8557,11 +12633,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#29"))
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#62"))
           )
           List
           (iterexp
-            "iter_0#29"
+            "iter_0#62"
             (CallE
               "fmax_"
               (ExpA
@@ -8574,6 +12650,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#39")
+        )
+      )
+      List
+      (iterexp
+        "iter#39"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#61"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#61"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8601,11 +12733,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#30"))
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#64"))
           )
           List
           (iterexp
-            "iter_0#30"
+            "iter_0#64"
             (CallE
               "fmax_"
               (ExpA
@@ -8618,6 +12750,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#40")
+        )
+      )
+      List
+      (iterexp
+        "iter#40"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#63"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#63"
+        (CallE
+          "fmax_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8645,11 +12833,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#31"))
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#66"))
           )
           List
           (iterexp
-            "iter_0#31"
+            "iter_0#66"
             (CallE
               "fcopysign_"
               (ExpA
@@ -8662,6 +12850,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          )
+          (VarE "iter#41")
+        )
+      )
+      List
+      (iterexp
+        "iter#41"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#65"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#65"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8689,11 +12933,11 @@
         (IterE
           (CaseE
             (Seq (Atom mk_val__1) Arg Arg)
-            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#32"))
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#68"))
           )
           List
           (iterexp
-            "iter_0#32"
+            "iter_0#68"
             (CallE
               "fcopysign_"
               (ExpA
@@ -8706,6 +12950,62 @@
               (ExpA (VarE "fN_2"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_fN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          )
+          (VarE "iter#42")
+        )
+      )
+      List
+      (iterexp
+        "iter#42"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#67"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#67"
+        (CallE
+          "fcopysign_"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "fN_1"))
+          (ExpA (VarE "fN_2"))
         )
       )
     )
@@ -8727,251 +13027,269 @@
     )
   )
 )
-(HintD (RelH "binop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "binop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "binop_" (VarT "binop_"))
-    (typbind "val_" (VarT "val_"))
-    (typbind "val__0" (VarT "val_"))
-    (typbind "ret_val*" (IterT (VarT "val_") List))
-  )
-  (RuleD
-    "binop__is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "binop_" (VarT "binop_"))
-    (ExpP "val_" (VarT "val_"))
-    (ExpP "val__0" (VarT "val_"))
-    (ExpP "ret_val*" (IterT (VarT "val_") List))
-    (ExpP "var_0" (IterT (IterT (VarT "val_") List) Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "valtype")
-      (VarE "binop_")
-      (VarE "val_")
-      (VarE "val__0")
-      (VarE "ret_val*")
-    )
-    (RulePr
-      "fun_binop_"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE
-        (VarE "valtype")
-        (VarE "binop_")
-        (VarE "val_")
-        (VarE "val__0")
-        (VarE "var_0")
-      )
-    )
-    (RulePr "wf_binop_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "binop_")))
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "val_")))
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "val__0")))
-    (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
-    (IfPr (CmpE EqOp bool (VarE "ret_val*") (TheE (VarE "var_0"))))
-    (IterPr
-      (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "binop_" (hint "partial" "{}")))
 (HintD (DecH "binop_" (hint "show" "%2#$_(%1)#(%3, %4)")))
-(DecD
-  "ieqz_"
-  (ExpP "N" (VarT "N"))
-  (ExpP "iN" (VarT "iN"))
-  (VarT "u32")
-  (DefD
-    (ExpP "N" nat)
-    (ExpP "i_1" (VarT "uN"))
-    (ExpA (VarE "N"))
-    (ExpA (VarE "i_1"))
-    (CaseE
-      Arg
-      (TupE
-        (CallE
-          "bool"
-          (ExpA
-            (CmpE
-              EqOp
-              bool
-              (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
-              (NumE (Nat 0))
-            )
-          )
-        )
-      )
-    )
-  )
-)
-(HintD (RelH "ieqz__is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "ieqz__is_wf"
+  "fun_ieqz_"
   (Seq Arg Arg Arg)
   (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
+    (typbind "_" (VarT "N"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "u32"))
   )
   (RuleD
-    "ieqz__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
+    "fun_ieqz__case_0"
+    (ExpP "N" nat)
+    (ExpP "i_1" (VarT "uN"))
     (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ieqz_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
-(DecD
-  "testop_"
-  (ExpP "valtype" (VarT "valtype"))
-  (ExpP "testop_" (VarT "testop_"))
-  (ExpP "val_" (VarT "val_"))
-  (IterT (VarT "val_") Opt)
-  (DefD
-    (ExpP "iN" (VarT "uN"))
-    (ExpA (CaseE (Atom I32) (TupE)))
-    (ExpA
+    (TupE
+      (VarE "N")
+      (VarE "i_1")
       (CaseE
-        (Seq (Atom mk_testop__0) Arg Arg)
-        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom EQZ) (TupE)))
-      )
-    )
-    (ExpA
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
-        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
-      )
-    )
-    (OptE
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
+        Arg
         (TupE
-          (CaseE (Atom I32) (TupE))
           (CallE
-            "ieqz_"
+            "bool"
             (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+              (CmpE
+                EqOp
+                bool
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                (NumE (Nat 0))
               )
             )
-            (ExpA (VarE "iN"))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  EqOp
+                  bool
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                  (NumE (Nat 0))
+                )
+              )
+            )
           )
         )
       )
     )
   )
-  (DefD
+)
+(RelD
+  "fun_testop__before_fun_testop__case_2"
+  (Seq Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "valtype"))
+    (typbind "_" (VarT "testop_"))
+    (typbind "_" (VarT "val_"))
+  )
+  (RuleD
+    "fun_testop__case_1"
     (ExpP "iN" (VarT "uN"))
-    (ExpA (CaseE (Atom I64) (TupE)))
-    (ExpA
+    (ExpP "var_0" (VarT "uN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
       (CaseE
         (Seq (Atom mk_testop__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom EQZ) (TupE)))
       )
-    )
-    (ExpA
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
       )
     )
-    (OptE
-      (CaseE
-        (Seq (Atom mk_val__0) Arg Arg)
-        (TupE
-          (CaseE (Atom I32) (TupE))
-          (CallE
-            "ieqz_"
-            (ExpA
-              (CallE
-                "size"
-                (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
-              )
-            )
-            (ExpA (VarE "iN"))
-          )
-        )
-      )
-    )
-  )
-  (DefD
-    (ExpP "x0" (VarT "valtype"))
-    (ExpP "x1" (VarT "testop_"))
-    (ExpP "x2" (VarT "val_"))
-    (ExpA (VarE "x0"))
-    (ExpA (VarE "x1"))
-    (ExpA (VarE "x2"))
-    (OptE)
-    ElsePr
-  )
-)
-(HintD (RelH "testop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "testop__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "testop_" (VarT "testop_"))
-    (typbind "val_" (VarT "val_"))
-    (typbind "ret_val" (VarT "val_"))
-  )
-  (RuleD
-    "testop__is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "testop_" (VarT "testop_"))
-    (ExpP "val_" (VarT "val_"))
-    (ExpP "ret_val" (VarT "val_"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "valtype") (VarE "testop_") (VarE "val_") (VarE "ret_val"))
-    (RulePr "wf_testop_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "testop_")))
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "val_")))
-    (IfPr
-      (CmpE
-        NeOp
-        bool
+    (RulePr
+      "fun_ieqz_"
+      (Seq Arg Arg Arg)
+      (TupE
         (CallE
-          "testop_"
-          (ExpA (VarE "valtype"))
-          (ExpA (VarE "testop_"))
-          (ExpA (VarE "val_"))
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
         )
-        (OptE)
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "testop_"
-            (ExpA (VarE "valtype"))
-            (ExpA (VarE "testop_"))
-            (ExpA (VarE "val_"))
-          )
-        )
+        (VarE "iN")
+        (VarE "var_0")
       )
     )
     (RulePr
       "wf_val_"
       (Seq Arg Arg)
-      (TupE (CaseE (Atom I32) (TupE)) (VarE "ret_val"))
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_testop__case_0"
+    (ExpP "iN" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
+    (Seq Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom mk_testop__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom EQZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "fun_ieqz_"
+      (Seq Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+  )
+)
+(RelD
+  "fun_testop_"
+  (Seq Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "valtype"))
+    (typbind "_" (VarT "testop_"))
+    (typbind "_" (VarT "val_"))
+    (typbind "_" (IterT (VarT "val_") Opt))
+  )
+  (RuleD
+    "fun_testop__case_0"
+    (ExpP "iN" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom mk_testop__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (CaseE (Atom EQZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+      )
+      (OptE
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+    (RulePr
+      "fun_ieqz_"
+      (Seq Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_testop__case_1"
+    (ExpP "iN" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
+      (CaseE
+        (Seq (Atom mk_testop__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (CaseE (Atom EQZ) (TupE)))
+      )
+      (CaseE
+        (Seq (Atom mk_val__0) Arg Arg)
+        (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+      (OptE
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+    (RulePr
+      "fun_ieqz_"
+      (Seq Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+  )
+  (RuleD
+    "fun_testop__case_2"
+    (ExpP "x0" (VarT "valtype"))
+    (ExpP "x1" (VarT "testop_"))
+    (ExpP "x2" (VarT "val_"))
+    (Seq Arg Arg Arg Arg)
+    (TupE (VarE "x0") (VarE "x1") (VarE "x2") (OptE))
+    (NegPr
+      (RulePr
+        "fun_testop__before_fun_testop__case_2"
+        (Seq Arg Arg Arg)
+        (TupE (VarE "x0") (VarE "x1") (VarE "x2"))
+      )
     )
   )
 )
@@ -8984,74 +13302,12 @@
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
 )
-(HintD (RelH "feq__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "feq__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "feq__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "feq_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
 (DecD
   "fge_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
-)
-(HintD (RelH "fge__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fge__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "fge__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fge_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
 )
 (DecD
   "fgt_"
@@ -9060,74 +13316,12 @@
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
 )
-(HintD (RelH "fgt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fgt__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "fgt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fgt_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
 (DecD
   "fle_"
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
-)
-(HintD (RelH "fle__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fle__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "fle__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fle_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
 )
 (DecD
   "flt_"
@@ -9136,37 +13330,6 @@
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
 )
-(HintD (RelH "flt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "flt__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "flt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "flt_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
 (DecD
   "fne_"
   (ExpP "N" (VarT "N"))
@@ -9174,85 +13337,43 @@
   (ExpP "fN" (VarT "fN"))
   (VarT "u32")
 )
-(HintD (RelH "fne__is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "fne__is_wf"
+  "fun_ieq_"
   (Seq Arg Arg Arg Arg)
   (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "fN_0" (VarT "fN"))
-    (typbind "ret_val" (VarT "u32"))
+    (typbind "_" (VarT "N"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "u32"))
   )
   (RuleD
-    "fne__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "fN_0" (VarT "fN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "fN_0") (VarE "ret_val"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "fne_" (ExpA (VarE "N")) (ExpA (VarE "fN")) (ExpA (VarE "fN_0")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
-(DecD
-  "ieq_"
-  (ExpP "N" (VarT "N"))
-  (ExpP "iN" (VarT "iN"))
-  (ExpP "iN" (VarT "iN"))
-  (VarT "u32")
-  (DefD
+    "fun_ieq__case_0"
     (ExpP "N" nat)
     (ExpP "i_1" (VarT "uN"))
     (ExpP "i_2" (VarT "uN"))
-    (ExpA (VarE "N"))
-    (ExpA (VarE "i_1"))
-    (ExpA (VarE "i_2"))
-    (CaseE
-      Arg
-      (TupE (CallE "bool" (ExpA (CmpE EqOp bool (VarE "i_1") (VarE "i_2")))))
-    )
-  )
-)
-(HintD (RelH "ieq__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ieq__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ieq__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
     (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ieq_" (ExpA (VarE "N")) (ExpA (VarE "iN")) (ExpA (VarE "iN_0")))
+    (TupE
+      (VarE "N")
+      (VarE "i_1")
+      (VarE "i_2")
+      (CaseE
+        Arg
+        (TupE (CallE "bool" (ExpA (CmpE EqOp bool (VarE "i_1") (VarE "i_2")))))
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE "bool" (ExpA (CmpE EqOp bool (VarE "i_1") (VarE "i_2"))))
+          )
+        )
+      )
+    )
   )
 )
 (RelD
@@ -9287,6 +13408,29 @@
                 nat
                 (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
                 (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  GeOp
+                  nat
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+                )
               )
             )
           )
@@ -9332,38 +13476,19 @@
         (VarE "var_0")
       )
     )
-  )
-)
-(HintD (RelH "ige__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ige__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ige__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (ExpP "var_0" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
     (RulePr
-      "fun_ige_"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "var_0"))
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE "bool" (ExpA (CmpE GeOp int (VarE "var_0") (VarE "var_1"))))
+          )
+        )
+      )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (RelD
@@ -9398,6 +13523,29 @@
                 nat
                 (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
                 (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  GtOp
+                  nat
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+                )
               )
             )
           )
@@ -9443,38 +13591,19 @@
         (VarE "var_0")
       )
     )
-  )
-)
-(HintD (RelH "igt__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "igt__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "igt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (ExpP "var_0" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
     (RulePr
-      "fun_igt_"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "var_0"))
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE "bool" (ExpA (CmpE GtOp int (VarE "var_0") (VarE "var_1"))))
+          )
+        )
+      )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (RelD
@@ -9509,6 +13638,29 @@
                 nat
                 (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
                 (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  LeOp
+                  nat
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+                )
               )
             )
           )
@@ -9554,38 +13706,19 @@
         (VarE "var_0")
       )
     )
-  )
-)
-(HintD (RelH "ile__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ile__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ile__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (ExpP "var_0" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
     (RulePr
-      "fun_ile_"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "var_0"))
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE "bool" (ExpA (CmpE LeOp int (VarE "var_0") (VarE "var_1"))))
+          )
+        )
+      )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (RelD
@@ -9620,6 +13753,29 @@
                 nat
                 (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
                 (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+              )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  LtOp
+                  nat
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_2"))) 0)
+                )
               )
             )
           )
@@ -9665,88 +13821,58 @@
         (VarE "var_0")
       )
     )
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE "bool" (ExpA (CmpE LtOp int (VarE "var_0") (VarE "var_1"))))
+          )
+        )
+      )
+    )
   )
 )
-(HintD (RelH "ilt__is_wf" (hint "wf-lemma-func" "{}")))
 (RelD
-  "ilt__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
+  "fun_ine_"
+  (Seq Arg Arg Arg Arg)
   (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
+    (typbind "_" (VarT "N"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "u32"))
   )
   (RuleD
-    "ilt__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (ExpP "var_0" (VarT "u32"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr
-      "fun_ilt_"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE (VarE "N") (VarE "sx") (VarE "iN") (VarE "iN_0") (VarE "var_0"))
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
-  )
-)
-(DecD
-  "ine_"
-  (ExpP "N" (VarT "N"))
-  (ExpP "iN" (VarT "iN"))
-  (ExpP "iN" (VarT "iN"))
-  (VarT "u32")
-  (DefD
+    "fun_ine__case_0"
     (ExpP "N" nat)
     (ExpP "i_1" (VarT "uN"))
     (ExpP "i_2" (VarT "uN"))
-    (ExpA (VarE "N"))
-    (ExpA (VarE "i_1"))
-    (ExpA (VarE "i_2"))
-    (CaseE
-      Arg
-      (TupE (CallE "bool" (ExpA (CmpE NeOp bool (VarE "i_1") (VarE "i_2")))))
-    )
-  )
-)
-(HintD (RelH "ine__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ine__is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "iN_0" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "ine__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "iN_0" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
     (Seq Arg Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "iN_0") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN_0")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "ine_" (ExpA (VarE "N")) (ExpA (VarE "iN")) (ExpA (VarE "iN_0")))
+    (TupE
+      (VarE "N")
+      (VarE "i_1")
+      (VarE "i_2")
+      (CaseE
+        Arg
+        (TupE (CallE "bool" (ExpA (CmpE NeOp bool (VarE "i_1") (VarE "i_2")))))
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE "bool" (ExpA (CmpE NeOp bool (VarE "i_1") (VarE "i_2"))))
+          )
+        )
+      )
+    )
   )
 )
 (RelD
@@ -9778,6 +13904,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fge_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_22"
@@ -9797,6 +13947,30 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fge_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -9820,6 +13994,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fle_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_20"
@@ -9839,6 +14037,30 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fle_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -9862,6 +14084,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fgt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_18"
@@ -9881,6 +14127,30 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fgt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -9904,6 +14174,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "flt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_16"
@@ -9923,6 +14217,30 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "flt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -9946,6 +14264,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fne_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_14"
@@ -9965,6 +14307,30 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fne_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -9988,6 +14354,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "feq_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_12"
@@ -10007,6 +14397,30 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "feq_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
       )
     )
   )
@@ -10035,6 +14449,31 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_ige_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_10"
@@ -10059,6 +14498,31 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "fun_ige_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
       )
     )
   )
@@ -10087,6 +14551,31 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_ile_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_8"
@@ -10111,6 +14600,31 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "fun_ile_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
       )
     )
   )
@@ -10139,6 +14653,31 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_igt_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_6"
@@ -10163,6 +14702,31 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "fun_igt_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
       )
     )
   )
@@ -10191,6 +14755,31 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_ilt_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_4"
@@ -10217,11 +14806,37 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_ilt_"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "sx")
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_3"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -10238,11 +14853,36 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_ine_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_2"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -10259,11 +14899,36 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_ine_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_1"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -10280,11 +14945,36 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN_2"))
       )
     )
+    (RulePr
+      "fun_ieq_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_0"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -10299,6 +14989,30 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN_2"))
+      )
+    )
+    (RulePr
+      "fun_ieq_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
       )
     )
   )
@@ -10317,6 +15031,7 @@
     "fun_relop__case_0"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -10335,20 +15050,31 @@
       (OptE
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I32) (TupE))
-            (CallE
-              "ieq_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN_1"))
-              (ExpA (VarE "iN_2"))
-            )
-          )
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+    (RulePr
+      "fun_ieq_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -10357,6 +15083,7 @@
     "fun_relop__case_1"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -10375,20 +15102,31 @@
       (OptE
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I32) (TupE))
-            (CallE
-              "ieq_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN_1"))
-              (ExpA (VarE "iN_2"))
-            )
-          )
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+    (RulePr
+      "fun_ieq_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -10397,6 +15135,7 @@
     "fun_relop__case_2"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I32) (TupE))
@@ -10415,20 +15154,31 @@
       (OptE
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I32) (TupE))
-            (CallE
-              "ine_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN_1"))
-              (ExpA (VarE "iN_2"))
-            )
-          )
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+    (RulePr
+      "fun_ine_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -10437,6 +15187,7 @@
     "fun_relop__case_3"
     (ExpP "iN_1" (VarT "uN"))
     (ExpP "iN_2" (VarT "uN"))
+    (ExpP "var_0" (VarT "uN"))
     (Seq Arg Arg Arg Arg Arg)
     (TupE
       (CaseE (Atom I64) (TupE))
@@ -10455,20 +15206,31 @@
       (OptE
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
-          (TupE
-            (CaseE (Atom I32) (TupE))
-            (CallE
-              "ine_"
-              (ExpA
-                (CallE
-                  "size"
-                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
-                )
-              )
-              (ExpA (VarE "iN_1"))
-              (ExpA (VarE "iN_2"))
-            )
-          )
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
+    (RulePr
+      "fun_ine_"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (CallE
+          "size"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+        )
+        (VarE "iN_1")
+        (VarE "iN_2")
+        (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
         )
       )
     )
@@ -10518,6 +15280,17 @@
         (VarE "var_0")
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_5"
@@ -10562,6 +15335,17 @@
         (VarE "iN_1")
         (VarE "iN_2")
         (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
       )
     )
   )
@@ -10610,6 +15394,17 @@
         (VarE "var_0")
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_7"
@@ -10654,6 +15449,17 @@
         (VarE "iN_1")
         (VarE "iN_2")
         (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
       )
     )
   )
@@ -10702,6 +15508,17 @@
         (VarE "var_0")
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_9"
@@ -10746,6 +15563,17 @@
         (VarE "iN_1")
         (VarE "iN_2")
         (VarE "var_0")
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
       )
     )
   )
@@ -10794,6 +15622,17 @@
         (VarE "var_0")
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_11"
@@ -10840,6 +15679,17 @@
         (VarE "var_0")
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "var_0"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_12"
@@ -10861,6 +15711,30 @@
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN_2"))
       )
       (OptE
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "feq_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
           (TupE
@@ -10920,6 +15794,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "feq_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_14"
@@ -10960,6 +15858,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fne_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_15"
@@ -10981,6 +15903,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
       (OptE
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fne_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
           (TupE
@@ -11040,6 +15986,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "flt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_17"
@@ -11061,6 +16031,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
       (OptE
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "flt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
           (TupE
@@ -11120,6 +16114,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fgt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_19"
@@ -11141,6 +16159,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
       (OptE
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fgt_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
           (TupE
@@ -11200,6 +16242,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fle_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_21"
@@ -11221,6 +16287,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
       (OptE
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fle_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
           (TupE
@@ -11280,6 +16370,30 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fge_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_relop__case_23"
@@ -11301,6 +16415,30 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN_2"))
       )
       (OptE
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "fge_"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "fN_1"))
+              (ExpA (VarE "fN_2"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
         (CaseE
           (Seq (Atom mk_val__0) Arg Arg)
           (TupE
@@ -11338,56 +16476,6 @@
     )
   )
 )
-(HintD (RelH "relop__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "relop__is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "relop_" (VarT "relop_"))
-    (typbind "val_" (VarT "val_"))
-    (typbind "val__0" (VarT "val_"))
-    (typbind "ret_val" (VarT "val_"))
-  )
-  (RuleD
-    "relop__is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "relop_" (VarT "relop_"))
-    (ExpP "val_" (VarT "val_"))
-    (ExpP "val__0" (VarT "val_"))
-    (ExpP "ret_val" (VarT "val_"))
-    (ExpP "var_0" (IterT (VarT "val_") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "valtype")
-      (VarE "relop_")
-      (VarE "val_")
-      (VarE "val__0")
-      (VarE "ret_val")
-    )
-    (RulePr
-      "fun_relop_"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE
-        (VarE "valtype")
-        (VarE "relop_")
-        (VarE "val_")
-        (VarE "val__0")
-        (VarE "var_0")
-      )
-    )
-    (RulePr "wf_relop_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "relop_")))
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "val_")))
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "val__0")))
-    (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (TheE (VarE "var_0"))))
-    (RulePr
-      "wf_val_"
-      (Seq Arg Arg)
-      (TupE (CaseE (Atom I32) (TupE)) (VarE "ret_val"))
-    )
-  )
-)
 (HintD (DecH "relop_" (hint "partial" "{}")))
 (HintD (DecH "relop_" (hint "show" "%2#$_(%1)#(%3, %4)")))
 (DecD
@@ -11398,89 +16486,12 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "fN")
 )
-(HintD (RelH "convert___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "convert___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "fN"))
-  )
-  (RuleD
-    "convert___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "M") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "convert__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-        )
-      )
-    )
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "demote__"
   (ExpP "M" (VarT "M"))
   (ExpP "N" (VarT "N"))
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
-)
-(HintD (RelH "demote___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "demote___is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "demote___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "M") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "demote__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
 )
 (DecD
   "extend__"
@@ -11490,44 +16501,6 @@
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
 )
-(HintD (RelH "extend___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "extend___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "extend___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "M") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "extend__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "iN"))
-        )
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (DecD
   "promote__"
   (ExpP "M" (VarT "M"))
@@ -11535,113 +16508,13 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "fN") List)
 )
-(HintD (RelH "promote___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "promote___is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "fN") List))
-  )
-  (RuleD
-    "promote___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "fN") List))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "M") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE
-          "promote__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "fN"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (DecD
   "reinterpret__"
   (ExpP "valtype_1" (VarT "valtype"))
   (ExpP "valtype_2" (VarT "valtype"))
   (ExpP "val_" (VarT "val_"))
-  (IterT (VarT "val_") Opt)
-  (DefD
-    (ExpP "x0" (VarT "valtype"))
-    (ExpP "x1" (VarT "valtype"))
-    (ExpP "x2" (VarT "val_"))
-    (ExpA (VarE "x0"))
-    (ExpA (VarE "x1"))
-    (ExpA (VarE "x2"))
-    (OptE)
-    ElsePr
-  )
+  (VarT "val_")
 )
-(HintD (RelH "reinterpret___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "reinterpret___is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "valtype_1" (VarT "valtype"))
-    (typbind "valtype_2" (VarT "valtype"))
-    (typbind "val_" (VarT "val_"))
-    (typbind "ret_val" (VarT "val_"))
-  )
-  (RuleD
-    "reinterpret___is_wf_0"
-    (ExpP "valtype_1" (VarT "valtype"))
-    (ExpP "valtype_2" (VarT "valtype"))
-    (ExpP "val_" (VarT "val_"))
-    (ExpP "ret_val" (VarT "val_"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "valtype_1") (VarE "valtype_2") (VarE "val_") (VarE "ret_val"))
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype_1") (VarE "val_")))
-    (IfPr
-      (CmpE
-        NeOp
-        bool
-        (CallE
-          "reinterpret__"
-          (ExpA (VarE "valtype_1"))
-          (ExpA (VarE "valtype_2"))
-          (ExpA (VarE "val_"))
-        )
-        (OptE)
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (TheE
-          (CallE
-            "reinterpret__"
-            (ExpA (VarE "valtype_1"))
-            (ExpA (VarE "valtype_2"))
-            (ExpA (VarE "val_"))
-          )
-        )
-      )
-    )
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype_2") (VarE "ret_val")))
-  )
-)
-(HintD (DecH "reinterpret__" (hint "partial" "{}")))
 (DecD
   "trunc__"
   (ExpP "M" (VarT "M"))
@@ -11650,84 +16523,12 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "iN") Opt)
 )
-(HintD (RelH "trunc___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "trunc___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "sx" (VarT "sx"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val?" (IterT (VarT "iN") Opt))
-  )
-  (RuleD
-    "trunc___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "sx" (VarT "sx"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val?" (IterT (VarT "iN") Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "sx") (VarE "fN") (VarE "ret_val?"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "M") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val?")
-        (CallE
-          "trunc__"
-          (ExpA (VarE "M"))
-          (ExpA (VarE "N"))
-          (ExpA (VarE "sx"))
-          (ExpA (VarE "fN"))
-        )
-      )
-    )
-    (IterPr
-      (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-      Opt
-      (iterexp "ret_val" (VarE "ret_val?"))
-    )
-  )
-)
 (DecD
   "wrap__"
   (ExpP "M" (VarT "M"))
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN"))
   (VarT "iN")
-)
-(HintD (RelH "wrap___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "wrap___is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "M" (VarT "M"))
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "wrap___is_wf_0"
-    (ExpP "M" (VarT "M"))
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "M") (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "M") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "wrap__" (ExpA (VarE "M")) (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (RelD
   "fun_cvtop___before_fun_cvtop___case_20"
@@ -11765,6 +16566,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_18"
@@ -11790,6 +16620,35 @@
         (CallE
           "size"
           (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
         )
       )
     )
@@ -11821,6 +16680,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_16"
@@ -11846,6 +16734,35 @@
         (CallE
           "size"
           (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
         )
       )
     )
@@ -11877,6 +16794,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_14"
@@ -11902,6 +16848,35 @@
         (CallE
           "size"
           (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
         )
       )
     )
@@ -11933,6 +16908,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_12"
@@ -11961,6 +16965,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_11"
@@ -11974,6 +17007,36 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE
+            (CaseE (Atom F64) (TupE))
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
       )
     )
   )
@@ -11991,6 +17054,36 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE
+            (CaseE (Atom F64) (TupE))
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_9"
@@ -12004,6 +17097,36 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE
+            (CaseE (Atom F32) (TupE))
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
       )
     )
   )
@@ -12021,6 +17144,36 @@
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE
+            (CaseE (Atom F32) (TupE))
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_7"
@@ -12035,6 +17188,42 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
       )
     )
+    (IterPr
+      (RulePr "wf_fN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter#52")))
+      List
+      (iterexp
+        "iter#52"
+        (CallE
+          "demote__"
+          (ExpA (NumE (Nat 64)))
+          (ExpA (NumE (Nat 32)))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CaseE (Atom F32) (TupE))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#82"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#82"
+        (CallE
+          "demote__"
+          (ExpA (NumE (Nat 64)))
+          (ExpA (NumE (Nat 32)))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_6"
@@ -12047,6 +17236,42 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr "wf_fN" (Seq Arg Arg) (TupE (NumE (Nat 64)) (VarE "iter#51")))
+      List
+      (iterexp
+        "iter#51"
+        (CallE
+          "promote__"
+          (ExpA (NumE (Nat 32)))
+          (ExpA (NumE (Nat 64)))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CaseE (Atom F64) (TupE))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#81"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#81"
+        (CallE
+          "promote__"
+          (ExpA (NumE (Nat 32)))
+          (ExpA (NumE (Nat 64)))
+          (ExpA (VarE "fN"))
+        )
       )
     )
   )
@@ -12064,6 +17289,125 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (VarE "iter#49")
+        )
+      )
+      List
+      (iterexp
+        "iter#49"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#78"))
+              )
+              Opt
+              (iterexp
+                "iter_0#78"
+                (CallE
+                  "trunc__"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "fN"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          )
+          (VarE "iter#50")
+        )
+      )
+      Opt
+      (iterexp
+        "iter#50"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#79"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0#79"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_4"
@@ -12077,6 +17421,125 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (VarE "iter#47")
+        )
+      )
+      List
+      (iterexp
+        "iter#47"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#75"))
+              )
+              Opt
+              (iterexp
+                "iter_0#75"
+                (CallE
+                  "trunc__"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "fN"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          )
+          (VarE "iter#48")
+        )
+      )
+      Opt
+      (iterexp
+        "iter#48"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#76"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0#76"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
       )
     )
   )
@@ -12094,6 +17557,125 @@
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
       )
     )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (VarE "iter#45")
+        )
+      )
+      List
+      (iterexp
+        "iter#45"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#72"))
+              )
+              Opt
+              (iterexp
+                "iter_0#72"
+                (CallE
+                  "trunc__"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "fN"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          )
+          (VarE "iter#46")
+        )
+      )
+      Opt
+      (iterexp
+        "iter#46"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#73"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0#73"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_2"
@@ -12107,6 +17689,125 @@
       (CaseE
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (VarE "iter#43")
+        )
+      )
+      List
+      (iterexp
+        "iter#43"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#69"))
+              )
+              Opt
+              (iterexp
+                "iter_0#69"
+                (CallE
+                  "trunc__"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "fN"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          )
+          (VarE "iter#44")
+        )
+      )
+      Opt
+      (iterexp
+        "iter#44"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#70"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0#70"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
       )
     )
   )
@@ -12123,6 +17824,25 @@
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "wrap__"
+              (ExpA (NumE (Nat 64)))
+              (ExpA (NumE (Nat 32)))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_0"
@@ -12136,6 +17856,26 @@
       (CaseE
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I64) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "extend__"
+              (ExpA (NumE (Nat 32)))
+              (ExpA (NumE (Nat 64)))
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
       )
     )
   )
@@ -12181,6 +17921,26 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I64) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CallE
+              "extend__"
+              (ExpA (NumE (Nat 32)))
+              (ExpA (NumE (Nat 64)))
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_1"
@@ -12211,6 +17971,25 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CaseE (Atom I32) (TupE))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CallE
+              "wrap__"
+              (ExpA (NumE (Nat 64)))
+              (ExpA (NumE (Nat 32)))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_2"
@@ -12233,11 +18012,11 @@
             (IterE
               (CaseE
                 (Seq (Atom mk_val__0) Arg Arg)
-                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#33"))
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#71"))
               )
               Opt
               (iterexp
-                "iter_0#33"
+                "iter_0#71"
                 (CallE
                   "trunc__"
                   (ExpA
@@ -12262,6 +18041,125 @@
               )
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (VarE "iter#43")
+        )
+      )
+      List
+      (iterexp
+        "iter#43"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#69"))
+              )
+              Opt
+              (iterexp
+                "iter_0#69"
+                (CallE
+                  "trunc__"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "fN"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          )
+          (VarE "iter#44")
+        )
+      )
+      Opt
+      (iterexp
+        "iter#44"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#70"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0#70"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
         )
       )
     )
@@ -12287,11 +18185,11 @@
             (IterE
               (CaseE
                 (Seq (Atom mk_val__0) Arg Arg)
-                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#34"))
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#74"))
               )
               Opt
               (iterexp
-                "iter_0#34"
+                "iter_0#74"
                 (CallE
                   "trunc__"
                   (ExpA
@@ -12319,6 +18217,125 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (VarE "iter#45")
+        )
+      )
+      List
+      (iterexp
+        "iter#45"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#72"))
+              )
+              Opt
+              (iterexp
+                "iter_0#72"
+                (CallE
+                  "trunc__"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "fN"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          )
+          (VarE "iter#46")
+        )
+      )
+      Opt
+      (iterexp
+        "iter#46"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "iter_0#73"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0#73"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_4"
@@ -12341,11 +18358,11 @@
             (IterE
               (CaseE
                 (Seq (Atom mk_val__0) Arg Arg)
-                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#35"))
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#77"))
               )
               Opt
               (iterexp
-                "iter_0#35"
+                "iter_0#77"
                 (CallE
                   "trunc__"
                   (ExpA
@@ -12373,6 +18390,125 @@
         )
       )
     )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (VarE "iter#47")
+        )
+      )
+      List
+      (iterexp
+        "iter#47"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#75"))
+              )
+              Opt
+              (iterexp
+                "iter_0#75"
+                (CallE
+                  "trunc__"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "fN"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          )
+          (VarE "iter#48")
+        )
+      )
+      Opt
+      (iterexp
+        "iter#48"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#76"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0#76"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_5"
@@ -12395,11 +18531,11 @@
             (IterE
               (CaseE
                 (Seq (Atom mk_val__0) Arg Arg)
-                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#36"))
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#80"))
               )
               Opt
               (iterexp
-                "iter_0#36"
+                "iter_0#80"
                 (CallE
                   "trunc__"
                   (ExpA
@@ -12424,6 +18560,125 @@
               )
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (VarE "iter#49")
+        )
+      )
+      List
+      (iterexp
+        "iter#49"
+        (CallE
+          "list_"
+          (TypA (VarT "val_"))
+          (ExpA
+            (IterE
+              (CaseE
+                (Seq (Atom mk_val__0) Arg Arg)
+                (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#78"))
+              )
+              Opt
+              (iterexp
+                "iter_0#78"
+                (CallE
+                  "trunc__"
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA
+                    (CallE
+                      "size"
+                      (ExpA
+                        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+                      )
+                    )
+                  )
+                  (ExpA (VarE "sx"))
+                  (ExpA (VarE "fN"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_uN"
+        (Seq Arg Arg)
+        (TupE
+          (CallE
+            "size"
+            (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          )
+          (VarE "iter#50")
+        )
+      )
+      Opt
+      (iterexp
+        "iter#50"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (VarE "iter_0#79"))
+          )
+        )
+      )
+      Opt
+      (iterexp
+        "iter_0#79"
+        (CallE
+          "trunc__"
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+            )
+          )
+          (ExpA
+            (CallE
+              "size"
+              (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+            )
+          )
+          (ExpA (VarE "sx"))
+          (ExpA (VarE "fN"))
         )
       )
     )
@@ -12459,6 +18714,42 @@
         )
       )
     )
+    (IterPr
+      (RulePr "wf_fN" (Seq Arg Arg) (TupE (NumE (Nat 64)) (VarE "iter#51")))
+      List
+      (iterexp
+        "iter#51"
+        (CallE
+          "promote__"
+          (ExpA (NumE (Nat 32)))
+          (ExpA (NumE (Nat 64)))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CaseE (Atom F64) (TupE))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "iter_0#81"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#81"
+        (CallE
+          "promote__"
+          (ExpA (NumE (Nat 32)))
+          (ExpA (NumE (Nat 64)))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_7"
@@ -12488,6 +18779,42 @@
               (ExpA (VarE "fN"))
             )
           )
+        )
+      )
+    )
+    (IterPr
+      (RulePr "wf_fN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "iter#52")))
+      List
+      (iterexp
+        "iter#52"
+        (CallE
+          "demote__"
+          (ExpA (NumE (Nat 64)))
+          (ExpA (NumE (Nat 32)))
+          (ExpA (VarE "fN"))
+        )
+      )
+    )
+    (IterPr
+      (RulePr
+        "wf_val_"
+        (Seq Arg Arg)
+        (TupE
+          (CaseE (Atom F32) (TupE))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "iter_0#82"))
+          )
+        )
+      )
+      List
+      (iterexp
+        "iter_0#82"
+        (CallE
+          "demote__"
+          (ExpA (NumE (Nat 64)))
+          (ExpA (NumE (Nat 32)))
+          (ExpA (VarE "fN"))
         )
       )
     )
@@ -12532,6 +18859,36 @@
                 (ExpA (VarE "sx"))
                 (ExpA (VarE "iN"))
               )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE
+            (CaseE (Atom F32) (TupE))
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
             )
           )
         )
@@ -12583,6 +18940,36 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE
+            (CaseE (Atom F32) (TupE))
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_10"
@@ -12624,6 +19011,36 @@
                 (ExpA (VarE "sx"))
                 (ExpA (VarE "iN"))
               )
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE
+            (CaseE (Atom F64) (TupE))
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+                )
+              )
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
             )
           )
         )
@@ -12675,6 +19092,36 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE
+            (CaseE (Atom F64) (TupE))
+            (CallE
+              "convert__"
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+                )
+              )
+              (ExpA
+                (CallE
+                  "size"
+                  (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+                )
+              )
+              (ExpA (VarE "sx"))
+              (ExpA (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_12"
@@ -12688,11 +19135,8 @@
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
       )
-      (IterE
-        (ListE (VarE "iter_val#3"))
-        Opt
-        (iterexp
-          "iter_val#3"
+      (OptE
+        (ListE
           (CallE
             "reinterpret__"
             (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
@@ -12718,6 +19162,35 @@
         (CallE
           "size"
           (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
         )
       )
     )
@@ -12734,11 +19207,8 @@
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
       )
-      (IterE
-        (ListE (VarE "iter_val#4"))
-        Opt
-        (iterexp
-          "iter_val#4"
+      (OptE
+        (ListE
           (CallE
             "reinterpret__"
             (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
@@ -12767,6 +19237,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_14"
@@ -12780,11 +19279,8 @@
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
       )
-      (IterE
-        (ListE (VarE "iter_val#5"))
-        Opt
-        (iterexp
-          "iter_val#5"
+      (OptE
+        (ListE
           (CallE
             "reinterpret__"
             (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
@@ -12813,6 +19309,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I32) (TupE)) (VarE "iN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_15"
@@ -12826,11 +19351,8 @@
         (Seq (Atom mk_val__0) Arg Arg)
         (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
       )
-      (IterE
-        (ListE (VarE "iter_val#6"))
-        Opt
-        (iterexp
-          "iter_val#6"
+      (OptE
+        (ListE
           (CallE
             "reinterpret__"
             (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
@@ -12859,6 +19381,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__0) Arg Arg)
+          (TupE (CaseE (Atom I64) (TupE)) (VarE "iN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_16"
@@ -12872,11 +19423,8 @@
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
       )
-      (IterE
-        (ListE (VarE "iter_val#7"))
-        Opt
-        (iterexp
-          "iter_val#7"
+      (OptE
+        (ListE
           (CallE
             "reinterpret__"
             (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
@@ -12902,6 +19450,35 @@
         (CallE
           "size"
           (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
         )
       )
     )
@@ -12918,11 +19495,8 @@
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
       )
-      (IterE
-        (ListE (VarE "iter_val#8"))
-        Opt
-        (iterexp
-          "iter_val#8"
+      (OptE
+        (ListE
           (CallE
             "reinterpret__"
             (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
@@ -12951,6 +19525,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I32) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_18"
@@ -12964,11 +19567,8 @@
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
       )
-      (IterE
-        (ListE (VarE "iter_val#9"))
-        Opt
-        (iterexp
-          "iter_val#9"
+      (OptE
+        (ListE
           (CallE
             "reinterpret__"
             (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
@@ -12997,6 +19597,35 @@
         )
       )
     )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE)))))
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F32) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE (CaseE (Atom F32) (TupE)) (VarE "fN"))
+        )
+      )
+    )
   )
   (RuleD
     "fun_cvtop___case_19"
@@ -13010,11 +19639,8 @@
         (Seq (Atom mk_val__1) Arg Arg)
         (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
       )
-      (IterE
-        (ListE (VarE "iter_val#10"))
-        Opt
-        (iterexp
-          "iter_val#10"
+      (OptE
+        (ListE
           (CallE
             "reinterpret__"
             (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
@@ -13040,6 +19666,35 @@
         (CallE
           "size"
           (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE))))
+        (CallE
+          "reinterpret__"
+          (ExpA (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE)))))
+          (ExpA (CallE "valtype_Inn" (ExpA (CaseE (Atom I64) (TupE)))))
+          (ExpA
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
+            )
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val_"
+      (Seq Arg Arg)
+      (TupE
+        (CallE "valtype_Fnn" (ExpA (CaseE (Atom F64) (TupE))))
+        (CaseE
+          (Seq (Atom mk_val__1) Arg Arg)
+          (TupE (CaseE (Atom F64) (TupE)) (VarE "fN"))
         )
       )
     )
@@ -13061,58 +19716,6 @@
     )
   )
 )
-(HintD (RelH "cvtop___is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "cvtop___is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "valtype_1" (VarT "valtype"))
-    (typbind "valtype_2" (VarT "valtype"))
-    (typbind "cvtop" (VarT "cvtop"))
-    (typbind "val_" (VarT "val_"))
-    (typbind "ret_val*" (IterT (VarT "val_") List))
-  )
-  (RuleD
-    "cvtop___is_wf_0"
-    (ExpP "valtype_1" (VarT "valtype"))
-    (ExpP "valtype_2" (VarT "valtype"))
-    (ExpP "cvtop" (VarT "cvtop"))
-    (ExpP "val_" (VarT "val_"))
-    (ExpP "ret_val*" (IterT (VarT "val_") List))
-    (ExpP "var_0" (IterT (IterT (VarT "val_") List) Opt))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "valtype_1")
-      (VarE "valtype_2")
-      (VarE "cvtop")
-      (VarE "val_")
-      (VarE "ret_val*")
-    )
-    (RulePr
-      "fun_cvtop__"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE
-        (VarE "valtype_1")
-        (VarE "valtype_2")
-        (VarE "cvtop")
-        (VarE "val_")
-        (VarE "var_0")
-      )
-    )
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype_1") (VarE "val_")))
-    (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
-    (IfPr (CmpE EqOp bool (VarE "ret_val*") (TheE (VarE "var_0"))))
-    (IterPr
-      (RulePr
-        "wf_val_"
-        (Seq Arg Arg)
-        (TupE (VarE "valtype_2") (VarE "ret_val"))
-      )
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "cvtop__" (hint "partial" "{}")))
 (HintD (DecH "cvtop__" (hint "show" "%3#$__(%1, %2)#((%4))")))
 (HintD (DecH "extend__" (hint "show" "$extend__(%, %)^(%)#((%))")))
@@ -13131,38 +19734,6 @@
   (ExpP "iN" (VarT "iN"))
   (IterT (VarT "byte") List)
 )
-(HintD (RelH "ibytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "ibytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "ibytes__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val*"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "ibytes_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD
   (DecH
     "ibytes_"
@@ -13176,38 +19747,6 @@
   (ExpP "fN" (VarT "fN"))
   (IterT (VarT "byte") List)
 )
-(HintD (RelH "fbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "fbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "fN" (VarT "fN"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "fbytes__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "fN" (VarT "fN"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "fN") (VarE "ret_val*"))
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "fN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "fbytes_" (ExpA (VarE "N")) (ExpA (VarE "fN")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD
   (DecH
     "fbytes_"
@@ -13219,95 +19758,14 @@
   "bytes_"
   (ExpP "valtype" (VarT "valtype"))
   (ExpP "val_" (VarT "val_"))
-  (IterT (IterT (VarT "byte") List) Opt)
-  (DefD
-    (ExpP "x0" (VarT "valtype"))
-    (ExpP "x1" (VarT "val_"))
-    (ExpA (VarE "x0"))
-    (ExpA (VarE "x1"))
-    (OptE)
-    ElsePr
-  )
+  (IterT (VarT "byte") List)
 )
-(HintD (RelH "bytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "bytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "val_" (VarT "val_"))
-    (typbind "ret_val*" (IterT (VarT "byte") List))
-  )
-  (RuleD
-    "bytes__is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "val_" (VarT "val_"))
-    (ExpP "ret_val*" (IterT (VarT "byte") List))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "valtype") (VarE "val_") (VarE "ret_val*"))
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "val_")))
-    (IfPr
-      (CmpE
-        NeOp
-        bool
-        (CallE "bytes_" (ExpA (VarE "valtype")) (ExpA (VarE "val_")))
-        (OptE)
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (TheE (CallE "bytes_" (ExpA (VarE "valtype")) (ExpA (VarE "val_"))))
-      )
-    )
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
-(HintD (DecH "bytes_" (hint "partial" "{}")))
 (HintD (DecH "bytes_" (hint "inverse" "$inv_bytes_")))
 (DecD
   "inv_ibytes_"
   (ExpP "N" (VarT "N"))
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "iN")
-)
-(HintD (RelH "inv_ibytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_ibytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "iN"))
-  )
-  (RuleD
-    "inv_ibytes__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_ibytes_" (ExpA (VarE "N")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
 )
 (HintD (DecH "inv_ibytes_" (hint "show" "$bytes_(I#%, %)")))
 (DecD
@@ -13316,76 +19774,12 @@
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "fN")
 )
-(HintD (RelH "inv_fbytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_fbytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "fN"))
-  )
-  (RuleD
-    "inv_fbytes__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "fN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_fbytes_" (ExpA (VarE "N")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_fN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
 (HintD (DecH "inv_fbytes_" (hint "show" "$bytes_(F#%, %)")))
 (DecD
   "inv_bytes_"
   (ExpP "valtype" (VarT "valtype"))
   (ExpP "_" (IterT (VarT "byte") List))
   (VarT "val_")
-)
-(HintD (RelH "inv_bytes__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inv_bytes__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "valtype" (VarT "valtype"))
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "val_"))
-  )
-  (RuleD
-    "inv_bytes__is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "val_"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "valtype") (VarE "var_0*") (VarE "ret_val"))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inv_bytes_" (ExpA (VarE "valtype")) (ExpA (VarE "var_0*")))
-      )
-    )
-    (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "valtype") (VarE "ret_val")))
-  )
 )
 (HintD (DecH "inv_bytes_" (hint "show" "$bytes_(%, %)")))
 (HintD (DecH "ibytes_" (hint "builtin" "{}")))
@@ -13397,89 +19791,63 @@
 (HintD (DecH "idiv_" (hint "show" "$idiv_(%)^(%)#((%, %))")))
 (HintD (DecH "irem_" (hint "show" "$irem_(%)^(%)#((%, %))")))
 (DecD "inot_" (ExpP "N" (VarT "N")) (ExpP "iN" (VarT "iN")) (VarT "iN"))
-(HintD (RelH "inot__is_wf" (hint "wf-lemma-func" "{}")))
+(HintD (DecH "ishr_" (hint "show" "$ishr_(%)^(%)#((%, %))")))
 (RelD
-  "inot__is_wf"
+  "fun_inez_"
   (Seq Arg Arg Arg)
   (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "iN"))
+    (typbind "_" (VarT "N"))
+    (typbind "_" (VarT "iN"))
+    (typbind "_" (VarT "u32"))
   )
   (RuleD
-    "inot__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "iN"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inot_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
-      )
-    )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "ret_val")))
-  )
-)
-(HintD (DecH "ishr_" (hint "show" "$ishr_(%)^(%)#((%, %))")))
-(DecD
-  "inez_"
-  (ExpP "N" (VarT "N"))
-  (ExpP "iN" (VarT "iN"))
-  (VarT "u32")
-  (DefD
+    "fun_inez__case_0"
     (ExpP "N" nat)
     (ExpP "i_1" (VarT "uN"))
-    (ExpA (VarE "N"))
-    (ExpA (VarE "i_1"))
-    (CaseE
-      Arg
-      (TupE
-        (CallE
-          "bool"
-          (ExpA
-            (CmpE
-              NeOp
-              bool
-              (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
-              (NumE (Nat 0))
+    (Seq Arg Arg Arg)
+    (TupE
+      (VarE "N")
+      (VarE "i_1")
+      (CaseE
+        Arg
+        (TupE
+          (CallE
+            "bool"
+            (ExpA
+              (CmpE
+                NeOp
+                bool
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                (NumE (Nat 0))
+              )
             )
           )
         )
       )
     )
-  )
-)
-(HintD (RelH "inez__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "inez__is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "N" (VarT "N"))
-    (typbind "iN" (VarT "iN"))
-    (typbind "ret_val" (VarT "u32"))
-  )
-  (RuleD
-    "inez__is_wf_0"
-    (ExpP "N" (VarT "N"))
-    (ExpP "iN" (VarT "iN"))
-    (ExpP "ret_val" (VarT "u32"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "N") (VarE "iN") (VarE "ret_val"))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (VarE "N") (VarE "iN")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "inez_" (ExpA (VarE "N")) (ExpA (VarE "iN")))
+    (RulePr
+      "wf_uN"
+      (Seq Arg Arg)
+      (TupE
+        (NumE (Nat 32))
+        (CaseE
+          Arg
+          (TupE
+            (CallE
+              "bool"
+              (ExpA
+                (CmpE
+                  NeOp
+                  bool
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "i_1"))) 0)
+                  (NumE (Nat 0))
+                )
+              )
+            )
+          )
+        )
       )
     )
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "ret_val")))
   )
 )
 (HintD (DecH "ilt_" (hint "show" "$ilt_(%)^(%)#((%, %))")))
@@ -14055,7 +20423,6 @@
             (typbind "memarg" (VarT "memarg"))
           )
           (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-          (ExpP "valtype?" (IterT (VarT "valtype") Opt))
         )
         (typcase (Atom MEMORY.SIZE) (TupT))
         (typcase (Atom MEMORY.GROW) (TupT))
@@ -14523,7 +20890,6 @@
     (RuleD
       "admininstr_case_25"
       (ExpP "Inn?" (IterT (VarT "Inn") Opt))
-      (ExpP "valtype?" (IterT (VarT "valtype") Opt))
       (ExpP "valtype" (VarT "valtype"))
       (ExpP "sz?" (IterT (VarT "sz") Opt))
       (ExpP "memarg" (VarT "memarg"))
@@ -14548,14 +20914,6 @@
           (CmpE EqOp bool (VarE "sz?") (OptE))
         )
       )
-      (IfPr
-        (BinE
-          EquivOp
-          bool
-          (CmpE EqOp bool (VarE "Inn?") (OptE))
-          (CmpE EqOp bool (VarE "valtype?") (OptE))
-        )
-      )
       (IterPr
         (IfPr
           (BinE
@@ -14578,7 +20936,6 @@
         Opt
         (iterexp "Inn" (VarE "Inn?"))
         (iterexp "sz" (VarE "sz?"))
-        (iterexp "valtype" (VarE "valtype?"))
       )
     )
     (RuleD
@@ -14684,89 +21041,145 @@
     (hint "desc" "\"administrative instruction\"")
   )
 )
-(DecD
-  "default_"
-  (ExpP "valtype" (VarT "valtype"))
-  (VarT "val")
-  (DefD
-    (ExpA (CaseE (Atom I32) (TupE)))
-    (CaseE
-      (Seq (Atom CONST) Arg Arg)
+(RelD
+  "fun_default_"
+  (Seq Arg Arg)
+  (TupT (typbind "_" (VarT "valtype")) (typbind "_" (VarT "val")))
+  (RuleD
+    "fun_default__case_0"
+    (Seq Arg Arg)
+    (TupE
+      (CaseE (Atom I32) (TupE))
+      (CaseE
+        (Seq (Atom CONST) Arg Arg)
+        (TupE
+          (CaseE (Atom I32) (TupE))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val"
+      (Seq Arg)
       (TupE
-        (CaseE (Atom I32) (TupE))
         (CaseE
-          (Seq (Atom mk_val__0) Arg Arg)
-          (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I32) (TupE))
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I32) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+            )
+          )
         )
       )
     )
   )
-  (DefD
-    (ExpA (CaseE (Atom I64) (TupE)))
-    (CaseE
-      (Seq (Atom CONST) Arg Arg)
+  (RuleD
+    "fun_default__case_1"
+    (Seq Arg Arg)
+    (TupE
+      (CaseE (Atom I64) (TupE))
+      (CaseE
+        (Seq (Atom CONST) Arg Arg)
+        (TupE
+          (CaseE (Atom I64) (TupE))
+          (CaseE
+            (Seq (Atom mk_val__0) Arg Arg)
+            (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+          )
+        )
+      )
+    )
+    (RulePr
+      "wf_val"
+      (Seq Arg)
       (TupE
-        (CaseE (Atom I64) (TupE))
         (CaseE
-          (Seq (Atom mk_val__0) Arg Arg)
-          (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+          (Seq (Atom CONST) Arg Arg)
+          (TupE
+            (CaseE (Atom I64) (TupE))
+            (CaseE
+              (Seq (Atom mk_val__0) Arg Arg)
+              (TupE (CaseE (Atom I64) (TupE)) (CaseE Arg (TupE (NumE (Nat 0)))))
+            )
+          )
         )
       )
     )
   )
-  (DefD
-    (ExpA (CaseE (Atom F32) (TupE)))
-    (CaseE
-      (Seq (Atom CONST) Arg Arg)
+  (RuleD
+    "fun_default__case_2"
+    (ExpP "var_0" (VarT "fN"))
+    (Seq Arg Arg)
+    (TupE
+      (CaseE (Atom F32) (TupE))
+      (CaseE
+        (Seq (Atom CONST) Arg Arg)
+        (TupE
+          (CaseE (Atom F32) (TupE))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F32) (TupE)) (VarE "var_0"))
+          )
+        )
+      )
+    )
+    (RulePr "fun_fzero" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "var_0")))
+    (RulePr
+      "wf_val"
+      (Seq Arg)
       (TupE
-        (CaseE (Atom F32) (TupE))
         (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
+          (Seq (Atom CONST) Arg Arg)
           (TupE
             (CaseE (Atom F32) (TupE))
-            (CallE "fzero" (ExpA (NumE (Nat 32))))
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F32) (TupE)) (VarE "var_0"))
+            )
           )
         )
       )
     )
   )
-  (DefD
-    (ExpA (CaseE (Atom F64) (TupE)))
-    (CaseE
-      (Seq (Atom CONST) Arg Arg)
+  (RuleD
+    "fun_default__case_3"
+    (ExpP "var_0" (VarT "fN"))
+    (Seq Arg Arg)
+    (TupE
+      (CaseE (Atom F64) (TupE))
+      (CaseE
+        (Seq (Atom CONST) Arg Arg)
+        (TupE
+          (CaseE (Atom F64) (TupE))
+          (CaseE
+            (Seq (Atom mk_val__1) Arg Arg)
+            (TupE (CaseE (Atom F64) (TupE)) (VarE "var_0"))
+          )
+        )
+      )
+    )
+    (RulePr "fun_fzero" (Seq Arg Arg) (TupE (NumE (Nat 64)) (VarE "var_0")))
+    (RulePr
+      "wf_val"
+      (Seq Arg)
       (TupE
-        (CaseE (Atom F64) (TupE))
         (CaseE
-          (Seq (Atom mk_val__1) Arg Arg)
+          (Seq (Atom CONST) Arg Arg)
           (TupE
             (CaseE (Atom F64) (TupE))
-            (CallE "fzero" (ExpA (NumE (Nat 64))))
+            (CaseE
+              (Seq (Atom mk_val__1) Arg Arg)
+              (TupE (CaseE (Atom F64) (TupE)) (VarE "var_0"))
+            )
           )
         )
       )
     )
-  )
-)
-(HintD (RelH "default__is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "default__is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "valtype" (VarT "valtype")) (typbind "ret_val" (VarT "val")))
-  (RuleD
-    "default__is_wf_0"
-    (ExpP "valtype" (VarT "valtype"))
-    (ExpP "ret_val" (VarT "val"))
-    (Seq Arg Arg)
-    (TupE (VarE "valtype") (VarE "ret_val"))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "default_" (ExpA (VarE "valtype")))
-      )
-    )
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (RecD
@@ -15004,24 +21417,6 @@
     (VarE "s")
   )
 )
-(HintD (RelH "store_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "store_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "state" (VarT "state")) (typbind "ret_val" (VarT "store")))
-  (RuleD
-    "store_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val" (VarT "store"))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "store" (ExpA (VarE "state"))))
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "store" (hint "show" "%.STORE")))
 (DecD
   "frame"
@@ -15032,24 +21427,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (VarE "f")
-  )
-)
-(HintD (RelH "frame_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "frame_is_wf"
-  (Seq Arg Arg)
-  (TupT (typbind "state" (VarT "state")) (typbind "ret_val" (VarT "frame")))
-  (RuleD
-    "frame_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val" (VarT "frame"))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val") (CallE "frame" (ExpA (VarE "state"))))
-    )
-    (RulePr "wf_frame" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "frame" (hint "show" "%.FRAME")))
@@ -15076,36 +21453,6 @@
     (DotE (VarE "s") (Atom FUNCS))
   )
 )
-(HintD (RelH "funcinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "funcinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "funcinst") List))
-  )
-  (RuleD
-    "funcinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "funcinst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "funcinst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_funcinst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "funcinst" (hint "show" "%.FUNCS")))
 (DecD
   "globalinst"
@@ -15116,36 +21463,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (DotE (VarE "s") (Atom GLOBALS))
-  )
-)
-(HintD (RelH "globalinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "globalinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "globalinst") List))
-  )
-  (RuleD
-    "globalinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "globalinst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "globalinst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_globalinst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
   )
 )
 (HintD (DecH "globalinst" (hint "show" "%.GLOBALS")))
@@ -15160,36 +21477,6 @@
     (DotE (VarE "s") (Atom TABLES))
   )
 )
-(HintD (RelH "tableinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "tableinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "tableinst") List))
-  )
-  (RuleD
-    "tableinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "tableinst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val*")
-        (CallE "tableinst" (ExpA (VarE "state")))
-      )
-    )
-    (IterPr
-      (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "tableinst" (hint "show" "%.TABLES")))
 (DecD
   "meminst"
@@ -15202,31 +21489,6 @@
     (DotE (VarE "s") (Atom MEMS))
   )
 )
-(HintD (RelH "meminst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "meminst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val*" (IterT (VarT "meminst") List))
-  )
-  (RuleD
-    "meminst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val*" (IterT (VarT "meminst") List))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val*"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE EqOp bool (VarE "ret_val*") (CallE "meminst" (ExpA (VarE "state"))))
-    )
-    (IterPr
-      (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "ret_val")))
-      List
-      (iterexp "ret_val" (VarE "ret_val*"))
-    )
-  )
-)
 (HintD (DecH "meminst" (hint "show" "%.MEMS")))
 (DecD
   "moduleinst"
@@ -15237,32 +21499,6 @@
     (ExpP "f" (VarT "frame"))
     (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     (DotE (VarE "f") (Atom MODULE))
-  )
-)
-(HintD (RelH "moduleinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "moduleinst_is_wf"
-  (Seq Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "ret_val" (VarT "moduleinst"))
-  )
-  (RuleD
-    "moduleinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "ret_val" (VarT "moduleinst"))
-    (Seq Arg Arg)
-    (TupE (VarE "state") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "moduleinst" (ExpA (VarE "state")))
-      )
-    )
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "moduleinst" (hint "show" "%.MODULE")))
@@ -15304,35 +21540,6 @@
     )
   )
 )
-(HintD (RelH "func_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "func_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "funcidx" (VarT "funcidx"))
-    (typbind "ret_val" (VarT "funcinst"))
-  )
-  (RuleD
-    "func_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "funcidx" (VarT "funcidx"))
-    (ExpP "ret_val" (VarT "funcinst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "funcidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "funcidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "func" (ExpA (VarE "state")) (ExpA (VarE "funcidx")))
-      )
-    )
-    (RulePr "wf_funcinst" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "func" (hint "show" "%.FUNCS[%]")))
 (DecD
   "global"
@@ -15352,35 +21559,6 @@
         (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
       )
     )
-  )
-)
-(HintD (RelH "global_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "global_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "globalidx" (VarT "globalidx"))
-    (typbind "ret_val" (VarT "globalinst"))
-  )
-  (RuleD
-    "global_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "globalidx" (VarT "globalidx"))
-    (ExpP "ret_val" (VarT "globalinst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "globalidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "globalidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "global" (ExpA (VarE "state")) (ExpA (VarE "globalidx")))
-      )
-    )
-    (RulePr "wf_globalinst" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "global" (hint "show" "%.GLOBALS[%]")))
@@ -15404,35 +21582,6 @@
     )
   )
 )
-(HintD (RelH "table_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "table_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "tableidx" (VarT "tableidx"))
-    (typbind "ret_val" (VarT "tableinst"))
-  )
-  (RuleD
-    "table_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "tableidx" (VarT "tableidx"))
-    (ExpP "ret_val" (VarT "tableinst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "tableidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tableidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "table" (ExpA (VarE "state")) (ExpA (VarE "tableidx")))
-      )
-    )
-    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "table" (hint "show" "%.TABLES[%]")))
 (DecD
   "mem"
@@ -15454,35 +21603,6 @@
     )
   )
 )
-(HintD (RelH "mem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "mem_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "memidx" (VarT "memidx"))
-    (typbind "ret_val" (VarT "meminst"))
-  )
-  (RuleD
-    "mem_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "memidx" (VarT "memidx"))
-    (ExpP "ret_val" (VarT "meminst"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "memidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "memidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "mem" (ExpA (VarE "state")) (ExpA (VarE "memidx")))
-      )
-    )
-    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "mem" (hint "show" "%.MEMS[%]")))
 (DecD
   "local"
@@ -15501,202 +21621,285 @@
     )
   )
 )
-(HintD (RelH "local_is_wf" (hint "wf-lemma-func" "{}")))
+(HintD (DecH "local" (hint "show" "%.LOCALS[%]")))
 (RelD
-  "local_is_wf"
-  (Seq Arg Arg Arg)
+  "fun_with_local"
+  (Seq Arg Arg Arg Arg)
   (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "localidx" (VarT "localidx"))
-    (typbind "ret_val" (VarT "val"))
+    (typbind "_" (VarT "state"))
+    (typbind "_" (VarT "localidx"))
+    (typbind "_" (VarT "val"))
+    (typbind "_" (VarT "state"))
   )
   (RuleD
-    "local_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "localidx" (VarT "localidx"))
-    (ExpP "ret_val" (VarT "val"))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "state") (VarE "localidx") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "localidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE "local" (ExpA (VarE "state")) (ExpA (VarE "localidx")))
-      )
-    )
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
-(HintD (DecH "local" (hint "show" "%.LOCALS[%]")))
-(DecD
-  "with_local"
-  (ExpP "state" (VarT "state"))
-  (ExpP "localidx" (VarT "localidx"))
-  (ExpP "val" (VarT "val"))
-  (VarT "state")
-  (DefD
+    "fun_with_local_case_0"
     (ExpP "s" (VarT "store"))
     (ExpP "f" (VarT "frame"))
     (ExpP "x" (VarT "uN"))
     (ExpP "v" (VarT "val"))
-    (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
-    (ExpA (VarE "x"))
-    (ExpA (VarE "v"))
-    (CaseE
-      (Infix Arg ; Arg)
-      (TupE
-        (VarE "s")
-        (UpdE
-          (VarE "f")
-          (IdxP
-            (DotP RootP (Atom LOCALS))
-            (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
-          )
-          (VarE "v")
-        )
-      )
-    )
-  )
-)
-(HintD (RelH "with_local_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_local_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "localidx" (VarT "localidx"))
-    (typbind "val" (VarT "val"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_local_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "localidx" (VarT "localidx"))
-    (ExpP "val" (VarT "val"))
-    (ExpP "ret_val" (VarT "state"))
     (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "localidx") (VarE "val") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "localidx")))
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "val")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_local"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "localidx"))
-          (ExpA (VarE "val"))
+    (TupE
+      (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f")))
+      (VarE "x")
+      (VarE "v")
+      (CaseE
+        (Infix Arg ; Arg)
+        (TupE
+          (VarE "s")
+          (UpdE
+            (VarE "f")
+            (IdxP
+              (DotP RootP (Atom LOCALS))
+              (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+            )
+            (VarE "v")
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (VarE "s")
+            (UpdE
+              (VarE "f")
+              (IdxP
+                (DotP RootP (Atom LOCALS))
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+              )
+              (VarE "v")
+            )
+          )
+        )
+      )
+    )
   )
 )
 (HintD (DecH "with_local" (hint "show" "%[LOCALS[%] = %]")))
-(DecD
-  "with_global"
-  (ExpP "state" (VarT "state"))
-  (ExpP "globalidx" (VarT "globalidx"))
-  (ExpP "val" (VarT "val"))
-  (VarT "state")
-  (DefD
+(RelD
+  "fun_with_global"
+  (Seq Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "state"))
+    (typbind "_" (VarT "globalidx"))
+    (typbind "_" (VarT "val"))
+    (typbind "_" (VarT "state"))
+  )
+  (RuleD
+    "fun_with_global_case_0"
     (ExpP "s" (VarT "store"))
     (ExpP "f" (VarT "frame"))
     (ExpP "x" (VarT "uN"))
     (ExpP "v" (VarT "val"))
-    (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
-    (ExpA (VarE "x"))
-    (ExpA (VarE "v"))
-    (CaseE
-      (Infix Arg ; Arg)
-      (TupE
-        (UpdE
-          (VarE "s")
-          (DotP
-            (IdxP
-              (DotP RootP (Atom GLOBALS))
-              (IdxE
-                (DotE (DotE (VarE "f") (Atom MODULE)) (Atom GLOBALS))
-                (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f")))
+      (VarE "x")
+      (VarE "v")
+      (CaseE
+        (Infix Arg ; Arg)
+        (TupE
+          (UpdE
+            (VarE "s")
+            (DotP
+              (IdxP
+                (DotP RootP (Atom GLOBALS))
+                (IdxE
+                  (DotE (DotE (VarE "f") (Atom MODULE)) (Atom GLOBALS))
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                )
               )
+              (Atom VALUE)
             )
-            (Atom VALUE)
+            (VarE "v")
           )
-          (VarE "v")
+          (VarE "f")
         )
-        (VarE "f")
       )
     )
-  )
-)
-(HintD (RelH "with_global_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_global_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "globalidx" (VarT "globalidx"))
-    (typbind "val" (VarT "val"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_global_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "globalidx" (VarT "globalidx"))
-    (ExpP "val" (VarT "val"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "globalidx") (VarE "val") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "globalidx")))
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "val")))
     (IfPr
       (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_global"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "globalidx"))
-          (ExpA (VarE "val"))
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (DotE (DotE (VarE "f") (Atom MODULE)) (Atom GLOBALS)))
+      )
+    )
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (VarE "s")
+              (DotP
+                (IdxP
+                  (DotP RootP (Atom GLOBALS))
+                  (IdxE
+                    (DotE (DotE (VarE "f") (Atom MODULE)) (Atom GLOBALS))
+                    (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                  )
+                )
+                (Atom VALUE)
+              )
+              (VarE "v")
+            )
+            (VarE "f")
+          )
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "with_global" (hint "show" "%[GLOBALS[%].VALUE = %]")))
-(DecD
-  "with_table"
-  (ExpP "state" (VarT "state"))
-  (ExpP "tableidx" (VarT "tableidx"))
-  (ExpP "nat" nat)
-  (ExpP "funcaddr" (VarT "funcaddr"))
-  (VarT "state")
-  (DefD
+(RelD
+  "fun_with_table"
+  (Seq Arg Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "state"))
+    (typbind "_" (VarT "tableidx"))
+    (typbind "_" nat)
+    (typbind "_" (VarT "funcaddr"))
+    (typbind "_" (VarT "state"))
+  )
+  (RuleD
+    "fun_with_table_case_0"
     (ExpP "s" (VarT "store"))
     (ExpP "f" (VarT "frame"))
     (ExpP "x" (VarT "uN"))
     (ExpP "i" nat)
     (ExpP "a" nat)
-    (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
-    (ExpA (VarE "x"))
-    (ExpA (VarE "i"))
-    (ExpA (VarE "a"))
-    (CaseE
-      (Infix Arg ; Arg)
+    (Seq Arg Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f")))
+      (VarE "x")
+      (VarE "i")
+      (VarE "a")
+      (CaseE
+        (Infix Arg ; Arg)
+        (TupE
+          (UpdE
+            (VarE "s")
+            (IdxP
+              (DotP
+                (IdxP
+                  (DotP RootP (Atom TABLES))
+                  (IdxE
+                    (DotE (DotE (VarE "f") (Atom MODULE)) (Atom TABLES))
+                    (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                  )
+                )
+                (Atom REFS)
+              )
+              (VarE "i")
+            )
+            (OptE (VarE "a"))
+          )
+          (VarE "f")
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (DotE (DotE (VarE "f") (Atom MODULE)) (Atom TABLES)))
+      )
+    )
+    (RulePr
+      "wf_state"
+      (Seq Arg)
       (TupE
-        (UpdE
-          (VarE "s")
-          (IdxP
-            (DotP
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (VarE "s")
+              (IdxP
+                (DotP
+                  (IdxP
+                    (DotP RootP (Atom TABLES))
+                    (IdxE
+                      (DotE (DotE (VarE "f") (Atom MODULE)) (Atom TABLES))
+                      (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                    )
+                  )
+                  (Atom REFS)
+                )
+                (VarE "i")
+              )
+              (OptE (VarE "a"))
+            )
+            (VarE "f")
+          )
+        )
+      )
+    )
+  )
+)
+(HintD (DecH "with_table" (hint "show" "%[TABLES[%].REFS[%] = %]")))
+(RelD
+  "fun_with_tableinst"
+  (Seq Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "state"))
+    (typbind "_" (VarT "tableidx"))
+    (typbind "_" (VarT "tableinst"))
+    (typbind "_" (VarT "state"))
+  )
+  (RuleD
+    "fun_with_tableinst_case_0"
+    (ExpP "s" (VarT "store"))
+    (ExpP "f" (VarT "frame"))
+    (ExpP "x" (VarT "uN"))
+    (ExpP "ti" (VarT "tableinst"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f")))
+      (VarE "x")
+      (VarE "ti")
+      (CaseE
+        (Infix Arg ; Arg)
+        (TupE
+          (UpdE
+            (VarE "s")
+            (IdxP
+              (DotP RootP (Atom TABLES))
+              (IdxE
+                (DotE (DotE (VarE "f") (Atom MODULE)) (Atom TABLES))
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+              )
+            )
+            (VarE "ti")
+          )
+          (VarE "f")
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (DotE (DotE (VarE "f") (Atom MODULE)) (Atom TABLES)))
+      )
+    )
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (VarE "s")
               (IdxP
                 (DotP RootP (Atom TABLES))
                 (IdxE
@@ -15704,161 +21907,163 @@
                   (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
                 )
               )
-              (Atom REFS)
+              (VarE "ti")
             )
-            (VarE "i")
+            (VarE "f")
           )
-          (OptE (VarE "a"))
-        )
-        (VarE "f")
-      )
-    )
-  )
-)
-(HintD (RelH "with_table_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_table_is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "tableidx" (VarT "tableidx"))
-    (typbind "nat" nat)
-    (typbind "funcaddr" (VarT "funcaddr"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_table_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "tableidx" (VarT "tableidx"))
-    (ExpP "nat" nat)
-    (ExpP "funcaddr" (VarT "funcaddr"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "state")
-      (VarE "tableidx")
-      (VarE "nat")
-      (VarE "funcaddr")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tableidx")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_table"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "tableidx"))
-          (ExpA (VarE "nat"))
-          (ExpA (VarE "funcaddr"))
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
-(HintD (DecH "with_table" (hint "show" "%[TABLES[%].REFS[%] = %]")))
-(DecD
-  "with_tableinst"
-  (ExpP "state" (VarT "state"))
-  (ExpP "tableidx" (VarT "tableidx"))
-  (ExpP "tableinst" (VarT "tableinst"))
-  (VarT "state")
-  (DefD
-    (ExpP "s" (VarT "store"))
-    (ExpP "f" (VarT "frame"))
-    (ExpP "x" (VarT "uN"))
-    (ExpP "ti" (VarT "tableinst"))
-    (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
-    (ExpA (VarE "x"))
-    (ExpA (VarE "ti"))
-    (CaseE
-      (Infix Arg ; Arg)
-      (TupE
-        (UpdE
-          (VarE "s")
-          (IdxP
-            (DotP RootP (Atom TABLES))
-            (IdxE
-              (DotE (DotE (VarE "f") (Atom MODULE)) (Atom TABLES))
-              (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
-            )
-          )
-          (VarE "ti")
-        )
-        (VarE "f")
-      )
-    )
-  )
-)
-(HintD (RelH "with_tableinst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_tableinst_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "tableidx" (VarT "tableidx"))
-    (typbind "tableinst" (VarT "tableinst"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_tableinst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "tableidx" (VarT "tableidx"))
-    (ExpP "tableinst" (VarT "tableinst"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "tableidx") (VarE "tableinst") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "tableidx")))
-    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "tableinst")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_tableinst"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "tableidx"))
-          (ExpA (VarE "tableinst"))
-        )
-      )
-    )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "with_tableinst" (hint "show" "%[TABLES[%] = %]")))
-(DecD
-  "with_mem"
-  (ExpP "state" (VarT "state"))
-  (ExpP "memidx" (VarT "memidx"))
-  (ExpP "nat" nat)
-  (ExpP "nat" nat)
-  (ExpP "_" (IterT (VarT "byte") List))
-  (VarT "state")
-  (DefD
+(RelD
+  "fun_with_mem"
+  (Seq Arg Arg Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "state"))
+    (typbind "_" (VarT "memidx"))
+    (typbind "_" nat)
+    (typbind "_" nat)
+    (typbind "_" (IterT (VarT "byte") List))
+    (typbind "_" (VarT "state"))
+  )
+  (RuleD
+    "fun_with_mem_case_0"
     (ExpP "s" (VarT "store"))
     (ExpP "f" (VarT "frame"))
     (ExpP "x" (VarT "uN"))
     (ExpP "i" nat)
     (ExpP "j" nat)
     (ExpP "b*" (IterT (VarT "byte") List))
-    (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
-    (ExpA (VarE "x"))
-    (ExpA (VarE "i"))
-    (ExpA (VarE "j"))
-    (ExpA (IterE (VarE "b#1") List (iterexp "b#1" (VarE "b*"))))
-    (CaseE
-      (Infix Arg ; Arg)
+    (Seq Arg Arg Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f")))
+      (VarE "x")
+      (VarE "i")
+      (VarE "j")
+      (IterE (VarE "b#1") List (iterexp "b#1" (VarE "b*")))
+      (CaseE
+        (Infix Arg ; Arg)
+        (TupE
+          (UpdE
+            (VarE "s")
+            (SliceP
+              (DotP
+                (IdxP
+                  (DotP RootP (Atom MEMS))
+                  (IdxE
+                    (DotE (DotE (VarE "f") (Atom MODULE)) (Atom MEMS))
+                    (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                  )
+                )
+                (Atom BYTES)
+              )
+              (VarE "i")
+              (VarE "j")
+            )
+            (IterE (VarE "b") List (iterexp "b" (VarE "b*")))
+          )
+          (VarE "f")
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (DotE (DotE (VarE "f") (Atom MODULE)) (Atom MEMS)))
+      )
+    )
+    (RulePr
+      "wf_state"
+      (Seq Arg)
       (TupE
-        (UpdE
-          (VarE "s")
-          (SliceP
-            (DotP
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (VarE "s")
+              (SliceP
+                (DotP
+                  (IdxP
+                    (DotP RootP (Atom MEMS))
+                    (IdxE
+                      (DotE (DotE (VarE "f") (Atom MODULE)) (Atom MEMS))
+                      (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                    )
+                  )
+                  (Atom BYTES)
+                )
+                (VarE "i")
+                (VarE "j")
+              )
+              (IterE (VarE "b#2") List (iterexp "b#2" (VarE "b*")))
+            )
+            (VarE "f")
+          )
+        )
+      )
+    )
+  )
+)
+(HintD (DecH "with_mem" (hint "show" "%[MEMS[%].BYTES[% : %] = %]")))
+(RelD
+  "fun_with_meminst"
+  (Seq Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (VarT "state"))
+    (typbind "_" (VarT "memidx"))
+    (typbind "_" (VarT "meminst"))
+    (typbind "_" (VarT "state"))
+  )
+  (RuleD
+    "fun_with_meminst_case_0"
+    (ExpP "s" (VarT "store"))
+    (ExpP "f" (VarT "frame"))
+    (ExpP "x" (VarT "uN"))
+    (ExpP "mi" (VarT "meminst"))
+    (Seq Arg Arg Arg Arg)
+    (TupE
+      (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f")))
+      (VarE "x")
+      (VarE "mi")
+      (CaseE
+        (Infix Arg ; Arg)
+        (TupE
+          (UpdE
+            (VarE "s")
+            (IdxP
+              (DotP RootP (Atom MEMS))
+              (IdxE
+                (DotE (DotE (VarE "f") (Atom MODULE)) (Atom MEMS))
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+              )
+            )
+            (VarE "mi")
+          )
+          (VarE "f")
+        )
+      )
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (DotE (DotE (VarE "f") (Atom MODULE)) (Atom MEMS)))
+      )
+    )
+    (RulePr
+      "wf_state"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (UpdE
+              (VarE "s")
               (IdxP
                 (DotP RootP (Atom MEMS))
                 (IdxE
@@ -15866,141 +22071,13 @@
                   (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
                 )
               )
-              (Atom BYTES)
+              (VarE "mi")
             )
-            (VarE "i")
-            (VarE "j")
+            (VarE "f")
           )
-          (IterE (VarE "b") List (iterexp "b" (VarE "b*")))
-        )
-        (VarE "f")
-      )
-    )
-  )
-)
-(HintD (RelH "with_mem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_mem_is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "memidx" (VarT "memidx"))
-    (typbind "nat" nat)
-    (typbind "nat_0" nat)
-    (typbind "var_0*" (IterT (VarT "byte") List))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_mem_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "memidx" (VarT "memidx"))
-    (ExpP "nat" nat)
-    (ExpP "nat_0" nat)
-    (ExpP "var_0*" (IterT (VarT "byte") List))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "state")
-      (VarE "memidx")
-      (VarE "nat")
-      (VarE "nat_0")
-      (VarE "var_0*")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "memidx")))
-    (IterPr
-      (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_mem"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "memidx"))
-          (ExpA (VarE "nat"))
-          (ExpA (VarE "nat_0"))
-          (ExpA (VarE "var_0*"))
         )
       )
     )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
-(HintD (DecH "with_mem" (hint "show" "%[MEMS[%].BYTES[% : %] = %]")))
-(DecD
-  "with_meminst"
-  (ExpP "state" (VarT "state"))
-  (ExpP "memidx" (VarT "memidx"))
-  (ExpP "meminst" (VarT "meminst"))
-  (VarT "state")
-  (DefD
-    (ExpP "s" (VarT "store"))
-    (ExpP "f" (VarT "frame"))
-    (ExpP "x" (VarT "uN"))
-    (ExpP "mi" (VarT "meminst"))
-    (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
-    (ExpA (VarE "x"))
-    (ExpA (VarE "mi"))
-    (CaseE
-      (Infix Arg ; Arg)
-      (TupE
-        (UpdE
-          (VarE "s")
-          (IdxP
-            (DotP RootP (Atom MEMS))
-            (IdxE
-              (DotE (DotE (VarE "f") (Atom MODULE)) (Atom MEMS))
-              (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
-            )
-          )
-          (VarE "mi")
-        )
-        (VarE "f")
-      )
-    )
-  )
-)
-(HintD (RelH "with_meminst_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "with_meminst_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "state" (VarT "state"))
-    (typbind "memidx" (VarT "memidx"))
-    (typbind "meminst" (VarT "meminst"))
-    (typbind "ret_val" (VarT "state"))
-  )
-  (RuleD
-    "with_meminst_is_wf_0"
-    (ExpP "state" (VarT "state"))
-    (ExpP "memidx" (VarT "memidx"))
-    (ExpP "meminst" (VarT "meminst"))
-    (ExpP "ret_val" (VarT "state"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "state") (VarE "memidx") (VarE "meminst") (VarE "ret_val"))
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "state")))
-    (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "memidx")))
-    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "meminst")))
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "with_meminst"
-          (ExpA (VarE "state"))
-          (ExpA (VarE "memidx"))
-          (ExpA (VarE "meminst"))
-        )
-      )
-    )
-    (RulePr "wf_state" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "with_meminst" (hint "show" "%[MEMS[%] = %]")))
@@ -16093,6 +22170,7 @@
       Opt
       (iterexp "j#3" (VarE "j?"))
     )
+    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ti'")))
     (RulePr
       "wf_tableinst"
       (Seq Arg)
@@ -16235,6 +22313,7 @@
       Opt
       (iterexp "j#3" (VarE "j?"))
     )
+    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ti'")))
     (RulePr
       "wf_tableinst"
       (Seq Arg)
@@ -16298,34 +22377,6 @@
     )
   )
 )
-(HintD (RelH "growtable_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "growtable_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "tableinst" (VarT "tableinst"))
-    (typbind "nat" nat)
-    (typbind "ret_val" (VarT "tableinst"))
-  )
-  (RuleD
-    "growtable_is_wf_0"
-    (ExpP "tableinst" (VarT "tableinst"))
-    (ExpP "nat" nat)
-    (ExpP "ret_val" (VarT "tableinst"))
-    (ExpP "var_0" (IterT (VarT "tableinst") Opt))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "tableinst") (VarE "nat") (VarE "ret_val"))
-    (RulePr
-      "fun_growtable"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "tableinst") (VarE "nat") (VarE "var_0"))
-    )
-    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "tableinst")))
-    (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (TheE (VarE "var_0"))))
-    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ret_val")))
-  )
-)
 (HintD (DecH "growtable" (hint "partial" "{}")))
 (RelD
   "fun_growmemory_before_fun_growmemory_case_1"
@@ -16359,7 +22410,7 @@
           )
           (expfield
             (Atom BYTES)
-            (IterE (VarE "b#2") List (iterexp "b#2" (VarE "b*")))
+            (IterE (VarE "b#3") List (iterexp "b#3" (VarE "b*")))
           )
         )
         (VarE "mi")
@@ -16379,7 +22430,7 @@
             (CvtE
               nat
               rat
-              (LenE (IterE (VarE "b#3") List (iterexp "b#3" (VarE "b*"))))
+              (LenE (IterE (VarE "b#4") List (iterexp "b#4" (VarE "b*"))))
             )
             (CvtE nat rat (BinE MulOp nat (NumE (Nat 64)) (CallE "Ki")))
           )
@@ -16406,7 +22457,7 @@
           (expfield
             (Atom BYTES)
             (CatE
-              (IterE (VarE "b#4") List (iterexp "b#4" (VarE "b*")))
+              (IterE (VarE "b#5") List (iterexp "b#5" (VarE "b*")))
               (IterE
                 (CaseE Arg (TupE (NumE (Nat 0))))
                 (ListN
@@ -16435,6 +22486,7 @@
       Opt
       (iterexp "j#8" (VarE "j?"))
     )
+    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "mi'")))
     (RulePr
       "wf_meminst"
       (Seq Arg)
@@ -16452,7 +22504,7 @@
           )
           (expfield
             (Atom BYTES)
-            (IterE (VarE "b#5") List (iterexp "b#5" (VarE "b*")))
+            (IterE (VarE "b#6") List (iterexp "b#6" (VarE "b*")))
           )
         )
       )
@@ -16475,7 +22527,7 @@
           (expfield
             (Atom BYTES)
             (CatE
-              (IterE (VarE "b#6") List (iterexp "b#6" (VarE "b*")))
+              (IterE (VarE "b#7") List (iterexp "b#7" (VarE "b*")))
               (IterE
                 (CaseE Arg (TupE (NumE (Nat 0))))
                 (ListN
@@ -16530,7 +22582,7 @@
           )
           (expfield
             (Atom BYTES)
-            (IterE (VarE "b#2") List (iterexp "b#2" (VarE "b*")))
+            (IterE (VarE "b#3") List (iterexp "b#3" (VarE "b*")))
           )
         )
         (VarE "mi")
@@ -16550,7 +22602,7 @@
             (CvtE
               nat
               rat
-              (LenE (IterE (VarE "b#3") List (iterexp "b#3" (VarE "b*"))))
+              (LenE (IterE (VarE "b#4") List (iterexp "b#4" (VarE "b*"))))
             )
             (CvtE nat rat (BinE MulOp nat (NumE (Nat 64)) (CallE "Ki")))
           )
@@ -16577,7 +22629,7 @@
           (expfield
             (Atom BYTES)
             (CatE
-              (IterE (VarE "b#4") List (iterexp "b#4" (VarE "b*")))
+              (IterE (VarE "b#5") List (iterexp "b#5" (VarE "b*")))
               (IterE
                 (CaseE Arg (TupE (NumE (Nat 0))))
                 (ListN
@@ -16606,6 +22658,7 @@
       Opt
       (iterexp "j#8" (VarE "j?"))
     )
+    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "mi'")))
     (RulePr
       "wf_meminst"
       (Seq Arg)
@@ -16623,7 +22676,7 @@
           )
           (expfield
             (Atom BYTES)
-            (IterE (VarE "b#5") List (iterexp "b#5" (VarE "b*")))
+            (IterE (VarE "b#6") List (iterexp "b#6" (VarE "b*")))
           )
         )
       )
@@ -16646,7 +22699,7 @@
           (expfield
             (Atom BYTES)
             (CatE
-              (IterE (VarE "b#6") List (iterexp "b#6" (VarE "b*")))
+              (IterE (VarE "b#7") List (iterexp "b#7" (VarE "b*")))
               (IterE
                 (CaseE Arg (TupE (NumE (Nat 0))))
                 (ListN
@@ -16677,34 +22730,6 @@
         (TupE (VarE "x0") (VarE "x1"))
       )
     )
-  )
-)
-(HintD (RelH "growmemory_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "growmemory_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "meminst" (VarT "meminst"))
-    (typbind "nat" nat)
-    (typbind "ret_val" (VarT "meminst"))
-  )
-  (RuleD
-    "growmemory_is_wf_0"
-    (ExpP "meminst" (VarT "meminst"))
-    (ExpP "nat" nat)
-    (ExpP "ret_val" (VarT "meminst"))
-    (ExpP "var_0" (IterT (VarT "meminst") Opt))
-    (Seq Arg Arg Arg)
-    (TupE (VarE "meminst") (VarE "nat") (VarE "ret_val"))
-    (RulePr
-      "fun_growmemory"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "meminst") (VarE "nat") (VarE "var_0"))
-    )
-    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "meminst")))
-    (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (TheE (VarE "var_0"))))
-    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (HintD (DecH "growmemory" (hint "partial" "{}")))
@@ -21268,6 +27293,7 @@
     (ExpP "c_1" (VarT "val_"))
     (ExpP "unop" (VarT "unop_"))
     (ExpP "c" (VarT "val_"))
+    (ExpP "var_0" (IterT (IterT (VarT "val_") List) Opt))
     (Infix Arg ~> Arg)
     (TupE
       (ListE
@@ -21276,63 +27302,18 @@
       )
       (ListE (CaseE (Seq (Atom CONST) Arg Arg) (TupE (VarE "t") (VarE "c"))))
     )
-    (IfPr
-      (CmpE
-        GtOp
-        nat
-        (LenE
-          (TheE
-            (CallE
-              "unop_"
-              (ExpA (VarE "t"))
-              (ExpA (VarE "unop"))
-              (ExpA (VarE "c_1"))
-            )
-          )
-        )
-        (NumE (Nat 0))
-      )
+    (RulePr
+      "fun_unop_"
+      (Seq Arg Arg Arg Arg)
+      (TupE (VarE "t") (VarE "unop") (VarE "c_1") (VarE "var_0"))
     )
-    (IfPr
-      (CmpE
-        NeOp
-        bool
-        (CallE
-          "unop_"
-          (ExpA (VarE "t"))
-          (ExpA (VarE "unop"))
-          (ExpA (VarE "c_1"))
-        )
-        (OptE)
-      )
-    )
-    (IfPr
-      (MemE
-        (VarE "c")
-        (TheE
-          (CallE
-            "unop_"
-            (ExpA (VarE "t"))
-            (ExpA (VarE "unop"))
-            (ExpA (VarE "c_1"))
-          )
-        )
-      )
-    )
+    (IfPr (CmpE GtOp nat (LenE (TheE (VarE "var_0"))) (NumE (Nat 0))))
+    (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
+    (IfPr (MemE (VarE "c") (TheE (VarE "var_0"))))
     (IterPr
       (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "t") (VarE "iter")))
       List
-      (iterexp
-        "iter"
-        (TheE
-          (CallE
-            "unop_"
-            (ExpA (VarE "t"))
-            (ExpA (VarE "unop"))
-            (ExpA (VarE "c_1"))
-          )
-        )
-      )
+      (iterexp "iter" (TheE (VarE "var_0")))
     )
     (RulePr
       "wf_admininstr"
@@ -21355,6 +27336,7 @@
     (ExpP "t" (VarT "valtype"))
     (ExpP "c_1" (VarT "val_"))
     (ExpP "unop" (VarT "unop_"))
+    (ExpP "var_0" (IterT (IterT (VarT "val_") List) Opt))
     (Infix Arg ~> Arg)
     (TupE
       (ListE
@@ -21363,48 +27345,17 @@
       )
       (ListE (CaseE (Atom TRAP) (TupE)))
     )
-    (IfPr
-      (CmpE
-        NeOp
-        bool
-        (CallE
-          "unop_"
-          (ExpA (VarE "t"))
-          (ExpA (VarE "unop"))
-          (ExpA (VarE "c_1"))
-        )
-        (OptE)
-      )
+    (RulePr
+      "fun_unop_"
+      (Seq Arg Arg Arg Arg)
+      (TupE (VarE "t") (VarE "unop") (VarE "c_1") (VarE "var_0"))
     )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (TheE
-          (CallE
-            "unop_"
-            (ExpA (VarE "t"))
-            (ExpA (VarE "unop"))
-            (ExpA (VarE "c_1"))
-          )
-        )
-        (ListE)
-      )
-    )
+    (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
+    (IfPr (CmpE EqOp bool (TheE (VarE "var_0")) (ListE)))
     (IterPr
       (RulePr "wf_val_" (Seq Arg Arg) (TupE (VarE "t") (VarE "iter")))
       List
-      (iterexp
-        "iter"
-        (TheE
-          (CallE
-            "unop_"
-            (ExpA (VarE "t"))
-            (ExpA (VarE "unop"))
-            (ExpA (VarE "c_1"))
-          )
-        )
-      )
+      (iterexp "iter" (TheE (VarE "var_0")))
     )
     (RulePr
       "wf_admininstr"
@@ -21520,6 +27471,7 @@
     (ExpP "c_1" (VarT "val_"))
     (ExpP "testop" (VarT "testop_"))
     (ExpP "c" (VarT "val_"))
+    (ExpP "var_0" (IterT (VarT "val_") Opt))
     (Infix Arg ~> Arg)
     (TupE
       (ListE
@@ -21533,48 +27485,17 @@
         )
       )
     )
-    (IfPr
-      (CmpE
-        NeOp
-        bool
-        (CallE
-          "testop_"
-          (ExpA (VarE "t"))
-          (ExpA (VarE "testop"))
-          (ExpA (VarE "c_1"))
-        )
-        (OptE)
-      )
+    (RulePr
+      "fun_testop_"
+      (Seq Arg Arg Arg Arg)
+      (TupE (VarE "t") (VarE "testop") (VarE "c_1") (VarE "var_0"))
     )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (VarE "c")
-        (TheE
-          (CallE
-            "testop_"
-            (ExpA (VarE "t"))
-            (ExpA (VarE "testop"))
-            (ExpA (VarE "c_1"))
-          )
-        )
-      )
-    )
+    (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
+    (IfPr (CmpE EqOp bool (VarE "c") (TheE (VarE "var_0"))))
     (RulePr
       "wf_val_"
       (Seq Arg Arg)
-      (TupE
-        (CaseE (Atom I32) (TupE))
-        (TheE
-          (CallE
-            "testop_"
-            (ExpA (VarE "t"))
-            (ExpA (VarE "testop"))
-            (ExpA (VarE "c_1"))
-          )
-        )
-      )
+      (TupE (CaseE (Atom I32) (TupE)) (TheE (VarE "var_0")))
     )
     (RulePr
       "wf_admininstr"
@@ -22415,6 +28336,7 @@
     (ExpP "func" (VarT "func"))
     (ExpP "x" (VarT "idx"))
     (ExpP "t*" (IterT (VarT "valtype") List))
+    (ExpP "var_0*" (IterT (VarT "val") List))
     (Infix Arg ~> Arg)
     (TupE
       (CaseE
@@ -22454,6 +28376,13 @@
           )
         )
       )
+    )
+    (IfPr (CmpE EqOp bool (LenE (VarE "var_0*")) (LenE (VarE "t*"))))
+    (IterPr
+      (RulePr "fun_default_" (Seq Arg Arg) (TupE (VarE "t") (VarE "var_0")))
+      List
+      (iterexp "var_0" (VarE "var_0*"))
+      (iterexp "t" (VarE "t*"))
     )
     (IfPr
       (CmpE LtOp nat (VarE "a") (LenE (CallE "funcinst" (ExpA (VarE "z")))))
@@ -22520,11 +28449,7 @@
                 (ListN (VarE "k"))
                 (iterexp "val" (VarE "val*"))
               )
-              (IterE
-                (CallE "default_" (ExpA (VarE "t")))
-                List
-                (iterexp "t" (VarE "t*"))
-              )
+              (IterE (VarE "var_0") List (iterexp "var_0" (VarE "var_0*")))
             )
           )
           (expfield (Atom MODULE) (VarE "mm"))
@@ -22642,11 +28567,7 @@
                 (ListN (VarE "k"))
                 (iterexp "val" (VarE "val*"))
               )
-              (IterE
-                (CallE "default_" (ExpA (VarE "t")))
-                List
-                (iterexp "t" (VarE "t*"))
-              )
+              (IterE (VarE "var_0") List (iterexp "var_0" (VarE "var_0*")))
             )
           )
           (expfield (Atom MODULE) (VarE "mm"))
@@ -22875,20 +28796,12 @@
       )
       (ListE (CaseE (Seq (Atom CONST) Arg Arg) (TupE (VarE "t") (VarE "c"))))
     )
-    (IfPr
-      (CmpE
-        NeOp
-        bool
-        (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c")))
-        (OptE)
-      )
-    )
     (IfPr (CmpE NeOp bool (CallE "proj_val__0" (ExpA (VarE "i"))) (OptE)))
     (IfPr
       (CmpE
         EqOp
         bool
-        (TheE (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c"))))
+        (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c")))
         (SliceE
           (DotE
             (CallE
@@ -22929,10 +28842,7 @@
     (IterPr
       (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
       List
-      (iterexp
-        "iter"
-        (TheE (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c"))))
-      )
+      (iterexp "iter" (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c"))))
     )
     (RulePr
       "wf_meminst"
@@ -24132,6 +30042,7 @@
       (ExpP "z" (VarT "state"))
       (ExpP "val" (VarT "val"))
       (ExpP "x" (VarT "idx"))
+      (ExpP "var_0" (VarT "state"))
       (Infix Arg ~> Arg)
       (TupE
         (CaseE
@@ -24144,18 +30055,12 @@
             )
           )
         )
-        (CaseE
-          (Infix Arg ; Arg)
-          (TupE
-            (CallE
-              "with_local"
-              (ExpA (VarE "z"))
-              (ExpA (VarE "x"))
-              (ExpA (VarE "val"))
-            )
-            (ListE)
-          )
-        )
+        (CaseE (Infix Arg ; Arg) (TupE (VarE "var_0") (ListE)))
+      )
+      (RulePr
+        "fun_with_local"
+        (Seq Arg Arg Arg Arg)
+        (TupE (VarE "z") (VarE "x") (VarE "val") (VarE "var_0"))
       )
       (RulePr
         "wf_config"
@@ -24176,20 +30081,7 @@
       (RulePr
         "wf_config"
         (Seq Arg)
-        (TupE
-          (CaseE
-            (Infix Arg ; Arg)
-            (TupE
-              (CallE
-                "with_local"
-                (ExpA (VarE "z"))
-                (ExpA (VarE "x"))
-                (ExpA (VarE "val"))
-              )
-              (ListE)
-            )
-          )
-        )
+        (TupE (CaseE (Infix Arg ; Arg) (TupE (VarE "var_0") (ListE))))
       )
     )
     (RuleD
@@ -24197,6 +30089,7 @@
       (ExpP "z" (VarT "state"))
       (ExpP "val" (VarT "val"))
       (ExpP "x" (VarT "idx"))
+      (ExpP "var_0" (VarT "state"))
       (Infix Arg ~> Arg)
       (TupE
         (CaseE
@@ -24209,18 +30102,12 @@
             )
           )
         )
-        (CaseE
-          (Infix Arg ; Arg)
-          (TupE
-            (CallE
-              "with_global"
-              (ExpA (VarE "z"))
-              (ExpA (VarE "x"))
-              (ExpA (VarE "val"))
-            )
-            (ListE)
-          )
-        )
+        (CaseE (Infix Arg ; Arg) (TupE (VarE "var_0") (ListE)))
+      )
+      (RulePr
+        "fun_with_global"
+        (Seq Arg Arg Arg Arg)
+        (TupE (VarE "z") (VarE "x") (VarE "val") (VarE "var_0"))
       )
       (RulePr
         "wf_config"
@@ -24241,20 +30128,7 @@
       (RulePr
         "wf_config"
         (Seq Arg)
-        (TupE
-          (CaseE
-            (Infix Arg ; Arg)
-            (TupE
-              (CallE
-                "with_global"
-                (ExpA (VarE "z"))
-                (ExpA (VarE "x"))
-                (ExpA (VarE "val"))
-              )
-              (ListE)
-            )
-          )
-        )
+        (TupE (CaseE (Infix Arg ; Arg) (TupE (VarE "var_0") (ListE))))
       )
     )
     (RuleD
@@ -24392,6 +30266,7 @@
       (ExpP "c" (VarT "val_"))
       (ExpP "ao" (VarT "memarg"))
       (ExpP "b*" (IterT (VarT "byte") List))
+      (ExpP "var_0" (VarT "state"))
       (Infix Arg ~> Arg)
       (TupE
         (CaseE
@@ -24411,55 +30286,42 @@
             )
           )
         )
-        (CaseE
-          (Infix Arg ; Arg)
-          (TupE
-            (CallE
-              "with_mem"
-              (ExpA (VarE "z"))
-              (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
-              (ExpA
-                (BinE
-                  AddOp
-                  nat
-                  (ProjE
-                    (CallE
-                      "proj_uN_0"
-                      (ExpA (TheE (CallE "proj_val__0" (ExpA (VarE "i")))))
-                    )
-                    0
-                  )
-                  (ProjE
-                    (CallE "proj_uN_0" (ExpA (DotE (VarE "ao") (Atom OFFSET))))
-                    0
-                  )
-                )
-              )
-              (ExpA
-                (CvtE
-                  rat
-                  nat
-                  (BinE
-                    DivOp
-                    rat
-                    (CvtE nat rat (CallE "size" (ExpA (VarE "t"))))
-                    (CvtE nat rat (NumE (Nat 8)))
-                  )
-                )
-              )
-              (ExpA (IterE (VarE "b") List (iterexp "b" (VarE "b*"))))
-            )
-            (ListE)
-          )
-        )
+        (CaseE (Infix Arg ; Arg) (TupE (VarE "var_0") (ListE)))
       )
       (IfPr (CmpE NeOp bool (CallE "proj_val__0" (ExpA (VarE "i"))) (OptE)))
-      (IfPr
-        (CmpE
-          NeOp
-          bool
-          (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c")))
-          (OptE)
+      (RulePr
+        "fun_with_mem"
+        (Seq Arg Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "z")
+          (CaseE Arg (TupE (NumE (Nat 0))))
+          (BinE
+            AddOp
+            nat
+            (ProjE
+              (CallE
+                "proj_uN_0"
+                (ExpA (TheE (CallE "proj_val__0" (ExpA (VarE "i")))))
+              )
+              0
+            )
+            (ProjE
+              (CallE "proj_uN_0" (ExpA (DotE (VarE "ao") (Atom OFFSET))))
+              0
+            )
+          )
+          (CvtE
+            rat
+            nat
+            (BinE
+              DivOp
+              rat
+              (CvtE nat rat (CallE "size" (ExpA (VarE "t"))))
+              (CvtE nat rat (NumE (Nat 8)))
+            )
+          )
+          (IterE (VarE "b") List (iterexp "b" (VarE "b*")))
+          (VarE "var_0")
         )
       )
       (IfPr
@@ -24467,16 +30329,13 @@
           EqOp
           bool
           (IterE (VarE "b") List (iterexp "b" (VarE "b*")))
-          (TheE (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c"))))
+          (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c")))
         )
       )
       (IterPr
         (RulePr "wf_byte" (Seq Arg) (TupE (VarE "iter")))
         List
-        (iterexp
-          "iter"
-          (TheE (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c"))))
-        )
+        (iterexp "iter" (CallE "bytes_" (ExpA (VarE "t")) (ExpA (VarE "c"))))
       )
       (RulePr
         "wf_config"
@@ -24504,52 +30363,7 @@
       (RulePr
         "wf_config"
         (Seq Arg)
-        (TupE
-          (CaseE
-            (Infix Arg ; Arg)
-            (TupE
-              (CallE
-                "with_mem"
-                (ExpA (VarE "z"))
-                (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
-                (ExpA
-                  (BinE
-                    AddOp
-                    nat
-                    (ProjE
-                      (CallE
-                        "proj_uN_0"
-                        (ExpA (TheE (CallE "proj_val__0" (ExpA (VarE "i")))))
-                      )
-                      0
-                    )
-                    (ProjE
-                      (CallE
-                        "proj_uN_0"
-                        (ExpA (DotE (VarE "ao") (Atom OFFSET)))
-                      )
-                      0
-                    )
-                  )
-                )
-                (ExpA
-                  (CvtE
-                    rat
-                    nat
-                    (BinE
-                      DivOp
-                      rat
-                      (CvtE nat rat (CallE "size" (ExpA (VarE "t"))))
-                      (CvtE nat rat (NumE (Nat 8)))
-                    )
-                  )
-                )
-                (ExpA (IterE (VarE "b") List (iterexp "b" (VarE "b*"))))
-              )
-              (ListE)
-            )
-          )
-        )
+        (TupE (CaseE (Infix Arg ; Arg) (TupE (VarE "var_0") (ListE))))
       )
     )
     (RuleD
@@ -24703,6 +30517,7 @@
       (ExpP "n" (VarT "n"))
       (ExpP "ao" (VarT "memarg"))
       (ExpP "b*" (IterT (VarT "byte") List))
+      (ExpP "var_0" (VarT "state"))
       (Infix Arg ~> Arg)
       (TupE
         (CaseE
@@ -24729,49 +30544,44 @@
             )
           )
         )
-        (CaseE
-          (Infix Arg ; Arg)
-          (TupE
-            (CallE
-              "with_mem"
-              (ExpA (VarE "z"))
-              (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
-              (ExpA
-                (BinE
-                  AddOp
-                  nat
-                  (ProjE
-                    (CallE
-                      "proj_uN_0"
-                      (ExpA (TheE (CallE "proj_val__0" (ExpA (VarE "i")))))
-                    )
-                    0
-                  )
-                  (ProjE
-                    (CallE "proj_uN_0" (ExpA (DotE (VarE "ao") (Atom OFFSET))))
-                    0
-                  )
-                )
-              )
-              (ExpA
-                (CvtE
-                  rat
-                  nat
-                  (BinE
-                    DivOp
-                    rat
-                    (CvtE nat rat (VarE "n"))
-                    (CvtE nat rat (NumE (Nat 8)))
-                  )
-                )
-              )
-              (ExpA (IterE (VarE "b") List (iterexp "b" (VarE "b*"))))
-            )
-            (ListE)
-          )
-        )
+        (CaseE (Infix Arg ; Arg) (TupE (VarE "var_0") (ListE)))
       )
       (IfPr (CmpE NeOp bool (CallE "proj_val__0" (ExpA (VarE "i"))) (OptE)))
+      (RulePr
+        "fun_with_mem"
+        (Seq Arg Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "z")
+          (CaseE Arg (TupE (NumE (Nat 0))))
+          (BinE
+            AddOp
+            nat
+            (ProjE
+              (CallE
+                "proj_uN_0"
+                (ExpA (TheE (CallE "proj_val__0" (ExpA (VarE "i")))))
+              )
+              0
+            )
+            (ProjE
+              (CallE "proj_uN_0" (ExpA (DotE (VarE "ao") (Atom OFFSET))))
+              0
+            )
+          )
+          (CvtE
+            rat
+            nat
+            (BinE
+              DivOp
+              rat
+              (CvtE nat rat (VarE "n"))
+              (CvtE nat rat (NumE (Nat 8)))
+            )
+          )
+          (IterE (VarE "b") List (iterexp "b" (VarE "b*")))
+          (VarE "var_0")
+        )
+      )
       (IfPr (CmpE NeOp bool (CallE "proj_val__0" (ExpA (VarE "c"))) (OptE)))
       (IfPr
         (CmpE
@@ -24869,52 +30679,7 @@
       (RulePr
         "wf_config"
         (Seq Arg)
-        (TupE
-          (CaseE
-            (Infix Arg ; Arg)
-            (TupE
-              (CallE
-                "with_mem"
-                (ExpA (VarE "z"))
-                (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
-                (ExpA
-                  (BinE
-                    AddOp
-                    nat
-                    (ProjE
-                      (CallE
-                        "proj_uN_0"
-                        (ExpA (TheE (CallE "proj_val__0" (ExpA (VarE "i")))))
-                      )
-                      0
-                    )
-                    (ProjE
-                      (CallE
-                        "proj_uN_0"
-                        (ExpA (DotE (VarE "ao") (Atom OFFSET)))
-                      )
-                      0
-                    )
-                  )
-                )
-                (ExpA
-                  (CvtE
-                    rat
-                    nat
-                    (BinE
-                      DivOp
-                      rat
-                      (CvtE nat rat (VarE "n"))
-                      (CvtE nat rat (NumE (Nat 8)))
-                    )
-                  )
-                )
-                (ExpA (IterE (VarE "b") List (iterexp "b" (VarE "b*"))))
-              )
-              (ListE)
-            )
-          )
-        )
+        (TupE (CaseE (Infix Arg ; Arg) (TupE (VarE "var_0") (ListE))))
       )
     )
     (RuleD
@@ -24922,7 +30687,8 @@
       (ExpP "z" (VarT "state"))
       (ExpP "n" (VarT "n"))
       (ExpP "mi" (VarT "meminst"))
-      (ExpP "var_0" (IterT (VarT "meminst") Opt))
+      (ExpP "var_1" (IterT (VarT "meminst") Opt))
+      (ExpP "var_0" (VarT "state"))
       (Infix Arg ~> Arg)
       (TupE
         (CaseE
@@ -24950,12 +30716,7 @@
         (CaseE
           (Infix Arg ; Arg)
           (TupE
-            (CallE
-              "with_meminst"
-              (ExpA (VarE "z"))
-              (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
-              (ExpA (VarE "mi"))
-            )
+            (VarE "var_0")
             (ListE
               (CaseE
                 (Seq (Atom CONST) Arg Arg)
@@ -25015,12 +30776,22 @@
             (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
           )
           (VarE "n")
+          (VarE "var_1")
+        )
+      )
+      (RulePr
+        "fun_with_meminst"
+        (Seq Arg Arg Arg Arg)
+        (TupE
+          (VarE "z")
+          (CaseE Arg (TupE (NumE (Nat 0))))
+          (VarE "mi")
           (VarE "var_0")
         )
       )
-      (IfPr (CmpE NeOp bool (VarE "var_0") (OptE)))
-      (IfPr (CmpE EqOp bool (TheE (VarE "var_0")) (VarE "mi")))
-      (RulePr "wf_meminst" (Seq Arg) (TupE (TheE (VarE "var_0"))))
+      (IfPr (CmpE NeOp bool (VarE "var_1") (OptE)))
+      (IfPr (CmpE EqOp bool (TheE (VarE "var_1")) (VarE "mi")))
+      (RulePr "wf_meminst" (Seq Arg) (TupE (TheE (VarE "var_1"))))
       (RulePr
         "wf_meminst"
         (Seq Arg)
@@ -25067,12 +30838,7 @@
           (CaseE
             (Infix Arg ; Arg)
             (TupE
-              (CallE
-                "with_meminst"
-                (ExpA (VarE "z"))
-                (ExpA (CaseE Arg (TupE (NumE (Nat 0)))))
-                (ExpA (VarE "mi"))
-              )
+              (VarE "var_0")
               (ListE
                 (CaseE
                   (Seq (Atom CONST) Arg Arg)
@@ -25889,6 +31655,7 @@
         )
       )
     )
+    (RulePr "wf_funcinst" (Seq Arg) (TupE (VarE "fi")))
     (RulePr
       "wf_funcinst"
       (Seq Arg)
@@ -25920,46 +31687,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocfunc_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocfunc_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "moduleinst" (VarT "moduleinst"))
-    (typbind "func" (VarT "func"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "funcaddr")))
-    )
-  )
-  (RuleD
-    "allocfunc_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "moduleinst" (VarT "moduleinst"))
-    (ExpP "func" (VarT "func"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "funcaddr")))
-    )
-    (ExpP
-      "var_0"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "funcaddr")))
-    )
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "moduleinst") (VarE "func") (VarE "ret_val"))
-    (RulePr
-      "fun_allocfunc"
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "moduleinst") (VarE "func") (VarE "var_0"))
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-    (RulePr "wf_func" (Seq Arg) (TupE (VarE "func")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -25996,6 +31723,13 @@
       (ExpP "s_2" (VarT "store"))
       (ExpP "fa'*" (IterT (VarT "funcaddr") List))
       (ExpP
+        "var_2"
+        (TupT
+          (typbind "_" (VarT "store"))
+          (typbind "_" (IterT (VarT "funcaddr") List))
+        )
+      )
+      (ExpP
         "var_1"
         (TupT
           (typbind "_" (VarT "store"))
@@ -26028,6 +31762,16 @@
         (TupE
           (VarE "s_1")
           (VarE "moduleinst")
+          (IterE (VarE "func'#3") List (iterexp "func'#3" (VarE "func'*")))
+          (VarE "var_2")
+        )
+      )
+      (RulePr
+        "fun_allocfuncs"
+        (Seq Arg Arg Arg Arg)
+        (TupE
+          (VarE "s_1")
+          (VarE "moduleinst")
           (IterE (VarE "func'#2") List (iterexp "func'#2" (VarE "func'*")))
           (VarE "var_1")
         )
@@ -26049,61 +31793,8 @@
           (VarE "var_1")
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "allocfuncs_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "allocfuncs_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "moduleinst" (VarT "moduleinst"))
-      (typbind "var_0*" (IterT (VarT "func") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "funcaddr") List))
-        )
-      )
-    )
-    (RuleD
-      "allocfuncs_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "moduleinst" (VarT "moduleinst"))
-      (ExpP "var_0*" (IterT (VarT "func") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "funcaddr") List))
-        )
-      )
-      (ExpP
-        "var_0"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "funcaddr") List))
-        )
-      )
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "moduleinst") (VarE "var_0*") (VarE "ret_val"))
-      (RulePr
-        "fun_allocfuncs"
-        (Seq Arg Arg Arg Arg)
-        (TupE (VarE "store") (VarE "moduleinst") (VarE "var_0*") (VarE "var_0"))
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-      (IterPr
-        (RulePr "wf_func" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_0") 0)))
+      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_2") 0)))
     )
   )
 )
@@ -26146,6 +31837,7 @@
         )
       )
     )
+    (RulePr "wf_globalinst" (Seq Arg) (TupE (VarE "gi")))
     (RulePr
       "wf_globalinst"
       (Seq Arg)
@@ -26156,45 +31848,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocglobal_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocglobal_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "globaltype" (VarT "globaltype"))
-    (typbind "val" (VarT "val"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "globaladdr")))
-    )
-  )
-  (RuleD
-    "allocglobal_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "globaltype" (VarT "globaltype"))
-    (ExpP "val" (VarT "val"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "globaladdr")))
-    )
-    (ExpP
-      "var_0"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "globaladdr")))
-    )
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "globaltype") (VarE "val") (VarE "ret_val"))
-    (RulePr
-      "fun_allocglobal"
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "globaltype") (VarE "val") (VarE "var_0"))
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_val" (Seq Arg) (TupE (VarE "val")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -26230,6 +31883,13 @@
       (ExpP "s_1" (VarT "store"))
       (ExpP "s_2" (VarT "store"))
       (ExpP "ga'*" (IterT (VarT "globaladdr") List))
+      (ExpP
+        "var_2"
+        (TupT
+          (typbind "_" (VarT "store"))
+          (typbind "_" (IterT (VarT "globaladdr") List))
+        )
+      )
       (ExpP
         "var_1"
         (TupT
@@ -26270,6 +31930,20 @@
         (TupE
           (VarE "s_1")
           (IterE
+            (VarE "globaltype'#3")
+            List
+            (iterexp "globaltype'#3" (VarE "globaltype'*"))
+          )
+          (IterE (VarE "val'#3") List (iterexp "val'#3" (VarE "val'*")))
+          (VarE "var_2")
+        )
+      )
+      (RulePr
+        "fun_allocglobals"
+        (Seq Arg Arg Arg Arg)
+        (TupE
+          (VarE "s_1")
+          (IterE
             (VarE "globaltype'#2")
             List
             (iterexp "globaltype'#2" (VarE "globaltype'*"))
@@ -26295,60 +31969,8 @@
           (VarE "var_1")
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "allocglobals_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "allocglobals_is_wf"
-    (Seq Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "globaltype") List))
-      (typbind "var_1*" (IterT (VarT "val") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "globaladdr") List))
-        )
-      )
-    )
-    (RuleD
-      "allocglobals_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "globaltype") List))
-      (ExpP "var_1*" (IterT (VarT "val") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "globaladdr") List))
-        )
-      )
-      (ExpP
-        "var_0"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "globaladdr") List))
-        )
-      )
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "var_1*") (VarE "ret_val"))
-      (RulePr
-        "fun_allocglobals"
-        (Seq Arg Arg Arg Arg)
-        (TupE (VarE "store") (VarE "var_0*") (VarE "var_1*") (VarE "var_0"))
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_val" (Seq Arg) (TupE (VarE "var_1")))
-        List
-        (iterexp "var_1" (VarE "var_1*"))
-      )
-      (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_0") 0)))
+      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_2") 0)))
     )
   )
 )
@@ -26407,6 +32029,7 @@
         )
       )
     )
+    (RulePr "wf_tableinst" (Seq Arg) (TupE (VarE "ti")))
     (RulePr
       "wf_tableinst"
       (Seq Arg)
@@ -26432,43 +32055,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "alloctable_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "alloctable_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "tabletype" (VarT "tabletype"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "tableaddr")))
-    )
-  )
-  (RuleD
-    "alloctable_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "tabletype" (VarT "tabletype"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "tableaddr")))
-    )
-    (ExpP
-      "var_0"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "tableaddr")))
-    )
-    (Seq Arg Arg Arg)
-    (TupE (VarE "store") (VarE "tabletype") (VarE "ret_val"))
-    (RulePr
-      "fun_alloctable"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "store") (VarE "tabletype") (VarE "var_0"))
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_limits" (Seq Arg) (TupE (VarE "tabletype")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
   )
 )
 (RecD
@@ -26501,6 +32087,13 @@
       (ExpP "s_1" (VarT "store"))
       (ExpP "s_2" (VarT "store"))
       (ExpP "ta'*" (IterT (VarT "tableaddr") List))
+      (ExpP
+        "var_2"
+        (TupT
+          (typbind "_" (VarT "store"))
+          (typbind "_" (IterT (VarT "tableaddr") List))
+        )
+      )
       (ExpP
         "var_1"
         (TupT
@@ -26537,6 +32130,19 @@
         (TupE
           (VarE "s_1")
           (IterE
+            (VarE "tabletype'#3")
+            List
+            (iterexp "tabletype'#3" (VarE "tabletype'*"))
+          )
+          (VarE "var_2")
+        )
+      )
+      (RulePr
+        "fun_alloctables"
+        (Seq Arg Arg Arg)
+        (TupE
+          (VarE "s_1")
+          (IterE
             (VarE "tabletype'#2")
             List
             (iterexp "tabletype'#2" (VarE "tabletype'*"))
@@ -26561,58 +32167,8 @@
           (VarE "var_1")
         )
       )
-    )
-  )
-)
-(RecD
-  (HintD (RelH "alloctables_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "alloctables_is_wf"
-    (Seq Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "tabletype") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "tableaddr") List))
-        )
-      )
-    )
-    (RuleD
-      "alloctables_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "tabletype") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "tableaddr") List))
-        )
-      )
-      (ExpP
-        "var_0"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "tableaddr") List))
-        )
-      )
-      (Seq Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "ret_val"))
-      (RulePr
-        "fun_alloctables"
-        (Seq Arg Arg Arg)
-        (TupE (VarE "store") (VarE "var_0*") (VarE "var_0"))
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_limits" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
+      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_0") 0)))
+      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_2") 0)))
     )
   )
 )
@@ -26678,6 +32234,7 @@
         )
       )
     )
+    (RulePr "wf_meminst" (Seq Arg) (TupE (VarE "mi")))
     (RulePr
       "wf_meminst"
       (Seq Arg)
@@ -26712,43 +32269,6 @@
     )
   )
 )
-(HintD (RelH "allocmem_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocmem_is_wf"
-  (Seq Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "memtype" (VarT "memtype"))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "memaddr")))
-    )
-  )
-  (RuleD
-    "allocmem_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "memtype" (VarT "memtype"))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "memaddr")))
-    )
-    (ExpP
-      "var_0"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "memaddr")))
-    )
-    (Seq Arg Arg Arg)
-    (TupE (VarE "store") (VarE "memtype") (VarE "ret_val"))
-    (RulePr
-      "fun_allocmem"
-      (Seq Arg Arg Arg)
-      (TupE (VarE "store") (VarE "memtype") (VarE "var_0"))
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_limits" (Seq Arg) (TupE (VarE "memtype")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
-  )
-)
 (RecD
   (RelD
     "fun_allocmems"
@@ -26779,6 +32299,13 @@
       (ExpP "s_1" (VarT "store"))
       (ExpP "s_2" (VarT "store"))
       (ExpP "ma'*" (IterT (VarT "memaddr") List))
+      (ExpP
+        "var_2"
+        (TupT
+          (typbind "_" (VarT "store"))
+          (typbind "_" (IterT (VarT "memaddr") List))
+        )
+      )
       (ExpP
         "var_1"
         (TupT
@@ -26815,6 +32342,19 @@
         (TupE
           (VarE "s_1")
           (IterE
+            (VarE "memtype'#3")
+            List
+            (iterexp "memtype'#3" (VarE "memtype'*"))
+          )
+          (VarE "var_2")
+        )
+      )
+      (RulePr
+        "fun_allocmems"
+        (Seq Arg Arg Arg)
+        (TupE
+          (VarE "s_1")
+          (IterE
             (VarE "memtype'#2")
             List
             (iterexp "memtype'#2" (VarE "memtype'*"))
@@ -26839,248 +32379,309 @@
           (VarE "var_1")
         )
       )
+      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_0") 0)))
+      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_2") 0)))
     )
   )
 )
-(RecD
-  (HintD (RelH "allocmems_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "allocmems_is_wf"
-    (Seq Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "var_0*" (IterT (VarT "memtype") List))
-      (typbind
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "memaddr") List))
-        )
-      )
-    )
-    (RuleD
-      "allocmems_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "var_0*" (IterT (VarT "memtype") List))
-      (ExpP
-        "ret_val"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "memaddr") List))
-        )
-      )
-      (ExpP
-        "var_0"
-        (TupT
-          (typbind "_" (VarT "store"))
-          (typbind "_" (IterT (VarT "memaddr") List))
-        )
-      )
-      (Seq Arg Arg Arg)
-      (TupE (VarE "store") (VarE "var_0*") (VarE "ret_val"))
-      (RulePr
-        "fun_allocmems"
-        (Seq Arg Arg Arg)
-        (TupE (VarE "store") (VarE "var_0*") (VarE "var_0"))
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (IterPr
-        (RulePr "wf_limits" (Seq Arg) (TupE (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-      (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
-    )
+(RelD
+  "fun_instexport"
+  (Seq Arg Arg Arg Arg Arg Arg)
+  (TupT
+    (typbind "_" (IterT (VarT "funcaddr") List))
+    (typbind "_" (IterT (VarT "globaladdr") List))
+    (typbind "_" (IterT (VarT "tableaddr") List))
+    (typbind "_" (IterT (VarT "memaddr") List))
+    (typbind "_" (VarT "export"))
+    (typbind "_" (VarT "exportinst"))
   )
-)
-(DecD
-  "instexport"
-  (ExpP "_" (IterT (VarT "funcaddr") List))
-  (ExpP "_" (IterT (VarT "globaladdr") List))
-  (ExpP "_" (IterT (VarT "tableaddr") List))
-  (ExpP "_" (IterT (VarT "memaddr") List))
-  (ExpP "export" (VarT "export"))
-  (VarT "exportinst")
-  (DefD
+  (RuleD
+    "fun_instexport_case_0"
     (ExpP "fa*" (IterT (VarT "funcaddr") List))
     (ExpP "ga*" (IterT (VarT "globaladdr") List))
     (ExpP "ta*" (IterT (VarT "tableaddr") List))
     (ExpP "ma*" (IterT (VarT "memaddr") List))
     (ExpP "name" (VarT "name"))
     (ExpP "x" (VarT "uN"))
-    (ExpA (IterE (VarE "fa#1") List (iterexp "fa#1" (VarE "fa*"))))
-    (ExpA (IterE (VarE "ga#1") List (iterexp "ga#1" (VarE "ga*"))))
-    (ExpA (IterE (VarE "ta#1") List (iterexp "ta#1" (VarE "ta*"))))
-    (ExpA (IterE (VarE "ma#1") List (iterexp "ma#1" (VarE "ma*"))))
-    (ExpA
+    (Seq Arg Arg Arg Arg Arg Arg)
+    (TupE
+      (IterE (VarE "fa#1") List (iterexp "fa#1" (VarE "fa*")))
+      (IterE (VarE "ga#1") List (iterexp "ga#1" (VarE "ga*")))
+      (IterE (VarE "ta#1") List (iterexp "ta#1" (VarE "ta*")))
+      (IterE (VarE "ma#1") List (iterexp "ma#1" (VarE "ma*")))
       (CaseE
         (Seq (Atom EXPORT) Arg Arg)
         (TupE (VarE "name") (CaseE (Seq (Atom FUNC) Arg) (TupE (VarE "x"))))
       )
+      (StrE
+        (expfield (Atom NAME) (VarE "name"))
+        (expfield
+          (Atom ADDR)
+          (CaseE
+            (Seq (Atom FUNC) Arg)
+            (TupE
+              (IdxE
+                (IterE (VarE "fa") List (iterexp "fa" (VarE "fa*")))
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+              )
+            )
+          )
+        )
+      )
     )
-    (StrE
-      (expfield (Atom NAME) (VarE "name"))
-      (expfield
-        (Atom ADDR)
-        (CaseE
-          (Seq (Atom FUNC) Arg)
-          (TupE
-            (IdxE
-              (IterE (VarE "fa") List (iterexp "fa" (VarE "fa*")))
-              (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (IterE (VarE "fa") List (iterexp "fa" (VarE "fa*"))))
+      )
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (IterE (VarE "fa#2") List (iterexp "fa#2" (VarE "fa*"))))
+      )
+    )
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom FUNC) Arg)
+              (TupE
+                (IdxE
+                  (IterE (VarE "fa#2") List (iterexp "fa#2" (VarE "fa*")))
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                )
+              )
             )
           )
         )
       )
     )
   )
-  (DefD
+  (RuleD
+    "fun_instexport_case_1"
     (ExpP "fa*" (IterT (VarT "funcaddr") List))
     (ExpP "ga*" (IterT (VarT "globaladdr") List))
     (ExpP "ta*" (IterT (VarT "tableaddr") List))
     (ExpP "ma*" (IterT (VarT "memaddr") List))
     (ExpP "name" (VarT "name"))
     (ExpP "x" (VarT "uN"))
-    (ExpA (IterE (VarE "fa#2") List (iterexp "fa#2" (VarE "fa*"))))
-    (ExpA (IterE (VarE "ga#2") List (iterexp "ga#2" (VarE "ga*"))))
-    (ExpA (IterE (VarE "ta#2") List (iterexp "ta#2" (VarE "ta*"))))
-    (ExpA (IterE (VarE "ma#2") List (iterexp "ma#2" (VarE "ma*"))))
-    (ExpA
+    (Seq Arg Arg Arg Arg Arg Arg)
+    (TupE
+      (IterE (VarE "fa#3") List (iterexp "fa#3" (VarE "fa*")))
+      (IterE (VarE "ga#2") List (iterexp "ga#2" (VarE "ga*")))
+      (IterE (VarE "ta#2") List (iterexp "ta#2" (VarE "ta*")))
+      (IterE (VarE "ma#2") List (iterexp "ma#2" (VarE "ma*")))
       (CaseE
         (Seq (Atom EXPORT) Arg Arg)
         (TupE (VarE "name") (CaseE (Seq (Atom GLOBAL) Arg) (TupE (VarE "x"))))
       )
+      (StrE
+        (expfield (Atom NAME) (VarE "name"))
+        (expfield
+          (Atom ADDR)
+          (CaseE
+            (Seq (Atom GLOBAL) Arg)
+            (TupE
+              (IdxE
+                (IterE (VarE "ga") List (iterexp "ga" (VarE "ga*")))
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+              )
+            )
+          )
+        )
+      )
     )
-    (StrE
-      (expfield (Atom NAME) (VarE "name"))
-      (expfield
-        (Atom ADDR)
-        (CaseE
-          (Seq (Atom GLOBAL) Arg)
-          (TupE
-            (IdxE
-              (IterE (VarE "ga") List (iterexp "ga" (VarE "ga*")))
-              (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (IterE (VarE "ga") List (iterexp "ga" (VarE "ga*"))))
+      )
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (IterE (VarE "ga#3") List (iterexp "ga#3" (VarE "ga*"))))
+      )
+    )
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom GLOBAL) Arg)
+              (TupE
+                (IdxE
+                  (IterE (VarE "ga#3") List (iterexp "ga#3" (VarE "ga*")))
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                )
+              )
             )
           )
         )
       )
     )
   )
-  (DefD
+  (RuleD
+    "fun_instexport_case_2"
     (ExpP "fa*" (IterT (VarT "funcaddr") List))
     (ExpP "ga*" (IterT (VarT "globaladdr") List))
     (ExpP "ta*" (IterT (VarT "tableaddr") List))
     (ExpP "ma*" (IterT (VarT "memaddr") List))
     (ExpP "name" (VarT "name"))
     (ExpP "x" (VarT "uN"))
-    (ExpA (IterE (VarE "fa#3") List (iterexp "fa#3" (VarE "fa*"))))
-    (ExpA (IterE (VarE "ga#3") List (iterexp "ga#3" (VarE "ga*"))))
-    (ExpA (IterE (VarE "ta#3") List (iterexp "ta#3" (VarE "ta*"))))
-    (ExpA (IterE (VarE "ma#3") List (iterexp "ma#3" (VarE "ma*"))))
-    (ExpA
+    (Seq Arg Arg Arg Arg Arg Arg)
+    (TupE
+      (IterE (VarE "fa#4") List (iterexp "fa#4" (VarE "fa*")))
+      (IterE (VarE "ga#4") List (iterexp "ga#4" (VarE "ga*")))
+      (IterE (VarE "ta#3") List (iterexp "ta#3" (VarE "ta*")))
+      (IterE (VarE "ma#3") List (iterexp "ma#3" (VarE "ma*")))
       (CaseE
         (Seq (Atom EXPORT) Arg Arg)
         (TupE (VarE "name") (CaseE (Seq (Atom TABLE) Arg) (TupE (VarE "x"))))
       )
+      (StrE
+        (expfield (Atom NAME) (VarE "name"))
+        (expfield
+          (Atom ADDR)
+          (CaseE
+            (Seq (Atom TABLE) Arg)
+            (TupE
+              (IdxE
+                (IterE (VarE "ta") List (iterexp "ta" (VarE "ta*")))
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+              )
+            )
+          )
+        )
+      )
     )
-    (StrE
-      (expfield (Atom NAME) (VarE "name"))
-      (expfield
-        (Atom ADDR)
-        (CaseE
-          (Seq (Atom TABLE) Arg)
-          (TupE
-            (IdxE
-              (IterE (VarE "ta") List (iterexp "ta" (VarE "ta*")))
-              (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (IterE (VarE "ta") List (iterexp "ta" (VarE "ta*"))))
+      )
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (IterE (VarE "ta#4") List (iterexp "ta#4" (VarE "ta*"))))
+      )
+    )
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom TABLE) Arg)
+              (TupE
+                (IdxE
+                  (IterE (VarE "ta#4") List (iterexp "ta#4" (VarE "ta*")))
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                )
+              )
             )
           )
         )
       )
     )
   )
-  (DefD
+  (RuleD
+    "fun_instexport_case_3"
     (ExpP "fa*" (IterT (VarT "funcaddr") List))
     (ExpP "ga*" (IterT (VarT "globaladdr") List))
     (ExpP "ta*" (IterT (VarT "tableaddr") List))
     (ExpP "ma*" (IterT (VarT "memaddr") List))
     (ExpP "name" (VarT "name"))
     (ExpP "x" (VarT "uN"))
-    (ExpA (IterE (VarE "fa#4") List (iterexp "fa#4" (VarE "fa*"))))
-    (ExpA (IterE (VarE "ga#4") List (iterexp "ga#4" (VarE "ga*"))))
-    (ExpA (IterE (VarE "ta#4") List (iterexp "ta#4" (VarE "ta*"))))
-    (ExpA (IterE (VarE "ma#4") List (iterexp "ma#4" (VarE "ma*"))))
-    (ExpA
+    (Seq Arg Arg Arg Arg Arg Arg)
+    (TupE
+      (IterE (VarE "fa#5") List (iterexp "fa#5" (VarE "fa*")))
+      (IterE (VarE "ga#5") List (iterexp "ga#5" (VarE "ga*")))
+      (IterE (VarE "ta#5") List (iterexp "ta#5" (VarE "ta*")))
+      (IterE (VarE "ma#4") List (iterexp "ma#4" (VarE "ma*")))
       (CaseE
         (Seq (Atom EXPORT) Arg Arg)
         (TupE (VarE "name") (CaseE (Seq (Atom MEM) Arg) (TupE (VarE "x"))))
       )
-    )
-    (StrE
-      (expfield (Atom NAME) (VarE "name"))
-      (expfield
-        (Atom ADDR)
-        (CaseE
-          (Seq (Atom MEM) Arg)
-          (TupE
-            (IdxE
-              (IterE (VarE "ma") List (iterexp "ma" (VarE "ma*")))
-              (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+      (StrE
+        (expfield (Atom NAME) (VarE "name"))
+        (expfield
+          (Atom ADDR)
+          (CaseE
+            (Seq (Atom MEM) Arg)
+            (TupE
+              (IdxE
+                (IterE (VarE "ma") List (iterexp "ma" (VarE "ma*")))
+                (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+              )
             )
           )
         )
       )
     )
-  )
-)
-(HintD (RelH "instexport_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "instexport_is_wf"
-  (Seq Arg Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "var_0*" (IterT (VarT "funcaddr") List))
-    (typbind "var_1*" (IterT (VarT "globaladdr") List))
-    (typbind "var_2*" (IterT (VarT "tableaddr") List))
-    (typbind "var_3*" (IterT (VarT "memaddr") List))
-    (typbind "export" (VarT "export"))
-    (typbind "ret_val" (VarT "exportinst"))
-  )
-  (RuleD
-    "instexport_is_wf_0"
-    (ExpP "var_0*" (IterT (VarT "funcaddr") List))
-    (ExpP "var_1*" (IterT (VarT "globaladdr") List))
-    (ExpP "var_2*" (IterT (VarT "tableaddr") List))
-    (ExpP "var_3*" (IterT (VarT "memaddr") List))
-    (ExpP "export" (VarT "export"))
-    (ExpP "ret_val" (VarT "exportinst"))
-    (Seq Arg Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "var_0*")
-      (VarE "var_1*")
-      (VarE "var_2*")
-      (VarE "var_3*")
-      (VarE "export")
-      (VarE "ret_val")
-    )
-    (RulePr "wf_export" (Seq Arg) (TupE (VarE "export")))
     (IfPr
       (CmpE
-        EqOp
-        bool
-        (VarE "ret_val")
-        (CallE
-          "instexport"
-          (ExpA (VarE "var_0*"))
-          (ExpA (VarE "var_1*"))
-          (ExpA (VarE "var_2*"))
-          (ExpA (VarE "var_3*"))
-          (ExpA (VarE "export"))
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (IterE (VarE "ma") List (iterexp "ma" (VarE "ma*"))))
+      )
+    )
+    (IfPr
+      (CmpE
+        LtOp
+        nat
+        (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+        (LenE (IterE (VarE "ma#5") List (iterexp "ma#5" (VarE "ma*"))))
+      )
+    )
+    (RulePr
+      "wf_exportinst"
+      (Seq Arg)
+      (TupE
+        (StrE
+          (expfield (Atom NAME) (VarE "name"))
+          (expfield
+            (Atom ADDR)
+            (CaseE
+              (Seq (Atom MEM) Arg)
+              (TupE
+                (IdxE
+                  (IterE (VarE "ma#5") List (iterexp "ma#5" (VarE "ma*")))
+                  (ProjE (CallE "proj_uN_0" (ExpA (VarE "x"))) 0)
+                )
+              )
+            )
+          )
         )
       )
     )
-    (RulePr "wf_exportinst" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (RelD
@@ -27132,33 +32733,63 @@
     (ExpP "ma*" (IterT (VarT "memaddr") List))
     (ExpP "xi*" (IterT (VarT "exportinst") List))
     (ExpP
-      "var_7"
+      "var_13"
       (TupT
         (typbind "_" (VarT "store"))
         (typbind "_" (IterT (VarT "memaddr") List))
       )
     )
     (ExpP
-      "var_6"
+      "var_12"
       (TupT
         (typbind "_" (VarT "store"))
         (typbind "_" (IterT (VarT "tableaddr") List))
       )
     )
     (ExpP
-      "var_5"
+      "var_11"
       (TupT
         (typbind "_" (VarT "store"))
         (typbind "_" (IterT (VarT "globaladdr") List))
       )
     )
     (ExpP
-      "var_4"
+      "var_10"
       (TupT
         (typbind "_" (VarT "store"))
         (typbind "_" (IterT (VarT "funcaddr") List))
       )
     )
+    (ExpP "var_9*" (IterT (VarT "exportinst") List))
+    (ExpP
+      "var_8"
+      (TupT
+        (typbind "_" (VarT "store"))
+        (typbind "_" (IterT (VarT "memaddr") List))
+      )
+    )
+    (ExpP
+      "var_7"
+      (TupT
+        (typbind "_" (VarT "store"))
+        (typbind "_" (IterT (VarT "tableaddr") List))
+      )
+    )
+    (ExpP
+      "var_6"
+      (TupT
+        (typbind "_" (VarT "store"))
+        (typbind "_" (IterT (VarT "globaladdr") List))
+      )
+    )
+    (ExpP
+      "var_5"
+      (TupT
+        (typbind "_" (VarT "store"))
+        (typbind "_" (IterT (VarT "funcaddr") List))
+      )
+    )
+    (ExpP "var_4*" (IterT (VarT "exportinst") List))
     (ExpP "var_3" (IterT (VarT "memaddr") List))
     (ExpP "var_2" (IterT (VarT "tableaddr") List))
     (ExpP "var_1" (IterT (VarT "globaladdr") List))
@@ -27181,11 +32812,95 @@
       (TupE
         (VarE "s_3")
         (IterE
+          (VarE "memtype#296")
+          (ListN (VarE "n_mem"))
+          (iterexp "memtype#296" (VarE "memtype*"))
+        )
+        (VarE "var_13")
+      )
+    )
+    (RulePr
+      "fun_alloctables"
+      (Seq Arg Arg Arg)
+      (TupE
+        (VarE "s_2")
+        (IterE
+          (VarE "tabletype#244")
+          (ListN (VarE "n_table"))
+          (iterexp "tabletype#244" (VarE "tabletype*"))
+        )
+        (VarE "var_12")
+      )
+    )
+    (RulePr
+      "fun_allocglobals"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (VarE "s_1")
+        (IterE
+          (VarE "globaltype#198")
+          (ListN (VarE "n_global"))
+          (iterexp "globaltype#198" (VarE "globaltype*"))
+        )
+        (IterE (VarE "val#3") List (iterexp "val#3" (VarE "val*")))
+        (VarE "var_11")
+      )
+    )
+    (RulePr
+      "fun_allocfuncs"
+      (Seq Arg Arg Arg Arg)
+      (TupE
+        (VarE "s")
+        (VarE "moduleinst")
+        (IterE
+          (VarE "func#3")
+          (ListN (VarE "n_func"))
+          (iterexp "func#3" (VarE "func*"))
+        )
+        (VarE "var_10")
+      )
+    )
+    (IfPr (CmpE EqOp bool (LenE (VarE "var_9*")) (LenE (VarE "export*"))))
+    (IterPr
+      (RulePr
+        "fun_instexport"
+        (Seq Arg Arg Arg Arg Arg Arg)
+        (TupE
+          (CatE
+            (IterE (VarE "fa_ex#4") List (iterexp "fa_ex#4" (VarE "fa_ex*")))
+            (IterE (VarE "fa#10") List (iterexp "fa#10" (VarE "fa*")))
+          )
+          (CatE
+            (IterE (VarE "ga_ex#4") List (iterexp "ga_ex#4" (VarE "ga_ex*")))
+            (IterE (VarE "ga#10") List (iterexp "ga#10" (VarE "ga*")))
+          )
+          (CatE
+            (IterE (VarE "ta_ex#4") List (iterexp "ta_ex#4" (VarE "ta_ex*")))
+            (IterE (VarE "ta#10") List (iterexp "ta#10" (VarE "ta*")))
+          )
+          (CatE
+            (IterE (VarE "ma_ex#4") List (iterexp "ma_ex#4" (VarE "ma_ex*")))
+            (IterE (VarE "ma#10") List (iterexp "ma#10" (VarE "ma*")))
+          )
+          (VarE "export#3")
+          (VarE "var_9")
+        )
+      )
+      List
+      (iterexp "var_9" (VarE "var_9*"))
+      (iterexp "export#3" (VarE "export*"))
+    )
+    (RulePr
+      "fun_allocmems"
+      (Seq Arg Arg Arg)
+      (TupE
+        (VarE "s_3")
+        (IterE
           (VarE "memtype#295")
           (ListN (VarE "n_mem"))
           (iterexp "memtype#295" (VarE "memtype*"))
         )
-        (VarE "var_7")
+        (VarE "var_8")
       )
     )
     (RulePr
@@ -27198,7 +32913,7 @@
           (ListN (VarE "n_table"))
           (iterexp "tabletype#243" (VarE "tabletype*"))
         )
-        (VarE "var_6")
+        (VarE "var_7")
       )
     )
     (RulePr
@@ -27212,7 +32927,7 @@
           (iterexp "globaltype#197" (VarE "globaltype*"))
         )
         (IterE (VarE "val#2") List (iterexp "val#2" (VarE "val*")))
-        (VarE "var_5")
+        (VarE "var_6")
       )
     )
     (RulePr
@@ -27226,8 +32941,38 @@
           (ListN (VarE "n_func"))
           (iterexp "func#2" (VarE "func*"))
         )
-        (VarE "var_4")
+        (VarE "var_5")
       )
+    )
+    (IfPr (CmpE EqOp bool (LenE (VarE "var_4*")) (LenE (VarE "export*"))))
+    (IterPr
+      (RulePr
+        "fun_instexport"
+        (Seq Arg Arg Arg Arg Arg Arg)
+        (TupE
+          (CatE
+            (IterE (VarE "fa_ex#2") List (iterexp "fa_ex#2" (VarE "fa_ex*")))
+            (IterE (VarE "fa#7") List (iterexp "fa#7" (VarE "fa*")))
+          )
+          (CatE
+            (IterE (VarE "ga_ex#2") List (iterexp "ga_ex#2" (VarE "ga_ex*")))
+            (IterE (VarE "ga#7") List (iterexp "ga#7" (VarE "ga*")))
+          )
+          (CatE
+            (IterE (VarE "ta_ex#2") List (iterexp "ta_ex#2" (VarE "ta_ex*")))
+            (IterE (VarE "ta#7") List (iterexp "ta#7" (VarE "ta*")))
+          )
+          (CatE
+            (IterE (VarE "ma_ex#2") List (iterexp "ma_ex#2" (VarE "ma_ex*")))
+            (IterE (VarE "ma#7") List (iterexp "ma#7" (VarE "ma*")))
+          )
+          (VarE "export#2")
+          (VarE "var_4")
+        )
+      )
+      List
+      (iterexp "var_4" (VarE "var_4*"))
+      (iterexp "export#2" (VarE "export*"))
     )
     (RulePr
       "fun_mems"
@@ -27359,7 +33104,7 @@
       (CmpE
         EqOp
         bool
-        (IterE (VarE "fa#5") List (iterexp "fa#5" (VarE "fa*")))
+        (IterE (VarE "fa#6") List (iterexp "fa#6" (VarE "fa*")))
         (IterE
           (BinE
             AddOp
@@ -27375,7 +33120,7 @@
       (CmpE
         EqOp
         bool
-        (IterE (VarE "ga#5") List (iterexp "ga#5" (VarE "ga*")))
+        (IterE (VarE "ga#6") List (iterexp "ga#6" (VarE "ga*")))
         (IterE
           (BinE
             AddOp
@@ -27391,7 +33136,7 @@
       (CmpE
         EqOp
         bool
-        (IterE (VarE "ta#5") List (iterexp "ta#5" (VarE "ta*")))
+        (IterE (VarE "ta#6") List (iterexp "ta#6" (VarE "ta*")))
         (IterE
           (BinE
             AddOp
@@ -27407,7 +33152,7 @@
       (CmpE
         EqOp
         bool
-        (IterE (VarE "ma#5") List (iterexp "ma#5" (VarE "ma*")))
+        (IterE (VarE "ma#6") List (iterexp "ma#6" (VarE "ma*")))
         (IterE
           (BinE AddOp nat (LenE (DotE (VarE "s") (Atom MEMS))) (VarE "i_mem#1"))
           (ListN (VarE "n_mem") "i_mem#1")
@@ -27419,54 +33164,7 @@
         EqOp
         bool
         (IterE (VarE "xi#1") List (iterexp "xi#1" (VarE "xi*")))
-        (IterE
-          (CallE
-            "instexport"
-            (ExpA
-              (CatE
-                (IterE
-                  (VarE "fa_ex#2")
-                  List
-                  (iterexp "fa_ex#2" (VarE "fa_ex*"))
-                )
-                (IterE (VarE "fa#6") List (iterexp "fa#6" (VarE "fa*")))
-              )
-            )
-            (ExpA
-              (CatE
-                (IterE
-                  (VarE "ga_ex#2")
-                  List
-                  (iterexp "ga_ex#2" (VarE "ga_ex*"))
-                )
-                (IterE (VarE "ga#6") List (iterexp "ga#6" (VarE "ga*")))
-              )
-            )
-            (ExpA
-              (CatE
-                (IterE
-                  (VarE "ta_ex#2")
-                  List
-                  (iterexp "ta_ex#2" (VarE "ta_ex*"))
-                )
-                (IterE (VarE "ta#6") List (iterexp "ta#6" (VarE "ta*")))
-              )
-            )
-            (ExpA
-              (CatE
-                (IterE
-                  (VarE "ma_ex#2")
-                  List
-                  (iterexp "ma_ex#2" (VarE "ma_ex*"))
-                )
-                (IterE (VarE "ma#6") List (iterexp "ma#6" (VarE "ma*")))
-              )
-            )
-            (ExpA (VarE "export#2"))
-          )
-          List
-          (iterexp "export#2" (VarE "export*"))
-        )
+        (IterE (VarE "var_4") List (iterexp "var_4" (VarE "var_4*")))
       )
     )
     (IfPr
@@ -27483,28 +33181,28 @@
             (Atom FUNCS)
             (CatE
               (IterE (VarE "fa_ex#3") List (iterexp "fa_ex#3" (VarE "fa_ex*")))
-              (IterE (VarE "fa#7") List (iterexp "fa#7" (VarE "fa*")))
+              (IterE (VarE "fa#8") List (iterexp "fa#8" (VarE "fa*")))
             )
           )
           (expfield
             (Atom GLOBALS)
             (CatE
               (IterE (VarE "ga_ex#3") List (iterexp "ga_ex#3" (VarE "ga_ex*")))
-              (IterE (VarE "ga#7") List (iterexp "ga#7" (VarE "ga*")))
+              (IterE (VarE "ga#8") List (iterexp "ga#8" (VarE "ga*")))
             )
           )
           (expfield
             (Atom TABLES)
             (CatE
               (IterE (VarE "ta_ex#3") List (iterexp "ta_ex#3" (VarE "ta_ex*")))
-              (IterE (VarE "ta#7") List (iterexp "ta#7" (VarE "ta*")))
+              (IterE (VarE "ta#8") List (iterexp "ta#8" (VarE "ta*")))
             )
           )
           (expfield
             (Atom MEMS)
             (CatE
               (IterE (VarE "ma_ex#3") List (iterexp "ma_ex#3" (VarE "ma_ex*")))
-              (IterE (VarE "ma#7") List (iterexp "ma#7" (VarE "ma*")))
+              (IterE (VarE "ma#8") List (iterexp "ma#8" (VarE "ma*")))
             )
           )
           (expfield
@@ -27520,18 +33218,7 @@
         bool
         (TupE
           (VarE "s_1")
-          (IterE (VarE "fa#8") List (iterexp "fa#8" (VarE "fa*")))
-        )
-        (VarE "var_4")
-      )
-    )
-    (IfPr
-      (CmpE
-        EqOp
-        bool
-        (TupE
-          (VarE "s_2")
-          (IterE (VarE "ga#8") List (iterexp "ga#8" (VarE "ga*")))
+          (IterE (VarE "fa#9") List (iterexp "fa#9" (VarE "fa*")))
         )
         (VarE "var_5")
       )
@@ -27541,8 +33228,8 @@
         EqOp
         bool
         (TupE
-          (VarE "s_3")
-          (IterE (VarE "ta#8") List (iterexp "ta#8" (VarE "ta*")))
+          (VarE "s_2")
+          (IterE (VarE "ga#9") List (iterexp "ga#9" (VarE "ga*")))
         )
         (VarE "var_6")
       )
@@ -27552,15 +33239,37 @@
         EqOp
         bool
         (TupE
-          (VarE "s_4")
-          (IterE (VarE "ma#8") List (iterexp "ma#8" (VarE "ma*")))
+          (VarE "s_3")
+          (IterE (VarE "ta#9") List (iterexp "ta#9" (VarE "ta*")))
         )
         (VarE "var_7")
       )
     )
+    (IfPr
+      (CmpE
+        EqOp
+        bool
+        (TupE
+          (VarE "s_4")
+          (IterE (VarE "ma#9") List (iterexp "ma#9" (VarE "ma*")))
+        )
+        (VarE "var_8")
+      )
+    )
+    (RulePr "wf_store" (Seq Arg) (TupE (VarE "s_4")))
+    (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
     (RulePr "wf_store" (Seq Arg) (TupE (VarE "s_1")))
     (RulePr "wf_store" (Seq Arg) (TupE (VarE "s_2")))
     (RulePr "wf_store" (Seq Arg) (TupE (VarE "s_3")))
+    (IterPr
+      (RulePr "wf_exportinst" (Seq Arg) (TupE (VarE "var_9")))
+      List
+      (iterexp "var_9" (VarE "var_9*"))
+    )
+    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_10") 0)))
+    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_11") 0)))
+    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_12") 0)))
+    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_13") 0)))
     (RulePr
       "wf_module"
       (Seq Arg)
@@ -27575,33 +33284,33 @@
             )
             (IterE (VarE "import#2") List (iterexp "import#2" (VarE "import*")))
             (IterE
-              (VarE "func#3")
+              (VarE "func#4")
               (ListN (VarE "n_func"))
-              (iterexp "func#3" (VarE "func*"))
+              (iterexp "func#4" (VarE "func*"))
             )
             (IterE
               (CaseE
                 (Seq (Atom GLOBAL) Arg Arg)
-                (TupE (VarE "globaltype#198") (VarE "expr_1#2"))
+                (TupE (VarE "globaltype#199") (VarE "expr_1#2"))
               )
               (ListN (VarE "n_global"))
               (iterexp "expr_1#2" (VarE "expr_1*"))
-              (iterexp "globaltype#198" (VarE "globaltype*"))
+              (iterexp "globaltype#199" (VarE "globaltype*"))
             )
             (IterE
-              (CaseE (Seq (Atom TABLE) Arg) (TupE (VarE "tabletype#244")))
+              (CaseE (Seq (Atom TABLE) Arg) (TupE (VarE "tabletype#245")))
               (ListN (VarE "n_table"))
-              (iterexp "tabletype#244" (VarE "tabletype*"))
+              (iterexp "tabletype#245" (VarE "tabletype*"))
             )
             (IterE
-              (CaseE (Seq (Atom MEMORY) Arg) (TupE (VarE "memtype#296")))
+              (CaseE (Seq (Atom MEMORY) Arg) (TupE (VarE "memtype#297")))
               (ListN (VarE "n_mem"))
-              (iterexp "memtype#296" (VarE "memtype*"))
+              (iterexp "memtype#297" (VarE "memtype*"))
             )
             (IterE (VarE "elem#2") List (iterexp "elem#2" (VarE "elem*")))
             (IterE (VarE "data#2") List (iterexp "data#2" (VarE "data*")))
             (IterE (VarE "start#2") Opt (iterexp "start#2" (VarE "start?")))
-            (IterE (VarE "export#3") List (iterexp "export#3" (VarE "export*")))
+            (IterE (VarE "export#4") List (iterexp "export#4" (VarE "export*")))
           )
         )
       )
@@ -27618,29 +33327,29 @@
           (expfield
             (Atom FUNCS)
             (CatE
-              (IterE (VarE "fa_ex#4") List (iterexp "fa_ex#4" (VarE "fa_ex*")))
-              (IterE (VarE "fa#9") List (iterexp "fa#9" (VarE "fa*")))
+              (IterE (VarE "fa_ex#5") List (iterexp "fa_ex#5" (VarE "fa_ex*")))
+              (IterE (VarE "fa#11") List (iterexp "fa#11" (VarE "fa*")))
             )
           )
           (expfield
             (Atom GLOBALS)
             (CatE
-              (IterE (VarE "ga_ex#4") List (iterexp "ga_ex#4" (VarE "ga_ex*")))
-              (IterE (VarE "ga#9") List (iterexp "ga#9" (VarE "ga*")))
+              (IterE (VarE "ga_ex#5") List (iterexp "ga_ex#5" (VarE "ga_ex*")))
+              (IterE (VarE "ga#11") List (iterexp "ga#11" (VarE "ga*")))
             )
           )
           (expfield
             (Atom TABLES)
             (CatE
-              (IterE (VarE "ta_ex#4") List (iterexp "ta_ex#4" (VarE "ta_ex*")))
-              (IterE (VarE "ta#9") List (iterexp "ta#9" (VarE "ta*")))
+              (IterE (VarE "ta_ex#5") List (iterexp "ta_ex#5" (VarE "ta_ex*")))
+              (IterE (VarE "ta#11") List (iterexp "ta#11" (VarE "ta*")))
             )
           )
           (expfield
             (Atom MEMS)
             (CatE
-              (IterE (VarE "ma_ex#4") List (iterexp "ma_ex#4" (VarE "ma_ex*")))
-              (IterE (VarE "ma#9") List (iterexp "ma#9" (VarE "ma*")))
+              (IterE (VarE "ma_ex#5") List (iterexp "ma_ex#5" (VarE "ma_ex*")))
+              (IterE (VarE "ma#11") List (iterexp "ma#11" (VarE "ma*")))
             )
           )
           (expfield
@@ -27650,65 +33359,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "allocmodule_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "allocmodule_is_wf"
-  (Seq Arg Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "module" (VarT "module"))
-    (typbind "var_0*" (IterT (VarT "externaddr") List))
-    (typbind "var_1*" (IterT (VarT "val") List))
-    (typbind
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "moduleinst")))
-    )
-  )
-  (RuleD
-    "allocmodule_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "module" (VarT "module"))
-    (ExpP "var_0*" (IterT (VarT "externaddr") List))
-    (ExpP "var_1*" (IterT (VarT "val") List))
-    (ExpP
-      "ret_val"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "moduleinst")))
-    )
-    (ExpP
-      "var_0"
-      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "moduleinst")))
-    )
-    (Seq Arg Arg Arg Arg Arg)
-    (TupE
-      (VarE "store")
-      (VarE "module")
-      (VarE "var_0*")
-      (VarE "var_1*")
-      (VarE "ret_val")
-    )
-    (RulePr
-      "fun_allocmodule"
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE
-        (VarE "store")
-        (VarE "module")
-        (VarE "var_0*")
-        (VarE "var_1*")
-        (VarE "var_0")
-      )
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_module" (Seq Arg) (TupE (VarE "module")))
-    (IterPr
-      (RulePr "wf_val" (Seq Arg) (TupE (VarE "var_1")))
-      List
-      (iterexp "var_1" (VarE "var_1*"))
-    )
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "ret_val") 0)))
-    (RulePr "wf_moduleinst" (Seq Arg) (TupE (ProjE (VarE "ret_val") 1)))
   )
 )
 (RecD
@@ -27739,6 +33389,7 @@
       (ExpP "a'**" (IterT (IterT (VarT "addr") List) List))
       (ExpP "s_1" (VarT "store"))
       (ExpP "s_2" (VarT "store"))
+      (ExpP "var_1" (VarT "store"))
       (ExpP "var_0" (VarT "store"))
       (Seq Arg Arg Arg Arg Arg)
       (TupE
@@ -27757,6 +33408,21 @@
           )
         )
         (VarE "s_2")
+      )
+      (RulePr
+        "fun_initelem"
+        (Seq Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "s_1")
+          (VarE "moduleinst")
+          (IterE (VarE "i'#3") List (iterexp "i'#3" (VarE "i'*")))
+          (IterE
+            (IterE (VarE "a'#3") List (iterexp "a'#3" (VarE "a'*#3")))
+            List
+            (iterexp "a'*#3" (VarE "a'**"))
+          )
+          (VarE "var_1")
+        )
       )
       (RulePr
         "fun_initelem"
@@ -27805,57 +33471,7 @@
       )
       (IfPr (CmpE EqOp bool (VarE "s_2") (VarE "var_0")))
       (RulePr "wf_store" (Seq Arg) (TupE (VarE "s_1")))
-    )
-  )
-)
-(RecD
-  (HintD (RelH "initelem_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "initelem_is_wf"
-    (Seq Arg Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "moduleinst" (VarT "moduleinst"))
-      (typbind "var_0*" (IterT (VarT "u32") List))
-      (typbind "var_1**" (IterT (IterT (VarT "funcaddr") List) List))
-      (typbind "ret_val" (VarT "store"))
-    )
-    (RuleD
-      "initelem_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "moduleinst" (VarT "moduleinst"))
-      (ExpP "var_0*" (IterT (VarT "u32") List))
-      (ExpP "var_1**" (IterT (IterT (VarT "funcaddr") List) List))
-      (ExpP "ret_val" (VarT "store"))
-      (ExpP "var_0" (VarT "store"))
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE
-        (VarE "store")
-        (VarE "moduleinst")
-        (VarE "var_0*")
-        (VarE "var_1**")
-        (VarE "ret_val")
-      )
-      (RulePr
-        "fun_initelem"
-        (Seq Arg Arg Arg Arg Arg)
-        (TupE
-          (VarE "store")
-          (VarE "moduleinst")
-          (VarE "var_0*")
-          (VarE "var_1**")
-          (VarE "var_0")
-        )
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "ret_val")))
+      (RulePr "wf_store" (Seq Arg) (TupE (VarE "var_1")))
     )
   )
 )
@@ -27887,6 +33503,7 @@
       (ExpP "b'**" (IterT (IterT (VarT "byte") List) List))
       (ExpP "s_1" (VarT "store"))
       (ExpP "s_2" (VarT "store"))
+      (ExpP "var_1" (VarT "store"))
       (ExpP "var_0" (VarT "store"))
       (Seq Arg Arg Arg Arg Arg)
       (TupE
@@ -27894,10 +33511,10 @@
         (VarE "moduleinst")
         (CatE
           (ListE (VarE "i"))
-          (IterE (VarE "i'#3") List (iterexp "i'#3" (VarE "i'*")))
+          (IterE (VarE "i'#4") List (iterexp "i'#4" (VarE "i'*")))
         )
         (CatE
-          (ListE (IterE (VarE "b#7") List (iterexp "b#7" (VarE "b*"))))
+          (ListE (IterE (VarE "b#8") List (iterexp "b#8" (VarE "b*"))))
           (IterE
             (IterE (VarE "b'#1") List (iterexp "b'#1" (VarE "b'*#1")))
             List
@@ -27912,7 +33529,22 @@
         (TupE
           (VarE "s_1")
           (VarE "moduleinst")
-          (IterE (VarE "i'#4") List (iterexp "i'#4" (VarE "i'*")))
+          (IterE (VarE "i'#6") List (iterexp "i'#6" (VarE "i'*")))
+          (IterE
+            (IterE (VarE "b'#3") List (iterexp "b'#3" (VarE "b'*#3")))
+            List
+            (iterexp "b'*#3" (VarE "b'**"))
+          )
+          (VarE "var_1")
+        )
+      )
+      (RulePr
+        "fun_initdata"
+        (Seq Arg Arg Arg Arg Arg)
+        (TupE
+          (VarE "s_1")
+          (VarE "moduleinst")
+          (IterE (VarE "i'#5") List (iterexp "i'#5" (VarE "i'*")))
           (IterE
             (IterE (VarE "b'#2") List (iterexp "b'#2" (VarE "b'*#2")))
             List
@@ -27945,73 +33577,14 @@
                 (Atom BYTES)
               )
               (ProjE (CallE "proj_uN_0" (ExpA (VarE "i"))) 0)
-              (LenE (IterE (VarE "b#9") List (iterexp "b#9" (VarE "b*"))))
+              (LenE (IterE (VarE "b#10") List (iterexp "b#10" (VarE "b*"))))
             )
-            (IterE (VarE "b#8") List (iterexp "b#8" (VarE "b*")))
+            (IterE (VarE "b#9") List (iterexp "b#9" (VarE "b*")))
           )
         )
       )
       (IfPr (CmpE EqOp bool (VarE "s_2") (VarE "var_0")))
-    )
-  )
-)
-(RecD
-  (HintD (RelH "initdata_is_wf" (hint "wf-lemma-func" "{}")))
-  (RelD
-    "initdata_is_wf"
-    (Seq Arg Arg Arg Arg Arg)
-    (TupT
-      (typbind "store" (VarT "store"))
-      (typbind "moduleinst" (VarT "moduleinst"))
-      (typbind "var_0*" (IterT (VarT "u32") List))
-      (typbind "var_1**" (IterT (IterT (VarT "byte") List) List))
-      (typbind "ret_val" (VarT "store"))
-    )
-    (RuleD
-      "initdata_is_wf_0"
-      (ExpP "store" (VarT "store"))
-      (ExpP "moduleinst" (VarT "moduleinst"))
-      (ExpP "var_0*" (IterT (VarT "u32") List))
-      (ExpP "var_1**" (IterT (IterT (VarT "byte") List) List))
-      (ExpP "ret_val" (VarT "store"))
-      (ExpP "var_0" (VarT "store"))
-      (Seq Arg Arg Arg Arg Arg)
-      (TupE
-        (VarE "store")
-        (VarE "moduleinst")
-        (VarE "var_0*")
-        (VarE "var_1**")
-        (VarE "ret_val")
-      )
-      (RulePr
-        "fun_initdata"
-        (Seq Arg Arg Arg Arg Arg)
-        (TupE
-          (VarE "store")
-          (VarE "moduleinst")
-          (VarE "var_0*")
-          (VarE "var_1**")
-          (VarE "var_0")
-        )
-      )
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-      (RulePr "wf_moduleinst" (Seq Arg) (TupE (VarE "moduleinst")))
-      (IterPr
-        (RulePr "wf_uN" (Seq Arg Arg) (TupE (NumE (Nat 32)) (VarE "var_0")))
-        List
-        (iterexp "var_0" (VarE "var_0*"))
-      )
-      (IterPr
-        (IterPr
-          (RulePr "wf_byte" (Seq Arg) (TupE (VarE "var_1")))
-          List
-          (iterexp "var_1" (VarE "var_1*"))
-        )
-        List
-        (iterexp "var_1*" (VarE "var_1**"))
-      )
-      (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-      (RulePr "wf_store" (Seq Arg) (TupE (VarE "ret_val")))
+      (RulePr "wf_store" (Seq Arg) (TupE (VarE "var_1")))
     )
   )
 )
@@ -28059,8 +33632,18 @@
     (ExpP "moduleinst" (VarT "moduleinst"))
     (ExpP "s_2" (VarT "store"))
     (ExpP "s_3" (VarT "store"))
-    (ExpP "var_6" (IterT (VarT "globaladdr") List))
-    (ExpP "var_5" (IterT (VarT "funcaddr") List))
+    (ExpP "var_10" (IterT (VarT "globaladdr") List))
+    (ExpP "var_9" (IterT (VarT "funcaddr") List))
+    (ExpP "var_8" (VarT "store"))
+    (ExpP "var_7" (VarT "store"))
+    (ExpP
+      "var_6"
+      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "moduleinst")))
+    )
+    (ExpP
+      "var_5"
+      (TupT (typbind "_" (VarT "store")) (typbind "_" (VarT "moduleinst")))
+    )
     (ExpP "var_4" (VarT "store"))
     (ExpP "var_3" (VarT "store"))
     (ExpP
@@ -28097,11 +33680,11 @@
       (Seq Arg Arg)
       (TupE
         (IterE
-          (VarE "externaddr#11")
+          (VarE "externaddr#13")
           List
-          (iterexp "externaddr#11" (VarE "externaddr*"))
+          (iterexp "externaddr#13" (VarE "externaddr*"))
         )
-        (VarE "var_6")
+        (VarE "var_10")
       )
     )
     (RulePr
@@ -28109,10 +33692,111 @@
       (Seq Arg Arg)
       (TupE
         (IterE
+          (VarE "externaddr#12")
+          List
+          (iterexp "externaddr#12" (VarE "externaddr*"))
+        )
+        (VarE "var_9")
+      )
+    )
+    (IterPr
+      (IfPr (CmpE NeOp bool (CallE "proj_val__0" (ExpA (VarE "i_D#3"))) (OptE)))
+      List
+      (iterexp "i_D#3" (VarE "i_D*"))
+    )
+    (RulePr
+      "fun_initdata"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "s_2")
+        (VarE "moduleinst")
+        (IterE
+          (TheE (CallE "proj_val__0" (ExpA (VarE "i_D#3"))))
+          List
+          (iterexp "i_D#3" (VarE "i_D*"))
+        )
+        (IterE
+          (IterE (VarE "b#13") List (iterexp "b#13" (VarE "b*#3")))
+          List
+          (iterexp "b*#3" (VarE "b**"))
+        )
+        (VarE "var_8")
+      )
+    )
+    (IterPr
+      (IfPr (CmpE NeOp bool (CallE "proj_val__0" (ExpA (VarE "i_E#3"))) (OptE)))
+      List
+      (iterexp "i_E#3" (VarE "i_E*"))
+    )
+    (IterPr
+      (IterPr
+        (IfPr
+          (CmpE
+            LtOp
+            nat
+            (ProjE (CallE "proj_uN_0" (ExpA (VarE "x#3"))) 0)
+            (LenE (DotE (VarE "moduleinst") (Atom FUNCS)))
+          )
+        )
+        List
+        (iterexp "x#3" (VarE "x*#3"))
+      )
+      List
+      (iterexp "x*#3" (VarE "x**"))
+    )
+    (RulePr
+      "fun_initelem"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "s_1")
+        (VarE "moduleinst")
+        (IterE
+          (TheE (CallE "proj_val__0" (ExpA (VarE "i_E#3"))))
+          List
+          (iterexp "i_E#3" (VarE "i_E*"))
+        )
+        (IterE
+          (IterE
+            (IdxE
+              (DotE (VarE "moduleinst") (Atom FUNCS))
+              (ProjE (CallE "proj_uN_0" (ExpA (VarE "x#3"))) 0)
+            )
+            List
+            (iterexp "x#3" (VarE "x*#3"))
+          )
+          List
+          (iterexp "x*#3" (VarE "x**"))
+        )
+        (VarE "var_7")
+      )
+    )
+    (RulePr
+      "fun_allocmodule"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "s")
+        (VarE "module")
+        (IterE
+          (VarE "externaddr#11")
+          List
+          (iterexp "externaddr#11" (VarE "externaddr*"))
+        )
+        (IterE (VarE "val#8") List (iterexp "val#8" (VarE "val*")))
+        (VarE "var_6")
+      )
+    )
+    (RulePr
+      "fun_allocmodule"
+      (Seq Arg Arg Arg Arg Arg)
+      (TupE
+        (VarE "s")
+        (VarE "module")
+        (IterE
           (VarE "externaddr#10")
           List
           (iterexp "externaddr#10" (VarE "externaddr*"))
         )
+        (IterE (VarE "val#7") List (iterexp "val#7" (VarE "val*")))
         (VarE "var_5")
       )
     )
@@ -28133,7 +33817,7 @@
           (iterexp "i_D#2" (VarE "i_D*"))
         )
         (IterE
-          (IterE (VarE "b#11") List (iterexp "b#11" (VarE "b*#2")))
+          (IterE (VarE "b#12") List (iterexp "b#12" (VarE "b*#2")))
           List
           (iterexp "b*#2" (VarE "b**"))
         )
@@ -28198,7 +33882,7 @@
           List
           (iterexp "externaddr#9" (VarE "externaddr*"))
         )
-        (IterE (VarE "val#4") List (iterexp "val#4" (VarE "val*")))
+        (IterE (VarE "val#5") List (iterexp "val#5" (VarE "val*")))
         (VarE "var_2")
       )
     )
@@ -28235,14 +33919,14 @@
           (TupE
             (IterE (VarE "type#1") List (iterexp "type#1" (VarE "type*")))
             (IterE (VarE "import#3") List (iterexp "import#3" (VarE "import*")))
-            (IterE (VarE "func#4") List (iterexp "func#4" (VarE "func*")))
+            (IterE (VarE "func#5") List (iterexp "func#5" (VarE "func*")))
             (IterE (VarE "global#1") List (iterexp "global#1" (VarE "global*")))
             (IterE (VarE "table#1") List (iterexp "table#1" (VarE "table*")))
             (IterE (VarE "mem#1") List (iterexp "mem#1" (VarE "mem*")))
             (IterE (VarE "elem#3") List (iterexp "elem#3" (VarE "elem*")))
             (IterE (VarE "data#3") List (iterexp "data#3" (VarE "data*")))
             (IterE (VarE "start#3") Opt (iterexp "start#3" (VarE "start?")))
-            (IterE (VarE "export#4") List (iterexp "export#4" (VarE "export*")))
+            (IterE (VarE "export#5") List (iterexp "export#5" (VarE "export*")))
           )
         )
         (VarE "module")
@@ -28268,11 +33952,11 @@
         (IterE
           (CaseE
             (Seq (Atom GLOBAL) Arg Arg)
-            (TupE (VarE "globaltype#200") (VarE "expr_G#1"))
+            (TupE (VarE "globaltype#201") (VarE "expr_G#1"))
           )
           List
           (iterexp "expr_G#1" (VarE "expr_G*"))
-          (iterexp "globaltype#200" (VarE "globaltype*"))
+          (iterexp "globaltype#201" (VarE "globaltype*"))
         )
       )
     )
@@ -28305,7 +33989,7 @@
             (Seq (Atom DATA) Arg Arg)
             (TupE
               (VarE "expr_D#1")
-              (IterE (VarE "b#10") List (iterexp "b#10" (VarE "b*#1")))
+              (IterE (VarE "b#11") List (iterexp "b#11" (VarE "b*#1")))
             )
           )
           List
@@ -28331,7 +34015,7 @@
         EqOp
         bool
         (VarE "n_F")
-        (LenE (IterE (VarE "func#5") List (iterexp "func#5" (VarE "func*"))))
+        (LenE (IterE (VarE "func#6") List (iterexp "func#6" (VarE "func*"))))
       )
     )
     (IfPr
@@ -28394,11 +34078,11 @@
       (RulePr
         "Eval_expr"
         (Infix (Infix Arg ; Arg) ~>* (Infix Arg ; Arg))
-        (TupE (VarE "z") (VarE "expr_G#2") (VarE "z") (ListE (VarE "val#3")))
+        (TupE (VarE "z") (VarE "expr_G#2") (VarE "z") (ListE (VarE "val#4")))
       )
       List
       (iterexp "expr_G#2" (VarE "expr_G*"))
-      (iterexp "val#3" (VarE "val*"))
+      (iterexp "val#4" (VarE "val*"))
     )
     (IfPr (CmpE EqOp bool (LenE (VarE "expr_E*")) (LenE (VarE "i_E*"))))
     (IterPr
@@ -28459,9 +34143,32 @@
       )
     )
     (IterPr
-      (RulePr "wf_val" (Seq Arg) (TupE (VarE "val#5")))
+      (RulePr "wf_val" (Seq Arg) (TupE (VarE "val#6")))
       List
-      (iterexp "val#5" (VarE "val*"))
+      (iterexp "val#6" (VarE "val*"))
+    )
+    (RulePr "wf_store" (Seq Arg) (TupE (ProjE (VarE "var_5") 0)))
+    (RulePr "wf_moduleinst" (Seq Arg) (TupE (ProjE (VarE "var_6") 1)))
+    (RulePr "wf_store" (Seq Arg) (TupE (VarE "var_7")))
+    (RulePr "wf_store" (Seq Arg) (TupE (VarE "var_8")))
+    (RulePr
+      "wf_config"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (CaseE (Infix Arg ; Arg) (TupE (VarE "s_3") (VarE "f")))
+            (LiftE
+              (IterE
+                (CaseE (Seq (Atom CALL) Arg) (TupE (VarE "x'#2")))
+                Opt
+                (iterexp "x'#2" (VarE "x'?"))
+              )
+            )
+          )
+        )
+      )
     )
     (RulePr
       "wf_module"
@@ -28472,14 +34179,14 @@
           (TupE
             (IterE (VarE "type#3") List (iterexp "type#3" (VarE "type*")))
             (IterE (VarE "import#4") List (iterexp "import#4" (VarE "import*")))
-            (IterE (VarE "func#6") List (iterexp "func#6" (VarE "func*")))
+            (IterE (VarE "func#7") List (iterexp "func#7" (VarE "func*")))
             (IterE (VarE "global#3") List (iterexp "global#3" (VarE "global*")))
             (IterE (VarE "table#2") List (iterexp "table#2" (VarE "table*")))
             (IterE (VarE "mem#2") List (iterexp "mem#2" (VarE "mem*")))
             (IterE (VarE "elem#5") List (iterexp "elem#5" (VarE "elem*")))
             (IterE (VarE "data#5") List (iterexp "data#5" (VarE "data*")))
             (IterE (VarE "start#5") Opt (iterexp "start#5" (VarE "start?")))
-            (IterE (VarE "export#5") List (iterexp "export#5" (VarE "export*")))
+            (IterE (VarE "export#6") List (iterexp "export#6" (VarE "export*")))
           )
         )
       )
@@ -28492,13 +34199,13 @@
         (TupE
           (CaseE
             (Seq (Atom GLOBAL) Arg Arg)
-            (TupE (VarE "globaltype#202") (VarE "expr_G#3"))
+            (TupE (VarE "globaltype#203") (VarE "expr_G#3"))
           )
         )
       )
       List
       (iterexp "expr_G#3" (VarE "expr_G*"))
-      (iterexp "globaltype#202" (VarE "globaltype*"))
+      (iterexp "globaltype#203" (VarE "globaltype*"))
     )
     (IfPr (CmpE EqOp bool (LenE (VarE "expr_E*")) (LenE (VarE "x**"))))
     (IterPr
@@ -28510,14 +34217,14 @@
             (Seq (Atom ELEM) Arg Arg)
             (TupE
               (VarE "expr_E#3")
-              (IterE (VarE "x#3") List (iterexp "x#3" (VarE "x*#3")))
+              (IterE (VarE "x#4") List (iterexp "x#4" (VarE "x*#4")))
             )
           )
         )
       )
       List
       (iterexp "expr_E#3" (VarE "expr_E*"))
-      (iterexp "x*#3" (VarE "x**"))
+      (iterexp "x*#4" (VarE "x**"))
     )
     (IfPr (CmpE EqOp bool (LenE (VarE "b**")) (LenE (VarE "expr_D*"))))
     (IterPr
@@ -28529,23 +34236,23 @@
             (Seq (Atom DATA) Arg Arg)
             (TupE
               (VarE "expr_D#3")
-              (IterE (VarE "b#12") List (iterexp "b#12" (VarE "b*#3")))
+              (IterE (VarE "b#14") List (iterexp "b#14" (VarE "b*#4")))
             )
           )
         )
       )
       List
-      (iterexp "b*#3" (VarE "b**"))
+      (iterexp "b*#4" (VarE "b**"))
       (iterexp "expr_D#3" (VarE "expr_D*"))
     )
     (IterPr
       (RulePr
         "wf_start"
         (Seq Arg)
-        (TupE (CaseE (Seq (Atom START) Arg) (TupE (VarE "x'#2"))))
+        (TupE (CaseE (Seq (Atom START) Arg) (TupE (VarE "x'#3"))))
       )
       Opt
-      (iterexp "x'#2" (VarE "x'?"))
+      (iterexp "x'#3" (VarE "x'?"))
     )
     (RulePr
       "wf_moduleinst"
@@ -28563,7 +34270,7 @@
           (expfield
             (Atom FUNCS)
             (CatE
-              (VarE "var_5")
+              (VarE "var_9")
               (IterE
                 (BinE
                   AddOp
@@ -28575,7 +34282,7 @@
               )
             )
           )
-          (expfield (Atom GLOBALS) (VarE "var_6"))
+          (expfield (Atom GLOBALS) (VarE "var_10"))
           (expfield (Atom TABLES) (ListE))
           (expfield (Atom MEMS) (ListE))
           (expfield (Atom EXPORTS) (ListE))
@@ -28604,12 +34311,12 @@
         (TupE
           (CaseE
             (Seq (Atom CONST) Arg Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (VarE "i_E#3"))
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "i_E#4"))
           )
         )
       )
       List
-      (iterexp "i_E#3" (VarE "i_E*"))
+      (iterexp "i_E#4" (VarE "i_E*"))
     )
     (IterPr
       (RulePr
@@ -28618,12 +34325,12 @@
         (TupE
           (CaseE
             (Seq (Atom CONST) Arg Arg)
-            (TupE (CaseE (Atom I32) (TupE)) (VarE "i_D#3"))
+            (TupE (CaseE (Atom I32) (TupE)) (VarE "i_D#4"))
           )
         )
       )
       List
-      (iterexp "i_D#3" (VarE "i_D*"))
+      (iterexp "i_D#4" (VarE "i_D*"))
     )
     (RulePr
       "wf_frame"
@@ -28635,36 +34342,6 @@
         )
       )
     )
-  )
-)
-(HintD (RelH "instantiate_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "instantiate_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "module" (VarT "module"))
-    (typbind "var_0*" (IterT (VarT "externaddr") List))
-    (typbind "ret_val" (VarT "config"))
-  )
-  (RuleD
-    "instantiate_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "module" (VarT "module"))
-    (ExpP "var_0*" (IterT (VarT "externaddr") List))
-    (ExpP "ret_val" (VarT "config"))
-    (ExpP "var_0" (VarT "config"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "module") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr
-      "fun_instantiate"
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "module") (VarE "var_0*") (VarE "var_0"))
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (RulePr "wf_module" (Seq Arg) (TupE (VarE "module")))
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_config" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (RelD
@@ -28689,7 +34366,7 @@
     (TupE
       (VarE "s")
       (VarE "fa")
-      (IterE (VarE "val#6") List (iterexp "val#6" (VarE "val*")))
+      (IterE (VarE "val#9") List (iterexp "val#9" (VarE "val*")))
       (CaseE
         (Infix Arg ; Arg)
         (TupE
@@ -28766,6 +34443,37 @@
         )
       )
     )
+    (IterPr
+      (RulePr "wf_funcinst" (Seq Arg) (TupE (VarE "iter#53")))
+      List
+      (iterexp
+        "iter#53"
+        (CallE
+          "funcinst"
+          (ExpA (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
+        )
+      )
+    )
+    (RulePr
+      "wf_config"
+      (Seq Arg)
+      (TupE
+        (CaseE
+          (Infix Arg ; Arg)
+          (TupE
+            (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f")))
+            (CatE
+              (IterE
+                (CallE "admininstr_val" (ExpA (VarE "val#10")))
+                (ListN (VarE "n"))
+                (iterexp "val#10" (VarE "val*"))
+              )
+              (ListE (CaseE (Seq (Atom CALL_ADDR) Arg) (TupE (VarE "fa"))))
+            )
+          )
+        )
+      )
+    )
     (RulePr
       "wf_frame"
       (Seq Arg)
@@ -28792,40 +34500,6 @@
       (TupE (CaseE (Infix Arg ; Arg) (TupE (VarE "s") (VarE "f"))))
     )
     (IfPr (CmpE EqOp bool (VarE "n") (LenE (VarE "val*"))))
-  )
-)
-(HintD (RelH "invoke_is_wf" (hint "wf-lemma-func" "{}")))
-(RelD
-  "invoke_is_wf"
-  (Seq Arg Arg Arg Arg)
-  (TupT
-    (typbind "store" (VarT "store"))
-    (typbind "funcaddr" (VarT "funcaddr"))
-    (typbind "var_0*" (IterT (VarT "val") List))
-    (typbind "ret_val" (VarT "config"))
-  )
-  (RuleD
-    "invoke_is_wf_0"
-    (ExpP "store" (VarT "store"))
-    (ExpP "funcaddr" (VarT "funcaddr"))
-    (ExpP "var_0*" (IterT (VarT "val") List))
-    (ExpP "ret_val" (VarT "config"))
-    (ExpP "var_0" (VarT "config"))
-    (Seq Arg Arg Arg Arg)
-    (TupE (VarE "store") (VarE "funcaddr") (VarE "var_0*") (VarE "ret_val"))
-    (RulePr
-      "fun_invoke"
-      (Seq Arg Arg Arg Arg)
-      (TupE (VarE "store") (VarE "funcaddr") (VarE "var_0*") (VarE "var_0"))
-    )
-    (RulePr "wf_store" (Seq Arg) (TupE (VarE "store")))
-    (IterPr
-      (RulePr "wf_val" (Seq Arg) (TupE (VarE "var_0")))
-      List
-      (iterexp "var_0" (VarE "var_0*"))
-    )
-    (IfPr (CmpE EqOp bool (VarE "ret_val") (VarE "var_0")))
-    (RulePr "wf_config" (Seq Arg) (TupE (VarE "ret_val")))
   )
 )
 (TypD "startopt" (InstD (AliasT (IterT (VarT "start") List))))

@@ -9,6 +9,8 @@ Claude effort is auditing `*_is_wf` theorems directly — expect
 
 ## Status as of session 1 (Phase 1: skeleton complete, no proofs filled in yet)
 
+(**Superseded** — see the table below; `Step_is_wf` has been used since bundle16.)
+
 **None used yet.** All lemma proofs across `HelperLemmas.lean`,
 `Subtyping.lean`, `TypingLemmas.lean`, `TypePreservationPure.lean`,
 `ExtensionLemmas.lean`, `TypePreservation.lean` are currently `sorry`
@@ -26,7 +28,63 @@ for stating the axioms themselves.
 
 | `*_is_wf` theorem | Used by (our lemma/file) | Status in `wasm2.0.lean` (sorry/proved) | Assessed true/false/unknown | Notes |
 |---|---|---|---|---|
-| _(none yet)_ | | | | |
+| `Step_is_wf` | `TypePreservation.t_preservation` (since bundle16; not logged here at the time — added bundle17) | `sorry` | **likely FALSE as stated** (see bundle17 note below) | Upstream `wasm.v:17702` is hand-edited to take an extra `Store_ok (fun_store z)` premise, and its read case goes through `Step_read_is_wf`, which is `Admitted` upstream with the author's note that 3 cases are not derivable. The Lean statement has no `Store_ok` premise. Rocq's `store_extension_reduce` and `t_preservation_type` also call it. |
+| `Step_pure_is_wf` | will be needed by `TypePreservationPure.t_pure_preservation` (Rocq's proof calls it to get `wf_admininstr` of the reduct) | `sorry` | believed TRUE | `Qed` upstream (`wasm.v:15794-15987`). bundle9 recorded an *older* upstream comment calling it provably false; that predates the 2026-09-28 well-formedness rework and is superseded. |
+| `Step_read_is_wf` | will be needed by `TypePreservation.t_read_preservation` (Rocq calls it at the top of the proof) | `sorry` | **FALSE in 3 corner cases** (upstream author's analysis) | `Admitted` upstream (`wasm.v:17354-17698`), hand-edited to take `Store_ok (fun_store z)`. Author's note: memory.fill-succ, memory.copy-le, memory.init-succ push `CONST I32 (i + 1)` with `i = 2^32 - 1` allowed by `Memtype_ok` (2^16 pages = 2^32 bytes), and `2^32` is not a u32. This is a spec-level issue, independent of the backend. |
+
+### bundle17 note (2026-10-02)
+
+- The three rows above are the only `*_is_wf` facts the preservation proofs touch.
+  Since `Config_ok` itself contains `wf_config`, the `Step_read_is_wf` corner case means
+  `t_preservation` is false in that corner case in **both** Rocq and Lean (Rocq's `Qed`
+  for `t_preservation` rests on the `Admitted` `Step_read_is_wf`). That is an upstream
+  spec issue, separate from the Lean-only `with_mem` issue in
+  `verbatim_dialogue_log/bundle17/user_requested_documents/with_mem_slice_update_issue.md`.
+- `wasm2.0.lean` is out of bounds for this project; nothing was changed there.
+
+### bundle18 note (2026-10-03)
+
+- `store_extension_reduce` was proved **without** `Step_is_wf` (Rocq uses it). It depends
+  only on `nbytes__is_wf`, `ibytes__is_wf`, `vbytes__is_wf`, `wrap___is_wf` (the byte
+  sequences written by the four memory-store rules; opaque functions, believed TRUE) and on
+  the flagged `TypePreservation.rat_to_nat_natCast` (not an `_is_wf`, but also unprovable:
+  `rat_to_nat` is `opaque`).
+- `t_pure_preservation` now uses `Step_pure_is_wf` (believed TRUE; `Qed` upstream).
+- `t_preservation_type` uses `Step_is_wf` (FALSE in the corner case below).
+- `t_read_preservation` (still `sorry`) should use `Step_read_is_wf`, as Rocq does. The
+  statement itself is false in the memory.fill/copy/init `CONST I32 2^32` corner case, so
+  some false lemma is unavoidable there.
+
+### bundle19 note (2026-10-04) — supersedes the table's status column and step 3 below
+
+- **The user asked for proofs inside `wasm2.0.lean`** of every `sorry` theorem whose Rocq
+  counterpart is filled in. So `wasm2.0.lean` is now edited for that purpose, and step 3's
+  "not ours to edit" no longer applies.
+- **Done:** 89 of the 152 `*_is_wf` theorems are proved, which is all of the ones that are
+  `Qed` in Rocq. The 63 still `sorry` are exactly Rocq's `Admitted` list. Hand edits are
+  re-appliable via `verbatim_dialogue_log/bundle19/user_requested_documents/wasm2.0_hand_edits.patch`.
+- **`Step_is_wf`:** proved. It is now stated with Rocq's hand-edited `Store_ok (fun_store z)`
+  premise and moved after `Store_ok`. The bundle17 "likely FALSE" verdict was about the
+  premise-less form, and is resolved except through `Step_read_is_wf`.
+- **`Step_pure_is_wf`:** proved (TRUE).
+- **`Step_read_is_wf`:** `sorry`, with Rocq's `Store_ok` premise added. It is FALSE in the
+  memory.fill/copy/init corner case; the user says a spec fix is pending. It is the only
+  `sorry` dependency of `t_read_preservation`.
+- **New rows, all `sorry`, all `Admitted` in Rocq:** 32 numeric-operation theorems that
+  `t_preservation` now reaches through the proved `Step_pure_is_wf` (29) and
+  `store_extension_reduce` (4: `nbytes__is_wf`, `ibytes__is_wf`, `vbytes__is_wf`,
+  `wrap___is_wf`). The 29 are the `_is_wf` of `convert__`, `demote__`, `extend__`, `fabs_`,
+  `fceil_`, `ffloor_`, `fnearest_`, `fneg_`, `fsqrt_`, `ftrunc_`, `iand_`, `iandnot_`,
+  `ibitselect_`, `iclz_`, `ictz_`, `inot_`, `inv_lanes_`, `ior_`, `ipopcnt_`, `irev_`,
+  `ishl_`, `ishr_`, `ixor_`, `lanes_`, `promote__`, `reinterpret__`, `trunc__`, `trunc_sat__`
+  and `wrap__`.
+  - **Unprovable:** every one of these functions is `opaque` in `wasm2.0.lean`. The fix
+    would be the one used for `rat_to_nat`: generate real definitions.
+  - **Not false:** each statement holds for some implementation (return 0, `[]`, `none`,
+    or `fN.POS fNmag.INF`, since `wf_fNmag N INF` holds for every `N`), and each mentions a
+    different opaque function.
+- **Full list:** `#sorry_deps TLC.t_preservation` gives 33 declarations, these 32 plus
+  `Step_read_is_wf`.
 
 ## How to fill this in going forward
 

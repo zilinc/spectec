@@ -18,6 +18,7 @@ lean_object* lean_mk_empty_array_with_capacity(lean_object*);
 lean_object* l___private_Init_Data_List_Impl_0__List_setTR_go___redArg(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 uint8_t lean_nat_dec_eq(lean_object*, lean_object*);
 lean_object* lean_nat_sub(lean_object*, lean_object*);
+lean_object* lp_test_x2dlean_x2dclaude_append__context(lean_object*, lean_object*);
 lean_object* l_List_modifyTR___redArg(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_lookup__total___redArg(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_lookup__total___redArg___boxed(lean_object*, lean_object*, lean_object*);
@@ -42,6 +43,11 @@ LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude___private_HelperLemmas_0__TLC
 LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude___private_HelperLemmas_0__TLC_list__slice__update_match__1_splitter(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude___private_HelperLemmas_0__TLC_list__slice__update_match__1_splitter___boxed(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_prepend__label(lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_prepend__local(lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_prepend__return(lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_append__local(lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_append__label(lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_append__return(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_lookup__total___redArg(lean_object* v_inst_1_, lean_object* v_l_2_, lean_object* v_n_3_){
 _start:
 {
@@ -715,6 +721,116 @@ v_reusejp_231_:
 return v___x_232_;
 }
 }
+}
+}
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_prepend__local(lean_object* v_C_235_, lean_object* v_t__lst_236_){
+_start:
+{
+lean_object* v___x_237_; lean_object* v___x_238_; lean_object* v___x_239_; lean_object* v___x_240_; 
+v___x_237_ = lean_box(0);
+v___x_238_ = lean_box(0);
+v___x_239_ = lean_alloc_ctor(0, 10, 0);
+lean_ctor_set(v___x_239_, 0, v___x_237_);
+lean_ctor_set(v___x_239_, 1, v___x_237_);
+lean_ctor_set(v___x_239_, 2, v___x_237_);
+lean_ctor_set(v___x_239_, 3, v___x_237_);
+lean_ctor_set(v___x_239_, 4, v___x_237_);
+lean_ctor_set(v___x_239_, 5, v___x_237_);
+lean_ctor_set(v___x_239_, 6, v___x_237_);
+lean_ctor_set(v___x_239_, 7, v_t__lst_236_);
+lean_ctor_set(v___x_239_, 8, v___x_237_);
+lean_ctor_set(v___x_239_, 9, v___x_238_);
+v___x_240_ = lp_test_x2dlean_x2dclaude_append__context(v___x_239_, v_C_235_);
+return v___x_240_;
+}
+}
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_prepend__return(lean_object* v_C_241_, lean_object* v_t_242_){
+_start:
+{
+lean_object* v___x_243_; lean_object* v___x_244_; lean_object* v___x_245_; lean_object* v___x_246_; 
+v___x_243_ = lean_box(0);
+v___x_244_ = lean_alloc_ctor(1, 1, 0);
+lean_ctor_set(v___x_244_, 0, v_t_242_);
+v___x_245_ = lean_alloc_ctor(0, 10, 0);
+lean_ctor_set(v___x_245_, 0, v___x_243_);
+lean_ctor_set(v___x_245_, 1, v___x_243_);
+lean_ctor_set(v___x_245_, 2, v___x_243_);
+lean_ctor_set(v___x_245_, 3, v___x_243_);
+lean_ctor_set(v___x_245_, 4, v___x_243_);
+lean_ctor_set(v___x_245_, 5, v___x_243_);
+lean_ctor_set(v___x_245_, 6, v___x_243_);
+lean_ctor_set(v___x_245_, 7, v___x_243_);
+lean_ctor_set(v___x_245_, 8, v___x_243_);
+lean_ctor_set(v___x_245_, 9, v___x_244_);
+v___x_246_ = lp_test_x2dlean_x2dclaude_append__context(v___x_245_, v_C_241_);
+return v___x_246_;
+}
+}
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_append__local(lean_object* v_C_247_, lean_object* v_t__lst_248_){
+_start:
+{
+lean_object* v___x_249_; lean_object* v___x_250_; lean_object* v___x_251_; lean_object* v___x_252_; 
+v___x_249_ = lean_box(0);
+v___x_250_ = lean_box(0);
+v___x_251_ = lean_alloc_ctor(0, 10, 0);
+lean_ctor_set(v___x_251_, 0, v___x_249_);
+lean_ctor_set(v___x_251_, 1, v___x_249_);
+lean_ctor_set(v___x_251_, 2, v___x_249_);
+lean_ctor_set(v___x_251_, 3, v___x_249_);
+lean_ctor_set(v___x_251_, 4, v___x_249_);
+lean_ctor_set(v___x_251_, 5, v___x_249_);
+lean_ctor_set(v___x_251_, 6, v___x_249_);
+lean_ctor_set(v___x_251_, 7, v_t__lst_248_);
+lean_ctor_set(v___x_251_, 8, v___x_249_);
+lean_ctor_set(v___x_251_, 9, v___x_250_);
+v___x_252_ = lp_test_x2dlean_x2dclaude_append__context(v_C_247_, v___x_251_);
+return v___x_252_;
+}
+}
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_append__label(lean_object* v_C_253_, lean_object* v_t_254_){
+_start:
+{
+lean_object* v___x_255_; lean_object* v___x_256_; lean_object* v___x_257_; lean_object* v___x_258_; lean_object* v___x_259_; 
+v___x_255_ = lean_box(0);
+v___x_256_ = lean_alloc_ctor(1, 2, 0);
+lean_ctor_set(v___x_256_, 0, v_t_254_);
+lean_ctor_set(v___x_256_, 1, v___x_255_);
+v___x_257_ = lean_box(0);
+v___x_258_ = lean_alloc_ctor(0, 10, 0);
+lean_ctor_set(v___x_258_, 0, v___x_255_);
+lean_ctor_set(v___x_258_, 1, v___x_255_);
+lean_ctor_set(v___x_258_, 2, v___x_255_);
+lean_ctor_set(v___x_258_, 3, v___x_255_);
+lean_ctor_set(v___x_258_, 4, v___x_255_);
+lean_ctor_set(v___x_258_, 5, v___x_255_);
+lean_ctor_set(v___x_258_, 6, v___x_255_);
+lean_ctor_set(v___x_258_, 7, v___x_255_);
+lean_ctor_set(v___x_258_, 8, v___x_256_);
+lean_ctor_set(v___x_258_, 9, v___x_257_);
+v___x_259_ = lp_test_x2dlean_x2dclaude_append__context(v_C_253_, v___x_258_);
+return v___x_259_;
+}
+}
+LEAN_EXPORT lean_object* lp_test_x2dlean_x2dclaude_TLC_append__return(lean_object* v_C_260_, lean_object* v_t_261_){
+_start:
+{
+lean_object* v___x_262_; lean_object* v___x_263_; lean_object* v___x_264_; lean_object* v___x_265_; 
+v___x_262_ = lean_box(0);
+v___x_263_ = lean_alloc_ctor(1, 1, 0);
+lean_ctor_set(v___x_263_, 0, v_t_261_);
+v___x_264_ = lean_alloc_ctor(0, 10, 0);
+lean_ctor_set(v___x_264_, 0, v___x_262_);
+lean_ctor_set(v___x_264_, 1, v___x_262_);
+lean_ctor_set(v___x_264_, 2, v___x_262_);
+lean_ctor_set(v___x_264_, 3, v___x_262_);
+lean_ctor_set(v___x_264_, 4, v___x_262_);
+lean_ctor_set(v___x_264_, 5, v___x_262_);
+lean_ctor_set(v___x_264_, 6, v___x_262_);
+lean_ctor_set(v___x_264_, 7, v___x_262_);
+lean_ctor_set(v___x_264_, 8, v___x_262_);
+lean_ctor_set(v___x_264_, 9, v___x_263_);
+v___x_265_ = lp_test_x2dlean_x2dclaude_append__context(v_C_260_, v___x_264_);
+return v___x_265_;
 }
 }
 lean_object* initialize_Init(uint8_t builtin);
