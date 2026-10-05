@@ -10,4 +10,4 @@ require mathlib from git
 lean_lib TestLeanClaude where
   globs := #[.one `«wasm2.0», .one `ExtendedDeriveDecEq, .one `HelperLemmas, .one `Subtyping,
     .one `TypingLemmas, .one `TypePreservationPure, .one `ExtensionLemmas,
-    .one `TypePreservation]
+    .one `TypePreservation, .one `TypeProgress]

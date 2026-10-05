@@ -86,6 +86,16 @@ for stating the axioms themselves.
 - **Full list:** `#sorry_deps TLC.t_preservation` gives 33 declarations, these 32 plus
   `Step_read_is_wf`.
 
+### bundle20 note (2026-10-05)
+
+- Re-verified: the 63 `sorry` theorems in `wasm2.0.lean` are exactly the 63 `Admitted` theorems
+  in `wasm.v` (set comparison by script). `#sorry_deps TLC.t_preservation` is still the same 33.
+- The progress port (`TypeProgress.lean`) will additionally use `Step_is_wf` (proved) and, through
+  it, `Step_read_is_wf`. Lean's `Step.ctxt_*` congruence rules require `wf_config` of the inner
+  configurations, as Rocq's do.
+- Isabelle's `step_wf`/`Step_read_is_wf` lack the `Store_ok` premise and are false as stated
+  (table.size pushes an unbounded `|REFS|`). This independently confirms the hand-added premise.
+
 ## How to fill this in going forward
 
 When a Phase 2/3 proof needs to invoke some `Foo_is_wf` theorem from

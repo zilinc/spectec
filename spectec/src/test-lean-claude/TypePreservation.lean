@@ -868,7 +868,10 @@ theorem wf_config_store {s : store} {f : frame} {ais : List admininstr}
     (h : wf_config (config.mk_config (state.mk_state s f) ais)) : wf_store s := by
   cases h with | config_case_0 _ _ hst _ => cases hst with | state_case_0 _ _ h _ => exact h
 
-theorem wf_config_frame {s : store} {f : frame} {ais : List admininstr}
+/-- Lean-only helper: the frame of a well-formed configuration is well-formed. Renamed in bundle20
+    from `wf_config_frame` to free that name for the Rocq progress lemma
+    `type_progress.v:870` `wf_config_frame` (a different statement), ported in TypeProgress.lean. -/
+theorem wf_config_wf_frame {s : store} {f : frame} {ais : List admininstr}
     (h : wf_config (config.mk_config (state.mk_state s f) ais)) : wf_frame f := by
   cases h with | config_case_0 _ _ hst _ => cases hst with | state_case_0 _ _ _ h => exact h
 
@@ -2512,7 +2515,7 @@ private theorem t_preservation_type_aux (c1 c2 : config) (hstep : Step c1 c2) :
             TYPES := [], FUNCS := [], GLOBALS := [], TABLES := [], MEMS := [], ELEMS := [], DATAS := [],
             LOCALS := tl, LABELS := [], RETURN := none } : context) ++ C0) :=
           Frame_ok.mk_Frame_ok s0' fi'.LOCALS fi'.MODULE tl C0 hmi'' hlen' hvals' hwfS' hwfC0
-            (wf_config_frame hwf2) hwfloc
+            (wf_config_wf_frame hwf2) hwfloc
         have hexpr' := Expr_ok2.mk_Expr_ok2 s0' _ ais' ts hbody' hwfS' hwfc'' (wf_config_ais hwf2)
         have hwfF : wf_admininstr (admininstr.FRAME_ n fi' ais') := wf_config_ais hwfc2 _ (by simp)
         exact construct_ais_subtyping _ _ _ [] ts t1s t2s

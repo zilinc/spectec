@@ -1,18 +1,67 @@
 # Notes for a future Claude session — READ THIS FIRST
 
-Last updated: 2026-10-04 (bundle19, same Opus 5.5 session as bundles 17-18; see
-`claude-logging/verbatim_dialogue_log/bundle19`).
+Last updated: 2026-10-05 (end of bundle20; see the bundle20 section below and
+`claude-logging/verbatim_dialogue_log/bundle20`).
 
 > **If you read nothing else, read (in this order)**
-> 1. The bundle19 section just below: preservation is fully proved, apart from generated
->    `*_is_wf` theorems that Rocq also leaves `Admitted`.
-> 2. `verbatim_dialogue_log/bundle19/user_requested_documents/README_wasm2.0_hand_edits.md`:
->    the hand-edits to the generated `wasm2.0.lean` and how to re-apply them after the user
->    regenerates it.
-> 3. `verbatim_dialogue_log/bundle18/user_requested_documents/insights_for_next_turn.md` §4
->    (Lean techniques, still valid) and
->    `verbatim_dialogue_log/bundle16/user_requested_documents/insights_for_next_turn.md`
->    (Lean-4 elaboration facts).
+> 1. The bundle20 section just below. Preservation is audited and sound. Progress is ported and
+>    proved, except two known-false subcases that Rocq also `admit`s.
+> 2. `verbatim_dialogue_log/bundle20/user_requested_documents/insights_for_next_turn.md`: new
+>    techniques (recursor-generated case lemmas, the `type_of%` guard for agent proofs) and new
+>    pitfalls (`omega` ignores the `N`/`M`/`n` abbrevs).
+> 3. `verbatim_dialogue_log/bundle19/user_requested_documents/README_wasm2.0_hand_edits.md`: how
+>    to re-apply the hand-edits to the generated `wasm2.0.lean` after a regeneration.
+> 4. The older Lean lessons: bundle18 `insights_for_next_turn.md` §4 and bundle16
+>    `insights_for_next_turn.md`.
+
+## ✅ 2026-10-05 UPDATE (bundle20): preservation audited; PROGRESS PORTED AND PROVED (except 2 known-false subcases)
+
+Session: the bundle16 session (Opus), resumed via `/compact` and addressed as if it had done
+bundles 17-19.
+
+**Read first:**
+- `verbatim_dialogue_log/bundle20/user_requested_documents/insights_for_next_turn.md`;
+- `preservation_audit_report.md`;
+- `progress_port_status.md`;
+- `progress_port_deviations.md`.
+
+**Done:**
+- **Task 1.** The 16 unused `sorry`s are marked `-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED`.
+- **Preservation audit.**
+  - Statement equal to Rocq and Isabelle; 0 signature mismatches on the chain.
+  - The trust boundary equals Rocq's `Admitted`: 33 generated `sorry`s, no project axiom.
+  - Non-vacuity is machine-checked (`preservation_nonvacuity_witness.lean`).
+  - Generated models correspond 1:1 (constructor names, premise fingerprints over 346 inductives).
+    Every zip-`Forall₂` on the path has a length premise.
+- **Verified findings** (each confirmed by an independent verifier):
+  - (A) **FIXED:** the axioms `ibytes_len'`/`ibytes_len''` derived `False`. They were restated
+    with Rocq's floor semantics (`rat_to_nat`); `ibytes_inv`'s premise was fixed the same way.
+  - (B) **UPSTREAM:** `Moduleinst_ok`'s hoisted `|addrs| > 0` (SpecTec
+    `middlend/sideconditions.ml`). No `$invoke` config is `Config_ok`.
+  - (C) **UPSTREAM:** `Globaltype_ok` admits only MUT globals.
+  - (D) **FIXED:** `s_invert_*` were vacuous with the zip-`Forall₂`; a length conjunct was added.
+- **Progress** (`TypeProgress.lean`, new, in the lakefile, imports `TypePreservation`):
+  - all 223 Rocq declarations covered (NOT-PORTED ones justified in place);
+  - 280/280 proof targets proved;
+  - the only `sorry`s are the two known-false subcases that Rocq `admit`s
+    (`t_progress_be_vload_pack` SHAPE 64x1, `t_progress_be_vcvtop` F32→I16 TRUNC_SAT); both are
+    proved stuck in Lean;
+  - `#sorry_deps TLC.t_progress` = those 2 + `Step_read_is_wf` + 56 generated numeric `*_is_wf`;
+  - `#print axioms` adds 17 project axioms mirroring `axioms.v`.
+- `HelperLemmas.lean` additions:
+  - the 12 progress-only axioms of `axioms.v`;
+  - `Forall2_size`/`Forall2_size2` with `hlen`;
+  - a NOT-PORTED note for `Forall2_seq_size`.
+- `TypePreservation.lean`: the Lean-only helper `wf_config_frame` was renamed `wf_config_wf_frame`.
+- **Tooling:**
+  - `safety-checks/verify_against_baseline.sh` (race-free);
+  - recovery checkpoints and merge scripts in `verbatim_dialogue_log/bundle20/checkpoints/`.
+
+**Sorry inventory at the end of bundle20:**
+- `HelperLemmas` 15 (marked dead), `ExtensionLemmas` 1 (marked dead), `TypeProgress` 2
+  (known-false); every other hand-written file 0;
+- `wasm2.0.lean` 63 (= Rocq `Admitted`);
+- `lake build` clean (3006 jobs).
 
 ## ✅ 2026-10-04 UPDATE (bundle19) — `t_read_preservation` proved; 89 `wasm2.0.lean` `*_is_wf` proved
 

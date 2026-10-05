@@ -1,10 +1,34 @@
 # Progress summary (human-readable)
 
-**Last updated:** 2026-10-04 (bundle19). The sections below the first one are the
+**Last updated:** 2026-10-05 (bundle20). The sections below the first one are the
 original session-1 summary, kept for history; for the step-by-step record see each
 `verbatim_dialogue_log/bundleN/response_N.md`.
 
-## Latest (2026-10-04, bundle19)
+## Latest (2026-10-05, bundle20)
+
+- **Preservation: audited, complete and sound.** It says the same as the Rocq and Isabelle
+  theorems.
+  - A machine-checked example shows its assumptions can hold, so it is not vacuous.
+  - It rests only on the 33 generated facts that Rocq also leaves unproved.
+  - Report, including a guide for checking it by hand:
+    `verbatim_dialogue_log/bundle20/user_requested_documents/preservation_audit_report.md`.
+- **Progress: ported and proved.**
+  - The new `TypeProgress.lean` (about 8,000 lines) ports all of Rocq's progress file, and every
+    proof obligation is proved.
+  - The exceptions are the two instruction cases that are provably stuck under the current spec.
+    Rocq leaves exactly those two unproved too, and Lean proves that they are stuck.
+- **Problems found along the way:**
+  - Two translated axioms were contradictory (they implied `False`); nothing used them. **Fixed.**
+  - Four unused Lean lemmas said nothing (vacuous). **Fixed.**
+  - Two upstream (SpecTec) translation artifacts affect Lean, Rocq and Isabelle equally:
+    - the starting configuration of a function invocation is never considered well-typed;
+    - stores containing immutable globals are never considered valid.
+
+    These shrink what both theorems talk about but don't make them false. They are reported for
+    an upstream fix.
+- **Task 1 is done:** the 16 unused `sorry`s are marked `TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED`.
+
+## Previous (2026-10-04, bundle19)
 
 - **Preservation is proved**, apart from generated well-formedness facts that the Rocq
   proof also leaves unproved. The last real proof, `t_read_preservation` (all 47 read-only

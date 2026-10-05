@@ -125,6 +125,7 @@ theorem forall_range_refl_noWf {α : Type} [Inhabited α] (l : List α) (R : α 
 /-! ## `Store_ok` inversion (extension_lemmas.v:20-209 old numbering; unchanged
     by the 2026-09-24 resync) -/
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `extension_lemmas.v` `Val_ok_store` at the pre-resync revision. **Not
     found under this name (or an obvious renaming) in the current upstream
     source** — flagged, not removed, since nothing else in this project
@@ -218,24 +219,34 @@ theorem eleminst_ok_invert (s : store) (e : eleminst) (t : elemtype) :
 
 /-- Rocq `extension_lemmas.v:57` `s_invert_funcs`. Unaffected by the
     2026-09-24 resync (signature confirmed identical against the current
-    source). -/
+    source).
+    **Deviation (bundle20, restores Rocq's meaning):** the conclusion carries the length equation
+    explicitly. Rocq's inductive `Forall2` implies it; with Lean's zip-based `Forall₂` the old
+    conclusion `∃ xs, Forall₂ P s.X xs` was vacuous (`xs := []` satisfies it for every store), as
+    the bundle20 signature audit found. The generated `Store_ok` supplies the length. -/
 theorem s_invert_funcs (s : store) : Store_ok s →
-    ∃ fts, Forall₂ (fun f t => ∃ minst v_func, f = funcinst.MKfuncinst t minst v_func) s.FUNCS fts := by
+    ∃ fts, s.FUNCS.length = fts.length ∧
+      Forall₂ (fun f t => ∃ minst v_func, f = funcinst.MKfuncinst t minst v_func) s.FUNCS fts := by
   intro h
   cases h with
-  | mk_Store_ok gil gtl mil mtl til ttl fil ftl dil dtl eil etl _ _ _ _ _ _ _ hf _ _ _ _ heq =>
+  | mk_Store_ok gil gtl mil mtl til ttl fil ftl dil dtl eil etl _ _ _ _ _ _ hlf hf _ _ _ _ heq =>
     subst heq
-    exact ⟨ftl, fun p hp => funcinst_ok_invert _ _ _ (hf p hp)⟩
+    exact ⟨ftl, hlf, fun p hp => funcinst_ok_invert _ _ _ (hf p hp)⟩
 
-/-- Rocq `extension_lemmas.v:89` `s_invert_globals`. Unaffected by the resync. -/
+/-- Rocq `extension_lemmas.v:89` `s_invert_globals`. Unaffected by the resync.
+    **Deviation (bundle20, restores Rocq's meaning):** the conclusion carries the length equation
+    explicitly. Rocq's inductive `Forall2` implies it; with Lean's zip-based `Forall₂` the old
+    conclusion `∃ xs, Forall₂ P s.X xs` was vacuous (`xs := []` satisfies it for every store), as
+    the bundle20 signature audit found. The generated `Store_ok` supplies the length. -/
 theorem s_invert_globals (s : store) : Store_ok s →
-    ∃ gts, Forall₂ (fun g t => ∃ v_mut v_vt v_v, g = globalinst.MKglobalinst t v_v ∧
+    ∃ gts, s.GLOBALS.length = gts.length ∧
+      Forall₂ (fun g t => ∃ v_mut v_vt v_v, g = globalinst.MKglobalinst t v_v ∧
       t = globaltype.mk_globaltype v_mut v_vt ∧ Val_ok s v_v v_vt) s.GLOBALS gts := by
   intro h
   cases h with
-  | mk_Store_ok gil gtl mil mtl til ttl fil ftl dil dtl eil etl _ hg _ _ _ _ _ _ _ _ _ _ heq =>
+  | mk_Store_ok gil gtl mil mtl til ttl fil ftl dil dtl eil etl hlg hg _ _ _ _ _ _ _ _ _ _ heq =>
     subst heq
-    exact ⟨gtl, fun p hp => globalinst_ok_invert _ _ _ (hg p hp)⟩
+    exact ⟨gtl, hlg, fun p hp => globalinst_ok_invert _ _ _ (hg p hp)⟩
 
 /-- Rocq `extension_lemmas.v:121` `s_invert_mems`. Signature resynced
     (2026-09-30, bundle13 signature audit): previously hard-coded the
@@ -249,32 +260,40 @@ theorem s_invert_globals (s : store) : Store_ok s →
     a `Definition` we don't need a Lean counterpart for since it's pure
     sugar for the same `b_lst.length / (64 * Ki)` computation already
     inlined here). Encodes the memory page-count invariant and the hard cap
-    `v_m ≤ 2^16` pages when a max is declared. -/
+    `v_m ≤ 2^16` pages when a max is declared.
+    **Deviation (bundle20, restores Rocq's meaning):** the conclusion carries the length equation
+    explicitly. Rocq's inductive `Forall2` implies it; with Lean's zip-based `Forall₂` the old
+    conclusion `∃ xs, Forall₂ P s.X xs` was vacuous (`xs := []` satisfies it for every store), as
+    the bundle20 signature audit found. The generated `Store_ok` supplies the length. -/
 theorem s_invert_mems (s : store) : Store_ok s →
-    ∃ mts, Forall₂ (fun m t => ∃ (b_lst : List byte) (v_n : Nat) (v_m : Option Nat),
+    ∃ mts, s.MEMS.length = mts.length ∧ Forall₂ (fun m t => ∃ (b_lst : List byte) (v_n : Nat) (v_m : Option Nat),
       m = meminst.MKmeminst t b_lst ∧
       t = memtype.PAGE (limits.mk_limits (uN.mk_uN v_n) (v_m.map uN.mk_uN)) ∧
       v_n = b_lst.length / (64 * Ki) ∧ Forall (fun m' => v_n ≤ m' ∧ m' ≤ 2 ^ 16) v_m.toList) s.MEMS mts := by
   intro h
   cases h with
-  | mk_Store_ok gil gtl mil mtl til ttl fil ftl dil dtl eil etl _ _ _ hm _ _ _ _ _ _ _ _ heq =>
+  | mk_Store_ok gil gtl mil mtl til ttl fil ftl dil dtl eil etl _ _ hlm hm _ _ _ _ _ _ _ _ heq =>
     subst heq
-    exact ⟨mtl, fun p hp => meminst_ok_invert _ _ _ (hm p hp)⟩
+    exact ⟨mtl, hlm, fun p hp => meminst_ok_invert _ _ _ (hm p hp)⟩
 
 /-- Rocq `extension_lemmas.v:172` `s_invert_tables`. Signature resynced
     (2026-09-30, bundle13 signature audit): same fix as `s_invert_mems`
     above — the declared table-size max is a genuine `Option Nat` in Rocq,
-    not always-present. Otherwise unaffected by the resync. -/
+    not always-present. Otherwise unaffected by the resync.
+    **Deviation (bundle20, restores Rocq's meaning):** the conclusion carries the length equation
+    explicitly. Rocq's inductive `Forall2` implies it; with Lean's zip-based `Forall₂` the old
+    conclusion `∃ xs, Forall₂ P s.X xs` was vacuous (`xs := []` satisfies it for every store), as
+    the bundle20 signature audit found. The generated `Store_ok` supplies the length. -/
 theorem s_invert_tables (s : store) : Store_ok s →
-    ∃ tbts, Forall₂ (fun tb tbt => ∃ (ref_lst : List ref) (v_m : Option Nat) (rt : reftype),
+    ∃ tbts, s.TABLES.length = tbts.length ∧ Forall₂ (fun tb tbt => ∃ (ref_lst : List ref) (v_m : Option Nat) (rt : reftype),
       tb = tableinst.MKtableinst tbt ref_lst ∧
       tbt = tabletype.mk_tabletype (limits.mk_limits (uN.mk_uN ref_lst.length) (v_m.map uN.mk_uN)) rt ∧
       Tabletype_ok tbt ∧ Forall (fun r => Ref_ok s r rt) ref_lst) s.TABLES tbts := by
   intro h
   cases h with
-  | mk_Store_ok gil gtl mil mtl til ttl fil ftl dil dtl eil etl _ _ _ _ _ ht _ _ _ _ _ _ heq =>
+  | mk_Store_ok gil gtl mil mtl til ttl fil ftl dil dtl eil etl _ _ _ _ hlt ht _ _ _ _ _ _ heq =>
     subst heq
-    exact ⟨ttl, fun p hp => tableinst_ok_invert _ _ _ (ht p hp)⟩
+    exact ⟨ttl, hlt, fun p hp => tableinst_ok_invert _ _ _ (ht p hp)⟩
 
 /-! ## `Extend_store` component-wise inversion (2026-09-24: RESHAPED from an
     existential-split idiom to `holds_upto`, matching the current source) -/
@@ -679,7 +698,10 @@ theorem minst_invert_functypes (v_S : store) (minst : moduleinst) (C C' : contex
   exact hmatch.1.symm
 
 /-- Rocq `minst_invert_funcs` (current source). Was exact-equality on `ft`
-    before the resync; now uses `Externtype_sub (FUNC ft') (FUNC ft)`. -/
+    before the resync; now uses `Externtype_sub (FUNC ft') (FUNC ft)`.
+    **Note (bundle20 audit):** Rocq's conclusion is an inductive `Forall2`, which also gives
+    `|minst.X| = |C'.X|`; the zip-based `Forall₂` here does not. Callers obtain the length from
+    `Moduleinst_ok_lengths` (TypePreservation.lean) together with `inst_match`. -/
 theorem minst_invert_funcs (v_S : store) (minst : moduleinst) (C C' : context) :
     Moduleinst_ok v_S minst C → inst_match C C' →
     Forall₂ (fun fa ft => ∃ minst1 v_func ft', fa < v_S.FUNCS.length ∧
@@ -699,7 +721,10 @@ theorem minst_invert_funcs (v_S : store) (minst : moduleinst) (C C' : context) :
     `Limits_sub`-on-the-limits-only premise before the resync; now uses
     `Externtype_sub (TABLE tbt') (TABLE tbt)` uniformly (which itself
     unfolds to a `Limits_sub` premise plus matching `wf_tabletype` facts,
-    per `wasm2.0.lean`'s `Tabletype_sub`/`Externtype_sub` definitions). -/
+    per `wasm2.0.lean`'s `Tabletype_sub`/`Externtype_sub` definitions).
+    **Note (bundle20 audit):** Rocq's conclusion is an inductive `Forall2`, which also gives
+    `|minst.X| = |C'.X|`; the zip-based `Forall₂` here does not. Callers obtain the length from
+    `Moduleinst_ok_lengths` (TypePreservation.lean) together with `inst_match`. -/
 theorem minst_invert_tables (v_S : store) (minst : moduleinst) (C C' : context) :
     Moduleinst_ok v_S minst C → inst_match C C' →
     Forall₂ (fun tba tbt => ∃ tbr tbt', tba < v_S.TABLES.length ∧
@@ -717,7 +742,10 @@ theorem minst_invert_tables (v_S : store) (minst : moduleinst) (C C' : context) 
 
 /-- Rocq `minst_invert_globals` (current source). Was exact-equality on
     `v_mut`/`v_valtype` before the resync; now uses
-    `Externtype_sub (GLOBAL gt') (GLOBAL gt)`. -/
+    `Externtype_sub (GLOBAL gt') (GLOBAL gt)`.
+    **Note (bundle20 audit):** Rocq's conclusion is an inductive `Forall2`, which also gives
+    `|minst.X| = |C'.X|`; the zip-based `Forall₂` here does not. Callers obtain the length from
+    `Moduleinst_ok_lengths` (TypePreservation.lean) together with `inst_match`. -/
 theorem minst_invert_globals (v_S : store) (minst : moduleinst) (C C' : context) :
     Moduleinst_ok v_S minst C → inst_match C C' →
     Forall₂ (fun ga gt => ∃ gt' v_val, ga < v_S.GLOBALS.length ∧
@@ -735,7 +763,10 @@ theorem minst_invert_globals (v_S : store) (minst : moduleinst) (C C' : context)
 
 /-- Rocq `minst_invert_mems` (current source). Was stated via a bespoke
     `Memtype_sub` premise before the resync; now uses
-    `Externtype_sub (MEM v_mt) (MEM mt)` uniformly. -/
+    `Externtype_sub (MEM v_mt) (MEM mt)` uniformly.
+    **Note (bundle20 audit):** Rocq's conclusion is an inductive `Forall2`, which also gives
+    `|minst.X| = |C'.X|`; the zip-based `Forall₂` here does not. Callers obtain the length from
+    `Moduleinst_ok_lengths` (TypePreservation.lean) together with `inst_match`. -/
 theorem minst_invert_mems (v_S : store) (minst : moduleinst) (C C' : context) :
     Moduleinst_ok v_S minst C → inst_match C C' →
     Forall₂ (fun ma mt => ∃ v_mt b_lst, ma < v_S.MEMS.length ∧
@@ -758,7 +789,10 @@ theorem minst_invert_mems (v_S : store) (minst : moduleinst) (C C' : context) :
     (`getElem!` / `Prod` projections), which defeats dependent elimination
     under `cases`, `obtain` and `set`+`clear_value` alike. The fix is
     `eleminst_ok_invert` above: do the inversion once, in a lemma whose
-    arguments are bare variables, then apply it. -/
+    arguments are bare variables, then apply it.
+    **Note (bundle20 audit):** Rocq's conclusion is an inductive `Forall2`, which also gives
+    `|minst.X| = |C'.X|`; the zip-based `Forall₂` here does not. Callers obtain the length from
+    `Moduleinst_ok_lengths` (TypePreservation.lean) together with `inst_match`. -/
 theorem minst_invert_elems (v_S : store) (minst : moduleinst) (C C' : context) :
     Moduleinst_ok v_S minst C → inst_match C C' →
     Forall₂ (fun ea et => ∃ ref_lst, ea < v_S.ELEMS.length ∧ Forall (fun r => Ref_ok v_S r et) ref_lst ∧

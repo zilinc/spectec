@@ -181,10 +181,12 @@ def In2 {α β : Type} (x : α) (y : β) (l : List α) (l' : List β) : Prop :=
 /-- Rocq `helper_lemmas.v:16` `leadd`. -/
 theorem leadd (i n : Nat) : i ≤ i + n := by omega
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:25` `list_update_func_split`. -/
 theorem list_update_func_split {α : Type} (x x' : List α) (idx : Nat) (f : α → α) :
     x' = list_update_func x idx f → (∃ y, (f y) ∈ x') ∨ x = x' := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:44` `list_update_func_split_strong`. -/
 theorem list_update_func_split_strong {α : Type} (x x' : List α) (idx : Nat) (f : α → α) :
     x' = list_update_func x idx f → idx < x.length → ∃ y, (f y) ∈ x' := sorry
@@ -271,6 +273,28 @@ theorem Forall2_nth_of_length {α β : Type} [Inhabited α] [Inhabited β] {R : 
     (i : Nat) (hi : i < l.length) : R (l[i]!) (l'[i]!) :=
   h _ (mem_zip_getElem! l l' i hi (hlen ▸ hi))
 
+/-- Rocq `helper_lemmas.v:172` `Forall2_size` (added bundle20 for the progress port).
+    **Deviation (zip-based `Forall₂`):** Rocq's inductive `Forall2` forces equal lengths, from
+    which Rocq derives the pointwise fact; Lean's generated `Forall₂` is zip-based, so the length
+    equation is an explicit premise `hlen` (project precedent: `funcinst_same`, `Vals_ok`). Rocq's
+    `l [|i|]` (`lookup_total`) is Lean's `l[i]!`. -/
+theorem Forall2_size {α β : Type} [Inhabited α] [Inhabited β] (l : List α) (l' : List β)
+    (R : α → β → Prop) (hlen : l.length = l'.length) :
+    Forall₂ R l l' → ∀ (i : Nat), i < l.length → R (l[i]!) (l'[i]!) :=
+  fun h i hi => Forall2_nth_of_length l l' h hlen i hi
+
+/-- Rocq `helper_lemmas.v:186` `Forall2_size2` (added bundle20): `Forall2_size` with the index
+    bounded by the second list. Same **deviation** (`hlen`) as `Forall2_size`. -/
+theorem Forall2_size2 {α β : Type} [Inhabited α] [Inhabited β] (l : List α) (l' : List β)
+    (R : α → β → Prop) (hlen : l.length = l'.length) :
+    Forall₂ R l l' → ∀ (i : Nat), i < l'.length → R (l[i]!) (l'[i]!) :=
+  fun h i hi => Forall2_nth_of_length l l' h hlen i (hlen ▸ hi)
+
+-- `Forall2_seq_size` (helper_lemmas.v:159, `Forall2 R l l' -> |l| = |l'|`) NOT PORTED: with the
+-- zip-based `Forall₂` the conclusion is not derivable, and adding `hlen` would make the lemma
+-- return its own premise; Lean callers use the length fact they already have (`Vals_ok`,
+-- `Moduleinst_ok_lengths`, `hlen` premises). (bundle20)
+
 theorem mem_zip_modify_right {α β : Type} [Inhabited α] [Inhabited β] (g : β → β)
     (l : List α) :
     ∀ (ts : List β) (idx : Nat) (p : α × β), p ∈ l.zip (ts.modify idx g) →
@@ -298,12 +322,14 @@ theorem mem_zip_modify_right {α β : Type} [Inhabited α] [Inhabited β] (g : �
           · exact Or.inr ⟨by simpa using h1, by simpa using h2,
               by simpa using List.mem_cons_of_mem (a, b) h3⟩
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:153` `Forall2_nth`. (Merged with `Forall2_nth2`, helper_lemmas.v:167,
     which only differs in whether the index bound is stated over `l` or `l'`; both hold since
     `Forall₂` forces equal length.) -/
 theorem Forall2_nth {α β : Type} [Inhabited α] [Inhabited β] (l : List α) (l' : List β) (R : α → β → Prop) :
     Forall₂ R l l' → l.length = l'.length ∧ ∀ i, i < l.length → R (lookup_total l i) (lookup_total l' i) := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:181` `Forall2_lookup`. (Merged with `Forall2_lookup2`,
     helper_lemmas.v:194; same content as `Forall2_nth` phrased via `lookup_total`, kept as a
     separate named lemma for Rocq-source provenance fidelity even though the statement now
@@ -314,6 +340,7 @@ theorem Forall2_lookup {α β : Type} [Inhabited α] [Inhabited β] (l : List α
 -- `in_same_as_In` (helper_lemmas.v:207) NOT PORTED: bridges mathcomp's boolean `\in` with
 -- stdlib's `List.In`; Lean has one membership notion (`∈`), no counterpart needed.
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:256` `lookup_list_update_func`. -/
 theorem lookup_list_update_func {α : Type} [Inhabited α] (x : α) (f : α → α) (l : List α) (idx : Nat) :
     idx < l.length → x = lookup_total (list_update_func l idx f) idx → ∃ y, x = f y := sorry
@@ -334,22 +361,27 @@ theorem In2_split {α β : Type} (x : α) (y : β) (l : List α) (l' : List β) 
       · obtain ⟨hx, hy⟩ := ih bs h
         exact ⟨List.mem_cons_of_mem _ hx, List.mem_cons_of_mem _ hy⟩
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:286` `Forall2_forall2`. -/
 theorem Forall2_forall2 {α β : Type} (l : List α) (l' : List β) (R : α → β → Prop) :
     Forall₂ R l l' ↔ l.length = l'.length ∧ ∀ x y, In2 x y l l' → R x y := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:313` `Forall2_forall2weak`. -/
 theorem Forall2_forall2weak {α β : Type} (l : List α) (l' : List β) (R : α → β → Prop) :
     Forall₂ R l l' → ∀ x, x ∈ l → ∃ y, R x y := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:325` `Forall2_forall2weak2`. -/
 theorem Forall2_forall2weak2 {α β : Type} (l : List α) (l' : List β) (R : α → β → Prop) :
     Forall₂ R l l' → ∀ y, y ∈ l' → ∃ x, R x y := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:336` `Forall2_forall2weak3`. -/
 theorem Forall2_forall2weak3 {α β : Type} (l : List α) (l' : List β) (R : α → β → Prop) :
     ((∀ x y, x ∈ l → R x y) ∧ l.length = l'.length) → Forall₂ R l l' := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:351` `Forall2_forall2weak4`. -/
 theorem Forall2_forall2weak4 {α β : Type} (l : List α) (l' : List β) (R : α → β → Prop) :
     ((∀ x y, y ∈ l' → R x y) ∧ l.length = l'.length) → Forall₂ R l l' := sorry
@@ -357,28 +389,33 @@ theorem Forall2_forall2weak4 {α β : Type} (l : List α) (l' : List β) (R : α
 /-! ## Section 2 : Forall2 interaction with list_update / list_update_func / lookup_total
     (helper_lemmas.v:366-521) -/
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:366` `Forall2_list_update_func`. -/
 theorem Forall2_list_update_func {α β : Type} [Inhabited α] [Inhabited β]
     (l : List α) (l' : List β) (R : α → β → Prop) (i : Nat) (f : α → α) (x : α) (y : β) :
     Forall₂ R l l' → lookup_total l i = x → lookup_total l' i = y → R (f x) y →
     Forall₂ R (list_update_func l i f) l' := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:390` `Forall2_list_update_func2`. -/
 theorem Forall2_list_update_func2 {α β : Type} [Inhabited α] [Inhabited β]
     (l : List α) (l' : List β) (R : α → β → Prop) (i : Nat) (f : β → β) (x : α) (y : β) :
     Forall₂ R l l' → lookup_total l i = x → lookup_total l' i = y → R x (f y) →
     Forall₂ R l (list_update_func l' i f) := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:414` `Forall2_list_update`. -/
 theorem Forall2_list_update {α β : Type} [Inhabited α] [Inhabited β]
     (l : List α) (l' : List β) (R : α → β → Prop) (i : Nat) (x : α) (y : β) :
     Forall₂ R l l' → lookup_total l' i = y → R x y → Forall₂ R (list_update l i x) l' := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:436` `Forall2_list_update2`. -/
 theorem Forall2_list_update2 {α β : Type} [Inhabited α] [Inhabited β]
     (l : List α) (l' : List β) (R : α → β → Prop) (i : Nat) (x : α) (y : β) :
     Forall₂ R l l' → lookup_total l i = x → R x y → Forall₂ R l (list_update l' i y) := sorry
 
+-- TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED
 /-- Rocq `helper_lemmas.v:458` `Forall2_list_update_both`. -/
 theorem Forall2_list_update_both {α β : Type} [Inhabited α] [Inhabited β]
     (l : List α) (l' : List β) (R : α → β → Prop) (i : Nat) (x : α) (y : β) :
@@ -656,7 +693,17 @@ theorem ltsize {α : Type} (x : Nat) (s s2 : List α) : x < s.length → x < (s 
 -- `repeat_size` (helper_lemmas.v:849) NOT PORTED: trivial `List.length_replicate`, already in
 -- Lean core.
 
-/-! ## Axioms (from `axioms.v`). Originally 2 primitive axioms; the
+/-! ## Axioms (from `axioms.v`).
+
+    **Reading Rocq's `|x| = q` correctly (bundle20):** `|x|` is `N.of_nat (size x)` and a `q : Q`
+    on the right is coerced to `N` through `Qfloor` and `Z.to_N` (wasm.v:194-200, 309), so the
+    Rocq axioms state FLOORED equations. `rat_to_nat` (wasm2.0.lean:9) is exactly that composite.
+    Counts as of bundle20: Rocq's `axioms.v` has 23 axioms; the 11 below were ported earlier (two
+    of them, `ibytes_len'`/`ibytes_len''`, and the premise of `ibytes_inv`, were corrected in
+    bundle20 to the floored reading), and the 12 progress-only ones follow after `vbytes_inv`.
+    (`size` is a concrete definition in `wasm2.0.lean`, not an opaque.)
+
+    Original note: Originally 2 primitive axioms; the
     2026-09-24 resync (see
     `claude-logging/verbatim_dialogue_log/bundle3/updated_documents/resync_impact_report.md`)
     brought `axioms.v` up from 2 to 9 axioms — the original `nbytes_len`/
@@ -692,16 +739,30 @@ axiom nbytes_len' (v_nt : numtype) (v_c : num_) :
     ((nbytes_ v_nt v_c).length : Rat) = (Option.get! (size (valtype_numtype v_nt)) : Rat) / 8
 
 /-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_len'`. `Rat`-valued
-    restatement of `ibytes_len`. -/
+    restatement of `ibytes_len`.
+    **Corrected in bundle20 (2026-10-05).** This axiom used to be stated as the exact rational
+    equation `((ibytes_ …).length : Rat) = (v_n : Rat) / 8`, which is INCONSISTENT: at `v_n = 1`
+    it says a natural number equals `1/8`, and `False` follows (machine-checked in bundle20; the
+    old statement was used by no proof). Rocq's `|x| = (v_n / 8)%Q` compares an `N` with a `Q`
+    through the coercions `Qfloor : Q → Z` and `Z.to_N : Z → N` (`wasm.v:194-200`), i.e. it states
+    `|x| = ⌊v_n / 8⌋`; `rat_to_nat` (`wasm2.0.lean:9`) is exactly `Z.to_N ∘ Qfloor`, so the
+    statement below is the faithful translation. -/
 axiom ibytes_len' (sz v_n : N) (v_c : iN) :
-    ((ibytes_ v_n (wrap__ sz v_n v_c)).length : Rat) = (v_n : Rat) / 8
+    (ibytes_ v_n (wrap__ sz v_n v_c)).length = rat_to_nat ((v_n : Rat) / 8)
 
 /-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_len''`. Same fact as
     `ibytes_len'` but without the `wrap__` composition — a direct statement
     about `ibytes_` at any bit-width, independent of how the underlying
-    integer value was produced. -/
+    integer value was produced.
+    **Corrected in bundle20 (2026-10-05).** This axiom used to be stated as the exact rational
+    equation `((ibytes_ …).length : Rat) = (v_n : Rat) / 8`, which is INCONSISTENT: at `v_n = 1`
+    it says a natural number equals `1/8`, and `False` follows (machine-checked in bundle20; the
+    old statement was used by no proof). Rocq's `|x| = (v_n / 8)%Q` compares an `N` with a `Q`
+    through the coercions `Qfloor : Q → Z` and `Z.to_N : Z → N` (`wasm.v:194-200`), i.e. it states
+    `|x| = ⌊v_n / 8⌋`; `rat_to_nat` (`wasm2.0.lean:9`) is exactly `Z.to_N ∘ Qfloor`, so the
+    statement below is the faithful translation. -/
 axiom ibytes_len'' (v_n : N) (v_c : iN) :
-    ((ibytes_ v_n v_c).length : Rat) = (v_n : Rat) / 8
+    (ibytes_ v_n v_c).length = rat_to_nat ((v_n : Rat) / 8)
 
 /-- Rocq `axioms.v` (2026-09-24 resync: NEW) `vbytes_len'`. The vector/SIMD
     analogue of `nbytes_len'`/`ibytes_len'`. -/
@@ -734,14 +795,65 @@ axiom nbytes_inv (nt : numtype) (bs : List byte)
     (hlen : (bs.length : Rat) = (Option.get! (size (valtype_numtype nt)) : Rat) / 8) :
     nbytes_ nt (inv_nbytes_ nt bs) = bs
 
-/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_inv`. -/
-axiom ibytes_inv (v_N : N) (bs : List byte) (hlen : (bs.length : Rat) = (v_N : Rat) / 8) :
+/-- Rocq `axioms.v` (2026-09-24 resync: NEW) `ibytes_inv`.
+    **Corrected in bundle20:** the premise used to be the exact rational equation
+    `(bs.length : Rat) = (v_N : Rat) / 8`, unsatisfiable unless `8 ∣ v_N` (so the axiom was
+    strictly weaker than Rocq's, though consistent). Rocq's `|bs| = (v_N / 8 : N)` is floored
+    (`Z.to_N ∘ Qfloor`, wasm.v:194-200), i.e. `rat_to_nat`. -/
+axiom ibytes_inv (v_N : N) (bs : List byte) (hlen : bs.length = rat_to_nat ((v_N : Rat) / 8)) :
     ibytes_ v_N (inv_ibytes_ v_N bs) = bs
 
 /-- Rocq `axioms.v` (2026-09-24 resync: NEW) `vbytes_inv`. -/
 axiom vbytes_inv (vt : vectype) (bs : List byte)
     (hlen : (bs.length : Rat) = (Option.get! (size (valtype_vectype vt)) : Rat) / 8) :
     vbytes_ vt (inv_vbytes_ vt bs) = bs
+
+/-! ### Progress-only axioms of `axioms.v` (added bundle20 for the progress port)
+
+    Each constrains functions that are `opaque` in `wasm2.0.lean` (no Lean definition), exactly as
+    in Rocq, where they are uninterpreted `Axiom`s of `wasm.v`. Consistency: each has an obvious
+    model consistent with the others and with every proved theorem (comparisons return 0/1, shifts
+    reduce modulo `2^N`, `trunc_sat__` returns `some 0`, `demote__`/`promote__` return `[INF]`,
+    `ibits_`/`inv_ibits_` are binary encode/decode). -/
+
+/-- Rocq `axioms.v:64` `ibits_inv`: `ibits_` and `inv_ibits_` are mutually inverse between
+    `iN(N)` and well-formed bit sequences of length `N`. -/
+axiom ibits_inv (v_N : N) (bs : List bit) :
+    bs.length = v_N → Forall (fun b => wf_bit b) bs → ibits_ v_N (inv_ibits_ v_N bs) = bs
+
+/-- Rocq `axioms.v:72` `feq_bit`: the float comparison `feq_` returns a boolean (0 or 1). -/
+axiom feq_bit (v_N : N) (a b : fN) : wf_uN 1 (feq_ v_N a b)
+
+/-- Rocq `axioms.v:73` `fne_bit`. -/
+axiom fne_bit (v_N : N) (a b : fN) : wf_uN 1 (fne_ v_N a b)
+
+/-- Rocq `axioms.v:74` `flt_bit`. -/
+axiom flt_bit (v_N : N) (a b : fN) : wf_uN 1 (flt_ v_N a b)
+
+/-- Rocq `axioms.v:75` `fgt_bit`. -/
+axiom fgt_bit (v_N : N) (a b : fN) : wf_uN 1 (fgt_ v_N a b)
+
+/-- Rocq `axioms.v:76` `fle_bit`. -/
+axiom fle_bit (v_N : N) (a b : fN) : wf_uN 1 (fle_ v_N a b)
+
+/-- Rocq `axioms.v:77` `fge_bit`. -/
+axiom fge_bit (v_N : N) (a b : fN) : wf_uN 1 (fge_ v_N a b)
+
+/-- Rocq `axioms.v:83` `ishl_wf`: `ishl_` stays in `iN(N)` whatever the shift amount (`$binop_`
+    passes the full operand as the shift amount; the spec takes it modulo `N`). -/
+axiom ishl_wf (v_N : N) (i : iN) (k : u32) : wf_uN v_N i → wf_uN v_N (ishl_ v_N i k)
+
+/-- Rocq `axioms.v:85` `ishr_wf`. -/
+axiom ishr_wf (v_N : N) (v_sx : sx) (i : iN) (k : u32) : wf_uN v_N i → wf_uN v_N (ishr_ v_N v_sx i k)
+
+/-- Rocq `axioms.v:95` `trunc_sat_total`: saturating truncation always produces a result. -/
+axiom trunc_sat_total (v_M : M) (v_N : N) (v_sx : sx) (x : fN) : trunc_sat__ v_M v_N v_sx x ≠ none
+
+/-- Rocq `axioms.v:97` `demote_nonempty`. -/
+axiom demote_nonempty (v_M : M) (v_N : N) (x : fN) : demote__ v_M v_N x ≠ []
+
+/-- Rocq `axioms.v:99` `promote_nonempty`. -/
+axiom promote_nonempty (v_M : M) (v_N : N) (x : fN) : promote__ v_M v_N x ≠ []
 
 /-! ## `Forall₂` bridge to Mathlib's `List.Forall₂` (2026-09-30, bundle9)
 

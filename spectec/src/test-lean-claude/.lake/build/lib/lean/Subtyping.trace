@@ -17,8 +17,8 @@
       ["imports",
        [["«wasm2.0» transitive imports (legacy)", "042b7ef8e4b09de0"],
         ["«wasm2.0»:importAllArts", "bb8d051741dfc4c6"],
-        ["HelperLemmas transitive imports (legacy)", "1fcde49e3a03dd8a"],
-        ["HelperLemmas:importAllArts", "d8fd3260cbc2d34f"]]]]],
+        ["HelperLemmas transitive imports (legacy)", "5c981d0e598645fa"],
+        ["HelperLemmas:importAllArts", "1bea2958d703c29a"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -33,4 +33,4 @@
   ["Module.name: Subtyping", "23e8db55f482b518"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "f51e13d5d1722cd7"}
+ "depHash": "d1dd835d3371fcd8"}
