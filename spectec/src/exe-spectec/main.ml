@@ -467,9 +467,8 @@ let () =
     | ProseNeo ->
       log "Translating to DL...";
       let env, pp_dl = Backend_animation.Main_animate.pp il false in
-      log "Anti-unifying dl_defs";
-      let au_result = Backend_animation.Antiunify.au_dls "Step_read" pp_dl in 
-      print_endline (List.map string_of_dl_def au_result |> String.concat "\n");
+      log "Anti-unifying DL...";
+      let au_result = Backend_animation.Antiunify.run_au pp_dl false in 
       (match !new_prose_ofile with
       | Some ofile ->
         log ("Imperative step injection");

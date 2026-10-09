@@ -78,7 +78,7 @@ let rec merge_exp qs exp1 exp2 : quant list * exp * Subst.t * Subst.t =
       qs_au, CaseE (mixop1, exp_au) |> replace_it, subst1, subst2 
     | UncaseE (e1, mixop1), UncaseE (e2, mixop2) when Eq.eq_mixop mixop1 mixop2 -> 
       let qs_au, exp_au, subst1, subst2 = merge_exp qs e1 e2 in 
-      qs_au, CaseE (mixop1, exp_au) |> replace_it, subst1, subst2 
+      qs_au, UncaseE (exp_au, mixop1) |> replace_it, subst1, subst2 
     | OptE (Some e1), OptE (Some e2) ->
       let qs_au, exp_au, subst1, subst2 = merge_exp qs e1 e2 in 
       qs_au, OptE (Some exp_au) |> replace_it, subst1, subst2 
@@ -86,9 +86,6 @@ let rec merge_exp qs exp1 exp2 : quant list * exp * Subst.t * Subst.t =
       let qs_au, exp_au, subst1, subst2 = merge_exp qs exp1 exp2 in 
       qs_au, TheE (exp_au) |> replace_it, subst1, subst2
     | StrE efs1, StrE efs2 when 
-    (*
-      Note: Check StrE, TupE, check as they allow dependent tuple and dependent records, may need to modify the types as well
-    *)
       List.length efs1 = List.length efs2 && 
       List.for_all2 (fun (a1, _) (a2, _) -> Il.Eq.eq_atom a1 a2) efs1 efs2 ->
       let zipped = List.map2 
@@ -200,7 +197,7 @@ let compose_substs (new_subst : Subst.t) (old_subst : Subst.t) : Subst.t =
         Subst.add_varid acc id (Subst.subst_exp old_subst e))
        Subst.empty
 
-let au (es : exp list) : quant list * exp * Subst.t list =
+let anti_unify (es : exp list) : quant list * exp * Subst.t list =
   match es with
   | [] -> invalid_arg "anti-unification expression list arg is empty"
   | [e] -> [], e, [Subst.empty]
@@ -258,24 +255,23 @@ let rec sub_func_clauses (new_exp : exp) (new_qs : quant list) (substs : Subst.t
 let rec au_rule (dl : dl_def) : dl_def  =
   match dl with
   | FuncDef def -> 
-    (*
-    TODO:
-      1. Extract func_clauses
-      2. Transform into list of LHS exp
-      3. Run AU on it
-      4. Sub those back in
-    *)
-    let (id, osubid, params, typ, fcs, opartial) = def.it in 
+    let (id, _osubid, params, typ, fcs, _opartial) = def.it in 
     let lhses = List.map lhs_of_clause fcs in 
-    let au_qs, au_exp, au_subs = au lhses in 
+    let au_qs, au_exp, au_subs = anti_unify lhses in 
     let fcs' = sub_func_clauses au_exp au_qs au_subs fcs in 
-    FuncDef { def with it = (id, osubid, params, typ, fcs', opartial) }
+    FuncDef { def with it = (id, _osubid, params, typ, fcs', _opartial) }
   | _ -> failwith (Printf.sprintf "au_rule: Failed, attempted to anti-unify non-FuncDef definition.")
 
-let rec au_dls (name : string) (dl : dl_def list) : dl_def list =
+let rec au_dls (dl : dl_def list) : dl_def list =
   match dl with 
   | (FuncDef def)::dl' -> 
       let (id, _osubid, _params, _typ, _fcs, _opartial) = def.it in
-      if List.mem id.it target_names then [au_rule (FuncDef def)] @ au_dls name dl' else [(FuncDef def)] @ au_dls name dl'
-  | def ::dl' -> [def] @ au_dls name dl' 
+      if List.mem id.it target_names then [au_rule (FuncDef def)] @ au_dls dl' else [(FuncDef def)] @ au_dls dl'
+  | def ::dl' -> [def] @ au_dls dl' 
   | [] -> []
+
+let run_au (dl : dl_def list) (print_dl : bool) : dl_def list = 
+  let dl' = au_dls dl in 
+  if print_dl then 
+    print_endline (List.map string_of_dl_def dl' |> String.concat "\n");
+  dl'
