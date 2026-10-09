@@ -433,26 +433,7 @@ let () =
 
     | Animate ->
       log "Translating to DL and animate...";
-      (*
-      Let antiunified_il = anti_unification IL in
-      Let domain_specific_il = insert_functions antiunified_il in
-      Let lifted_il = expr_lifting domain_specific_il in
-      Let prose = prose_gen lifted_il
-      Let animated_il = animation domain_specific_il in
-      Let result = meta_interpretation animated_il wasm _prog in
-      (Prose, animated_il)
-      *)
       let (env, dl) = Backend_animation.Main_animate.run il !print_dl !animate_inline in
-      let au_qs, au_exp, au_subst = Backend_animation.Antiunify.au_step "Step_read/load" dl in
-      (* AU section *)
-      log "AU LHS...";
-      print_endline (Il.Print.string_of_exp au_exp);
-      log "AU subst";
-      let string_subst = List.map Il.Subst.string_of_subst au_subst in 
-      List.iter print_endline string_subst;
-      log "AU qs";
-      let string_qs = List.map Il.Print.string_of_param au_qs in 
-      List.iter print_endline string_qs;
       log "DL Validating... ";
       Backend_animation.Valid.valid dl;
       (match !generate_ocaml with
@@ -486,6 +467,9 @@ let () =
     | ProseNeo ->
       log "Translating to DL...";
       let env, pp_dl = Backend_animation.Main_animate.pp il false in
+      log "Anti-unifying dl_defs";
+      let au_result = Backend_animation.Antiunify.au_dls "Step_read" pp_dl in 
+      print_endline (List.map string_of_dl_def au_result |> String.concat "\n");
       (match !new_prose_ofile with
       | Some ofile ->
         log ("Imperative step injection");
