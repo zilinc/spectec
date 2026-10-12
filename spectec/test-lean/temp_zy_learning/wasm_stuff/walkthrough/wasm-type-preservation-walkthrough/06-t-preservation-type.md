@@ -4,8 +4,15 @@
 
 **Plain-English summary. The central preservation lemma for the whole `Step` relation**, per its own doc comment — the instruction sequence itself stays well-typed at the *same* `t1s → t2s` arrow type across one step (and, unlike `t_preservation_vs_type`, this one already needs the store-extension and well-formedness facts as explicit hypotheses rather than deriving them internally). It's the thinnest possible wrapper around `t_preservation_type_aux` (next file), existing only to supply that `_aux`'s one extra hypothesis — well-formedness of the post-config — from the generated `Step_is_wf`.
 
-**Code** — [TypePreservation.lean:2682-2693](../../spectec/src/test-lean-claude/TypePreservation.lean#L2682-L2693):
+**Code** — [TypePreservation.lean:2675-2693](../../../../../src/test-lean-claude/TypePreservation.lean#L2675-L2693):
 ```lean
+/-- Rocq `type_preservation.v:3137` `t_preservation_type`. **The central preservation
+    lemma for the whole `Step` relation** (subsumes `t_read_preservation`). `Qed` in Rocq,
+    SIMD cases included (the "`Admitted`, SIMD gap" note this file used to carry described
+    the pre-`a8b585cdb` Rocq and was corrected in bundle18). Dispatches `Step_pure` to
+    `t_pure_preservation` and `Step_read` to `t_read_preservation`; the case analysis is in
+    `t_preservation_type_aux`. Like Rocq, it takes the reduct's well-formedness from the
+    generated `Step_is_wf`. -/
 theorem t_preservation_type (v_s : store) (v_f : frame) (v_ais : List admininstr) (v_s' : store)
     (v_f' : frame) (v_ais' : List admininstr) (v_C v_C' : context) (t1s t2s : List valtype) :
     wf_config (config.mk_config (state.mk_state v_s v_f) v_ais) →

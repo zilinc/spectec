@@ -4,8 +4,15 @@
 
 **Plain-English summary.** The frame's **locals** stay well-typed across one step. (`vs_type` = "value-stack type," inherited naming from Rocq, even though what's actually tracked here is locals, not the operand stack — the operand stack's typing is handled by `t_preservation_type` in the next file instead.) This is built in three layers, exactly the primer's §0.8 `_aux` pattern: a fully-general induction (`'_aux`), a thin store-fixed wrapper (`'`), and the final version that also transports across store growth.
 
-**Code, layer 1 (`t_preservation_vs_type'_aux`)** — [TypePreservation.lean:119-212](../../spectec/src/test-lean-claude/TypePreservation.lean#L119-L212):
+**Code, layer 1 (`t_preservation_vs_type'_aux`)** — [TypePreservation.lean:112-212](../../../../../src/test-lean-claude/TypePreservation.lean#L112-L212):
 ```lean
+/-- Generalized form of `t_preservation_vs_type'` below (same `remember`/
+    `generalize dependent` encoding as `reduce_inst_unchanged_aux`). Of `Step`'s
+    23 rules, 20 leave the frame alone outright — only `local_set` touches
+    `LOCALS`, and only the two congruence rules (`ctxt_label`, `ctxt_instrs`)
+    need the induction hypothesis; `ctxt_frame` changes only the *inner* frame.
+    Rocq compresses the same case split into one `induction ...; try (...)`
+    script backed by its `invert_ais_typing`/`resolve_all_pt` tactics. -/
 private theorem t_preservation_vs_type'_aux (c1 c2 : config) (h : Step c1 c2) :
     ∀ (s : store) (f : frame) (ais : List admininstr) (s' : store) (f' : frame)
       (ais' : List admininstr) (C C' : context) (t1s t2s : List valtype),
@@ -102,8 +109,10 @@ private theorem t_preservation_vs_type'_aux (c1 c2 : config) (h : Step c1 c2) :
     exact hvals)
 ```
 
-**Code, layer 2 (`t_preservation_vs_type'`)** — [TypePreservation.lean:216-222](../../spectec/src/test-lean-claude/TypePreservation.lean#L216-L222):
+**Code, layer 2 (`t_preservation_vs_type'`)** — [TypePreservation.lean:214-222](../../../../../src/test-lean-claude/TypePreservation.lean#L214-L222):
 ```lean
+/-- Rocq `type_preservation.v:53` `t_preservation_vs_type'`. Locals stay well-typed under
+    one `Step` (store held fixed / pre-store-extension). -/
 theorem t_preservation_vs_type' (s : store) (f : frame) (ais : List admininstr) (s' : store)
     (f' : frame) (ais' : List admininstr) (C C' : context) (t1s t2s : List valtype) :
     Step (config.mk_config (state.mk_state s f) ais) (config.mk_config (state.mk_state s' f') ais') →
@@ -113,8 +122,11 @@ theorem t_preservation_vs_type' (s : store) (f : frame) (ais : List admininstr) 
     t_preservation_vs_type'_aux _ _ hstep s f ais s' f' ais' C C' t1s t2s rfl rfl hsok hmi hvals him htype
 ```
 
-**Code, layer 3 — the actual diagram node (`t_preservation_vs_type`)** — [TypePreservation.lean:227-234](../../spectec/src/test-lean-claude/TypePreservation.lean#L227-L234):
+**Code, layer 3 — the actual diagram node (`t_preservation_vs_type`)** — [TypePreservation.lean:224-234](../../../../../src/test-lean-claude/TypePreservation.lean#L224-L234):
 ```lean
+/-- Rocq `type_preservation.v:107` `t_preservation_vs_type`. Composition:
+    `t_preservation_vs_type'` then `store_extension_vals` to transport across store
+    extension. -/
 theorem t_preservation_vs_type (s : store) (f : frame) (ais : List admininstr) (s' : store)
     (f' : frame) (ais' : List admininstr) (C C' : context) (t1s t2s : List valtype) :
     Step (config.mk_config (state.mk_state s f) ais) (config.mk_config (state.mk_state s' f') ais') →

@@ -4,8 +4,11 @@
 
 **Plain-English summary.** If the store only grew, every fact "address `a` in module instance `i` has type `t`" that held in the old store still holds in the new one — growing the store can't invalidate an existing module's view of it, because every component only ever grows or (for globals/data/elem) changes in a way that's compatible with its old type.
 
-**Code** — [ExtensionLemmas.lean:1757-1781](../../spectec/src/test-lean-claude/ExtensionLemmas.lean#L1757-L1781):
+**Code** — [ExtensionLemmas.lean:1754-1781](../../../../../src/test-lean-claude/ExtensionLemmas.lean#L1754-L1781):
 ```lean
+/-- Rocq `Extend_store_moduleinst` (was `store_extension_moduleinst`). **The
+    key assembly lemma**, reused by `type_preservation.v`'s
+    `step_moduleinst`. -/
 theorem Extend_store_moduleinst (v_S v_S' : store) (v_i : moduleinst) (v_C : context) :
     Extend_store v_S v_S' → Moduleinst_ok v_S v_i v_C → Moduleinst_ok v_S' v_i v_C := by
   intro hext h

@@ -1,11 +1,16 @@
 # 7. `t_preservation_type_aux` — the 23-case engine
 
-*(Previous: [06-t-preservation-type.md](06-t-preservation-type.md). This is the last file in the current walkthrough — `t_read_preservation` (§7b, the 47-case `Step_read` dispatcher) is not yet written up; see the [README](README.md).)*
+*(Previous: [06-t-preservation-type.md](06-t-preservation-type.md). Next: [08-t-read-preservation.md](08-t-read-preservation.md), the `Step.read` branch — the diagram's §7b.)*
 
 **Plain-English summary.** This is where the instruction-sequence-typing half of preservation is actually proved, case by case over every way a step can happen: hand off to `t_pure_preservation`/`t_read_preservation` for the two lifted sub-relations, recurse through the three congruence rules, and directly re-derive a typing for each store-writing rule's very simple reduct (`[]`, or one `CONST` value).
 
-**Code — the full 23-case proof** — [TypePreservation.lean:2425-2673](../../spectec/src/test-lean-claude/TypePreservation.lean#L2425-L2673):
+**Code — the full 23-case proof** — [TypePreservation.lean:2420-2673](../../../../../src/test-lean-claude/TypePreservation.lean#L2420-L2673):
 ```lean
+/-- Generalized form of `t_preservation_type` (same `remember`/`generalize dependent`
+    encoding as `reduce_inst_unchanged_aux`), additionally taking `wf_config` of the
+    post-configuration: the congruence rules carry the inner configurations' `wf_config`
+    as premises, so the induction never needs `Step_is_wf` itself; only the top-level
+    wrapper below does (exactly where Rocq uses it). -/
 private theorem t_preservation_type_aux (c1 c2 : config) (hstep : Step c1 c2) :
     ∀ (v_s : store) (v_f : frame) (v_ais : List admininstr) (v_s' : store) (v_f' : frame)
       (v_ais' : List admininstr) (v_C v_C' : context) (t1s t2s : List valtype),
@@ -260,83 +265,150 @@ private theorem t_preservation_type_aux (c1 c2 : config) (hstep : Step c1 c2) :
 **Signature.** Same `_aux` shape as every other node in the primer's §0.8: fully general `c1 c2 : config` plus equality premises. What's new here versus the smaller `_aux`s is the sheer number of hypotheses the goal carries — `wf_config` of *both* sides, `Store_ok` of *both* sides, `Extend_store` between them, `Moduleinst_ok` of *both* stores against the *same* unchanging context, `Vals_ok` for the locals, `inst_match`, and the pre-typing — because by this point in the proof (recall file `01`'s `t_preservation`), every other piece of the puzzle has already been established by the other children, and this is the one case-split that actually needs all of them simultaneously.
 
 **Proof sketch.** Three groups, matching `Step`'s 23 constructors one-to-one:
-1. **`pure`/`read`** dispatch straight to §7a below / to `t_read_preservation` (not yet written up) after peeling the config equalities — all the real casework for these two lives there, not here.
+1. **`pure`/`read`** dispatch straight to `t_pure_preservation` (§7a below) and `t_read_preservation` (file `08`) after peeling the config equalities — all the real casework for these two lives there, not here.
 2. **`ctxt_label`/`ctxt_frame`/`ctxt_instrs`** recurse through the induction hypothesis `ih`, exactly as in files `02` and `05`'s `_aux`s: invert the wrapping instruction's principal type, recurse on the shorter inner sequence, then re-wrap the result in a fresh `Instr_ok2.label`/`Instr_ok2_frame`/sequencing derivation. `ctxt_frame` is the most involved of the three because it's where `t_preservation_vs_type` (file `05`) and `reduce_inst_unchanged` (file `03`) get invoked *again*, locally, to re-derive `Frame_ok` for the frame sitting inside the stepped `FRAME_` marker.
-3. **Every store-writing rule** (`local_set` through `data_drop`) retypes its reduct directly and cheaply, because every store-writing rule's reduct is either `[]` (typed via `ais_empty_typing`, after inverting the premise's typing with the matching `inv_*`/`ais_args*_typing` helper to get a subtyping fact) or one `CONST I32 _` value (typed via `const_I32_result`) — **this is exactly "the reduct is `[]` or a constant, typed directly"** from the diagram. The two SIMD-store cases (`vstore_val`, `vstore_lane_val`) are the only two that don't inline this and instead call the dedicated `Step__vstore_preserves`/`Step__vstore_lane_preserves` helper lemmas (defined earlier in the file, around [TypePreservation.lean:637-670](../../spectec/src/test-lean-claude/TypePreservation.lean#L637-L670)) — purely because their typing-inversion step is more involved (three-instruction sequences, not two), not because the underlying logic differs.
+3. **Every store-writing rule** (`local_set` through `data_drop`) retypes its reduct directly and cheaply, because every store-writing rule's reduct is either `[]` (typed via `ais_empty_typing`, after inverting the premise's typing with the matching `inv_*`/`ais_args*_typing` helper to get a subtyping fact) or one `CONST I32 _` value (typed via `const_I32_result`) — **this is exactly "the reduct is `[]` or a constant, typed directly"** from the diagram. The two SIMD-store cases (`vstore_val`, `vstore_lane_val`) are the only two that don't inline this and instead call the dedicated `Step__vstore_preserves`/`Step__vstore_lane_preserves` helper lemmas (defined earlier in the file, around [TypePreservation.lean:637-670](../../../../../src/test-lean-claude/TypePreservation.lean#L637-L670)) — purely because their typing-inversion step is more involved (three-instruction sequences, not two), not because the underlying logic differs.
 
 ## 7a. `t_pure_preservation`
 
 **Plain-English summary.** Type preservation for the 54 store-independent, frame-independent rules — arithmetic, control-flow bookkeeping, `select`/`if`/`local.tee`, trap propagation, the full SIMD pure-op family. Each rule gets its own tiny dedicated lemma (`Step_pure__<rule>_preserves`), proved earlier in the file; this theorem is purely the dispatch table.
 
-**Code — the complete 54-case theorem** — [TypePreservationPure.lean:1858-1974](../../spectec/src/test-lean-claude/TypePreservationPure.lean#L1858-L1974):
+**Code — the complete 54-case theorem** — [TypePreservationPure.lean:1854-1974](../../../../../src/test-lean-claude/TypePreservationPure.lean#L1854-L1974):
 ```lean
+/-- Rocq `type_preservation_pure.v` `t_pure_preservation` — the master theorem for this
+    file. `Qed` upstream, SIMD cases included; proved here (bundle18) by dispatching every
+    `Step_pure` case to the per-rule lemmas above, with the reduct's well-formedness from the
+    generated `Step_pure_is_wf` (as in Rocq). -/
 theorem t_pure_preservation (v_s : store) (v_ais v_ais' : List admininstr) (v_C : context) (tf : functype) :
     Instrs_ok2 v_s v_C v_ais tf → Step_pure v_ais v_ais' → Instrs_ok2 v_s v_C v_ais' tf := by
   intro h hstep
   obtain ⟨hwfC, hwfS, hwfais⟩ := ainstrs_ok_context_store_wf v_s v_C v_ais tf h
+  -- well-formedness of the reduct, from the generated `Step_pure_is_wf` (as in Rocq)
   have hwf' := Step_pure_is_wf v_ais v_ais' hwfais hstep
   have hs := hstep
   cases hstep
-  case unreachable => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case nop => exact Step_pure__nop_preserves v_s v_C tf h hs
-  case drop => exact Step_pure__drop_preserves v_s v_C _ tf h hs
-  case select_true => exact Step_pure__select_true_preserves v_s v_C _ _ _ _ tf h hs
-  case select_false => exact Step_pure__select_false_preserves v_s v_C _ _ _ _ tf h hs
-  case if_true => exact Step_pure__if_true_preserves v_s v_C _ _ _ _ tf h hs
-  case if_false => exact Step_pure__if_false_preserves v_s v_C _ _ _ _ tf h hs
-  case label_vals => exact Step_pure__label_vals_preserves v_s v_C _ _ _ tf h hs
-  case br_zero _ _ _ _ _ hn => exact Step_pure__br_zero_preserves v_s v_C _ _ _ _ _ tf h hn.symm
-  case br_succ => exact Step_pure__br_succ_preserves v_s v_C _ _ _ _ _ tf h hs
-  case br_if_true => exact Step_pure__br_if_true_preserves v_s v_C _ _ tf h hs
-  case br_if_false => exact Step_pure__br_if_false_preserves v_s v_C _ _ tf h hs
-  case br_table_lt _ _ _ hlt _ => exact Step_pure__br_table_lt_preserves v_s v_C _ _ _ tf h hs hlt
-  case br_table_ge => exact Step_pure__br_table_ge_preserves v_s v_C _ _ _ tf h hs
-  case frame_vals => exact Step_pure__frame_vals_preserves v_s v_C _ _ _ tf h hs
-  case return_frame _ _ _ _ _ hn => exact Step_pure__return_frame_preserves v_s v_C _ _ _ _ _ tf h hs hn.symm
-  case return_label => exact Step_pure__return_label_preserves v_s v_C _ _ _ _ tf h hs
-  case trap_vals => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case trap_label => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case trap_frame => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case unop_val => exact Step_pure__unop_val_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
-  case unop_trap => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case binop_val => exact Step_pure__binop_val_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case binop_trap => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case testop => exact Step_pure__testop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
-  case relop => exact Step_pure__relop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case cvtop_val => exact Step_pure__cvtop_val_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case cvtop_trap => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case ref_is_null_true _ rt heq => subst heq; exact Step_pure__ref_is_null_true_preserves v_s v_C rt tf h hs
-  case ref_is_null_false => exact Step_pure__ref_is_null_false_preserves v_s v_C _ tf h hs
-  case vvunop => exact Step_pure__vvunop_preserves v_s v_C _ _ _ tf h hs (hwf' _ (by simp))
-  case vvbinop => exact Step_pure__vvbinop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vvternop => exact Step_pure__vvternop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vvtestop => exact Step_pure__vvtestop_preserves v_s v_C _ _ _ tf h hs (hwf' _ (by simp))
-  case vunop => exact Step_pure__vunop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vunop_trap => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case vbinop_val => exact Step_pure__vbinop_val_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vbinop_trap => exact construct_ais_trap v_s v_C tf hwfC hwfS
-  case vtestop_true => exact Step_pure__vtestop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vtestop_false => exact Step_pure__vtestop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vrelop => exact Step_pure__vrelop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vshiftop => exact Step_pure__vshiftop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vbitmask => exact Step_pure__vbitmask_preserves v_s v_C _ _ _ tf h hs (hwf' _ (by simp))
-  case vswizzle => exact Step_pure__vswizzle_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vshuffle => exact Step_pure__vshuffle_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vsplat => exact Step_pure__vsplat_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vextract_lane_num => exact Step_pure__vextract_lane_num_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vextract_lane_pack => exact Step_pure__vextract_lane_pack_preserves v_s v_C _ _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vreplace_lane => exact Step_pure__vreplace_lane_preserves v_s v_C _ _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vextunop => exact Step_pure__vextunop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vextbinop => exact Step_pure__vextbinop_preserves v_s v_C _ _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vnarrow => exact Step_pure__vnarrow_preserves v_s v_C _ _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case vcvtop => exact Step_pure__vcvtop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
-  case local_tee => exact Step_pure__local_tee_preserves v_s v_C _ _ tf h hs
+  case unreachable =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case nop =>
+    exact Step_pure__nop_preserves v_s v_C tf h hs
+  case drop =>
+    exact Step_pure__drop_preserves v_s v_C _ tf h hs
+  case select_true =>
+    exact Step_pure__select_true_preserves v_s v_C _ _ _ _ tf h hs
+  case select_false =>
+    exact Step_pure__select_false_preserves v_s v_C _ _ _ _ tf h hs
+  case if_true =>
+    exact Step_pure__if_true_preserves v_s v_C _ _ _ _ tf h hs
+  case if_false =>
+    exact Step_pure__if_false_preserves v_s v_C _ _ _ _ tf h hs
+  case label_vals =>
+    exact Step_pure__label_vals_preserves v_s v_C _ _ _ tf h hs
+  case br_zero _ _ _ _ _ hn =>
+    exact Step_pure__br_zero_preserves v_s v_C _ _ _ _ _ tf h hn.symm
+  case br_succ =>
+    exact Step_pure__br_succ_preserves v_s v_C _ _ _ _ _ tf h hs
+  case br_if_true =>
+    exact Step_pure__br_if_true_preserves v_s v_C _ _ tf h hs
+  case br_if_false =>
+    exact Step_pure__br_if_false_preserves v_s v_C _ _ tf h hs
+  case br_table_lt _ _ _ hlt _ =>
+    exact Step_pure__br_table_lt_preserves v_s v_C _ _ _ tf h hs hlt
+  case br_table_ge =>
+    exact Step_pure__br_table_ge_preserves v_s v_C _ _ _ tf h hs
+  case frame_vals =>
+    exact Step_pure__frame_vals_preserves v_s v_C _ _ _ tf h hs
+  case return_frame _ _ _ _ _ hn =>
+    exact Step_pure__return_frame_preserves v_s v_C _ _ _ _ _ tf h hs hn.symm
+  case return_label =>
+    exact Step_pure__return_label_preserves v_s v_C _ _ _ _ tf h hs
+  case trap_vals =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case trap_label =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case trap_frame =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case unop_val =>
+    exact Step_pure__unop_val_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
+  case unop_trap =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case binop_val =>
+    exact Step_pure__binop_val_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case binop_trap =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case testop =>
+    exact Step_pure__testop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
+  case relop =>
+    exact Step_pure__relop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case cvtop_val =>
+    exact Step_pure__cvtop_val_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case cvtop_trap =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case ref_is_null_true _ rt heq =>
+    subst heq
+    exact Step_pure__ref_is_null_true_preserves v_s v_C rt tf h hs
+  case ref_is_null_false =>
+    exact Step_pure__ref_is_null_false_preserves v_s v_C _ tf h hs
+  case vvunop =>
+    exact Step_pure__vvunop_preserves v_s v_C _ _ _ tf h hs (hwf' _ (by simp))
+  case vvbinop =>
+    exact Step_pure__vvbinop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vvternop =>
+    exact Step_pure__vvternop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vvtestop =>
+    exact Step_pure__vvtestop_preserves v_s v_C _ _ _ tf h hs (hwf' _ (by simp))
+  case vunop =>
+    exact Step_pure__vunop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vunop_trap =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case vbinop_val =>
+    exact Step_pure__vbinop_val_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vbinop_trap =>
+    exact construct_ais_trap v_s v_C tf hwfC hwfS
+  case vtestop_true =>
+    exact Step_pure__vtestop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vtestop_false =>
+    exact Step_pure__vtestop_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vrelop =>
+    exact Step_pure__vrelop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vshiftop =>
+    exact Step_pure__vshiftop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vbitmask =>
+    exact Step_pure__vbitmask_preserves v_s v_C _ _ _ tf h hs (hwf' _ (by simp))
+  case vswizzle =>
+    exact Step_pure__vswizzle_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vshuffle =>
+    exact Step_pure__vshuffle_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vsplat =>
+    exact Step_pure__vsplat_preserves v_s v_C _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vextract_lane_num =>
+    exact Step_pure__vextract_lane_num_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vextract_lane_pack =>
+    exact Step_pure__vextract_lane_pack_preserves v_s v_C _ _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vreplace_lane =>
+    exact Step_pure__vreplace_lane_preserves v_s v_C _ _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vextunop =>
+    exact Step_pure__vextunop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vextbinop =>
+    exact Step_pure__vextbinop_preserves v_s v_C _ _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vnarrow =>
+    exact Step_pure__vnarrow_preserves v_s v_C _ _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case vcvtop =>
+    exact Step_pure__vcvtop_preserves v_s v_C _ _ _ _ _ tf h hs (hwf' _ (by simp))
+  case local_tee =>
+    exact Step_pure__local_tee_preserves v_s v_C _ _ tf h hs
 ```
 
 **Signature.** `Instrs_ok2 v_s v_C v_ais tf → Step_pure v_ais v_ais' → Instrs_ok2 v_s v_C v_ais' tf` — note there's no store or frame anywhere in sight, matching `Step_pure`'s own signature (primer §0.7): pure reduction never touches either, so neither the hypothesis nor the conclusion needs to mention them.
 
-**Proof sketch.** `cases hstep` splits into all 54 `Step_pure` constructors. Every genuine "trap" constructor (`unreachable`, `trap_vals`, `trap_label`, `trap_frame`, `unop_trap`, `binop_trap`, `cvtop_trap`, `vunop_trap`, `vbinop_trap`) is dismissed identically by `construct_ais_trap`, since `TRAP` types at *any* signature (primer §0.5's `Instr_ok2.trap`). Every other case calls exactly one dedicated `Step_pure__<name>_preserves` lemma, passing through the original typing `h`, the `Step_pure` fact `hs`, and — for anything whose result is a fresh numeric/vector constant rather than a syntactic copy — a well-formedness fact for that constant pulled from `Step_pure_is_wf` (`hwf'`). A representative one of those 54 per-rule lemmas, in full — [TypePreservationPure.lean:35-50](../../spectec/src/test-lean-claude/TypePreservationPure.lean#L35-L50):
+**Proof sketch.** `cases hstep` splits into all 54 `Step_pure` constructors. Every genuine "trap" constructor (`unreachable`, `trap_vals`, `trap_label`, `trap_frame`, `unop_trap`, `binop_trap`, `cvtop_trap`, `vunop_trap`, `vbinop_trap`) is dismissed identically by `construct_ais_trap`, since `TRAP` types at *any* signature (primer §0.5's `Instr_ok2.trap`). Every other case calls exactly one dedicated `Step_pure__<name>_preserves` lemma, passing through the original typing `h`, the `Step_pure` fact `hs`, and — for anything whose result is a fresh numeric/vector constant rather than a syntactic copy — a well-formedness fact for that constant pulled from `Step_pure_is_wf` (`hwf'`). A representative one of those 54 per-rule lemmas, in full — [TypePreservationPure.lean:28-50](../../../../../src/test-lean-claude/TypePreservationPure.lean#L28-L50):
 ```lean
+/-- Rocq `type_preservation_pure.v:41` `Step_pure__nop_preserves`. Rocq's proof is a
+    5-tactic-macro pipeline (`resolve_wfness`/`invert_ais_typing`/`resolve_all_pt`/
+    `resolve_subtyping`/`construct_ais_typing`, all pure Ltac automation from
+    `helper_tactics.v`, not ported per project convention); the underlying content is:
+    `[NOP]`'s only principal type is `[]->[]` (`ai_principal_typing`'s `NOP` case), so the
+    typing hypothesis reduces to `instrtype_sub([]->[])v_ft`, and `[]` types at any such
+    `v_ft` via `ais_empty_typing` + `instrtype_sub_empty`. -/
 theorem Step_pure__nop_preserves (v_S : store) (v_C : context) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.NOP] v_ft → Step_pure [admininstr.NOP] [] →
     Instrs_ok2 v_S v_C [] v_ft := by
@@ -358,4 +430,4 @@ theorem Step_pure__nop_preserves (v_S : store) (v_C : context) (v_ft : functype)
 
 ---
 
-*This is the end of the current walkthrough. `t_read_preservation` (§7b — the 47-case `Step_read` dispatcher) is the one remaining leaf; see the [README](README.md) for status.*
+*Next: [08-t-read-preservation.md](08-t-read-preservation.md) — `t_read_preservation`, the 47-case `Step_read` dispatcher (§7b in the diagram).*

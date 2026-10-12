@@ -4,8 +4,15 @@
 
 **Plain-English summary.** This is it — WASM 2.0's type soundness statement, preservation half. *If* a machine configuration is well-typed at some result type `ts`, *and* it takes one step, *then* the new configuration is still well-typed at that same `ts`. Nothing about execution ever invalidates the type system's guarantees. The Rocq source literally comments this lemma `(* Ultimate goal of project *)`.
 
-**Code** — [TypePreservation.lean:2702-2753](../../spectec/src/test-lean-claude/TypePreservation.lean#L2702-L2753):
+**Code** — [TypePreservation.lean:2695-2752](../../../../../src/test-lean-claude/TypePreservation.lean#L2695-L2752):
 ```lean
+/-- Rocq `type_preservation.v:2668` `t_preservation`. **THE top-level theorem** — Rocq
+    source comment: `(* Ultimate goal of project *)`. Whole-program preservation: reduction
+    (`Step`) on a full `config` preserves well-typedness at the same fixed result type.
+    `Qed` in Rocq; proved here by the same composition (`store_extension_reduce`,
+    `t_preservation_vs_type`, `t_preservation_type`, `reduce_inst_unchanged`,
+    `Extend_store_moduleinst`). Its remaining `sorry` dependencies are listed in
+    `claude-logging/for-claude/is_wf_theorems.md` (generated `*_is_wf` theorems). -/
 theorem t_preservation (c1 : config) (ts : resulttype) (c2 : config) :
     Step c1 c2 → Config_ok c1 ts → Config_ok c2 ts := by
   intro hstep hcfg
@@ -61,7 +68,9 @@ theorem t_preservation (c1 : config) (ts : resulttype) (c2 : config) :
 
 **Signature.** `c1 c2 : config` are the full before/after machine states; `ts : resulttype` is the fixed type the whole configuration is checked at (think: "the overall program's declared result type"). `Step c1 c2` is one execution step; `Config_ok c1 ts` is the hypothesis; `Config_ok c2 ts` — *same* `ts` — is the conclusion. Note what's *not* parametrized: there's no weakening of `ts` between the two sides. One step can't change what type the whole computation is ultimately aiming for.
 
-**Proof sketch.** Destructure `c1`/`c2` into `(store, frame, instrs)` triples, then peel `Config_ok` → `State_ok` → `Frame_ok` (which itself contains `Moduleinst_ok` and the locals' typing) and `Expr_ok2` via three nested `cases`. That hands you five separate facts about the *pre*-state. Get well-formedness of the *post*-state for free from the generated (and separately, fully proved) `Step_is_wf`. Then compute four facts about the transition, each delegated to one child lemma: the store extends and stays `Store_ok` (`store_extension_reduce`), the frame's module instance is literally unchanged (`reduce_inst_unchanged`), that unchanged module instance is still `Moduleinst_ok` in the bigger store (`Extend_store_moduleinst`), the locals are still well-typed (`t_preservation_vs_type`), and the instruction sequence is still well-typed (`t_preservation_type`). Finally, `exact Config_ok.mk_Config_ok ...` re-assembles exactly the same nested structure for `c2` out of those five facts — the "re-packs the same structure for `c2`" the diagram promised.
+**Proof sketch.** Destructure `c1`/`c2` into `(store, frame, instrs)` triples, then peel `Config_ok` → `State_ok` → `Frame_ok` (which itself contains `Moduleinst_ok` and the locals' typing) and `Expr_ok2` via three nested `cases`. That hands you five separate facts about the *pre*-state. Get well-formedness of the *post*-state from the generated `Step_is_wf` (whose own proof is complete, though it rests on `Step_read_is_wf` — primer §0.4). Then compute five facts about the transition, each delegated to one child lemma: the store extends and stays `Store_ok` (`store_extension_reduce`), the frame's module instance is literally unchanged (`reduce_inst_unchanged`), that unchanged module instance is still `Moduleinst_ok` in the bigger store (`Extend_store_moduleinst`), the locals are still well-typed (`t_preservation_vs_type`), and the instruction sequence is still well-typed (`t_preservation_type`). Finally, `exact Config_ok.mk_Config_ok ...` re-assembles exactly the same nested structure for `c2` out of those five facts — the "re-packs the same structure for `c2`" the diagram promised.
+
+**Proof status.** The proof term above is complete, but through its children it rests on 33 `sorry`'d declarations: `Step_read_is_wf`, which is false in one corner case of the bulk memory operations (file `08` §8.11), and 32 generated lemmas asserting that WASM's numeric primitives — left `opaque` in this backend — return well-formed results (primer §0.4).
 
 ---
 *Next: [02-store-extension-reduce.md](02-store-extension-reduce.md).*
