@@ -107,7 +107,7 @@ rule Reftype_sub/nonnull:
   -- Heaptype_sub: C |- ht_1 <: ht_2
 
 rule Reftype_sub/null:
-  C |- REF null? ht_1 <: REF NULL ht_2
+  C |- REF NULL? ht_1 <: REF NULL ht_2
   -- Heaptype_sub: C |- ht_1 <: ht_2
 
 

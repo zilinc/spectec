@@ -35,7 +35,6 @@ type pass =
   | LetIntroMech
   | DatatypeDiet
   | SinglePatternMatch
-  | HandleExplicitIgnores
 
 (* This list declares the intended order of passes.
 
@@ -45,7 +44,6 @@ flags on the command line.
 *)
 let _skip_passes = [ Unthe ]  (* Not clear how to extend them to indexed types *)
 let all_passes = [
-  HandleExplicitIgnores;
   Ite;
   LetIntroMech;
   TypeFamilyRemoval;
@@ -148,7 +146,6 @@ let pass_flag = function
   | LetIntroMech -> "let-intro-mech"
   | DatatypeDiet -> "datatype-diet"
   | SinglePatternMatch -> "single-pattern-match"
-  | HandleExplicitIgnores -> "handle-explicit-ignores"
 
 
 let pass_desc = function
@@ -170,7 +167,6 @@ let pass_desc = function
   | LetIntroMech -> "Let Premise introduction for mechanization backends"
   | DatatypeDiet -> "Remove datatypes with over 50 constructors"
   | SinglePatternMatch -> "Remove functions that pattern-match on several arguments"
-  | HandleExplicitIgnores -> "Strip defs tagged hint(nobackendrender), and everything derived from them, before any other pass runs"
 
 
 let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
@@ -192,7 +188,6 @@ let run_pass : pass -> Il.Ast.script -> Il.Ast.script = function
   | ElseSimp -> Middlend.Elsesimp.transform
   | DatatypeDiet -> Middlend.Datatypediet.transform
   | SinglePatternMatch -> Middlend.Singlepatternmatch.transform
-  | HandleExplicitIgnores -> Middlend.Handleexplicitignores.transform
 
 
 (* Argument parsing - Specific for undep pass *)
@@ -315,7 +310,6 @@ let () =
     | Prose _ | Splice _ | Interpreter _ ->
       enable_pass Sideconditions;
     | Rocq | Lean ->
-      enable_pass HandleExplicitIgnores;
       enable_pass Sideconditions;
       enable_pass Totalize;
       enable_pass Else;

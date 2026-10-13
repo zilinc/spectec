@@ -28,7 +28,7 @@ rule Heaptype_ok/bot:
   C |- BOT : OK
 
 rule Reftype_ok:
-  C |- REF null? heaptype : OK
+  C |- REF NULL? heaptype : OK
   -- Heaptype_ok: C |- heaptype : OK
 
 rule Valtype_ok/num:
@@ -128,7 +128,7 @@ rule Storagetype_ok/pack:
   -- Packtype_ok: C |- packtype : OK
 
 rule Fieldtype_ok:
-  C |- mut? storagetype : OK
+  C |- MUT? storagetype : OK
   -- Storagetype_ok: C |- storagetype : OK
 
 
@@ -147,7 +147,7 @@ rule Comptype_ok/func:
 
 
 rule Subtype_ok:
-  C |- SUB final? (_IDX x)* comptype : OK(x_0)
+  C |- SUB FINAL? (_IDX x)* comptype : OK(x_0)
   -- if |x*| <= 1
   -- (if x < x_0)*
   -- (if $unrolldt(C.TYPES[x]) = SUB yy* comptype')*
@@ -165,7 +165,7 @@ def $unrollht_(C, _IDX typeidx) = $unrolldt(C.TYPES[typeidx])
 def $unrollht_(C, REC i) = C.RECS[i]
 
 rule Subtype_ok2:
-  C |- SUB final? typeuse* comptype : OK(i)
+  C |- SUB FINAL? typeuse* comptype : OK(i)
   -- if |typeuse*| <= 1
   -- (Typeuse_ok: C |- typeuse : OK)*
   -- (if $before(typeuse, i))*
@@ -222,7 +222,7 @@ rule Tagtype_ok:
   -- Expand_use: typeuse ~~_C $($(FUNC t_1* -> t_2*))
 
 rule Globaltype_ok:
-  C |- mut? t : OK
+  C |- MUT? t : OK
   -- Valtype_ok: C |- t : OK
 
 rule Memtype_ok:
