@@ -11,6 +11,7 @@ open Il.Print
 open Xl.Atom
 open Backend_ast
 open Def
+open Common
 open Il_util
 open Occur
 open Lazy
@@ -509,10 +510,6 @@ let string_of_state (s: AnimState.t) =
   "inverse : " ^ string_of_bool s.inverse
 
 let throw_log e = let () = info "log" no e in E.throw (force e)
-
-let is_step_rule rel_id : bool = rel_id = "Step"
-let is_step_pure_rule rel_id : bool = rel_id = "Step_pure"
-let is_step_read_rule rel_id : bool = rel_id = "Step_read"
 
 
 (* Mode analysis *)

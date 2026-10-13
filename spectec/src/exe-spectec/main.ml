@@ -472,7 +472,7 @@ let () =
       (match !new_prose_ofile with
       | Some ofile ->
         log ("Imperative step injection");
-        let dl = Backend_animation.Main_prose_v.inject_prose pp_dl env in
+        let dl = Backend_animation.Main_prose_v.inject_prose env pp_dl in
         let injected_s = Backend_animation.Def.string_of_dl_script dl in
         let oc = open_out ofile in
         Printf.fprintf oc "%s\n" injected_s;

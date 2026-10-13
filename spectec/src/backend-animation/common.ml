@@ -2,6 +2,10 @@ let step_relids = ["Step"; "Step_pure"; "Step_read"]
 
 module Map = Map.Make(String)
 
+let is_step_rule rel_id : bool = rel_id = "Step"
+let is_step_pure_rule rel_id : bool = rel_id = "Step_pure"
+let is_step_read_rule rel_id : bool = rel_id = "Step_read"
+
 let step_table : (string * string) Map.t ref =
   let step_pure_table = [
     "NOP"                     ;

@@ -6,12 +6,14 @@ open Il.Valid
 open Il.Eval
 open Il_util
 open Def
+open Common
 open Util
 open Lib.Fun
 open Source
 open Xl.Mixop
 open Xl.Atom
 open Lazy
+module A = Animate
 
 
 let verbose : string list = ["no_prose"] (* @ ["debug_merge"; "debug_stack"; "draft_prose"] *)
@@ -426,11 +428,11 @@ let explicate_clause env id osubid nth (func_clause: func_clause) : func_clause 
   let fid = string_of_funcname id osubid in
   let* () = push (cl.at, "in clause " ^ string_of_int (nth + 1)) in
   let* cl' =
-    if id.it = "Step_pure" then
+    if is_step_pure_rule id.it then
       explicate_step_clause ~rule:Step_pure env fid osubid cl nth
-    else if id.it = "Step_read" then
+    else if is_step_read_rule id.it then
       explicate_step_clause ~rule:Step_read env fid osubid cl nth
-    else if id.it = "Step" then
+    else if is_step_rule id.it then
       explicate_step_clause ~rule:Step env fid osubid cl nth
     else (
       info ~cat:"not_step" (lazy ("Not a step rule: " ^ id.it));
@@ -511,7 +513,7 @@ let dual_ops op1 op2 : bool =
   | _, _ -> false
 
 (* A set of rules that two premises are considered to be complementary. *)
-let dual_prems p1 p2 : bool =
+let dual_prem p1 p2 : bool =
   match p1.it, p2.it with
   | _, ElsePr -> false  (* FIXME: It's only true if p1 contains all the premises in the first clause *)
   | IfPr e1, IfPr e2 ->
@@ -592,7 +594,7 @@ let rec naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) : (quant list * 
     let qs2' = qs2 in  (* TODO: exclude [p21] *)
     let* (qs_call, if_call, fn_defs) = gen_if_function env fid at (qs11, prems1) (qs1', [], e1) (qs2', ps2, e2) in
     return (qs_call, (fun rhs -> [IfPr (eqE ~at rhs if_call) $ at]), fn_defs)
-  | p11::ps1, p21::ps2 when dual_prems p11 p21 ->
+  | p11::ps1, p21::ps2 when dual_prem p11 p21 ->
     let qs11 = qs1 in  (* TODO: those in [p11] *)
     let qs1' = qs1 in  (* TODO: exclude [p11] *)
     let qs2' = qs2 in  (* TODO: exclude [p21] *)
@@ -613,7 +615,7 @@ let rec score_merge prems1 prems2 : int =
     | ElsePr, ElsePr -> 10 + score_merge ps1 ps2
     | ElsePr, _ -> 0
     | _ when Il.Eq.eq_prem p11 p21 -> 100 + score_merge ps1 ps2
-    | _ when dual_prems p11 p21 -> 90
+    | _ when dual_prem p11 p21 -> 90
     | IfPr e1, _ when contains_if_calls e1 -> 1
     | _, IfPr e2 when contains_if_calls e2 -> 1
     | _ -> 10
@@ -736,7 +738,7 @@ let rec inject_def def : dl_def list M.m = match def with
   | FuncDef fdef -> let* fdef', if_defs = inject_fdef fdef in return (if_defs @ [FuncDef fdef'])
   | RecDef defs -> let* defs' = List.concat <$> mapM inject_def defs in return [RecDef defs']
 
-let inject_dl dl (env: Il.Env.t) hints : dl_def list =
+let inject_dl (env: Il.Env.t) dl hints : dl_def list =
   il_env := env;
   no_prose := hints;
   let (r, ctx) = List.concat <$> mapM inject_def dl |> run_logger in
@@ -744,5 +746,268 @@ let inject_dl dl (env: Il.Env.t) hints : dl_def list =
   | Ok dl'  -> dl'
   | Error e ->
     print_endline ("[E] Failed to inject Wasm information:");
+    print_endline (string_of_ctx_error ctx e);
+    dl
+
+
+(* ************************************************************************** *)
+(*                  Another top-level that also calls animation.              *)
+(* ************************************************************************** *)
+
+type layer_type = Check | Binding
+type layer = layer_type * prem list
+
+let binders_of_quant (quant: quant) =
+  match quant.it with
+  | ExpP (x, _) -> [x.it]
+  | _ -> []
+
+let rec binders_of_prem prem =
+  match prem.it with
+  | IfPr _ -> []
+  | LetPr (qs, _, _) -> List.concat_map binders_of_quant qs
+  | IterPr (p', (_iter, xes)) ->
+    let bs = binders_of_prem p' in
+    List.concat_map (fun (x, e) ->
+      if List.mem x.it bs then
+        (free_exp e).varid |> Set.to_list
+      else
+        []
+    ) xes
+  | ElsePr -> []
+
+let binders_of_prems = List.concat_map binders_of_prem
+let binders_of_layer: layer -> text list = snd >.> binders_of_prems
+let binders_of_layers = List.concat_map binders_of_layer
+
+let rec is_check_prem prem = match prem.it with
+  | LetPr _ -> false
+  | IfPr _ -> true
+  | ElsePr -> true
+  | IterPr (p, _) -> is_check_prem p
+
+let label_prem prem = if is_check_prem prem then Check, [prem] else Binding, [prem]
+
+let rec to_layered prems : layer list =
+  match prems with
+  | [] -> []
+  | p::ps ->
+    let ls = to_layered ps in
+    (match ls with
+    | [] -> [label_prem p]
+    | l::ls' ->
+      let l', p' = label_prem p in
+      if fst l = l' then
+        (l', p' @ snd l) :: ls'
+      else
+        (l', p') :: l :: ls'
+    )
+
+(* ASSUMES: the last layer of [layers] is Binding.
+   Returns: [Some] if lifted, [None] otherwise.
+   ENSURES: the last layer is Binding.
+*)
+let rec lift_check prem (layers: layer list) : layer list option =
+  let fvs = (free_prem prem).varid in
+  let rev_layers = List.rev layers in
+  match rev_layers with
+  | [] -> None
+  | l::ls ->
+    let bvs = binders_of_layer l |> Set.of_list in
+    if Set.(union fvs bvs |> is_empty) then
+      (* Doesn't depends on the layer [l], lift. *)
+      (match lift_check prem (List.rev ls) with
+      | Some ls' -> Some (l::ls' |> List.rev)
+      | None -> (match ls with
+                | [] -> Some [(Check, [prem]); l]
+                | l'::ls'' ->
+                  (* [l'] must be a Check layer. *)
+                  Some (l :: (Check, prem::snd l') :: ls'' |> List.rev)
+                )
+      )
+    else  (* Can't lift. *)
+      None
+
+
+(* Merged layers with the lifted premises, and a list of unlifted premises.
+   ENSURES: the last layer is Binding.
+ *)
+let rec lift_checks prems layers : layer list * prem list =
+  match prems with
+  | [] -> layers, []
+  | p::ps ->
+    (match lift_check p layers with
+    | None -> let layers', ps' = lift_checks ps layers in layers', p::ps'
+    | Some layers' -> lift_checks ps layers'
+    )
+
+let stratify_layer layer (layers: layer list) : layer list =
+  let prems = snd layer in
+  if fst layer = Binding then
+    let bvs = binders_of_prems prems in
+    layers @ [layer]
+  else
+    let layers', cant_lift = lift_checks prems layers in
+    layers' @ [(Check, cant_lift)]
+
+let rec stratify_prems (prems: prem list) : layer list =
+  let layers = to_layered prems in
+  List.fold_left (Fun.flip stratify_layer) [] layers
+
+let stratify_func_clauses func_clause : func_clause * layer list =
+  let orule_id, { it = DefD (ps, as_, e, prems); _ } = func_clause in
+  let ls = stratify_prems prems in
+  (func_clause, ls)
+
+(* ASSUMES: neither list is empty. *)
+(* TODO(zilinc): check properly. *)
+let rec dual_prems ps1 ps2 : bool =
+  match ps1, ps2 with
+  | [], [] -> assert false
+  | [ { it = ElsePr; _ } ], _ -> true
+  | _, [ { it = ElsePr; _ } ] -> true
+  | p11::ps1', p21::ps2' ->
+    if dual_prem p11 p21 then dual_prems ps1' ps2' else false
+
+(* ASSUMES: neither list of layers is empty. *)
+(* TODO(zilinc): Give proper scores. *)
+let rec score_layers_merge ls1 ls2 : int =
+  match ls1, ls2 with
+  | [], _ | _, [] -> assert false
+  | l11::ls1', l21::ls2' ->
+    (match l11, l21 with
+    | (Binding, ps1), (Binding, ps2) ->
+      (* Look for common bindings *)
+      if Il.Eq.(eq_list eq_prem ps1 ps2) then 100 + score_layers_merge ls1' ls2' else 0
+    | (Check, ps1), (Check, ps2) ->
+      (* Look for same or opposite conditions. This is not strictly necessary, but
+         merely an optimisation.
+      *)
+      if Il.Eq.(eq_list eq_prem ps1 ps2) then
+        100 + score_layers_merge ls1' ls2'
+      else if dual_prems ps1 ps2 then
+        90 + score_layers_merge ls1' ls2'
+      else
+        10 + max (score_layers_merge ls1 ls2') (score_layers_merge ls1' ls2)
+    | (Check, _), _ -> 40 + max (score_layers_merge ls1 ls2') (score_layers_merge ls1' ls2)
+    | _, (Check, _) -> 40 + max (score_layers_merge ls1 ls2') (score_layers_merge ls1' ls2)
+    )
+
+
+(* TODO: Turn off A-normalisation. *)
+let carefully_animate_func_clause env fid func_clause : func_clause M.m =
+  match A.animate_clause0 (ref env) fid func_clause with
+  | Error (at, msg) -> throw ("Failed to animate function clause (at " ^ string_of_region at ^ "): " ^ msg)
+  | Ok func_clauses' -> return func_clauses'
+
+let carefully_animate_func_clauses env fid fcls : func_clause list M.m =
+  mapM (carefully_animate_func_clause env fid) fcls
+
+
+let merge_layers ls1 ls2 : layer list M.m =
+  match ls1, ls2 with
+  | ls, [] -> return ls
+  | [], ls -> return ls
+  | l11::ls1', l21::ls2' -> (* TODO *) return ls1
+
+
+(* TODO: TOP LEVEL.
+  Stratify all clauses, select clauses to merge and recurse.
+  The selection and merging algorithms are now based on layers,
+  instead of individual premise.
+  A potential problem is multi-way merge.
+*)
+
+(* ASSUMES: [clauses] is not empty. *)
+let rec select_merge_func_clauses' env fid clauses : (func_clause list * dl_def list) M.m =
+  if List.is_empty clauses then assert false else
+  if List.length clauses = 1 then return (clauses, []) else
+
+  let clause_layers = List.map stratify_func_clauses clauses in
+
+  let module IM = Stdlib.Map.Make(Int) in
+  (* Only merge adjacent clauses *)
+  let score_table : int IM.t =
+    List.mapi (fun i (_, layers) ->
+      let _, layers' = List.nth clause_layers (i+1) in
+      (i, score_layers_merge layers layers')
+    ) (Lib.List.split_last clause_layers |> fst) |> IM.of_list
+  in
+  assert (IM.cardinal score_table = List.length clause_layers - 1);
+  let p, top_score = IM.fold (fun k v ((_, max) as acc) ->
+    if v > max then (k, v) else acc
+  ) score_table (0, -1) in
+  let _, ocl1, ocl2, bef, aft = List.fold_left (fun (idx, cl1, cl2, b, a) cl ->
+    if p     = idx then (assert (Option.is_none cl1); (idx+1, Some cl, cl2, b, a)) else
+    if p + 1 = idx then (assert (Option.is_none cl2); (idx+1, cl1, Some cl, b, a)) else
+    if p     < idx then                               (idx+1, cl1, cl2, b, a@[cl]) else
+                                                      (idx+1, cl1, cl2, b@[cl], a)
+  ) (0, None, None, [], []) clause_layers in
+  assert (Option.is_some ocl1);
+  assert (Option.is_some ocl2);
+  let (orule_id1, { it = DefD (qs1, args1, e1, prems1); at = at1; _ }), ls1 = Option.get ocl1 in
+  let (orule_id2, { it = DefD (qs2, args2, e2, prems2); at = at2; _ }), ls2 = Option.get ocl2 in
+  let at = over_region [at1; at2] in
+  let* () = push (at, "when merging the " ^ string_of_int p ^ "-th and " ^ string_of_int (p+1) ^ "-th clauses with a score of " ^ string_of_int top_score ^ ":\n" ^
+                      "  ▹ " ^ Option.fold ~none:"<NO_RULEID>" ~some:string_of_id orule_id1 ^ "\n" ^
+                      "  ▹ " ^ Option.fold ~none:"<NO_RULEID>" ~some:string_of_id orule_id2
+  ) in
+  let* () = if Il.Eq.eq_list Il.Eq.eq_arg args1 args2 |> not then
+      throw ("Arguments do not match:\n" ^
+             "  ▹ args1: " ^ string_of_args args1 ^ "\n" ^
+             "  ▹ args2: " ^ string_of_args args2)
+    else return ()
+  in
+  let* qs, k_prems, defs = naive_merge env fid (qs1, prems1, e1) (qs2, prems2, e2) in
+  let v_rhs = fresh_var () $ no in
+  let q_rhs = ExpP (v_rhs, e1.note) $ no in
+  let e_rhs = rhs_func (over_region [e1.at; e2.at]) e1.note v_rhs in
+  (* Recursive call. Put the merge result back into the original position. *)
+  let* clauses'', defs' = select_merge_func_clauses' env fid (bef @ [ (None, DefD (q_rhs::qs, args1, e_rhs, k_prems e_rhs) $ at) ] @ aft) in
+  let* () = drop () in
+  return (clauses'', defs@defs')
+
+
+let prose_gen_fdef (fdef: func_def) : (func_def * dl_def list) M.m =
+  let (id, osubid, ps, t, clauses, opartial) = fdef.it in
+  let fid = string_of_funcname id osubid in
+  let* () = new_with (fdef.at, "in definition `" ^ fid ^ "`") in
+  (* If not a Step* rule, we don't do anything. *)
+  if List.mem id.it Common.step_relids |> not then return (fdef, []) else
+  (* If a Step* rule, we filter out the clauses that are marked `no_prose`. *)
+  let clauses' = List.filter (fun cl ->
+    let orule_id, _ = cl in
+    if Option.is_some orule_id &&
+       List.exists (fun (id', subid') -> Il.Eq.eq_id id id' && Il.Eq.eq_id (Option.get orule_id) subid') !no_prose
+    then (
+      info ~cat:"no_prose" (lazy ("Suppressed by hint: " ^ id.it ^ "/" ^ (Option.get orule_id).it));
+      (* NOTE: We assume the annotation of no_prose must be done in a way that, removing these rules
+         and reordering them don't change the semantics of the original set of rules. This is particularly
+         important if there're otherwise premises.
+       *)
+      false
+    )
+    else true
+  ) clauses in
+  let* clauses'' = mapiM (explicate_clause !il_env id osubid) clauses' in
+  let* clauses''', if_defs = match fmap_prems_clauses lift_otherwises clauses'' with
+  | [] -> return ([], [])
+  | _ -> (carefully_animate_func_clauses !il_env (fid $ id.at) >=> select_merge_func_clauses' !il_env fid) clauses''
+  in
+  return ((id, osubid, ps, t, clauses''', opartial) $ fdef.at, if_defs)
+
+let rec prose_gen_def def : dl_def list M.m = match def with
+  | TypeDef _ -> return [def]
+  | FuncDef fdef -> let* fdef', if_defs = prose_gen_fdef fdef in return (if_defs @ [FuncDef fdef'])
+  | RecDef defs -> let* defs' = List.concat <$> mapM prose_gen_def defs in return [RecDef defs']
+
+let prose_gen_dl (env: Il.Env.t) dl hints : dl_def list =
+  il_env := env;
+  no_prose := hints;
+  let (r, ctx) = List.concat <$> mapM prose_gen_def dl |> run_logger in
+  match r with
+  | Ok dl'  -> dl'
+  | Error e ->
+    print_endline ("[E] Failed to produce prose:");
     print_endline (string_of_ctx_error ctx e);
     dl
