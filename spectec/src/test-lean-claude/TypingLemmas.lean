@@ -40,6 +40,10 @@ namespace TLC
 
 /-! ## Context update helpers (typing_lemmas.v:76-172) -/
 
+/-
+TODO FROM USER: Probably don't need many of these; the built-in syntax should do fine, tidy later
+-/
+
 /-- Rocq `typing_lemmas.v:76` `upd_label`. -/
 def upd_label (C : context) (labs : List resulttype) : context := { C with LABELS := labs }
 

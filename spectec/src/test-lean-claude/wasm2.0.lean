@@ -3114,6 +3114,25 @@ inductive fun_idiv_ : N → sx → iN → iN → Option iN → Prop where
     wf_uN v_N (uN.mk_uN var_0) →
     fun_idiv_ v_N sx.S i_1 i_2 (some (uN.mk_uN var_0))
 
+example : fun_idiv_ 32 sx.U (.mk_uN 5) (.mk_uN 0) none := by
+  apply fun_idiv_.fun_idiv__case_0 32 (.mk_uN 5)
+
+-- example : fun_idiv_ 32 sx.U (.mk_uN 5) (.mk_uN 0) (some (.mk_uN 5)) := by
+--   apply fun_idiv_.fun_idiv__case_1 32 (.mk_uN 5) (.mk_uN 0)
+--   sorry
+
+example : wf_uN 32 (.mk_uN 0) := by
+  constructor
+  simp
+
+-- (B) idiv_: case_1 at divisor 0 gives the opaque `truncz 0`, given its wf side condition
+example (hwf : wf_uN 32 (.mk_uN (truncz 0).toNat)) :
+    fun_idiv_ 32 sx.U (.mk_uN 5) (.mk_uN 0) (some (.mk_uN (truncz 0).toNat)) := by
+  have e : ((proj_uN_0 (.mk_uN 5) : Nat) : Rat) / ((proj_uN_0 (.mk_uN 0) : Nat) : Rat) = 0 := by
+    simp [proj_uN_0, Rat.div_def]
+  have h := fun_idiv_.fun_idiv__case_1 32 (.mk_uN 5) (.mk_uN 0)
+  rw [e] at h
+  exact h hwf
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:107.1-107.36 -/
 def imul_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN :=

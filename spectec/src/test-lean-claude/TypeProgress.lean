@@ -525,24 +525,24 @@ theorem list_slice_size {T : Type} (bs : List T) (i j : Nat) :
 
 /-- Rocq `type_progress.v:590` `br_reduce`. Rocq's `++` is right-associative; the grouping is kept
     explicitly (Lean's `++` is left-associative). -/
-def br_reduce (es : List admininstr) : Prop :=
-  ∃ (vcs : List val) (l : labelidx) (es' : List admininstr),
-    es = List.map admininstr_val vcs ++ ([admininstr.BR l] ++ es')
+def br_reduce (ais : List admininstr) : Prop :=
+  ∃ (vals : List val) (l : labelidx) (ais' : List admininstr),
+    ais = ((List.map admininstr_val vals) ++ ([admininstr.BR l] ++ ais'))
 
 /-- Rocq `type_progress.v:594` `return_reduce`. -/
-def return_reduce (es : List admininstr) : Prop :=
-  ∃ (vcs : List val) (es' : List admininstr),
-    es = List.map admininstr_val vcs ++ ([admininstr.RETURN] ++ es')
+def return_reduce (ais : List admininstr) : Prop :=
+  ∃ (vals : List val) (ais' : List admininstr),
+    ais = ((List.map admininstr_val vals) ++ ([admininstr.RETURN] ++ ais'))
 
 /-- Rocq `type_progress.v:599` `not_lf_br`. -/
-def not_lf_br (es : List admininstr) : Prop :=
-  ∀ (vcs : List val) (l : labelidx) (es' : List admininstr),
-    es ≠ List.map admininstr_val vcs ++ ([admininstr.BR l] ++ es')
+def not_lf_br (ais : List admininstr) : Prop :=
+  ∀ (vals : List val) (l : labelidx) (ais' : List admininstr),
+    ais ≠ ((List.map admininstr_val vals) ++ ([admininstr.BR l] ++ ais'))
 
 /-- Rocq `type_progress.v:604` `not_lf_return`. -/
-def not_lf_return (es : List admininstr) : Prop :=
-  ∀ (vcs : List val) (es' : List admininstr),
-    es ≠ List.map admininstr_val vcs ++ ([admininstr.RETURN] ++ es')
+def not_lf_return (ais : List admininstr) : Prop :=
+  ∀ (vals : List val) (ais' : List admininstr),
+    ais ≠ ((List.map admininstr_val vals) ++ ([admininstr.RETURN] ++ ais'))
 
 /-- Rocq `type_progress.v:609` `split_vals`: split off the leading run of values. -/
 def split_vals : List admininstr → List val × List admininstr
@@ -7833,45 +7833,65 @@ theorem t_progress_e_mk_Expr_ok2 (s : store) :
     `Qed` in Rocq (relying on the `Admitted` `t_progress_be`). Here it is assembled from the 12 case
     lemmas `t_progress_e_*` by one application of the mutual recursor `Instrs_ok2.rec` (Rocq:
     `Admin_instrs_ok_ind'`). -/
-theorem t_progress_e (s : store) (C C' : context) (f : frame) (vcs : List val) (es : List admininstr)
-    (tf : functype) (ts1 ts2 : List valtype) (lab : List resulttype) (ret : Option resulttype) :
-    wf_config (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ es)) →
-    Instrs_ok2 s C es tf →
-    Forall (fun e => wf_val e) vcs →
-    tf = mkFunctype ts1 ts2 →
-    C = upd_local_label_return C' (List.map typeof f.LOCALS) lab ret →
-    Moduleinst_ok s f.MODULE C' →
-    List.map typeof vcs = ts1 →
+theorem t_progress_e (s : store) (C framemoduleC : context) (f : frame) (vals : List val) (ais : List admininstr)
+    (ft : functype) (vt1 vt2 : List valtype) (lab : List resulttype) (ret : Option resulttype) :
+    wf_config (config.mk_config (state.mk_state s f) ((List.map admininstr_val vals) ++ ais)) →
+    Instrs_ok2 s C ais ft →
+    Forall (fun val => wf_val val) vals →
+    ft = mkFunctype vt1 vt2 →
+    C = upd_local_label_return framemoduleC (List.map typeof f.LOCALS) lab ret →
+    Moduleinst_ok s f.MODULE framemoduleC →
+    List.map typeof vals = vt1 →
     Store_ok s →
-    not_lf_br es →
-    not_lf_return es →
-    terminal_form (List.map admininstr_val vcs ++ es) ∨
-      ∃ (s' : store) (f' : frame) (es' : List admininstr),
-        Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ es))
-          (config.mk_config (state.mk_state s' f') es') := by
+    not_lf_br ais →
+    not_lf_return ais →
+    terminal_form ((List.map admininstr_val vals) ++ ais) ∨
+      ∃ (s' : store) (f' : frame) (ais' : List admininstr),
+        Step (config.mk_config (state.mk_state s f) ((List.map admininstr_val vals) ++ ais))
+          (config.mk_config (state.mk_state s' f') ais') := by
   intro hwf hadmin
-  exact (Instrs_ok2.rec (motive_1 := t_progress_e_P s) (motive_2 := t_progress_e_P0 s) (motive_3 := t_progress_e_P1 s)
-    (t_progress_e_plain s) (t_progress_e_label s) (t_progress_e_Instr_ok2_frame s) (t_progress_e_call_addr s) (t_progress_e_ref s) (t_progress_e_trap s) (t_progress_e_empty s) (t_progress_e_instr s) (t_progress_e_seq s) (t_progress_e_sub s) (t_progress_e_Instrs_ok2_frame s) (t_progress_e_mk_Expr_ok2 s)
-    hadmin) f C' vcs ts1 ts2 lab ret hwf
+  exact (
+    Instrs_ok2.rec
+      (motive_1 := t_progress_e_P s)
+      (motive_2 := t_progress_e_P0 s)
+      (motive_3 := t_progress_e_P1 s)
+      (t_progress_e_plain s)
+      (t_progress_e_label s)
+      (t_progress_e_Instr_ok2_frame s)
+      (t_progress_e_call_addr s)
+      (t_progress_e_ref s)
+      (t_progress_e_trap s)
+      (t_progress_e_empty s)
+      (t_progress_e_instr s)
+      (t_progress_e_seq s)
+      (t_progress_e_sub s)
+      (t_progress_e_Instrs_ok2_frame s)
+      (t_progress_e_mk_Expr_ok2 s)
+      hadmin
+    ) f framemoduleC vals vt1 vt2 lab ret hwf
 
 /-- Rocq `type_progress.v:6064` `t_progress`: **progress**. A configuration that is `Config_ok` at
     some result type is either terminal (only values, or a single `TRAP`) or can take a step. `Qed`
     in Rocq, from `t_progress_e`. -/
-theorem t_progress (s : store) (f : frame) (es : List admininstr) (ts : resulttype) :
-    Config_ok (config.mk_config (state.mk_state s f) es) ts →
-    terminal_form es ∨
-      ∃ (s' : store) (f' : frame) (es' : List admininstr),
-        Step (config.mk_config (state.mk_state s f) es) (config.mk_config (state.mk_state s' f') es') := by
-  intro hconfig
-  cases hconfig with
-  | mk_Config_ok _ _ _ t_lst C hstate hexpr _ hwfconfig _ =>
-  cases hstate with
-  | mk_State_ok _ _ _ hstore hframe _ _ =>
-  cases hexpr with
-  | mk_Expr_ok2 _ _ _ hadmin _ _ _ =>
-  have hloc := frame_t_context_local_types s f C hframe
-  have hlab := frame_t_context_label_empty s f C hframe
-  have hret := frame_t_context_return_empty s f C hframe
+theorem t_progress (s : store) (f : frame) (ais : List admininstr) (rt : resulttype) :
+    Config_ok (config.mk_config (state.mk_state s f) ais) rt →
+    terminal_form ais ∨
+      ∃ (s' : store) (f' : frame) (ais' : List admininstr),
+        Step (config.mk_config (state.mk_state s f) ais) (config.mk_config (state.mk_state s' f') ais') := by
+  intro config_ok
+
+  cases config_ok with
+  | mk_Config_ok _ _ _ rt C state_ok expr_ok2 _ wf_config _ =>
+
+  cases state_ok with
+  | mk_State_ok _ _ _ store_ok frame_ok _ _ =>
+
+  cases expr_ok2 with
+  | mk_Expr_ok2 _ _ _ instrs_ok2_empty_rt _ _ _ =>
+
+  have hloc : C.LOCALS = List.map typeof f.LOCALS := frame_t_context_local_types s f C frame_ok
+  have hlab : C.LABELS = [] := frame_t_context_label_empty s f C frame_ok
+  have hret : C.RETURN = none := frame_t_context_return_empty s f C frame_ok
   have hC : C = upd_local_label_return (upd_local_label_return C [] [] none)
       (List.map typeof f.LOCALS) [] none := by
     rcases C with ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10⟩
@@ -7879,7 +7899,7 @@ theorem t_progress (s : store) (f : frame) (es : List admininstr) (ts : resultty
     subst hloc hlab hret
     rfl
   have hmod : Moduleinst_ok s f.MODULE (upd_local_label_return C [] [] none) := by
-    cases hframe with
+    cases frame_ok with
     | mk_Frame_ok val_lst v_minst t_lst0 C0 hminst _ _ _ _ _ _ =>
       have hl : C0.LOCALS = [] := by cases hminst; rfl
       have hb : C0.LABELS = [] := by cases hminst; rfl
@@ -7888,10 +7908,29 @@ theorem t_progress (s : store) (f : frame) (es : List admininstr) (ts : resultty
       simp only at hl hb hr
       subst hl hb hr
       exact hminst
-  exact t_progress_e s C (upd_local_label_return C [] [] none) f [] es (mkFunctype [] t_lst) [] t_lst [] none
-    hwfconfig hadmin (fun x hx => by cases hx) rfl hC hmod rfl hstore
-    (s_typing_not_lf_br' s f C es [] t_lst hframe hadmin)
-    (s_typing_not_lf_return s f C es [] t_lst hframe hadmin)
+  exact
+    t_progress_e
+      s
+      C
+      (upd_local_label_return C [] [] none)
+      f
+      []
+      ais
+      (mkFunctype [] rt)
+      []
+      rt
+      []
+      none
+      wf_config
+      instrs_ok2_empty_rt
+      (fun x hx => by cases hx)
+      rfl
+      hC
+      hmod
+      rfl
+      store_ok
+      (s_typing_not_lf_br' s f C ais [] rt frame_ok instrs_ok2_empty_rt)
+      (s_typing_not_lf_return s f C ais [] rt frame_ok instrs_ok2_empty_rt)
 
 /-- Rocq `type_progress.v:6103` `vload_shape64_wf`. `VLOAD (SHAPE 64 X 1)` is well formed
     (`64 * 1 = 128 / 2`), although `vload-shape-val` needs a `Jnn` of size 128 (counterexample

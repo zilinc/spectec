@@ -2699,56 +2699,191 @@ theorem t_preservation_type (v_s : store) (v_f : frame) (v_ais : List admininstr
     `t_preservation_vs_type`, `t_preservation_type`, `reduce_inst_unchanged`,
     `Extend_store_moduleinst`). Its remaining `sorry` dependencies are listed in
     `claude-logging/for-claude/is_wf_theorems.md` (generated `*_is_wf` theorems). -/
-theorem t_preservation (c1 : config) (ts : resulttype) (c2 : config) :
-    Step c1 c2 → Config_ok c1 ts → Config_ok c2 ts := by
-  intro hstep hcfg
-  obtain ⟨⟨s1, f1⟩, ais1⟩ := c1
-  obtain ⟨⟨s2, f2⟩, ais2⟩ := c2
-  cases hcfg with
-  | mk_Config_ok _ _ _ t_lst C hstate hexpr hwfC hwfcfg _ =>
-    cases hstate with
-    | mk_State_ok _ _ _ hsok hframe _ _ =>
-      cases hframe with
-      | mk_Frame_ok val_lst v_minst t_lst0 C0 hminst hlen hvals _ hwfC0 _ hwflocC =>
-        cases hexpr with
-        | mk_Expr_ok2 _ _ _ hinstrs _ _ _ =>
+theorem t_preservation (config1 : config) (rt : resulttype) (config2 : config) :
+    Step config1 config2 → Config_ok config1 rt → Config_ok config2 rt := by
+  intro step_configs config1_ok
+  obtain ⟨⟨store1, frame1⟩, ais1⟩ := config1
+  obtain ⟨⟨store2, frame2⟩, ais2⟩ := config2
+  cases config1_ok with
+  | mk_Config_ok _ _ _ rt' C state1_ok expr1_ok context_ok config1_ok' _ =>
+    cases state1_ok with
+    | mk_State_ok _ _ _ store1_ok frame1_ok _ _ =>
+      generalize frame1_def : frame1 = f at frame1_ok
+      cases frame1_ok with
+      | mk_Frame_ok
+        frame1locals
+        frame1minst
+        localstypes
+        frame1minstcontext
+        frame1minst_ok_store1
+        frame1locals_length_match_types
+        frame1locals_ok_forall
+        _
+        minstcontext_wf
+        _
+        frame1localsonlycontext_wf
+        =>
+        obtain rfl : frame1minst = frame1.MODULE := by rw [frame1_def]
+        obtain rfl : frame1locals = frame1.LOCALS := by rw [frame1_def]
+        clear frame1_def
+        cases expr1_ok with
+        | mk_Expr_ok2 _ _ _ ais1_ok _ _ _ =>
+
+          -- for readability, restore variables from earlier
+          set config1 : config := config.mk_config (state.mk_state store1 frame1) ais1
+          set config2 : config := config.mk_config (state.mk_state store2 frame2) ais2
+          set rt : resulttype := list.mk_list rt'
+          set C := (
+            {
+                TYPES := [], FUNCS := [], GLOBALS := [], TABLES := [], MEMS := [], ELEMS := [], DATAS := [],
+                LOCALS := localstypes, LABELS := [], RETURN := none
+            }
+            ++ frame1minstcontext
+          )
+          set state2 := state.mk_state store2 frame2
+
           -- well-formedness of the post-state, from the generated `Step_is_wf`
-          have hwfcfg2 : wf_config (config.mk_config (state.mk_state s2 f2) ais2) :=
-            Step_is_wf _ _ _ hwfcfg hsok hstep
-          have hwfais2 : Forall wf_admininstr ais2 := by
-            cases hwfcfg2 with | config_case_0 _ _ _ h => exact h
-          have hwfst2 : wf_state (state.mk_state s2 f2) := by
-            cases hwfcfg2 with | config_case_0 _ _ h _ => exact h
-          have hwfs2 : wf_store s2 := by
-            cases hwfst2 with | state_case_0 _ _ h _ => exact h
-          have hwff2 : wf_frame f2 := by
-            cases hwfst2 with | state_case_0 _ _ _ h => exact h
+          have config2_wf : wf_config config2 :=
+            Step_is_wf _ ais1 _ config1_ok' store1_ok step_configs
+          have ais2_wf : Forall wf_admininstr ais2 := by
+            change wf_config (config.mk_config (state.mk_state store2 frame2) ais2) at config2_wf
+            cases config2_wf with | config_case_0 _ _ _ h => exact h
+          have state2_wf : wf_state state2 := by
+            change wf_config (config.mk_config (state.mk_state store2 frame2) ais2) at config2_wf
+            cases config2_wf with | config_case_0 _ _ h _ => exact h
+          have store2_wf : wf_store store2 := by
+            change wf_state (state.mk_state store2 frame2) at state2_wf
+            cases state2_wf with | state_case_0 _ _ h _ => exact h
+          have frame2_wf : wf_frame frame2 := by
+            change wf_state (state.mk_state store2 frame2) at state2_wf
+            cases state2_wf with | state_case_0 _ _ _ h => exact h
+
           -- the module context's own LOCALS are empty, so the appended context's
           -- LOCALS are exactly the frame's local types
-          have hloc : C0.LOCALS = [] := inst_t_context_local_empty s1 v_minst C0 hminst
-          have him := inst_match_locals_append t_lst0 C0
+          have frame1minstcontext_has_no_locals : frame1minstcontext.LOCALS = [] :=
+            inst_t_context_local_empty
+              store1
+              frame1.MODULE
+              frame1minstcontext
+              frame1minst_ok_store1
+          have frame1minstcontext_matches_C :
+            inst_match
+              frame1minstcontext
+              C
+            :=
+              inst_match_locals_append localstypes frame1minstcontext
+
           -- store extension + store typedness across the step
-          obtain ⟨hext, hsok2⟩ := store_extension_reduce s1 _ ais1 s2 f2 ais2 C0 _ _
-            hwfcfg hstep hminst hinstrs him hsok
-          have hmod := reduce_inst_unchanged s1 _ ais1 s2 f2 ais2 hstep
-          have hminst2 : Moduleinst_ok s2 v_minst C0 :=
-            Extend_store_moduleinst s1 s2 v_minst C0 hext hminst
-          -- locals stay well-typed
-          have hvals2 := t_preservation_vs_type s1 _ ais1 s2 f2 ais2 C0 _ [] t_lst hstep hsok
-            hext hminst (by rw [locals_append_eq t_lst0 C0 hloc]; exact ⟨hlen, hvals⟩) him hinstrs
-          rw [locals_append_eq t_lst0 C0 hloc] at hvals2
-          obtain ⟨hlen2, hvals2'⟩ := hvals2
+          obtain ⟨extend_stores, store2_ok⟩ :=
+            store_extension_reduce
+              store1 _ ais1 store2 frame2 ais2 frame1minstcontext _ _
+              config1_ok' step_configs frame1minst_ok_store1 ais1_ok
+              frame1minstcontext_matches_C store1_ok
+
+          have frame1minst_is_frame2minst : frame1.MODULE = frame2.MODULE :=
+            reduce_inst_unchanged
+              store1
+              _
+              ais1
+              store2
+              frame2
+              ais2
+              step_configs
+
+          have frame1minst_ok_store2 : Moduleinst_ok store2 frame1.MODULE frame1minstcontext :=
+            Extend_store_moduleinst
+              store1
+              store2
+              frame1.MODULE
+              frame1minstcontext
+              extend_stores
+              frame1minst_ok_store1
+
+          have frame2locals_ok : Vals_ok store2 frame2.LOCALS localstypes := by
+
+            -- locals stay well-typed
+            have frame2locals_ok'
+              :
+              Vals_ok
+                store2
+                frame2.LOCALS
+                C.LOCALS
+              :=
+              t_preservation_vs_type
+                store1 _ ais1 store2 frame2 ais2 frame1minstcontext
+                _ [] rt' step_configs store1_ok extend_stores
+                frame1minst_ok_store1
+                (by rw [locals_append_eq localstypes frame1minstcontext frame1minstcontext_has_no_locals]; exact ⟨frame1locals_length_match_types, frame1locals_ok_forall⟩)
+                frame1minstcontext_matches_C ais1_ok
+
+            -- resolves that frame2locals_ok is actually just also referencing localstypes
+            rw [locals_append_eq localstypes frame1minstcontext frame1minstcontext_has_no_locals] at frame2locals_ok'
+
+            exact frame2locals_ok'
+
+          obtain ⟨frame2locals_length_match_types, frame2locals_ok_forall⟩ := frame2locals_ok
+
           -- and so does the instruction sequence
-          have hinstrs2 := t_preservation_type s1 _ ais1 s2 f2 ais2 C0 _ [] t_lst hwfcfg hstep
-            hsok hsok2 hext hminst hminst2
-            (by rw [locals_append_eq t_lst0 C0 hloc]; exact ⟨hlen, hvals⟩) him hinstrs
+          have ais2_ok
+            :
+            Instrs_ok2 store2
+              C
+              ais2 (mkFunctype [] rt')
+            :=
+            t_preservation_type
+              store1 _ ais1 store2 frame2 ais2 frame1minstcontext _ [] rt' config1_ok' step_configs
+              store1_ok store2_ok extend_stores frame1minst_ok_store1 frame1minst_ok_store2
+              (by rw [locals_append_eq localstypes frame1minstcontext frame1minstcontext_has_no_locals]; exact ⟨frame1locals_length_match_types, frame1locals_ok_forall⟩) frame1minstcontext_matches_C ais1_ok
+
+          have frame2minst_ok : Moduleinst_ok store2 frame2.MODULE frame1minstcontext := by
+            rw [← frame1minst_is_frame2minst]
+            exact frame1minst_ok_store2
+
           -- reassemble
-          exact Config_ok.mk_Config_ok s2 f2 ais2 t_lst _
-            (State_ok.mk_State_ok s2 f2 _ hsok2
-              (Frame_ok.mk_Frame_ok s2 f2.LOCALS f2.MODULE t_lst0 C0
-                (by rw [← hmod]; exact hminst2) hlen2 hvals2' hwfs2 hwfC0 hwff2 hwflocC)
-              hwfC hwfst2)
-            (Expr_ok2.mk_Expr_ok2 s2 _ ais2 t_lst hinstrs2 hwfs2 hwfC hwfais2)
-            hwfC hwfcfg2 hwfst2
+          exact
+            Config_ok.mk_Config_ok
+              store2
+              frame2
+              ais2
+              rt'
+              _
+              (
+                State_ok.mk_State_ok
+                  store2
+                  frame2
+                  _
+                  store2_ok
+                  (
+                    Frame_ok.mk_Frame_ok
+                      store2
+                      frame2.LOCALS
+                      frame2.MODULE
+                      localstypes
+                      frame1minstcontext
+                      frame2minst_ok
+                      frame2locals_length_match_types
+                      frame2locals_ok_forall
+                      store2_wf
+                      minstcontext_wf
+                      frame2_wf
+                      frame1localsonlycontext_wf
+                  )
+                  context_ok
+                  state2_wf
+              )
+              (
+                Expr_ok2.mk_Expr_ok2
+                  store2
+                  _
+                  ais2
+                  rt'
+                  ais2_ok
+                  store2_wf
+                  context_ok
+                  ais2_wf
+              )
+              context_ok
+              config2_wf
+              state2_wf
 
 end TLC
