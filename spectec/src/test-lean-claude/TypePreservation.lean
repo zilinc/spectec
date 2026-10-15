@@ -12,17 +12,16 @@ Lean port of `spectec/test-rocq/theories/type_preservation.v` — the
 capstone file containing the main preservation theorem. Full digest:
 `claude-logging/for-claude/digest_type_preservation.md`.
 
-Status (bundle21, 2026-10-15; supersedes the bundle18 summary). Upstream `type_preservation.v`
-has **no** `Admitted` lemmas: everything is `Qed`. Since upstream `6582b3a39` that includes the
+Status: upstream `type_preservation.v` has **no** `Admitted` lemmas: everything is `Qed`. Since
+upstream `6582b3a39` that includes the
 generated `Step_read_is_wf` in `wasm.v`, which used to be `Admitted` (and false in a
 memory.fill/copy/init `2^32` corner case, fixed by spec commit `4cf9f29c5`, which makes those
-rules push `$iadd_(32, i, 1)`). Here everything is proved, including `Step_read_is_wf`
-(bundle21, in `wasm2.0.lean`). The only `sorry`s that `t_preservation` still depends on are
-generated `*_is_wf` theorems about functions that are `opaque` in `wasm2.0.lean` (`Axiom`s in
+rules push `$iadd_(32, i, 1)`). The only `sorry`s that `t_preservation` still depends on
+are generated `*_is_wf` theorems about functions that are `opaque` in `wasm2.0.lean` (`Axiom`s in
 Rocq, where the same theorems are `Admitted`); see `claude-logging/for-claude/is_wf_theorems.md`.
 `num_default_is_well_formed` is proved (its Rocq statement is commented out upstream).
 
-Phase 1 (this file, first pass): every signature stated, proofs `sorry`.
+Line numbers refer to `spectec/test-rocq/theories` at upstream `rocq-backend-proof` `6582b3a39`.
 -/
 
 namespace TLC
@@ -43,7 +42,8 @@ def num_default (nt : numtype) : num_ :=
   | .F32 => .mk_num__1 Fnn.F32 (fzero 32)
   | .F64 => .mk_num__1 Fnn.F64 (fzero 64)
 
-/-- Rocq `type_preservation.v:28` `num_default_is_well_formed`. -/
+/-- Rocq `type_preservation.v:75` `num_default_is_well_formed` (commented out in Rocq; proved
+    here). -/
 theorem num_default_is_well_formed (nt : numtype) : wf_num_ nt (num_default nt) := by
   cases nt with
   | I32 =>
@@ -67,7 +67,7 @@ theorem num_default_is_well_formed (nt : numtype) : wf_num_ nt (num_default nt) 
     exact wf_fN.fN_case_0 64 (fNmag.SUBNORM 0)
       (wf_fNmag.fNmag_case_1 64 (2 - 2 ^ (((E 64 : Int) - 1).toNat)) 0 ⟨by decide, rfl⟩)
 
-/-- Rocq `type_preservation.v:41` `wf_context_app` (added bundle18). -/
+/-- Rocq `type_preservation.v:41` `wf_context_app`. -/
 theorem wf_context_app (C C' : context) : wf_context C → wf_context C' → wf_context (C ++ C') := by
   intro h1 h2
   cases h1 with
@@ -82,7 +82,7 @@ theorem wf_context_app (C C' : context) : wf_context C → wf_context C' → wf_
         rcases List.mem_append.mp hx with hx | hx
         exacts [hM x hx, hM' x hx]
 
-/-- Rocq `type_preservation.v:53` `wf_context_tab` (added bundle18). -/
+/-- Rocq `type_preservation.v:53` `wf_context_tab`. -/
 theorem wf_context_tab (n : Nat) (C : context) :
     n < C.TABLES.length → wf_context C → wf_tabletype (C.TABLES[n]!) := by
   intro hn hC
@@ -90,7 +90,7 @@ theorem wf_context_tab (n : Nat) (C : context) :
   cases hC with
   | context_case_ _ _ _ _ _ _ _ _ _ _ hT _ => exact hT _ hmem
 
-/-- Rocq `type_preservation.v:63` `wf_context_mem` (added bundle18). -/
+/-- Rocq `type_preservation.v:63` `wf_context_mem`. -/
 theorem wf_context_mem (n : Nat) (C : context) :
     n < C.MEMS.length → wf_context C → wf_memtype (C.MEMS[n]!) := by
   intro hn hC
@@ -98,12 +98,12 @@ theorem wf_context_mem (n : Nat) (C : context) :
   cases hC with
   | context_case_ _ _ _ _ _ _ _ _ _ _ _ hM => exact hM _ hmem
 
-/-- Rocq `type_preservation.v:39` `inst_t_context_local_empty`. -/
+/-- Rocq `type_preservation.v:86` `inst_t_context_local_empty`. -/
 theorem inst_t_context_local_empty (s : store) (i : moduleinst) (C : context) :
     Moduleinst_ok s i C → C.LOCALS = [] := by
   intro h; cases h; rfl
 
-/-- Rocq `type_preservation.v:46` `inst_t_context_labels_empty`. -/
+/-- Rocq `type_preservation.v:93` `inst_t_context_labels_empty`. -/
 theorem inst_t_context_labels_empty (s : store) (i : moduleinst) (C : context) :
     Moduleinst_ok s i C → C.LABELS = [] := by
   intro h; cases h; rfl
@@ -210,7 +210,7 @@ private theorem t_preservation_vs_type'_aux (c1 c2 : config) (h : Step c1 c2) :
     subst hf
     exact hvals)
 
-/-- Rocq `type_preservation.v:53` `t_preservation_vs_type'`. Locals stay well-typed under
+/-- Rocq `type_preservation.v:100` `t_preservation_vs_type'`. Locals stay well-typed under
     one `Step` (store held fixed / pre-store-extension). -/
 theorem t_preservation_vs_type' (s : store) (f : frame) (ais : List admininstr) (s' : store)
     (f' : frame) (ais' : List admininstr) (C C' : context) (t1s t2s : List valtype) :
@@ -220,8 +220,8 @@ theorem t_preservation_vs_type' (s : store) (f : frame) (ais : List admininstr) 
   fun hstep hsok hmi hvals him htype =>
     t_preservation_vs_type'_aux _ _ hstep s f ais s' f' ais' C C' t1s t2s rfl rfl hsok hmi hvals him htype
 
-/-- Rocq `type_preservation.v:107` `t_preservation_vs_type`. Composition:
-    `t_preservation_vs_type'` then `store_extension_vals` to transport across store
+/-- Rocq `type_preservation.v:154` `t_preservation_vs_type`. Composition:
+    `t_preservation_vs_type'` then `Extend_store_vals` to transport across store
     extension. -/
 theorem t_preservation_vs_type (s : store) (f : frame) (ais : List admininstr) (s' : store)
     (f' : frame) (ais' : List admininstr) (C C' : context) (t1s t2s : List valtype) :
@@ -232,7 +232,7 @@ theorem t_preservation_vs_type (s : store) (f : frame) (ais : List admininstr) (
   exact Extend_store_vals s s' C'.LOCALS f'.LOCALS hext
     (t_preservation_vs_type' s f ais s' f' ais' C C' t1s t2s hstep hsok hmi hvals him htype)
 
-/-- Rocq `type_preservation.v:170` `wf_tableinsts_preserves` (added bundle18).
+/-- Rocq `type_preservation.v:170` `wf_tableinsts_preserves`.
     **Intended deviation**: takes `hlen`, the same move as `funcinst_same`/`Vals_ok` — Rocq's
     inductive `Forall2` implies equal lengths, this file's zip-based `Forall₂` does not, and
     without `hlen` the statement is false when `tbts` is longer than `tbinsts`. -/
@@ -249,7 +249,7 @@ theorem wf_tableinsts_preserves (s : store) (tbinsts : List tableinst) (tbts : L
   rw [getElem!_pos tbts i hi] at hok
   exact aux _ _ hok
 
-/-- Rocq `type_preservation.v:185` `wf_memoryinsts_preserves` (added bundle18). Takes `hlen`,
+/-- Rocq `type_preservation.v:185` `wf_memoryinsts_preserves`. Takes `hlen`,
     for the same reason as `wf_tableinsts_preserves`. -/
 theorem wf_memoryinsts_preserves (s : store) (meminsts : List meminst) (mts : List memtype)
     (hlen : meminsts.length = mts.length) :
@@ -263,7 +263,7 @@ theorem wf_memoryinsts_preserves (s : store) (meminsts : List meminst) (mts : Li
   rw [getElem!_pos mts i hi] at hok
   exact aux _ _ hok
 
-/-- Rocq `type_preservation.v:201` `list_update_func_preserves_prop` (added bundle18). -/
+/-- Rocq `type_preservation.v:201` `list_update_func_preserves_prop`. -/
 theorem list_update_func_preserves_prop {A : Type} [Inhabited A] (l : List A) (f : A → A) (P : A → Prop)
     (x : Nat) : Forall P l → P (f (l[x]!)) → Forall P (list_update_func l x f) := by
   intro hl hf y hy
@@ -271,7 +271,7 @@ theorem list_update_func_preserves_prop {A : Type} [Inhabited A] (l : List A) (f
   · exact hl y h
   · rw [h1]; exact hf
 
-/-- Rocq `type_preservation.v:216` `list_update_func_forall_inv` (added bundle18). -/
+/-- Rocq `type_preservation.v:216` `list_update_func_forall_inv`. -/
 theorem list_update_func_forall_inv {A : Type} [Inhabited A] (l : List A) (f : A → A) (P : A → Prop)
     (x : Nat) : x < l.length → Forall P (list_update_func l x f) → P (f (l[x]!)) := by
   intro hx h
@@ -281,7 +281,7 @@ theorem list_update_func_forall_inv {A : Type} [Inhabited A] (l : List A) (f : A
   have := h _ hmem
   rwa [getElem!_modify_eq_or_ne l x x f hx, if_pos rfl] at this
 
-/-- Rocq `type_preservation.v:242` `Forall_list_update_func` (added bundle18). -/
+/-- Rocq `type_preservation.v:242` `Forall_list_update_func`. -/
 theorem Forall_list_update_func {A : Type} (P : A → Prop) (l : List A) (n : Nat) (f : A → A) :
     Forall P l → (∀ x, P x → P (f x)) → Forall P (list_update_func l n f) := by
   intro hl hf
@@ -294,9 +294,9 @@ theorem Forall_list_update_func {A : Type} (P : A → Prop) (l : List A) (n : Na
     · exact hl y h
     · rw [h1]; exact hf _ (hl _ h2)
 
-/-! ### Store-update plumbing for `store_extension_reduce` (Lean-only, bundle18)
+/-! ### Store-update plumbing for `store_extension_reduce` (Lean-only)
 
-    Rocq rebuilds `Store_extension`/`Store_ok` in every store-writing case with
+    Rocq rebuilds `Extend_store`/`Store_ok` in every store-writing case with
     `mk_Extend_store … ; eauto` and `mk_Store_ok with (…) ; first [eapply Extend_store_*s …]`.
     `Store_ok_parts`/`Store_ok_of_parts` take `Store_ok` apart and back together over a store's
     own fields, and `Extend_store_of_parts` replaces the 18 index-range premises of
@@ -354,7 +354,7 @@ theorem Extend_store_of_parts (s s' : store) :
     (forall_range_lt _) (fun a ha => Nat.lt_of_lt_of_le (List.mem_range.mp ha) he1) he2
     hwf hwf'
 
-/-- `Store_ok s` stated for a store `s` gives each component list's `wf_*` facts. -/
+/-- `wf_store s` gives each component list's `wf_*` facts. -/
 theorem wf_store_parts (s : store) (h : wf_store s) :
     Forall wf_funcinst s.FUNCS ∧ Forall wf_globalinst s.GLOBALS ∧ Forall wf_tableinst s.TABLES ∧
       Forall wf_meminst s.MEMS ∧ Forall wf_datainst s.DATAS := by
@@ -374,7 +374,7 @@ theorem Extend_store_datainsts₂ (s s' : store) (ds : List datainst) (dts : Lis
     | mk_Datainst_ok b_lst hlen _ hwf => exact Datainst_ok.mk_Datainst_ok s' b_lst hlen hwfS' hwf
   exact aux _ _ (h p hp)
 
-/-- Rocq `type_preservation.v:253` `wf_store_mem_update` (added bundle18). Stated, as in Rocq,
+/-- Rocq `type_preservation.v:253` `wf_store_mem_update`. Stated, as in Rocq,
     with `list_slice_update`; the Lean `with_mem` (`splice`) is bridged to it by
     `HelperLemmas.splice_eq_list_slice_update`. -/
 theorem wf_store_mem_update (s : store) (idx off len : Nat) (b_lst : List byte) :
@@ -391,7 +391,7 @@ theorem wf_store_mem_update (s : store) (idx off len : Nat) (b_lst : List byte) 
     | meminst_case_ mt bs hmt hbs =>
       exact wf_meminst.meminst_case_ mt _ hmt (list_slice_update_forall bs b_lst off len hbs hb)
 
-/-- Rocq `type_preservation.v:270` `wf_store_mem_update'` (added bundle18). -/
+/-- Rocq `type_preservation.v:270` `wf_store_mem_update'`. -/
 theorem wf_store_mem_update' (fs : List funcinst) (gs : List globalinst) (ts : List tableinst)
     (ms : List meminst) (es : List eleminst) (ds : List datainst) (idx off len : Nat) (b_lst : List byte) :
     wf_store (store.MKstore fs gs ts ms es ds) → Forall wf_byte b_lst →
@@ -401,7 +401,7 @@ theorem wf_store_mem_update' (fs : List funcinst) (gs : List globalinst) (ts : L
   exact wf_store_mem_update (store.MKstore fs gs ts ms es ds) idx off len b_lst h hb
 
 /-- The address lists of a module instance have the lengths of its context's type lists:
-    `Moduleinst_ok`'s own length premises, collected once (Lean-only, bundle18). Rocq gets these
+    `Moduleinst_ok`'s own length premises, collected once (Lean-only). Rocq gets these
     from `Forall2_length` on the corresponding `Forall2` premises; the zip-based `Forall₂` here
     cannot, so they are read off the separate length premises instead. -/
 theorem Moduleinst_ok_lengths (s : store) (minst : moduleinst) (C : context) :
@@ -414,7 +414,7 @@ theorem Moduleinst_ok_lengths (s : store) (minst : moduleinst) (C : context) :
   | mk_Moduleinst_ok _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hg _ hf _ hm _ ht _ _ hd _ _ he =>
     exact ⟨hg, hf, hm, ht, hd, he⟩
 
-/-- Rocq `type_preservation.v:287` `mem_store_extension` (added bundle18): storing a
+/-- Rocq `type_preservation.v:287` `mem_store_extension`: storing a
     well-formed byte sequence into memory 0 extends the store and keeps it `Store_ok`. The
     byte-list-agnostic core of `store_extension_reduce`'s store cases. Rocq's `len : Q` is a
     `Nat` here, matching the Lean model's byte lengths. -/
@@ -457,7 +457,7 @@ theorem mem_store_extension (s : store) (v_f : frame) (C C' : context) (off : Na
   · exact (list_update_length_func _ _ _).trans h3
   · exact Extend_store_meminsts _ _ _ _ hext (construct_meminsts s mtl _ v_mt b0 off b_lst hwfb h4 hlk)
 
-/-- Rocq `type_preservation.v:402` `ais_seq3_last_typing` (added bundle18). -/
+/-- Rocq `type_preservation.v:402` `ais_seq3_last_typing`. -/
 theorem ais_seq3_last_typing (v_S : store) (v_C : context) (a b op : admininstr) (v_ft : functype) :
     Instrs_ok2 v_S v_C [a, b, op] v_ft → ∃ t1s t2s, Instrs_ok2 v_S v_C [op] (mkFunctype t1s t2s) := by
   intro h
@@ -468,7 +468,7 @@ theorem ais_seq3_last_typing (v_S : store) (v_C : context) (a b op : admininstr)
   obtain ⟨t4s, hop, _⟩ := ais_seq_typing_inversion v_S v_C [op] b t3s t2s hrest
   exact ⟨t4s, t2s, hop⟩
 
-/-- Rocq `type_preservation.v:414` `ais_vstore_mems_inversion` (added bundle18). -/
+/-- Rocq `type_preservation.v:414` `ais_vstore_mems_inversion`. -/
 theorem ais_vstore_mems_inversion (v_S : store) (v_C : context) (ao : memarg) (t1s t2s : List valtype) :
     Instrs_ok2 v_S v_C [admininstr.VSTORE vectype.V128 ao] (mkFunctype t1s t2s) → 0 < v_C.MEMS.length := by
   intro h
@@ -477,7 +477,7 @@ theorem ais_vstore_mems_inversion (v_S : store) (v_C : context) (ao : memarg) (t
   cases hok
   assumption
 
-/-- Rocq `type_preservation.v:424` `ais_vstore_lane_mems_inversion` (added bundle18). -/
+/-- Rocq `type_preservation.v:424` `ais_vstore_lane_mems_inversion`. -/
 theorem ais_vstore_lane_mems_inversion (v_S : store) (v_C : context) (v_n : n) (ao : memarg)
     (v_laneidx : laneidx) (t1s t2s : List valtype) :
     Instrs_ok2 v_S v_C [admininstr.VSTORE_LANE vectype.V128 (sz.mk_sz v_n) ao v_laneidx] (mkFunctype t1s t2s) →
@@ -530,7 +530,7 @@ private theorem reduce_inst_unchanged_aux (c1 c2 : config) (h : Step c1 c2) :
     simp_all [with_global, with_table, with_tableinst, with_elem, with_mem,
       with_meminst, with_data])
 
-/-- Rocq `type_preservation.v:997` `reduce_inst_unchanged`. The module-instance component
+/-- Rocq `type_preservation.v:1504` `reduce_inst_unchanged`. The module-instance component
     of the frame is invariant under `Step`. -/
 theorem reduce_inst_unchanged (s : store) (f : frame) (ais : List admininstr) (s' : store)
     (f' : frame) (ais' : List admininstr) :
@@ -538,7 +538,7 @@ theorem reduce_inst_unchanged (s : store) (f : frame) (ais : List admininstr) (s
     f.MODULE = f'.MODULE :=
   fun h => reduce_inst_unchanged_aux _ _ h s f ais s' f' ais' rfl rfl
 
-/-! ### SIMD loads and stores (`type_preservation.v:1518-1659`, added bundle18) -/
+/-! ### SIMD loads and stores (`type_preservation.v:1518-1660`) -/
 
 /-- Rocq `type_preservation.v:1522` `ais_vload_typing_inversion`. -/
 theorem ais_vload_typing_inversion (v_S : store) (v_C : context) (vlo : Option vloadop_) (ao : memarg)
@@ -683,11 +683,11 @@ theorem locals_append_eq (tl : List valtype) (C : context) (h : C.LOCALS = []) :
   show tl ++ C.LOCALS = tl
   rw [h, List.append_nil]
 
-/-! ### Shared helpers for the `Step`/`Step_read` case analyses (Lean-only, bundle18)
+/-! ### Shared helpers for the `Step`/`Step_read` case analyses (Lean-only)
 
     Rocq discharges most cases of `t_read_preservation`/`t_preservation_type` with its
     `invert_ais_typing; resolve_all_pt; join_subtyping_*; construct_ais_typing` automation
-    (`helper_tactics.v`, not ported). These package the recurring shapes once: "k operands,
+    (Ltac in `typing_lemmas.v`, not ported). These package the recurring shapes once: "k operands,
     then an operator whose principal type consumes them", plus the per-operator principal
     type inversions and a few well-formedness projections. -/
 
@@ -867,7 +867,7 @@ theorem wf_config_store {s : store} {f : frame} {ais : List admininstr}
     (h : wf_config (config.mk_config (state.mk_state s f) ais)) : wf_store s := by
   cases h with | config_case_0 _ _ hst _ => cases hst with | state_case_0 _ _ h _ => exact h
 
-/-- Lean-only helper: the frame of a well-formed configuration is well-formed. Renamed in bundle20
+/-- Lean-only helper: the frame of a well-formed configuration is well-formed. Renamed
     from `wf_config_frame` to free that name for the Rocq progress lemma
     `type_progress.v:870` `wf_config_frame` (a different statement), ported in TypeProgress.lean. -/
 theorem wf_config_wf_frame {s : store} {f : frame} {ais : List admininstr}
@@ -899,7 +899,7 @@ theorem const_I32_result (s : store) (C : context) (c : num_) (t1s t2s : List va
   construct_ais_subtyping s C _ [] [valtype.I32] t1s t2s
     (construct_ais_typing_single s C _ [] [valtype.I32] (construct_ai_const_I32 s C c hn hC hS)) hsub
 
-/-! ### `store_extension_reduce`: per-rule store cases (bundle18)
+/-! ### `store_extension_reduce`: per-rule store cases
 
     Rocq proves `store_extension_reduce` by one induction on `Step`
     (`type_preservation.v:437-1502`): every rule that leaves the store alone is closed by
@@ -912,7 +912,7 @@ theorem const_I32_result (s : store) (C : context) (c : num_) (t1s t2s : List va
     `Step_is_wf`. Here every new store component's well-formedness comes from the reducing
     instruction sequence, the old store, or the `$growtable`/`$growmemory` relations' own
     premises, so this lemma does not depend on `Step_is_wf` (which was false in a corner case
-    until spec commit `4cf9f29c5`; it is proved since bundle21, so this is now only a difference
+    until spec commit `4cf9f29c5`; it is proved now, so this is only a difference
     of proof route). -/
 
 theorem getElem?_eq_some_bang {α : Type} [Inhabited α] {l : List α} {k : Nat} {a : α}
@@ -1313,8 +1313,7 @@ theorem Store_ok_wf_store (s : store) (h : Store_ok s) : wf_store s := by
     `memory.grow` case of `store_extension_reduce` needs (`$growmemory` stores the new page count
     as `rat_to_nat (|b*| / 64Ki + n)`, which in every `Store_ok` store is the natural number
     `lim_old + n`). Lean-only, no Rocq counterpart (its rational-to-`N` conversion is concrete).
-    Flagged as unprovable in bundle18 while `rat_to_nat` was `opaque`; provable since the user
-    gave it a definition (bundle19). -/
+    Follows from the definition of `rat_to_nat` (`wasm2.0.lean:9`), which used to be `opaque`. -/
 theorem rat_to_nat_natCast (n : Nat) : rat_to_nat (n : Rat) = n := by
   simp [rat_to_nat]
 
@@ -1635,7 +1634,7 @@ theorem step_moduleinst (v_s : store) (v_f : frame) (v_ais : List admininstr) (v
     (store_extension_reduce v_s v_f v_ais v_s' v_f' v_ais' v_C v_C' v_tf hwfc hstep hmi htype him hsok).1
     hmi
 
-/-! ### Helpers for `t_read_preservation` (Lean-only, bundle19)
+/-! ### Helpers for `t_read_preservation` (Lean-only)
 
     Rocq builds the reduct typings with its `construct_ais_typing` automation and explicit
     `instrtype_sub` witnesses for stack prefixes. Here: `ais_cons_pre` types one instruction at its
@@ -2014,13 +2013,13 @@ theorem Forall2_app_intro {α β : Type} {R : α → β → Prop} {l1 l2 : List 
   · exact h2 p hp
 
 /-- Rocq `type_preservation.v:1661` `t_read_preservation`: preservation under the read-only
-    reduction relation (no store mutation). `Qed` in Rocq; proved here (bundle19), all 47
+    reduction relation (no store mutation). `Qed` in Rocq; proved here for all 47
     `Step_read` rules. As in Rocq, the reduct's well-formedness comes from the generated
-    `Step_read_is_wf`, which is proved since bundle21 (it was `Admitted` in Rocq and `sorry`
+    `Step_read_is_wf`, which is proved (in `wasm2.0.lean`; it was `Admitted` in Rocq and `sorry`
     here until the spec fixed the memory.fill/copy/init `CONST I32 2^32` corner case in commit
     `4cf9f29c5`).
 
-    **Signature deviation (intended, bundle19):** the locals hypothesis is
+    **Signature deviation (intended):** the locals hypothesis is
     `Vals_ok v_s v_f.LOCALS v_C'.LOCALS`, i.e. Rocq's
     `Forall2 (fun v_t v_val => Val_ok v_s v_val v_t) (context_LOCALS v_C') (LOCALS v_f)` plus
     the length equation. Rocq's inductive `Forall2` implies equal lengths; Lean's generated
@@ -2673,8 +2672,7 @@ private theorem t_preservation_type_aux (c1 c2 : config) (hstep : Step c1 c2) :
 
 /-- Rocq `type_preservation.v:3137` `t_preservation_type`. **The central preservation
     lemma for the whole `Step` relation** (subsumes `t_read_preservation`). `Qed` in Rocq,
-    SIMD cases included (the "`Admitted`, SIMD gap" note this file used to carry described
-    the pre-`a8b585cdb` Rocq and was corrected in bundle18). Dispatches `Step_pure` to
+    SIMD cases included. Dispatches `Step_pure` to
     `t_pure_preservation` and `Step_read` to `t_read_preservation`; the case analysis is in
     `t_preservation_type_aux`. Like Rocq, it takes the reduct's well-formedness from the
     generated `Step_is_wf`. -/
@@ -2691,13 +2689,12 @@ theorem t_preservation_type (v_s : store) (v_f : frame) (v_ais : List admininstr
   exact t_preservation_type_aux _ _ hstep v_s v_f v_ais v_s' v_f' v_ais' v_C v_C' t1s t2s rfl rfl
     hwf (Step_is_wf _ _ _ hwf hsok hstep) hsok hsok' hext hmi hmi' hvals him htype
 
-/-- Rocq `type_preservation.v:2668` `t_preservation`. **THE top-level theorem** — Rocq
+/-- Rocq `type_preservation.v:3412` `t_preservation`. **THE top-level theorem** — Rocq
     source comment: `(* Ultimate goal of project *)`. Whole-program preservation: reduction
     (`Step`) on a full `config` preserves well-typedness at the same fixed result type.
     `Qed` in Rocq; proved here by the same composition (`store_extension_reduce`,
     `t_preservation_vs_type`, `t_preservation_type`, `reduce_inst_unchanged`,
-    `Extend_store_moduleinst`). Its remaining `sorry` dependencies are listed in
-    `claude-logging/for-claude/is_wf_theorems.md` (generated `*_is_wf` theorems). -/
+    `Extend_store_moduleinst`). -/
 theorem t_preservation (config1 : config) (rt : resulttype) (config2 : config) :
     Step config1 config2 → Config_ok config1 rt → Config_ok config2 rt := by
   intro step_configs config1_ok

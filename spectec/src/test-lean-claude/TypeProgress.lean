@@ -9,10 +9,10 @@ import TypePreservation
 /-!
 # TypeProgress
 
-Lean port of `spectec/test-rocq/theories/type_progress.v` (ported from upstream
-`rocq-backend-proof-final` `95c256c2c` in bundle20; re-synced in bundle21 to upstream
-`rocq-backend-proof` `6582b3a39`, where Rocq's proof is complete). Rocq line citations below are to
-`95c256c2c` unless marked otherwise; `6582b3a39` shifted most of them. This is the **progress** half
+Lean port of `spectec/test-rocq/theories/type_progress.v` (first ported from upstream
+`rocq-backend-proof-final` `95c256c2c`, then re-synced to upstream `rocq-backend-proof`
+`6582b3a39`, where Rocq's proof is complete). Rocq line citations below are to `6582b3a39`
+unless a revision is named. This is the **progress** half
 of type safety. The main theorem is `t_progress`: a
 configuration that is `Config_ok` at some result type is either terminal (only values, or a single
 `TRAP`) or can take a `Step`.
@@ -25,12 +25,12 @@ Structure (it follows the Rocq file):
 4. numeric and lane/vector totality lemmas;
 5. `t_progress_be` (basic instructions), `t_progress_e` (administrative instructions), `t_progress`.
 
-(Until bundle20 there was a 6th part: two counterexample families, `vload_shape64_*` and
+(The `95c256c2c` revision had a 6th part: two counterexample families, `vload_shape64_*` and
 `vcvtop_trunc_sat_i16_*`, showing where progress was FALSE under the old spec. Upstream spec commit
 `4cf9f29c5` ruled both instructions out in validation (`SHAPE` now needs `M > 1`; `TRUNC_SAT` now
-needs an `Inn` destination), and Rocq `6582b3a39` deleted the counterexamples. So did bundle21.)
+needs an `Inn` destination), and Rocq `6582b3a39` deleted the counterexamples, as does this file.)
 
-**Lean-only structure (bundle20).** Rocq proves `t_progress_be` / `t_progress_e` with one
+**Lean-only structure.** Rocq proves `t_progress_be` / `t_progress_e` with one
 `Instrs_ok_ind'` / `Admin_instrs_ok_ind'` application whose bullets handle each typing rule. Here
 each bullet is a standalone lemma `t_progress_be_<rule>` / `t_progress_e_<rule>` whose statement is,
 verbatim, the corresponding minor premise of Lean's auto-generated mutual recursor `Instrs_ok.rec`
@@ -44,9 +44,9 @@ recursor. The cases can therefore be proved and checked independently.
 `getElem?_eq_some_bang`, typing builders). No logical dependency on preservation results is
 intended.
 
-Status (end of bundle21): **everything is proved, with no `sorry` in this file**, as Rocq's
-`t_progress_be` is now `Qed`. The two subcases that bundle20 left as `sorry` (false under the old
-spec) are now impossible: `t_progress_be_vload_pack` refutes `SHAPE 64 X 1` with the new `M > 1`
+Status: **everything is proved, with no `sorry` in this file**, as Rocq's
+`t_progress_be` is now `Qed`. The two subcases that were false under the old
+spec are now impossible: `t_progress_be_vload_pack` refutes `SHAPE 64 X 1` with the new `M > 1`
 side condition, and `t_progress_be_vcvtop` no longer has an `F32 → I16 TRUNC_SAT` case at all.
 `#sorry_deps TLC.t_progress` lists only generated numeric `*_is_wf` theorems about functions that
 are `opaque` in Lean (`Axiom`s in Rocq, whose `*_is_wf` are all `Admitted` there too); see
@@ -838,7 +838,7 @@ theorem wf_config_label (s : state) (n : n) (bes : List instr) (es : List admini
 /-- Rocq `type_progress.v:870` `wf_config_frame`. A well-formed configuration whose instructions are
     one `FRAME_ n f es` gives well-formed configurations for the body `es`, both under the outer
     frame `f'` and under the inner frame `f`. (Distinct from the Lean-only
-    `wf_config_wf_frame` of TypePreservation.lean, which was renamed in bundle20 to free this name.) -/
+    `wf_config_wf_frame` of TypePreservation.lean, which was renamed to free this name.) -/
 theorem wf_config_frame (s : store) (f' : frame) (n : n) (f : frame) (es : List admininstr) :
     wf_config (config.mk_config (state.mk_state s f') [admininstr.FRAME_ n f es]) →
     wf_config (config.mk_config (state.mk_state s f') es) ∧
@@ -1688,7 +1688,7 @@ theorem binop_total (nt : numtype) (b : binop_) (n1 n2 : num_) :
         | exact fmax__is_wf _ _ _ _ hw1 hw2 rfl
         | exact fcopysign__is_wf _ _ _ _ hw1 hw2 rfl
 
-/-- Rocq `type_progress.v:1691` `relop_total`. `relop_` is total on well-formed operands and a
+/-- Rocq `type_progress.v:1686` `relop_total`. `relop_` is total on well-formed operands and a
     well-formed operator. -/
 theorem relop_total (nt : numtype) (r : relop_) (n1 n2 : num_) :
     wf_num_ nt n1 → wf_num_ nt n2 → wf_relop_ nt r →
@@ -1745,7 +1745,7 @@ theorem relop_total (nt : numtype) (r : relop_) (n1 n2 : num_) :
     obtain rfl := numF _ _ h2
     cases F <;> cases rF <;> apply Exists.intro <;> constructor
 
-/-- Rocq `type_progress.v:1715` `cvtop_total`. `cvtop__` is total on a well-formed operand and a
+/-- Rocq `type_progress.v:1710` `cvtop_total`. `cvtop__` is total on a well-formed operand and a
     well-formed conversion operator. -/
 theorem cvtop_total (nt1 nt2 : numtype) (cvt : cvtop__) (c1 : num_) :
     wf_num_ nt1 c1 → wf_cvtop__ nt1 nt2 cvt →
@@ -1799,7 +1799,7 @@ theorem cvtop_total (nt1 nt2 : numtype) (cvt : cvtop__) (c1 : num_) :
     obtain rfl := numF _ _ h1
     cases x <;> cases F1 <;> cases F2 <;> apply Exists.intro <;> constructor
 
-/-- Rocq `type_progress.v:1735` `binop_before`. On well-formed operands and operator, the
+/-- Rocq `type_progress.v:1730` `binop_before`. On well-formed operands and operator, the
     generated "earlier clauses apply" predicate `fun_binop__before_fun_binop__case_38` holds (it
     lists every `binop_` clause before the catch-all case 38). -/
 theorem binop_before (nt : numtype) (b : binop_) (n1 n2 : num_) :
@@ -1874,7 +1874,7 @@ theorem binop_before (nt : numtype) (b : binop_) (n1 n2 : num_) :
         | exact fmax__is_wf _ _ _ _ hw1 hw2 rfl
         | exact fcopysign__is_wf _ _ _ _ hw1 hw2 rfl
 
-/-- Rocq `type_progress.v:1761` `binop_not_none`. On well-formed operands and operator, any result
+/-- Rocq `type_progress.v:1754` `binop_not_none`. On well-formed operands and operator, any result
     `lst` that `fun_binop_` relates them to is not `none` (the catch-all case 38 cannot fire). -/
 theorem binop_not_none (nt : numtype) (b : binop_) (n1 n2 : num_) (lst : Option (List num_)) :
     wf_num_ nt n1 →
@@ -1887,7 +1887,7 @@ theorem binop_not_none (nt : numtype) (b : binop_) (n1 n2 : num_) (lst : Option 
   cases hf with
   | fun_binop__case_38 _ _ _ _ hnb => exact hnb (binop_before _ _ _ _ hn1 hn2 hb)
 
-/-- Rocq `type_progress.v:1774` `relop_before`. On well-formed operands and operator, the
+/-- Rocq `type_progress.v:1767` `relop_before`. On well-formed operands and operator, the
     generated "an earlier clause applies" predicate `fun_relop__before_fun_relop__case_24` holds. -/
 theorem relop_before (nt : numtype) (r : relop_) (n1 n2 : num_) :
     wf_num_ nt n1 → wf_num_ nt n2 → wf_relop_ nt r →
@@ -1919,7 +1919,7 @@ theorem relop_before (nt : numtype) (r : relop_) (n1 n2 : num_) :
     obtain rfl := numF _ _ h2
     cases F <;> cases rF <;> constructor
 
-/-- Rocq `type_progress.v:1787` `relop_not_none`. On well-formed operands and operator, any result
+/-- Rocq `type_progress.v:1780` `relop_not_none`. On well-formed operands and operator, any result
     `c` that `fun_relop_` relates them to is not `none`. -/
 theorem relop_not_none (nt : numtype) (r : relop_) (n1 n2 : num_) (c : Option num_) :
     wf_num_ nt n1 →
@@ -1932,7 +1932,7 @@ theorem relop_not_none (nt : numtype) (r : relop_) (n1 n2 : num_) (c : Option nu
   cases hf with
   | fun_relop__case_24 _ _ _ _ hnb => exact hnb (relop_before _ _ _ _ hn1 hn2 hr)
 
-/-- Rocq `type_progress.v:1800` `cvtop_before`. On a well-formed operand and conversion operator,
+/-- Rocq `type_progress.v:1793` `cvtop_before`. On a well-formed operand and conversion operator,
     the generated predicate `fun_cvtop___before_fun_cvtop___case_36` (an earlier clause of
     `fun_cvtop__` applies) holds. -/
 theorem cvtop_before (nt1 nt2 : numtype) (cvt : cvtop__) (c1 : num_) :
@@ -1987,7 +1987,7 @@ theorem cvtop_before (nt1 nt2 : numtype) (cvt : cvtop__) (c1 : num_) :
     obtain rfl := numF _ _ h1
     cases x <;> cases F1 <;> cases F2 <;> constructor
 
-/-- Rocq `type_progress.v:1824` `cvtop_not_none`. On a well-formed operand and conversion
+/-- Rocq `type_progress.v:1817` `cvtop_not_none`. On a well-formed operand and conversion
     operator, any result `c2` that `fun_cvtop__` relates them to is not `none`. -/
 theorem cvtop_not_none (nt1 nt2 : numtype) (cvt : cvtop__) (c1 : num_) (c2 : Option (List num_)) :
     wf_num_ nt1 c1 →
@@ -1999,7 +1999,7 @@ theorem cvtop_not_none (nt1 nt2 : numtype) (cvt : cvtop__) (c1 : num_) (c2 : Opt
   cases hf with
   | fun_cvtop___case_36 _ _ _ _ hnb => exact hnb (cvtop_before _ _ _ _ hc1 hcvt)
 
-/-- Rocq `type_progress.v:1836` `testop_not_none`. The function `fun_testop_` is defined
+/-- Rocq `type_progress.v:1829` `testop_not_none`. The function `fun_testop_` is defined
     (`≠ none`) on a well-formed operand and test operator. -/
 theorem testop_not_none (nt : numtype) (t : testop_) (n1 : num_) :
     wf_num_ nt n1 →
@@ -2019,7 +2019,7 @@ theorem testop_not_none (nt : numtype) (t : testop_) (n1 : num_) :
   cases tI
   cases I <;> simp [fun_testop_, numtype_Inn]
 
-/-- Rocq `type_progress.v:1854` `Forall_all`. If every element satisfies the boolean predicate `P`
+/-- Rocq `type_progress.v:1847` `Forall_all`. If every element satisfies the boolean predicate `P`
     (as a `Forall`), the list passes the boolean `all P`. mathcomp `all P l` ↦ `l.all P`; Rocq's
     `is_true` coercions ↦ `= true`. -/
 theorem Forall_all (T : Type) (P : T → Bool) (l : List T) :
@@ -2027,20 +2027,20 @@ theorem Forall_all (T : Type) (P : T → Bool) (l : List T) :
   intro h
   exact List.all_eq_true.mpr h
 
-/-- Rocq `type_progress.v:1858` `all_Forall`. Converse of `Forall_all`: a list passing the boolean
+/-- Rocq `type_progress.v:1851` `all_Forall`. Converse of `Forall_all`: a list passing the boolean
     `all P` satisfies `P` element-wise. -/
 theorem all_Forall (T : Type) (P : T → Bool) (l : List T) :
     l.all P = true → Forall (fun x => P x = true) l := by
   intro h
   exact List.all_eq_true.mp h
 
-/-- Rocq `type_progress.v:1865` `Forall_exists_Forall2`. If every `b ∈ l` has an `R`-related
+/-- Rocq `type_progress.v:1858` `Forall_exists_Forall2`. If every `b ∈ l` has an `R`-related
     witness `a` satisfying `P`, the witnesses form a list `la` with `Forall2 R la l` and
     `Forall P la`. **Deviation:** Lean's generated `Forall₂` is zip-based and does not imply equal
     lengths (with it alone the conclusion would hold trivially with `la = []`), while Rocq's
     inductive `Forall2` does; so Rocq's conjunct `Forall2 R la l` is rendered as
     `(Forall₂ R la l ∧ la.length = l.length)` (length right after the `Forall₂`, grouped so the
-    outer `_ ∧ Forall P la` shape is Rocq's). Downstream Rocq uses of `Forall2_size_eq` (1982/3941;
+    outer `_ ∧ Forall P la` shape is Rocq's). Downstream Rocq uses of `Forall2_size_eq` (1975/3922;
     NOT PORTED in Lean) need exactly this length fact, which Lean callers take from this conjunct. -/
 theorem Forall_exists_Forall2 (A B : Type) (R : A → B → Prop) (P : A → Prop) (l : List B) :
     Forall (fun b => ∃ a, R a b ∧ P a) l →
@@ -2065,14 +2065,14 @@ theorem Forall_exists_Forall2 (A B : Type) (R : A → B → Prop) (P : A → Pro
       · exact hp
       · exact hp' x hx
 
--- `Forall2_size_eq` (type_progress.v:1874, `Forall2 R la lb -> (|la|) = (|lb|)`) NOT PORTED: Rocq's
+-- `Forall2_size_eq` (type_progress.v:1867, `Forall2 R la lb -> (|la|) = (|lb|)`) NOT PORTED: Rocq's
 -- inductive `Forall2` carries the length but Lean's zip-based `Forall₂` does not (the literal
 -- statement is false in Lean, e.g. `la = []`, `lb = [b]`), so adding `hlen` would make the lemma
--- return its own premise (same as `Forall2_seq_size`, HelperLemmas.lean:293). Its Rocq uses (Ltac
--- `vunop_case` at 1982 and 3941) only extract the length; Lean callers take it from the length
+-- return its own premise (same as `Forall2_seq_size`, HelperLemmas.lean:292). Its Rocq uses (Ltac
+-- `vunop_case` at 1975 and 3922) only extract the length; Lean callers take it from the length
 -- conjunct of `Forall_iabs_total` / `Forall_exists_Forall2`.
 
-/-- Rocq `type_progress.v:1884` `wf_lane_Jnn_inv`. A well-formed lane of lane type
+/-- Rocq `type_progress.v:1877` `wf_lane_Jnn_inv`. A well-formed lane of lane type
     `lanetype_Jnn J` that projects as an integer lane is `mk_lane__0 J x` with `x` in range.
     Rocq's boolean `proj_lane__0 l != None` ↦ `proj_lane__0 l ≠ none`. -/
 theorem wf_lane_Jnn_inv (J : Jnn) (l : lane_) :
@@ -2089,7 +2089,7 @@ theorem wf_lane_Jnn_inv (J : Jnn) (l : lane_) :
     exfalso
     cases F <;> cases J <;> simp [lanetype_Jnn, lanetype_Fnn] at Heq
 
-/-- Rocq `type_progress.v:1897` `wf_lane_Jnn_some`. `lane_` has disjoint integer / float cases, so
+/-- Rocq `type_progress.v:1890` `wf_lane_Jnn_some`. `lane_` has disjoint integer / float cases, so
     every well-formed lane of lane type `lanetype_Jnn J` projects as an integer lane. -/
 theorem wf_lane_Jnn_some (J : Jnn) (l : lane_) :
     wf_lane_ (lanetype_Jnn J) l → proj_lane__0 l ≠ none := by
@@ -2100,7 +2100,7 @@ theorem wf_lane_Jnn_some (J : Jnn) (l : lane_) :
     exfalso
     cases F <;> cases J <;> simp [lanetype_Jnn, lanetype_Fnn] at Heq
 
-/-- Rocq `type_progress.v:1905` `wf_lane_Fnn_inv`. A well-formed lane of lane type
+/-- Rocq `type_progress.v:1898` `wf_lane_Fnn_inv`. A well-formed lane of lane type
     `lanetype_Fnn F` is `mk_lane__1 F x` with `x` well-formed. -/
 theorem wf_lane_Fnn_inv (F : Fnn) (l : lane_) :
     wf_lane_ (lanetype_Fnn F) l →
@@ -2116,7 +2116,7 @@ theorem wf_lane_Fnn_inv (F : Fnn) (l : lane_) :
     subst HF
     exact ⟨c, rfl, Hc⟩
 
-/-- Rocq `type_progress.v:1916` `Forall_lane_Jnn`. List version of `wf_lane_Jnn_inv`. -/
+/-- Rocq `type_progress.v:1909` `Forall_lane_Jnn`. List version of `wf_lane_Jnn_inv`. -/
 theorem Forall_lane_Jnn (J : Jnn) (ls : List lane_) :
     Forall (fun l => wf_lane_ (lanetype_Jnn J) l) ls →
     Forall (fun l => proj_lane__0 l ≠ none) ls →
@@ -2124,7 +2124,7 @@ theorem Forall_lane_Jnn (J : Jnn) (ls : List lane_) :
   intro Hw Hs l hl
   exact wf_lane_Jnn_inv J l (Hw l hl) (Hs l hl)
 
-/-- Rocq `type_progress.v:1927` `Forall_lane_map_wf`. Mapping a range-preserving operation `f`
+/-- Rocq `type_progress.v:1920` `Forall_lane_map_wf`. Mapping a range-preserving operation `f`
     over in-range `Jnn` lanes gives well-formed lanes. Rocq `!(x)` ↦ `Option.get! x`. -/
 theorem Forall_lane_map_wf (J : Jnn) (f : iN → iN) (ls : List lane_) :
     (∀ x, wf_uN (lsize (lanetype_Jnn J)) x → wf_uN (lsize (lanetype_Jnn J)) (f x)) →
@@ -2135,9 +2135,9 @@ theorem Forall_lane_map_wf (J : Jnn) (f : iN → iN) (ls : List lane_) :
   subst hx
   exact wf_lane_.lane__case_0 _ _ _ (Hf x hwx) rfl
 
-/-- Rocq `type_progress.v:1938` `Forall_lane_fop_wf`. Likewise for a (set-valued) float operation
+/-- Rocq `type_progress.v:1931` `Forall_lane_fop_wf`. Likewise for a (set-valued) float operation
     `fop` over well-formed `Fnn` lanes: every result lane is well-formed. Rocq's `res_N`
-    (`Definition res_N := N`, wasm.v:342) ↦ `N`, as in Lean's generated float operations. -/
+    (`Definition res_N := N`, wasm.v:323) ↦ `N`, as in Lean's generated float operations. -/
 theorem Forall_lane_fop_wf (F : Fnn) (fop : N → fN → List fN) (ls : List lane_) :
     (∀ x, wf_fN (sizenn (numtype_Fnn F)) x →
       Forall (fun r => wf_fN (sizenn (numtype_Fnn F)) r) (fop (sizenn (numtype_Fnn F)) x)) →
@@ -2151,7 +2151,7 @@ theorem Forall_lane_fop_wf (F : Fnn) (fop : N → fN → List fN) (ls : List lan
   intro r hr
   exact wf_lane_.lane__case_1 _ _ _ (Hf x hwx r hr) rfl
 
-/-- Rocq `type_progress.v:1953` `iabs_lane_total`. `fun_iabs_` is total on an in-range `Jnn` lane
+/-- Rocq `type_progress.v:1946` `iabs_lane_total`. `fun_iabs_` is total on an in-range `Jnn` lane
     value, and its result makes a well-formed lane. -/
 theorem iabs_lane_total (J : Jnn) (x : iN) :
     wf_uN (lsize (lanetype_Jnn J)) x →
@@ -2164,7 +2164,7 @@ theorem iabs_lane_total (J : Jnn) (x : iN) :
     fun_iabs_.fun_iabs__case_0 _ _ _ Hz
   exact ⟨_, Ha, wf_lane_.lane__case_0 _ _ _ (iabs__is_wf _ _ _ _ Ha Hx rfl) rfl⟩
 
-/-- Rocq `type_progress.v:1968` `Forall_iabs_total`. Lane-wise `fun_iabs_` over in-range `Jnn` lanes
+/-- Rocq `type_progress.v:1961` `Forall_iabs_total`. Lane-wise `fun_iabs_` over in-range `Jnn` lanes
     has results `vs` (`Forall2`-related to the lanes), all making well-formed lanes.
     **Deviation:** as in `Forall_exists_Forall2`, Rocq's conjunct `Forall2 R vs ls` is rendered as
     `(Forall₂ R vs ls ∧ vs.length = ls.length)` (zip-based `Forall₂` would be satisfied trivially
@@ -2181,10 +2181,10 @@ theorem Forall_iabs_total (J : Jnn) (ls : List lane_) :
   subst hx
   exact iabs_lane_total J x Hx
 
--- Ltac `vunop_case` (type_progress.v:1980) NOT PORTED: proof automation; the Lean proofs do
+-- Ltac `vunop_case` (type_progress.v:1973) NOT PORTED: proof automation; the Lean proofs do
 -- this inline.
 
-/-- Rocq `type_progress.v:2004` `vunop_real`. On well-formed arguments (and, for an integer shape,
+/-- Rocq `type_progress.v:1997` `vunop_real`. On well-formed arguments (and, for an integer shape,
     lanes that project as integer lanes) a real case of `fun_vunop_` applies, and hence its
     `before` predicate `fun_vunop__before_fun_vunop__case_26` holds. Rocq's boolean
     `all (fun l => proj_lane__0 l != None) L` ↦ `L.all (fun l => proj_lane__0 l != none) = true`. -/
@@ -2248,7 +2248,7 @@ theorem vunop_real (sh : shape) (vunop : vunop_) (val : vec_) :
       · constructor
         all_goals first | exact Hsh | exact Habs | exact Hneg | exact Hsqrt | exact Hceil | exact Hfloor | exact Htrunc | exact Hnearest | rfl
 
-/-- Rocq `type_progress.v:2032` `vunop_total`. `fun_vunop_` relates well-formed arguments to some
+/-- Rocq `type_progress.v:2025` `vunop_total`. `fun_vunop_` relates well-formed arguments to some
     result (a real case or the catch-all). -/
 theorem vunop_total (sh : shape) (vunop : vunop_) (val : vec_) :
     wf_vunop_ sh vunop →
@@ -2271,7 +2271,7 @@ theorem vunop_total (sh : shape) (vunop : vunop_) (val : vec_) :
   obtain ⟨⟨vs, Hvs⟩, _⟩ := vunop_real sh vunop val Hop Hv Hsh Hall
   exact ⟨some vs, Hvs⟩
 
-/-- Rocq `type_progress.v:2059` `vunop_not_none`. On well-formed arguments, any result `ret` of
+/-- Rocq `type_progress.v:2052` `vunop_not_none`. On well-formed arguments, any result `ret` of
     `fun_vunop_` is not `none` (the catch-all case 26 cannot fire). -/
 theorem vunop_not_none (sh : shape) (vunop : vunop_) (val : vec_) (ret : Option (List vec_)) :
     wf_vunop_ sh vunop →
@@ -2300,7 +2300,7 @@ theorem vunop_not_none (sh : shape) (vunop : vunop_) (val : vec_) (ret : Option 
   -- the real case supplied by `vunop_real` contradicts the catch-all
   exact inv _ _ _ Hf (vunop_real sh vunop val Hop Hv Hsh Hall).2
 
-/-- Rocq `type_progress.v:2092` `sat_s_range`. `sat_s_ v_N z` lies in `[0 - 2^(v_N-1), 2^(v_N-1))`.
+/-- Rocq `type_progress.v:2085` `sat_s_range`. `sat_s_ v_N z` lies in `[0 - 2^(v_N-1), 2^(v_N-1))`.
     Rocq's `(2 ^ (v_N - 1))%BN` is `N` arithmetic (truncated subtraction) cast to `Z`; here the
     power is computed in `Nat` and cast to `Int`. -/
 theorem sat_s_range (v_N : N) (z : Int) :
@@ -2312,7 +2312,7 @@ theorem sat_s_range (v_N : N) (z : Int) :
   have Hp : 0 < 2 ^ (v_N - 1) := Nat.two_pow_pos _
   split_ifs <;> omega
 
-/-- Rocq `type_progress.v:2103` `imin_total_wf`. `fun_imin_` is total on in-range operands and its
+/-- Rocq `type_progress.v:2096` `imin_total_wf`. `fun_imin_` is total on in-range operands and its
     result is in range. -/
 theorem imin_total_wf (v_N : N) (v_sx : sx) (i1 i2 : iN) : wf_uN v_N i1 → wf_uN v_N i2 →
     ∃ r, fun_imin_ v_N v_sx i1 i2 r ∧ wf_uN v_N r := by
@@ -2330,7 +2330,7 @@ theorem imin_total_wf (v_N : N) (v_sx : sx) (i1 i2 : iN) : wf_uN v_N i1 → wf_u
   obtain ⟨r, Hr⟩ := hr
   exact ⟨r, Hr, imin__is_wf _ _ _ _ _ _ Hr H1 H2 rfl⟩
 
-/-- Rocq `type_progress.v:2119` `imax_total_wf`. `fun_imax_` is total on in-range operands and its
+/-- Rocq `type_progress.v:2112` `imax_total_wf`. `fun_imax_` is total on in-range operands and its
     result is in range. -/
 theorem imax_total_wf (v_N : N) (v_sx : sx) (i1 i2 : iN) : wf_uN v_N i1 → wf_uN v_N i2 →
     ∃ r, fun_imax_ v_N v_sx i1 i2 r ∧ wf_uN v_N r := by
@@ -2348,7 +2348,7 @@ theorem imax_total_wf (v_N : N) (v_sx : sx) (i1 i2 : iN) : wf_uN v_N i1 → wf_u
   obtain ⟨r, Hr⟩ := hex
   exact ⟨r, Hr, imax__is_wf _ _ _ _ _ _ Hr H1 H2 rfl⟩
 
-/-- Rocq `type_progress.v:2135` `iadd_sat_total_wf`. `fun_iadd_sat_` is total on in-range operands
+/-- Rocq `type_progress.v:2128` `iadd_sat_total_wf`. `fun_iadd_sat_` is total on in-range operands
     and its result is in range. -/
 theorem iadd_sat_total_wf (v_N : N) (v_sx : sx) (i1 i2 : iN) : wf_uN v_N i1 → wf_uN v_N i2 →
     ∃ r, fun_iadd_sat_ v_N v_sx i1 i2 r ∧ wf_uN v_N r := by
@@ -2365,7 +2365,7 @@ theorem iadd_sat_total_wf (v_N : N) (v_sx : sx) (i1 i2 : iN) : wf_uN v_N i1 → 
   obtain ⟨r, Hr⟩ := hex
   exact ⟨r, Hr, iadd_sat__is_wf _ _ _ _ _ _ Hr H1 H2 rfl⟩
 
-/-- Rocq `type_progress.v:2149` `isub_sat_total_wf`. `fun_isub_sat_` is total on in-range operands
+/-- Rocq `type_progress.v:2142` `isub_sat_total_wf`. `fun_isub_sat_` is total on in-range operands
     and its result is in range. -/
 theorem isub_sat_total_wf (v_N : N) (v_sx : sx) (i1 i2 : iN) : wf_uN v_N i1 → wf_uN v_N i2 →
     ∃ r, fun_isub_sat_ v_N v_sx i1 i2 r ∧ wf_uN v_N r := by
@@ -2382,15 +2382,15 @@ theorem isub_sat_total_wf (v_N : N) (v_sx : sx) (i1 i2 : iN) : wf_uN v_N i1 → 
   obtain ⟨r, Hr⟩ := hex
   exact ⟨r, Hr, isub_sat__is_wf _ _ _ _ _ _ Hr H1 H2 rfl⟩
 
-/-- Rocq `type_progress.v:2165` `jlane`: `l` is a well-formed integer lane of shape `J`. -/
+/-- Rocq `type_progress.v:2158` `jlane`: `l` is a well-formed integer lane of shape `J`. -/
 def jlane (J : Jnn) (l : lane_) : Prop :=
   ∃ x, l = lane_.mk_lane__0 J x ∧ wf_uN (lsize (lanetype_Jnn J)) x
 
-/-- Rocq `type_progress.v:2167` `flane`: `l` is a well-formed float lane of shape `F`. -/
+/-- Rocq `type_progress.v:2160` `flane`: `l` is a well-formed float lane of shape `F`. -/
 def flane (F : Fnn) (l : lane_) : Prop :=
   ∃ x, l = lane_.mk_lane__1 F x ∧ wf_fN (sizenn (numtype_Fnn F)) x
 
-/-- Rocq `type_progress.v:2170` `lanes_Jnn_form`. The lanes of a well-formed vector at an integer
+/-- Rocq `type_progress.v:2163` `lanes_Jnn_form`. The lanes of a well-formed vector at an integer
     shape are all `jlane J` (in the `Jnn` injection and in range). -/
 theorem lanes_Jnn_form (J : Jnn) (M : N) (c : vec_) :
     wf_shape (shape.X (lanetype_Jnn J) (dim.mk_dim M)) → wf_uN 128 c →
@@ -2401,7 +2401,7 @@ theorem lanes_Jnn_form (J : Jnn) (M : N) (c : vec_) :
   have Hw := Hl l hl
   exact wf_lane_Jnn_inv J l Hw (wf_lane_Jnn_some J l Hw)
 
-/-- Rocq `type_progress.v:2179` `lanes_Fnn_form`. The lanes of a well-formed vector at a float
+/-- Rocq `type_progress.v:2172` `lanes_Fnn_form`. The lanes of a well-formed vector at a float
     shape are all `flane F`. -/
 theorem lanes_Fnn_form (F : Fnn) (M : N) (c : vec_) :
     wf_shape (shape.X (lanetype_Fnn F) (dim.mk_dim M)) → wf_uN 128 c →
@@ -2411,28 +2411,28 @@ theorem lanes_Fnn_form (F : Fnn) (M : N) (c : vec_) :
   intro l hl
   exact wf_lane_Fnn_inv F l (Hl l hl)
 
-/-- Rocq `type_progress.v:2187` `jlane_some`. `jlane` lanes project as integer lanes. -/
+/-- Rocq `type_progress.v:2180` `jlane_some`. `jlane` lanes project as integer lanes. -/
 theorem jlane_some (J : Jnn) (L : List lane_) :
     Forall (jlane J) L → Forall (fun l => proj_lane__0 l ≠ none) L := by
   intro H l hl
   obtain ⟨x, rfl, _⟩ := H l hl
   simp [proj_lane__0]
 
-/-- Rocq `type_progress.v:2190` `flane_some`. `flane` lanes project as float lanes. -/
+/-- Rocq `type_progress.v:2183` `flane_some`. `flane` lanes project as float lanes. -/
 theorem flane_some (F : Fnn) (L : List lane_) :
     Forall (flane F) L → Forall (fun l => proj_lane__1 l ≠ none) L := by
   intro H l hl
   obtain ⟨x, rfl, _⟩ := H l hl
   simp [proj_lane__1]
 
-/-- Rocq `type_progress.v:2193` `lanes_size_eq`. Two vectors have the same number of lanes at a
-    given shape (mathcomp `size` ↦ `List.length`; Lean proof can use `lanes_len`,
-    HelperLemmas.lean:785). -/
+/-- Rocq `type_progress.v:2186` `lanes_size_eq`. Two vectors have the same number of lanes at a
+    given shape (mathcomp `size` ↦ `List.length`; proved by `lanes_len`,
+    HelperLemmas.lean:734). -/
 theorem lanes_size_eq (lt : lanetype) (M : N) (c1 c2 : vec_) :
     (lanes_ (shape.X lt (dim.mk_dim M)) c1).length = (lanes_ (shape.X lt (dim.mk_dim M)) c2).length := by
   rw [lanes_len, lanes_len]
 
-/-- Rocq `type_progress.v:2200` `zip_lane_wf`. Lane-wise application of a range-preserving binary
+/-- Rocq `type_progress.v:2193` `zip_lane_wf`. Lane-wise application of a range-preserving binary
     operation `f` to two equally long lists of `jlane J` lanes gives well-formed lanes. No `hlen`
     deviation: Rocq's `Forall2` conclusion additionally carries `size L1 = size L2`, which is
     already the premise `L1.length = L2.length`, so the zip-based `Forall₂` conclusion is
@@ -2453,7 +2453,7 @@ theorem zip_lane_wf (J : Jnn) (lt : lanetype) (f : iN → iN → iN) (L1 L2 : Li
   obtain ⟨x2, rfl, Hx2⟩ := H2 _ h2
   exact wf_lane_.lane__case_0 _ _ _ (Hf _ _ Hx1 Hx2) rfl
 
-/-- Rocq `type_progress.v:2214` `zip_flane_wf`. A float-lane operation `fop` that preserves
+/-- Rocq `type_progress.v:2207` `zip_flane_wf`. A float-lane operation `fop` that preserves
     `wf_fN` maps two equal-length lists of well-formed `F`-lanes, lane-wise, to well-formed
     `F`-lanes. Rocq's `res_N` is `N` (`Nat`); `!(·)` is `Option.get!`. The `Forall₂` conclusion is
     zip-based (no length fact), but the length equality is already the premise
@@ -2472,7 +2472,7 @@ theorem zip_flane_wf (F : Fnn) (fop : N → fN → fN → List fN) (L1 L2 : List
   intro r hr
   exact wf_lane_.lane__case_1 _ _ _ (Hf _ _ Hx1 Hx2 r hr) rfl
 
-/-- Rocq `type_progress.v:2230` `zip_lane_rel`. Lane-wise application of a total relation `R`
+/-- Rocq `type_progress.v:2223` `zip_lane_rel`. Lane-wise application of a total relation `R`
     whose results satisfy `W`: on equal-length lists of well-formed `J`-lanes there are results
     `vs` related lane-wise, all satisfying `W`, with `vs.length = L1.length`. Rocq's inductive
     `List_Forall3` is Lean's zip-based `Forall₃` (same argument order); the lengths it would carry
@@ -2512,10 +2512,10 @@ theorem zip_lane_rel (J : Jnn) (R : iN → iN → iN → Prop) (W : iN → Prop)
         · exact Hw v hv
       · simp [Hs]
 
--- Ltac `vlane_close` (type_progress.v:2252) NOT PORTED: proof automation; the Lean proofs do
+-- Ltac `vlane_close` (type_progress.v:2245) NOT PORTED: proof automation; the Lean proofs do
 -- this inline.
 
-/-- Rocq `type_progress.v:2282` `vbinop_some`. On a well-formed shape and operator and two
+/-- Rocq `type_progress.v:2275` `vbinop_some`. On a well-formed shape and operator and two
     well-formed 128-bit vectors, `fun_vbinop_` has some (non-`none`) result. -/
 theorem vbinop_some (sh : shape) (op : vbinop_) (c1 c2 : vec_) :
     wf_shape sh → wf_vbinop_ sh op → wf_uN 128 c1 → wf_uN 128 c2 →
@@ -2688,29 +2688,29 @@ theorem vbinop_some (sh : shape) (op : vbinop_) (c1 c2 : vec_) :
       · exact ⟨_, fun_vbinop_.fun_vbinop__case_50 M c1 c2 M _ _ _ _ rfl rfl rfl rfl Hsh Hsz hz rfl⟩
       · exact ⟨_, fun_vbinop_.fun_vbinop__case_51 M c1 c2 M _ _ _ _ rfl rfl rfl rfl Hsh Hsz hz rfl⟩
 
-/-- Rocq `type_progress.v:2327` `mk_uN_eta`. Eta law for `uN`; Rocq's coercion `(u :> N)` is
+/-- Rocq `type_progress.v:2320` `mk_uN_eta`. Eta law for `uN`; Rocq's coercion `(u :> N)` is
     `proj_uN_0 u`. -/
 theorem mk_uN_eta (u : uN) : uN.mk_uN (proj_uN_0 u) = u := by
   cases u
   rfl
 
-/-- Rocq `type_progress.v:2332` `res_bool_bit`. A boolean result is a 1-bit integer. Rocq's
+/-- Rocq `type_progress.v:2325` `res_bool_bit`. A boolean result is a 1-bit integer. Rocq's
     `res_bool` is Lean's generated `nat_of_bool` (same spectec definition,
     3-numerics.spectec:9.1-9.22). -/
 theorem res_bool_bit (b : Bool) : wf_uN 1 (uN.mk_uN (nat_of_bool b)) := by
   apply iswf_uN_of_lt
   cases b <;> simp [nat_of_bool]
 
-/-- Rocq `type_progress.v:2335` `ieq_bit`. The result of `ieq_` is a 1-bit integer
+/-- Rocq `type_progress.v:2328` `ieq_bit`. The result of `ieq_` is a 1-bit integer
     (`(· :> N)` is `proj_uN_0`). -/
 theorem ieq_bit (v_N : N) (a b : iN) : wf_uN 1 (uN.mk_uN (proj_uN_0 (ieq_ v_N a b))) := by
   exact res_bool_bit _
 
-/-- Rocq `type_progress.v:2338` `ine_bit`. The result of `ine_` is a 1-bit integer. -/
+/-- Rocq `type_progress.v:2331` `ine_bit`. The result of `ine_` is a 1-bit integer. -/
 theorem ine_bit (v_N : N) (a b : iN) : wf_uN 1 (uN.mk_uN (proj_uN_0 (ine_ v_N a b))) := by
   exact res_bool_bit _
 
-/-- Rocq `type_progress.v:2341` `icmp_total_bit`. On well-formed operands, each of
+/-- Rocq `type_progress.v:2334` `icmp_total_bit`. On well-formed operands, each of
     `fun_ilt_`/`fun_igt_`/`fun_ile_`/`fun_ige_` has a result, and that result is a 1-bit integer. -/
 theorem icmp_total_bit (v_N : N) (v_sx : sx) (i1 i2 : iN) :
     wf_uN v_N i1 → wf_uN v_N i2 →
@@ -2729,7 +2729,7 @@ theorem icmp_total_bit (v_N : N) (v_sx : sx) (i1 i2 : iN) :
   · cases Hr3 <;> exact res_bool_bit _
   · cases Hr4 <;> exact res_bool_bit _
 
-/-- Rocq `type_progress.v:2360` `Forall_zipWith`. If `f` always lands in `P`, every element of
+/-- Rocq `type_progress.v:2353` `Forall_zipWith`. If `f` always lands in `P`, every element of
     `zipWith f l1 l2` satisfies `P`. Rocq's `list_zipWith` (map over the truncating `zip`) is
     `List.zipWith`. -/
 theorem Forall_zipWith (A B C : Type) (P : C → Prop) (f : A → B → C) (l1 : List A) (l2 : List B) :
@@ -2747,7 +2747,7 @@ theorem Forall_zipWith (A B C : Type) (P : C → Prop) (f : A → B → C) (l1 :
       · exact H a b
       · exact IH l2 x hx
 
-/-- Rocq `type_progress.v:2367` `Forall2_all`. A total relation holds pairwise on equal-length
+/-- Rocq `type_progress.v:2360` `Forall2_all`. A total relation holds pairwise on equal-length
     lists. The zip-based `Forall₂` conclusion lacks the length fact, which is the premise here, so
     the statement is equivalent to Rocq's. -/
 theorem Forall2_all (A B : Type) (P : A → B → Prop) (l1 : List A) (l2 : List B) :
@@ -2755,7 +2755,7 @@ theorem Forall2_all (A B : Type) (P : A → B → Prop) (l1 : List A) (l2 : List
   intro H _ t _
   exact H t.1 t.2
 
-/-- Rocq `type_progress.v:2375` `Forall_map_P`. `Forall` transported along `map f` when `f`
+/-- Rocq `type_progress.v:2368` `Forall_map_P`. `Forall` transported along `map f` when `f`
     sends `Q`-elements to `P`-elements. -/
 theorem Forall_map_P (A B : Type) (P : B → Prop) (Q : A → Prop) (f : A → B) (l : List A) :
     (∀ a, Q a → P (f a)) → Forall Q l → Forall P (List.map f l) := by
@@ -2763,13 +2763,13 @@ theorem Forall_map_P (A B : Type) (P : B → Prop) (Q : A → Prop) (f : A → B
   obtain ⟨a, ha, rfl⟩ := List.mem_map.mp hx
   exact H a (Hl a ha)
 
--- Ltac `bit_close` (type_progress.v:2380) NOT PORTED: proof automation; the Lean proofs do
+-- Ltac `bit_close` (type_progress.v:2373) NOT PORTED: proof automation; the Lean proofs do
 -- this inline.
 
--- Ltac `vrelop_close` (type_progress.v:2386) NOT PORTED: proof automation; the Lean proofs do
+-- Ltac `vrelop_close` (type_progress.v:2379) NOT PORTED: proof automation; the Lean proofs do
 -- this inline.
 
-/-- Rocq `type_progress.v:2400` `vrelop_some`. On a well-formed shape and operator and two
+/-- Rocq `type_progress.v:2393` `vrelop_some`. On a well-formed shape and operator and two
     well-formed 128-bit vectors, `fun_vrelop_` has some (non-`none`) result. -/
 theorem vrelop_some (sh : shape) (op : vrelop_) (c1 c2 : vec_) :
     wf_shape sh → wf_vrelop_ sh op → wf_uN 128 c1 → wf_uN 128 c2 →
@@ -2856,12 +2856,12 @@ theorem vrelop_some (sh : shape) (op : vrelop_) (c1 c2 : vec_) :
       | (rw [hMap2]; apply Forall_zipWith; intro a b
          exact wf_lane_.lane__case_0 _ _ _ (extend___is_wf _ _ _ _ _ (by first | exact feq_bit _ _ _ | exact fne_bit _ _ _ | exact flt_bit _ _ _ | exact fgt_bit _ _ _ | exact fle_bit _ _ _ | exact fge_bit _ _ _) rfl) rfl))
 
-/-- Rocq `type_progress.v:2442` `invsigned_total_32m1`. `fun_inv_signed_ 32` is defined at
+/-- Rocq `type_progress.v:2435` `invsigned_total_32m1`. `fun_inv_signed_ 32` is defined at
     `-1` (Rocq's `(0 - 1)%Z`, kept literally as `(0 : Int) - 1`). -/
 theorem invsigned_total_32m1 : ∃ ret, fun_inv_signed_ 32 ((0 : Int) - 1) ret := by
   exact invsigned_total 32 _ (by decide) (by decide)
 
-/-- Rocq `type_progress.v:2447` `Forall_list_slice`. `Forall` is preserved by slicing; Rocq's
+/-- Rocq `type_progress.v:2440` `Forall_list_slice`. `Forall` is preserved by slicing; Rocq's
     `list_slice l i j` (drop `i`, then take `j`) is `List.take j (List.drop i l)`, as in the
     generated code. `T` is implicit, as in Rocq. -/
 theorem Forall_list_slice {T : Type} (P : T → Prop) (l : List T) (i j : N) :
@@ -2869,7 +2869,7 @@ theorem Forall_list_slice {T : Type} (P : T → Prop) (l : List T) (i j : N) :
   intro H x hx
   exact H x (List.mem_of_mem_drop (List.mem_of_mem_take hx))
 
-/-- Rocq `type_progress.v:2458` `mem_bytes_wf`. The bytes of any entry `ms[k]!` (Rocq
+/-- Rocq `type_progress.v:2451` `mem_bytes_wf`. The bytes of any entry `ms[k]!` (Rocq
     `ms [| k |]`, default-valued out of range) of a list of well-formed memory instances are
     well-formed bytes. -/
 theorem mem_bytes_wf (ms : List meminst) (k : N) :
@@ -2888,7 +2888,7 @@ theorem mem_bytes_wf (ms : List meminst) (k : N) :
     intro b hb
     simp at hb
 
-/-- Rocq `type_progress.v:2471` `wf_config_mem_bytes`. In a well-formed configuration, the bytes
+/-- Rocq `type_progress.v:2464` `wf_config_mem_bytes`. In a well-formed configuration, the bytes
     of the memory `fun_mem (state.mk_state s f) x` are well-formed. -/
 theorem wf_config_mem_bytes (s : store) (f : frame) (ais : List admininstr) (x : memidx) :
     wf_config (config.mk_config (state.mk_state s f) ais) →
@@ -2902,7 +2902,7 @@ theorem wf_config_mem_bytes (s : store) (f : frame) (ais : List admininstr) (x :
       | store_case_ _ _ _ _ _ _ _ _ _ h _ =>
         exact mem_bytes_wf _ _ h
 
-/-- Rocq `type_progress.v:2486` `all_and_Forall`. A boolean `all` over a conjunction splits into
+/-- Rocq `type_progress.v:2479` `all_and_Forall`. A boolean `all` over a conjunction splits into
     two `Forall`s. Rocq's mathcomp `all` is `List.all`; bool-to-Prop coercions (`is_true`) are
     `· = true`. -/
 theorem all_and_Forall (T : Type) (P Q : T → Bool) (l : List T) :
@@ -2918,7 +2918,7 @@ theorem all_and_Forall (T : Type) (P Q : T → Bool) (l : List T) :
     rw [Bool.and_eq_true] at this
     exact this.2
 
-/-- Rocq `type_progress.v:2494` `Forall_and_all`. Converse of `all_and_Forall`. -/
+/-- Rocq `type_progress.v:2487` `Forall_and_all`. Converse of `all_and_Forall`. -/
 theorem Forall_and_all (T : Type) (P Q : T → Bool) (l : List T) :
     Forall (fun x => P x = true) l → Forall (fun x => Q x = true) l →
     List.all l (fun x => P x && Q x) = true := by
@@ -2928,7 +2928,7 @@ theorem Forall_and_all (T : Type) (P Q : T → Bool) (l : List T) :
   rw [Bool.and_eq_true]
   exact ⟨HP x hx, HQ x hx⟩
 
-/-- Rocq `type_progress.v:2503` `packnum_not_none`. Packing a well-formed number of the
+/-- Rocq `type_progress.v:2496` `packnum_not_none`. Packing a well-formed number of the
     unpacked type of `lt` never fails (Rocq's boolean `!= None` is `≠ none`). -/
 theorem packnum_not_none (lt : lanetype) (c : num_) :
     wf_num_ (unpack lt) c → packnum_ lt c ≠ none := by
@@ -2939,7 +2939,7 @@ theorem packnum_not_none (lt : lanetype) (c : num_) :
     | (simp [packnum_, OMap, size, valtype_numtype, unpack, lanetype_packtype]; done)
     | (exfalso; cases Hwf; simp_all [unpack, numtype_Inn, numtype_Fnn])
 
-/-- Rocq `type_progress.v:2513` `lanes_nth_wf`. Every in-range lane (`k < v_N`, Rocq `%BN`) of a
+/-- Rocq `type_progress.v:2506` `lanes_nth_wf`. Every in-range lane (`k < v_N`, Rocq `%BN`) of a
     well-formed 128-bit vector at a well-formed shape is a well-formed lane. -/
 theorem lanes_nth_wf (lt : lanetype) (v_N : N) (c : vec_) (k : N) :
     wf_shape (shape.X lt (dim.mk_dim v_N)) →
@@ -2952,7 +2952,7 @@ theorem lanes_nth_wf (lt : lanetype) (v_N : N) (c : vec_) (k : N) :
   rw [lanes_len] at H
   exact H Hk
 
-/-- Rocq `type_progress.v:2527` `vstore_lane_progress`. `VSTORE_LANE` on lane type `J` with `M`
+/-- Rocq `type_progress.v:2520` `vstore_lane_progress`. `VSTORE_LANE` on lane type `J` with `M`
     lanes, an in-range lane index and an `I32` address always steps. Rocq's premise
     `Qeq_bool (M : Q) ((128%num : Q) / ((jsize J) : Q))%Q = true` (decidable `Qeq`) is stated as
     `=` on Lean's normalized `Rat`, exactly as the generated `Step.vstore_lane_val` renders the same
@@ -2978,7 +2978,7 @@ theorem vstore_lane_progress (s : store) (f : frame) (n1 : N) (memarg : memarg) 
   · rw [lanes_len]; exact Hk
   · rw [Hx]; exact Hwx
 
-/-- Rocq `type_progress.v:2551` `Forall2_map_l`. `Forall₂ R (map f l) l` from a pointwise fact.
+/-- Rocq `type_progress.v:2544` `Forall2_map_l`. `Forall₂ R (map f l) l` from a pointwise fact.
     The zip-based `Forall₂` conclusion lacks the length fact, which holds trivially here
     (`map` preserves length), so the statement is equivalent to Rocq's. -/
 theorem Forall2_map_l (A B : Type) (R : B → A → Prop) (f : A → B) (l : List A) :
@@ -2993,7 +2993,7 @@ theorem Forall2_map_l (A B : Type) (R : B → A → Prop) (f : A → B) (l : Lis
     · exact H a (List.mem_cons_self ..)
     · exact ih (fun x hx => H x (List.mem_cons_of_mem _ hx)) t ht
 
-/-- Rocq `type_progress.v:2556` `invert_typeof_I32_wf`. A well-formed value of type `I32` is a
+/-- Rocq `type_progress.v:2549` `invert_typeof_I32_wf`. A well-formed value of type `I32` is a
     `CONST I32` of an in-range (32-bit) integer. -/
 theorem invert_typeof_I32_wf (v : val) :
     typeof v = valtype.I32 → wf_val v →
@@ -3010,12 +3010,12 @@ theorem invert_typeof_I32_wf (v : val) :
     | I64 => cases Hnt
   | num__case_1 F x Hx Hnt => cases F <;> cases Hnt
 
-/-- Rocq `type_progress.v:2568` `size_list_repeat`. `list_repeat x n` (Lean `List.replicate n x`)
+/-- Rocq `type_progress.v:2561` `size_list_repeat`. `list_repeat x n` (Lean `List.replicate n x`)
     has length `n`. In Lean this is core `List.length_replicate`; kept by name for the 1-1 port. -/
 theorem size_list_repeat (X : Type) (x : X) (n : N) : (List.replicate n x).length = n := by
   simp
 
-/-- Rocq `type_progress.v:2575` `Forall_list_repeat`. Every element of `List.replicate n x`
+/-- Rocq `type_progress.v:2568` `Forall_list_repeat`. Every element of `List.replicate n x`
     (Rocq `list_repeat x n`) satisfies `P` when `x` does. -/
 theorem Forall_list_repeat (X : Type) (P : X → Prop) (x : X) (n : N) :
     P x → Forall P (List.replicate n x) := by
@@ -3023,7 +3023,7 @@ theorem Forall_list_repeat (X : Type) (P : X → Prop) (x : X) (n : N) :
   rw [List.eq_of_mem_replicate ht]
   exact hx
 
-/-- Rocq `type_progress.v:2579` `bit_of_wf1`. A 1-bit integer is a well-formed `bit`. -/
+/-- Rocq `type_progress.v:2572` `bit_of_wf1`. A 1-bit integer is a well-formed `bit`. -/
 theorem bit_of_wf1 (i : N) : wf_uN 1 (uN.mk_uN i) → wf_bit (bit.mk_bit i) := by
   intro H
   cases H with
@@ -3031,13 +3031,13 @@ theorem bit_of_wf1 (i : N) : wf_uN 1 (uN.mk_uN i) → wf_bit (bit.mk_bit i) := b
     have Hle : i ≤ 1 := by simpa using Hb.2
     exact wf_bit.bit_case_0 i (Nat.le_one_iff_eq_zero_or_eq_one.mp Hle)
 
-/-- Rocq `type_progress.v:2587` `wf_dim_le16`. A well-formed dimension is at most 16. -/
+/-- Rocq `type_progress.v:2580` `wf_dim_le16`. A well-formed dimension is at most 16. -/
 theorem wf_dim_le16 (M : N) : wf_dim (dim.mk_dim M) → M ≤ 16 := by
   intro H
   cases H with
   | dim_case_0 i Hi => rcases Hi with (((h | h) | h) | h) | h <;> simp [h]
 
-/-- Rocq `type_progress.v:2594` `wf_ishape_inv`. An integer shape is a well-formed shape with a
+/-- Rocq `type_progress.v:2587` `wf_ishape_inv`. An integer shape is a well-formed shape with a
     `Jnn` lane type and at most 16 lanes. -/
 theorem wf_ishape_inv (sh : ishape) :
     wf_ishape sh →
@@ -3056,15 +3056,15 @@ theorem wf_ishape_inv (sh : ishape) :
         cases Hs with
         | shape_case_0 _ _ Hd _ => exact wf_dim_le16 M Hd
 
-/-- Rocq `type_progress.v:2604` `holds_upto_intro`. Introduction rule for `holds_upto`
-    (`TLC.holds_upto`, ExtensionLemmas.lean:89, = `Forall P (List.range n)`, Rocq
+/-- Rocq `type_progress.v:2597` `holds_upto_intro`. Introduction rule for `holds_upto`
+    (`TLC.holds_upto`, ExtensionLemmas.lean:56, = `Forall P (List.range n)`, Rocq
     `Forall P (iotaN 0 n)`). -/
 theorem holds_upto_intro (P : N → Prop) (n : N) :
     (∀ (k : N), k < n → P k) → holds_upto P n := by
   intro H k hk
   exact H k (List.mem_range.mp hk)
 
-/-- Rocq `type_progress.v:2614` `jlane_proj_wf`. Projecting a list of well-formed `J`-lanes to
+/-- Rocq `type_progress.v:2607` `jlane_proj_wf`. Projecting a list of well-formed `J`-lanes to
     their integers gives well-formed integers. -/
 theorem jlane_proj_wf (J : Jnn) (L : List lane_) :
     Forall (jlane J) L →
@@ -3075,7 +3075,7 @@ theorem jlane_proj_wf (J : Jnn) (L : List lane_) :
   obtain ⟨y, rfl, hy⟩ := H l hl
   exact hy
 
-/-- Rocq `type_progress.v:2619` `jlane_map_proj`. Re-injecting the projected integers of a list
+/-- Rocq `type_progress.v:2612` `jlane_map_proj`. Re-injecting the projected integers of a list
     of `J`-lanes gives back the list. -/
 theorem jlane_map_proj (J : Jnn) (L : List lane_) :
     Forall (jlane J) L →
@@ -3089,17 +3089,17 @@ theorem jlane_map_proj (J : Jnn) (L : List lane_) :
     simp only [List.map_cons, List.cons.injEq]
     exact ⟨rfl, this⟩
 
-/-- Rocq `type_progress.v:2625` `evens`: the elements at even positions (of an even-length list). -/
+/-- Rocq `type_progress.v:2618` `evens`: the elements at even positions (of an even-length list). -/
 def evens {T : Type} : List T → List T
   | a :: _ :: l' => a :: evens l'
   | _ => []
 
-/-- Rocq `type_progress.v:2630` `odds`: the elements at odd positions. -/
+/-- Rocq `type_progress.v:2623` `odds`: the elements at odd positions. -/
 def odds {T : Type} : List T → List T
   | _ :: b :: l' => b :: odds l'
   | _ => []
 
-/-- Rocq `type_progress.v:2636` `evens_odds_ind`. Two-step list induction: a property of `[]`, of
+/-- Rocq `type_progress.v:2629` `evens_odds_ind`. Two-step list induction: a property of `[]`, of
     every singleton, and preserved by consing two elements, holds of every list. -/
 theorem evens_odds_ind (T : Type) (P : List T → Prop) :
     P [] → (∀ a, P [a]) → (∀ a b l, P l → P (a :: b :: l)) → ∀ l, P l := by
@@ -3125,7 +3125,7 @@ theorem evens_odds_ind (T : Type) (P : List T → Prop) :
   intro l
   exact H l.length l (Nat.le_refl _)
 
-/-- Rocq `type_progress.v:2645` `evens_odds_concat`. For an even-length list, interleaving
+/-- Rocq `type_progress.v:2638` `evens_odds_concat`. For an even-length list, interleaving
     `evens l` and `odds l` again gives back `l`. Rocq's mathcomp `~~ odd (size l)` is stated as
     `¬ Odd l.length` (Mathlib `Odd`). Rocq's `T : eqType` is only forced by Rocq's `concat_`
     (`X : eqType`); Lean's generated `concat_` takes a plain `Type`, so `T : Type` here. -/
@@ -3149,7 +3149,7 @@ theorem evens_odds_concat (T : Type) (l : List T) :
     have IH' := IH hl'
     simp [evens, odds, concat_, IH']
 
-/-- Rocq `type_progress.v:2652` `evens_odds_size`. For an even-length list, `evens l` and
+/-- Rocq `type_progress.v:2645` `evens_odds_size`. For an even-length list, `evens l` and
     `odds l` have the same length (`~~ odd (size l)` stated as `¬ Odd l.length`). -/
 theorem evens_odds_size (T : Type) (l : List T) :
     ¬ Odd l.length → (evens l).length = (odds l).length := by
@@ -3168,7 +3168,7 @@ theorem evens_odds_size (T : Type) (l : List T) :
     simp only [evens, odds, List.length_cons]
     rw [IH Hl']
 
-/-- Rocq `type_progress.v:2658` `Forall_evens`. `Forall P` passes from a list to its
+/-- Rocq `type_progress.v:2651` `Forall_evens`. `Forall P` passes from a list to its
     even-position elements. -/
 theorem Forall_evens (T : Type) (P : T → Prop) (l : List T) :
     Forall P l → Forall P (evens l) := by
@@ -3183,7 +3183,7 @@ theorem Forall_evens (T : Type) (P : T → Prop) (l : List T) :
     · exact H _ (by simp)
     · exact IH (fun y hy => H y (by simp [hy])) x hx
 
-/-- Rocq `type_progress.v:2664` `Forall_odds`. `Forall P` passes from a list to its
+/-- Rocq `type_progress.v:2657` `Forall_odds`. `Forall P` passes from a list to its
     odd-position elements. -/
 theorem Forall_odds (T : Type) (P : T → Prop) (l : List T) :
     Forall P l → Forall P (odds l) := by
@@ -3198,7 +3198,7 @@ theorem Forall_odds (T : Type) (P : T → Prop) (l : List T) :
     · exact H _ (by simp)
     · exact IH (fun y hy => H y (by simp [hy])) x hx
 
-/-- Rocq `type_progress.v:2670` `Forall2_of_Forall`. If `Q` relates any two `W`-elements, then two
+/-- Rocq `type_progress.v:2663` `Forall2_of_Forall`. If `Q` relates any two `W`-elements, then two
     equal-length lists of `W`-elements are `Forall₂ Q`-related. (Rocq's inductive `Forall2` also
     carries the length equation, which here is already the premise `l1.length = l2.length`, so the
     zip-based `Forall₂` conclusion loses nothing.) -/
@@ -3210,7 +3210,7 @@ theorem Forall2_of_Forall (A : Type) (W : A → Prop) (Q : A → A → Prop) (l1
   have h := List.of_mem_zip ht
   exact HQ a b (H1 a h.1) (H2 b h.2)
 
-/-- Rocq `type_progress.v:2679` `list_slice_size_eq`. Slicing two equal-length lists at the same
+/-- Rocq `type_progress.v:2672` `list_slice_size_eq`. Slicing two equal-length lists at the same
     `i`, `j` gives equal-length results. Rocq's `list_slice l i j` (drop `i`, then take `j`) is
     written `List.take j (List.drop i l)`. -/
 theorem list_slice_size_eq (A B : Type) (l1 : List A) (l2 : List B) (i j : Nat) :
@@ -3219,7 +3219,7 @@ theorem list_slice_size_eq (A B : Type) (l1 : List A) (l2 : List B) (i j : Nat) 
   intro h
   simp [List.length_take, List.length_drop, h]
 
-/-- Rocq `type_progress.v:2687` `zip_lane_wf2`. Applying an `iN` function that maps well-formed
+/-- Rocq `type_progress.v:2680` `zip_lane_wf2`. Applying an `iN` function that maps well-formed
     `Ji`-width arguments to a well-formed `Jo`-width result, lane-wise to two equal-length lists of
     well-formed `Ji` lanes, gives well-formed `Jo` lanes. (The length equation of Rocq's `Forall2`
     conclusion is the premise `L1.length = L2.length`.) -/
@@ -3237,7 +3237,7 @@ theorem zip_lane_wf2 (Ji Jo : Jnn) (lt : lanetype) (f : iN → iN → iN) (L1 L2
   obtain ⟨x2, rfl, Hx2⟩ := H2 b h.2
   exact wf_lane_.lane__case_0 lt Jo _ (Hf x1 x2 Hx1 Hx2) hlt
 
-/-- Rocq `type_progress.v:2701` `zip_wf`. If `P (f a b)` holds for all well-formed `J` lanes `a`,
+/-- Rocq `type_progress.v:2694` `zip_wf`. If `P (f a b)` holds for all well-formed `J` lanes `a`,
     `b`, then `P` holds of every element of `List.zipWith f L1 L2` (Rocq `list_zipWith`, which
     also truncates to the shorter list). -/
 theorem zip_wf (J : Jnn) (P : iN → Prop) (f : lane_ → lane_ → iN) (L1 L2 : List lane_) :
@@ -3249,14 +3249,14 @@ theorem zip_wf (J : Jnn) (P : iN → Prop) (f : lane_ → lane_ → iN) (L1 L2 :
   have h := List.of_mem_zip hab
   exact Hf a b (H1 a h.1) (H2 b h.2)
 
-/-- Rocq `type_progress.v:2710` `size_zipWith_eq`. Zipping two equal-length lists keeps the
+/-- Rocq `type_progress.v:2703` `size_zipWith_eq`. Zipping two equal-length lists keeps the
     length. -/
 theorem size_zipWith_eq (A B C : Type) (f : A → B → C) (l1 : List A) (l2 : List B) :
     l1.length = l2.length → (List.zipWith f l1 l2).length = l1.length := by
   intro h
   simp [List.length_zipWith, h]
 
-/-- Rocq `type_progress.v:2715` `shape_lanes_even`. A full-width integer shape `J X M`
+/-- Rocq `type_progress.v:2708` `shape_lanes_even`. A full-width integer shape `J X M`
     (`lsize J * M = 128`) has an even number of lanes (`~~ odd (size _)` stated as
     `¬ Odd _.length`). -/
 theorem shape_lanes_even (J : Jnn) (M : Nat) (c : vec_) :
@@ -3268,7 +3268,7 @@ theorem shape_lanes_even (J : Jnn) (M : Nat) (c : vec_) :
     (have : M = 16 ∨ M = 8 ∨ M = 4 ∨ M = 2 := by omega
      rcases this with rfl | rfl | rfl | rfl <;> decide)
 
-/-- Rocq `type_progress.v:2727` `add_sub_parens`. `n1 + (n2 - n3) = (n1 + n2) - n3` across Rocq's
+/-- Rocq `type_progress.v:2720` `add_sub_parens`. `n1 + (n2 - n3) = (n1 + n2) - n3` across Rocq's
     `N`/`Z` coercions, given `n3 ≤ n2` in `Z`. Rocq elaborates the statement (checked with `coqc`)
     to `n1 + Z.to_N (Z.of_N n2 - n3) = Z.to_N (Z.of_N (n1 + n2) - n3)` with `n1 n2 : N` and
     `n3 : Z`; here `Z.of_N` is the `Nat → Int` cast and `Z.to_N` is `Int.toNat`. -/
@@ -3278,7 +3278,7 @@ theorem add_sub_parens (n1 : Nat) (n2 : Nat) (n3 : Int) :
   intro h
   omega
 
-/-- Rocq `type_progress.v:2734` `call_indirect_progress`. `CONST I32 v_i; CALL_INDIRECT x y`
+/-- Rocq `type_progress.v:2727` `call_indirect_progress`. `CONST I32 v_i; CALL_INDIRECT x y`
     always steps (to a call, or a trap) once `v_i` is an integer number. -/
 theorem call_indirect_progress (s : store) (f : frame) (v_i : num_) (x : tableidx) (y : typeidx) :
     proj_num__0 v_i ≠ none →
@@ -3292,14 +3292,13 @@ theorem call_indirect_progress (s : store) (f : frame) (v_i : num_) (x : tableid
       exact ⟨[admininstr.CALL_ADDR a], Step.read _ _ _ (Step_read.call_indirect_call _ _ _ _ _ h1 h2 h3 h4 h5)⟩
   · exact ⟨[admininstr.TRAP], Step.read _ _ _ (Step_read.call_indirect_trap _ _ _ _ h)⟩
 
--- bundle21: Rocq's `vcvtop_trunc_sat_i16` (95c256c2c `type_progress.v:2811`), which recognised
--- the unreducible `F32 → I16 TRUNC_SAT`, was deleted upstream in `6582b3a39` together with every
--- `~~ vcvtop_trunc_sat_i16 op` premise below: spec commit `4cf9f29c5` restricted `TRUNC_SAT` to
--- `Inn` destinations, so that `vcvtop` no longer exists. Deleted here as well.
+-- Rocq's former `vcvtop_trunc_sat_i16` (`type_progress.v:2811` at revision `95c256c2c`), which
+-- recognised the unreducible `F32 → I16 TRUNC_SAT`, was deleted upstream in `6582b3a39` together
+-- with every `~~ vcvtop_trunc_sat_i16 op` premise of the lemmas below: spec commit `4cf9f29c5`
+-- restricted `TRUNC_SAT` to `Inn` destinations, so that `vcvtop` no longer exists. Not ported.
 
-/-- Rocq `type_progress.v:2817` `vcvtop_lane_total` (6582b3a39: v:2801). Every well-formed
-    `vcvtop` has a non-empty lane-wise result `$lcvtop__` on every well-formed lane. (bundle21: the
-    `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as upstream.) -/
+/-- Rocq `type_progress.v:2801` `vcvtop_lane_total`. Every well-formed
+    `vcvtop` has a non-empty lane-wise result `$lcvtop__` on every well-formed lane. -/
 theorem vcvtop_lane_total (sh_1 sh_2 : shape) (op : vcvtop__) (ci : lane_) :
     wf_vcvtop__ sh_1 sh_2 op →
     wf_lane_ (fun_lanetype sh_1) ci →
@@ -3394,8 +3393,7 @@ theorem vcvtop_lane_total (sh_1 sh_2 : shape) (op : vcvtop__) (ci : lane_) :
         | exact absurd hs (by decide)
         | exact ⟨_, fun_lcvtop__.fun_lcvtop___case_34 _ _ _ _ _ _ rfl rfl rfl, keyL _ _ (promote_nonempty _ _ _)⟩
 
-/-- Rocq `type_progress.v:2849` `vcvtop_lanes_total` (6582b3a39: v:2832; bundle21 dropped the
-    `~~ vcvtop_trunc_sat_i16 op` premise, as upstream). The lane-wise results of a conversion over
+/-- Rocq `type_progress.v:2832` `vcvtop_lanes_total`. The lane-wise results of a conversion over
     a list of well-formed lanes: all defined, non-empty, and
     made of well-formed destination lanes. **Deviation:** the conjunct `vs.length = L.length` is
     added right after the `Forall₂` conjunct. Rocq's inductive `Forall2 _ vs L` implies
@@ -3428,7 +3426,7 @@ theorem vcvtop_lanes_total (sh_1 sh_2 : shape) (op : vcvtop__) (L : List lane_) 
   · exact Forall_map_P _ _ _ _ _ _ (fun v hv => hv.2.1) HP
   · exact Forall_map_P _ _ _ _ _ _ (fun v hv => hv.2.2) HP
 
-/-- Rocq `type_progress.v:2871` `setproduct2_Forall`. `setproduct2_` (prefix `w` to every list)
+/-- Rocq `type_progress.v:2854` `setproduct2_Forall`. `setproduct2_` (prefix `w` to every list)
     preserves `Forall (Forall P)` when `P w`. Rocq's `X : eqType` (forced by Rocq's
     `setproduct2_`) is a plain `Type`, as Lean's generated `setproduct2_` takes. -/
 theorem setproduct2_Forall (X : Type) (P : X → Prop) (w : X) (S : List (List X)) :
@@ -3449,7 +3447,7 @@ theorem setproduct2_Forall (X : Type) (P : X → Prop) (w : X) (S : List (List X
       · exact HS s (by simp) x hx
     · exact IH (fun t ht => HS t (List.mem_cons_of_mem _ ht)) l hl
 
-/-- Rocq `type_progress.v:2875` `setproduct1_Forall`. `setproduct1_` preserves
+/-- Rocq `type_progress.v:2858` `setproduct1_Forall`. `setproduct1_` preserves
     `Forall (Forall P)` when `Forall P l` (Rocq `X : eqType` → `Type`, as for
     `setproduct2_Forall`). -/
 theorem setproduct1_Forall (X : Type) (P : X → Prop) (l : List X) (S : List (List X)) :
@@ -3468,7 +3466,7 @@ theorem setproduct1_Forall (X : Type) (P : X → Prop) (l : List X) (S : List (L
     · exact h2 x hx
     · exact h1 x hx
 
-/-- Rocq `type_progress.v:2882` `setproduct_Forall`. Every list in the cartesian product
+/-- Rocq `type_progress.v:2865` `setproduct_Forall`. Every list in the cartesian product
     `setproduct_ X ls` satisfies `Forall P` if every list of `ls` does (Rocq `X : eqType` →
     `Type`). -/
 theorem setproduct_Forall (X : Type) (P : X → Prop) (ls : List (List X)) :
@@ -3486,7 +3484,7 @@ theorem setproduct_Forall (X : Type) (P : X → Prop) (ls : List (List X)) :
     have Hls' : Forall (Forall P) ls' := fun x hx => H x (List.mem_cons_of_mem _ hx)
     exact setproduct1_Forall X P l (setproduct_ X ls') Hl (ih Hls')
 
-/-- Rocq `type_progress.v:2889` `setproduct_nonempty`. The cartesian product of non-empty lists is
+/-- Rocq `type_progress.v:2872` `setproduct_nonempty`. The cartesian product of non-empty lists is
     non-empty (Rocq `X : eqType` → `Type`). -/
 theorem setproduct_nonempty (X : Type) (ls : List (List X)) :
     Forall (fun l => l ≠ []) ls → setproduct_ X ls ≠ [] := by
@@ -3505,7 +3503,7 @@ theorem setproduct_nonempty (X : Type) (ls : List (List X)) :
       | nil => exact absurd hS IH
       | cons s S => simp [setproduct1_, setproduct2_]
 
-/-- Rocq `type_progress.v:2897` `setproduct_pick`. Choosing a result vector from a non-empty,
+/-- Rocq `type_progress.v:2880` `setproduct_pick`. Choosing a result vector from a non-empty,
     well-formed `setproduct_`. Rocq's boolean `(|l| >? 0)%BN` is stated as the Prop
     `l.length > 0`, and `c \in l` as `c ∈ l`. -/
 theorem setproduct_pick (lt : lanetype) (M : Nat) (lss : List (List lane_)) :
@@ -3526,7 +3524,7 @@ theorem setproduct_pick (lt : lanetype) (M : Nat) (lss : List (List lane_)) :
     · simp
     · simp
 
-/-- Rocq `type_progress.v:2912` `halfop_of`. -/
+/-- Rocq `type_progress.v:2895` `halfop_of`. -/
 def halfop_of (op : vcvtop__) : Option half :=
   match op with
   | .mk_vcvtop___0 _ _ _ _ (.EXTEND hf _) => some hf
@@ -3535,7 +3533,7 @@ def halfop_of (op : vcvtop__) : Option half :=
   | .mk_vcvtop___3 _ _ _ _ (.DEMOTE _) => none
   | .mk_vcvtop___3 _ _ _ _ .PROMOTELOW => some half.LOW
 
-/-- Rocq `type_progress.v:2921` `zeroop_of`. -/
+/-- Rocq `type_progress.v:2904` `zeroop_of`. -/
 def zeroop_of (op : vcvtop__) : Option zero :=
   match op with
   | .mk_vcvtop___0 _ _ _ _ _ => none
@@ -3544,12 +3542,11 @@ def zeroop_of (op : vcvtop__) : Option zero :=
   | .mk_vcvtop___3 _ _ _ _ (.DEMOTE z) => some z
   | .mk_vcvtop___3 _ _ _ _ .PROMOTELOW => none
 
--- Ltac `vcvtop_cases` (type_progress.v:2930) NOT PORTED: proof automation; the Lean proofs do
+-- Ltac `vcvtop_cases` (type_progress.v:2913) NOT PORTED: proof automation; the Lean proofs do
 -- this inline.
 
-/-- Rocq `type_progress.v:2943` `halfop_total` (6582b3a39: v:2925). For a well-formed `vcvtop`, `$halfop` is defined and
-    equals `halfop_of op`. (bundle21: the `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as
-    upstream.) -/
+/-- Rocq `type_progress.v:2925` `halfop_total`. For a well-formed `vcvtop`, `$halfop` is defined and
+    equals `halfop_of op`. -/
 theorem halfop_total (sh_1 sh_2 : shape) (op : vcvtop__) :
     wf_vcvtop__ sh_1 sh_2 op →
     fun_halfop sh_1 sh_2 op (some (halfop_of op)) := by
@@ -3571,9 +3568,8 @@ theorem halfop_total (sh_1 sh_2 : shape) (op : vcvtop__) :
     subst E1 E2
     cases Hx <;> (cases F1 <;> cases F2 <;> constructor <;> rfl)
 
-/-- Rocq `type_progress.v:2951` `zeroop_total` (6582b3a39: v:2933). For a well-formed `vcvtop`, `$zeroop` is defined and
-    equals `zeroop_of op`. (bundle21: the `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as
-    upstream.) -/
+/-- Rocq `type_progress.v:2933` `zeroop_total`. For a well-formed `vcvtop`, `$zeroop` is defined and
+    equals `zeroop_of op`. -/
 theorem zeroop_total (sh_1 sh_2 : shape) (op : vcvtop__) :
     wf_vcvtop__ sh_1 sh_2 op →
     fun_zeroop sh_1 sh_2 op (some (zeroop_of op)) := by
@@ -3595,7 +3591,7 @@ theorem zeroop_total (sh_1 sh_2 : shape) (op : vcvtop__) :
     subst E1 E2
     cases Hx <;> (cases F1 <;> cases F2 <;> constructor <;> rfl)
 
-/-- Rocq `type_progress.v:2959` `zero_lane_wf`. Packing the zero of a number type into a lane
+/-- Rocq `type_progress.v:2941` `zero_lane_wf`. Packing the zero of a number type into a lane
     succeeds and gives a well-formed lane. Rocq's `!(x)` (`the x`) is `Option.get! x`. -/
 theorem zero_lane_wf (nt : numtype) :
     packnum_ (lanetype_numtype nt) (fun_zero nt) ≠ none ∧
@@ -3605,9 +3601,8 @@ theorem zero_lane_wf (nt : numtype) :
   have Hp := packnum_not_none _ _ Hz
   exact ⟨Hp, packnum__is_wf _ _ _ Hz Hp rfl⟩
 
-/-- Rocq `type_progress.v:2969` `vcvtop_step_full` (6582b3a39: v:2951). A well-formed `VCVTOP` with neither half nor
-    zero on a `V128` constant steps to a `V128` constant. (bundle21: the
-    `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as upstream.) -/
+/-- Rocq `type_progress.v:2951` `vcvtop_step_full`. A well-formed `VCVTOP` with neither half nor
+    zero on a `V128` constant steps to a `V128` constant. -/
 theorem vcvtop_step_full (L1 L2 : lanetype) (M : Nat) (op : vcvtop__) (c1 : uN) :
     wf_uN 128 c1 → wf_shape (shape.X L1 (dim.mk_dim M)) → wf_shape (shape.X L2 (dim.mk_dim M)) →
     wf_vcvtop__ (shape.X L1 (dim.mk_dim M)) (shape.X L2 (dim.mk_dim M)) op →
@@ -3627,9 +3622,8 @@ theorem vcvtop_step_full (L1 L2 : lanetype) (M : Nat) (op : vcvtop__) (c1 : uN) 
   exact fun_vcvtop__.fun_vcvtop___case_0 L1 M L2 op c1 c M _ _ vs (some none) (some none)
     Hn H2 Hzero Hhalf (by simp) (by simp) ⟨rfl, rfl⟩ rfl Hne0 rfl Hgt (List.elem_eq_true_of_mem Hin) Hs1 Hs2 rfl
 
-/-- Rocq `type_progress.v:2991` `vcvtop_step_half` (6582b3a39: v:2973). A well-formed `VCVTOP` with a half on a `V128`
-    constant steps to a `V128` constant. (bundle21: the `~~ vcvtop_trunc_sat_i16 op` premise was
-    dropped, as upstream.) -/
+/-- Rocq `type_progress.v:2973` `vcvtop_step_half`. A well-formed `VCVTOP` with a half on a `V128`
+    constant steps to a `V128` constant. -/
 theorem vcvtop_step_half (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) (op : vcvtop__)
     (c1 : uN) (h : half) :
     wf_uN 128 c1 → wf_shape (shape.X L1 (dim.mk_dim M1)) → wf_shape (shape.X L2 (dim.mk_dim M2)) →
@@ -3648,9 +3642,8 @@ theorem vcvtop_step_half (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) (
   exact fun_vcvtop__.fun_vcvtop___case_1 L1 M1 L2 M2 op c1 c h _ _ vs (some (some h))
     Hn H2 Hhalf (by simp) rfl rfl Hne0 rfl Hgt (List.elem_eq_true_of_mem Hin) Hs1 Hs2
 
-/-- Rocq `type_progress.v:3012` `vcvtop_step_zero` (6582b3a39: v:2994). A well-formed `VCVTOP` with `ZERO` between
-    number-type lanes, on a `V128` constant, steps to a `V128` constant. (bundle21: the
-    `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as upstream.) -/
+/-- Rocq `type_progress.v:2994` `vcvtop_step_zero`. A well-formed `VCVTOP` with `ZERO` between
+    number-type lanes, on a `V128` constant, steps to a `V128` constant. -/
 theorem vcvtop_step_zero (nt1 : numtype) (M1 : Nat) (nt2 : numtype) (M2 : Nat) (op : vcvtop__)
     (c1 : uN) :
     wf_uN 128 c1 → wf_shape (shape.X (lanetype_numtype nt1) (dim.mk_dim M1)) →
@@ -3699,10 +3692,10 @@ theorem vcvtop_step_zero (nt1 : numtype) (M1 : Nat) (nt2 : numtype) (M2 : Nat) (
   exact fun_vcvtop__.fun_vcvtop___case_2 (lanetype_numtype nt1) M1 (lanetype_numtype nt2) M2 op c1 c _ _ vs
     (some (some zero.ZERO)) Hn H2 Hzero (by simp) rfl rfl Hne0 Hpz' rfl Hgt (List.elem_eq_true_of_mem Hin) Hs1 Hs2
 
--- Ltac `vcvtop_cases_full` (type_progress.v:3046) NOT PORTED: proof automation; the Lean proofs do
+-- Ltac `vcvtop_cases_full` (type_progress.v:3028) NOT PORTED: proof automation; the Lean proofs do
 -- this inline.
 
-/-- Rocq `type_progress.v:3064` `vcvtop_zero_numtype` (6582b3a39: v:3045). `vcvtop`-zero applies to number-type lanes
+/-- Rocq `type_progress.v:3045` `vcvtop_zero_numtype`. `vcvtop`-zero applies to number-type lanes
     only: the operators with a `ZERO` (`TRUNC_SAT` to `I32`, `DEMOTE`) have number-type lanes on
     both sides. -/
 theorem vcvtop_zero_numtype (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) (op : vcvtop__)
@@ -3740,7 +3733,7 @@ theorem vcvtop_zero_numtype (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat
     | vcvtop__Fnn_1_M_1_Fnn_2_M_2_case_1 hcond =>
       exact absurd Hz (by simp [zeroop_of])
 
-/-- Rocq `type_progress.v:3076` `vcvtop_full_lsize` (6582b3a39: v:3057). Without half / zero, source and destination
+/-- Rocq `type_progress.v:3057` `vcvtop_full_lsize`. Without half / zero, source and destination
     lanes have the same size. -/
 theorem vcvtop_full_lsize (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) (op : vcvtop__) :
     wf_vcvtop__ (shape.X L1 (dim.mk_dim M1)) (shape.X L2 (dim.mk_dim M2)) op →
@@ -3778,8 +3771,8 @@ theorem vcvtop_full_lsize (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) 
     | vcvtop__Fnn_1_M_1_Fnn_2_M_2_case_1 hcond =>
       exact absurd Hh (by simp [halfop_of])
 
-/-- Lean-only (bundle20): Rocq's motive `P` (for `Instr_ok`) in the `Instrs_ok_ind'` application
-    that proves `t_progress_be` (`type_progress.v:3102-3115`), verbatim; like Rocq's it takes the
+/-- Lean-only: Rocq's motive `P` (for `Instr_ok`) in the `Instrs_ok_ind'` application
+    that proves `t_progress_be` (`type_progress.v:3083-3096`), verbatim; like Rocq's it takes the
     (unused) typing derivation as its last argument. -/
 def t_progress_be_P (C : context) (be : instr) (tf : functype) (_ : Instr_ok C be tf) : Prop :=
   ∀ (s : store) (f : frame) (C' : context) (vcs : List val) (ts1 ts2 : List valtype)
@@ -3798,8 +3791,8 @@ def t_progress_be_P (C : context) (be : instr) (tf : functype) (_ : Instr_ok C b
         Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ List.map admininstr_instr [be]))
           (config.mk_config (state.mk_state s' f') es')
 
-/-- Lean-only (bundle20): Rocq's motive `P0` (for `Instrs_ok`) of `t_progress_be`
-    (`type_progress.v:3116-3128`). -/
+/-- Lean-only: Rocq's motive `P0` (for `Instrs_ok`) of `t_progress_be`
+    (`type_progress.v:3097-3109`). -/
 def t_progress_be_P0 (C : context) (bes : List instr) (tf : functype) (_ : Instrs_ok C bes tf) : Prop :=
   ∀ (s : store) (f : frame) (C' : context) (vcs : List val) (ts1 ts2 : List valtype)
     (lab : List resulttype) (ret : Option resulttype),
@@ -3817,7 +3810,7 @@ def t_progress_be_P0 (C : context) (bes : List instr) (tf : functype) (_ : Instr
         Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ List.map admininstr_instr bes))
           (config.mk_config (state.mk_state s' f') es')
 
-/-- Lean-only (bundle20): the `Instr_ok.nop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3130`),
+/-- Lean-only: the `Instr_ok.nop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3111`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_nop :
@@ -3835,7 +3828,7 @@ theorem t_progress_be_nop :
   subst Hvcs
   exact Step.pure _ _ _ Step_pure.nop
 
-/-- Lean-only (bundle20): the `Instr_ok.unreachable` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3140`),
+/-- Lean-only: the `Instr_ok.unreachable` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3121`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_unreachable :
@@ -3860,7 +3853,7 @@ theorem t_progress_be_unreachable :
     exact Step.ctxt_instrs _ (vc' :: vcs') [admininstr.UNREACHABLE] [] _ [admininstr.TRAP] H
       (Or.inl (List.cons_ne_nil _ _)) HWf1 HWf2
 
-/-- Lean-only (bundle20): the `Instr_ok.drop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3160`),
+/-- Lean-only: the `Instr_ok.drop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3141`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_drop :
@@ -3877,7 +3870,7 @@ theorem t_progress_be_drop :
   | [v], _ =>
     exact ⟨s, f, [], Step.pure _ _ _ (Step_pure.drop v)⟩
 
-/-- Lean-only (bundle20): the `Instr_ok.select_expl` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3173`),
+/-- Lean-only: the `Instr_ok.select_expl` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3154`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_select_expl :
@@ -3913,7 +3906,7 @@ theorem t_progress_be_select_expl :
     | _ => simp [admininstr_val] at Hn3
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.select_impl` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3190`),
+/-- Lean-only: the `Instr_ok.select_impl` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3171`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_select_impl :
@@ -3951,7 +3944,7 @@ theorem t_progress_be_select_impl :
     | _ => simp [admininstr_val] at Hn3
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.block` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3207`),
+/-- Lean-only: the `Instr_ok.block` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3188`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_block :
@@ -3991,7 +3984,7 @@ theorem t_progress_be_block :
   exact Step.read _ _ _ (Step_read.block (state.mk_state s f) vcs.length vcs bt bes vt2.length
     vt1 vt2 Hfun rfl Hlen rfl)
 
-/-- Lean-only (bundle20): the `Instr_ok.loop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3229`),
+/-- Lean-only: the `Instr_ok.loop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3210`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_loop :
@@ -4031,7 +4024,7 @@ theorem t_progress_be_loop :
   exact Step.read _ _ _ (Step_read.loop (state.mk_state s f) vt1.length vcs bt bes vt1 vt2.length
     vt2 Hfun Hlen.symm rfl rfl)
 
-/-- Lean-only (bundle20): the `Instr_ok.if` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3251`),
+/-- Lean-only: the `Instr_ok.if` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3232`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_if :
@@ -4100,7 +4093,7 @@ theorem t_progress_be_if :
     | cons x xs =>
       exact ⟨s, f, _, Step.ctxt_instrs _ (x :: xs) _ [] _ _ HStep (Or.inl (List.cons_ne_nil _ _)) Hwf1 Hwf2⟩
 
-/-- Lean-only (bundle20): the `Instr_ok.br` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3338`),
+/-- Lean-only: the `Instr_ok.br` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3319`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_br :
@@ -4113,7 +4106,7 @@ theorem t_progress_be_br :
   intro s f C' vcs ts1' ts2' lab ret HWfConfig HWfVals Htf Hcontext Hmod Hts Hstore Hnotbr Hnotret
   exact (not_lf_br_singleton _ l Hnotbr rfl).elim
 
-/-- Lean-only (bundle20): the `Instr_ok.br_if` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3344`),
+/-- Lean-only: the `Instr_ok.br_if` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3325`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_br_if :
@@ -4173,7 +4166,7 @@ theorem t_progress_be_br_if :
       (by simp [proj_num__0, proj_uN_0]))
       (iswf_Forall_cons (wf_admininstr.admininstr_case_7 _ Hl) (iswf_Forall_nil _)) HWfConfig
 
-/-- Lean-only (bundle20): the `Instr_ok.br_table` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3393`),
+/-- Lean-only: the `Instr_ok.br_table` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3374`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_br_table :
@@ -4236,7 +4229,7 @@ theorem t_progress_be_br_table :
       (by simp [proj_num__0, proj_uN_0]; omega))
       (iswf_Forall_cons (wf_admininstr.admininstr_case_7 _ Hl') (iswf_Forall_nil _)) HWfConfig
 
-/-- Lean-only (bundle20): the `Instr_ok.call` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3449`),
+/-- Lean-only: the `Instr_ok.call` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3430`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_call :
@@ -4269,7 +4262,7 @@ theorem t_progress_be_call :
     rw [List.append_nil, List.append_nil] at HStep
     exact ⟨s, f, _, HStep⟩
 
-/-- Lean-only (bundle20): the `Instr_ok.call_indirect` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3477`),
+/-- Lean-only: the `Instr_ok.call_indirect` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3458`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_call_indirect :
@@ -4319,7 +4312,7 @@ theorem t_progress_be_call_indirect :
     rw [List.append_nil, List.append_nil] at HStep'
     exact ⟨s, f, _, HStep'⟩
 
-/-- Lean-only (bundle20): the `Instr_ok.return` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3516`),
+/-- Lean-only: the `Instr_ok.return` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3497`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_return :
@@ -4333,7 +4326,7 @@ theorem t_progress_be_return :
   -- Rocq: `by move/not_lf_return_singleton: Hnotret.`
   exact absurd rfl (not_lf_return_singleton _ Hnotret)
 
-/-- Lean-only (bundle20): the `Instr_ok.const` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3521`),
+/-- Lean-only: the `Instr_ok.const` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3502`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_const :
@@ -4348,7 +4341,7 @@ theorem t_progress_be_const :
   left
   rfl
 
-/-- Lean-only (bundle20): the `Instr_ok.unop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3526`),
+/-- Lean-only: the `Instr_ok.unop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3507`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_unop :
@@ -4395,7 +4388,7 @@ theorem t_progress_be_unop :
           exact unop_not_none _ _ _ Hn Hu Eunop
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.binop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3551`),
+/-- Lean-only: the `Instr_ok.binop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3532`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_binop :
@@ -4431,7 +4424,7 @@ theorem t_progress_be_binop :
         (Step_pure.binop_val nt n1 n2 binop_nt a' _ HBinop (by simp) (by simp) (by simp))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.testop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3582`),
+/-- Lean-only: the `Instr_ok.testop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3563`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_testop :
@@ -4465,7 +4458,7 @@ theorem t_progress_be_testop :
     | none => exact absurd ENone (testop_not_none nt testop_nt n1 Hwf1 Hwft)
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.relop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3600`),
+/-- Lean-only: the `Instr_ok.relop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3581`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_relop :
@@ -4502,7 +4495,7 @@ theorem t_progress_be_relop :
           (relop__is_wf nt relop_nt n1 n2 c' (some c') Hrelop Hwfr Hwf1 Hwf2 Hne Hc))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.cvtop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3625`),
+/-- Lean-only: the `Instr_ok.cvtop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3606`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_cvtop :
@@ -4535,7 +4528,7 @@ theorem t_progress_be_cvtop :
         (Step_pure.cvtop_val nt_2 n1 nt_1 cvtop c _ Hcvtop (by simp) (by simp) (by simp))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.ref_null` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3653`),
+/-- Lean-only: the `Instr_ok.ref_null` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3634`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_ref_null :
@@ -4548,7 +4541,7 @@ theorem t_progress_be_ref_null :
   left
   rfl
 
-/-- Lean-only (bundle20): the `Instr_ok.ref_func` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3658`),
+/-- Lean-only: the `Instr_ok.ref_func` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3639`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_ref_func :
@@ -4570,7 +4563,7 @@ theorem t_progress_be_ref_func :
       Step.read _ _ _ (Step_read.ref_func (state.mk_state s f) x (by simpa [fun_funcaddr] using Hxrange))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.ref_is_null` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3672`),
+/-- Lean-only: the `Instr_ok.ref_is_null` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3653`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_ref_is_null :
@@ -4616,7 +4609,7 @@ theorem t_progress_be_ref_is_null :
         simp [admininstr_ref] at hl
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vconst` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3716`),
+/-- Lean-only: the `Instr_ok.vconst` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3697`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vconst :
@@ -4629,7 +4622,7 @@ theorem t_progress_be_vconst :
   left
   rfl
 
-/-- Lean-only (bundle20): the `Instr_ok.vvunop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3721`),
+/-- Lean-only: the `Instr_ok.vvunop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3702`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vvunop :
@@ -4657,7 +4650,7 @@ theorem t_progress_be_vvunop :
     exact Step.pure _ _ _ (Step_pure.vvunop c1 v_vvunop _ rfl)
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vvbinop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3733`),
+/-- Lean-only: the `Instr_ok.vvbinop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3714`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vvbinop :
@@ -4688,7 +4681,7 @@ theorem t_progress_be_vvbinop :
     exact Step.pure _ _ _ (Step_pure.vvbinop c1 c2 v_vvbinop _ rfl)
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vvternop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3746`),
+/-- Lean-only: the `Instr_ok.vvternop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3727`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vvternop :
@@ -4722,7 +4715,7 @@ theorem t_progress_be_vvternop :
     exact Step.pure _ _ _ (Step_pure.vvternop c1 c2 c3 v_vvternop _ rfl)
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vvtestop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3760`),
+/-- Lean-only: the `Instr_ok.vvtestop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3741`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vvtestop :
@@ -4754,7 +4747,7 @@ theorem t_progress_be_vvtestop :
         (wf_uN.uN_case_0 _ _ ⟨Nat.zero_le _, Nat.zero_le _⟩))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vunop` case of Rocq's `t_progress_be` proof (no separate Rocq bullet (handled by the surrounding `Instrs_ok_ind'` automation / a shared bullet)),
+/-- Lean-only: the `Instr_ok.vunop` case of Rocq's `t_progress_be` proof (the unlabelled bullet at `type_progress.v:3758`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vunop :
@@ -4788,7 +4781,7 @@ theorem t_progress_be_vunop :
         (Step_pure.vunop c1 sh vunop_sh v' _ Hvunop (by simp) (by simp) (by simp))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vbinop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3803`),
+/-- Lean-only: the `Instr_ok.vbinop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3784`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vbinop :
@@ -4824,7 +4817,7 @@ theorem t_progress_be_vbinop :
         (Step_pure.vbinop_val c1 c2 sh vbinop_sh v _ Hr (by simp) (by simp) (by simp))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vtestop` case of Rocq's `t_progress_be` proof (no separate Rocq bullet (handled by the surrounding `Instrs_ok_ind'` automation / a shared bullet)),
+/-- Lean-only: the `Instr_ok.vtestop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3802`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vtestop :
@@ -4881,7 +4874,7 @@ theorem t_progress_be_vtestop :
         exact Bool.noConfusion (Hall.symm.trans E)
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vrelop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3852`),
+/-- Lean-only: the `Instr_ok.vrelop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3833`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vrelop :
@@ -4915,7 +4908,7 @@ theorem t_progress_be_vrelop :
     exact Step.pure _ _ _ (Step_pure.vrelop c1 c2 sh vrelop r (some r) Hr (Option.some_ne_none r) rfl)
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vshiftop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3867`),
+/-- Lean-only: the `Instr_ok.vshiftop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3848`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vshiftop :
@@ -5001,7 +4994,7 @@ theorem t_progress_be_vshiftop :
         rfl
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vbitmask` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3917`),
+/-- Lean-only: the `Instr_ok.vbitmask` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3898`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vbitmask :
@@ -5065,7 +5058,7 @@ theorem t_progress_be_vbitmask :
       (inv_ibits__is_wf 32 bits _ Hbw rfl) Hwsh Hb (wf_bit.bit_case_0 0 (Or.inl rfl)))
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vswizzle` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3963`),
+/-- Lean-only: the `Instr_ok.vswizzle` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3944`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vswizzle :
@@ -5154,7 +5147,7 @@ theorem t_progress_be_vswizzle :
       · rfl
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vshuffle` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4009`),
+/-- Lean-only: the `Instr_ok.vshuffle` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:3990`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vshuffle :
@@ -5232,7 +5225,7 @@ theorem t_progress_be_vshuffle :
       · rfl
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vsplat` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4051`),
+/-- Lean-only: the `Instr_ok.vsplat` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4032`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vsplat :
@@ -5262,7 +5255,7 @@ theorem t_progress_be_vsplat :
       Step.pure _ _ _ (Step_pure.vsplat Lnn c1 Ndim _ Hpk rfl Hwfsh)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vextract_lane` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4068`),
+/-- Lean-only: the `Instr_ok.vextract_lane` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4049`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vextract_lane :
@@ -5364,7 +5357,7 @@ theorem t_progress_be_vextract_lane :
           Hwsh)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vreplace_lane` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4112`),
+/-- Lean-only: the `Instr_ok.vreplace_lane` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4093`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vreplace_lane :
@@ -5396,7 +5389,7 @@ theorem t_progress_be_vreplace_lane :
     exact ⟨s, f, _, Step.pure _ _ _ (Step_pure.vreplace_lane c1 Lnn c2 Ndim i _ Hpk rfl Hwfsh)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vextunop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4132`),
+/-- Lean-only: the `Instr_ok.vextunop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4113`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vextunop :
@@ -5470,7 +5463,7 @@ theorem t_progress_be_vextunop :
     exact ⟨s, f, _, Step.pure _ _ _ (Step_pure.vextunop c1 _ _ _ _ _ Hfun (by simp) rfl)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vextbinop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4180`),
+/-- Lean-only: the `Instr_ok.vextbinop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4161`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vextbinop :
@@ -5574,7 +5567,7 @@ theorem t_progress_be_vextbinop :
     exact Step.pure _ _ _ (Step_pure.vextbinop c1 c2 _ _ _ c (some c) Hc (Option.some_ne_none c) rfl)
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vnarrow` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4264`),
+/-- Lean-only: the `Instr_ok.vnarrow` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4245`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vnarrow :
@@ -5627,7 +5620,7 @@ theorem t_progress_be_vnarrow :
       (lanes__is_wf _ _ _ Hs1 Hwf1 rfl) (lanes__is_wf _ _ _ Hs1 Hwf2 rfl) Hs1 Hs2 (Hnar _ HL1) (Hnar _ HL2))
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vcvtop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4301`),
+/-- Lean-only: the `Instr_ok.vcvtop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4282`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vcvtop :
@@ -5654,7 +5647,7 @@ theorem t_progress_be_vcvtop :
     have Hs1 : wf_shape sh_1 := by cases HWfinstr; assumption
     have Hs2 : wf_shape sh_2 := by cases HWfinstr; assumption
     have Hop : wf_vcvtop__ sh_2 sh_1 op := by cases HWfinstr; assumption
-    -- bundle21: Rocq 6582b3a39 dropped its `vcvtop_trunc_sat_i16` case split (and its `admit`):
+    -- No `vcvtop_trunc_sat_i16` case split here (Rocq dropped it, and its `admit`, in 6582b3a39):
     -- `F32 → I16 TRUNC_SAT` is no longer a `vcvtop__` (spec commit 4cf9f29c5).
     obtain ⟨L2, ⟨M2⟩⟩ := sh_1
     obtain ⟨L1, ⟨M1⟩⟩ := sh_2
@@ -5683,7 +5676,7 @@ theorem t_progress_be_vcvtop :
         exact ⟨s, f, [admininstr.VCONST vectype.V128 c], Step.pure _ _ _ Hc⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.local_get` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4340`),
+/-- Lean-only: the `Instr_ok.local_get` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4317`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_local_get :
@@ -5703,7 +5696,7 @@ theorem t_progress_be_local_get :
       Step.read _ _ _ (Step_read.local_get _ x)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.local_set` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4349`),
+/-- Lean-only: the `Instr_ok.local_set` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4326`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_local_set :
@@ -5727,7 +5720,7 @@ theorem t_progress_be_local_set :
       exact Step.local_set _ v1 x
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.local_tee` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4359`),
+/-- Lean-only: the `Instr_ok.local_tee` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4336`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_local_tee :
@@ -5748,7 +5741,7 @@ theorem t_progress_be_local_tee :
       Step.pure _ _ _ (Step_pure.local_tee v1 x)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.global_get` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4368`),
+/-- Lean-only: the `Instr_ok.global_get` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4345`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_global_get :
@@ -5769,7 +5762,7 @@ theorem t_progress_be_global_get :
       Step.read _ _ _ (Step_read.global_get _ x)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.global_set` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4377`),
+/-- Lean-only: the `Instr_ok.global_set` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4354`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_global_set :
@@ -5794,7 +5787,7 @@ theorem t_progress_be_global_set :
       exact Step.global_set _ v1 x
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.table_get` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4388`),
+/-- Lean-only: the `Instr_ok.table_get` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4365`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_table_get :
@@ -5828,7 +5821,7 @@ theorem t_progress_be_table_get :
           (by simp [proj_num__0, proj_uN_0]; omega))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.table_set` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4408`),
+/-- Lean-only: the `Instr_ok.table_set` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4385`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_table_set :
@@ -5867,7 +5860,7 @@ theorem t_progress_be_table_set :
           (by simp [proj_num__0, proj_uN_0]; omega)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.table_size` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4429`),
+/-- Lean-only: the `Instr_ok.table_size` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4406`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_table_size :
@@ -5889,7 +5882,7 @@ theorem t_progress_be_table_size :
       Step.read _ _ _ (Step_read.table_size _ x _ rfl)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.table_grow` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4448`),
+/-- Lean-only: the `Instr_ok.table_grow` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4425`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_table_grow :
@@ -5921,7 +5914,7 @@ theorem t_progress_be_table_grow :
       Step.table_grow_fail _ r1 n2 x r (by simpa using Hunsigned)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.table_fill` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4464`),
+/-- Lean-only: the `Instr_ok.table_fill` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4441`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_table_fill :
@@ -5970,7 +5963,7 @@ theorem t_progress_be_table_fill :
         exact Step.read _ _ _ Hstep
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.table_copy` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4511`),
+/-- Lean-only: the `Instr_ok.table_copy` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4488`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_table_copy :
@@ -6028,7 +6021,7 @@ theorem t_progress_be_table_copy :
               (by simpa [proj_num__0, proj_uN_0] using Hb))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.table_init` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4605`),
+/-- Lean-only: the `Instr_ok.table_init` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4582`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_table_init :
@@ -6085,7 +6078,7 @@ theorem t_progress_be_table_init :
             (by simp only [proj_num__0, Option.get!_some, proj_uN_0]; omega))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.elem_drop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4683`),
+/-- Lean-only: the `Instr_ok.elem_drop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4660`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_elem_drop :
@@ -6111,7 +6104,7 @@ theorem t_progress_be_elem_drop :
       exact Step.elem_drop _ x
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.memory_size` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4693`),
+/-- Lean-only: the `Instr_ok.memory_size` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4670`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_memory_size :
@@ -6148,7 +6141,7 @@ theorem t_progress_be_memory_size :
     · exact wf_uN.uN_case_0 32 0 ⟨Nat.zero_le _, Nat.zero_le _⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.memory_grow` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4745`),
+/-- Lean-only: the `Instr_ok.memory_grow` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4722`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_memory_grow :
@@ -6175,7 +6168,7 @@ theorem t_progress_be_memory_grow :
     exact ⟨s, f, _, Step.memory_grow_fail (state.mk_state s f) n1 r (by simpa using Hunsigned)⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.memory_fill` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4769`),
+/-- Lean-only: the `Instr_ok.memory_fill` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4746`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_memory_fill :
@@ -6217,7 +6210,7 @@ theorem t_progress_be_memory_fill :
             (by simp [proj_num__0]) Hz (by simp only [proj_num__0, proj_uN_0, Option.get!_some]; omega))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.memory_copy` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4820`),
+/-- Lean-only: the `Instr_ok.memory_copy` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4797`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_memory_copy :
@@ -6270,7 +6263,7 @@ theorem t_progress_be_memory_copy :
             (by simp only [proj_num__0, proj_uN_0, Option.get!_some]; omega) H0
             (by simpa [proj_num__0, proj_uN_0] using HB))⟩
 
-/-- Lean-only (bundle20): the `Instr_ok.memory_init` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4917`),
+/-- Lean-only: the `Instr_ok.memory_init` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4894`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_memory_init :
@@ -6328,7 +6321,7 @@ theorem t_progress_be_memory_init :
             (by simp only [proj_num__0, Option.get!_some, proj_uN_0]; omega))⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.data_drop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4995`),
+/-- Lean-only: the `Instr_ok.data_drop` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4972`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_data_drop :
@@ -6354,7 +6347,7 @@ theorem t_progress_be_data_drop :
       exact Step.data_drop _ x
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.load_val` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5005`),
+/-- Lean-only: the `Instr_ok.load_val` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4982`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_load_val :
@@ -6415,7 +6408,7 @@ theorem t_progress_be_load_val :
           (Forall_list_slice _ _ _ _ (wf_config_mem_bytes _ _ _ _ HWfConfig)) rfl
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.load_pack` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5034`),
+/-- Lean-only: the `Instr_ok.load_pack` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5011`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_load_pack :
@@ -6479,7 +6472,7 @@ theorem t_progress_be_load_pack :
           (Forall_list_slice _ _ _ _ (wf_config_mem_bytes _ _ _ _ HWfConfig)) rfl
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.store_val` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5061`),
+/-- Lean-only: the `Instr_ok.store_val` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5038`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_store_val :
@@ -6524,7 +6517,7 @@ theorem t_progress_be_store_val :
         (by simp [proj_num__0]) Hfunsize rfl⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.store_pack` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5081`),
+/-- Lean-only: the `Instr_ok.store_pack` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5058`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_store_pack :
@@ -6584,7 +6577,7 @@ theorem t_progress_be_store_pack :
         (by simp [proj_num__0]) (by simp [valtype_Inn, size]) (by simp [proj_num__0]) rfl⟩
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vload_val` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5132`),
+/-- Lean-only: the `Instr_ok.vload_val` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5109`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vload_val :
@@ -6642,7 +6635,7 @@ theorem t_progress_be_vload_val :
           (Forall_list_slice _ _ _ _ (wf_config_mem_bytes _ _ _ _ HWfConfig)) rfl Hfunsize
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vload_pack` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5161`),
+/-- Lean-only: the `Instr_ok.vload_pack` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5138`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vload_pack :
@@ -6690,8 +6683,8 @@ theorem t_progress_be_vload_pack :
       -- Rocq: `inversion Hwv as [? ? ? ? Hsz HMN | | ]; subst.` and `HMN' : v_M * v_N = 64`.
       cases Hwv
       rename_i Hsz HMN
-      -- bundle21: the side condition is now `v_M * v_N = 128 / 2 ∧ v_N > 1` (spec commit 4cf9f29c5);
-      -- Rocq 6582b3a39: `move/andP: HMN => [HMN HM1]`.
+      -- The side condition is `v_M * v_N = 128 / 2 ∧ v_N > 1` (since spec commit 4cf9f29c5);
+      -- Rocq: `move/andP: HMN => [HMN HM1]`.
       obtain ⟨HMN, HM1⟩ := HMN
       have HMN' : @Eq Nat (v_M * v_N) 64 := by
         simp only [proj_sz_0, vsize] at HMN
@@ -6728,7 +6721,7 @@ theorem t_progress_be_vload_pack :
           exact Or.inr ⟨4, Jnn.I64, rfl, rfl,
             wf_shape.shape_case_0 _ _ (wf_dim.dim_case_0 _ (by decide)) (by decide)⟩
         · exact Or.inl E
-      · -- Rocq 6582b3a39: `4: { (* SHAPE 64 X 1 is excluded by the side condition M > 1 of
+      · -- Rocq: `4: { (* SHAPE 64 X 1 is excluded by the side condition M > 1 of
         -- vloadop_. *) have EN : v_N = 1%num by lia. subst v_N. move: HM1. by vm_compute. }`
         subst E
         have HM1' : @LT.lt Nat _ 1 v_N := HM1
@@ -6781,7 +6774,7 @@ theorem t_progress_be_vload_pack :
           exact wf_lane_.lane__case_0 _ _ _ (extend___is_wf _ _ _ _ _ (HJ k) rfl) rfl
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vload_splat` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5228`),
+/-- Lean-only: the `Instr_ok.vload_splat` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5204`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vload_splat :
@@ -6866,7 +6859,7 @@ theorem t_progress_be_vload_splat :
         exact wf_lane_.lane__case_0 _ _ _ Hwfk rfl
   · simp at Hts
 
-/-- Lean-only (bundle20): the `Instr_ok.vload_zero` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5277`),
+/-- Lean-only: the `Instr_ok.vload_zero` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5253`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vload_zero :
@@ -6899,7 +6892,7 @@ theorem t_progress_be_vload_zero :
           (Forall_list_slice _ _ _ _ (wf_config_mem_bytes s f _ (uN.mk_uN 0) HWfConfig)) rfl)
         Hwf0)⟩
 
-/-- Lean-only (bundle20): the `Instr_ok.vload_lane` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5304`),
+/-- Lean-only: the `Instr_ok.vload_lane` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5280`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vload_lane :
@@ -6965,7 +6958,7 @@ theorem t_progress_be_vload_lane :
           (wf_shape.shape_case_0 _ _ (wf_dim.dim_case_0 _ (by decide)) rfl)
           (wf_lane_.lane__case_0 _ _ _ (by rw [Heta]; exact Hwfk) rfl))⟩
 
-/-- Lean-only (bundle20): the `Instr_ok.vstore` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5348`),
+/-- Lean-only: the `Instr_ok.vstore` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5324`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vstore :
@@ -6989,7 +6982,7 @@ theorem t_progress_be_vstore :
   simp only [List.map_cons, List.map_nil, List.cons_append, List.nil_append, Heqv1, Heqv2]
   exact ⟨_, _, _, Step.vstore_val _ _ _ _ _ (by simp [proj_num__0]) Hfunsize rfl⟩
 
-/-- Lean-only (bundle20): the `Instr_ok.vstore_lane` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5363`),
+/-- Lean-only: the `Instr_ok.vstore_lane` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5339`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_vstore_lane :
@@ -7040,7 +7033,7 @@ theorem t_progress_be_vstore_lane :
         (wf_shape.shape_case_0 _ _ (wf_dim.dim_case_0 _ (by decide)) rfl)
         (by have h := Hidx; norm_num at h; omega) (show ((2 : ℕ) : Rat) = 128 / ((64 : ℕ) : Rat) by norm_num)
 
-/-- Lean-only (bundle20): the `Instrs_ok.empty` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5394`),
+/-- Lean-only: the `Instrs_ok.empty` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5370`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_empty :
@@ -7052,7 +7045,7 @@ theorem t_progress_be_empty :
   left
   rfl
 
-/-- Lean-only (bundle20): the `Instrs_ok.instr` case of Rocq's `t_progress_be` proof (no separate Rocq bullet (handled by the surrounding `Instrs_ok_ind'` automation / a shared bullet)),
+/-- Lean-only: the `Instrs_ok.instr` case of Rocq's `t_progress_be` proof (no separate Rocq bullet: handled by the surrounding `Instrs_ok_ind'` automation / a shared bullet),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_instr :
@@ -7065,7 +7058,7 @@ theorem t_progress_be_instr :
   intro C v_instr t_1_lst t_2_lst a a_1 a_2 ih
   exact ih
 
-/-- Lean-only (bundle20): the `Instrs_ok.seq` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5399`),
+/-- Lean-only: the `Instrs_ok.seq` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5375`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_seq :
@@ -7145,7 +7138,7 @@ theorem t_progress_be_seq :
           (Or.inr (by simp)) hwf1 hwf'
         exact h
 
-/-- Lean-only (bundle20): the `Instrs_ok.sub` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5466`),
+/-- Lean-only: the `Instrs_ok.sub` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5442`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_sub :
@@ -7169,7 +7162,7 @@ theorem t_progress_be_sub :
   exact ih s f C' vcs t_1_lst t_2_lst lab ret hwf hwfv rfl hctx hmod (by rw [hts, ← e1, e2]) hstore hnotbr
     hnotret
 
-/-- Lean-only (bundle20): the `Instrs_ok.frame` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5475`),
+/-- Lean-only: the `Instrs_ok.frame` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:5451`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok.rec` for motives
     `t_progress_be_P`/`t_progress_be_P0`, so the 78 cases can be proved and checked one by one. -/
 theorem t_progress_be_frame :
@@ -7207,11 +7200,12 @@ theorem t_progress_be_frame :
       simp only [List.append_nil] at h
       exact h
 
-/-- Rocq `type_progress.v:3086` `t_progress_be` (6582b3a39: v:3067): progress for
+/-- Rocq `type_progress.v:3067` `t_progress_be`: progress for
     basic-instruction sequences, under a prefix of values `vcs` whose types are the sequence's input
     types. `Qed` in Rocq since `6582b3a39` (it was `Admitted` before, with two `admit`s in subcases
     that the old spec made false; spec commit `4cf9f29c5` ruled both instructions out in
-    validation). Here the theorem is assembled from the 78 case lemmas `t_progress_be_*` by one
+    validation). Here the theorem is assembled from the 78 case lemmas `t_progress_be_*` (one per
+    `Instr_ok`/`Instrs_ok` rule) by one
     application of the mutual recursor `Instrs_ok.rec` (Rocq: `Instrs_ok_ind'`). All 78 cases are
     proved. -/
 theorem t_progress_be (s : store) (C C' : context) (f : frame) (vcs : List val) (bes : List instr)
@@ -7235,7 +7229,7 @@ theorem t_progress_be (s : store) (C C' : context) (f : frame) (vcs : List val) 
     t_progress_be_nop t_progress_be_unreachable t_progress_be_drop t_progress_be_select_expl t_progress_be_select_impl t_progress_be_block t_progress_be_loop t_progress_be_if t_progress_be_br t_progress_be_br_if t_progress_be_br_table t_progress_be_call t_progress_be_call_indirect t_progress_be_return t_progress_be_const t_progress_be_unop t_progress_be_binop t_progress_be_testop t_progress_be_relop t_progress_be_cvtop t_progress_be_ref_null t_progress_be_ref_func t_progress_be_ref_is_null t_progress_be_vconst t_progress_be_vvunop t_progress_be_vvbinop t_progress_be_vvternop t_progress_be_vvtestop t_progress_be_vunop t_progress_be_vbinop t_progress_be_vtestop t_progress_be_vrelop t_progress_be_vshiftop t_progress_be_vbitmask t_progress_be_vswizzle t_progress_be_vshuffle t_progress_be_vsplat t_progress_be_vextract_lane t_progress_be_vreplace_lane t_progress_be_vextunop t_progress_be_vextbinop t_progress_be_vnarrow t_progress_be_vcvtop t_progress_be_local_get t_progress_be_local_set t_progress_be_local_tee t_progress_be_global_get t_progress_be_global_set t_progress_be_table_get t_progress_be_table_set t_progress_be_table_size t_progress_be_table_grow t_progress_be_table_fill t_progress_be_table_copy t_progress_be_table_init t_progress_be_elem_drop t_progress_be_memory_size t_progress_be_memory_grow t_progress_be_memory_fill t_progress_be_memory_copy t_progress_be_memory_init t_progress_be_data_drop t_progress_be_load_val t_progress_be_load_pack t_progress_be_store_val t_progress_be_store_pack t_progress_be_vload_val t_progress_be_vload_pack t_progress_be_vload_splat t_progress_be_vload_zero t_progress_be_vload_lane t_progress_be_vstore t_progress_be_vstore_lane t_progress_be_empty t_progress_be_instr t_progress_be_seq t_progress_be_sub t_progress_be_frame
     hinstrs) s f C' vcs ts1 ts2 lab ret hwf
 
-/-- Rocq `type_progress.v:5515` `Instr_ok_Instrs_ok`: a single instruction typing gives the
+/-- Rocq `type_progress.v:5491` `Instr_ok_Instrs_ok`: a single instruction typing gives the
     sequence typing. -/
 theorem Instr_ok_Instrs_ok (C : context) (be : instr) (ts1 ts2 : List valtype) :
     Instr_ok C be (mkFunctype ts1 ts2) → Instrs_ok C [be] (mkFunctype ts1 ts2) := by
@@ -7243,11 +7237,11 @@ theorem Instr_ok_Instrs_ok (C : context) (be : instr) (ts1 ts2 : List valtype) :
   obtain ⟨hwfC, hwfi⟩ := instr_ok_context_wf C be _ hinstr
   exact Instrs_ok.instr C be ts1 ts2 hinstr hwfC hwfi
 
--- `Scheme Instr_ok2_ind'`/`Admin_instrs_ok_ind'`/`Expr_ok2_ind'` (type_progress.v:5524) NOT PORTED:
+-- `Scheme Instr_ok2_ind'`/`Admin_instrs_ok_ind'`/`Expr_ok2_ind'` (type_progress.v:5500) NOT PORTED:
 -- Lean auto-generates the mutual recursor `Instrs_ok2.rec`, used by `t_progress_e` below.
 
-/-- Lean-only (bundle20): Rocq's motive `P` (for `Instr_ok2`) in the `Admin_instrs_ok_ind'`
-    application that proves `t_progress_e` (`type_progress.v:5553-5565`). The store `s` is a
+/-- Lean-only: Rocq's motive `P` (for `Instr_ok2`) in the `Admin_instrs_ok_ind'`
+    application that proves `t_progress_e` (`type_progress.v:5529-5541`). The store `s` is a
     parameter of Lean's mutual inductive, so the recursor is used with motive `t_progress_e_P s`. -/
 def t_progress_e_P (s : store) (C : context) (e : admininstr) (tf : functype) (_ : Instr_ok2 s C e tf) : Prop :=
   ∀ (f : frame) (C' : context) (vcs : List val) (ts1 ts2 : List valtype)
@@ -7266,8 +7260,8 @@ def t_progress_e_P (s : store) (C : context) (e : admininstr) (tf : functype) (_
         Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ [e]))
           (config.mk_config (state.mk_state s' f') es')
 
-/-- Lean-only (bundle20): Rocq's motive `P0` (for `Instrs_ok2`) of `t_progress_e`
-    (`type_progress.v:5566-5578`). -/
+/-- Lean-only: Rocq's motive `P0` (for `Instrs_ok2`) of `t_progress_e`
+    (`type_progress.v:5542-5554`). -/
 def t_progress_e_P0 (s : store) (C : context) (es : List admininstr) (tf : functype) (_ : Instrs_ok2 s C es tf) : Prop :=
   ∀ (f : frame) (C' : context) (vcs : List val) (ts1 ts2 : List valtype)
     (lab : List resulttype) (ret : Option resulttype),
@@ -7285,8 +7279,8 @@ def t_progress_e_P0 (s : store) (C : context) (es : List admininstr) (tf : funct
         Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ es))
           (config.mk_config (state.mk_state s' f') es')
 
-/-- Lean-only (bundle20): Rocq's motive `P1` (for `Expr_ok2`) of `t_progress_e`
-    (`type_progress.v:5579-5589`). Rocq's `|es| = |ts|` (`ts : resulttype` coerced to a list) is
+/-- Lean-only: Rocq's motive `P1` (for `Expr_ok2`) of `t_progress_e`
+    (`type_progress.v:5555-5565`). Rocq's `|es| = |ts|` (`ts : resulttype` coerced to a list) is
     `es.length = (proj_list_0 valtype ts).length`. -/
 def t_progress_e_P1 (s : store) (C : context) (es : List admininstr) (ts : resulttype) (_ : Expr_ok2 s C es ts) : Prop :=
   ∀ (f : frame) (C' : context) (ret : Option resulttype),
@@ -7301,7 +7295,7 @@ def t_progress_e_P1 (s : store) (C : context) (es : List admininstr) (ts : resul
     ∃ (s' : store) (f' : frame) (es' : List admininstr),
       Step (config.mk_config (state.mk_state s f) es) (config.mk_config (state.mk_state s' f') es')
 
-/-- Lean-only (bundle20): the `plain` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5591`),
+/-- Lean-only: the `plain` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5567`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_plain (s : store) :
@@ -7324,7 +7318,7 @@ theorem t_progress_e_plain (s : store) :
   · right
     exact Hprog
 
-/-- Lean-only (bundle20): the `label` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5603`),
+/-- Lean-only: the `label` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5579`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_label (s : store) :
@@ -7428,7 +7422,7 @@ theorem t_progress_e_label (s : store) :
         refine ⟨s', f', [admininstr.LABEL_ n bes es'], ?_⟩
         exact Step.ctxt_label _ n bes es _ es' Hstep HWfCL1 (Step_is_wf _ _ _ HWfCL1 Hstore Hstep)
 
-/-- Lean-only (bundle20): the `Instr_ok2_frame` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5689`),
+/-- Lean-only: the `Instr_ok2_frame` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5665`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_Instr_ok2_frame (s : store) :
@@ -7522,7 +7516,7 @@ theorem t_progress_e_Instr_ok2_frame (s : store) :
         Step.ctxt_frame s f' v_n f es s' f'' es' Hprog HWfFrame2
           (Step_is_wf _ _ _ HWfFrame2 Hstore Hprog)⟩
 
-/-- Lean-only (bundle20): the `call_addr` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5761`),
+/-- Lean-only: the `call_addr` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5737`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_call_addr (s : store) :
@@ -7578,7 +7572,7 @@ theorem t_progress_e_call_addr (s : store) :
     exact Step_read.call_addr (state.mk_state s f) vcs.length vcs addr ts2.length _ es ts1 ts2 minst _ x t_lst
       HBound HLookup rfl HNotNone rfl hwffi hwffunc (wf_frame.frame_case_ _ _ hwfvals hwfmi) rfl hlen rfl
 
-/-- Lean-only (bundle20): the `ref` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5841`),
+/-- Lean-only: the `ref` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5817`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_ref (s : store) :
@@ -7597,7 +7591,7 @@ theorem t_progress_e_ref (s : store) :
   left
   cases v_ref <;> rfl
 
-/-- Lean-only (bundle20): the `trap` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5849`),
+/-- Lean-only: the `trap` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5825`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_trap (s : store) :
@@ -7620,7 +7614,7 @@ theorem t_progress_e_trap (s : store) :
     have H := Step_pure.trap_vals (vc :: vcs) [] (Or.inl (List.cons_ne_nil vc vcs))
     simpa [Map] using H
 
-/-- Lean-only (bundle20): the `empty` case of Rocq's `t_progress_e` proof (no separate Rocq bullet (closed by the `=> //` of the `Admin_instrs_ok_ind'` application)),
+/-- Lean-only: the `empty` case of Rocq's `t_progress_e` proof (no separate Rocq bullet: closed by the `=> //` of the `Admin_instrs_ok_ind'` application),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_empty (s : store) :
@@ -7634,7 +7628,7 @@ theorem t_progress_e_empty (s : store) :
   left
   exact v_to_e_const vcs
 
-/-- Lean-only (bundle20): the `instr` case of Rocq's `t_progress_e` proof (no separate Rocq bullet (closed by the `=> //` of the `Admin_instrs_ok_ind'` application)),
+/-- Lean-only: the `instr` case of Rocq's `t_progress_e` proof (no separate Rocq bullet: closed by the `=> //` of the `Admin_instrs_ok_ind'` application),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_instr (s : store) :
@@ -7647,7 +7641,7 @@ theorem t_progress_e_instr (s : store) :
   intro C v_admininstr t_1_lst t_2_lst a a_1 a_2 a_3 ih
   exact ih
 
-/-- Lean-only (bundle20): the `seq` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5875`),
+/-- Lean-only: the `seq` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5851`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_seq (s : store) :
@@ -7728,7 +7722,7 @@ theorem t_progress_e_seq (s : store) :
         exact Step.ctxt_instrs (state.mk_state s f) [] (List.map admininstr_val vcs ++ admininstr_1_lst)
           (a2 :: es2) (state.mk_state s' f') es1' hstep (Or.inr (List.cons_ne_nil _ _)) hwf1 hwf'
 
-/-- Lean-only (bundle20): the `sub` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5949`),
+/-- Lean-only: the `sub` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5925`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_sub (s : store) :
@@ -7752,7 +7746,7 @@ theorem t_progress_e_sub (s : store) :
   exact ih f C' vcs t_1_lst t_2_lst lab ret hwf hwfv rfl hctx hmod (by rw [hts, ← e1, e2]) hstore hnotbr
     hnotret
 
-/-- Lean-only (bundle20): the `Instrs_ok2_frame` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5958`),
+/-- Lean-only: the `Instrs_ok2_frame` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5934`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_Instrs_ok2_frame (s : store) :
@@ -7798,7 +7792,7 @@ theorem t_progress_e_Instrs_ok2_frame (s : store) :
       simp only [List.append_nil] at H
       exact H
 
-/-- Lean-only (bundle20): the `mk_Expr_ok2` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:6006`),
+/-- Lean-only: the `mk_Expr_ok2` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5982`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
     parameter) for motives `t_progress_e_P s`/`t_progress_e_P0 s`/`t_progress_e_P1 s`. -/
 theorem t_progress_e_mk_Expr_ok2 (s : store) :
@@ -7835,7 +7829,7 @@ theorem t_progress_e_mk_Expr_ok2 (s : store) :
   · right; left; exact Htrap
   · right; right; exact Hprog
 
-/-- Rocq `type_progress.v:5536` `t_progress_e`: progress for administrative-instruction sequences
+/-- Rocq `type_progress.v:5512` `t_progress_e`: progress for administrative-instruction sequences
     (labels, frames, calls, traps), by mutual induction on `Instr_ok2`/`Instrs_ok2`/`Expr_ok2`.
     `Qed` in Rocq (relying on `t_progress_be`, itself `Qed` since `6582b3a39`). Here it is assembled from the 12 case
     lemmas `t_progress_e_*` by one application of the mutual recursor `Instrs_ok2.rec` (Rocq:
@@ -7877,7 +7871,7 @@ theorem t_progress_e (s : store) (C framemoduleC : context) (f : frame) (vals : 
       hadmin
     ) f framemoduleC vals vt1 vt2 lab ret hwf
 
-/-- Rocq `type_progress.v:6064` `t_progress`: **progress**. A configuration that is `Config_ok` at
+/-- Rocq `type_progress.v:6040` `t_progress`: **progress**. A configuration that is `Config_ok` at
     some result type is either terminal (only values, or a single `TRAP`) or can take a step. `Qed`
     in Rocq, from `t_progress_e`. -/
 theorem t_progress (s : store) (f : frame) (ais : List admininstr) (rt : resulttype) :
@@ -7939,9 +7933,10 @@ theorem t_progress (s : store) (f : frame) (ais : List admininstr) (rt : resultt
       (s_typing_not_lf_br' s f C ais [] rt frame_ok instrs_ok2_empty_rt)
       (s_typing_not_lf_return s f C ais [] rt frame_ok instrs_ok2_empty_rt)
 
--- bundle21: the counterexample lemmas `vload_shape64_wf`, `vload_shape64_stuck`,
--- `vcvtop_trunc_sat_i16_wf_instr` and `vcvtop_trunc_sat_i16_stuck` (95c256c2c `type_progress.v:6103-6159`)
--- were deleted upstream in `6582b3a39`, and are deleted here too: spec commit `4cf9f29c5` makes both
+-- The counterexample lemmas `vload_shape64_wf`, `vload_shape64_stuck`,
+-- `vcvtop_trunc_sat_i16_wf_instr` and `vcvtop_trunc_sat_i16_stuck` (`type_progress.v:6103-6159` at
+-- revision `95c256c2c`) were deleted upstream in `6582b3a39`, and are not ported: spec commit
+-- `4cf9f29c5` makes both
 -- instructions invalid (`SHAPE` needs `M > 1`, `TRUNC_SAT` needs an `Inn` destination), so the two
 -- `*_wf*` statements are now false and the `vcvtop__Fnn_1_M_1_Jnn_2_M_2` constructor they name is gone.
 

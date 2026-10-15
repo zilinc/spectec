@@ -11,24 +11,24 @@ digest: `claude-logging/for-claude/digest_typing_lemmas_and_type_preservation_pu
 
 Scope: type preservation ONLY for `Step_pure` (WASM's deterministic,
 store-independent reduction rules — constant folding, control-flow
-bookkeeping, select/if/local.tee desugaring, ref.is_null). Excludes
-store-mutating instructions (→ `type_preservation.v`) and SIMD.
+bookkeeping, select/if/local.tee desugaring, ref.is_null, and the SIMD
+instructions). Excludes store-reading and store-mutating instructions
+(→ `type_preservation.v`).
 
-Status (bundle18, 2026-10-03): every lemma in this file is proved, including the SIMD
+Status: every lemma in this file is proved (no `sorry`), including the SIMD
 section and `t_pure_preservation` (which takes the reduct's well-formedness from the
 generated `Step_pure_is_wf`, as Rocq does). Upstream `type_preservation_pure.v` is fully
-`Qed` since `a8b585cdb`; the "two `Admitted` obligations" this header used to list described
-an older Rocq checkout.
-
-Phase 1 (this file, first pass): every signature stated, proofs `sorry`.
+`Qed` too. Line numbers refer to `spectec/test-rocq/theories` at upstream
+`rocq-backend-proof` `6582b3a39`.
 -/
 
 namespace TLC
 
-/-- Rocq `type_preservation_pure.v:41` `Step_pure__nop_preserves`. Rocq's proof is a
+/-- Rocq `type_preservation_pure.v:34` `Step_pure__nop_preserves`. Rocq's proof is a
     5-tactic-macro pipeline (`resolve_wfness`/`invert_ais_typing`/`resolve_all_pt`/
-    `resolve_subtyping`/`construct_ais_typing`, all pure Ltac automation from
-    `helper_tactics.v`, not ported per project convention); the underlying content is:
+    `resolve_subtyping`/`construct_ais_typing`, pure Ltac automation defined in
+    `typing_lemmas.v:2106-2382` and, for `resolve_wfness`, `type_preservation_pure.v:16`; not
+    ported per project convention); the underlying content is:
     `[NOP]`'s only principal type is `[]->[]` (`ai_principal_typing`'s `NOP` case), so the
     typing hypothesis reduces to `instrtype_sub([]->[])v_ft`, and `[]` types at any such
     `v_ft` via `ais_empty_typing` + `instrtype_sub_empty`. -/
@@ -49,7 +49,7 @@ theorem Step_pure__nop_preserves (v_S : store) (v_C : context) (v_ft : functype)
   obtain ⟨hwfC, hwfS, _⟩ := ainstrs_ok_context_store_wf v_S v_C [admininstr.NOP] (mkFunctype t1s t2s) h
   exact (ais_empty_typing v_S v_C t1s t2s).mpr ⟨hwfC, hwfS, hrsub⟩
 
-/-- Rocq `type_preservation_pure.v:55` `Step_pure__drop_preserves`. Rocq's `join_subtyping_eq`
+/-- Rocq `type_preservation_pure.v:48` `Step_pure__drop_preserves`. Rocq's `join_subtyping_eq`
     tactic step is `instrtype_sub_compose_eq` applied to the value's `[]->[t]` principal
     typing and `DROP`'s `[t']->[]` principal typing (both singleton lists, so the length
     hypothesis `[t].length=[t'].length` is `rfl`), collapsing the pipeline to `[]->[]`. -/
@@ -79,7 +79,7 @@ theorem Step_pure__drop_preserves (v_S : store) (v_C : context) (v_val : val) (v
   obtain ⟨hwfC, hwfS, _⟩ := ainstrs_ok_context_store_wf v_S v_C _ (mkFunctype t1s t2s) h
   exact (ais_empty_typing v_S v_C t1s t2s).mpr ⟨hwfC, hwfS, hrsub⟩
 
-/-- Rocq `type_preservation_pure.v:72` `Step_pure__select_preserves_helper`. -/
+/-- Rocq `type_preservation_pure.v:65` `Step_pure__select_preserves_helper`. -/
 theorem Step_pure__select_preserves_helper (v_S : store) (v_C : context)
     (v_val_1 v_val_2 : val) (v_c : num_) (v_t : Option (List valtype)) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr_val v_val_1, admininstr_val v_val_2,
@@ -169,7 +169,7 @@ theorem Step_pure__select_preserves_helper (v_S : store) (v_C : context)
       (construct_ais_typing_single v_S v_C (admininstr_val v_val_2) [] [tt]
         (construct_ai_val v_S v_C v_val_2 tt hvok2 hwfC hwfS)) hfinal⟩
 
-/-- Rocq `type_preservation_pure.v:130` `Step_pure__select_true_preserves`. -/
+/-- Rocq `type_preservation_pure.v:123` `Step_pure__select_true_preserves`. -/
 theorem Step_pure__select_true_preserves (v_S : store) (v_C : context)
     (v_val_1 v_val_2 : val) (v_c : num_) (v_t : Option (List valtype)) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr_val v_val_1, admininstr_val v_val_2,
@@ -179,7 +179,7 @@ theorem Step_pure__select_true_preserves (v_S : store) (v_C : context)
     Instrs_ok2 v_S v_C [admininstr_val v_val_1] v_ft := fun h _ =>
   (Step_pure__select_preserves_helper v_S v_C v_val_1 v_val_2 v_c v_t v_ft h).1
 
-/-- Rocq `type_preservation_pure.v:140` `Step_pure__select_false_preserves`. -/
+/-- Rocq `type_preservation_pure.v:133` `Step_pure__select_false_preserves`. -/
 theorem Step_pure__select_false_preserves (v_S : store) (v_C : context)
     (v_val_1 v_val_2 : val) (v_c : num_) (v_t : Option (List valtype)) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr_val v_val_1, admininstr_val v_val_2,
@@ -189,7 +189,7 @@ theorem Step_pure__select_false_preserves (v_S : store) (v_C : context)
     Instrs_ok2 v_S v_C [admininstr_val v_val_2] v_ft := fun h _ =>
   (Step_pure__select_preserves_helper v_S v_C v_val_1 v_val_2 v_c v_t v_ft h).2
 
-/-- Rocq `type_preservation_pure.v:150` `Step_pure__if_preserves_helper`. Rocq's
+/-- Rocq `type_preservation_pure.v:143` `Step_pure__if_preserves_helper`. Rocq's
     `join_subtyping_le Hsub0 Hsub` step is `instrtype_sub_compose_le` applied to `CONST`'s
     `[]->[I32]` principal typing and `IFELSE`'s `(ift1s++[I32])->ift2s` principal typing
     (length hyp `[I32].length=[I32].length` is `rfl`), collapsing to `ift1s->ift2s ≤
@@ -258,7 +258,7 @@ theorem Step_pure__if_preserves_helper (v_S : store) (v_C : context) (v_c : num_
       construct_ais_subtyping v_S v_C [admininstr.BLOCK v_bt v_instrs_2] ift1s ift2s t1s t2s
         (construct_ais_typing_single v_S v_C (admininstr.BLOCK v_bt v_instrs_2) ift1s ift2s hinstr2_2) hwidened'⟩
 
-/-- Rocq `type_preservation_pure.v:170` `Step_pure__if_true_preserves`. -/
+/-- Rocq `type_preservation_pure.v:161` `Step_pure__if_true_preserves`. -/
 theorem Step_pure__if_true_preserves (v_S : store) (v_C : context) (v_c : num_) (v_bt : blocktype)
     (v_instrs_1 v_instrs_2 : List instr) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST numtype.I32 v_c, admininstr.IFELSE v_bt v_instrs_1 v_instrs_2] v_ft →
@@ -267,7 +267,7 @@ theorem Step_pure__if_true_preserves (v_S : store) (v_C : context) (v_c : num_) 
     Instrs_ok2 v_S v_C [admininstr.BLOCK v_bt v_instrs_1] v_ft := fun h _ =>
   (Step_pure__if_preserves_helper v_S v_C v_c v_bt v_instrs_1 v_instrs_2 v_ft h).1
 
-/-- Rocq `type_preservation_pure.v:180` `Step_pure__if_false_preserves`. -/
+/-- Rocq `type_preservation_pure.v:171` `Step_pure__if_false_preserves`. -/
 theorem Step_pure__if_false_preserves (v_S : store) (v_C : context) (v_c : num_) (v_bt : blocktype)
     (v_instrs_1 v_instrs_2 : List instr) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST numtype.I32 v_c, admininstr.IFELSE v_bt v_instrs_1 v_instrs_2] v_ft →
@@ -276,7 +276,7 @@ theorem Step_pure__if_false_preserves (v_S : store) (v_C : context) (v_c : num_)
     Instrs_ok2 v_S v_C [admininstr.BLOCK v_bt v_instrs_2] v_ft := fun h _ =>
   (Step_pure__if_preserves_helper v_S v_C v_c v_bt v_instrs_1 v_instrs_2 v_ft h).2
 
-/-- Rocq `type_preservation_pure.v:190` `Step_pure__label_vals_preserves`. Diverges from
+/-- Rocq `type_preservation_pure.v:181` `Step_pure__label_vals_preserves`. Diverges from
     Rocq's `join_subtyping_trans` (a second `invert_ais_typing` decomposing the value-list
     body further): once `LABEL_`'s principal typing hands over
     `Instrs_ok2{...LABELS:=t's::v_C.LABELS}(v_val.map admininstr_val)([]->ts)`, this project's
@@ -308,7 +308,7 @@ theorem Step_pure__label_vals_preserves (v_S : store) (v_C : context) (v_n : n) 
       (mkFunctype [] ts) hbody hwfC
   exact construct_ais_subtyping v_S v_C (v_val.map admininstr_val) [] ts t1s t2s hbody' hsub
 
-/-- Lean-only helper (bundle18): type `BR l` at any `t1s -> t2s` subsuming a principal-type
+/-- Lean-only helper: type `BR l` at any `t1s -> t2s` subsuming a principal-type
     instance `(u1 ++ ts) -> u2`, given that label `l` exists with a type `r` that `ts`
     subtypes. Rocq inlines this as `eapply (plain _ _ (BR _)); eapply (br …)` plus one
     `instrtype_sub_trans` with the explicit witness `[], [], t ++ v_t, t'`; both `br_table`
@@ -335,7 +335,7 @@ theorem br_typing_from_label (v_S : store) (v_C : context) (l : labelidx) (r : r
       (Instr_ok2.plain v_S v_C (instr.BR l) _ _ hbr hS hC (wf_instr.instr_case_7 l hwfl)))
     (instrtype_sub_trans _ _ _ hw hsub)
 
-/-- Lean-only helper (bundle18): a stack-polymorphic principal type `(u1 ++ tl) -> u2` that
+/-- Lean-only helper: a stack-polymorphic principal type `(u1 ++ tl) -> u2` that
     sits under `x1 -> x2` can be re-targeted to *any* output `t`: some prefix `p` gives
     `(p ++ tl) -> t ≤ x1 -> t`. This is the `eexists [], [], (ts ++ ts11_sub), extr0`
     witness Rocq builds by hand in `br_succ`/`return_label`. -/
@@ -347,7 +347,7 @@ theorem instrtype_sub_retarget (u1 tl u2 x1 x2 t : List valtype) :
   rw [hx1, List.append_assoc]
   exact resulttype_sub_app ts_sub ts11_sub ts_sub (u1 ++ tl) (resulttype_sub_refl ts_sub) h2
 
-/-- Rocq `type_preservation_pure.v:210` `Step_pure__br_zero_preserves`. NOTE: Rocq's
+/-- Rocq `type_preservation_pure.v:201` `Step_pure__br_zero_preserves`. NOTE: Rocq's
     statement takes only the typing hypothesis + length side-condition, not an explicit
     `Step_pure` premise — the reduction fact itself isn't needed for the proof. -/
 theorem Step_pure__br_zero_preserves (v_S : store) (v_C : context) (v_n : n) (v_instr' : List instr)
@@ -395,8 +395,8 @@ theorem Step_pure__br_zero_preserves (v_S : store) (v_C : context) (v_n : n) (v_
   have hall := construct_ais_compose v_S v_C _ _ [] t's ts hvals hinstrs
   exact construct_ais_subtyping v_S v_C _ [] ts t1s t2s hall hsub
 
-/-- Rocq `type_preservation_pure.v:241` `Step_pure__br_succ_preserves`. Longest/most
-    involved lemma in the Rocq file (~80 lines). -/
+/-- Rocq `type_preservation_pure.v:232` `Step_pure__br_succ_preserves`. Among the
+    longest, most involved lemmas in the Rocq file (~65 lines). -/
 theorem Step_pure__br_succ_preserves (v_S : store) (v_C : context) (v_n : n) (v_instr' : List instr)
     (v_val : List val) (v_l : labelidx) (v_admininstr : List admininstr) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.LABEL_ v_n v_instr'
@@ -452,7 +452,7 @@ theorem Step_pure__br_succ_preserves (v_S : store) (v_C : context) (v_n : n) (v_
   exact construct_ais_subtyping v_S v_C _ [] ts t1s t2s
     (construct_ais_compose v_S v_C _ _ [] x1 ts hvals hbr) hsub
 
-/-- Rocq `type_preservation_pure.v:322` `Step_pure__br_if_true_preserves`. -/
+/-- Rocq `type_preservation_pure.v:297` `Step_pure__br_if_true_preserves`. -/
 theorem Step_pure__br_if_true_preserves (v_S : store) (v_C : context) (v_c : num_) (v_l : labelidx) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST numtype.I32 v_c, admininstr.BR_IF v_l] v_ft →
     Step_pure [admininstr.CONST numtype.I32 v_c, admininstr.BR_IF v_l] [admininstr.BR v_l] →
@@ -502,7 +502,7 @@ theorem Step_pure__br_if_true_preserves (v_S : store) (v_C : context) (v_c : num
     exact construct_ais_subtyping v_S v_C [admininstr.BR v_l] ts ts t1s t2s
       (construct_ais_typing_single v_S v_C (admininstr.BR v_l) ts ts hbr2) hwidened
 
-/-- Rocq `type_preservation_pure.v:355` `Step_pure__br_if_false_preserves`. -/
+/-- Rocq `type_preservation_pure.v:330` `Step_pure__br_if_false_preserves`. -/
 theorem Step_pure__br_if_false_preserves (v_S : store) (v_C : context) (v_c : num_) (v_l : labelidx) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST numtype.I32 v_c, admininstr.BR_IF v_l] v_ft →
     Step_pure [admininstr.CONST numtype.I32 v_c, admininstr.BR_IF v_l] [] →
@@ -543,13 +543,14 @@ theorem Step_pure__br_if_false_preserves (v_S : store) (v_C : context) (v_c : nu
       (mkFunctype t1s t2s) h
   exact (ais_empty_typing v_S v_C t1s t2s).mpr ⟨hwfC, hwfS, hrsub⟩
 
-/-- Rocq `type_preservation_pure.v:383` `proj_identity`. Small helper (round-trip through
+/-- Rocq `type_preservation_pure.v:358` `proj_identity`. Small helper (round-trip through
     the `list` wrapper constructor). -/
 theorem proj_identity (a : resulttype) : list.mk_list (proj_list_0 valtype a) = a := by
   cases a; rfl
 
-/-- Rocq `type_preservation_pure.v:389` `Step_pure__br_table_lt_preserves`. One of the
-    longest lemmas (~70 lines): `Forall_nth`, manual `instrtype_sub_trans` chaining. -/
+/-- Rocq `type_preservation_pure.v:364` `Step_pure__br_table_lt_preserves`. One of the
+    longest Rocq lemmas (~70 lines: `Forall_nth`, manual `instrtype_sub_trans` chaining); here
+    both `br_table` cases go through `br_typing_from_label`. -/
 theorem Step_pure__br_table_lt_preserves (v_S : store) (v_C : context) (v_i : num_)
     (v_l : List labelidx) (v_l' : labelidx) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST numtype.I32 v_i, admininstr.BR_TABLE v_l v_l'] v_ft →
@@ -594,7 +595,7 @@ theorem Step_pure__br_table_lt_preserves (v_S : store) (v_C : context) (v_i : nu
   | admininstr_case_9 _ _ hwfls _ =>
     exact br_typing_from_label v_S v_C _ r ts u1 u2 t1s t2s hwfS hwfC (hwfls _ hmem) hr hsubr hw
 
-/-- Rocq `type_preservation_pure.v:458` `Step_pure__br_table_ge_preserves`. Dual/default-
+/-- Rocq `type_preservation_pure.v:432` `Step_pure__br_table_ge_preserves`. Dual/default-
     target case. -/
 theorem Step_pure__br_table_ge_preserves (v_S : store) (v_C : context) (v_i : num_)
     (v_l : List labelidx) (v_l' : labelidx) (v_ft : functype) :
@@ -635,7 +636,7 @@ theorem Step_pure__br_table_ge_preserves (v_S : store) (v_C : context) (v_i : nu
   | admininstr_case_9 _ _ _ hwfl' =>
     exact br_typing_from_label v_S v_C v_l' r' ts u1 u2 t1s t2s hwfS hwfC hwfl' hr' hsubr' hw
 
-/-- Rocq `type_preservation_pure.v:501` `Step_pure__frame_vals_preserves`. Uses
+/-- Rocq `type_preservation_pure.v:474` `Step_pure__frame_vals_preserves`. Uses
     `construct_ais_vals'` (context-irrelevance) to cross the frame boundary — same shape as
     `Step_pure__label_vals_preserves` above, except `FRAME_`'s principal typing wraps its
     body in `Expr_ok2` (one extra inversion step to reach the underlying `Instrs_ok2`) and
@@ -669,9 +670,7 @@ theorem Step_pure__frame_vals_preserves (v_S : store) (v_C : context) (v_n : n) 
         (mkFunctype [] ts) hinstrs hwfC
     exact construct_ais_subtyping v_S v_C (v_val.map admininstr_val) [] ts t1s t2s hbody' hsub
 
-/-- Rocq `type_preservation_pure.v` `Step_pure__return_frame_preserves`. `Qed` upstream
-    (the "commented-out, `Admitted`" note this comment used to carry described an older
-    checkout); proved here (bundle18). -/
+/-- Rocq `type_preservation_pure.v:490` `Step_pure__return_frame_preserves`. -/
 theorem Step_pure__return_frame_preserves (v_S : store) (v_C : context) (v_n : n) (v_f : frame)
     (v_val' v_val : List val) (v_admininstr : List admininstr) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.FRAME_ v_n v_f
@@ -720,9 +719,8 @@ theorem Step_pure__return_frame_preserves (v_S : store) (v_C : context) (v_n : n
         ((instrtype_sub_iff_resulttype_sub vts ts []).mp hrs) hvok
     exact construct_ais_subtyping v_S v_C _ [] ts t1s t2s hvals hsub
 
-/-- Rocq `type_preservation_pure.v:577` `Step_pure__return_label_preserves`. Fully proved
-    in Rocq (unlike the `_frame_` sibling above). RETURN propagates outward through an
-    enclosing label unchanged. -/
+/-- Rocq `type_preservation_pure.v:549` `Step_pure__return_label_preserves`. RETURN
+    propagates outward through an enclosing label unchanged. -/
 theorem Step_pure__return_label_preserves (v_S : store) (v_C : context) (v_n : n) (v_instr' : List instr)
     (v_val : List val) (v_admininstr : List admininstr) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.LABEL_ v_n v_instr'
@@ -765,9 +763,9 @@ theorem Step_pure__return_label_preserves (v_S : store) (v_C : context) (v_n : n
   exact construct_ais_subtyping v_S v_C _ [] ts t1s t2s
     (construct_ais_compose v_S v_C _ _ [] x1 ts hvals hreturn) hsub
 
-/-- Rocq `type_preservation_pure.v:619` `Step_pure__unop_val_preserves`. NOTE: takes
-    `wf_admininstr` of the *result* constant as an extra hypothesis (not derived —
-    presumably from a `Step_pure_is_wf`-style companion fact). -/
+/-- Rocq `type_preservation_pure.v:591` `Step_pure__unop_val_preserves`. NOTE: takes
+    `wf_admininstr` of the *result* constant as an extra hypothesis, as Rocq does
+    (`t_pure_preservation` supplies it from the generated `Step_pure_is_wf`). -/
 theorem Step_pure__unop_val_preserves (v_S : store) (v_C : context) (v_t : numtype) (v_c_1 : num_)
     (v_unop : unop_) (v_c : num_) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST v_t v_c_1, admininstr.UNOP v_t v_unop] v_ft →
@@ -813,7 +811,7 @@ theorem Step_pure__unop_val_preserves (v_S : store) (v_C : context) (v_t : numty
     exact construct_ais_subtyping v_S v_C [admininstr.CONST v_t v_c] [] [valtype_numtype v_t] t1s t2s
       (construct_ais_typing_single v_S v_C (admininstr.CONST v_t v_c) [] [valtype_numtype v_t] hcinstr2) hwidened
 
-/-- Rocq `type_preservation_pure.v:646` `Step_pure__binop_val_preserves`. -/
+/-- Rocq `type_preservation_pure.v:618` `Step_pure__binop_val_preserves`. -/
 theorem Step_pure__binop_val_preserves (v_S : store) (v_C : context) (v_t : numtype)
     (v_c_1 v_c_2 : num_) (v_binop : binop_) (v_c : num_) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST v_t v_c_1, admininstr.CONST v_t v_c_2, admininstr.BINOP v_t v_binop] v_ft →
@@ -877,7 +875,7 @@ theorem Step_pure__binop_val_preserves (v_S : store) (v_C : context) (v_t : numt
     exact construct_ais_subtyping v_S v_C [admininstr.CONST v_t v_c] [] [valtype_numtype v_t] t1s t2s
       (construct_ais_typing_single v_S v_C (admininstr.CONST v_t v_c) [] [valtype_numtype v_t] hcinstr2) hwidened
 
-/-- Rocq `type_preservation_pure.v:680` `Step_pure__testop_preserves`. -/
+/-- Rocq `type_preservation_pure.v:652` `Step_pure__testop_preserves`. -/
 theorem Step_pure__testop_preserves (v_S : store) (v_C : context) (v_t : numtype) (v_c_1 : num_)
     (v_testop : testop_) (v_c : num_) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST v_t v_c_1, admininstr.TESTOP v_t v_testop] v_ft →
@@ -923,7 +921,7 @@ theorem Step_pure__testop_preserves (v_S : store) (v_C : context) (v_t : numtype
     exact construct_ais_subtyping v_S v_C [admininstr.CONST numtype.I32 v_c] [] [valtype.I32] t1s t2s
       (construct_ais_typing_single v_S v_C (admininstr.CONST numtype.I32 v_c) [] [valtype.I32] hcinstr2) hwidened
 
-/-- Rocq `type_preservation_pure.v:708` `Step_pure__relop_preserves`. -/
+/-- Rocq `type_preservation_pure.v:680` `Step_pure__relop_preserves`. -/
 theorem Step_pure__relop_preserves (v_S : store) (v_C : context) (v_t : numtype) (v_c_1 v_c_2 : num_)
     (v_relop : relop_) (v_c : num_) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST v_t v_c_1, admininstr.CONST v_t v_c_2, admininstr.RELOP v_t v_relop] v_ft →
@@ -987,7 +985,7 @@ theorem Step_pure__relop_preserves (v_S : store) (v_C : context) (v_t : numtype)
     exact construct_ais_subtyping v_S v_C [admininstr.CONST numtype.I32 v_c] [] [valtype.I32] t1s t2s
       (construct_ais_typing_single v_S v_C (admininstr.CONST numtype.I32 v_c) [] [valtype.I32] hcinstr2) hwidened
 
-/-- Rocq `type_preservation_pure.v:742` `Step_pure__cvtop_val_preserves`. -/
+/-- Rocq `type_preservation_pure.v:714` `Step_pure__cvtop_val_preserves`. -/
 theorem Step_pure__cvtop_val_preserves (v_S : store) (v_C : context) (v_t_1 v_t_2 : numtype) (v_c_1 : num_)
     (v_cvtop : cvtop__) (v_c : num_) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr.CONST v_t_1 v_c_1, admininstr.CVTOP v_t_2 v_t_1 v_cvtop] v_ft →
@@ -1033,7 +1031,7 @@ theorem Step_pure__cvtop_val_preserves (v_S : store) (v_C : context) (v_t_1 v_t_
     exact construct_ais_subtyping v_S v_C [admininstr.CONST v_t_2 v_c] [] [valtype_numtype v_t_2] t1s t2s
       (construct_ais_typing_single v_S v_C (admininstr.CONST v_t_2 v_c) [] [valtype_numtype v_t_2] hcinstr2) hwidened
 
-/-- Rocq `type_preservation_pure.v:770` `Step_pure__local_tee_preserves`. Diverges from
+/-- Rocq `type_preservation_pure.v:742` `Step_pure__local_tee_preserves`. Diverges from
     Rocq's `Val_ok_non_bot`/`valtype_sub_non_bot` pinning: rather than proving the two
     values' type is *exactly* the local's declared type `t`, this port just widens the
     value's own principal type `[]->[ta]` directly to `[]->[t]` using the `ResulttypeSub
@@ -1102,7 +1100,7 @@ theorem Step_pure__local_tee_preserves (v_S : store) (v_C : context) (v_val : va
     exact construct_ais_subtyping v_S v_C
       [admininstr_val v_val, admininstr_val v_val, admininstr.LOCAL_SET v_x] [] [t] t1s t2s hcombined hfinal
 
-/-- Rocq `type_preservation_pure.v:816` `Step_pure__ref_is_null_helper`. Generic over the
+/-- Rocq `type_preservation_pure.v:788` `Step_pure__ref_is_null_helper`. Generic over the
     Boolean result (works for either 0 or 1). -/
 theorem Step_pure__ref_is_null_helper (v_S : store) (v_C : context) (v_rt : reftype) (v_ft : functype) (v_n : Nat) :
     Instrs_ok2 v_S v_C [admininstr_instr (instr.REF_NULL v_rt), admininstr.REF_IS_NULL] v_ft →
@@ -1158,7 +1156,7 @@ theorem Step_pure__ref_is_null_helper (v_S : store) (v_C : context) (v_rt : reft
     (construct_ais_typing_single v_S v_C (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n)))
       [] [valtype.I32] hcinstr2) hfinal
 
-/-- Rocq `type_preservation_pure.v:848` `Step_pure__ref_is_null_true_preserves`.
+/-- Rocq `type_preservation_pure.v:820` `Step_pure__ref_is_null_true_preserves`.
     Specializes the helper above with `v_n := 1`. -/
 theorem Step_pure__ref_is_null_true_preserves (v_S : store) (v_C : context) (v_rt : reftype) (v_ft : functype) :
     Instrs_ok2 v_S v_C [admininstr_instr (instr.REF_NULL v_rt), admininstr.REF_IS_NULL] v_ft →
@@ -1193,7 +1191,7 @@ theorem ref_is_null_zero_construct {v_ais : List admininstr} (v_S : store) (v_C 
     (construct_ais_typing_single v_S v_C (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN 0)))
       [] [valtype.I32] hcinstr2) hfinal
 
-/-- Rocq `type_preservation_pure.v:857` `Step_pure__ref_is_null_false_preserves`.
+/-- Rocq `type_preservation_pure.v:829` `Step_pure__ref_is_null_false_preserves`.
     Case-splits on the 3 `ref` constructors (REF_NULL delegates to the helper above;
     REF_FUNC_ADDR/REF_HOST_ADDR each get their own hand proof in Rocq). -/
 theorem Step_pure__ref_is_null_false_preserves (v_S : store) (v_C : context) (v_ref : ref) (v_ft : functype) :
@@ -1262,7 +1260,7 @@ theorem Step_pure__ref_is_null_false_preserves (v_S : store) (v_C : context) (v_
         hsub_ref hsub_isnull rfl
     exact ref_is_null_zero_construct v_S v_C t1s t2s hfinal h
 
-/-! ## SIMD / vector instructions (`type_preservation_pure.v:883-1524`, added bundle18)
+/-! ## SIMD / vector instructions (`type_preservation_pure.v:883-1522`)
 
     `ai_principal_typing` has no case for the vector instructions (they fall into its
     `_ => True`, in Rocq as here), so Rocq goes through `Instr_ok` directly via
@@ -1851,8 +1849,8 @@ theorem Step_pure__vextract_lane_pack_preserves (v_S : store) (v_C : context) (v
     (ais_vextract_lane_typing_inversion v_S v_C (shape.X (lanetype_packtype _) (dim.mk_dim v_N)) (some v_sx) i)
     (const_result_typing v_S v_C numtype.I32 v_c_2 hwfS hwfC hwfc)
 
-/-- Rocq `type_preservation_pure.v` `t_pure_preservation` — the master theorem for this
-    file. `Qed` upstream, SIMD cases included; proved here (bundle18) by dispatching every
+/-- Rocq `type_preservation_pure.v:1526` `t_pure_preservation` — the master theorem for this
+    file, SIMD cases included. Proved by dispatching every
     `Step_pure` case to the per-rule lemmas above, with the reduct's well-formedness from the
     generated `Step_pure_is_wf` (as in Rocq). -/
 theorem t_pure_preservation (v_s : store) (v_ais v_ais' : List admininstr) (v_C : context) (tf : functype) :

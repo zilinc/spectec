@@ -1,10 +1,22 @@
 # Progress summary (human-readable)
 
-**Last updated:** 2026-10-15 (bundle21). The sections below the first one are the
+**Last updated:** 2026-10-15 (bundle22). The sections below the first one are the
 original session-1 summary, kept for history; for the step-by-step record see each
 `verbatim_dialogue_log/bundleN/response_N.md`.
 
-## Latest (2026-10-15, bundle21)
+## Latest (2026-10-15, bundle22)
+
+- **Comments updated; no code changed.** About half of the 1,211 comments in the seven
+  hand-written proof files were out of date. They now cite the current Rocq source, describe the
+  current state (everything proved), and no longer carry session-history notes.
+- A few comments were simply wrong and are fixed, e.g. one claimed a proof followed Rocq's
+  strategy when it doesn't, and one header said SIMD was excluded when it isn't.
+- The leftover `Val_ok_store` doc comment from the user's deletion was a Lean syntax error; it is
+  now a plain comment.
+- A full rebuild was not run (not enough free memory at the time); the checks run show only
+  comments changed.
+
+## Previous (2026-10-15, bundle21)
 
 - **Upstream fixed the blocking issues.** Upstream (`rocq-backend-proof` `6582b3a39` with spec
   commit `4cf9f29c5`) made the two "stuck" vector instructions invalid and removed the 2^32 corner

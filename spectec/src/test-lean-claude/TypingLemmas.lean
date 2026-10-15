@@ -18,80 +18,76 @@ per-instruction facts go through `ai_principal_typing`, not separate named
 lemmas per instruction (unlike `type_preservation_pure.v`, which IS one
 lemma per reduction rule).
 
-Rocq's Ltac automation layer (`typing_lemmas.v:1220-2222`: `construct_ais_typing`,
-`invert_ais_typing`, `join_subtyping_*`, `resolve_subtyping`, etc.) is
+Rocq's Ltac automation layer (chiefly `typing_lemmas.v:2106-2382`: `construct_ais_typing`,
+`invert_ais_typing`, `join_subtyping_*`, `resolve_subtyping`, etc., plus a few tactics
+interleaved earlier, e.g. `typing_inversion` at `typing_lemmas.v:1279`) is
 NOT ported 1:1 — Lean's `simp`/tactics cover the same dispatch differently;
 only the *lemma* declarations that layer sits on top of are ported.
 
-**MAJOR TODO (flagged, not resolved in this pass)**: `instr_of` and
-`ai_principal_typing` are two large per-constructor case definitions
-(~50 and ~57 cases respectively in Rocq). Their *signatures* are stated
-correctly below but their *bodies* are `sorry` stubs for this first pass
-— filling them in requires transcribing the full case list, which is
-substantial mechanical work deferred to a later pass. See the digest file
-above (section "`ai_principal_typing`") for the complete per-constructor
-Rocq content to transcribe.
+The two large per-constructor case definitions, `instr_of` and `ai_principal_typing`,
+are transcribed in full; see their doc comments for where they come from and how they were
+checked against Rocq.
 
-Phase 1 (this file, first pass): every signature stated, proofs/bodies
-`sorry`.
+Line numbers refer to `spectec/test-rocq/theories` at upstream `rocq-backend-proof`
+`6582b3a39`.
 -/
 
 namespace TLC
 
-/-! ## Context update helpers (typing_lemmas.v:76-172) -/
+/-! ## Context update helpers (typing_lemmas.v:26-123) -/
 
 /-
 TODO FROM USER: Probably don't need many of these; the built-in syntax should do fine, tidy later
 -/
 
-/-- Rocq `typing_lemmas.v:76` `upd_label`. -/
+/-- Rocq `typing_lemmas.v:26` `upd_label`. -/
 def upd_label (C : context) (labs : List resulttype) : context := { C with LABELS := labs }
 
-/-- Rocq `typing_lemmas.v:79` `upd_local`. -/
+/-- Rocq `typing_lemmas.v:29` `upd_local`. -/
 def upd_local (C : context) (locs : List valtype) : context := { C with LOCALS := locs }
 
-/-- Rocq `typing_lemmas.v:82` `upd_return`. -/
+/-- Rocq `typing_lemmas.v:32` `upd_return`. -/
 def upd_return (C : context) (ret : Option resulttype) : context := { C with RETURN := ret }
 
-/-- Rocq `typing_lemmas.v:85` `upd_local_return`. -/
+/-- Rocq `typing_lemmas.v:35` `upd_local_return`. -/
 def upd_local_return (C : context) (loc : List valtype) (ret : Option resulttype) : context :=
   upd_return (upd_local C loc) ret
 
-/-- Rocq `typing_lemmas.v:88` `upd_local_label_return`. -/
+/-- Rocq `typing_lemmas.v:38` `upd_local_label_return`. -/
 def upd_local_label_return (C : context) (loc : List valtype) (lab : List resulttype) (ret : Option resulttype) : context :=
   upd_return (upd_label (upd_local C loc) lab) ret
 
-/-- Rocq `typing_lemmas.v:105` `upd_label_overwrite`. `upd_label` is a plain record update on
+/-- Rocq `typing_lemmas.v:55` `upd_label_overwrite`. `upd_label` is a plain record update on
     `LABELS`, so overwriting it twice collapses definitionally. -/
 theorem upd_label_overwrite (C : context) (l1 l2 : List resulttype) :
     upd_label (upd_label C l1) l2 = upd_label C l2 := rfl
 
-/-- Rocq `typing_lemmas.v:111` `upd_label_is_same_as_append`. Rocq builds a near-empty
+/-- Rocq `typing_lemmas.v:61` `upd_label_is_same_as_append`. Rocq builds a near-empty
     context with `LABELS := lab ++ LABELS C` and generic-appends onto `v_C`; since Lean's
     `context.LABELS` is a plain list field, `upd_label` already IS that append directly, so
     this collapses to `rfl` and is stated only for provenance. -/
 theorem upd_label_is_same_as_append (C : context) (lab : List resulttype) :
     upd_label C (lab ++ C.LABELS) = { C with LABELS := lab ++ C.LABELS } := rfl
 
-/-- Rocq `typing_lemmas.v:118` `upd_local_is_same_as_append`. -/
+/-- Rocq `typing_lemmas.v:68` `upd_local_is_same_as_append`. -/
 theorem upd_local_is_same_as_append (C : context) (loc : List valtype) :
     upd_local C (loc ++ C.LOCALS) = { C with LOCALS := loc ++ C.LOCALS } := rfl
 
-/-- Rocq `typing_lemmas.v:125` `upd_local_return_is_same_as_append`. -/
+/-- Rocq `typing_lemmas.v:75` `upd_local_return_is_same_as_append`. -/
 theorem upd_local_return_is_same_as_append (C : context) (loc : List valtype) (ret : Option resulttype) :
     upd_local_return C (loc ++ C.LOCALS) (ret.orElse (fun _ => C.RETURN)) =
       { C with LOCALS := loc ++ C.LOCALS, RETURN := ret.orElse (fun _ => C.RETURN) } := rfl
 
-/-- Rocq `typing_lemmas.v:142` `upd_return_is_same_as_append`. -/
+/-- Rocq `typing_lemmas.v:92` `upd_return_is_same_as_append`. -/
 theorem upd_return_is_same_as_append (C : context) (ret : Option resulttype) :
     upd_return C (ret.orElse (fun _ => C.RETURN)) = { C with RETURN := ret.orElse (fun _ => C.RETURN) } := rfl
 
-/-- Rocq `typing_lemmas.v:150` `upd_label_unchanged`. -/
+/-- Rocq `typing_lemmas.v:100` `upd_label_unchanged`. -/
 theorem upd_label_unchanged (C : context) (lab : List resulttype) :
     C.LABELS = lab → upd_label C lab = C := by
   intro h; subst h; rfl
 
-/-- Rocq `typing_lemmas.v:158` `upd_label_unchanged_typing`. See also
+/-- Rocq `typing_lemmas.v:108` `upd_label_unchanged_typing`. See also
     `spectec/test-rocq/upd_label_unchanged_typing_verified_walkthrough.md` for a detailed
     Rocq-side walkthrough of this specific lemma. Direct corollary of `upd_label_unchanged`
     (`upd_label v_C v_C.LABELS = v_C` trivially, so both sides of the `↔` are the same
@@ -100,7 +96,7 @@ theorem upd_label_unchanged_typing (v_S : store) (v_C : context) (v_admininstrs 
     Instrs_ok2 v_S v_C v_admininstrs v_ft ↔ Instrs_ok2 v_S (upd_label v_C v_C.LABELS) v_admininstrs v_ft := by
   rw [upd_label_unchanged v_C v_C.LABELS rfl]
 
-/-! ## `instr_of : admininstr → Option instr` (typing_lemmas.v:174-245) -/
+/-! ## `instr_of : admininstr → Option instr` (typing_lemmas.v:124-196) -/
 
 /-- Rocq `typing_lemmas.v:124` `instr_of`. Every "plain" `admininstr` constructor ↦
     `some` of the corresponding `instr` constructor; the 6 purely-administrative forms
@@ -189,16 +185,16 @@ def instr_of (ai : admininstr) : Option instr :=
   | admininstr.TRAP => none
 
 /-- Round-trip fact, not in Rocq: `instr_of` really is `admininstr_instr`'s left inverse.
-    Not needed by anything downstream yet, but a cheap correctness check on the 68-case
+    Used by `ai_typing_inversion'`, and a cheap correctness check on the 68-case
     transcription above (`decide`/`rfl`-style case bash would time out at this size, so
     proved by structural case split instead). -/
 theorem instr_of_admininstr_instr (i : instr) : instr_of (admininstr_instr i) = some i := by
   cases i <;> rfl
 
-/-! ## Context/store well-formedness projections (typing_lemmas.v:247-278) -/
+/-! ## Context/store well-formedness projections (typing_lemmas.v:197-229) -/
 
-/-- Rocq `typing_lemmas.v:247` `instr_ok_context_wf`. Every `Instr_ok` constructor bakes in
-    `wf_context`/`wf_instr` directly (confirmed by reading all 72 cases in `wasm2.0.lean`), so
+/-- Rocq `typing_lemmas.v:197` `instr_ok_context_wf`. Every `Instr_ok` constructor bakes in
+    `wf_context`/`wf_instr` directly (confirmed by reading all 73 cases in `wasm2.0.lean`), so
     this is a case split closed uniformly by `assumption` (which searches by type, not name,
     so it's robust to not knowing every constructor's exact argument list). -/
 theorem instr_ok_context_wf (v_C : context) (v_instr : instr) (v_ft : functype) :
@@ -225,7 +221,7 @@ theorem wf_instr_admininstr (v_instr : instr) (h : wf_instr v_instr) :
     wf_admininstr (admininstr_instr v_instr) := by
   cases v_instr <;> cases h <;> constructor <;> assumption
 
-/-- Rocq `typing_lemmas.v:255` `ainstr_ok_context_store_wf`. 4 of `Instr_ok2`'s 6
+/-- Rocq `typing_lemmas.v:205` `ainstr_ok_context_store_wf`. 4 of `Instr_ok2`'s 6
     constructors bake in `wf_admininstr` directly (closed by `assumption`); `plain` needs
     `wf_instr_admininstr` and `ref` needs `wf_admininstr_ref` instead (see their doc
     comments). -/
@@ -235,7 +231,7 @@ theorem ainstr_ok_context_store_wf (v_S : store) (v_C : context) (v_ainstr : adm
   cases h <;> exact ⟨by assumption, by assumption,
     by first | assumption | exact wf_admininstr_ref _ | exact wf_instr_admininstr _ (by assumption)⟩
 
-/-- Rocq `typing_lemmas.v:263` `instrs_ok_context_wf`. Unlike `instr_ok_context_wf`, the
+/-- Rocq `typing_lemmas.v:213` `instrs_ok_context_wf`. Unlike `instr_ok_context_wf`, the
     `Forall wf_instr v_instrs` component isn't a single hypothesis in every `Instrs_ok`
     constructor: `empty` needs it derived (vacuously, for `[]`), `instr` needs it derived from
     a singular `wf_instr` fact, and `seq` needs two `Forall`s combined across `++`. `sub`/
@@ -258,7 +254,7 @@ theorem instrs_ok_context_wf (v_C : context) (v_instrs : List instr) (v_ft : fun
   | sub C instr_lst t'_1_lst t'_2_lst t_1_lst t_2_lst h1 hs1 hs2 hwf hf => exact hf
   | frame C instr_lst t_lst t_1_lst t_2_lst h1 hwf hf => exact hf
 
-/-- Rocq `typing_lemmas.v:271` `ainstrs_ok_context_store_wf`. `Instrs_ok2` mirrors `Instrs_ok`
+/-- Rocq `typing_lemmas.v:221` `ainstrs_ok_context_store_wf`. `Instrs_ok2` mirrors `Instrs_ok`
     field-for-field (with `Instr_ok2`/`wf_admininstr`/`wf_store` in place of `Instr_ok`/
     `wf_instr`); same proof shape as `instrs_ok_context_wf`, with the last constructor named
     `Instrs_ok2_frame` rather than `frame`. -/
@@ -278,18 +274,21 @@ theorem ainstrs_ok_context_store_wf (v_S : store) (v_C : context) (v_ainstrs : L
   | sub C admininstr_lst t'_1_lst t'_2_lst t_1_lst t_2_lst h1 hs1 hs2 hs hwf hf => exact hf
   | Instrs_ok2_frame C admininstr_lst t_lst t_1_lst t_2_lst h1 hs hwf hf => exact hf
 
-/-! ## Composition/empty-typing lemmas (typing_lemmas.v:280-424) -/
+/-! ## Composition/empty-typing lemmas, `ai_principal_typing` (typing_lemmas.v:269-628) -/
 
--- `instrs_empty_typing`/`ais_empty_typing` (Rocq `typing_lemmas.v:349`/`333`) are stated and
+-- `instrs_empty_typing`/`ais_empty_typing` (Rocq `typing_lemmas.v:299`/`333`) are stated and
 -- proved further below, right after `ais_ok_widen_out`, since their proofs need
 -- `instrs_ok_nil_sub`/`instrs_ok_widen_in`/`ais_ok_nil_sub`/`ais_ok_widen_in` (part of the
 -- seq-typing-inversion scaffolding), which are declared later in this file.
 
-/-- Rocq `typing_lemmas.v:427` (originally `typing_lemmas.v:377` in an older layout)
-    `ai_principal_typing` — **THE central definition of the file**. Ported from a prior Lean
-    session's own hand-written `spectec/test-lean/typing_lemmas.lean` (built against the
-    *identical*, byte-for-byte `wasm2.0.lean` this project uses — confirmed via `diff` before
-    porting), per the user's explicit go-ahead to reuse it after checking correctness.
+/-- Rocq `typing_lemmas.v:377` `ai_principal_typing` — **THE central definition of the
+    file**. Ported from the user's own hand-written `spectec/test-lean/typing_lemmas.lean`
+    (built against the `wasm2.0.lean` of that time, byte-for-byte identical to this
+    project's then — confirmed via `diff` before porting), per the user's explicit go-ahead to
+    reuse it after checking correctness. Later corrections against Rocq: a `REF_HOST_ADDR`
+    case (it had fallen through to the `| _ => True` catch-all), `GLOBAL_SET` pinned to a
+    mutable global, the `Instr_ok … RETURN …` conjunct of `RETURN`, and the
+    `ts.length = v_n` conjunct of `FRAME_`.
 
     **One real bug found and fixed while checking**: the source file's `BR_TABLE` case wrote
     `∀ l ∈ ls, ∃ r, ... ∧ ... ∧ ∃ r', ...` with no parens around the `∀`'s body, so Lean's
@@ -301,17 +300,13 @@ theorem ainstrs_ok_context_store_wf (v_S : store) (v_C : context) (v_ainstrs : L
     on `l'` as five independent top-level conjuncts, confirming the default-label conditions
     must NOT be gated by `ls`. Fixed here by parenthesizing the `∀` explicitly.
 
-    **One area kept as a faithful-but-not-bit-exact port, flagged rather than silently
-    trusted**: the `LOAD`/`STORE` packed-access cases here existentially quantify over an
-    `Inn` (`I32`/`I64`) restricted numtype (`nt = numtype_Inn inntype`), which is vacuously
-    unsatisfiable for `F32`/`F64` — semantically equivalent to the live Rocq version's
-    explicit `admininstr_LOAD F32/F64 (Some _) _ => False` cases for `LOAD`. Rocq's current
-    `STORE`-packed case, however, no longer excludes `F32`/`F64` at all (its exclusion arms
-    are commented out in the live source), which does NOT match this ported case's implicit
-    exclusion — a live upstream-vs-port discrepancy, not a porting mistake made here. Left
-    as-is (matching the more conservative/older reading) since resolving it requires a
-    judgment call about which Rocq revision is authoritative; revisit if any downstream
-    `STORE`-with-packing proof needs the relaxed (Rocq-current) reading instead. -/
+    **One deliberate difference from Rocq**: the `LOAD`/`STORE` packed-access cases here
+    require an `Inn` (`I32`/`I64`) numtype (`nt = numtype_Inn inntype`), so they are
+    unsatisfiable for `F32`/`F64` — for `LOAD` this is equivalent to Rocq's explicit
+    `admininstr_LOAD F32/F64 (Some _) _ => False` cases. Rocq's `STORE`-packed case does not
+    exclude `F32`/`F64` (its exclusion arms are commented out, `typing_lemmas.v:562-563`), which
+    is laxer than its own `Instr_ok` rule `store_pack` (`Inn`-only). The Lean version agrees with
+    `Instr_ok`, and no proof needs the laxer reading. -/
 def ai_principal_typing (v_S : store) (v_C : context) (v_ai : admininstr) (v_ft : functype) : Prop :=
   match v_ai with
   | admininstr.NOP => v_ft = mkFunctype [] []
@@ -459,15 +454,15 @@ def ai_principal_typing (v_S : store) (v_C : context) (v_ai : admininstr) (v_ft 
   | admininstr.EXTEND _ _ => False
   | _ => True
 
-/-- Rocq `typing_lemmas.v:676` `instr_principal_typing`. Store is irrelevant for the
+/-- Rocq `typing_lemmas.v:626` `instr_principal_typing`. Store is irrelevant for the
     surface (non-administrative) judgment; Rocq plugs in `default_val : store`, matching
     Lean's `default : store` (both types already `deriving Inhabited`). -/
 def instr_principal_typing (v_C : context) (v_instr : instr) (v_ft : functype) : Prop :=
   ai_principal_typing default v_C (admininstr_instr v_instr) v_ft
 
-/-! ## Master inversion theorems (typing_lemmas.v:679-850) -/
+/-! ## Master inversion theorems (typing_lemmas.v:629-810) -/
 
-/-- Rocq `typing_lemmas.v:679` `instr_typing_inversion`. -/
+/-- Rocq `typing_lemmas.v:629` `instr_typing_inversion`. -/
 theorem instr_typing_inversion (v_C : context) (v_instr : instr) (t1s t2s : List valtype) :
     Instr_ok v_C v_instr (mkFunctype t1s t2s) → instr_principal_typing v_C v_instr (mkFunctype t1s t2s) := by
   intro h
@@ -671,8 +666,9 @@ theorem instr_typing_inversion (v_C : context) (v_instr : instr) (t1s t2s : List
       )
       exact applied_bridge
 
-/-- Rocq `typing_lemmas.v:676` (in-between helper, not independently named in the Rocq
-    source but needed by `ai_typing_inversion`'s `plain` case below): bridges
+/-- Lean-only helper (not independently named in the Rocq source, near
+    `instr_principal_typing`, `typing_lemmas.v:626`; needed by `ai_typing_inversion`'s `plain`
+    case below): bridges
     `instr_principal_typing` (surface, `Instr_ok`-facing) and `ai_principal_typing`
     (administrative, `Instr_ok2`-facing) for the "plain" (non-purely-administrative)
     instructions, since `Instr_ok2.plain` produces its conclusion via `admininstr_instr`.
@@ -706,11 +702,11 @@ theorem principal_typing_conversion (i : instr) :
     case none => rfl
     case some sz => rfl
 
-/-- Rocq `typing_lemmas.v:720` `ai_typing_inversion` — **the master per-instruction
+/-- Rocq `typing_lemmas.v:672` `ai_typing_inversion` — **the master per-instruction
     inversion lemma**, administrative level, up to `<ti:` subtyping. Highest
     difficulty/longest proof in the "inversion" family (57-way case split in Rocq). Ported
-    from a prior Lean session's `spectec/test-lean/typing_lemmas.lean` (built against the
-    identical `wasm2.0.lean`), using this project's own already-proved `instrtype_sub_refl`
+    from the user's `spectec/test-lean/typing_lemmas.lean` (built against the then-identical
+    `wasm2.0.lean`), using this project's own already-proved `instrtype_sub_refl`
     (`Subtyping.lean`) in place of that file's own un-proved copy of the same lemma. -/
 theorem ai_typing_inversion (v_S : store) (v_C : context) (v_ai : admininstr) (t1s t2s : List valtype) :
     Instr_ok2 v_S v_C v_ai (mkFunctype t1s t2s) →
@@ -768,7 +764,7 @@ theorem ai_typing_inversion (v_S : store) (v_C : context) (v_ai : admininstr) (t
     case refine_1 => trivial
     case refine_2 => exact instrtype_sub_refl _
 
-/-- Rocq `typing_lemmas.v:790` `ai_typing_inversion'` (added bundle18). The no-slack
+/-- Rocq `typing_lemmas.v:790` `ai_typing_inversion'`. The no-slack
     special case of `ai_typing_inversion` for an embedded plain instruction: an `Instr_ok2`
     derivation for `admininstr_instr v_instr` can only come from `Instr_ok2.plain` (or, for
     `REF_NULL`, from `Instr_ok2.ref`), so it hands back `Instr_ok` at the *same* type. -/
@@ -810,9 +806,9 @@ theorem ai_typing_inversion' (v_S : store) (v_C : context) (v_instr : instr) (t1
   | trap => simp [instr_of] at hof
 
 /-! ## Single/seq/append composition — surface and administrative, both directions
-    (typing_lemmas.v:852-1218) -/
+    (typing_lemmas.v:811-1178) -/
 
-/-- Rocq `typing_lemmas.v:852` `split_single_append`. Generic list helper. -/
+/-- Rocq `typing_lemmas.v:811` `split_single_append`. Generic list helper. -/
 theorem split_single_append {α : Type} (l l' : List α) (x : α) :
     [x] = l ++ l' → (l = [x] ∧ l' = []) ∨ (l = [] ∧ l' = [x]) := by
   intro h
@@ -825,23 +821,23 @@ theorem split_single_append {α : Type} (l l' : List α) (x : α) :
     left
     exact ⟨by rw [hys, ← hxy], hl'⟩
 
--- `instrs_single_typing_inversion` (Rocq `typing_lemmas.v:863`) is defined further below,
+-- `instrs_single_typing_inversion` (Rocq `typing_lemmas.v:822`) is defined further below,
 -- right after `instrs_seq_typing_inversion`, since its proof needs `instrs_ok_nil_sub`/
 -- `instr_subtyping_weaken2`/`_strengthen2`, all defined later in this file (see
 -- `instrs_single_typing_inversion_gen`).
 
--- `ais_single_typing_inversion'` (Rocq `typing_lemmas.v:925`) and
--- `ais_single_typing_inversion` (`typing_lemmas.v:987`) are defined further below, right
+-- `ais_single_typing_inversion'` (Rocq `typing_lemmas.v:884`) and
+-- `ais_single_typing_inversion` (`typing_lemmas.v:946`) are defined further below, right
 -- after `ais_composition_typing`, since their proofs need `ais_ok_nil_sub`/
 -- `instr_subtyping_weaken2`/`_strengthen2`/`ai_typing_inversion` in scope — same reordering
 -- reason as `instrs_single_typing_inversion` above.
 
--- `ais_single_ref_typing_inversion` (Rocq `typing_lemmas.v:1002`) and
--- `ais_single_val_typing_inversion` (`typing_lemmas.v:1023`) are defined further below,
+-- `ais_single_ref_typing_inversion` (Rocq `typing_lemmas.v:961`) and
+-- `ais_single_val_typing_inversion` (`typing_lemmas.v:982`) are defined further below,
 -- right after `ais_single_typing_inversion`, which their proofs need in scope.
 
-/-- Rocq `typing_lemmas.v:1019` `val_ref_null_is_ref`. Definitional: `val_ref`
-    (`wasm2.0.lean:8135`) maps `ref.REF_NULL x0 ↦ val.REF_NULL x0` directly. -/
+/-- Rocq `typing_lemmas.v:978` `val_ref_null_is_ref`. Definitional: `val_ref`
+    (`wasm2.0.lean:11261`) maps `ref.REF_NULL x0 ↦ val.REF_NULL x0` directly. -/
 theorem val_ref_null_is_ref (rt : reftype) : val.REF_NULL rt = val_ref (ref.REF_NULL rt) := rfl
 
 /-! ### Sequence-typing inversion machinery (ported from a prior Lean session's
@@ -854,7 +850,7 @@ theorem val_ref_null_is_ref (rt : reftype) : val.REF_NULL rt = val_ref (ref.REF_
     `_widen_*` lemmas here have no direct named Rocq counterpart (they're this proof's own
     induction scaffolding — Rocq's tactic proof of the same fact doesn't need named
     sub-lemmas), kept `private`-in-spirit (not exported as project API) but not marked
-    `private` since later `TypePreservation*` work may find them independently useful. -/
+    `private`; no other file uses them. -/
 
 theorem instrs_ok_nil_sub_gen {C : context} {instr_lst : List instr} {ft : functype}
     (h : Instrs_ok C instr_lst ft) :
@@ -998,7 +994,7 @@ theorem instrs_ok_cons_gen {C : context} {instr_lst : List instr} {ft : functype
     · rw [← e2]; exact Instrs_ok.frame C' is tpre ts2' t2'''' hpart2 hwf_c hwf_is
   | _ => intros; trivial
 
-/-- Rocq `typing_lemmas.v:1056` `instrs_seq_typing_inversion`. **IMPORTANT**: this is the
+/-- Rocq `typing_lemmas.v:1015` `instrs_seq_typing_inversion`. **IMPORTANT**: this is the
     Rocq-faithful sequence-level statement (`Instrs_ok`, not singular `Instr_ok`, on the
     head) — a previous session's `typing_lemmas.lean` mis-stated the analogous lemma with
     singular `Instr_ok` on the head and it was proved FALSE (see
@@ -1070,7 +1066,7 @@ theorem instrs_single_typing_inversion_gen {C : context} {instr_lst : List instr
       resulttype_sub_refl t1'''', resulttype_sub_refl t2''''⟩
   | _ => intros; trivial
 
-/-- Rocq `typing_lemmas.v:863` `instrs_single_typing_inversion`. -/
+/-- Rocq `typing_lemmas.v:822` `instrs_single_typing_inversion`. -/
 theorem instrs_single_typing_inversion (v_C : context) (v_instr : instr) (t1s t2s : List valtype) :
     Instrs_ok v_C [v_instr] (mkFunctype t1s t2s) →
     ∃ t1s_sup t2s_sub, Instr_ok v_C v_instr (mkFunctype t1s_sup t2s_sub) ∧
@@ -1144,7 +1140,7 @@ theorem ais_ok_widen_out {v_S : store} {C : context} {ais : List admininstr} {t 
     Instrs_ok2 v_S C ais (mkFunctype t1 t2) :=
   Instrs_ok2.sub v_S C ais t1 t2 t1 t h (resulttype_sub_refl t1) hsub hS hC hwf
 
-/-- Rocq `typing_lemmas.v:349` `instrs_empty_typing`. ⇒: `instrs_ok_context_wf` +
+/-- Rocq `typing_lemmas.v:299` `instrs_empty_typing`. ⇒: `instrs_ok_context_wf` +
     `instrs_ok_nil_sub`. ⇐: `instrs_ok_nil_refl` (reflexive `t2s f-> t2s`) widened on the
     input side via `instrs_ok_widen_in` — mirrors Rocq's own `frame`-then-`sub` proof. -/
 theorem instrs_empty_typing (v_C : context) (t1s t2s : List valtype) :
@@ -1241,7 +1237,7 @@ theorem ais_ok_cons_gen {v_S : store} {C : context} {ai_lst : List admininstr} {
     · rw [← e2]; exact Instrs_ok2.Instrs_ok2_frame v_S C' ais tpre ts2' t2'''' hpart2 hs hwf_c hwf_ais
   | _ => intros; trivial
 
-/-- Rocq `typing_lemmas.v:1121` `ais_seq_typing_inversion`. Administrative analog of
+/-- Rocq `typing_lemmas.v:1080` `ais_seq_typing_inversion`. Administrative analog of
     `instrs_seq_typing_inversion`; proof ported the same way from a prior Lean session's
     `SeqTypingInversion.lean` (`instrs_seq_typing_inversion_fixed`), re-derived here for the
     `Instrs_ok2`/store-threaded setting (see `ais_ok_cons_gen` above). -/
@@ -1252,7 +1248,7 @@ theorem ais_seq_typing_inversion (v_S : store) (v_C : context) (v_ais : List adm
   obtain ⟨t3s, hpart1, hpart2⟩ := ais_ok_cons_gen h v_ai v_ais rfl t1s t2s rfl
   exact ⟨t3s, hpart2, hpart1⟩
 
-/-- Rocq `typing_lemmas.v:1184` `ais_composition_typing`. Generalizes `ais_seq_typing_inversion`
+/-- Rocq `typing_lemmas.v:1143` `ais_composition_typing`. Generalizes `ais_seq_typing_inversion`
     from a single head admininstr to an arbitrary prefix `v_ais1`, by induction on `v_ais1`
     reusing `ais_seq_typing_inversion` at each step. -/
 theorem ais_composition_typing (v_S : store) (v_C : context) (v_ais1 v_ais2 : List admininstr) (t1s t2s : List valtype) :
@@ -1333,14 +1329,14 @@ theorem ais_single_typing_inversion'_gen {v_S : store} {C : context} {ai_lst : L
       resulttype_sub_refl t1'''', resulttype_sub_refl t2''''⟩
   | _ => trivial
 
-/-- Rocq `typing_lemmas.v:925` `ais_single_typing_inversion'`. -/
+/-- Rocq `typing_lemmas.v:884` `ais_single_typing_inversion'`. -/
 theorem ais_single_typing_inversion' (v_S : store) (v_C : context) (v_ai : admininstr) (t1s t2s : List valtype) :
     Instrs_ok2 v_S v_C [v_ai] (mkFunctype t1s t2s) →
     ∃ t1s_sup t2s_sub, Instr_ok2 v_S v_C v_ai (mkFunctype t1s_sup t2s_sub) ∧
       instrtype_sub (mkFunctype t1s_sup t2s_sub) (mkFunctype t1s t2s) :=
   fun h => ais_single_typing_inversion'_gen h v_ai rfl t1s t2s rfl
 
-/-- Rocq `typing_lemmas.v:987` `ais_single_typing_inversion`. **The single most-used lemma
+/-- Rocq `typing_lemmas.v:946` `ais_single_typing_inversion`. **The single most-used lemma
     downstream** in `type_preservation_pure.v` — turns "list-of-one administrative
     instruction is typed" directly into "its principal typing, up to subtyping". Chains
     `ais_single_typing_inversion'` with `ai_typing_inversion`, composing the two
@@ -1354,7 +1350,7 @@ theorem ais_single_typing_inversion (v_S : store) (v_C : context) (v_ai : admini
   obtain ⟨t1s', t2s', hprincipal, hsub'⟩ := ai_typing_inversion v_S v_C v_ai t1s_sup t2s_sub hok
   exact ⟨t1s', t2s', hprincipal, instrtype_sub_trans _ _ _ hsub' hsub⟩
 
-/-- Rocq `typing_lemmas.v:1002` `ais_single_ref_typing_inversion`. -/
+/-- Rocq `typing_lemmas.v:961` `ais_single_ref_typing_inversion`. -/
 theorem ais_single_ref_typing_inversion (v_S : store) (v_C : context) (v_ref : ref) (ts1 ts2 : List valtype) :
     Instrs_ok2 v_S v_C [admininstr_ref v_ref] (mkFunctype ts1 ts2) →
     ∃ t : reftype, instrtype_sub (mkFunctype [] [valtype_reftype t]) (mkFunctype ts1 ts2) ∧ Ref_ok v_S v_ref t := by
@@ -1386,7 +1382,7 @@ theorem ais_single_ref_typing_inversion (v_S : store) (v_C : context) (v_ref : r
     subst e1; subst e2
     exact ⟨reftype.EXTERNREF, hsub, Ref_ok.extern v_S haddr hwfS⟩
 
-/-- Rocq `typing_lemmas.v:1023` `ais_single_val_typing_inversion`. -/
+/-- Rocq `typing_lemmas.v:982` `ais_single_val_typing_inversion`. -/
 theorem ais_single_val_typing_inversion (v_S : store) (v_C : context) (v_val : val) (ts1 ts2 : List valtype) :
     Instrs_ok2 v_S v_C [admininstr_val v_val] (mkFunctype ts1 ts2) →
     ∃ t, instrtype_sub (mkFunctype [] [t]) (mkFunctype ts1 ts2) ∧ Val_ok v_S v_val t := by
@@ -1442,14 +1438,13 @@ theorem ais_single_val_typing_inversion (v_S : store) (v_C : context) (v_val : v
       Val_ok.reftype v_S (ref.REF_HOST_ADDR haddr) reftype.EXTERNREF
         (Ref_ok.extern v_S haddr hwfS) hwfS⟩
 
-/-! ## More inversion/construction lemmas (typing_lemmas.v:1335-1594) -/
+/-! ## More inversion/construction lemmas (typing_lemmas.v:1294-1730) -/
 
-/-- Rocq `typing_lemmas.v:1335` `ai_val_principal_typing_inversion`. Needs the fixed
-    `ai_principal_typing` (bundle9: `REF_HOST_ADDR` was missing its own case, falling
-    through to the generic `| _ => True` catch-all — a real gap in the prior session's
-    `spectec/test-lean/typing_lemmas.lean` this file was ported from in bundle8, not caught
-    at the time since nothing exercised that specific case yet; fixed above alongside
-    `ai_typing_inversion`'s `ref`/`REF_HOST_ADDR` case, which relied on the same bug). -/
+/-- Rocq `typing_lemmas.v:1294` `ai_val_principal_typing_inversion`. Relies on
+    `ai_principal_typing`'s own `REF_HOST_ADDR` case: the `spectec/test-lean/typing_lemmas.lean`
+    version it was ported from lacked that case, so it fell through to the generic
+    `| _ => True` catch-all (`ai_typing_inversion`'s `ref`/`REF_HOST_ADDR` case had relied on
+    the same gap; both are fixed). -/
 theorem ai_val_principal_typing_inversion (v_S : store) (v_C : context) (v_val : val) (t1s t2s : List valtype) :
     ai_principal_typing v_S v_C (admininstr_val v_val) (mkFunctype t1s t2s) →
     ∃ t_lst, [] = t1s ∧ [t_lst] = t2s := by
@@ -1480,33 +1475,33 @@ theorem ai_val_principal_typing_inversion (v_S : store) (v_C : context) (v_val :
     exact ⟨valtype_reftype reftype.EXTERNREF, h.1.symm, h.2.symm⟩
 
 set_option maxHeartbeats 1000000 in
-/-- Rocq `typing_lemmas.v:1375` `injective_admininstr_instr`. Rocq: `destruct x1; destruct x2;
+/-- Rocq `typing_lemmas.v:1334` `injective_admininstr_instr`. Rocq: `destruct x1; destruct x2;
     try discriminate; auto` — same shape here (`admininstr_instr` maps each of `instr`'s 68
     constructors to the identically-shaped `admininstr` constructor of the same name; a
     same-constructor case reduces the goal to reflexivity, a mismatched pair is closed by
     `simp`'s built-in constructor-injectivity/no-confusion). 68×68 cases, mechanical.
     `maxHeartbeats` raised: importing `Mathlib.Tactic` (for `ai_principal_typing`'s port,
     see above) enlarges `simp_all`'s default simp-set enough that the 68×68 case bash no
-    longer finishes in the default budget (it did before, in ~26s, per bundle7's own log). -/
+    longer finishes in the default budget (it did, in ~26s, before Mathlib was imported). -/
 theorem injective_admininstr_instr : Function.Injective admininstr_instr := by
   intro a b h
   cases a <;> cases b <;> simp_all [admininstr_instr]
 
-/-- Rocq `typing_lemmas.v:1382` `construct_instrs_typing_single`. -/
+/-- Rocq `typing_lemmas.v:1341` `construct_instrs_typing_single`. -/
 theorem construct_instrs_typing_single (v_C : context) (v_ai : instr) (ts1 ts2 : List valtype) :
     Instr_ok v_C v_ai (mkFunctype ts1 ts2) → Instrs_ok v_C [v_ai] (mkFunctype ts1 ts2) := by
   intro h
   obtain ⟨hwf, hwfi⟩ := instr_ok_context_wf v_C v_ai (mkFunctype ts1 ts2) h
   exact Instrs_ok.instr v_C v_ai ts1 ts2 h hwf hwfi
 
-/-- Rocq `typing_lemmas.v:1391` `construct_ais_typing_single`. -/
+/-- Rocq `typing_lemmas.v:1350` `construct_ais_typing_single`. -/
 theorem construct_ais_typing_single (v_S : store) (v_C : context) (v_ai : admininstr) (ts1 ts2 : List valtype) :
     Instr_ok2 v_S v_C v_ai (mkFunctype ts1 ts2) → Instrs_ok2 v_S v_C [v_ai] (mkFunctype ts1 ts2) := by
   intro h
   obtain ⟨hwfC, hwfS, hwfa⟩ := ainstr_ok_context_store_wf v_S v_C v_ai (mkFunctype ts1 ts2) h
   exact Instrs_ok2.instr v_S v_C v_ai ts1 ts2 h hwfS hwfC hwfa
 
-/-- Rocq `typing_lemmas.v:1400` `construct_ais_subtyping`. Rocq's proof: `frame`-extend the
+/-- Rocq `typing_lemmas.v:1359` `construct_ais_subtyping`. Rocq's proof: `frame`-extend the
     original derivation by the `instrtype_sub` witness's shared/subsumed prefix (`ts_sub`),
     then `sub` the two remaining pieces via `resulttype_sub_app` (one side reflexive on
     `ts_sub`, the other using the existential's own two `ResulttypeSub` facts directly). -/
@@ -1526,12 +1521,12 @@ theorem construct_ais_subtyping (v_S : store) (v_C : context) (v_ais : List admi
     (resulttype_sub_app ts_sub ts2 ts ts2_sup hsub_ts hsub2)
     hwfS hwfC hwfF
 
-/-- Rocq `typing_lemmas.v:1423` `injective_valtype_numtype`. -/
+/-- Rocq `typing_lemmas.v:1382` `injective_valtype_numtype`. -/
 theorem injective_valtype_numtype : Function.Injective valtype_numtype := by
   intro a b h
   cases a <;> cases b <;> simp_all [valtype_numtype]
 
-/-- Rocq `typing_lemmas.v:1442` `construct_ais_compose`. Heavily reused in
+/-- Rocq `typing_lemmas.v:1401` `construct_ais_compose`. Heavily reused in
     `type_preservation_pure.v` to glue partial typing derivations back together. -/
 theorem construct_ais_compose (v_S : store) (v_C : context) (v_ais1 v_ais2 : List admininstr) (t1s t2s t3s : List valtype) :
     Instrs_ok2 v_S v_C v_ais1 (mkFunctype t1s t2s) → Instrs_ok2 v_S v_C v_ais2 (mkFunctype t2s t3s) →
@@ -1542,10 +1537,10 @@ theorem construct_ais_compose (v_S : store) (v_C : context) (v_ais1 v_ais2 : Lis
   exact Instrs_ok2.seq v_S v_C v_ais1 v_ais2 t1s t3s t2s h1 h2 hwfS1 hwfC1 hwfF1 hwfF2
 
 /-! ### Moving typing derivations between `instr` and `admininstr_instr`
-    (typing_lemmas.v:1412-1585, added bundle18) -/
+    (typing_lemmas.v:1412-1586) -/
 
-/-- Rocq `typing_lemmas.v:1412` `wf_admininstr_instr`. The `→` direction already existed
-    here as `wf_instr_admininstr` (bundle5); this is Rocq's `↔`. -/
+/-- Rocq `typing_lemmas.v:1412` `wf_admininstr_instr`. The `→` direction already exists
+    here as `wf_instr_admininstr`; this is Rocq's `↔`. -/
 theorem wf_admininstr_instr (i : instr) : wf_instr i ↔ wf_admininstr (admininstr_instr i) := by
   refine ⟨wf_instr_admininstr i, fun h => ?_⟩
   cases i <;> cases h <;> constructor <;> assumption
@@ -1592,7 +1587,7 @@ theorem construct_instrs_from_ais (v_S : store) (v_C : context) (v_instrs : List
       (construct_instr_from_ai v_S v_C i ts1 t3s hS hhead) (ih t3s ts2 htail)
     simpa using this
 
-/-- `Instrs_ok` counterpart of `construct_ais_subtyping` (Lean-only helper, bundle18): frame
+/-- `Instrs_ok` counterpart of `construct_ais_subtyping` (Lean-only helper): frame
     by the shared prefix, then `sub` both sides. Rocq gets the same effect inside its
     `dependent induction` proofs of `revert_to_*`. -/
 theorem construct_instrs_subtyping (v_C : context) (v_instrs : List instr) (ts1 ts2 ts1' ts2' : List valtype) :
@@ -1639,7 +1634,7 @@ theorem revert_to_instrs_from_ais (v_S : store) (v_C : context) (v_instrs : List
     obtain ⟨_, hf2⟩ := instrs_ok_context_wf v_C is _ h2
     exact Instrs_ok.seq v_C [i] is t1s t2s t3s h1 h2 hC hf1 hf2
 
-/-- Rocq `typing_lemmas.v:1453` `construct_ai_const_I32`. -/
+/-- Rocq `typing_lemmas.v:1587` `construct_ai_const_I32`. -/
 theorem construct_ai_const_I32 (v_S : store) (v_C : context) (v_num : num_) :
     wf_num_ numtype.I32 v_num → wf_context v_C → wf_store v_S →
     Instr_ok2 v_S v_C (admininstr.CONST numtype.I32 v_num) (mkFunctype [] [valtype.I32]) := by
@@ -1648,7 +1643,7 @@ theorem construct_ai_const_I32 (v_S : store) (v_C : context) (v_num : num_) :
   exact Instr_ok2.plain v_S v_C (instr.CONST numtype.I32 v_num) [] [valtype.I32]
     (Instr_ok.const v_C numtype.I32 v_num hwfC hwfinstr) hwfS hwfC hwfinstr
 
-/-- Rocq `typing_lemmas.v:1466` `construct_ai_ref`. Simpler than Rocq's own proof: unlike
+/-- Rocq `typing_lemmas.v:1600` `construct_ai_ref`. Simpler than Rocq's own proof: unlike
     Rocq's mirrored `Instr_ok2__ref` constructor (which Rocq only invokes for the
     `FUNC_ADDR`/`HOST_ADDR` cases, routing `REF_NULL` through the "plain" `instr` path
     instead), this backend's `Instr_ok2.ref` constructor is generic over every `ref`
@@ -1660,11 +1655,11 @@ theorem construct_ai_ref (v_S : store) (v_C : context) (v_ref : ref) (t : reftyp
   intro href hwfC hwfS
   exact Instr_ok2.ref v_S v_C v_ref t href hwfS hwfC
 
-/-- Rocq `typing_lemmas.v:1490` `adminval_val_ref`. -/
+/-- Rocq `typing_lemmas.v:1624` `adminval_val_ref`. -/
 theorem adminval_val_ref (r : ref) : admininstr_val (val_ref r) = admininstr_ref r := by
   cases r <;> rfl
 
-/-- Rocq `typing_lemmas.v:1497` `construct_ai_val`. `vectype`/`reftype` sub-cases use
+/-- Rocq `typing_lemmas.v:1631` `construct_ai_val`. `vectype`/`reftype` sub-cases use
     `cases vt`/`adminval_val_ref` respectively since `vectype` has a single constructor
     (`V128`) and the `reftype` case reduces to `construct_ai_ref` via the equation just
     proved above. -/
@@ -1690,7 +1685,7 @@ theorem construct_ai_val (v_S : store) (v_C : context) (v_val : val) (t : valtyp
     rw [adminval_val_ref]
     exact construct_ai_ref v_S v_C r rt href hwfC hs
 
-/-- Rocq `typing_lemmas.v:1523` `construct_ai_maybe`. Rocq closes this with one generic
+/-- Rocq `typing_lemmas.v:1657` `construct_ai_maybe`. Rocq closes this with one generic
     `destruct ai; ...; try contradiction; eapply plain; eauto` tactic script covering all
     ~74 cases uniformly; mirrored here the same way via `cases ai <;> simp_all [instr_of]`
     (closing the 6 admin-only cases by contradiction against `hsome`, reducing
@@ -1705,7 +1700,7 @@ theorem construct_ai_maybe (v_S : store) (v_C : context) (ai : admininstr) (t1 t
   cases ai <;> simp_all [instr_of] <;>
     exact Instr_ok2.plain v_S v_C _ _ _ hinstr hwfS hwfC hwfi
 
-/-- Rocq `typing_lemmas.v:1540` `construct_ais_vals'`. **Context-irrelevance for
+/-- Rocq `typing_lemmas.v:1674` `construct_ais_vals'`. **Context-irrelevance for
     value-list typing** (value typing doesn't depend on local/label/return components of
     `C`) — crucial for label/frame-boundary-crossing lemmas in `type_preservation_pure.v`. -/
 theorem construct_ais_vals' (v_S : store) (v_C v_C' : context) (v_vals : List val) (v_ft : functype) :
@@ -1739,7 +1734,7 @@ theorem construct_ais_vals' (v_S : store) (v_C v_C' : context) (v_vals : List va
     have := construct_ais_compose v_S v_C' [admininstr_val x] (xs.map admininstr_val) t1s t3s t2s hhead' htail'
     simpa [heq, mkFunctype] using this
 
-/-- Rocq `typing_lemmas.v:1578` `construct_ais_trap`. TRAP typechecks at ANY functype: unlike
+/-- Rocq `typing_lemmas.v:1712` `construct_ais_trap`. TRAP typechecks at ANY functype: unlike
     Rocq's `Instrs_ok2__seq`-based decomposition, `Instr_ok2.trap` here is already generic
     over the target functype, so `construct_ais_typing_single` closes it directly. -/
 theorem construct_ais_trap (v_S : store) (v_C : context) (v_ft : functype) :
@@ -1751,19 +1746,19 @@ theorem construct_ais_trap (v_S : store) (v_C : context) (v_ft : functype) :
   exact construct_ais_typing_single v_S v_C admininstr.TRAP t1s t2s
     (Instr_ok2.trap v_S v_C t1s t2s hwfS hwfC wf_admininstr.admininstr_case_73)
 
-/-! ## Val_ok / Vals_ok infrastructure (typing_lemmas.v:1596-1805) -/
+/-! ## Val_ok / Vals_ok infrastructure (typing_lemmas.v:1731-1948) -/
 
-/-- Rocq `typing_lemmas.v:1597` `value_extra`. -/
+/-- Rocq `typing_lemmas.v:1731` `value_extra`. -/
 def value_extra (v_S : store) (v_val : val) : Prop :=
   match v_val with
   | .REF_FUNC_ADDR v_funcaddr => ∃ v_ft, Externaddr_ok v_S (.FUNC v_funcaddr) (.FUNC v_ft)
   | _ => True
 
-/-- Rocq `typing_lemmas.v:1604` `Vals_ok`. NOTE argument order matches Rocq exactly:
+/-- Rocq `typing_lemmas.v:1738` `Vals_ok`. NOTE argument order matches Rocq exactly:
     `Forall2 P v_ts v_vals` (types first, values second).
 
     **Definition deliberately strengthened over a literal transcription**
-    (2026-09-30, bundle9, per explicit user decision — see
+    (per explicit user decision — see `claude-logging/verbatim_dialogue_log/`
     `bundle8/vals_ok_non_bot_analysis.md` and
     `bundle9/user_requested_documents/vals_ok_non_bot_resolution.md`): Rocq's
     `Forall2` is an *inductive* relation that forces `v_ts.length =
@@ -1779,7 +1774,7 @@ def value_extra (v_S : store) (v_val : val) : Prop :=
 def Vals_ok (v_S : store) (v_vals : List val) (v_ts : List valtype) : Prop :=
   v_ts.length = v_vals.length ∧ Forall₂ (fun t v => Val_ok v_S v t) v_ts v_vals
 
-/-- Rocq `typing_lemmas.v:1607` `Val_ok_non_bot`. -/
+/-- Rocq `typing_lemmas.v:1741` `Val_ok_non_bot`. -/
 theorem Val_ok_non_bot (v_S : store) (v_val : val) (t : valtype) :
     Val_ok v_S v_val t → t ≠ valtype.BOT := by
   intro h
@@ -1788,7 +1783,7 @@ theorem Val_ok_non_bot (v_S : store) (v_val : val) (t : valtype) :
   | vectype vt _ _ _ => cases vt <;> simp [valtype_vectype]
   | reftype _ rt _ _ => cases rt <;> simp [valtype_reftype]
 
-/-- Rocq `typing_lemmas.v:1619` `ais_vals_typing_inversion`. -/
+/-- Rocq `typing_lemmas.v:1753` `ais_vals_typing_inversion`. -/
 theorem ais_vals_typing_inversion (v_S : store) (v_C : context) (v_vals : List val) (t1s t2s : List valtype) :
     Instrs_ok2 v_S v_C (v_vals.map admininstr_val) (mkFunctype t1s t2s) →
     ∃ v_ts : List valtype, instrtype_sub (mkFunctype [] v_ts) (mkFunctype t1s t2s) ∧ Vals_ok v_S v_vals v_ts := by
@@ -1815,8 +1810,11 @@ theorem ais_vals_typing_inversion (v_S : store) (v_C : context) (v_vals : List v
       · exact hval_head
       · exact hforall_tail p hp
 
-/-- Rocq `typing_lemmas.v:1679` `construct_ais_vals`. Longest/most intricate proof in the
-    Rocq file (~125 lines, `last_ind` on `v_vals`/`ts` simultaneously). -/
+/-- Rocq `typing_lemmas.v:1813` `construct_ais_vals`. Longest/most intricate proof in the
+    Rocq file (~130 lines, `last_ind` on `v_vals`/`ts` simultaneously). This proof diverges:
+    it is an ordinary left induction on `v_vals`, splitting the codomain with
+    `resulttype_sub_split_sup'` on the `t :: ts'` shape, which avoids Rocq's `take`/`drop`
+    size arithmetic. -/
 theorem construct_ais_vals (v_S : store) (v_C : context) (v_vals : List val) (t1s t2s ts : List valtype) :
     wf_context v_C → wf_store v_S → instrtype_sub (mkFunctype [] ts) (mkFunctype t1s t2s) →
     Vals_ok v_S v_vals ts → Instrs_ok2 v_S v_C (v_vals.map admininstr_val) (mkFunctype t1s t2s) := by
@@ -1863,9 +1861,9 @@ theorem construct_ais_vals (v_S : store) (v_C : context) (v_vals : List val) (t1
         t1s (ts_w ++ ts12_sup.take 1) t2s head_typing tail_typing
       simpa using hcombined
 
-/-! ## Subtyping-composition helpers (typing_lemmas.v:1807-1831) -/
+/-! ## Subtyping-composition helpers (typing_lemmas.v:1949-1974) -/
 
-/-- Rocq `typing_lemmas.v:1807` `resulttype_sub_single_inversion`. `Forall₂` here is the
+/-- Rocq `typing_lemmas.v:1949` `resulttype_sub_single_inversion`. `Forall₂` here is the
     zip-based `def` (not an inductive), so `[t1].zip [t2] = [(t1,t2)]` and membership is
     closed by `simp`. -/
 theorem resulttype_sub_single_inversion (t1 t2 : valtype) :
@@ -1874,7 +1872,7 @@ theorem resulttype_sub_single_inversion (t1 t2 : valtype) :
   cases h with
   | mk_Resulttype_sub _ _ _ hf => exact hf (t1, t2) (by simp)
 
-/-- Rocq `typing_lemmas.v:1817` `construct_ais_instrtype_sub`. Same statement/proof as
+/-- Rocq `typing_lemmas.v:1959` `construct_ais_instrtype_sub`. Same statement/proof as
     `construct_ais_subtyping` above (Rocq keeps both names, used interchangeably
     downstream) — kept as a separate lemma for provenance fidelity. -/
 theorem construct_ais_instrtype_sub (v_S : store) (v_C : context) (v_ais : List admininstr) (t1s t2s t1s' t2s' : List valtype) :
@@ -1883,58 +1881,56 @@ theorem construct_ais_instrtype_sub (v_S : store) (v_C : context) (v_ais : List 
     Instrs_ok2 v_S v_C v_ais (mkFunctype t1s' t2s') :=
   construct_ais_subtyping v_S v_C v_ais t1s t2s t1s' t2s'
 
-/-! ## `inst_match` — context-component invariance (typing_lemmas.v:1833-1922) -/
+/-! ## `inst_match` — context-component invariance (typing_lemmas.v:1975-2043) -/
 
-/-- Rocq `typing_lemmas.v:1833` `inst_match`. Deliberately excludes LOCALS/LABELS/RETURN:
+/-- Rocq `typing_lemmas.v:1975` `inst_match`. Deliberately excludes LOCALS/LABELS/RETURN:
     "same module-instance-derived components, differing local/label/return typing". -/
 def inst_match (C C' : context) : Prop :=
   C.TYPES = C'.TYPES ∧ C.FUNCS = C'.FUNCS ∧ C.GLOBALS = C'.GLOBALS ∧ C.TABLES = C'.TABLES ∧
   C.MEMS = C'.MEMS ∧ C.ELEMS = C'.ELEMS ∧ C.DATAS = C'.DATAS
 
-/-- Rocq `typing_lemmas.v:1842` `construct_inst_match_label`. `inst_match`
+/-- Rocq `typing_lemmas.v:1984` `construct_inst_match_label`. `inst_match`
     deliberately excludes LABELS (see its own doc comment above), and
     `upd_label` only touches LABELS, so this is definitional. -/
 theorem construct_inst_match_label (C C' : context) (lab : List resulttype) :
     inst_match C C' → inst_match C (upd_label C' lab) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1852` `construct_inst_match_return`. Definitional,
+/-- Rocq `typing_lemmas.v:1994` `construct_inst_match_return`. Definitional,
     as `construct_inst_match_label` (RETURN is excluded from `inst_match`). -/
 theorem construct_inst_match_return (C C' : context) (ret : Option resulttype) :
     inst_match C C' → inst_match C (upd_return C' ret) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1862` `construct_inst_match_local`. Definitional,
+/-- Rocq `typing_lemmas.v:2004` `construct_inst_match_local`. Definitional,
     as `construct_inst_match_label` (LOCALS is excluded from `inst_match`). -/
 theorem construct_inst_match_local (C C' : context) (loc : List valtype) :
     inst_match C C' → inst_match C (upd_local C' loc) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1872` `construct_inst_match_local_label_return`.
+/-- Rocq `typing_lemmas.v:2014` `construct_inst_match_local_label_return`.
     Definitional, as `construct_inst_match_label` (all three touched fields
     are excluded from `inst_match`). -/
 theorem construct_inst_match_local_label_return (C C' : context) (loc : List valtype) (lab : List resulttype) (ret : Option resulttype) :
     inst_match C C' → inst_match C (upd_local_label_return C' loc lab ret) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1882` `construct_inst_match_local_return`.
+/-- Rocq `typing_lemmas.v:2024` `construct_inst_match_local_return`.
     Definitional, as `construct_inst_match_label`. -/
 theorem construct_inst_match_local_return (C C' : context) (loc : List valtype) (ret : Option resulttype) :
     inst_match C C' → inst_match C (upd_local_return C' loc ret) := fun h => h
 
-/-- Rocq `typing_lemmas.v:1892` `construct_inst_prepend_label`. Definitional,
+/-- Rocq `typing_lemmas.v:2034` `construct_inst_prepend_label`. Definitional,
     as `construct_inst_match_label` (`prepend_label` only touches LABELS). -/
 theorem construct_inst_prepend_label (C C' : context) (lab : resulttype) :
     inst_match C C' → inst_match C (prepend_label C' lab) := fun h => h
 
-/-! ## Non-bottom propagation to lists (typing_lemmas.v:1927-1959) -/
+/-! ## Non-bottom propagation to lists (typing_lemmas.v:2069-2105) -/
 
-/-- Rocq `typing_lemmas.v:2071` `Vals_ok_non_bot`. **Resolved 2026-09-30 (bundle9)**: the
-    representation gap flagged in `bundle8/vals_ok_non_bot_analysis.md` (Rocq's `Forall2` is
+/-- Rocq `typing_lemmas.v:2069` `Vals_ok_non_bot`. **Deviation**: the hypothesis is the
+    length-carrying `Vals_ok` instead of the bare `Forall₂` Rocq states. Rocq's `Forall2` is
     inductive and forces `v_ts.length = v_val.length`; this project's `Forall₂` is a zip-based
-    `def` that does not) is closed by routing this lemma's hypothesis through the now-
-    length-carrying `Vals_ok` (Option 2 of the analysis doc) instead of the bare `Forall₂`
-    Rocq states directly — a deliberate, documented deviation from Rocq's literal statement,
-    justified because `Vals_ok` is exactly the Lean-side stand-in for what Rocq's own
-    `Forall2` carries for free. Proved by converting to Mathlib's `List.Forall₂` (Option 3)
-    via `to_mathlib_forall₂`, then structural induction (mirroring Rocq's own proof, which
-    inducts on `v_val` and case-splits `v_ts`). -/
+    `def` that does not, so with a bare `Forall₂` the lemma would be false (see `Vals_ok` and
+    `claude-logging/verbatim_dialogue_log/bundle8/vals_ok_non_bot_analysis.md`). `Vals_ok` is
+    exactly the Lean-side stand-in for what Rocq's own `Forall2` carries for free. Proved by
+    converting to Mathlib's `List.Forall₂` via `to_mathlib_forall₂`, then structural induction
+    (mirroring Rocq's own proof, which inducts on `v_val` and case-splits `v_ts`). -/
 theorem Vals_ok_non_bot (v_S : store) (v_val : List val) (v_ts : List valtype) :
     Vals_ok v_S v_val v_ts → Forall (fun t => t ≠ valtype.BOT) v_ts := by
   rintro ⟨hlen, hforall⟩
@@ -1948,7 +1944,7 @@ theorem Vals_ok_non_bot (v_S : store) (v_val : List val) (v_ts : List valtype) :
       · exact Val_ok_non_bot v_S _ t hval
       · exact ih t ht
 
-/-- Rocq `typing_lemmas.v:1952` `Ref_ok_non_bot`. -/
+/-- Rocq `typing_lemmas.v:2094` `Ref_ok_non_bot`. -/
 theorem Ref_ok_non_bot (v_S : store) (v_val : ref) (t : reftype) :
     Ref_ok v_S v_val t → valtype_reftype t ≠ valtype.BOT := by
   intro h

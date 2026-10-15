@@ -1,13 +1,15 @@
 # Notes for a future Claude session — READ THIS FIRST
 
-Last updated: 2026-10-15 (end of bundle21; see the bundle21 section below and
-`claude-logging/verbatim_dialogue_log/bundle21`).
+Last updated: 2026-10-15 (end of bundle22; see the bundle22 section below and
+`claude-logging/verbatim_dialogue_log/bundle22`).
 
 > **If you read nothing else, read (in this order)**
-> 0. The bundle21 section just below, and
+> 0. The bundle22 section just below (comment-only update; no code change), the bundle21 section
+>    after it, and
 >    `verbatim_dialogue_log/bundle21/user_requested_documents/resync_6582b3a_and_sorry_report.md`.
 >    After the bundle21 re-sync the hand-written port has no `sorry` except the 16 the user marked
->    for deletion; `wasm2.0.lean` keeps only the 62 opaque-builtin `*_is_wf` (Rocq: `Admitted`).
+>    for deletion, and the user deleted those 16 before bundle22 (uncommitted at that point);
+>    `wasm2.0.lean` keeps only the 62 opaque-builtin `*_is_wf` (Rocq: `Admitted`).
 >    To re-apply the hand-edits after a regeneration, use the **bundle21** patch + README (it
 >    supersedes bundle19's).
 > 1. The bundle20 section below. Preservation is audited and sound. Progress is ported and
@@ -19,6 +21,44 @@ Last updated: 2026-10-15 (end of bundle21; see the bundle21 section below and
 >    to re-apply the hand-edits to the generated `wasm2.0.lean` after a regeneration.
 > 4. The older Lean lessons: bundle18 `insights_for_next_turn.md` §4 and bundle16
 >    `insights_for_next_turn.md`.
+
+## ✅ 2026-10-15 UPDATE (bundle22): comments brought up to date; no code change
+
+Session: a new session (Opus 5.5) on a different machine, auto mode. Task: "update all the existing
+comments throughout the Lean proof … Only touch existing comments."
+
+**What changed** (626 of the 1,211 comments in the seven hand-written files; patch, relative to
+the session-start state, in `verbatim_dialogue_log/bundle22/user_requested_documents/bundle22_comment_updates.patch`):
+- **Rocq citations** now point at the current local `spectec/test-rocq/theories` (= upstream
+  `rocq-backend-proof` `6582b3a39`; still the live tip). About 300 were stale (pinned to `5b03ae067`
+  or `95c256c2c`); `TypeProgress.lean`'s "bullet at line N" citations were re-pointed with a
+  verified line-for-line diff mapping; the `(6582b3a39: v:N)` dual annotations were folded in.
+  Lemmas that upstream has removed are cited at their old revision, marked
+  "(`5b03ae067`; since removed upstream)". `ExtensionLemmas.lean` citations gained line numbers.
+- **Status and history**: stale "Phase 1 … proofs `sorry`", "MAJOR TODO", "SIMD excluded",
+  "mirrors Rocq `Admitted`", FLAGGED/RESOLVED and resync narration, and bare `bundleN`/date tags were
+  replaced by current-state wording. Pointers to documents in `claude-logging/` were kept.
+- **Pre-existing comment errors fixed** (details in `response_22.md`): e.g. `construct_ais_vals`
+  (the doc did not say the proof diverges from Rocq's `last_ind`), the `TypePreservationPure.lean`
+  header (claimed SIMD was excluded), `wf_store_parts` (named the wrong hypothesis), the
+  `vunop`/`vtestop` case docs (claimed no Rocq bullet), `Extend_store_datainsts'` (its signature
+  deviation is now documented), `Instr_ok` now has 73 constructors.
+- **User's uncommitted deletion**: the leftover `Val_ok_store` doc comment had no declaration after
+  it, which is a parse error; it is now `--` lines in the user's `DELETED BECAUSE NOT USED` style.
+
+**Not touched**: every `TODO FROM USER` comment; the user's own comments inside `t_preservation`;
+`wasm2.0.lean` (its generated comments, and its hand-written markers, which
+`bundle21/user_requested_documents/README_wasm2.0_hand_edits.md` relies on, are accurate);
+`ExtendedDeriveDecEq.lean`; `OLD_wasm2.0.lean`.
+
+**Verified**: non-comment tokens of all seven files are identical to the session-start snapshot
+(mechanical check after every edit batch); every comment parses with core Lean; every doc comment
+is attached to a declaration. A full `lake build` was **not** run: the machine had ~1.2 GB free
+memory with swap full and three IDE Lean workers. Safety check clean.
+
+**Pitfall (new)**: the user's walkthrough
+(`spectec/test-lean/temp_zy_learning/wasm_stuff/walkthrough/wasm-type-preservation-walkthrough/`,
+outside this directory) quotes doc comments verbatim, so its quotes now differ from the source.
 
 ## ✅ 2026-10-15 UPDATE (bundle21): re-synced to upstream `6582b3a39`; the hand-written port has no `sorry` left except the 16 you marked for deletion
 
