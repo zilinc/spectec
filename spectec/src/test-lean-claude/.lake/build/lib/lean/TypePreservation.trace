@@ -1,40 +1,40 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["ad93b5b3ed95f21f.olean"],
+ {"o": ["81a1796f386d59f5.olean"],
   "m": false,
-  "i": "a93be36400283690.ilean",
+  "i": "dc05e0384872bb1f.ilean",
   "c": "884a9cc24864257b.c"},
  "log":
  [{"message":
    ".> LEAN_PATH=/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/Cli/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/batteries/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/Qq/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/aesop/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/importGraph/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/plausible/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/mathlib/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean /home/zhengyew/.elan/toolchains/leanprover--lean4---v4.32.0/bin/lean /home/zhengyew/spectec/spectec/src/test-lean-claude/TypePreservation.lean -o /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/TypePreservation.olean -i /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/TypePreservation.ilean -c /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/ir/TypePreservation.c --setup /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/ir/TypePreservation.setup.json --json",
    "level": "trace"},
   {"message":
-   "TypePreservation.lean:62:43: This simp argument is unused:\n  sizenn1\n\nHint: Omit it from the simp argument list.\n  simp only [fzero, sizenn, numtype_Fnn,̵ ̵s̵i̵z̵e̵n̵n̵1̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "TypePreservation.lean:61:43: This simp argument is unused:\n  sizenn1\n\nHint: Omit it from the simp argument list.\n  simp only [fzero, sizenn, numtype_Fnn,̵ ̵s̵i̵z̵e̵n̵n̵1̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
    "level": "warning"},
   {"message":
-   "TypePreservation.lean:67:43: This simp argument is unused:\n  sizenn1\n\nHint: Omit it from the simp argument list.\n  simp only [fzero, sizenn, numtype_Fnn,̵ ̵s̵i̵z̵e̵n̵n̵1̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "TypePreservation.lean:66:43: This simp argument is unused:\n  sizenn1\n\nHint: Omit it from the simp argument list.\n  simp only [fzero, sizenn, numtype_Fnn,̵ ̵s̵i̵z̵e̵n̵n̵1̵]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
    "level": "warning"},
   {"message":
-   "TypePreservation.lean:562:12: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
+   "TypePreservation.lean:561:12: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
    "level": "warning"},
   {"message":
-   "TypePreservation.lean:571:12: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
+   "TypePreservation.lean:570:12: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
    "level": "warning"},
   {"message":
-   "TypePreservation.lean:581:12: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
+   "TypePreservation.lean:580:12: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
    "level": "warning"},
   {"message":
-   "TypePreservation.lean:584:8: The declaration 'Step_read__vload_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "TypePreservation.lean:583:8: The declaration 'Step_read__vload_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message":
-   "TypePreservation.lean:597:8: The declaration 'Step_read__vload_lane_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "TypePreservation.lean:596:8: The declaration 'Step_read__vload_lane_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message":
-   "TypePreservation.lean:637:8: The declaration 'Step__vstore_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "TypePreservation.lean:636:8: The declaration 'Step__vstore_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"},
   {"message":
-   "TypePreservation.lean:649:8: The declaration 'Step__vstore_lane_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
+   "TypePreservation.lean:648:8: The declaration 'Step__vstore_lane_preserves' contains '__', which does not follow the mathlib naming conventions. Consider using single underscores instead.\n\nNote: This linter can be disabled with `set_option linter.style.nameCheck false`",
    "level": "warning"}],
  "inputs":
  [["TypePreservation:deps",
@@ -43,18 +43,18 @@
        [["@«test-lean-claude»:extraDep", "00000000000006bb"]]],
       ["imports",
        [["«wasm2.0» transitive imports (legacy)", "042b7ef8e4b09de0"],
-        ["«wasm2.0»:importAllArts", "175da2e13c6e8b9a"],
-        ["HelperLemmas transitive imports (legacy)", "1d488048f555ccbb"],
-        ["HelperLemmas:importAllArts", "1bea2958d703c29a"],
-        ["Subtyping transitive imports (legacy)", "9389ae5aa5a34189"],
+        ["«wasm2.0»:importAllArts", "675ac16b856d1a66"],
+        ["HelperLemmas transitive imports (legacy)", "3151bc60dbe97170"],
+        ["HelperLemmas:importAllArts", "e8d4bff6de6bcd6c"],
+        ["Subtyping transitive imports (legacy)", "8a748e05090a180d"],
         ["Subtyping:importAllArts", "6b357408975fae13"],
-        ["TypingLemmas transitive imports (legacy)", "2b6e7c5b939c0c44"],
-        ["TypingLemmas:importAllArts", "722214215c1cc106"],
+        ["TypingLemmas transitive imports (legacy)", "7e432cf66470a0fd"],
+        ["TypingLemmas:importAllArts", "86cd15840a8b9b3b"],
         ["TypePreservationPure transitive imports (legacy)",
-         "6b45cf689a25cf9b"],
-        ["TypePreservationPure:importAllArts", "61fc568dd516850b"],
-        ["ExtensionLemmas transitive imports (legacy)", "50b0ecc3bed34688"],
-        ["ExtensionLemmas:importAllArts", "f76dbfd5e9fe96a2"]]]]],
+         "6ae15bd525ad8480"],
+        ["TypePreservationPure:importAllArts", "8ac69ef8e7933d7e"],
+        ["ExtensionLemmas transitive imports (legacy)", "d1459ff27826fe4f"],
+        ["ExtensionLemmas:importAllArts", "a112047c7dc81867"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -63,10 +63,10 @@
   ["Lean 4.32.0, commit 8c9756b28d64dab099da31a4c09229a9e6a2ef35",
    "5d4a267a1ba5cafb"],
   ["/home/zhengyew/spectec/spectec/src/test-lean-claude/TypePreservation.lean",
-   "1eb23de7c997e29d"],
+   "844cf2b317d6541e"],
   ["options", "00000000000006bb"],
   ["isModule: false", "feefd2a0d3a1847e"],
   ["Module.name: TypePreservation", "73166d1d7c5f5866"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "363fe4cf86c6f084"}
+ "depHash": "fb8305b11b58abfb"}

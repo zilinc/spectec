@@ -1,9 +1,9 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["29d89381823416af.olean"],
+ {"o": ["4429f2754bd08f7e.olean"],
   "m": false,
-  "i": "4efbd5c5f156e09b.ilean",
+  "i": "9d82d35bff232434.ilean",
   "c": "7f8d15b2a7c3d42a.c"},
  "log":
  [{"message":
@@ -57,10 +57,10 @@
      [["«test-lean-claude»/TestLeanClaude:extraDep",
        [["@«test-lean-claude»:extraDep", "00000000000006bb"]]],
       ["imports",
-       [["Mathlib.Tactic transitive imports (legacy)", "5390d593ecc2262d"],
+       [["Mathlib.Tactic transitive imports (legacy)", "ce66067266321590"],
         ["Mathlib.Tactic:importAllArts", "1a7bd42d35380fe2"],
         ["«wasm2.0» transitive imports (legacy)", "042b7ef8e4b09de0"],
-        ["«wasm2.0»:importAllArts", "175da2e13c6e8b9a"]]]]],
+        ["«wasm2.0»:importAllArts", "675ac16b856d1a66"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -69,10 +69,10 @@
   ["Lean 4.32.0, commit 8c9756b28d64dab099da31a4c09229a9e6a2ef35",
    "5d4a267a1ba5cafb"],
   ["/home/zhengyew/spectec/spectec/src/test-lean-claude/HelperLemmas.lean",
-   "d97a0eef2ab85c5a"],
+   "e85428e6e251a260"],
   ["options", "00000000000006bb"],
   ["isModule: false", "feefd2a0d3a1847e"],
   ["Module.name: HelperLemmas", "6275d6b032ab702e"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "1833659521b54fbd"}
+ "depHash": "5800e64792093ea2"}

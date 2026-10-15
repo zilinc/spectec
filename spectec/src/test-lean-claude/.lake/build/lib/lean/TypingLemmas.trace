@@ -1,40 +1,40 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["4f7455c8164db5c0.olean"],
+ {"o": ["9936bad1823e20df.olean"],
   "m": false,
-  "i": "d35901cdcdb0052b.ilean",
+  "i": "d3a32534f5bc8ad2.ilean",
   "c": "a3a3e247dc9087d3.c"},
  "log":
  [{"message":
    ".> LEAN_PATH=/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/Cli/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/batteries/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/Qq/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/aesop/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/importGraph/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/plausible/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/mathlib/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean /home/zhengyew/.elan/toolchains/leanprover--lean4---v4.32.0/bin/lean /home/zhengyew/spectec/spectec/src/test-lean-claude/TypingLemmas.lean -o /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/TypingLemmas.olean -i /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/TypingLemmas.ilean -c /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/ir/TypingLemmas.c --setup /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/ir/TypingLemmas.setup.json --json",
    "level": "trace"},
   {"message":
-   "TypingLemmas.lean:635:48: This simp argument is unused:\n  Option.get\n\nHint: Omit it from the simp argument list.\n  simp [size, valtype_numtype, Option.bind,̵ ̵O̵p̵t̵i̵o̵n̵.̵g̵e̵t̵] at size_constraint ⊢\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "TypingLemmas.lean:639:48: This simp argument is unused:\n  Option.get\n\nHint: Omit it from the simp argument list.\n  simp [size, valtype_numtype, Option.bind,̵ ̵O̵p̵t̵i̵o̵n̵.̵g̵e̵t̵] at size_constraint ⊢\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
    "level": "warning"},
   {"message":
-   "TypingLemmas.lean:488:4: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
+   "TypingLemmas.lean:492:4: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
    "level": "warning"},
   {"message":
-   "TypingLemmas.lean:489:4: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
+   "TypingLemmas.lean:493:4: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
    "level": "warning"},
   {"message":
-   "TypingLemmas.lean:894:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
+   "TypingLemmas.lean:898:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
    "level": "warning"},
   {"message":
-   "TypingLemmas.lean:995:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
+   "TypingLemmas.lean:999:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
    "level": "warning"},
   {"message":
-   "TypingLemmas.lean:1067:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
+   "TypingLemmas.lean:1071:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
    "level": "warning"},
   {"message":
-   "TypingLemmas.lean:1119:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
+   "TypingLemmas.lean:1123:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
    "level": "warning"},
   {"message":
-   "TypingLemmas.lean:1238:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
+   "TypingLemmas.lean:1242:9: 'intros' tactic does nothing\n\nNote: This linter can be disabled with `set_option linter.unusedTactic false`",
    "level": "warning"},
   {"message":
-   "TypingLemmas.lean:1784:33: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
+   "TypingLemmas.lean:1788:33: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice\n\nNote: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`",
    "level": "warning"}],
  "inputs":
  [["TypingLemmas:deps",
@@ -42,13 +42,13 @@
      [["«test-lean-claude»/TestLeanClaude:extraDep",
        [["@«test-lean-claude»:extraDep", "00000000000006bb"]]],
       ["imports",
-       [["Mathlib.Tactic transitive imports (legacy)", "5390d593ecc2262d"],
+       [["Mathlib.Tactic transitive imports (legacy)", "ce66067266321590"],
         ["Mathlib.Tactic:importAllArts", "1a7bd42d35380fe2"],
         ["«wasm2.0» transitive imports (legacy)", "042b7ef8e4b09de0"],
-        ["«wasm2.0»:importAllArts", "175da2e13c6e8b9a"],
-        ["HelperLemmas transitive imports (legacy)", "1d488048f555ccbb"],
-        ["HelperLemmas:importAllArts", "1bea2958d703c29a"],
-        ["Subtyping transitive imports (legacy)", "9389ae5aa5a34189"],
+        ["«wasm2.0»:importAllArts", "675ac16b856d1a66"],
+        ["HelperLemmas transitive imports (legacy)", "3151bc60dbe97170"],
+        ["HelperLemmas:importAllArts", "e8d4bff6de6bcd6c"],
+        ["Subtyping transitive imports (legacy)", "8a748e05090a180d"],
         ["Subtyping:importAllArts", "6b357408975fae13"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
@@ -58,10 +58,10 @@
   ["Lean 4.32.0, commit 8c9756b28d64dab099da31a4c09229a9e6a2ef35",
    "5d4a267a1ba5cafb"],
   ["/home/zhengyew/spectec/spectec/src/test-lean-claude/TypingLemmas.lean",
-   "89d824711b995f11"],
+   "5516fef8dffa1dc8"],
   ["options", "00000000000006bb"],
   ["isModule: false", "feefd2a0d3a1847e"],
   ["Module.name: TypingLemmas", "fb3981b2264ba5c9"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "10f6e36c3390d7ea"}
+ "depHash": "baddd8d37169257b"}

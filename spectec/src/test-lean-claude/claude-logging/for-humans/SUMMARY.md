@@ -1,10 +1,29 @@
 # Progress summary (human-readable)
 
-**Last updated:** 2026-10-05 (bundle20). The sections below the first one are the
+**Last updated:** 2026-10-15 (bundle21). The sections below the first one are the
 original session-1 summary, kept for history; for the step-by-step record see each
 `verbatim_dialogue_log/bundleN/response_N.md`.
 
-## Latest (2026-10-05, bundle20)
+## Latest (2026-10-15, bundle21)
+
+- **Upstream fixed the blocking issues.** Upstream (`rocq-backend-proof` `6582b3a39` with spec
+  commit `4cf9f29c5`) made the two "stuck" vector instructions invalid and removed the 2^32 corner
+  case in memory.fill/copy/init. Rocq's proof of progress and its `Step_read_is_wf` are now
+  complete.
+- **The Lean port caught up.**
+  - `Step_read_is_wf` is now proved in Lean too.
+  - `TypeProgress.lean` has no `sorry` left.
+  - Every change mirrors Rocq's own changes.
+- **What remains, and why:**
+  - 62 generated facts saying that uninterpreted builtin functions (`iand_`, `fadd_`, ...) return
+    well-formed values. Nothing can be proved about functions that have no definition. Rocq
+    leaves exactly the same 62 unproved.
+  - The 16 unused lemmas the user marked for deletion.
+- **Still open upstream** (they shrink what the theorems talk about, but block nothing): the
+  `Moduleinst_ok` non-emptiness premise and the mutable-only `Globaltype_ok`.
+- **Report:** `verbatim_dialogue_log/bundle21/user_requested_documents/resync_6582b3a_and_sorry_report.md`.
+
+## Previous (2026-10-05, bundle20)
 
 - **Preservation: audited, complete and sound.** It says the same as the Rocq and Isabelle
   theorems.

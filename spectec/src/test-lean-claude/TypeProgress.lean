@@ -9,8 +9,11 @@ import TypePreservation
 /-!
 # TypeProgress
 
-Lean port of `spectec/test-rocq/theories/type_progress.v` (upstream `rocq-backend-proof-final`
-`95c256c2c`): the **progress** half of type safety. The main theorem is `t_progress`: a
+Lean port of `spectec/test-rocq/theories/type_progress.v` (ported from upstream
+`rocq-backend-proof-final` `95c256c2c` in bundle20; re-synced in bundle21 to upstream
+`rocq-backend-proof` `6582b3a39`, where Rocq's proof is complete). Rocq line citations below are to
+`95c256c2c` unless marked otherwise; `6582b3a39` shifted most of them. This is the **progress** half
+of type safety. The main theorem is `t_progress`: a
 configuration that is `Config_ok` at some result type is either terminal (only values, or a single
 `TRAP`) or can take a `Step`.
 
@@ -20,9 +23,12 @@ Structure (it follows the Rocq file):
 2. canonical forms (`typeof`, `invert_typeof_*`);
 3. `br`/`return` shape predicates (`br_reduce`, `not_lf_br`, ...) and their typing lemmas;
 4. numeric and lane/vector totality lemmas;
-5. `t_progress_be` (basic instructions), `t_progress_e` (administrative instructions), `t_progress`;
-6. the two counterexample families (`vload_shape64_*`, `vcvtop_trunc_sat_i16_*`) showing where
-   progress is FALSE as the spec stands, which is why Rocq's `t_progress_be` is `Admitted`.
+5. `t_progress_be` (basic instructions), `t_progress_e` (administrative instructions), `t_progress`.
+
+(Until bundle20 there was a 6th part: two counterexample families, `vload_shape64_*` and
+`vcvtop_trunc_sat_i16_*`, showing where progress was FALSE under the old spec. Upstream spec commit
+`4cf9f29c5` ruled both instructions out in validation (`SHAPE` now needs `M > 1`; `TRUNC_SAT` now
+needs an `Inn` destination), and Rocq `6582b3a39` deleted the counterexamples. So did bundle21.)
 
 **Lean-only structure (bundle20).** Rocq proves `t_progress_be` / `t_progress_e` with one
 `Instrs_ok_ind'` / `Admin_instrs_ok_ind'` application whose bullets handle each typing rule. Here
@@ -38,13 +44,15 @@ recursor. The cases can therefore be proved and checked independently.
 `getElem?_eq_some_bang`, typing builders). No logical dependency on preservation results is
 intended.
 
-Status (end of bundle20): **everything is proved** except two subcases that are FALSE as the spec
-stands, exactly where Rocq has its two `admit`s: the in-bounds `VLOAD V128 (SHAPE 64 X 1)` subcase of
-`t_progress_be_vload_pack` (Rocq `admit` at v:5208) and the `F32 X 4 → I16 X 8 TRUNC_SAT … ZERO`
-subcase of `t_progress_be_vcvtop` (v:4319). Each is one commented `sorry`. Both are machine-checked
-to be stuck (`vload_shape64_stuck`, `vcvtop_trunc_sat_i16_stuck`). `#sorry_deps TLC.t_progress`
-lists those two, `Step_read_is_wf` and 56 generated numeric `*_is_wf` theorems (all `Admitted` in
-Rocq). `#print axioms` adds 17 project axioms, each mirroring Rocq's `axioms.v`.
+Status (end of bundle21): **everything is proved, with no `sorry` in this file**, as Rocq's
+`t_progress_be` is now `Qed`. The two subcases that bundle20 left as `sorry` (false under the old
+spec) are now impossible: `t_progress_be_vload_pack` refutes `SHAPE 64 X 1` with the new `M > 1`
+side condition, and `t_progress_be_vcvtop` no longer has an `F32 → I16 TRUNC_SAT` case at all.
+`#sorry_deps TLC.t_progress` lists only generated numeric `*_is_wf` theorems about functions that
+are `opaque` in Lean (`Axiom`s in Rocq, whose `*_is_wf` are all `Admitted` there too); see
+`claude-logging/for-claude/is_wf_theorems.md`. `#print axioms` adds the project axioms that mirror
+Rocq's `axioms.v` (`ishl_wf`/`ishr_wf` were deleted with Rocq's, since `ishl_`/`ishr_` now take an
+`iN(N)` shift amount and the generated `ishl__is_wf`/`ishr__is_wf` apply directly).
 -/
 
 namespace TLC
@@ -1661,8 +1669,8 @@ theorem binop_total (nt : numtype) (b : binop_) (n1 n2 : num_) :
           | exact ixor__is_wf _ _ _ _ hw1 hw2 rfl
           | exact irotl__is_wf _ _ _ _ hw1 hw2 rfl
           | exact irotr__is_wf _ _ _ _ hw1 hw2 rfl
-          | exact ishl_wf _ _ _ hw1
-          | exact ishr_wf _ _ _ _ hw1
+          | exact ishl__is_wf _ _ _ _ hw1 hw2 rfl
+          | exact ishr__is_wf _ _ _ _ _ hw1 hw2 rfl
   · subst hF
     rcases hn1 with ⟨I1, x1, _, _, h1⟩ | ⟨F1, x1, hw1, h1⟩
     · exact (numIF _ _ h1.symm).elim
@@ -1847,8 +1855,8 @@ theorem binop_before (nt : numtype) (b : binop_) (n1 n2 : num_) :
           | exact ixor__is_wf _ _ _ _ hw1 hw2 rfl
           | exact irotl__is_wf _ _ _ _ hw1 hw2 rfl
           | exact irotr__is_wf _ _ _ _ hw1 hw2 rfl
-          | exact ishl_wf _ _ _ hw1
-          | exact ishr_wf _ _ _ _ hw1
+          | exact ishl__is_wf _ _ _ _ hw1 hw2 rfl
+          | exact ishr__is_wf _ _ _ _ _ hw1 hw2 rfl
   · subst hF
     rcases hn1 with ⟨I1, x1, _, _, h1⟩ | ⟨F1, x1, hw1, h1⟩
     · exact (numIF _ _ h1.symm).elim
@@ -3284,21 +3292,19 @@ theorem call_indirect_progress (s : store) (f : frame) (v_i : num_) (x : tableid
       exact ⟨[admininstr.CALL_ADDR a], Step.read _ _ _ (Step_read.call_indirect_call _ _ _ _ _ h1 h2 h3 h4 h5)⟩
   · exact ⟨[admininstr.TRAP], Step.read _ _ _ (Step_read.call_indirect_trap _ _ _ _ h)⟩
 
-/-- Rocq `type_progress.v:2811` `vcvtop_trunc_sat_i16`: recognises `F32 → I16 TRUNC_SAT`, the
-    `vcvtop` variant that the spec allows but cannot reduce (see `vcvtop_trunc_sat_i16_stuck`). -/
-def vcvtop_trunc_sat_i16 (op : vcvtop__) : Bool :=
-  match op with
-  | .mk_vcvtop___2 Fnn.F32 _ Jnn.I16 _ (.TRUNC_SAT _ _) => true
-  | _ => false
+-- bundle21: Rocq's `vcvtop_trunc_sat_i16` (95c256c2c `type_progress.v:2811`), which recognised
+-- the unreducible `F32 → I16 TRUNC_SAT`, was deleted upstream in `6582b3a39` together with every
+-- `~~ vcvtop_trunc_sat_i16 op` premise below: spec commit `4cf9f29c5` restricted `TRUNC_SAT` to
+-- `Inn` destinations, so that `vcvtop` no longer exists. Deleted here as well.
 
-/-- Rocq `type_progress.v:2817` `vcvtop_lane_total`. Every well-formed `vcvtop` other than
-    `F32 → I16 TRUNC_SAT` has a non-empty lane-wise result `$lcvtop__` on every well-formed lane.
-    Rocq's `~~ vcvtop_trunc_sat_i16 op` is stated as `vcvtop_trunc_sat_i16 op = false`. -/
+/-- Rocq `type_progress.v:2817` `vcvtop_lane_total` (6582b3a39: v:2801). Every well-formed
+    `vcvtop` has a non-empty lane-wise result `$lcvtop__` on every well-formed lane. (bundle21: the
+    `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as upstream.) -/
 theorem vcvtop_lane_total (sh_1 sh_2 : shape) (op : vcvtop__) (ci : lane_) :
-    wf_vcvtop__ sh_1 sh_2 op → vcvtop_trunc_sat_i16 op = false →
+    wf_vcvtop__ sh_1 sh_2 op →
     wf_lane_ (fun_lanetype sh_1) ci →
     ∃ r, fun_lcvtop__ sh_1 sh_2 op ci (some r) ∧ r ≠ [] := by
-  intro Hop Hts Hl
+  intro Hop Hl
   have inj : ∀ a b : Jnn, lanetype_Jnn a = lanetype_Jnn b → a = b := by
     intro a b h
     cases a <;> cases b <;> first | rfl | (exfalso; revert h; decide)
@@ -3362,12 +3368,11 @@ theorem vcvtop_lane_total (sh_1 sh_2 : shape) (op : vcvtop__) (ci : lane_) :
     cases o with
     | TRUNC_SAT sx zo =>
       cases Ho with
-      | vcvtop__Fnn_1_M_1_Jnn_2_M_2_case_0 _ _ hs =>
+      | vcvtop__Fnn_1_M_1_Inn_2_M_2_case_0 _ _ hs =>
         rcases hs with ⟨⟨h1, h2⟩, _⟩ | ⟨h1, _⟩ <;> cases F1 <;> cases J2 <;>
         first
         | exact absurd h1 (by decide)
         | exact absurd h2 (by decide)
-        | (simp [vcvtop_trunc_sat_i16] at Hts; done)
         | exact ⟨_, fun_lcvtop__.fun_lcvtop___case_24 _ _ _ _ _ _ _ _ rfl rfl rfl, key _ _ (trunc_sat_total _ _ _ _)⟩
         | exact ⟨_, fun_lcvtop__.fun_lcvtop___case_25 _ _ _ _ _ _ _ _ rfl rfl rfl, key _ _ (trunc_sat_total _ _ _ _)⟩
   | vcvtop___case_3 F1 M1 F2 M2 o Ho E1 E2 =>
@@ -3389,15 +3394,16 @@ theorem vcvtop_lane_total (sh_1 sh_2 : shape) (op : vcvtop__) (ci : lane_) :
         | exact absurd hs (by decide)
         | exact ⟨_, fun_lcvtop__.fun_lcvtop___case_34 _ _ _ _ _ _ rfl rfl rfl, keyL _ _ (promote_nonempty _ _ _)⟩
 
-/-- Rocq `type_progress.v:2849` `vcvtop_lanes_total`. The lane-wise results of a (non
-    `F32 → I16 TRUNC_SAT`) conversion over a list of well-formed lanes: all defined, non-empty, and
+/-- Rocq `type_progress.v:2849` `vcvtop_lanes_total` (6582b3a39: v:2832; bundle21 dropped the
+    `~~ vcvtop_trunc_sat_i16 op` premise, as upstream). The lane-wise results of a conversion over
+    a list of well-formed lanes: all defined, non-empty, and
     made of well-formed destination lanes. **Deviation:** the conjunct `vs.length = L.length` is
     added right after the `Forall₂` conjunct. Rocq's inductive `Forall2 _ vs L` implies
     `size vs = size L`, but Lean's zip-based `Forall₂` does not, and without the conjunct the
     statement would hold trivially with `vs = []`. -/
 theorem vcvtop_lanes_total (sh_1 sh_2 : shape) (op : vcvtop__) (L : List lane_) :
     wf_shape sh_1 → wf_shape sh_2 →
-    wf_vcvtop__ sh_1 sh_2 op → vcvtop_trunc_sat_i16 op = false →
+    wf_vcvtop__ sh_1 sh_2 op →
     Forall (wf_lane_ (fun_lanetype sh_1)) L →
     ∃ vs : List (Option (List lane_)),
       Forall₂ (fun v ci => fun_lcvtop__ sh_1 sh_2 op ci v) vs L ∧
@@ -3405,14 +3411,14 @@ theorem vcvtop_lanes_total (sh_1 sh_2 : shape) (op : vcvtop__) (L : List lane_) 
       Forall (fun v => v ≠ none) vs ∧
       Forall (fun r => r ≠ []) (List.map (fun v => Option.get! v) vs) ∧
       Forall (Forall (wf_lane_ (fun_lanetype sh_2))) (List.map (fun v => Option.get! v) vs) := by
-  intro Hs1 Hs2 Hop Hts HL
+  intro Hs1 Hs2 Hop HL
   have H : ∃ vs : List (Option (List lane_)),
       (Forall₂ (fun v ci => fun_lcvtop__ sh_1 sh_2 op ci v) vs L ∧ vs.length = L.length) ∧
       Forall (fun v => v ≠ none ∧ Option.get! v ≠ [] ∧
         Forall (wf_lane_ (fun_lanetype sh_2)) (Option.get! v)) vs := by
     apply Forall_exists_Forall2 (Option (List lane_)) lane_ (fun v ci => fun_lcvtop__ sh_1 sh_2 op ci v)
     intro ci Hci
-    obtain ⟨r, Hr, Hne⟩ := vcvtop_lane_total _ _ _ _ Hop Hts (HL ci Hci)
+    obtain ⟨r, Hr, Hne⟩ := vcvtop_lane_total _ _ _ _ Hop (HL ci Hci)
     refine ⟨some r, Hr, by simp, by simpa using Hne, ?_⟩
     exact lcvtop___is_wf _ _ _ _ _ _ Hr Hs1 Hs2 Hop (HL ci Hci) (by simp) rfl
   obtain ⟨vs, ⟨H2, Hlen⟩, HP⟩ := H
@@ -3541,12 +3547,13 @@ def zeroop_of (op : vcvtop__) : Option zero :=
 -- Ltac `vcvtop_cases` (type_progress.v:2930) NOT PORTED: proof automation; the Lean proofs do
 -- this inline.
 
-/-- Rocq `type_progress.v:2943` `halfop_total`. For a well-formed (non `F32 → I16 TRUNC_SAT`)
-    `vcvtop`, `$halfop` is defined and equals `halfop_of op`. -/
+/-- Rocq `type_progress.v:2943` `halfop_total` (6582b3a39: v:2925). For a well-formed `vcvtop`, `$halfop` is defined and
+    equals `halfop_of op`. (bundle21: the `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as
+    upstream.) -/
 theorem halfop_total (sh_1 sh_2 : shape) (op : vcvtop__) :
-    wf_vcvtop__ sh_1 sh_2 op → vcvtop_trunc_sat_i16 op = false →
+    wf_vcvtop__ sh_1 sh_2 op →
     fun_halfop sh_1 sh_2 op (some (halfop_of op)) := by
-  intro Hop Hts
+  intro Hop
   cases Hop with
   | vcvtop___case_0 J1 M1 J2 M2 x Hx E1 E2 =>
     subst E1 E2
@@ -3564,12 +3571,13 @@ theorem halfop_total (sh_1 sh_2 : shape) (op : vcvtop__) :
     subst E1 E2
     cases Hx <;> (cases F1 <;> cases F2 <;> constructor <;> rfl)
 
-/-- Rocq `type_progress.v:2951` `zeroop_total`. For a well-formed (non `F32 → I16 TRUNC_SAT`)
-    `vcvtop`, `$zeroop` is defined and equals `zeroop_of op`. -/
+/-- Rocq `type_progress.v:2951` `zeroop_total` (6582b3a39: v:2933). For a well-formed `vcvtop`, `$zeroop` is defined and
+    equals `zeroop_of op`. (bundle21: the `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as
+    upstream.) -/
 theorem zeroop_total (sh_1 sh_2 : shape) (op : vcvtop__) :
-    wf_vcvtop__ sh_1 sh_2 op → vcvtop_trunc_sat_i16 op = false →
+    wf_vcvtop__ sh_1 sh_2 op →
     fun_zeroop sh_1 sh_2 op (some (zeroop_of op)) := by
-  intro Hop Hts
+  intro Hop
   cases Hop with
   | vcvtop___case_0 J1 M1 J2 M2 x Hx E1 E2 =>
     subst E1 E2
@@ -3597,67 +3605,66 @@ theorem zero_lane_wf (nt : numtype) :
   have Hp := packnum_not_none _ _ Hz
   exact ⟨Hp, packnum__is_wf _ _ _ Hz Hp rfl⟩
 
-/-- Rocq `type_progress.v:2969` `vcvtop_step_full`. A well-formed `VCVTOP` with neither half nor
-    zero (and not `F32 → I16 TRUNC_SAT`) on a `V128` constant steps to a `V128` constant. -/
+/-- Rocq `type_progress.v:2969` `vcvtop_step_full` (6582b3a39: v:2951). A well-formed `VCVTOP` with neither half nor
+    zero on a `V128` constant steps to a `V128` constant. (bundle21: the
+    `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as upstream.) -/
 theorem vcvtop_step_full (L1 L2 : lanetype) (M : Nat) (op : vcvtop__) (c1 : uN) :
     wf_uN 128 c1 → wf_shape (shape.X L1 (dim.mk_dim M)) → wf_shape (shape.X L2 (dim.mk_dim M)) →
     wf_vcvtop__ (shape.X L1 (dim.mk_dim M)) (shape.X L2 (dim.mk_dim M)) op →
-    vcvtop_trunc_sat_i16 op = false →
     halfop_of op = none → zeroop_of op = none →
     ∃ c, Step_pure [admininstr.VCONST vectype.V128 c1,
                     admininstr.VCVTOP (shape.X L2 (dim.mk_dim M)) (shape.X L1 (dim.mk_dim M)) op]
                    [admininstr.VCONST vectype.V128 c] := by
-  intro Hc Hs1 Hs2 Hop Hts Hh Hz
+  intro Hc Hs1 Hs2 Hop Hh Hz
   have Hl := lanes__is_wf _ _ _ Hs1 Hc rfl
-  obtain ⟨vs, H2, Hn, Hne0, Hne, Hw⟩ := vcvtop_lanes_total _ _ _ _ Hs1 Hs2 Hop Hts Hl
+  obtain ⟨vs, H2, Hn, Hne0, Hne, Hw⟩ := vcvtop_lanes_total _ _ _ _ Hs1 Hs2 Hop Hl
   obtain ⟨c, Hgt, Hin, Hsw⟩ := setproduct_pick L2 M _ Hne Hw
-  have Hhalf := halfop_total _ _ _ Hop Hts
-  have Hzero := zeroop_total _ _ _ Hop Hts
+  have Hhalf := halfop_total _ _ _ Hop
+  have Hzero := zeroop_total _ _ _ Hop
   rw [Hh] at Hhalf
   rw [Hz] at Hzero
   refine ⟨c, Step_pure.vcvtop c1 _ _ op c (some c) ?_ (by simp) rfl⟩
   exact fun_vcvtop__.fun_vcvtop___case_0 L1 M L2 op c1 c M _ _ vs (some none) (some none)
     Hn H2 Hzero Hhalf (by simp) (by simp) ⟨rfl, rfl⟩ rfl Hne0 rfl Hgt (List.elem_eq_true_of_mem Hin) Hs1 Hs2 rfl
 
-/-- Rocq `type_progress.v:2991` `vcvtop_step_half`. A well-formed `VCVTOP` with a half (and not
-    `F32 → I16 TRUNC_SAT`) on a `V128` constant steps to a `V128` constant. -/
+/-- Rocq `type_progress.v:2991` `vcvtop_step_half` (6582b3a39: v:2973). A well-formed `VCVTOP` with a half on a `V128`
+    constant steps to a `V128` constant. (bundle21: the `~~ vcvtop_trunc_sat_i16 op` premise was
+    dropped, as upstream.) -/
 theorem vcvtop_step_half (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) (op : vcvtop__)
     (c1 : uN) (h : half) :
     wf_uN 128 c1 → wf_shape (shape.X L1 (dim.mk_dim M1)) → wf_shape (shape.X L2 (dim.mk_dim M2)) →
     wf_vcvtop__ (shape.X L1 (dim.mk_dim M1)) (shape.X L2 (dim.mk_dim M2)) op →
-    vcvtop_trunc_sat_i16 op = false →
     halfop_of op = some h →
     ∃ c, Step_pure [admininstr.VCONST vectype.V128 c1,
                     admininstr.VCVTOP (shape.X L2 (dim.mk_dim M2)) (shape.X L1 (dim.mk_dim M1)) op]
                    [admininstr.VCONST vectype.V128 c] := by
-  intro Hc Hs1 Hs2 Hop Hts Hh
+  intro Hc Hs1 Hs2 Hop Hh
   have Hl := Forall_list_slice _ _ (fun_half h 0 M2) M2 (lanes__is_wf _ _ _ Hs1 Hc rfl)
-  obtain ⟨vs, H2, Hn, Hne0, Hne, Hw⟩ := vcvtop_lanes_total _ _ _ _ Hs1 Hs2 Hop Hts Hl
+  obtain ⟨vs, H2, Hn, Hne0, Hne, Hw⟩ := vcvtop_lanes_total _ _ _ _ Hs1 Hs2 Hop Hl
   obtain ⟨c, Hgt, Hin, Hsw⟩ := setproduct_pick L2 M2 _ Hne Hw
-  have Hhalf := halfop_total _ _ _ Hop Hts
+  have Hhalf := halfop_total _ _ _ Hop
   rw [Hh] at Hhalf
   refine ⟨c, Step_pure.vcvtop c1 _ _ op c (some c) ?_ (by simp) rfl⟩
   exact fun_vcvtop__.fun_vcvtop___case_1 L1 M1 L2 M2 op c1 c h _ _ vs (some (some h))
     Hn H2 Hhalf (by simp) rfl rfl Hne0 rfl Hgt (List.elem_eq_true_of_mem Hin) Hs1 Hs2
 
-/-- Rocq `type_progress.v:3012` `vcvtop_step_zero`. A well-formed `VCVTOP` with `ZERO` (and not
-    `F32 → I16 TRUNC_SAT`) between number-type lanes, on a `V128` constant, steps to a `V128`
-    constant. -/
+/-- Rocq `type_progress.v:3012` `vcvtop_step_zero` (6582b3a39: v:2994). A well-formed `VCVTOP` with `ZERO` between
+    number-type lanes, on a `V128` constant, steps to a `V128` constant. (bundle21: the
+    `~~ vcvtop_trunc_sat_i16 op` premise was dropped, as upstream.) -/
 theorem vcvtop_step_zero (nt1 : numtype) (M1 : Nat) (nt2 : numtype) (M2 : Nat) (op : vcvtop__)
     (c1 : uN) :
     wf_uN 128 c1 → wf_shape (shape.X (lanetype_numtype nt1) (dim.mk_dim M1)) →
     wf_shape (shape.X (lanetype_numtype nt2) (dim.mk_dim M2)) →
     wf_vcvtop__ (shape.X (lanetype_numtype nt1) (dim.mk_dim M1))
       (shape.X (lanetype_numtype nt2) (dim.mk_dim M2)) op →
-    vcvtop_trunc_sat_i16 op = false →
     zeroop_of op = some zero.ZERO →
     ∃ c, Step_pure [admininstr.VCONST vectype.V128 c1,
                     admininstr.VCVTOP (shape.X (lanetype_numtype nt2) (dim.mk_dim M2))
                       (shape.X (lanetype_numtype nt1) (dim.mk_dim M1)) op]
                    [admininstr.VCONST vectype.V128 c] := by
-  intro Hc Hs1 Hs2 Hop Hts Hz
+  intro Hc Hs1 Hs2 Hop Hz
   have Hl := lanes__is_wf _ _ _ Hs1 Hc rfl
-  obtain ⟨vs, H2, Hn, Hne0, Hne, Hw⟩ := vcvtop_lanes_total _ _ _ _ Hs1 Hs2 Hop Hts Hl
+  obtain ⟨vs, H2, Hn, Hne0, Hne, Hw⟩ := vcvtop_lanes_total _ _ _ _ Hs1 Hs2 Hop Hl
   obtain ⟨Hpz, Hwz⟩ := zero_lane_wf nt2
   have Hu : ∀ nt : numtype, unpack (lanetype_numtype nt) = nt := by
     intro nt; cases nt <;> rfl
@@ -3686,7 +3693,7 @@ theorem vcvtop_step_zero (nt1 : numtype) (M1 : Nat) (nt2 : numtype) (M2 : Nat) (
       subst ht
       exact Hwz'
   obtain ⟨c, Hgt, Hin, Hsw⟩ := setproduct_pick (lanetype_numtype nt2) M2 _ Hne' Hw'
-  have Hzero := zeroop_total _ _ _ Hop Hts
+  have Hzero := zeroop_total _ _ _ Hop
   rw [Hz] at Hzero
   refine ⟨c, Step_pure.vcvtop c1 _ _ op c (some c) ?_ (by simp) rfl⟩
   exact fun_vcvtop__.fun_vcvtop___case_2 (lanetype_numtype nt1) M1 (lanetype_numtype nt2) M2 op c1 c _ _ vs
@@ -3695,16 +3702,15 @@ theorem vcvtop_step_zero (nt1 : numtype) (M1 : Nat) (nt2 : numtype) (M2 : Nat) (
 -- Ltac `vcvtop_cases_full` (type_progress.v:3046) NOT PORTED: proof automation; the Lean proofs do
 -- this inline.
 
-/-- Rocq `type_progress.v:3064` `vcvtop_zero_numtype`. `vcvtop`-zero applies to number-type lanes
+/-- Rocq `type_progress.v:3064` `vcvtop_zero_numtype` (6582b3a39: v:3045). `vcvtop`-zero applies to number-type lanes
     only: the operators with a `ZERO` (`TRUNC_SAT` to `I32`, `DEMOTE`) have number-type lanes on
     both sides. -/
 theorem vcvtop_zero_numtype (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) (op : vcvtop__)
     (z : zero) :
     wf_vcvtop__ (shape.X L1 (dim.mk_dim M1)) (shape.X L2 (dim.mk_dim M2)) op →
-    vcvtop_trunc_sat_i16 op = false →
     zeroop_of op = some z →
     ∃ nt1 nt2, L1 = lanetype_numtype nt1 ∧ L2 = lanetype_numtype nt2 := by
-  intro Hop Hts Hz
+  intro Hop Hz
   cases Hop with
   | vcvtop___case_0 J1 M1' J2 M2' x Hx E1 E2 =>
     exact absurd Hz (by simp [zeroop_of])
@@ -3715,12 +3721,11 @@ theorem vcvtop_zero_numtype (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat
     obtain ⟨rfl, rfl⟩ := E1
     obtain ⟨rfl, rfl⟩ := E2
     cases Hx with
-    | vcvtop__Fnn_1_M_1_Jnn_2_M_2_case_0 sx zo hcond =>
+    | vcvtop__Fnn_1_M_1_Inn_2_M_2_case_0 sx zo hcond =>
       simp only [zeroop_of] at Hz
       subst Hz
       cases z
       cases F1 <;> cases J2 <;> first
-        | (simp [vcvtop_trunc_sat_i16] at Hts; done)
         | (exfalso; revert hcond; decide)
         | exact ⟨numtype.F64, numtype.I32, rfl, rfl⟩
   | vcvtop___case_3 F1 M1' F2 M2' x Hx E1 E2 =>
@@ -3735,13 +3740,12 @@ theorem vcvtop_zero_numtype (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat
     | vcvtop__Fnn_1_M_1_Fnn_2_M_2_case_1 hcond =>
       exact absurd Hz (by simp [zeroop_of])
 
-/-- Rocq `type_progress.v:3076` `vcvtop_full_lsize`. Without half / zero, source and destination
+/-- Rocq `type_progress.v:3076` `vcvtop_full_lsize` (6582b3a39: v:3057). Without half / zero, source and destination
     lanes have the same size. -/
 theorem vcvtop_full_lsize (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) (op : vcvtop__) :
     wf_vcvtop__ (shape.X L1 (dim.mk_dim M1)) (shape.X L2 (dim.mk_dim M2)) op →
-    vcvtop_trunc_sat_i16 op = false →
     halfop_of op = none → zeroop_of op = none → lsize L1 = lsize L2 := by
-  intro Hop Hts Hh Hz
+  intro Hop Hh Hz
   cases Hop with
   | vcvtop___case_0 J1 M1' J2 M2' x Hx E1 E2 =>
     exact absurd Hh (by simp [halfop_of])
@@ -3761,7 +3765,7 @@ theorem vcvtop_full_lsize (L1 : lanetype) (M1 : Nat) (L2 : lanetype) (M2 : Nat) 
     obtain ⟨rfl, rfl⟩ := E1
     obtain ⟨rfl, rfl⟩ := E2
     cases Hx with
-    | vcvtop__Fnn_1_M_1_Jnn_2_M_2_case_0 sx zo hcond =>
+    | vcvtop__Fnn_1_M_1_Inn_2_M_2_case_0 sx zo hcond =>
       simp only [zeroop_of] at Hz
       subst Hz
       cases F1 <;> cases J2 <;> first
@@ -4949,12 +4953,12 @@ theorem t_progress_be_vshiftop :
     cases o with
     | SHL =>
       refine ⟨s, f, [admininstr.VCONST vectype.V128 (inv_lanes_ (shape.X (lanetype_Jnn J) (dim.mk_dim M))
-        (List.map (fun l => lane_.mk_lane__0 J (ishl_ (lsizenn (lanetype_Jnn J)) (Option.get! (proj_lane__0 l)) (uN.mk_uN k)))
+        (List.map (fun l => lane_.mk_lane__0 J (ishl_ (lsizenn (lanetype_Jnn J)) (Option.get! (proj_lane__0 l)) (uN.mk_uN (k % lsizenn (lanetype_Jnn J)))))
           (lanes_ (shape.X (lanetype_Jnn J) (dim.mk_dim M)) c1)))], ?_⟩
       simp only [List.map_cons, List.map_nil, List.cons_append, List.nil_append]
       rw [Heqv1, Heqv2]
       refine Step.pure _ _ _ (Step_pure.vshiftop c1 k J M _ _ (lanes_ (shape.X (lanetype_Jnn J) (dim.mk_dim M)) c1)
-        (List.map (fun l => some (lane_.mk_lane__0 J (ishl_ (lsizenn (lanetype_Jnn J)) (Option.get! (proj_lane__0 l)) (uN.mk_uN k))))
+        (List.map (fun l => some (lane_.mk_lane__0 J (ishl_ (lsizenn (lanetype_Jnn J)) (Option.get! (proj_lane__0 l)) (uN.mk_uN (k % lsizenn (lanetype_Jnn J))))))
           (lanes_ (shape.X (lanetype_Jnn J) (dim.mk_dim M)) c1)) ?_ ?_ rfl ?_ ?_ Hl Hwsh Hwish Hwfk)
       · simp
       · apply Forall2_map_l
@@ -4973,12 +4977,12 @@ theorem t_progress_be_vshiftop :
         rfl
     | SHR v_sx =>
       refine ⟨s, f, [admininstr.VCONST vectype.V128 (inv_lanes_ (shape.X (lanetype_Jnn J) (dim.mk_dim M))
-        (List.map (fun l => lane_.mk_lane__0 J (ishr_ (lsizenn (lanetype_Jnn J)) v_sx (Option.get! (proj_lane__0 l)) (uN.mk_uN k)))
+        (List.map (fun l => lane_.mk_lane__0 J (ishr_ (lsizenn (lanetype_Jnn J)) v_sx (Option.get! (proj_lane__0 l)) (uN.mk_uN (k % lsizenn (lanetype_Jnn J)))))
           (lanes_ (shape.X (lanetype_Jnn J) (dim.mk_dim M)) c1)))], ?_⟩
       simp only [List.map_cons, List.map_nil, List.cons_append, List.nil_append]
       rw [Heqv1, Heqv2]
       refine Step.pure _ _ _ (Step_pure.vshiftop c1 k J M _ _ (lanes_ (shape.X (lanetype_Jnn J) (dim.mk_dim M)) c1)
-        (List.map (fun l => some (lane_.mk_lane__0 J (ishr_ (lsizenn (lanetype_Jnn J)) v_sx (Option.get! (proj_lane__0 l)) (uN.mk_uN k))))
+        (List.map (fun l => some (lane_.mk_lane__0 J (ishr_ (lsizenn (lanetype_Jnn J)) v_sx (Option.get! (proj_lane__0 l)) (uN.mk_uN (k % lsizenn (lanetype_Jnn J))))))
           (lanes_ (shape.X (lanetype_Jnn J) (dim.mk_dim M)) c1)) ?_ ?_ rfl ?_ ?_ Hl Hwsh Hwish Hwfk)
       · simp
       · apply Forall2_map_l
@@ -5650,36 +5654,33 @@ theorem t_progress_be_vcvtop :
     have Hs1 : wf_shape sh_1 := by cases HWfinstr; assumption
     have Hs2 : wf_shape sh_2 := by cases HWfinstr; assumption
     have Hop : wf_vcvtop__ sh_2 sh_1 op := by cases HWfinstr; assumption
-    cases Hti : vcvtop_trunc_sat_i16 op with
-    | true =>
-      -- FALSE subcase as the spec stands (Rocq: admit at type_progress.v:4319); see vcvtop_trunc_sat_i16_stuck.
-      sorry
-    | false =>
-      obtain ⟨L2, ⟨M2⟩⟩ := sh_1
-      obtain ⟨L1, ⟨M1⟩⟩ := sh_2
-      cases Hh : halfop_of op with
-      | some h =>
-        obtain ⟨c, Hc⟩ := vcvtop_step_half L1 M1 L2 M2 op c1 h Hwf1' Hs2 Hs1 Hop Hti Hh
+    -- bundle21: Rocq 6582b3a39 dropped its `vcvtop_trunc_sat_i16` case split (and its `admit`):
+    -- `F32 → I16 TRUNC_SAT` is no longer a `vcvtop__` (spec commit 4cf9f29c5).
+    obtain ⟨L2, ⟨M2⟩⟩ := sh_1
+    obtain ⟨L1, ⟨M1⟩⟩ := sh_2
+    cases Hh : halfop_of op with
+    | some h =>
+      obtain ⟨c, Hc⟩ := vcvtop_step_half L1 M1 L2 M2 op c1 h Hwf1' Hs2 Hs1 Hop Hh
+      exact ⟨s, f, [admininstr.VCONST vectype.V128 c], Step.pure _ _ _ Hc⟩
+    | none =>
+      cases Hz : zeroop_of op with
+      | some z =>
+        obtain ⟨nt1, nt2, E1, E2⟩ := vcvtop_zero_numtype L1 M1 L2 M2 op z Hop Hz
+        subst E1 E2
+        cases z
+        obtain ⟨c, Hc⟩ := vcvtop_step_zero nt1 M1 nt2 M2 op c1 Hwf1' Hs2 Hs1 Hop Hz
         exact ⟨s, f, [admininstr.VCONST vectype.V128 c], Step.pure _ _ _ Hc⟩
       | none =>
-        cases Hz : zeroop_of op with
-        | some z =>
-          obtain ⟨nt1, nt2, E1, E2⟩ := vcvtop_zero_numtype L1 M1 L2 M2 op z Hop Hti Hz
-          subst E1 E2
-          cases z
-          obtain ⟨c, Hc⟩ := vcvtop_step_zero nt1 M1 nt2 M2 op c1 Hwf1' Hs2 Hs1 Hop Hti Hz
-          exact ⟨s, f, [admininstr.VCONST vectype.V128 c], Step.pure _ _ _ Hc⟩
-        | none =>
-          have HL := vcvtop_full_lsize L1 M1 L2 M2 op Hop Hti Hh Hz
-          have HM : M1 = M2 := by
-            have Hm1 : lsize L1 * M1 = 128 := by cases Hs2; assumption
-            have Hm2 : lsize L2 * M2 = 128 := by cases Hs1; assumption
-            have Hp : 0 < lsize L2 := by cases L2 <;> decide
-            rw [HL] at Hm1
-            exact Nat.eq_of_mul_eq_mul_left Hp (Hm1.trans Hm2.symm)
-          subst HM
-          obtain ⟨c, Hc⟩ := vcvtop_step_full L1 L2 _ op c1 Hwf1' Hs2 Hs1 Hop Hti Hh Hz
-          exact ⟨s, f, [admininstr.VCONST vectype.V128 c], Step.pure _ _ _ Hc⟩
+        have HL := vcvtop_full_lsize L1 M1 L2 M2 op Hop Hh Hz
+        have HM : M1 = M2 := by
+          have Hm1 : lsize L1 * M1 = 128 := by cases Hs2; assumption
+          have Hm2 : lsize L2 * M2 = 128 := by cases Hs1; assumption
+          have Hp : 0 < lsize L2 := by cases L2 <;> decide
+          rw [HL] at Hm1
+          exact Nat.eq_of_mul_eq_mul_left Hp (Hm1.trans Hm2.symm)
+        subst HM
+        obtain ⟨c, Hc⟩ := vcvtop_step_full L1 L2 _ op c1 Hwf1' Hs2 Hs1 Hop Hh Hz
+        exact ⟨s, f, [admininstr.VCONST vectype.V128 c], Step.pure _ _ _ Hc⟩
   · simp at Hts
 
 /-- Lean-only (bundle20): the `Instr_ok.local_get` case of Rocq's `t_progress_be` proof (bullet at `type_progress.v:4340`),
@@ -6689,6 +6690,9 @@ theorem t_progress_be_vload_pack :
       -- Rocq: `inversion Hwv as [? ? ? ? Hsz HMN | | ]; subst.` and `HMN' : v_M * v_N = 64`.
       cases Hwv
       rename_i Hsz HMN
+      -- bundle21: the side condition is now `v_M * v_N = 128 / 2 ∧ v_N > 1` (spec commit 4cf9f29c5);
+      -- Rocq 6582b3a39: `move/andP: HMN => [HMN HM1]`.
+      obtain ⟨HMN, HM1⟩ := HMN
       have HMN' : @Eq Nat (v_M * v_N) 64 := by
         simp only [proj_sz_0, vsize] at HMN
         have h : (v_M : Rat) * (v_N : Rat) = ((64 : Nat) : Rat) := by rw [HMN]; norm_num
@@ -6704,9 +6708,10 @@ theorem t_progress_be_vload_pack :
           (List.drop (n1 + proj_uN_0 memarg.OFFSET + rat_to_nat (((k * v_M) : Rat) / (8 : Rat)))
             (fun_mem (state.mk_state s f) (uN.mk_uN 0)).BYTES))) := fun k =>
         inv_ibytes__is_wf _ _ _ (Forall_list_slice _ _ _ _ (wf_config_mem_bytes _ _ _ _ HWfConfig)) rfl
-      -- Rocq: `case: Hcases => [E | [E | [E | E]]]; subst v_M. 4: { admit }.` In the three good
-      -- cases (`v_M` = 8/16/32, so `v_N` = 8/4/2) the lanes widen to `Jnn` = I16/I32/I64; they
-      -- share the `vload_shape_val` step below, parametrised by `q = v_M / 8` and that `Jnn`.
+      -- Rocq: `case: Hcases => [E | [E | [E | E]]]; subst v_M.` In the three possible cases
+      -- (`v_M` = 8/16/32, so `v_N` = 8/4/2) the lanes widen to `Jnn` = I16/I32/I64; they share
+      -- the `vload_shape_val` step below, parametrised by `q = v_M / 8` and that `Jnn`. The fourth
+      -- (`v_M = 64`, so `v_N = 1`) contradicts the side condition `v_N > 1`.
       obtain E | ⟨q, Jn, Hq, HJn, Hshape⟩ : v_M = 64 ∨ ∃ (q : Nat) (Jn : Jnn), v_M = 8 * q ∧
           jsize Jn = v_M * 2 ∧ wf_shape (shape.X (lanetype_Jnn Jn) (dim.mk_dim v_N)) := by
         rcases Hcases with E | E | E | E
@@ -6723,8 +6728,11 @@ theorem t_progress_be_vload_pack :
           exact Or.inr ⟨4, Jnn.I64, rfl, rfl,
             wf_shape.shape_case_0 _ _ (wf_dim.dim_case_0 _ (by decide)) (by decide)⟩
         · exact Or.inl E
-      · -- FALSE subcase as the spec stands (Rocq: admit at type_progress.v:5208); see vload_shape64_stuck.
-        sorry
+      · -- Rocq 6582b3a39: `4: { (* SHAPE 64 X 1 is excluded by the side condition M > 1 of
+        -- vloadop_. *) have EN : v_N = 1%num by lia. subst v_N. move: HM1. by vm_compute. }`
+        subst E
+        have HM1' : @LT.lt Nat _ 1 v_N := HM1
+        omega
       · -- Rocq: `eapply (vload_shape_val (mk_state s f) _ _ _ _ _ _ (mkseqN J N) Jnn)`.
         -- the byte offsets/sizes are whole numbers, since `v_M = 8 * q`
         have HkM : ∀ k : Nat, rat_to_nat (((k * v_M) : Rat) / (8 : Rat)) = k * q := by
@@ -7199,14 +7207,13 @@ theorem t_progress_be_frame :
       simp only [List.append_nil] at h
       exact h
 
-/-- Rocq `type_progress.v:3086` `t_progress_be`: progress for basic-instruction sequences, under a
-    prefix of values `vcs` whose types are the sequence's input types. **`Admitted` in Rocq**: two of
-    its cases are false as the spec stands (see `vload_shape64_stuck` and
-    `vcvtop_trunc_sat_i16_stuck` at the end of this file), and Rocq also leaves an `admit` in the
-    `vcvtop` case. Here the theorem is assembled from the 78 case lemmas `t_progress_be_*` by one
+/-- Rocq `type_progress.v:3086` `t_progress_be` (6582b3a39: v:3067): progress for
+    basic-instruction sequences, under a prefix of values `vcs` whose types are the sequence's input
+    types. `Qed` in Rocq since `6582b3a39` (it was `Admitted` before, with two `admit`s in subcases
+    that the old spec made false; spec commit `4cf9f29c5` ruled both instructions out in
+    validation). Here the theorem is assembled from the 78 case lemmas `t_progress_be_*` by one
     application of the mutual recursor `Instrs_ok.rec` (Rocq: `Instrs_ok_ind'`). All 78 cases are
-    proved apart from the two known-false subcases (in `t_progress_be_vload_pack` and
-    `t_progress_be_vcvtop`), which keep one commented `sorry` each, as Rocq keeps its `admit`s. -/
+    proved. -/
 theorem t_progress_be (s : store) (C C' : context) (f : frame) (vcs : List val) (bes : List instr)
     (tf : functype) (ts1 ts2 : List valtype) (lab : List resulttype) (ret : Option resulttype) :
     wf_config (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ List.map admininstr_instr bes)) →
@@ -7830,7 +7837,7 @@ theorem t_progress_e_mk_Expr_ok2 (s : store) :
 
 /-- Rocq `type_progress.v:5536` `t_progress_e`: progress for administrative-instruction sequences
     (labels, frames, calls, traps), by mutual induction on `Instr_ok2`/`Instrs_ok2`/`Expr_ok2`.
-    `Qed` in Rocq (relying on the `Admitted` `t_progress_be`). Here it is assembled from the 12 case
+    `Qed` in Rocq (relying on `t_progress_be`, itself `Qed` since `6582b3a39`). Here it is assembled from the 12 case
     lemmas `t_progress_e_*` by one application of the mutual recursor `Instrs_ok2.rec` (Rocq:
     `Admin_instrs_ok_ind'`). -/
 theorem t_progress_e (s : store) (C framemoduleC : context) (f : frame) (vals : List val) (ais : List admininstr)
@@ -7932,113 +7939,10 @@ theorem t_progress (s : store) (f : frame) (ais : List admininstr) (rt : resultt
       (s_typing_not_lf_br' s f C ais [] rt frame_ok instrs_ok2_empty_rt)
       (s_typing_not_lf_return s f C ais [] rt frame_ok instrs_ok2_empty_rt)
 
-/-- Rocq `type_progress.v:6103` `vload_shape64_wf`. `VLOAD (SHAPE 64 X 1)` is well formed
-    (`64 * 1 = 128 / 2`), although `vload-shape-val` needs a `Jnn` of size 128 (counterexample
-    family to `t_progress_be`, with `vload_shape64_stuck`). -/
-theorem vload_shape64_wf (sx : sx) :
-    wf_vloadop_ vectype.V128 (vloadop_.SHAPEX_ (sz.mk_sz 64) 1 sx) := by
-  refine wf_vloadop_.vloadop__case_0 _ _ _ _ (wf_sz.sz_case_0 64 (by decide)) ?_
-  norm_num [proj_sz_0, vsize]
-
-/-- Rocq `type_progress.v:6107` `vload_shape64_stuck`. An in-bounds `VLOAD (SHAPE 64 X 1)` does not
-    reduce (`vload-shape-oob` needs it out of bounds). Rocq's coercion `(i :> N)` is `proj_uN_0 i`
-    and `|l|` is `l.length`. -/
-theorem vload_shape64_stuck (z : state) (i : iN) (sx : sx) (ao : memarg) (es : List admininstr) :
-    proj_uN_0 i + proj_uN_0 ao.OFFSET + 8 ≤ (fun_mem z (uN.mk_uN 0)).BYTES.length →
-    ¬ Step_read (config.mk_config z [admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 i),
-        admininstr.VLOAD vectype.V128 (some (vloadop_.SHAPEX_ (sz.mk_sz 64) 1 sx)) ao]) es := by
-  intro Hb H
-  have key : ∀ (vs : List val) (a b x : admininstr), [a, b] = Map admininstr_val vs ++ [x] → b = x := by
-    intro vs a b x h
-    rcases vs with _ | ⟨v, _ | ⟨v', vs'⟩⟩
-    · simp [Map] at h
-    · simp [Map] at h
-      exact h.2
-    · simp [Map] at h
-  generalize hc : config.mk_config z [admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 i),
-        admininstr.VLOAD vectype.V128 (some (vloadop_.SHAPEX_ (sz.mk_sz 64) 1 sx)) ao] = c at H
-  cases H
-  all_goals try (simp at hc; done)
-  all_goals try (injection hc with h1 h2; exact absurd (key _ _ _ _ h2) (by simp))
-  case vload_shape_oob =>
-    simp only [config.mk_config.injEq, List.cons.injEq, admininstr.CONST.injEq, admininstr.VLOAD.injEq,
-      Option.some.injEq, vloadop_.SHAPEX_.injEq, sz.mk_sz.injEq, true_and, and_true] at hc
-    obtain ⟨rfl, rfl, ⟨rfl, rfl, rfl⟩, rfl⟩ := hc
-    rename_i _ _ Hgt
-    have h8 : rat_to_nat (((64 : Nat) : Rat) * ((1 : Nat) : Rat) / (8 : Rat)) = 8 := by
-      have : (((64 : Nat) : Rat) * ((1 : Nat) : Rat) / (8 : Rat)) = ((8 : Nat) : Rat) := by norm_num
-      rw [this, rat_to_nat_natCast]
-    rw [h8] at Hgt
-    simp only [proj_num__0, Option.get!_some] at Hgt
-    omega
-  case vload_shape_val =>
-    simp only [config.mk_config.injEq, List.cons.injEq, admininstr.CONST.injEq, admininstr.VLOAD.injEq,
-      Option.some.injEq, vloadop_.SHAPEX_.injEq, sz.mk_sz.injEq, true_and, and_true] at hc
-    obtain ⟨rfl, rfl, ⟨rfl, rfl, rfl⟩, rfl⟩ := hc
-    rename_i _ _ J _ h1 _ _ _ _ _ _
-    cases J <;> exact absurd h1 (by decide)
-
-/-- Rocq `type_progress.v:6124` `vcvtop_trunc_sat_i16_wf_instr`. `VCVTOP (I16 X 8) (F32 X 4)
-    (TRUNC_SAT sx ZERO)` is well formed: the side condition of `vcvtop__` allows it
-    (`$sizenn1(F32) = 2 * $lsizenn2(I16)`). -/
-theorem vcvtop_trunc_sat_i16_wf_instr (sx : sx) :
-    wf_instr (instr.VCVTOP (shape.X lanetype.I16 (dim.mk_dim 8)) (shape.X lanetype.F32 (dim.mk_dim 4))
-      (vcvtop__.mk_vcvtop___2 Fnn.F32 4 Jnn.I16 8
-        (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT sx (some zero.ZERO)))) := by
-  refine wf_instr.instr_case_39 _ _ _ ?_ ?_ ?_
-  · exact wf_shape.shape_case_0 _ _ (wf_dim.dim_case_0 _ (by decide)) (by decide)
-  · exact wf_shape.shape_case_0 _ _ (wf_dim.dim_case_0 _ (by decide)) (by decide)
-  · exact wf_vcvtop__.vcvtop___case_2 _ _ _ _ _ _ _
-      (wf_vcvtop__Fnn_1_M_1_Jnn_2_M_2.vcvtop__Fnn_1_M_1_Jnn_2_M_2_case_0 _ _ _ _ _ _
-        (Or.inr ⟨by decide, rfl⟩)) rfl rfl
-
-/-- Rocq `type_progress.v:6132` `vcvtop_trunc_sat_i16_stuck`. That well-formed `VCVTOP` on a `V128`
-    constant does not reduce: `$lcvtop__` only defines `TRUNC_SAT` for `Inn` destinations, so
-    `$vcvtop__` has no result (counterexample family to `t_progress_be`). -/
-theorem vcvtop_trunc_sat_i16_stuck (sx : sx) (c : vec_) (es : List admininstr) :
-    ¬ Step_pure [admininstr.VCONST vectype.V128 c,
-        admininstr.VCVTOP (shape.X lanetype.I16 (dim.mk_dim 8)) (shape.X lanetype.F32 (dim.mk_dim 4))
-          (vcvtop__.mk_vcvtop___2 Fnn.F32 4 Jnn.I16 8
-            (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT sx (some zero.ZERO)))] es := by
-  intro H
-  -- generalize the left side so that `cases` can handle the rule `trap_vals` (a non-constructor lhs)
-  generalize hl : [admininstr.VCONST vectype.V128 c,
-        admininstr.VCVTOP (shape.X lanetype.I16 (dim.mk_dim 8)) (shape.X lanetype.F32 (dim.mk_dim 4))
-          (vcvtop__.mk_vcvtop___2 Fnn.F32 4 Jnn.I16 8
-            (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT sx (some zero.ZERO)))] = l at H
-  cases H
-  all_goals (try (simp at hl; done))
-  · -- `trap_vals`: the left side `[VCONST, VCVTOP]` has no `TRAP`
-    rename_i vl al _
-    rcases vl with _ | ⟨v, _ | ⟨v', vl⟩⟩ <;> simp [Map] at hl
-  · -- `vcvtop`
-    cases hl
-    rename_i hne _ hf
-    cases hf with
-    | fun_vcvtop___case_0 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hMM _ =>
-      -- full: the lane counts differ (`4 = 8`)
-      omega
-    | fun_vcvtop___case_1 _ _ _ _ _ _ _ v_half c_1_lst c_lst_lst var_1_lst var_0 hlen hF2 hh hvne hvget hc hF1 _ _ _ _ _ =>
-      -- half: `TRUNC_SAT` has no `half`
-      cases hh <;> first | exact absurd rfl hvne | (simp at hvget)
-    | fun_vcvtop___case_2 _ _ _ _ _ _ v128 c_1_lst c_lst_lst var_1_lst var_0 hlen hF2 hz hvne hvget hc hF1 _ _ _ _ _ _ =>
-      -- zero: no lane-wise `TRUNC_SAT` to `I16`
-      have hlcvtop : ∀ (ci : lane_) (v : Option (List lane_)),
-          fun_lcvtop__ (shape.X lanetype.F32 (dim.mk_dim 4)) (shape.X lanetype.I16 (dim.mk_dim 8))
-            (vcvtop__.mk_vcvtop___2 Fnn.F32 4 Jnn.I16 8
-              (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT sx (some zero.ZERO))) ci v → v = none := by
-        intro ci v hv
-        cases hv
-        rfl
-      have h4 : c_1_lst.length = 4 := by rw [hc]; exact lanes_len lanetype.F32 4 c
-      rcases var_1_lst with _ | ⟨v, vl⟩
-      · have h0 : c_1_lst.length = 0 := hlen.symm
-        omega
-      · rcases c_1_lst with _ | ⟨ci, cl⟩
-        · simp at hlen
-        · exact hF1 v (List.mem_cons_self ..) (hlcvtop ci v (hF2 (v, ci) (List.mem_cons_self ..)))
-    | fun_vcvtop___case_3 _ _ _ _ hnb =>
-      -- fallthrough: the result is `none`
-      exact hne rfl
+-- bundle21: the counterexample lemmas `vload_shape64_wf`, `vload_shape64_stuck`,
+-- `vcvtop_trunc_sat_i16_wf_instr` and `vcvtop_trunc_sat_i16_stuck` (95c256c2c `type_progress.v:6103-6159`)
+-- were deleted upstream in `6582b3a39`, and are deleted here too: spec commit `4cf9f29c5` makes both
+-- instructions invalid (`SHAPE` needs `M > 1`, `TRUNC_SAT` needs an `Inn` destination), so the two
+-- `*_wf*` statements are now false and the `vcvtop__Fnn_1_M_1_Jnn_2_M_2` constructor they name is gone.
 
 end TLC

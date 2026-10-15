@@ -1,10 +1,16 @@
 # Notes for a future Claude session — READ THIS FIRST
 
-Last updated: 2026-10-05 (end of bundle20; see the bundle20 section below and
-`claude-logging/verbatim_dialogue_log/bundle20`).
+Last updated: 2026-10-15 (end of bundle21; see the bundle21 section below and
+`claude-logging/verbatim_dialogue_log/bundle21`).
 
 > **If you read nothing else, read (in this order)**
-> 1. The bundle20 section just below. Preservation is audited and sound. Progress is ported and
+> 0. The bundle21 section just below, and
+>    `verbatim_dialogue_log/bundle21/user_requested_documents/resync_6582b3a_and_sorry_report.md`.
+>    After the bundle21 re-sync the hand-written port has no `sorry` except the 16 the user marked
+>    for deletion; `wasm2.0.lean` keeps only the 62 opaque-builtin `*_is_wf` (Rocq: `Admitted`).
+>    To re-apply the hand-edits after a regeneration, use the **bundle21** patch + README (it
+>    supersedes bundle19's).
+> 1. The bundle20 section below. Preservation is audited and sound. Progress is ported and
 >    proved, except two known-false subcases that Rocq also `admit`s.
 > 2. `verbatim_dialogue_log/bundle20/user_requested_documents/insights_for_next_turn.md`: new
 >    techniques (recursor-generated case lemmas, the `type_of%` guard for agent proofs) and new
@@ -13,6 +19,62 @@ Last updated: 2026-10-05 (end of bundle20; see the bundle20 section below and
 >    to re-apply the hand-edits to the generated `wasm2.0.lean` after a regeneration.
 > 4. The older Lean lessons: bundle18 `insights_for_next_turn.md` §4 and bundle16
 >    `insights_for_next_turn.md`.
+
+## ✅ 2026-10-15 UPDATE (bundle21): re-synced to upstream `6582b3a39`; the hand-written port has no `sorry` left except the 16 you marked for deletion
+
+Session: a new session (Opus 5.5, Ultracode), told to behave as the bundle20 session.
+
+**What upstream changed** (merge `39aca4a5b` of `rocq-backend-proof` `6582b3a39`, on top of spec
+commit `4cf9f29c5` "CR changes"):
+- spec: `vloadop_` `SHAPE` needs `M > 1`; `TRUNC_SAT` needs an `Inn` destination (constructors
+  `vcvtop__Fnn_1_M_1_Jnn_2_M_2` → `…_Inn_2_M_2`); `$ishl_`/`$ishr_` take an `iN(N)` shift amount
+  and `$vshiftop_` reduces it modulo the lane size; `memory.fill-succ`/`memory.copy-le`/
+  `memory.init-succ` push `CONST I32 $iadd_(32, i, 1)` (wrapping) instead of `i+1`.
+- Rocq: `Step_read_is_wf` is `Qed`; `t_progress_be` is `Qed`; `ishl_wf`/`ishr_wf` axioms deleted;
+  `vcvtop_trunc_sat_i16` (+ the `~~ vcvtop_trunc_sat_i16 op` premise of 9 lemmas) and the four
+  counterexample lemmas deleted. Rocq's `Admitted` set is now the 62 `*_is_wf` of `Axiom` functions
+  plus `res_list_eq_dec`.
+
+**Blocking issues (bundle20 list):** the two stuck vector instructions and the `Step_read_is_wf`
+2^32 corner case are FIXED by the spec commit. Still open upstream (they block no `sorry`; they
+narrow what the theorems cover): (B) `Moduleinst_ok`'s hoisted `|addrs| > 0`; (C) `Globaltype_ok`
+mutable-only; the `vstore_lane-oob` `N`-bits typo. The bundle20 non-vacuity witness still compiles
+against the new model and re-confirms B and C.
+
+**What bundle21 did** (in a scratch copy of the project; see "Landing" below):
+- `wasm2.0.lean` = the user's regeneration (verified byte-identical to running the current
+  `main.exe … --lean`) + the bundle19 hand-edits patch (applied cleanly, 3 hunks with fuzz)
+  + `vshiftop__is_wf` adjusted to the modulo shift amount + `Step_read_is_wf` proved
+  (ported from Rocq's new proof by a subagent: 126 lines of `iswf_*` helpers in a sixth hand-written block + a 214-line proof over the 47 `Step_read` rules; it uses only `extend___is_wf`, `inv_lanes__is_wf`, `lanes__is_wf`, which Rocq's proof also uses). New hand-edits patch: `bundle21/user_requested_documents/wasm2.0_hand_edits.patch`.
+- `HelperLemmas.lean`: `ishl_wf`/`ishr_wf` deleted (as upstream); counts in the axiom header fixed.
+- `TypeProgress.lean`: re-signed the 9 vcvtop lemmas (premise dropped), deleted
+  `vcvtop_trunc_sat_i16` and the 4 counterexample lemmas, `binop_total`/`binop_before` use the
+  generated `ishl__is_wf`/`ishr__is_wf`, `t_progress_be_vshiftop` uses the modulo shift amount,
+  the two former `sorry` subcases are closed (`SHAPE 64 X 1` refuted by `M > 1`; the I16 TRUNC_SAT
+  case no longer exists). **`TypeProgress.lean` has no `sorry`.** Your readability rewrites of
+  `t_preservation`, `t_progress`, `t_progress_e`, `br_reduce` & co. are kept verbatim.
+- Doc comments updated in `TypePreservation.lean` (header, `store_extension_reduce`,
+  `t_read_preservation`) and `TypeProgress.lean` (header, `t_progress_be`, `t_progress_e`).
+
+**`sorry` inventory after bundle21:** hand-written files: only the 16 marked
+`TODO FROM USER: MARKED FOR DELETION BECAUSE UNUSED` (15 `HelperLemmas`, `Val_ok_store`).
+`wasm2.0.lean`: the 62 `*_is_wf` theorems about `opaque` functions (Rocq: `Admitted`). These
+cannot be proved without giving those builtins real definitions (as was done for `rat_to_nat`).
+`#sorry_deps`: `t_preservation` 32 (was 33; `Step_read_is_wf` is gone), `t_progress` 56 (was 59),
+all opaque-builtin `*_is_wf`. `#print axioms`: `t_preservation` uses no project axiom; `t_progress`
+uses 15 (was 17), each mirroring Rocq's `axioms.v`.
+
+**Landing:** the auto-mode permission classifier refused overwriting the repo's `.lean` files (the
+user's regenerated `wasm2.0.lean` was uncommitted), so the checked result was handed over as
+`bundle21/user_requested_documents/bundle21_lean_changes.patch`; the user applied it at 16:05 local
+and rebuilt (all nine modules recompiled 16:08-16:10). The repo's Lean files are byte-identical to
+the versions checked in the scratch copy.
+
+**New pitfalls:** (1) Claude's `Read`/`Edit` tools on a `.lean` file inside the repo can make the
+IDE's Lean server run Lake, which writes untracked `.lake/build/lib/lean/*.trace.nobuild` stubs
+when a module is stale (one appeared at 04:52Z this turn: `wasm2.0.trace.nobuild`); read `.lean`
+files with `cat`/`sed` only. (2) Build in a scratch copy (`cp` the sources, `cp -a`/`cp -al`
+`.lake/packages`) so nothing is written into the repo's `.lake` (its `.lake/build` is tracked in git).
 
 ## ✅ 2026-10-05 UPDATE (bundle20): preservation audited; PROGRESS PORTED AND PROVED (except 2 known-false subcases)
 

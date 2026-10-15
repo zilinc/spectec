@@ -96,6 +96,27 @@ for stating the axioms themselves.
 - Isabelle's `step_wf`/`Step_read_is_wf` lack the `Store_ok` premise and are false as stated
   (table.size pushes an unbounded `|REFS|`). This independently confirms the hand-added premise.
 
+### bundle21 note (2026-10-15)
+
+- Upstream `6582b3a39` proves Rocq's `Step_read_is_wf` (`Qed`): spec commit `4cf9f29c5` makes
+  memory.fill-succ/memory.copy-le/memory.init-succ push `CONST I32 $iadd_(32, i, 1)`, which removes
+  the `2^32` corner case. **Proved in Lean too** (bundle21, `wasm2.0.lean`, with a sixth
+  hand-written helper block). Its proof uses `extend___is_wf`, `inv_lanes__is_wf` and
+  `lanes__is_wf` (opaque builtins, `Admitted` in Rocq), exactly as Rocq's does.
+- `ishl__is_wf`/`ishr__is_wf` changed statement (`$ishl_`/`$ishr_` now take an `iN(N)` shift
+  amount). `TypeProgress.binop_total`/`binop_before` now use them in place of the deleted project
+  axioms `ishl_wf`/`ishr_wf` (deleted upstream too).
+- `vshiftop__is_wf`'s bundle19 proof was adjusted: `$vshiftop_` now passes the shift amount modulo
+  the lane size.
+- The 63 → **62** `sorry` theorems in `wasm2.0.lean` are now exactly Rocq's 62 `Admitted`
+  `*_is_wf` of `Axiom` (Lean: `opaque`) functions; Rocq's only other `Admitted` is
+  `res_list_eq_dec`, which Lean derives automatically.
+- `#sorry_deps TLC.t_preservation`: 32 (was 33); `#sorry_deps TLC.t_progress`: 56 (was 59). All
+  are `*_is_wf` of opaque builtins. They can be removed only by giving those builtins real
+  definitions in the generator, as was done for `rat_to_nat`.
+- The re-apply patch for regenerations is now
+  `verbatim_dialogue_log/bundle21/user_requested_documents/wasm2.0_hand_edits.patch`.
+
 ## How to fill this in going forward
 
 When a Phase 2/3 proof needs to invoke some `Foo_is_wf` theorem from

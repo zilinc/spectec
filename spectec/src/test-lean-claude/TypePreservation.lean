@@ -12,15 +12,14 @@ Lean port of `spectec/test-rocq/theories/type_preservation.v` — the
 capstone file containing the main preservation theorem. Full digest:
 `claude-logging/for-claude/digest_type_preservation.md`.
 
-Status (bundle18, 2026-10-03; supersedes the "3 lemmas are `Admitted`" summary this header
-used to carry, which described a pre-`a8b585cdb` Rocq checkout). Upstream
-`type_preservation.v` has **no** `Admitted` lemmas: everything is `Qed`, modulo the generated
-`Step_is_wf`/`Step_read_is_wf` in `wasm.v` (`Step_read_is_wf` is `Admitted` upstream, and false
-in a memory.fill/copy/init corner case; see `claude-logging/for-claude/is_wf_theorems.md`).
-Here everything is proved; `t_read_preservation` was the last proof (bundle19). The only
-`sorry`s that `t_preservation` still depends on are generated `*_is_wf` theorems in
-`wasm2.0.lean` that are `Admitted` in Rocq too (bundle19 status in
-`claude-logging/for-claude/is_wf_theorems.md`).
+Status (bundle21, 2026-10-15; supersedes the bundle18 summary). Upstream `type_preservation.v`
+has **no** `Admitted` lemmas: everything is `Qed`. Since upstream `6582b3a39` that includes the
+generated `Step_read_is_wf` in `wasm.v`, which used to be `Admitted` (and false in a
+memory.fill/copy/init `2^32` corner case, fixed by spec commit `4cf9f29c5`, which makes those
+rules push `$iadd_(32, i, 1)`). Here everything is proved, including `Step_read_is_wf`
+(bundle21, in `wasm2.0.lean`). The only `sorry`s that `t_preservation` still depends on are
+generated `*_is_wf` theorems about functions that are `opaque` in `wasm2.0.lean` (`Axiom`s in
+Rocq, where the same theorems are `Admitted`); see `claude-logging/for-claude/is_wf_theorems.md`.
 `num_default_is_well_formed` is proved (its Rocq statement is commented out upstream).
 
 Phase 1 (this file, first pass): every signature stated, proofs `sorry`.
@@ -912,8 +911,9 @@ theorem const_I32_result (s : store) (C : context) (c : num_) (t1s t2s : List va
     **Deviation (intended, an improvement):** Rocq takes the post-store's well-formedness from
     `Step_is_wf`. Here every new store component's well-formedness comes from the reducing
     instruction sequence, the old store, or the `$growtable`/`$growmemory` relations' own
-    premises, so this lemma does not depend on `Step_is_wf`, which is false in a corner case
-    (`claude-logging/for-claude/is_wf_theorems.md`). -/
+    premises, so this lemma does not depend on `Step_is_wf` (which was false in a corner case
+    until spec commit `4cf9f29c5`; it is proved since bundle21, so this is now only a difference
+    of proof route). -/
 
 theorem getElem?_eq_some_bang {α : Type} [Inhabited α] {l : List α} {k : Nat} {a : α}
     (h : l[k]? = some a) : k < l.length ∧ l[k]! = a := by
@@ -2016,10 +2016,9 @@ theorem Forall2_app_intro {α β : Type} {R : α → β → Prop} {l1 l2 : List 
 /-- Rocq `type_preservation.v:1661` `t_read_preservation`: preservation under the read-only
     reduction relation (no store mutation). `Qed` in Rocq; proved here (bundle19), all 47
     `Step_read` rules. As in Rocq, the reduct's well-formedness comes from the generated
-    `Step_read_is_wf` (`Admitted` in Rocq, `sorry` in `wasm2.0.lean`), and that is this
-    theorem's only `sorry` dependency. The theorem (Rocq's too) is false in the
-    memory.fill/copy/init `CONST I32 2^32` corner case, through exactly that dependency; the
-    fix is pending on the spec side (`claude-logging/for-claude/is_wf_theorems.md`).
+    `Step_read_is_wf`, which is proved since bundle21 (it was `Admitted` in Rocq and `sorry`
+    here until the spec fixed the memory.fill/copy/init `CONST I32 2^32` corner case in commit
+    `4cf9f29c5`).
 
     **Signature deviation (intended, bundle19):** the locals hypothesis is
     `Vals_ok v_s v_f.LOCALS v_C'.LOCALS`, i.e. Rocq's

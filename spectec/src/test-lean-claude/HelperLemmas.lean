@@ -698,9 +698,11 @@ theorem ltsize {α : Type} (x : Nat) (s s2 : List α) : x < s.length → x < (s 
     **Reading Rocq's `|x| = q` correctly (bundle20):** `|x|` is `N.of_nat (size x)` and a `q : Q`
     on the right is coerced to `N` through `Qfloor` and `Z.to_N` (wasm.v:194-200, 309), so the
     Rocq axioms state FLOORED equations. `rat_to_nat` (wasm2.0.lean:9) is exactly that composite.
-    Counts as of bundle20: Rocq's `axioms.v` has 23 axioms; the 11 below were ported earlier (two
-    of them, `ibytes_len'`/`ibytes_len''`, and the premise of `ibytes_inv`, were corrected in
-    bundle20 to the floored reading), and the 12 progress-only ones follow after `vbytes_inv`.
+    Counts as of bundle21: Rocq's `axioms.v` has 21 axioms (23 until upstream `6582b3a39` deleted
+    `ishl_wf`/`ishr_wf`); the 11 below were ported earlier (two of them, `ibytes_len'`/`ibytes_len''`,
+    and the premise of `ibytes_inv`, were corrected in bundle20 to the floored reading), and the 10
+    progress-only ones follow after `vbytes_inv` (12 in bundle20; `ishl_wf`/`ishr_wf` deleted in
+    bundle21, as upstream).
     (`size` is a concrete definition in `wasm2.0.lean`, not an opaque.)
 
     Original note: Originally 2 primitive axioms; the
@@ -808,12 +810,12 @@ axiom vbytes_inv (vt : vectype) (bs : List byte)
     (hlen : (bs.length : Rat) = (Option.get! (size (valtype_vectype vt)) : Rat) / 8) :
     vbytes_ vt (inv_vbytes_ vt bs) = bs
 
-/-! ### Progress-only axioms of `axioms.v` (added bundle20 for the progress port)
+/-! ### Progress-only axioms of `axioms.v` (added bundle20 for the progress port; 10 since bundle21)
 
     Each constrains functions that are `opaque` in `wasm2.0.lean` (no Lean definition), exactly as
     in Rocq, where they are uninterpreted `Axiom`s of `wasm.v`. Consistency: each has an obvious
-    model consistent with the others and with every proved theorem (comparisons return 0/1, shifts
-    reduce modulo `2^N`, `trunc_sat__` returns `some 0`, `demote__`/`promote__` return `[INF]`,
+    model consistent with the others and with every proved theorem (comparisons return 0/1,
+    `trunc_sat__` returns `some 0`, `demote__`/`promote__` return `[INF]`,
     `ibits_`/`inv_ibits_` are binary encode/decode). -/
 
 /-- Rocq `axioms.v:64` `ibits_inv`: `ibits_` and `inv_ibits_` are mutually inverse between
@@ -839,12 +841,10 @@ axiom fle_bit (v_N : N) (a b : fN) : wf_uN 1 (fle_ v_N a b)
 /-- Rocq `axioms.v:77` `fge_bit`. -/
 axiom fge_bit (v_N : N) (a b : fN) : wf_uN 1 (fge_ v_N a b)
 
-/-- Rocq `axioms.v:83` `ishl_wf`: `ishl_` stays in `iN(N)` whatever the shift amount (`$binop_`
-    passes the full operand as the shift amount; the spec takes it modulo `N`). -/
-axiom ishl_wf (v_N : N) (i : iN) (k : u32) : wf_uN v_N i → wf_uN v_N (ishl_ v_N i k)
-
-/-- Rocq `axioms.v:85` `ishr_wf`. -/
-axiom ishr_wf (v_N : N) (v_sx : sx) (i : iN) (k : u32) : wf_uN v_N i → wf_uN v_N (ishr_ v_N v_sx i k)
+-- bundle21: Rocq's `ishl_wf`/`ishr_wf` (95c256c2c `axioms.v:83-86`) were deleted upstream in
+-- `6582b3a39`, and are deleted here too. Spec commit `4cf9f29c5` gives `$ishl_`/`$ishr_` an `iN(N)`
+-- shift amount (`$binop_` passes its second operand directly; `$vshiftop_` reduces it modulo the
+-- lane size first), so the generated `ishl__is_wf`/`ishr__is_wf` apply wherever these were used.
 
 /-- Rocq `axioms.v:95` `trunc_sat_total`: saturating truncation always produces a result. -/
 axiom trunc_sat_total (v_M : M) (v_N : N) (v_sx : sx) (x : fN) : trunc_sat__ v_M v_N v_sx x ≠ none
