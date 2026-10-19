@@ -1895,6 +1895,16 @@ let create_wf_lemma_theorem_construct (def : Il.Ast.def) : command list =
 
         *)
 
+        let is_axiom =
+          (* omg I need to look up monadic stuff in ocaml when I have time *)
+          let wf_rel_hint = Hint_index.get_hint !analysis.hints ~hint_id:Middlend.Undep.wf_rel_id id.it  in
+          let wf_func_hint = Hint_index.get_hint !analysis.hints ~hint_id:Middlend.Undep.wf_func_id id.it in
+          let wf_rel_is_axiom = Option.map (fun (h:hint) -> h.hintexp.it = BoolE true) wf_rel_hint in
+          let wf_func_is_axiom = Option.map (fun (h:hint) -> h.hintexp.it = BoolE true) wf_func_hint in
+          (* let _ = Printf.printf "%b, %b, %b, %b\n"  in *)
+          List.exists (fun (e : bool option) -> e = Some true) [wf_rel_is_axiom; wf_func_is_axiom]
+        in
+
         let rule = match rules with
           | [rule] -> rule
           | _ -> failwith "wf-lemma relation should have exactly one rule"
@@ -1915,47 +1925,56 @@ let create_wf_lemma_theorem_construct (def : Il.Ast.def) : command list =
         ) = rule.it
         in
 
-        
+        let signature = (
+          List.map (fun q -> match q.it with
+            | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+                create_typ typ
+              ))
+            | TypP id -> BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+                Type None
+              ))
+            (* A higher-order function quantifier (e.g. the wf-lemma for a
+                function like fvunop_ that itself takes a callback
+                f_ : N -> fN -> List fN). Mirrors the DefP case in the
+                ordinary (non-lemma) signature builder just below, and
+                Rocq's render_param_type (src/backend-rocq/print.ml),
+                which renders the same DefP as a curried function type. *)
+            | DefP (id, params, typ) ->
+              let param_types = List.map (fun p -> match p.it with
+                | ExpP (_, typ) -> create_typ typ
+                | _ -> failwith "only ExpP should be here"
+              ) params in
+              BracketedBinder(ExplicitParam(
+                NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
+                create_curried_func (param_types @ [create_typ typ])
+              ))
+            | _ -> failwith "only ExpP, TypP, and DefP should be here"
+          ) rule_quants,
+
+          (* The last premise is the theorem's actual conclusion (e.g.
+              `wf_fN v_N ret_val`); everything before it is a hypothesis
+              the theorem assumes (e.g. `ret_val = fzero v_N`). Premises
+              renders the last element as the conclusion (no arrow). *)
+          Premises (List.map create_prem rule_prems)
+        )
+      in
+
+      if is_axiom then
+        [
+          Axiom {
+            id = id.it;
+            signature = signature;
+          }
+        ]
+      else
 
         [
           Theorem {
             modifier = { empty_modifier with comment = create_comment def };
             id = id.it;
-            signature = (
-              List.map (fun q -> match q.it with
-                | ExpP (id, typ) -> BracketedBinder(ExplicitParam(
-                    NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
-                    create_typ typ
-                  ))
-                | TypP id -> BracketedBinder(ExplicitParam(
-                    NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
-                    Type None
-                  ))
-                (* A higher-order function quantifier (e.g. the wf-lemma for a
-                   function like fvunop_ that itself takes a callback
-                   f_ : N -> fN -> List fN). Mirrors the DefP case in the
-                   ordinary (non-lemma) signature builder just below, and
-                   Rocq's render_param_type (src/backend-rocq/print.ml),
-                   which renders the same DefP as a curried function type. *)
-                | DefP (id, params, typ) ->
-                  let param_types = List.map (fun p -> match p.it with
-                    | ExpP (_, typ) -> create_typ typ
-                    | _ -> failwith "only ExpP should be here"
-                  ) params in
-                  BracketedBinder(ExplicitParam(
-                    NonEmptyList.from_list_unsafe [Ident_IOH id.it;],
-                    create_curried_func (param_types @ [create_typ typ])
-                  ))
-                | _ -> failwith "only ExpP, TypP, and DefP should be here"
-              ) rule_quants,
-
-              (* The last premise is the theorem's actual conclusion (e.g.
-                 `wf_fN v_N ret_val`); everything before it is a hypothesis
-                 the theorem assumes (e.g. `ret_val = fzero v_N`). Premises
-                 renders the last element as the conclusion (no arrow). *)
-              Premises (List.map create_prem rule_prems)
-
-            );
+            signature = signature;
             proof = Sorry;
           }
         ]

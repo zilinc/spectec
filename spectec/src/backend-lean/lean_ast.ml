@@ -511,6 +511,11 @@ type _theorem = {
 }
 [@@deriving show]
 
+type axiom = {
+  id: decl_id;
+  signature: decl_sig;
+}[@@deriving show]
+
 type command =
   | Def of _def
   | Inductive of _inductive
@@ -521,6 +526,7 @@ type command =
   | Instance of instance
   | Theorem of _theorem
   | DeriveDeceq of _derive_deceq
+  | Axiom of axiom
 [@@deriving show]
 
 (* Not part of Lean 4's own command grammar: an import precedes every

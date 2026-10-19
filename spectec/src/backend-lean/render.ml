@@ -27,6 +27,15 @@ let rec render_command (cmd : command) : document =
   | Instance i -> render_instance i
   | Theorem t -> render_theorem t
   | DeriveDeceq d -> render__derive_deceq d
+  | Axiom a -> render_axiom a
+
+and render_axiom (axiom : axiom) : document =
+  let id_str = render_id axiom.id in
+  let decl_sig_str = render_decl_sig axiom.signature in
+  string "axiom "
+  ^^ id_str
+  ^^ space
+  ^^ decl_sig_str
 
 and render_theorem (theorem : _theorem) : document =
   let modifier_str = render_decl_modifier theorem.modifier in

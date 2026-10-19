@@ -689,10 +689,16 @@ module Hint_index = struct
   let hints_of (index : t) (target_id : string) : hint list =
     StringMap.find_opt target_id index |> Option.value ~default:[]
 
+  let get_hint (index : t) ~(hint_id : string) (target_id : string) : hint option =
+    let hints = hints_of index target_id in
+    List.find_opt (fun (h : hint) -> h.hintid.it = hint_id) hints
+
   (* Does `target_id` carry a hint whose hintid is exactly `hint_id`?
      e.g. has_hint index ~hint_id:Middlend.Undep.wf_rel_id "fadd__is_wf" *)
   let has_hint (index : t) ~(hint_id : string) (target_id : string) : bool =
-    List.exists (fun (h : hint) -> h.hintid.it = hint_id) (hints_of index target_id)
+    (* List.exists (fun (h : hint) -> h.hintid.it = hint_id) (hints_of index target_id) *)
+    let h = get_hint index ~hint_id:hint_id target_id in
+    Option.is_some h  
 
   (* Every id carrying a hint whose hintid is exactly `hint_id`. Mirrors the
      Rocq backend's `wf_lemma_set` pattern generically: that set is exactly

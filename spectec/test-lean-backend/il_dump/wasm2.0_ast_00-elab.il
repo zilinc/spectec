@@ -124,12 +124,7 @@
   )
 )
 (HintD
-  (DecH
-    "concat_"
-    (hint "show" "$concat(%2)")
-    (hint "inverse" "$inv_concat_")
-    (hint "recfunc" "{}")
-  )
+  (DecH "concat_" (hint "show" "$concat(%2)") (hint "inverse" "$inv_concat_"))
 )
 (DecD
   "inv_concat_"
@@ -305,15 +300,7 @@
     )
   )
 )
-(HintD
-  (DecH
-    "setproduct_"
-    (hint "show" "{latex({\\\\Large\\\\times}) %2}")
-    (hint "recfunc" "{}")
-  )
-)
-(HintD (DecH "setproduct1_" (hint "recfunc" "{}")))
-(HintD (DecH "setproduct2_" (hint "recfunc" "{}")))
+(HintD (DecH "setproduct_" (hint "show" "{latex({\\\\Large\\\\times}) %2}")))
 (RecD
   (DecD
     "disjoint_"
@@ -349,14 +336,7 @@
     )
   )
 )
-(HintD
-  (DecH
-    "disjoint_"
-    (hint "show" "{%2 $disjoint}")
-    (hint "macro" "none")
-    (hint "recfunc" "{}")
-  )
-)
+(HintD (DecH "disjoint_" (hint "show" "{%2 $disjoint}") (hint "macro" "none")))
 (TypD
   "list"
   (TypP "X")
@@ -2699,7 +2679,7 @@
   (InstD
     (ExpP "Fnn_1" (VarT "Fnn"))
     (ExpP "M_1" (VarT "M"))
-    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "Inn_2" (VarT "Inn"))
     (ExpP "M_2" (VarT "M"))
     (ExpA
       (CaseE
@@ -2714,7 +2694,7 @@
       (CaseE
         (Seq Arg (Atom X) Arg)
         (TupE
-          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+          (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
           (CaseE Arg (TupE (VarE "M_2")))
         )
       )
@@ -2745,7 +2725,7 @@
                   )
                   (CallE
                     "lsizenn2"
-                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+                    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2")))
                   )
                 )
                 (CmpE
@@ -2753,7 +2733,7 @@
                   bool
                   (CallE
                     "lsizenn2"
-                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+                    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2")))
                   )
                   (NumE (Nat 32))
                 )
@@ -2781,7 +2761,7 @@
                   (NumE (Nat 2))
                   (CallE
                     "lsizenn2"
-                    (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2")))
+                    (ExpA (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2")))
                   )
                 )
               )
@@ -3157,20 +3137,25 @@
           (typbind "sx" (VarT "sx"))
         )
         (IfPr
-          (CmpE
-            EqOp
+          (BinE
+            AndOp
             bool
-            (CvtE
-              nat
-              rat
-              (BinE MulOp nat (ProjE (UncaseE (VarE "sz") Arg) 0) (VarE "M"))
+            (CmpE
+              EqOp
+              bool
+              (CvtE
+                nat
+                rat
+                (BinE MulOp nat (ProjE (UncaseE (VarE "sz") Arg) 0) (VarE "M"))
+              )
+              (BinE
+                DivOp
+                rat
+                (CvtE nat rat (CallE "vsize" (ExpA (VarE "vectype"))))
+                (CvtE nat rat (NumE (Nat 2)))
+              )
             )
-            (BinE
-              DivOp
-              rat
-              (CvtE nat rat (CallE "vsize" (ExpA (VarE "vectype"))))
-              (CvtE nat rat (NumE (Nat 2)))
-            )
+            (CmpE GtOp nat (VarE "M") (NumE (Nat 1)))
           )
         )
       )
@@ -5494,7 +5479,7 @@
   "ishl_"
   (ExpP "N" (VarT "N"))
   (ExpP "iN" (VarT "iN" (ExpA (VarE "N"))))
-  (ExpP "u32" (VarT "u32"))
+  (ExpP "iN" (VarT "iN" (ExpA (VarE "N"))))
   (VarT "iN" (ExpA (VarE "N")))
 )
 (DecD
@@ -5502,7 +5487,7 @@
   (ExpP "N" (VarT "N"))
   (ExpP "sx" (VarT "sx"))
   (ExpP "iN" (VarT "iN" (ExpA (VarE "N"))))
-  (ExpP "u32" (VarT "u32"))
+  (ExpP "iN" (VarT "iN" (ExpA (VarE "N"))))
   (VarT "iN" (ExpA (VarE "N")))
 )
 (DecD
@@ -5827,7 +5812,7 @@
           )
         )
         (ExpA (VarE "iN_1"))
-        (ExpA (CaseE Arg (TupE (ProjE (UncaseE (VarE "iN_2") Arg) 0))))
+        (ExpA (VarE "iN_2"))
       )
     )
   )
@@ -5857,7 +5842,7 @@
         )
         (ExpA (VarE "sx"))
         (ExpA (VarE "iN_1"))
-        (ExpA (CaseE Arg (TupE (ProjE (UncaseE (VarE "iN_2") Arg) 0))))
+        (ExpA (VarE "iN_2"))
       )
     )
   )
@@ -8063,7 +8048,7 @@
   (DefD
     (ExpP "Fnn_1" (VarT "Fnn"))
     (ExpP "M_1" (VarT "M"))
-    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "Inn_2" (VarT "Inn"))
     (ExpP "M_2" (VarT "M"))
     (ExpP "sx" (VarT "sx"))
     (ExpP "zero?" (IterT (VarT "zero") Opt))
@@ -8080,7 +8065,7 @@
       (CaseE
         (Seq Arg (Atom X) Arg)
         (TupE
-          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+          (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
           (CaseE Arg (TupE (VarE "M_2")))
         )
       )
@@ -8226,7 +8211,7 @@
   (DefD
     (ExpP "Fnn_1" (VarT "Fnn"))
     (ExpP "M_1" (VarT "M"))
-    (ExpP "Jnn_2" (VarT "Jnn"))
+    (ExpP "Inn_2" (VarT "Inn"))
     (ExpP "M_2" (VarT "M"))
     (ExpP "sx" (VarT "sx"))
     (ExpP "zero?" (IterT (VarT "zero") Opt))
@@ -8243,7 +8228,7 @@
       (CaseE
         (Seq Arg (Atom X) Arg)
         (TupE
-          (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn_2"))
+          (SubE (VarT "Inn") (VarT "lanetype") (VarE "Inn_2"))
           (CaseE Arg (TupE (VarE "M_2")))
         )
       )
@@ -16645,7 +16630,22 @@
         )
       )
       (ExpA (VarE "lane"))
-      (ExpA (CaseE Arg (TupE (VarE "n"))))
+      (ExpA
+        (CaseE
+          Arg
+          (TupE
+            (BinE
+              ModOp
+              nat
+              (VarE "n")
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+          )
+        )
+      )
     )
   )
   (DefD
@@ -16711,7 +16711,22 @@
       )
       (ExpA (VarE "sx"))
       (ExpA (VarE "lane"))
-      (ExpA (CaseE Arg (TupE (VarE "n"))))
+      (ExpA
+        (CaseE
+          Arg
+          (TupE
+            (BinE
+              ModOp
+              nat
+              (VarE "n")
+              (CallE
+                "lsizenn"
+                (ExpA (SubE (VarT "Jnn") (VarT "lanetype") (VarE "Jnn")))
+              )
+            )
+          )
+        )
+      )
     )
   )
 )
@@ -28670,16 +28685,11 @@
           (Seq (Atom CONST) Arg Arg)
           (TupE
             (CaseE (Atom I32) (TupE))
-            (CaseE
-              Arg
-              (TupE
-                (BinE
-                  AddOp
-                  nat
-                  (ProjE (UncaseE (VarE "i") Arg) 0)
-                  (NumE (Nat 1))
-                )
-              )
+            (CallE
+              "iadd_"
+              (ExpA (NumE (Nat 32)))
+              (ExpA (VarE "i"))
+              (ExpA (CaseE Arg (TupE (NumE (Nat 1)))))
             )
           )
         )
@@ -28875,16 +28885,11 @@
           (Seq (Atom CONST) Arg Arg)
           (TupE
             (CaseE (Atom I32) (TupE))
-            (CaseE
-              Arg
-              (TupE
-                (BinE
-                  AddOp
-                  nat
-                  (ProjE (UncaseE (VarE "j") Arg) 0)
-                  (NumE (Nat 1))
-                )
-              )
+            (CallE
+              "iadd_"
+              (ExpA (NumE (Nat 32)))
+              (ExpA (VarE "j"))
+              (ExpA (CaseE Arg (TupE (NumE (Nat 1)))))
             )
           )
         )
@@ -28892,16 +28897,11 @@
           (Seq (Atom CONST) Arg Arg)
           (TupE
             (CaseE (Atom I32) (TupE))
-            (CaseE
-              Arg
-              (TupE
-                (BinE
-                  AddOp
-                  nat
-                  (ProjE (UncaseE (VarE "i") Arg) 0)
-                  (NumE (Nat 1))
-                )
-              )
+            (CallE
+              "iadd_"
+              (ExpA (NumE (Nat 32)))
+              (ExpA (VarE "i"))
+              (ExpA (CaseE Arg (TupE (NumE (Nat 1)))))
             )
           )
         )
@@ -29255,16 +29255,11 @@
           (Seq (Atom CONST) Arg Arg)
           (TupE
             (CaseE (Atom I32) (TupE))
-            (CaseE
-              Arg
-              (TupE
-                (BinE
-                  AddOp
-                  nat
-                  (ProjE (UncaseE (VarE "j") Arg) 0)
-                  (NumE (Nat 1))
-                )
-              )
+            (CallE
+              "iadd_"
+              (ExpA (NumE (Nat 32)))
+              (ExpA (VarE "j"))
+              (ExpA (CaseE Arg (TupE (NumE (Nat 1)))))
             )
           )
         )
@@ -29272,16 +29267,11 @@
           (Seq (Atom CONST) Arg Arg)
           (TupE
             (CaseE (Atom I32) (TupE))
-            (CaseE
-              Arg
-              (TupE
-                (BinE
-                  AddOp
-                  nat
-                  (ProjE (UncaseE (VarE "i") Arg) 0)
-                  (NumE (Nat 1))
-                )
-              )
+            (CallE
+              "iadd_"
+              (ExpA (NumE (Nat 32)))
+              (ExpA (VarE "i"))
+              (ExpA (CaseE Arg (TupE (NumE (Nat 1)))))
             )
           )
         )
