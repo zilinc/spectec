@@ -215,6 +215,48 @@ $${rule-prose: Step_read/try_table}
 $${rule: Step_read/try_table}
 
 
+.. _exec-cont.new:
+
+$${rule-prose: Step/cont.new}
+
+$${rule: Step/cont.new-*}
+
+
+.. _exec-cont.bind:
+
+$${rule-prose: Step/cont.bind}
+
+$${rule: Step/cont.bind-*}
+
+
+.. _exec-resume:
+
+$${rule-prose: Step/resume}
+
+$${rule: Step/resume-*}
+
+
+.. _exec-resume_throw:
+
+$${rule-prose: Step/resume_throw}
+
+$${rule: Step/resume_throw-*}
+
+
+.. _exec-suspend:
+
+$${rule-prose: Step_read/suspend}
+
+$${rule: Step_read/suspend}
+
+
+.. _exec-switch:
+
+$${rule-prose: Step/switch}
+
+$${rule: Step/switch-*}
+
+
 .. index:: instruction, instruction sequence, block, exception, trap
 .. _exec-instrs:
 
@@ -313,6 +355,28 @@ When the end of a ${:TRY_TABLE} block is reached without a jump, :ref:`exception
 7. Jump to the position after the end of the administrative instruction associated with the handler :math:`H`.
 
 $${rule: Step_pure/handler-vals}
+
+
+.. index:: tag, exception tag
+
+.. _effect-handler:
+
+Effect Handling
+~~~~~~~~~~~~~~~~~~
+
+TODO(lyl): describe these admininstrs
+
+$${rule-prose: Step_pure/prompt}
+
+$${rule: Step_pure/prompt-vals}
+
+$${rule-prose: Step/suspending}
+
+$${rule: Step/suspending-*}
+
+$${rule-prose: Step_pure/resuming}
+
+$${rule: Step_pure/resuming-*}
 
 
 .. index:: ! call, function, function instance, label, frame

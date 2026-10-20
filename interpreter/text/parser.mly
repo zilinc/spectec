@@ -173,7 +173,6 @@ let func_type (c : context) x =
   | _ -> error x.at ("non-function type " ^ Int32.to_string x.it)
   | exception Failure _ -> error x.at ("unknown type " ^ Int32.to_string x.it)
 
-
 let bind_abs category space x =
   if VarMap.mem x.it space.map then
     error x.at ("duplicate " ^ category ^ " " ^ print x);
@@ -251,7 +250,6 @@ let inline_functype_explicit (c : context) x ft =
     error x.at "inline function type does not match explicit type";
   x
 
-
 (* Custom annotations *)
 
 let parse_annots (m : module_) : Custom.section list =
@@ -285,10 +283,12 @@ let parse_annots (m : module_) : Custom.section list =
 %token<V128.shape> VECSHAPE
 %token ANYREF NULLREF EQREF I31REF STRUCTREF ARRAYREF
 %token FUNCREF NULLFUNCREF EXNREF NULLEXNREF EXTERNREF NULLEXTERNREF
+%token NOCONT CONTREF NULLCONTREF
 %token ANY NONE EQ I31 REF NOFUNC EXN NOEXN EXTERN NOEXTERN NULL
 %token MUT FIELD STRUCT ARRAY SUB FINAL REC
 %token UNREACHABLE NOP DROP SELECT
 %token BLOCK END IF THEN ELSE LOOP
+%token CONT_NEW CONT_BIND SUSPEND RESUME RESUME_THROW SWITCH
 %token BR BR_IF BR_TABLE
 %token<Ast.idx -> Ast.instr'> BR_ON_NULL
 %token<Ast.idx -> Types.reftype -> Types.reftype -> Ast.instr'> BR_ON_CAST
@@ -320,12 +320,12 @@ let parse_annots (m : module_) : Custom.section list =
 %token<Ast.instr'> VEC_SHIFT VEC_BITMASK VEC_SPLAT
 %token VEC_SHUFFLE
 %token<Ast.laneidx -> Ast.instr'> VEC_EXTRACT VEC_REPLACE
-%token FUNC START TYPE PARAM RESULT LOCAL GLOBAL
-%token TABLE ELEM MEMORY TAG DATA DECLARE OFFSET ITEM IMPORT EXPORT
+%token FUNC START TYPE PARAM RESULT LOCAL GLOBAL CONT
+%token TABLE ELEM MEMORY ON TAG DATA DECLARE OFFSET ITEM IMPORT EXPORT
 %token MODULE BIN QUOTE DEFINITION INSTANCE
 %token SCRIPT REGISTER INVOKE GET
 %token ASSERT_MALFORMED ASSERT_INVALID ASSERT_UNLINKABLE
-%token ASSERT_RETURN ASSERT_TRAP ASSERT_EXCEPTION ASSERT_EXHAUSTION
+%token ASSERT_RETURN ASSERT_TRAP ASSERT_EXCEPTION ASSERT_EXHAUSTION ASSERT_SUSPENSION
 %token ASSERT_MALFORMED_CUSTOM ASSERT_INVALID_CUSTOM
 %token<Script.nan> NAN
 %token EITHER
@@ -376,6 +376,8 @@ heaptype :
   | NOEXN { fun c -> NoExnHT }
   | EXTERN { fun c -> ExternHT }
   | NOEXTERN { fun c -> NoExternHT }
+  | CONT { fun c -> ContHT }
+  | NOCONT { fun c -> NoContHT }
   | idx { fun c -> UseHT (Idx ($1 c type_).it) }
 
 reftype :
@@ -392,6 +394,8 @@ reftype :
   | NULLEXNREF { fun c -> (Null, NoExnHT) }  /* Sugar */
   | EXTERNREF { fun c -> (Null, ExternHT) }  /* Sugar */
   | NULLEXTERNREF { fun c -> (Null, NoExternHT) }  /* Sugar */
+  | CONTREF { fun c -> (Null, ContHT) } /* Sugar */
+  | NULLCONTREF { fun c -> (Null, NoContHT) } /* Sugar */
 
 valtype :
   | NUMTYPE { fun c -> NumT $1 }
@@ -405,6 +409,33 @@ valtype_list :
 globaltype :
   | valtype { fun c -> GlobalT (Cons, $1 c) }
   | LPAR MUT valtype RPAR { fun c -> GlobalT (Var, $3 c) }
+
+conttype :
+  | typeuse conttype_params
+    { fun c ->
+      match $2 c with
+      | ([], []) -> UseHT (Idx ($1 c).it)
+      | ft ->
+         let x = inline_functype_explicit c ($1 c) ft in
+         UseHT (Idx x.it) }
+  | conttype_params
+    /* TODO: the inline type is broken for now */
+    { let at = $sloc in fun c -> UseHT (Idx (inline_functype c ($1 c) at).it) }
+  | idx  /* Sugar */
+    { fun c -> UseHT (Idx ($1 c type_).it) }
+
+conttype_params :
+  | LPAR PARAM valtype_list RPAR conttype_params
+    { fun c -> let (ts1, ts2) = $5 c in
+      (snd $3 c @ ts1, ts2) }
+  | conttype_results
+    { fun c -> ([], $1 c) }
+
+conttype_results :
+  | LPAR RESULT valtype_list RPAR conttype_results
+    { fun c -> snd $3 c @ $5 c }
+  | /* empty */
+    { fun c -> [] }
 
 storagetype :
   | valtype { fun c -> ValStorageT ($1 c) }
@@ -452,6 +483,7 @@ comptype :
   | LPAR STRUCT structtype RPAR { fun c x -> StructT ($3 c x) }
   | LPAR ARRAY arraytype RPAR { fun c x -> ArrayT ($3 c) }
   | LPAR FUNC functype RPAR { fun c x -> FuncT ($3 c) }
+  | LPAR CONT conttype RPAR { fun c x -> ContT ($3 c) }
 
 subtype :
   | comptype { fun c x -> SubT (Final, [], $1 c x) }
@@ -553,6 +585,7 @@ instr_list :
   | instr1 instr_list { fun c -> $1 c @ $2 c }
   | selectinstr_instr_list { $1 }
   | callinstr_instr_list { $1 }
+  | resumeinstr_instr_list { $1 }
 
 instr1 :
   | plaininstr { fun c -> [$1 c @@ $sloc] }
@@ -575,6 +608,9 @@ plaininstr :
   | CALL_REF idx { fun c -> call_ref ($2 c type_) }
   | RETURN_CALL idx { fun c -> return_call ($2 c func) }
   | RETURN_CALL_REF idx { fun c -> return_call_ref ($2 c type_) }
+  | CONT_NEW idx { fun c -> cont_new ($2 c type_) }
+  | CONT_BIND idx idx { fun c -> cont_bind ($2 c type_) ($3 c type_) }
+  | SUSPEND idx { fun c -> suspend ($2 c tag) }
   | THROW idx { fun c -> throw ($2 c tag) }
   | THROW_REF { fun c -> throw_ref }
   | LOCAL_GET idx { fun c -> local_get ($2 c local) }
@@ -626,6 +662,7 @@ plaininstr :
   | STRUCT_NEW idx { fun c -> $1 ($2 c type_) }
   | STRUCT_GET idx idx { fun c -> let x = $2 c type_ in $1 x ($3 c (field x.it)).it }
   | STRUCT_SET idx idx { fun c -> let x = $2 c type_ in struct_set x ($3 c (field x.it)).it }
+  | SWITCH idx idx { fun c -> let x = $2 c type_ in let tag = $3 c tag in switch x tag }
   | ARRAY_NEW idx { fun c -> $1 ($2 c type_) }
   | ARRAY_NEW_FIXED idx nat32 { fun c -> array_new_fixed ($2 c type_) $3 }
   | ARRAY_NEW_ELEM idx idx { fun c -> array_new_elem ($2 c type_) ($3 c elem) }
@@ -724,6 +761,26 @@ callinstr_results_instr_list :
   | instr_list
     { fun c -> [], $1 c }
 
+resumeinstr_instr_list :
+  | RESUME idx resumeinstr_handler_instr
+    { let loc1 = $loc($1) in
+      fun c ->
+      let x = $2 c type_ in
+      let hs, es = $3 c in (resume x hs @@ loc1) :: es }
+  | RESUME_THROW idx idx resumeinstr_handler_instr
+    { let loc1 = $loc($1) in
+      fun c ->
+      let x  = $2 c type_ in
+      let tag = $3 c tag in
+      let hs, es = $4 c in (resume_throw x tag hs @@ loc1) :: es }
+
+resumeinstr_handler_instr :
+  | LPAR ON idx idx RPAR resumeinstr_handler_instr
+    { fun c -> let hs, es = $6 c in ($3 c tag, OnLabel ($4 c label)) :: hs, es }
+  | LPAR ON idx SWITCH RPAR resumeinstr_handler_instr
+    { fun c -> let hs, es = $6 c in ($3 c tag, OnSwitch) :: hs, es }
+  | instr_list
+    { fun c -> [], $1 c }
 
 blockinstr :
   | BLOCK labeling_opt block END labeling_end_opt
@@ -824,6 +881,16 @@ expr1 :  /* Sugar */
     { fun c -> let x, es = $3 c in es, return_call_indirect ($2 c table) x }
   | RETURN_CALL_INDIRECT callexpr_type  /* Sugar */
     { fun c -> let x, es = $2 c in es, return_call_indirect (0l @@ $loc($1)) x }
+  | RESUME idx resume_expr_handler
+    { fun c ->
+      let x = $2 c type_ in
+      let hs, es = $3 c in es, resume x hs }
+  | RESUME_THROW idx idx resume_expr_handler
+    { fun c ->
+      let x = $2 c type_ in
+      let tag = $3 c tag in
+      let hs, es = $4 c in
+      es, resume_throw x tag hs }
   | BLOCK labeling_opt block
     { fun c -> let c' = $2 c [] in let bt, es = $3 c' in [], block bt es }
   | LOOP labeling_opt block
@@ -863,6 +930,13 @@ callexpr_results :
   | expr_list
     { fun c -> [], $1 c }
 
+resume_expr_handler :
+  | LPAR ON idx idx RPAR resume_expr_handler
+    { fun c -> let hs, es = $6 c in ($3 c tag, OnLabel ($4 c label)) :: hs, es }
+  | LPAR ON idx SWITCH RPAR resume_expr_handler
+    { fun c -> let hs, es = $6 c in ($3 c tag, OnSwitch) :: hs, es }
+  | expr_list
+    { fun c -> [], $1 c }
 
 if_block :
   | typeuse if_block_param_body
@@ -898,7 +972,6 @@ if_ :
     { fun c c' -> [], $3 c', $7 c' }
   | LPAR THEN instr_list RPAR  /* Sugar */
     { fun c c' -> [], $3 c', [] }
-
 
 try_block :
   | typeuse try_block_param_body
@@ -1223,7 +1296,6 @@ table_fields :
       [Elem (rt, einit, Active (x, offset) @@ loc) @@ loc],
       [], [] }
 
-
 /* Imports & Exports */
 
 externtype :
@@ -1452,6 +1524,7 @@ action :
   | LPAR GET option(instance_var) name RPAR
     { Get ($3, $4) @@ $sloc }
 
+
 assertion :
   | LPAR ASSERT_MALFORMED script_module STRING RPAR
     { [], AssertMalformed (thd $3, $4) @@ $sloc }
@@ -1473,6 +1546,8 @@ assertion :
     { [], AssertTrap ($3, $4) @@ $sloc }
   | LPAR ASSERT_EXHAUSTION action STRING RPAR
     { [], AssertExhaustion ($3, $4) @@ $sloc }
+  | LPAR ASSERT_SUSPENSION action STRING RPAR
+    { [], AssertSuspension ($3, $4) @@ $sloc }
 
 cmd :
   | action { [Action $1 @@ $sloc] }

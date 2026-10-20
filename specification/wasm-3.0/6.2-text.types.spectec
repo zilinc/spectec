@@ -24,9 +24,11 @@ grammar Tabsheaptype : heaptype =
   | "func" => FUNC
   | "nofunc" => NOFUNC
   | "exn" => EXN
+  | "cont" => CONT
   | "noexn" => NOEXN
   | "extern" => EXTERN
   | "noextern" => NOEXTERN
+  | "nocont" => NOCONT
 
 grammar Theaptype_(I) : heaptype =
   | ht:Tabsheaptype => ht
@@ -97,6 +99,7 @@ grammar Tcomptype_(I) : (comptype, idctxt) =
   | "(" "struct" (ft,id?)*:Tlist(Tfield_(I)) ")" => (STRUCT ft*, {FIELDS ((id?)*)})
   | "(" "array" ft:Tfieldtype_(I) ")" => (ARRAY ft, {FIELDS (eps)})
   | "(" "func" (t_1,id?)*:Tlist(Tparam_(I)) t_2*:Tlist(Tresult_(I)) ")" => (FUNC t_1* -> t_2*, {FIELDS (eps)})
+  | "(" "cont" tu:Theaptype_(I) ")" => (CONT tu, {FIELDS (eps)})
 
 
 grammar Tfinal : final =

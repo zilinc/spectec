@@ -402,6 +402,82 @@ $${rule-prose: Catch_ok/catch_all_ref}
 $${rule: Catch_ok/catch_all_ref}
 
 
+.. _valid-cont.new:
+
+:math:`\CONTNEW~x`
+..................
+
+$${rule-prose: Instr_ok/cont.new}
+
+$${rule: Instr_ok/cont.new}
+
+
+.. _valid-cont.bind:
+
+:math:`\CONTBIND~x~x'`
+......................
+
+$${rule-prose: Instr_ok/cont.bind}
+
+$${rule: Instr_ok/cont.bind}
+
+
+.. _valid-resume:
+
+:math:`\RESUME~x~\hdl^\ast`
+...........................
+
+$${rule-prose: Instr_ok/resume}
+
+$${rule: Instr_ok/resume}
+
+
+.. _valid-resume_throw:
+
+:math:`\RESUMETHROW~x~xe~\hdl^\ast`
+...................................
+
+$${rule-prose: Instr_ok/resume_throw}
+
+$${rule: Instr_ok/resume_throw}
+
+
+:math:`\hdlON~x~l`
+..................
+
+$${rule-prose: Hdl_ok/label}
+
+$${rule: Hdl_ok/label}
+
+
+:math:`\hdlON~x~\hdlSWITCH`
+...........................
+
+$${rule-prose: Hdl_ok/switch}
+
+$${rule: Hdl_ok/switch}
+
+
+.. _valid-suspend:
+
+:math:`\SUSPEND~x`
+..................
+
+$${rule-prose: Instr_ok/suspend}
+
+$${rule: Instr_ok/suspend}
+
+
+.. _valid-switch:
+
+:math:`\SWITCH~x~xe`
+....................
+
+$${rule-prose: Instr_ok/switch}
+
+$${rule: Instr_ok/switch}
+
+
 .. index:: variable instructions, local index, global index, context
    pair: validation; instruction
    single: abstract syntax; instruction

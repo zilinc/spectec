@@ -60,9 +60,11 @@ rule Step_pure/select-false:
 
 ;; Block instructions
 
-rule Step_read/block:
-  z; (BLOCK t? instr*)  ~>  (LABEL_ n `{eps} instr*)
-  -- if t? = eps /\ n = 0 \/ t? =/= eps /\ n = 1  ;; TODO: allow |t?|
+rule Step_read/block-0:
+  z; (BLOCK eps instr*)  ~>  (LABEL_ 0 `{eps} instr*)
+
+rule Step_read/block-1:
+  z; (BLOCK t instr*)  ~>  (LABEL_ 1 `{eps} instr*)
 
 rule Step_read/loop:
   z; (LOOP t? instr*)  ~>  (LABEL_ 0 `{LOOP t? instr*} instr*)

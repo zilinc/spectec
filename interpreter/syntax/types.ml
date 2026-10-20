@@ -17,7 +17,7 @@ and numtype = I32T | I64T | F32T | F64T
 and vectype = V128T
 and heaptype =
   | AnyHT | NoneHT | EqHT | I31HT | StructHT | ArrayHT
-  | FuncHT | NoFuncHT | ExnHT | NoExnHT | ExternHT | NoExternHT
+  | FuncHT | NoFuncHT | ExnHT | NoExnHT | ExternHT | NoExternHT | ContHT | NoContHT
   | UseHT of typeuse | BotHT
 and reftype = null * heaptype
 and valtype = NumT of numtype | VecT of vectype | RefT of reftype | BotT
@@ -32,6 +32,7 @@ and comptype =
   | StructT of fieldtype list
   | ArrayT of fieldtype
   | FuncT of (resulttype * resulttype)
+  | ContT of heaptype
 
 and subtype = SubT of final * typeuse list * comptype
 and rectype = RecT of subtype list
@@ -123,9 +124,12 @@ let unpacked_fieldtype (FieldT (_mut, t)) = unpacked_storagetype t
 let idx_of_typeuse = function Idx x -> x | _ -> assert false
 let deftype_of_typeuse = function Def dt -> dt | _ -> assert false
 
+let reftype_of_valtype = function RefT t -> t | _ -> assert false
+
 let structtype_of_comptype = function StructT fts -> fts | _ -> assert false
 let arraytype_of_comptype = function ArrayT ft -> ft | _ -> assert false
 let functype_of_comptype = function FuncT rt2 -> rt2 | _ -> assert false
+let conttype_of_comptype = function ContT ht -> ht | _ -> assert false
 
 let externtype_of_importtype = function ImportT (_, _, xt) -> xt
 let externtype_of_exporttype = function ExportT (_, xt) -> xt
@@ -175,6 +179,8 @@ and subst_heaptype s = function
   | NoExnHT -> NoExnHT
   | ExternHT -> ExternHT
   | NoExternHT -> NoExternHT
+  | ContHT -> ContHT
+  | NoContHT -> NoContHT
   | UseHT t -> UseHT (subst_typeuse s t)
   | BotHT -> BotHT
 
@@ -202,6 +208,7 @@ and subst_comptype s = function
   | StructT fts -> StructT (List.map (subst_fieldtype s) fts)
   | ArrayT ft -> ArrayT (subst_fieldtype s ft)
   | FuncT (ts1, ts2) -> FuncT (subst_resulttype s ts1, subst_resulttype s ts2)
+  | ContT ht -> ContT (subst_heaptype s ht)
 
 and subst_subtype s = function
   | SubT (fin, uts, ct) ->
@@ -284,6 +291,24 @@ let expand_deftype (dt : deftype) : comptype =
   st
 
 
+(* Conversions & Projections *)
+
+let num_type_of_addr_type = function
+  | I32AT -> I32T
+  | I64AT -> I64T
+
+let addr_type_of_num_type = function
+  | I32T -> I32AT
+  | I64T -> I64AT
+  | _ -> assert false
+
+let unpacked_storage_type = function
+  | ValStorageT t -> t
+  | PackStorageT _ -> NumT I32T
+
+let unpacked_field_type (FieldT (_mut, t)) = unpacked_storage_type t
+
+
 (* String conversion *)
 
 let string_of_idx x =
@@ -346,6 +371,8 @@ and string_of_heaptype = function
   | NoExnHT -> "noexn"
   | ExternHT -> "extern"
   | NoExternHT -> "noextern"
+  | ContHT -> "cont"
+  | NoContHT -> "nocont"
   | UseHT ut -> string_of_typeuse ut
   | BotHT -> "something"
 
@@ -381,6 +408,7 @@ and string_of_comptype = function
   | ArrayT ft -> "array " ^ string_of_fieldtype ft
   | FuncT (ts1, ts2) ->
     "func " ^ string_of_resulttype ts1 ^ " -> " ^ string_of_resulttype ts2
+  | ContT ht -> "cont " ^ string_of_heaptype ht
 
 and string_of_subtype = function
   | SubT (Final, [], ct) -> string_of_comptype ct

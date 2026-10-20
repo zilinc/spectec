@@ -182,6 +182,7 @@ let heaptype s =
     (fun s -> UseHT (typeuse s33 s));
     (fun s ->
       match s7 s with
+      | -0x0b -> NoContHT
       | -0x0c -> NoExnHT
       | -0x0d -> NoFuncHT
       | -0x0e -> NoExternHT
@@ -194,6 +195,7 @@ let heaptype s =
       | -0x15 -> StructHT
       | -0x16 -> ArrayHT
       | -0x17 -> ExnHT
+      | -0x18 -> ContHT
       | _ -> error s pos "malformed heap type"
     )
   ] s
@@ -201,6 +203,7 @@ let heaptype s =
 let reftype s =
   let pos = pos s in
   match s7 s with
+  | -0x0b -> (Null, NoContHT)
   | -0x0c -> (Null, NoExnHT)
   | -0x0d -> (Null, NoFuncHT)
   | -0x0e -> (Null, NoExternHT)
@@ -213,6 +216,7 @@ let reftype s =
   | -0x15 -> (Null, StructHT)
   | -0x16 -> (Null, ArrayHT)
   | -0x17 -> (Null, ExnHT)
+  | -0x18 -> (Null, ContHT)
   | -0x1c -> (NoNull, heaptype s)
   | -0x1d -> (Null, heaptype s)
   | _ -> error s pos "malformed reference type"
@@ -256,6 +260,9 @@ let comptype s =
   | -0x22 ->
     let ft = fieldtype s in
     ArrayT ft
+  | -0x23 ->
+    let ht = heaptype s in
+    ContT ht
   | _ -> error s (pos s - 1) "malformed definition type"
 
 let subtype s =
@@ -351,6 +358,16 @@ let locals s =
     s pos "too many locals";
   List.flatten (List.map (Lib.Fun.uncurry Lib.List32.make) nts)
 
+let on_clause s =
+  match byte s with
+  | 0x00 ->
+    let x = at idx s in
+    let y = at idx s in
+    (x, OnLabel y)
+  | 0x01 ->
+    let x = at idx s in
+    (x, OnSwitch)
+  | _ -> error s (pos s) "ON opcode expected"
 
 let rec instr s =
   let pos = pos s in
@@ -401,7 +418,10 @@ let rec instr s =
   | 0x14 -> let x = at idx s in call_ref x
   | 0x15 -> let x = at idx s in return_call_ref x
 
-  | 0x16 | 0x17 | 0x18 | 0x19 as b -> illegal s pos b
+  | (0x16 | 0x17) as b -> illegal s pos b
+
+  | 0x18 -> error s pos "misplaced DELEGATE opcode"
+  | 0x19 -> error s pos "misplaced CATCH_ALL opcode"
 
   | 0x1a -> drop
   | 0x1b -> select None
@@ -608,6 +628,26 @@ let rec instr s =
   | 0xd4 -> ref_as_non_null
   | 0xd5 -> let x = at idx s in br_on_null x
   | 0xd6 -> let x = at idx s in br_on_non_null x
+
+  | 0xe0 -> cont_new (at idx s)
+  | 0xe1 ->
+    let x = at idx s in
+    let y = at idx s in
+    cont_bind x y
+  | 0xe2 -> suspend (at idx s)
+  | 0xe3 ->
+    let x = at idx s in
+    let xls = vec on_clause s in
+    resume x xls
+  | 0xe4 ->
+    let x   = at idx s in
+    let tag = at idx s in
+    let xls = vec on_clause s in
+    resume_throw x tag xls
+  | 0xe5 ->
+    let x = at idx s in
+    let y = at idx s in
+    switch x y
 
   | 0xfb as b ->
     (match u32 s with
@@ -966,11 +1006,11 @@ let rec instr s =
 and instr_block s = List.rev (instr_block' s [])
 and instr_block' s es =
   match peek s with
-  | None | Some (0x05 | 0x0b) -> es
+  | None | Some (0x05 | 0x07 | 0x0b | 0x19) -> es
   | _ ->
     let pos = pos s in
     let e' = instr s in
-    instr_block' s ((e' @@ region s pos pos) :: es)
+    instr_block' s (Source.(e' @@ region s pos pos) :: es)
 
 and catch s =
   match byte s with
@@ -1085,6 +1125,7 @@ let tag s =
 
 let tag_section s =
   section Custom.Tag (vec (at tag)) [] s
+
 
 
 (* Global section *)
@@ -1307,7 +1348,6 @@ let module_ s =
   { types; tables; memories; tags; globals; funcs;
     imports; exports; elems; datas; start },
   customs
-
 
 let decode_custom m bs custom =
   let open Source in

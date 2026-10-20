@@ -28,14 +28,14 @@ test: test-latex test-sphinx
 
 # Latex splicing
 
-LATEXINNAME = spec-latex.in
+LATEXINNAME = spec-latex
 LATEXOUTNAME = spec-latex
 
 .PHONY: test-latex
 
 test-latex: $(SPECS:%=$(LATEXOUTNAME)-%.pdf)
 
-$(LATEXOUTNAME)-%.tex: $(LATEXINNAME).tex $(SPECCLONE) $(EXE)
+$(LATEXOUTNAME)-%.tex: $(LATEXINNAME)-%.in.tex $(SPECCLONE) $(EXE)
 	cp $< $@
 	(cd $(SPECCLONE)/$* && $(EXE) -l *.$(EXT) --splice-latex -i -p $(OWNDIR)/$@)
 
@@ -45,7 +45,7 @@ $(LATEXOUTNAME)-%.pdf: $(LATEXOUTNAME)-%.tex
 
 # Sphinx splicing
 
-SPHINXINNAME = spec-sphinx.in
+SPHINXINNAME = spec-sphinx
 SPHINXOUTNAME = spec-sphinx
 SPHINXDIR = _sphinx
 
@@ -53,7 +53,7 @@ SPHINXDIR = _sphinx
 
 test-sphinx: $(SPECS:%=sphinx-splice-%)
 
-$(SPHINXOUTNAME)-%.rst: $(SPHINXINNAME).rst $(SPECFILES) $(EXE)
+$(SPHINXOUTNAME)-%.rst: $(SPHINXINNAME)-%.in.rst $(SPECFILES) $(EXE)
 	cp $< $@
 	(cd $(SPECDIR)/$* && $(EXE) -l *.$(EXT) --splice-sphinx -i -p $(OWNDIR)/$@)
 
@@ -94,5 +94,5 @@ clean:
 	rm -rf $(SPHINXDIR) $(LOG)
 
 distclean: clean
-	rm -f $(LATEXOUTNAME)-*.tex $(SPHINXOUTNAME)-*.rst
+	rm -f $(LATEXOUTNAME)-wasm-*.0.tex $(SPHINXOUTNAME)-wasm-*.0.rst
 	rm -f *.pdf

@@ -13,6 +13,7 @@ let lookup c x = Lib.List32.nth c x
 let abs_of_comptype _c = function
   | StructT _ | ArrayT _ -> StructHT
   | FuncT _ -> FuncHT
+  | ContT _ -> ContHT
 
 let rec top_of_comptype c ct =
   top_of_heaptype c (abs_of_comptype c ct)
@@ -27,6 +28,7 @@ and top_of_heaptype c = function
   | FuncHT | NoFuncHT -> FuncHT
   | ExnHT | NoExnHT -> ExnHT
   | ExternHT | NoExternHT -> ExternHT
+  | ContHT | NoContHT -> ContHT
   | UseHT ut -> top_of_typeuse c ut
   | BotHT -> assert false
 
@@ -49,6 +51,7 @@ and bot_of_heaptype c = function
   | FuncHT | NoFuncHT -> NoFuncHT
   | ExnHT | NoExnHT -> NoExnHT
   | ExternHT | NoExternHT -> NoExternHT
+  | ContHT | NoContHT -> NoContHT
   | UseHT ut -> bot_of_typeuse c ut
   | BotHT -> assert false
 
@@ -86,6 +89,7 @@ let rec match_heaptype c t1 t2 =
   | NoneHT, t when t <> BotHT -> match_heaptype c t AnyHT
   | NoFuncHT, t when t <> BotHT -> match_heaptype c t FuncHT
   | NoExnHT, t when t <> BotHT -> match_heaptype c t ExnHT
+  | NoContHT, t when t <> BotHT -> match_heaptype c t ContHT
   | NoExternHT, t when t <> BotHT -> match_heaptype c t ExternHT
   | UseHT (Idx x1), _ -> match_heaptype c (UseHT (Def (lookup c x1))) t2
   | _, UseHT (Idx x2) -> match_heaptype c t1 (UseHT (Def (lookup c x2)))
@@ -99,6 +103,7 @@ let rec match_heaptype c t1 t2 =
     | ArrayT _, EqHT -> true
     | ArrayT _, ArrayHT -> true
     | FuncT _, FuncHT -> true
+    | ContT _, ContHT -> true
     | _ -> false
     )
   | BotHT, _ -> true
@@ -146,6 +151,8 @@ and match_comptype c ct1 ct2 =
     match_fieldtype c ft1 ft2
   | FuncT (ts11, ts12), FuncT (ts21, ts22) ->
     match_resulttype c ts21 ts11 && match_resulttype c ts12 ts22
+  | ContT ht1, ContT ht2 ->
+    match_heaptype c ht1 ht2
   | _, _ -> false
 
 and match_deftype c dt1 dt2 =

@@ -71,17 +71,25 @@ If missing, the operands must be of :ref:`numeric <syntax-numtype>` or :ref:`vec
 .. _syntax-throw:
 .. _syntax-throw_ref:
 .. _syntax-try_table:
+.. _syntax-cont.new:
+.. _syntax-cont.bind:
+.. _syntax-resume:
+.. _syntax-resume_throw:
+.. _syntax-suspend:
+.. _syntax-switch:
 .. _syntax-catch:
 .. _syntax-instrs:
 .. _syntax-instr-control:
+.. _syntax-hdl:
 .. _exception:
+.. _continuation:
 
 Control Instructions
 ~~~~~~~~~~~~~~~~~~~~
 
 Instructions in this group affect the flow of control.
 
-$${syntax: {instr/block instr/br instr/call instr/exn} catch}
+$${syntax: {instr/block instr/br instr/call instr/exn instr/cont} catch hdl}
 
 The ${:BLOCK}, ${:LOOP}, ${:IF} and ${:TRY_TABLE} instructions are *structured* instructions.
 They bracket nested sequences of instructions, called *blocks*.
@@ -133,6 +141,9 @@ It is guaranteed that no sequence of nested calls using only these instructions 
 The instructions ${:THROW}, ${:THROW_REF}, and ${:TRY_TABLE} are concerned with *exceptions*.
 The ${:THROW} and ${:THROW_REF} instructions raise and reraise an exception, respectively, and transfers control to the innermost enclosing exception handler that has a matching catch clause.
 The ${:TRY_TABLE} instruction installs an exception *handler* that handles exceptions as specified by its catch clauses.
+
+The instructions ${:CONT.NEW}, ${:CONT.BIND}, ${:RESUME}, ${:RESUME_THROW}, ${:SUSPEND} and ${:SWITCH} are *stack-switching* instructions.
+TODO(lyl): description
 
 
 .. index:: ! variable instruction, local, global, local index, global index

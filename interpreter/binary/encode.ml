@@ -131,6 +131,8 @@ struct
     | NoExnHT -> s7 (-0x0c)
     | ExternHT -> s7 (-0x11)
     | NoExternHT -> s7 (-0x0e)
+    | ContHT -> s7 (-0x18)
+    | NoContHT -> s7 (-0x0b)
     | UseHT ut -> typeuse s33 ut
     | BotHT -> assert false
 
@@ -147,6 +149,8 @@ struct
     | (Null, NoExnHT) -> s7 (-0x0c)
     | (Null, ExternHT) -> s7 (-0x11)
     | (Null, NoExternHT) -> s7 (-0x0e)
+    | (Null, ContHT) -> s7 (-0x18)
+    | (Null, NoContHT) -> s7 (-0x0b)
     | (Null, t) -> s7 (-0x1d); heaptype t
     | (NoNull, t) -> s7 (-0x1c); heaptype t
 
@@ -173,6 +177,7 @@ struct
     | StructT fts -> s7 (-0x21); vec fieldtype fts
     | ArrayT ft -> s7 (-0x22); fieldtype ft
     | FuncT (ts1, ts2) -> s7 (-0x20); resulttype ts1; resulttype ts2
+    | ContT ht -> s7(-0x23); heaptype ht
 
   let subtype = function
     | SubT (Final, [], ct) -> comptype ct
@@ -241,6 +246,16 @@ struct
       | nlocs -> (1, loc) :: nlocs
     in vec local (List.fold_right combine locs [])
 
+  let on_clause (x, y) =
+    match y with
+    | OnSwitch ->
+       byte 0x01; idx x
+    | OnLabel y ->
+       byte 0x00; idx x; idx y
+
+  let resumetable xls =
+    vec on_clause xls
+
   let rec instr e =
     match e.it with
     | Unreachable -> op 0x00
@@ -276,6 +291,14 @@ struct
     | ReturnCall x -> op 0x12; idx x
     | ReturnCallRef x -> op 0x15; idx x
     | ReturnCallIndirect (x, y) -> op 0x13; idx y; idx x
+
+    | ContNew x -> op 0xe0; idx x
+    | ContBind (x, y) -> op 0xe1; idx x; idx y
+    | Suspend x -> op 0xe2; idx x
+    | Resume (x, xls) -> op 0xe3; idx x; resumetable xls
+    | ResumeThrow (x, y, xls) -> op 0xe4; idx x; idx y; resumetable xls
+    | Switch (x, y) -> op 0xe5; idx x; idx y
+
     | Throw x -> op 0x08; idx x
     | ThrowRef -> op 0x0a
 

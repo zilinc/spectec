@@ -50,6 +50,10 @@ rule Heaptype_sub/func:
   C |- deftype <: FUNC
   -- Expand: deftype ~~ FUNC t_1* -> t_2*
 
+rule Heaptype_sub/cont:
+  C |- deftype <: CONT
+  -- Expand: deftype ~~ CONT typeuse
+
 rule Heaptype_sub/def:
   C |- deftype_1 <: deftype_2
   -- Deftype_sub: C |- deftype_1 <: deftype_2
@@ -97,6 +101,10 @@ rule Heaptype_sub/noextern:
   C |- NOEXTERN <: heaptype
   -- Heaptype_sub: C |- heaptype <: EXTERN
   -- if heaptype =/= BOT
+
+rule Heaptype_sub/nocont:
+  C |- NOCONT <: heaptype
+  -- Heaptype_sub: C |- heaptype <: CONT
 
 rule Heaptype_sub/bot:
   C |- BOT <: heaptype
@@ -190,6 +198,10 @@ rule Comptype_sub/func:
   C |- FUNC t_11* -> t_12* <: FUNC t_21* -> t_22*
   -- Resulttype_sub: C |- t_21* <: t_11*
   -- Resulttype_sub: C |- t_12* <: t_22*
+
+rule Comptype_sub/cont:
+  C |- CONT tu_1 <: CONT tu_2
+  -- Heaptype_sub: C |- tu_1 <: tu_2
 
 
 rule Deftype_sub/refl:

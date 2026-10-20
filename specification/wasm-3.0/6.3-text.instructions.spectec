@@ -89,6 +89,10 @@ grammar Tblockinstr_(I)/abbrev : instr = ...
   | "if" Tlabel_(I) Tblocktype_(I) Tinstrs_(I) "end" Tid? ==
     "if" Tlabel_(I) Tblocktype_(I) Tinstrs_(I) "else" "end" Tid?
 
+grammar Thdl_(I) : hdl =
+  | "(" "on" x:Ttypeidx_(I) l:Tlabelidx_(I) ")" => _LABEL ON x l
+  | "(" "on" x:Ttypeidx_(I) "switch" ")" => _SWITCH ON x SWITCH
+
 grammar Tcatch_(I) : catch =
   | "(" "catch" x:Ttagidx_(I) l:Tlabelidx_(I) ")" => CATCH x l
   | "(" "catch_ref" x:Ttagidx_(I) l:Tlabelidx_(I) ")" => CATCH_REF x l
@@ -128,6 +132,15 @@ grammar Tplaininstr_(I)/func-abbrev : instr = ...
 grammar Tplaininstr_(I)/exn : instr = ...
   | "throw" x:Ttagidx_(I) => THROW x
   | "throw_ref" => THROW_REF
+  | ...
+
+grammar Tplaininstr_(I)/cont : instr = ...
+  | "cont.new" x:Ttypeidx_(I) => CONT.NEW x
+  | "cont.bind" x:Ttypeidx_(I) y:Ttypeidx_(I) => CONT.BIND x y
+  | "suspend" x:Ttagidx_(I) => SUSPEND x
+  | "resume" x:Ttypeidx_(I) hdl*:Thdl_(I)* => RESUME x hdl*
+  | "resume_throw" x:Ttypeidx_(I) y:Ttagidx_(I) hdl*:Thdl_(I)* => RESUME_THROW x y hdl*
+  | "switch" x:Ttypeidx_(I) y:Ttagidx_(I) => SWITCH x y
   | ...
 
 

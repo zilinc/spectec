@@ -3,8 +3,7 @@
   (deps
     (file ../src/exe-spectec/main.exe)
     ;(glob_files_rec ../../specification/*)
-    (file spec-latex.in.tex)
-    (file spec-sphinx.in.rst)
+    (file spec-latex-wasm-3.0.in.tex)
   )
   (files TEST.md)
 )

@@ -78,12 +78,35 @@ let func_type (c : context) x =
   | FuncT (ts1, ts2) -> ts1, ts2
   | _ -> error x.at ("non-function type " ^ I32.to_string_u x.it)
 
+let cont_type (c : context) x =
+  match expand_deftype (type_ c x) with
+  | ContT ht -> ht
+  | _ -> error x.at ("non-continuation type " ^ Int32.to_string x.it)
+
 let refer category (s : Free.Set.t) x =
   if not (Free.Set.mem x.it s) then
     error x.at
       ("undeclared " ^ category ^ " reference " ^ I32.to_string_u x.it)
 
 let refer_func (c : context) x = refer "function" c.refs.Free.funcs x
+
+
+(* Conversions *)
+
+let conttype_of_heaptype (c : context) (ht : heaptype) at : heaptype =
+  match ht with
+  | UseHT (Def dt) -> conttype_of_comptype (expand_deftype dt)
+  | UseHT (Idx x) -> cont_type c (x @@ at)
+  | _ -> assert false
+
+let functype_of_heaptype (c : context) (ht : heaptype) at : resulttype * resulttype =
+  match ht with
+  | UseHT (Def dt) -> functype_of_comptype (expand_deftype dt)
+  | UseHT (Idx x) -> func_type c (x @@ at)
+  | _ -> assert false
+
+let functype_of_tagtype (c : context) (TagT ut) at : resulttype * resulttype =
+  functype_of_comptype (expand_deftype (deftype_of_typeuse ut))
 
 
 let clos (c : context) subst t =
@@ -119,6 +142,7 @@ let check_heaptype (c : context) (t : heaptype) at =
   match t with
   | AnyHT | NoneHT | EqHT | I31HT | StructHT | ArrayHT
   | FuncHT | NoFuncHT
+  | ContHT | NoContHT
   | ExnHT | NoExnHT
   | ExternHT | NoExternHT -> ()
   | UseHT ut -> check_typeuse c ut at
@@ -156,6 +180,9 @@ let check_comptype (c : context) (ct : comptype) at =
   | FuncT (ts1, ts2) ->
     check_resulttype c ts1 at;
     check_resulttype c ts2 at
+  | ContT (UseHT (Idx x)) ->
+    let _dt = func_type c (x @@ at) in ()
+  | ContT _ -> assert false
 
 let check_subtype (c : context) (sut : subtype) at =
   let SubT (_fin, uts, ct) = sut in
@@ -190,8 +217,7 @@ let check_rectype (c : context) (rt : rectype) at : context =
 
 let check_tagtype (c : context) (tt : tagtype) at =
   let TagT ut = tt in
-  let (ts1, ts2) = func_type c (idx_of_typeuse ut @@ at) in
-  require (ts2 = []) at "non-empty tag result type";
+  let _ = func_type c (idx_of_typeuse ut @@ at) in
   ()
 
 let check_globaltype (c : context) (gt : globaltype) at =
@@ -414,6 +440,29 @@ let check_memop (c : context) (memop : ('t, 's) memop) ty_size get_sz at =
  * declarative typing rules.
  *)
 
+let check_resume_table (c : context) ts2 (xys : (idx * hdl) list) at =
+  List.iter (fun (x1, x2) ->
+      match x2 with
+      | OnLabel x2 ->
+        let (ts3, ts4) = functype_of_tagtype c (tag c x1) x1.at in
+        let ts' = label c x2 in
+        (match Lib.List.last_opt ts' with
+        | Some (RefT (nul', ht)) ->
+          let ht' = conttype_of_heaptype c ht x2.at in
+          let ft' = functype_of_heaptype c ht' x2.at in
+          require (match_comptype c.types (FuncT (ts4, ts2)) (FuncT ft')) x2.at
+            "type mismatch in continuation type";
+          match_stack c (ts3 @ [RefT (nul', ht)]) ts' x2.at
+        | _ ->
+           error at
+             ("type mismatch: instruction requires continuation reference type" ^
+                " but label has " ^ string_of_resulttype ts'))
+      | OnSwitch ->
+        let (ts3, ts4) = functype_of_tagtype c (tag c x1) x1.at in
+        require (match_resulttype c.types ts3 []) x1.at
+          "type mismatch tag type"
+    ) xys
+
 let check_blocktype (c : context) (bt : blocktype) at : instrtype =
   match bt with
   | ValBlockType None -> InstrT ([], [], [])
@@ -462,10 +511,12 @@ let rec check_instr (c : context) (e : instr) (s : infer_resulttype) : infer_ins
     (ts1 @ [NumT I32T]) --> ts2, List.map (fun x -> x @@ e.at) xs
 
   | Br x ->
-    label c x -->... [], []
+    let ts = label c x in
+    ts -->... [], []
 
   | BrIf x ->
-    (label c x @ [NumT I32T]) --> label c x, []
+    let ts = label c x in
+    (ts @ [NumT I32T]) --> ts, []
 
   | BrTable (xs, x) ->
     let n = List.length (label c x) in
@@ -476,7 +527,8 @@ let rec check_instr (c : context) (e : instr) (s : infer_resulttype) : infer_ins
 
   | BrOnNull x ->
     let (_nul, ht) = peek_ref 0 s e.at in
-    (label c x @ [RefT (Null, ht)]) --> (label c x @ [RefT (NoNull, ht)]), []
+    let ts = label c x in
+    (ts @ [RefT (Null, ht)]) --> (ts @ [RefT (NoNull, ht)]), []
 
   | BrOnNonNull x ->
     require (label c x <> []) e.at
@@ -568,6 +620,66 @@ let rec check_instr (c : context) (e : instr) (s : infer_resulttype) : infer_ins
        string_of_resulttype c.results ^
        " but callee returns " ^ string_of_resulttype ts2);
     (ts1 @ [NumT (numtype_of_addrtype at)]) -->... [], []
+
+  | ContNew x ->
+    let ht = cont_type c x in
+    [RefT (Null, ht)] -->
+    [RefT (NoNull, UseHT (Idx x.it))], []
+
+  | ContBind (x, y) ->
+    let ht = cont_type c x in
+    let (ts1, ts2) = functype_of_heaptype c ht x.at in
+    let ht' = cont_type c y in
+    let (ts1', _) as ft' = functype_of_heaptype c ht' y.at in
+    require (List.length ts1 >= List.length ts1') x.at
+      "type mismatch in continuation arguments";
+    let ts11, ts12 = Lib.List.split (List.length ts1 - List.length ts1') ts1 in
+    require (match_comptype c.types (FuncT (ts12, ts2)) (FuncT ft')) e.at
+      "type mismatch in continuation types";
+    (ts11 @ [RefT (Null, UseHT (Idx x.it))]) -->
+      [RefT (NoNull, UseHT (Idx y.it))], []
+
+  | Suspend x ->
+    let tag = tag c x in
+    let (ts1, ts2) = functype_of_tagtype c tag x.at in
+    ts1 --> ts2, []
+
+  | Resume (x, xys) ->
+    let ht = cont_type c x in
+    let (ts1, ts2) = functype_of_heaptype c ht x.at in
+    check_resume_table c ts2 xys e.at;
+    (ts1 @ [RefT (Null, UseHT (Idx x.it))]) --> ts2, []
+
+  | ResumeThrow (x, y, xys) ->
+    let ht = cont_type c x in
+    let (ts1, ts2) = functype_of_heaptype c ht x.at in
+    let tag = tag c y in
+    let (ts0, _) = functype_of_tagtype c tag y.at in
+    check_resume_table c ts2 xys e.at;
+    (ts0 @ [RefT (Null, UseHT (Idx x.it))]) --> ts2, []
+
+  | Switch (x, y) ->
+     let ht1 = cont_type c x in
+     let (ts11, ts12) = functype_of_heaptype c ht1 x.at in
+     let (ts21, ts22) =
+       match Lib.List.last_opt ts11 with
+       | Some (RefT (nul', ht)) ->
+         functype_of_heaptype c (conttype_of_heaptype c ht x.at) x.at
+       | _ ->
+         error x.at
+           ("type mismatch: instruction requires continuation reference type" ^
+              " but the type annotation has " ^ string_of_resulttype ts11)
+     in
+     let et = tag c y in
+     let (ts31, t) = functype_of_tagtype c et y.at in
+     require (ts31 = []) y.at
+       "type mismatch in switch tag";
+     require (match_resulttype c.types ts12 t) y.at
+       "type mismatch in continuation types";
+     require (match_resulttype c.types t ts22) y.at
+       "type mismatch in continuation types";
+     let ts11' = Lib.List.lead ts11 in
+     (ts11' @ [RefT (Null, UseHT (Idx x.it))]) --> ts21, []
 
   | Throw x ->
     let TagT ut = tag c x in

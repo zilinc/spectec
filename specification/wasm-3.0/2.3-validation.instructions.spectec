@@ -608,6 +608,70 @@ rule Instr_ok/vcvtop:
   C |- VCVTOP sh_1 sh_2 vcvtop : V128 -> V128
 
 
+;; Stack-switching instructions
+
+rule Instr_ok/cont.new:
+  C |- CONT.NEW x : (REF NULL tu) -> (REF (_IDX x))
+  -- Expand: C.TYPES[x] ~~ CONT tu
+  ;; TODO(lyl): should I use Expand_use or Expand: $as_deftype(tu)?
+  -- Expand_use: tu ~~_C $($(FUNC t_1* -> t_2*))
+
+rule Instr_ok/cont.bind:
+  C |- CONT.BIND x x' : t_3* (REF NULL (_IDX x)) -> (REF (_IDX x'))
+  -- Expand: C.TYPES[x] ~~ CONT tu
+  -- Expand_use: tu ~~_C $($(FUNC t_3* t_1* -> t_2*))
+  ----
+  -- Expand: C.TYPES[x'] ~~ CONT tu'
+  -- Expand_use: tu' ~~_C $($(FUNC t'_1* -> t'_2*))
+  ----
+  -- Comptype_sub: C |- (FUNC t_1* -> t_2*) <: (FUNC t'_1* -> t'_2*)
+
+relation Hdl_ok: context |- hdl : resulttype
+
+rule Instr_ok/resume:
+  C |- RESUME x hdl* : t_1* (REF NULL (_IDX x)) -> t_2*
+  -- Expand: C.TYPES[x] ~~ CONT tu
+  -- Expand_use: tu ~~_C $($(FUNC t_1* -> t_2*))
+  -- (Hdl_ok: C |- hdl : t_2*)*
+
+rule Instr_ok/resume_throw:
+  C |- RESUME_THROW x xe hdl* : te* (REF NULL (_IDX x)) -> t_2*
+  -- Expand: C.TYPES[x] ~~ CONT tu
+  -- Expand_use: tu ~~_C $($(FUNC t_1* -> t_2*))
+  -- Expand: $as_deftype(C.TAGS[xe]) ~~ FUNC te* -> eps
+  -- (Hdl_ok: C |- hdl : t_2*)
+
+rule Hdl_ok/label:
+  C |- _LABEL ON x l : t*
+  -- Expand: $as_deftype(C.TAGS[x]) ~~ FUNC t_1* -> t_2*
+  -- if C.LABELS[l] = t'_1* (REF nul (_IDX x'))
+  -- Resulttype_sub: C |- t_1* <: t'_1*
+  ----
+  -- Expand: C.TYPES[x'] ~~ CONT tu
+  -- Expand_use: tu ~~_C $($(FUNC t'_2* -> t'*))
+  -- Comptype_sub: C |- (FUNC t_2* -> t*) <: (FUNC t'_2* -> t'*)
+
+rule Hdl_ok/switch:
+  C |- _SWITCH ON x SWITCH : t*
+  -- Expand: $as_deftype(C.TAGS[x]) ~~ FUNC eps -> t*
+
+rule Instr_ok/suspend:
+  C |- SUSPEND x : t_1* -> t_2*
+  -- Expand: $as_deftype(C.TAGS[x]) ~~ FUNC t_1* -> t_2*
+
+rule Instr_ok/switch:
+  C |- SWITCH x xe : t_1* (REF NULL (_IDX x)) -> t_2*
+  -- Expand: $as_deftype(C.TAGS[xe]) ~~ FUNC eps -> t*
+  ----
+  -- Expand: C.TYPES[x] ~~ CONT tu_1
+  -- Expand_use: tu_1 ~~_C $($(FUNC t_1* (REF nul (_IDX y)) -> te_1*))
+  -- Resulttype_sub: C |- te_1* <: t*
+  ----
+  -- Expand: C.TYPES[y] ~~ CONT tu_2
+  -- Expand_use: tu_2 ~~_C $($(FUNC t_2* -> te_2*))
+  -- Resulttype_sub: C |- t* <: te_2*
+
+
 ;; Instruction sequences
 
 rule Instrs_ok/empty:

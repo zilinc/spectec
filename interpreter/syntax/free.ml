@@ -82,6 +82,7 @@ and heaptype = function
   | FuncHT | NoFuncHT -> empty
   | ExnHT | NoExnHT -> empty
   | ExternHT | NoExternHT -> empty
+  | ContHT | NoContHT -> empty
   | UseHT x -> typeuse x
   | BotHT -> empty
 
@@ -106,6 +107,7 @@ and comptype = function
   | StructT fts -> list fieldtype fts
   | ArrayT ft -> fieldtype ft
   | FuncT (ts1, ts2) -> list valtype ts1 ++ list valtype ts2
+  | ContT ht -> heaptype ht
 
 and subtype = function
   | SubT (_fin, uts, ct) -> list typeuse uts ++ comptype ct
@@ -132,6 +134,10 @@ let blocktype = function
   | VarBlockType x -> types (idx x)
   | ValBlockType t -> opt valtype t
 
+let hdl = function
+  | OnLabel x -> labels (idx x)
+  | OnSwitch -> empty
+
 let rec instr (e : instr) =
   match e.it with
   | Unreachable | Nop | Drop -> empty
@@ -146,7 +152,13 @@ let rec instr (e : instr) =
   | Call x | ReturnCall x -> funcs (idx x)
   | CallRef x | ReturnCallRef x -> types (idx x)
   | CallIndirect (x, y) | ReturnCallIndirect (x, y) ->
-    tables (idx x) ++ types (idx y)
+     tables (idx x) ++ types (idx y)
+  | ContNew x -> types (idx x)
+  | ContBind (x, y) -> types (idx x) ++ types (idx y)
+  | ResumeThrow (x, y, xys) -> types (idx x) ++ tags (idx y) ++ list (fun (x, y) -> tags (idx x) ++ hdl y) xys
+  | Resume (x, xys) -> types (idx x) ++ list (fun (x, y) -> tags (idx x) ++ hdl y) xys
+  | Suspend x -> tags (idx x)
+  | Switch (x, z) -> types (idx x) ++ tags (idx z)
   | Throw x -> tags (idx x)
   | ThrowRef -> empty
   | TryTable (bt, cs, es) -> blocktype bt ++ list catch cs ++ block es
@@ -237,6 +249,7 @@ let module_ (m : module_) =
   list global m.it.globals ++
   list memory m.it.memories ++
   list table m.it.tables ++
+  list tag m.it.tags ++
   list func m.it.funcs ++
   list data m.it.datas ++
   list elem m.it.elems ++

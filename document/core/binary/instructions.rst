@@ -68,10 +68,17 @@ Control Instructions
 .. _binary-throw:
 .. _binary-throw_ref:
 .. _binary-try_table:
+.. _binary-cont.new:
+.. _binary-cont.bind:
+.. _binary-suspend:
+.. _binary-resume:
+.. _binary-resume_throw:
+.. _binary-switch:
 .. _binary-catch:
 .. _binary-castop:
+.. _binary-hdl:
 
-$${grammar: Bblocktype {Binstr/block Binstr/control} Bcatch Bcastop}
+$${grammar: Bblocktype {Binstr/block Binstr/control} Bcatch Bcastop Bhdl}
 $${syntax-ignore: castop}
 
 .. note::

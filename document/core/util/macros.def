@@ -230,10 +230,12 @@
 .. |ARRAYREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{arrayref}}
 .. |FUNCREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{funcref}}
 .. |EXNREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{exnref}}
+.. |CONTREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{contref}}
 .. |EXTERNREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{externref}}
 .. |NULLREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{nullref}}
 .. |NULLFUNCREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{nullfuncref}}
 .. |NULLEXNREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{nullexnref}}
+.. |NULLCONTREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{nullcontref}}
 .. |NULLEXTERNREF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{nullexternref}}
 .. |REF| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{ref}}
 .. |NULL| mathdef:: \xref{syntax/types}{syntax-reftype}{\K{null}}
@@ -246,10 +248,12 @@
 .. |FUNCT| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{func}}
 .. |EXN| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{exn}}
 .. |EXTERN| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{extern}}
+.. |CONT| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{cont}}
 .. |NONE| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{none}}
 .. |NOFUNC| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{nofunc}}
 .. |NOEXN| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{noexn}}
 .. |NOEXTERN| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{noextern}}
+.. |NOCONT| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{nocont}}
 
 .. |I8X16| mathdef:: \xref{syntax/instructions}{syntax-shape}{\K{i{\scriptstyle8}x\scriptstyle16}}
 .. |I16X8| mathdef:: \xref{syntax/instructions}{syntax-shape}{\K{i{\scriptstyle16}x\scriptstyle8}}
@@ -261,6 +265,7 @@
 .. |REC| mathdef:: \xref{syntax/types}{syntax-heaptype}{\K{rec}}
 
 .. |TFUNC| mathdef:: \xref{syntax/types}{syntax-comptype}{\K{func}}
+.. |TCONT| mathdef:: \xref{syntax/types}{syntax-comptype}{\K{cont}}
 .. |Tarrow| mathdef:: \xref{syntax/types}{syntax-comptype}{\rightarrow}
 .. |TSTRUCT| mathdef:: \xref{syntax/types}{syntax-comptype}{\K{struct}}
 .. |TARRAY| mathdef:: \xref{syntax/types}{syntax-comptype}{\K{array}}
@@ -492,6 +497,13 @@
 .. |RETURNCALL| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{return\_call}}
 .. |RETURNCALLREF| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{return\_call\_ref}}
 .. |RETURNCALLINDIRECT| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{return\_call\_indirect}}
+
+.. |CONTNEW| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{cont{.}new}}
+.. |CONTBIND| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{cont{.}bind}}
+.. |RESUME| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{resume}}
+.. |RESUMETHROW| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{resume\_throw}}
+.. |SUSPEND| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{suspend}}
+.. |SWITCH| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{switch}}
 
 .. |THROW| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{throw}}
 .. |THROWREF| mathdef:: \xref{syntax/instructions}{syntax-instr-control}{\K{throw\_ref}}
@@ -761,6 +773,9 @@
 
 .. |instr| mathdef:: \xref{syntax/instructions}{syntax-instr}{\X{instr}}
 .. |catch| mathdef:: \xref{syntax/instructions}{syntax-catch}{\X{catch}}
+.. |hdl| mathdef:: \xref{syntax/instructions}{syntax-hdl}{\X{hdl}}
+.. |hdlON| mathdef:: \xref{syntax/instructions}{syntax-hdl}{\K{on}}
+.. |hdlSWITCH| mathdef:: \xref{syntax/instructions}{syntax-hdl}{\K{switch}}
 .. |expr| mathdef:: \xref{syntax/instructions}{syntax-expr}{\X{expr}}
 
 
@@ -906,6 +921,7 @@
 
 .. |Binstr| mathdef:: \xref{binary/instructions}{binary-instr}{\B{instr}}
 .. |Bcatch| mathdef:: \xref{binary/instructions}{binary-catch}{\B{catch}}
+.. |Bhdl| mathdef:: \xref{binary/instructions}{binary-hdl}{\B{hdl}}
 .. |Bexpr| mathdef:: \xref{binary/instructions}{binary-expr}{\B{expr}}
 
 .. |Blaneidx| mathdef:: \xref{binary/instructions}{binary-laneidx}{\B{laneidx}}
@@ -1354,6 +1370,7 @@
 .. |structaddr| mathdef:: \xref{exec/runtime}{syntax-structaddr}{\X{structaddr}}
 .. |arrayaddr| mathdef:: \xref{exec/runtime}{syntax-arrayaddr}{\X{arrayaddr}}
 .. |exnaddr| mathdef:: \xref{exec/runtime}{syntax-exnaddr}{\X{exnaddr}}
+.. |contaddr| mathdef:: \xref{exec/runtime}{syntax-contaddr}{\X{contaddr}}
 .. |hostaddr| mathdef:: \xref{exec/runtime}{syntax-hostaddr}{\X{hostaddr}}
 
 
@@ -1421,25 +1438,33 @@
 .. |EITAG| mathdef:: \xref{exec/runtime}{syntax-exninst}{\K{tag}}
 .. |EIFIELDS| mathdef:: \xref{exec/runtime}{syntax-exninst}{\K{fields}}
 
+.. |KVALS| mathdef:: \xref{exec/runtime}{syntax-cont}{\K{vals}}
+.. |KHOLE| mathdef:: \xref{exec/runtime}{syntax-cont}{\K{[\_]}}
+.. |KFRAME| mathdef:: \xref{exec/runtime}{syntax-cont}{\K{frame}}
+
+.. |KICONT| mathdef:: \xref{exec/runtime}{syntax-continst}{\K{cont}}
+.. |KIARITY| mathdef:: \xref{exec/runtime}{syntax-continst}{\K{arity}}
+
 .. |PACK| mathdef:: \xref{exec/runtime}{syntax-packval}{\K{pack}}
 .. |I8PACK| mathdef:: \xref{exec/runtime}{syntax-packval}{\K{i8.pack}}
 .. |I16PACK| mathdef:: \xref{exec/runtime}{syntax-packval}{\K{i16.pack}}
 
-.. |ZSTORE| mathdef:: \xref{exec/runtime}{syntax-state}{\K{store}}
-.. |ZFRAME| mathdef:: \xref{exec/runtime}{syntax-state}{\K{frame}}
-.. |ZMODULE| mathdef:: \xref{exec/runtime}{syntax-state}{\K{module}}
-.. |ZTYPES| mathdef:: \xref{exec/runtime}{syntax-state}{\K{types}}
-.. |ZFUNCS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{funcs}}
-.. |ZGLOBALS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{globals}}
-.. |ZTABLES| mathdef:: \xref{exec/runtime}{syntax-state}{\K{tables}}
-.. |ZMEMS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{mems}}
-.. |ZTAGS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{tags}}
-.. |ZELEMS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{elems}}
-.. |ZDATAS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{datas}}
-.. |ZSTRUCTS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{structs}}
-.. |ZARRAYS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{arrays}}
-.. |ZEXNS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{exns}}
-.. |ZLOCALS| mathdef:: \xref{exec/runtime}{syntax-state}{\K{locals}}
+.. |ZSTORE| mathdef:: \xref{exec/runtime}{syntax-store}{\K{store}}
+.. |ZFRAME| mathdef:: \xref{exec/runtime}{syntax-store}{\K{frame}}
+.. |ZMODULE| mathdef:: \xref{exec/runtime}{syntax-store}{\K{module}}
+.. |ZTYPES| mathdef:: \xref{exec/runtime}{syntax-store}{\K{types}}
+.. |ZFUNCS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{funcs}}
+.. |ZGLOBALS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{globals}}
+.. |ZTABLES| mathdef:: \xref{exec/runtime}{syntax-store}{\K{tables}}
+.. |ZMEMS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{mems}}
+.. |ZTAGS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{tags}}
+.. |ZELEMS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{elems}}
+.. |ZDATAS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{datas}}
+.. |ZSTRUCTS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{structs}}
+.. |ZARRAYS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{arrays}}
+.. |ZEXNS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{exns}}
+.. |ZCONTS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{conts}}
+.. |ZLOCALS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{locals}}
 
 .. |ZGGLOBALS| mathdef:: \ZGLOBALS
 .. |ZGVALUE| mathdef:: \GIVALUE
@@ -1455,6 +1480,7 @@
 .. |ZSFIELDS| mathdef:: \SIFIELDS
 .. |ZAARRAYS| mathdef:: \ZARRAYS
 .. |ZAFIELDS| mathdef:: \AIFIELDS
+.. |ZKCONTS| mathdef:: \ZCONTS
 
 .. Instances, non-terminals
 
@@ -1477,6 +1503,14 @@
 .. |arrayinst| mathdef:: \xref{exec/runtime}{syntax-arrayinst}{\X{arrayinst}}
 .. |exportinst| mathdef:: \xref{exec/runtime}{syntax-exportinst}{\X{exportinst}}
 .. |exninst| mathdef:: \xref{exec/runtime}{syntax-exninst}{\X{exninst}}
+.. |continst| mathdef:: \xref{exec/runtime}{syntax-continst}{\X{continst}}
+
+.. |generalframe| mathdef:: \xref{exec/runtime}{syntax-generalframe}{\X{gframe}}
+.. |cont| mathdef:: \xref{exec/runtime}{syntax-cont}{\X{cont}}
+.. |addrhdl| mathdef:: \xref{exec/runtime}{syntax-addrhdl}{\X{addrhdl}}
+.. |addrhdlON| mathdef:: \xref{exec/runtime}{syntax-addrhdl}{\K{on}}
+.. |addrhdlSWITCH| mathdef:: \xref{exec/runtime}{syntax-addrhdl}{\K{switch}}
+.. |resumption| mathdef:: \xref{exec/runtime}{syntax-resumption}{\X{resumption}}
 
 .. |hostfunc| mathdef:: \xref{exec/runtime}{syntax-hostfunc}{\X{hostfunc}}
 
@@ -1502,6 +1536,7 @@
 .. |SSTRUCTS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{structs}}
 .. |SARRAYS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{arrays}}
 .. |SEXNS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{exns}}
+.. |SCONTS| mathdef:: \xref{exec/runtime}{syntax-store}{\K{conts}}
 
 .. Store, non-terminals
 
@@ -1514,6 +1549,7 @@
 .. |LABEL| mathdef:: \xref{exec/runtime}{syntax-label}{\K{label}}
 .. |FRAME| mathdef:: \xref{exec/runtime}{syntax-frame}{\K{frame}}
 .. |HANDLER| mathdef:: \xref{exec/runtime}{syntax-handler}{\K{handler}}
+.. |PROMPT| mathdef:: \xref{exec/runtime}{syntax-prompt}{\K{prompt}}
 
 .. |ALOCALS| mathdef:: \xref{exec/runtime}{syntax-frame}{\K{locals}}
 .. |AMODULE| mathdef:: \xref{exec/runtime}{syntax-frame}{\K{module}}
@@ -1524,6 +1560,7 @@
 .. |label| mathdef:: \xref{exec/runtime}{syntax-label}{\X{label}}
 .. |handler| mathdef:: \xref{exec/runtime}{syntax-handler}{\X{handler}}
 .. |frame| mathdef:: \xref{exec/runtime}{syntax-frame}{\X{frame}}
+.. |prompt| mathdef:: \xref{exec/runtime}{syntax-prompt}{\X{prompt}}
 .. |callframe| mathdef:: \xref{exec/runtime}{syntax-callframe}{\X{callframe}}
 
 
@@ -1540,8 +1577,11 @@
 .. |REFSTRUCTADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}struct}}
 .. |REFARRAYADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}array}}
 .. |REFEXNADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}exn}}
+.. |REFCONTADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}cont}}
 .. |REFHOSTADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}host}}
 .. |REFEXTERN| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}extern}}
+.. |SUSPENDING| mathdef:: \xref{exec/runtime}{syntax-suspending}{\K{suspending}}
+.. |RESUMING| mathdef:: \xref{exec/runtime}{syntax-resuming}{\K{resuming}}
 .. |TRAP| mathdef:: \xref{exec/runtime}{syntax-trap}{\K{trap}}
 
 
@@ -1566,6 +1606,14 @@
 
 .. |packfield| mathdef:: \xref{exec/runtime}{aux-packfield}{\F{pack}}
 .. |unpackfield| mathdef:: \xref{exec/runtime}{aux-unpackfield}{\F{unpack}}
+
+
+.. Continuations, meta-functions
+
+.. |contfill| mathdef:: \xref{exec/runtime}{aux-contfill}{\F{contfill}}
+.. |gethandlersuspend| mathdef:: \xref{exec/runtime}{aux-gethandlersuspend}{\F{gethandlersuspend}}
+.. |gethandlerswitch| mathdef:: \xref{exec/runtime}{aux-gethandlerswitch}{\F{gethandlerswitch}}
+.. |hdlinst| mathdef:: \xref{exec/runtime}{aux-hdlinst}{\F{hdlinst}}
 
 
 .. Configurations, non-terminals
@@ -1765,6 +1813,7 @@
 .. |vdashstructinst| mathdef:: \xref{appendix/properties}{valid-structinst}{\vdash}
 .. |vdasharrayinst| mathdef:: \xref{appendix/properties}{valid-arrayinst}{\vdash}
 .. |vdashexninst| mathdef:: \xref{appendix/properties}{valid-exninst}{\vdash}
+.. |vdashcontinst| mathdef:: \xref{appendix/properties}{valid-continst}{\vdash}
 .. |vdashexportinst| mathdef:: \xref{appendix/properties}{valid-exportinst}{\vdash}
 .. |vdashmoduleinst| mathdef:: \xref{appendix/properties}{valid-moduleinst}{\vdash}
 
@@ -1773,6 +1822,7 @@
 .. |OKstructinst| mathdef:: \xref{appendix/properties}{valid-structinst}{\K{ok}}
 .. |OKarrayinst| mathdef:: \xref{appendix/properties}{valid-arrayinst}{\K{ok}}
 .. |OKexninst| mathdef:: \xref{appendix/properties}{valid-exninst}{\K{ok}}
+.. |OKcontinst| mathdef:: \xref{appendix/properties}{valid-continst}{\K{ok}}
 .. |OKexportinst| mathdef:: \xref{appendix/properties}{valid-exportinst}{\K{ok}}
 
 .. |vdashcontext| mathdef:: \xref{appendix/properties}{valid-context}{\vdash}
@@ -1793,6 +1843,7 @@
 .. |vdashstructinstextends| mathdef:: \xref{appendix/properties}{extend-structinst}{\vdash}
 .. |vdasharrayinstextends| mathdef:: \xref{appendix/properties}{extend-arrayinst}{\vdash}
 .. |vdashexninstextends| mathdef:: \xref{appendix/properties}{extend-exninst}{\vdash}
+.. |vdashcontinstextends| mathdef:: \xref{appendix/properties}{extend-continst}{\vdash}
 .. |vdashstoreextends| mathdef:: \xref{appendix/properties}{extend-store}{\vdash}
 
 

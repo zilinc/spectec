@@ -98,6 +98,7 @@ let comptype = function
     Node ("struct", list (fun ft -> Node ("field", [fieldtype ft])) fts)
   | ArrayT ft -> Node ("array", [fieldtype ft])
   | FuncT (ts1, ts2) -> Node ("func", decls "param" ts1 @ decls "result" ts2)
+  | ContT ht -> Node ("cont", [atom heaptype ht])
 
 let subtype = function
   | SubT (Final, [], ct) -> comptype ct
@@ -482,6 +483,15 @@ let blocktype = function
   | VarBlockType x -> [Node ("type " ^ idx x, [])]
   | ValBlockType ts -> decls "result" (list_of_opt ts)
 
+let hdl = function
+  | OnLabel x -> idx x
+  | OnSwitch -> "switch"
+
+let resumetable xys =
+  List.map
+    (fun (x, y) -> Node ("on " ^ idx x ^ " " ^ hdl y, []))
+    xys
+
 let rec instr e =
   let head, inner =
     match e.it with
@@ -515,6 +525,15 @@ let rec instr e =
     | ReturnCallRef x -> "return_call_ref " ^ idx x, []
     | ReturnCallIndirect (x, y) ->
       "return_call_indirect " ^ idx x, [Node ("type " ^ idx y, [])]
+    | ContNew x -> "cont.new " ^ idx x, []
+    | ContBind (x, y) -> "cont.bind " ^ idx x ^ " " ^ idx y, []
+    | Suspend x -> "suspend " ^ idx x, []
+    | Resume (x, xys) ->
+      "resume " ^ idx x, resumetable xys
+    | ResumeThrow (x, y, xys) ->
+      "resume_throw " ^ idx x ^ " " ^ idx y, resumetable xys
+    | Switch (x, z) ->
+      "switch " ^ idx x ^ " " ^ idx z, []
     | Throw x -> "throw " ^ idx x, []
     | ThrowRef -> "throw_ref", []
     | TryTable (bt, cs, es) ->
@@ -892,10 +911,12 @@ let assertion mode ass =
     [Node ("assert_trap", [instance (None, x_opt); Atom (string re)])]
   | AssertReturn (act, results) ->
     [Node ("assert_return", action mode act :: List.map (result mode) results)]
-  | AssertTrap (act, re) ->
-    [Node ("assert_trap", [action mode act; Atom (string re)])]
   | AssertException act ->
     [Node ("assert_exception", [action mode act])]
+  | AssertTrap (act, re) ->
+    [Node ("assert_trap", [action mode act; Atom (string re)])]
+  | AssertSuspension (act, re) ->
+    [Node ("assert_suspension", [action mode act; Atom (string re)])]
   | AssertExhaustion (act, re) ->
     [Node ("assert_exhaustion", [action mode act; Atom (string re)])]
 

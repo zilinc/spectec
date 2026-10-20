@@ -121,6 +121,10 @@ This type has no concrete subtypes.
 Dually, the type ${:NOEXN} denotes the common subtype of all forms of exception references.
 This type has no values.
 
+The type ${:CONT} denotes the common supertype of all :ref:`continuation references <syntax-ref.cont>`, regardless of their concrete definition.
+Dually, the type ${:NOCONT} denotes the common subtype of all continuation references.
+This type has no values.
+
 The type ${:EXTERN} denotes the common supertype of all external references received through the :ref:`embedder <embedder>`.
 This type has no concrete subtypes.
 Dually, the type ${:NOEXTERN} denotes the common subtype of all forms of external references.
@@ -190,6 +194,8 @@ Conventions
 
 * The reference type ${:$EXNREF} is an abbreviation for ${reftype: (REF NULL EXN)}.
 
+* The reference type ${:$CONTREF} is an abbreviation for ${reftype: (REF NULL CONT)}.
+
 * The reference type ${:$EXTERNREF} is an abbreviation for ${reftype: (REF NULL EXTERN)}.
 
 * The reference type ${:$NULLREF} is an abbreviation for ${reftype: (REF NULL NONE)}.
@@ -197,6 +203,8 @@ Conventions
 * The reference type ${:$NULLFUNCREF} is an abbreviation for ${reftype: (REF NULL NOFUNC)}.
 
 * The reference type ${:$NULLEXNREF} is an abbreviation for ${reftype: (REF NULL NOEXN)}.
+
+* The reference type ${:$NULLCONTREF} is an abbreviation for ${reftype: (REF NULL NOCONT)}.
 
 * The reference type ${:$NULLEXTERNREF} is an abbreviation for ${reftype: (REF NULL NOEXTERN)}.
 

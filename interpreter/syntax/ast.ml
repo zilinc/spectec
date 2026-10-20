@@ -164,6 +164,7 @@ type vec = Value.vec Source.phrase
 type name = Utf8.unicode
 
 type blocktype = VarBlockType of typeidx | ValBlockType of valtype option
+type hdl = OnLabel of idx | OnSwitch
 
 type instr = instr' Source.phrase
 and instr' =
@@ -188,6 +189,12 @@ and instr' =
   | ReturnCall of funcidx                (* tail-call function *)
   | ReturnCallRef of typeidx             (* tail call through reference *)
   | ReturnCallIndirect of tableidx * typeidx   (* tail-call function through table *)
+  | ContNew of typeidx                   (* create continuation *)
+  | ContBind of typeidx * typeidx        (* bind continuation arguments *)
+  | Suspend of tagidx                    (* suspend continuation *)
+  | Resume of typeidx * (tagidx * hdl) list  (* resume continuation *)
+  | ResumeThrow of typeidx * tagidx * (tagidx * hdl) list (* abort continuation *)
+  | Switch of typeidx * tagidx           (* direct switch continuation *)
   | Throw of tagidx                      (* throw exception *)
   | ThrowRef                            (* rethrow exception *)
   | TryTable of blocktype * catch list * instr list  (* handle exceptions *)

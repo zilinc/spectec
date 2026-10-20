@@ -17,6 +17,7 @@ module Trap = Error.Make ()
 module Crash = Error.Make ()
 module Exception = Error.Make ()
 module Exhaustion = Error.Make ()
+module Suspension = Error.Make ()
 
 exception Abort = Abort.Error
 exception Assert = Assert.Error
@@ -27,6 +28,8 @@ exception Trap = Trap.Error
 exception Crash = Crash.Error
 exception Exception = Exception.Error
 exception Exhaustion = Exhaustion.Error
+exception Suspension = Suspension.Error
+
 
 let trace name = if !Flags.trace then print_endline ("-- " ^ name)
 
@@ -132,9 +135,11 @@ let input_from get_script run =
   | Crash (at, msg) -> error at "runtime crash" msg
   | Exception (at, msg) -> error at "uncaught exception" msg
   | Exhaustion (at, msg) -> error at "resource exhaustion" msg
+  | Suspension (at, msg) -> error at "suspension error" msg
   | Assert (at, msg) -> error at "assertion failure" msg
   | IO (at, msg) -> error at "i/o error" msg
   | Abort _ -> false
+
 
 let input_script name lexbuf run =
   input_from (fun () -> Parse.Script.parse name lexbuf) run
@@ -588,6 +593,13 @@ let run_assertion ass =
     | exception Exhaustion (_, msg) ->
       assert_message ass.at "exhaustion" msg re
     | _ -> Assert.error ass.at "expected exhaustion error"
+    )
+
+  | AssertSuspension (act, re) ->
+    trace ("Asserting suspension...");
+    (match run_action act with
+    | exception Suspension (_, msg) -> assert_message ass.at "runtime" msg re
+    | _ -> Assert.error ass.at "expected suspension"
     )
 
 let rec run_command cmd =

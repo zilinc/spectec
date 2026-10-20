@@ -87,6 +87,16 @@ $${rule-prose: Ref_ok/exn}
 $${rule: Ref_ok/exn}
 
 
+.. _valid-ref.cont:
+
+Continuation References
+.......................
+
+$${rule-prose: Ref_ok/cont}
+
+$${rule: Ref_ok/cont}
+
+
 Function References
 ...................
 

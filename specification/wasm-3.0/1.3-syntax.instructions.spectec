@@ -388,6 +388,19 @@ syntax instr/vec hint(desc "vector instruction") = ...
   | VREPLACE_LANE shape laneidx         hint(show ##%.REPLACE_LANE %) hint(macro "VREPLACE_LANE")
   | ...
 
+syntax hdl hint(desc "effect handler") hint(macro "%" "hdl%") =
+  | _LABEL  ON tagidx labelidx
+  | _SWITCH ON tagidx SWITCH
+
+syntax instr/cont hint(desc "continuation instruction") = ...
+  | CONT.NEW typeidx
+  | CONT.BIND typeidx typeidx
+  | RESUME typeidx hdl*
+  | RESUME_THROW typeidx tagidx hdl*
+  | SUSPEND tagidx
+  | SWITCH typeidx tagidx
+  | ...
+
 
 ;; Expressions
 

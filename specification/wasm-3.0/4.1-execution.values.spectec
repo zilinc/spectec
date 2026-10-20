@@ -54,6 +54,11 @@ rule Ref_ok/exn:
   s |- REF.EXN_ADDR a : REF EXN
   -- if s.EXNS[a] = exn
 
+;; TODO(lyl): validate dt
+rule Ref_ok/cont:
+  s |- REF.CONT_ADDR a : (REF dt)
+  -- if s.CONTS[a] = eps \/ s.CONTS[a] = continst
+
 rule Ref_ok/host:
   s |- REF.HOST_ADDR a : REF ANY
 

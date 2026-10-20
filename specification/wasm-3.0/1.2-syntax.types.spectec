@@ -24,6 +24,7 @@ syntax absheaptype/syn hint(desc "abstract heap type") =
   | FUNC hint(macro "FUNCT") | NOFUNC
   | EXN | NOEXN
   | EXTERN | NOEXTERN
+  | CONT | NOCONT
   | ...
 syntax absheaptype/sem =
   | ... | BOT
@@ -65,10 +66,12 @@ def $STRUCTREF : reftype hint(show STRUCTREF)
 def $ARRAYREF  : reftype hint(show ARRAYREF)
 def $FUNCREF   : reftype hint(show FUNCREF)
 def $EXNREF    : reftype hint(show EXNREF)
+def $CONTREF   : reftype hint(show CONTREF)
 def $EXTERNREF : reftype hint(show EXTERNREF)
 def $NULLREF   : reftype hint(show NULLREF)
 def $NULLFUNCREF : reftype hint(show NULLFUNCREF)
 def $NULLEXNREF  : reftype hint(show NULLEXNREF)
+def $NULLCONTREF : reftype hint(show NULLCONTREF)
 def $NULLEXTERNREF : reftype hint(show NULLEXTERNREF)
 
 def $ANYREF    = (REF NULL ANY)
@@ -78,10 +81,12 @@ def $STRUCTREF = (REF NULL STRUCT)
 def $ARRAYREF  = (REF NULL ARRAY)
 def $FUNCREF   = (REF NULL FUNC)
 def $EXNREF    = (REF NULL EXN)
+def $CONTREF   = (REF NULL CONT)
 def $EXTERNREF = (REF NULL EXTERN)
 def $NULLREF   = (REF NULL NONE)
 def $NULLFUNCREF = (REF NULL NOFUNC)
 def $NULLEXNREF  = (REF NULL NOEXN)
+def $NULLCONTREF = (REF NULL NOCONT)
 def $NULLEXTERNREF = (REF NULL NOEXTERN)
 
 
@@ -115,6 +120,7 @@ syntax comptype hint(desc "composite type") hint(macro "%" "T%") =
   | STRUCT list(fieldtype)
   | ARRAY fieldtype
   | FUNC resulttype -> resulttype
+  | CONT typeuse
 
 syntax subtype hint(desc "sub type") hint(macro "%" "T%") =
   | SUB final? typeuse* comptype
@@ -394,6 +400,7 @@ def $subst_fieldtype((mut? zt), tv*, tu*) = mut? $subst_storagetype(zt, tv*, tu*
 def $subst_comptype((STRUCT ft*), tv*, tu*) = STRUCT $subst_fieldtype(ft, tv*, tu*)*
 def $subst_comptype((ARRAY ft), tv*, tu*) = ARRAY $subst_fieldtype(ft, tv*, tu*)
 def $subst_comptype((FUNC t_1* -> t_2*), tv*, tu*) = FUNC $subst_valtype(t_1, tv*, tu*)* -> $subst_valtype(t_2, tv*, tu*)*
+def $subst_comptype((CONT tv'), tv*, tu*) = CONT $subst_typeuse(tv', tv*, tu*)
 
 def $subst_subtype((SUB final? tu'* ct), tv*, tu*) =
   SUB final? $subst_typeuse(tu', tv*, tu*)* $subst_comptype(ct, tv*, tu*)
@@ -546,6 +553,7 @@ def $free_fieldtype(mut? storagetype) = $free_storagetype(storagetype)
 def $free_comptype(STRUCT fieldtype*) = $free_list($free_fieldtype(fieldtype)*)
 def $free_comptype(ARRAY fieldtype) = $free_fieldtype(fieldtype)
 def $free_comptype(FUNC resulttype_1 -> resulttype_2) = $free_resulttype(resulttype_1) ++ $free_resulttype(resulttype_2)
+def $free_comptype(CONT typeuse) = $free_typeuse(typeuse)
 
 def $free_subtype(SUB final? typeuse* comptype) =
   $free_list($free_typeuse(typeuse)*) ++ $free_comptype(comptype)

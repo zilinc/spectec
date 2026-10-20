@@ -14,6 +14,7 @@ grammar Bvectype : vectype =
   | 0x7B => V128
 
 grammar Babsheaptype : heaptype =
+  | 0x68 => CONT
   | 0x69 => EXN
   | 0x6A => ARRAY
   | 0x6B => STRUCT
@@ -26,6 +27,7 @@ grammar Babsheaptype : heaptype =
   | 0x72 => NOEXTERN
   | 0x73 => NOFUNC
   | 0x74 => NOEXN
+  | 0x75 => NOCONT
 
 grammar Bheaptype : heaptype =
   | ht:Babsheaptype => ht
@@ -64,6 +66,7 @@ grammar Bfieldtype : fieldtype =
   | zt:Bstoragetype mut?:Bmut => mut? zt
 
 grammar Bcomptype : comptype =
+  | 0x5D tu:Bheaptype => CONT tu
   | 0x5E ft:Bfieldtype => ARRAY ft
   | 0x5F ft*:Blist(Bfieldtype) => STRUCT ft*
   | 0x60 t_1*:Bresulttype t_2*:Bresulttype => FUNC t_1* -> t_2*

@@ -16,6 +16,7 @@ Runtime Structure
 .. _syntax-ref.struct:
 .. _syntax-ref.array:
 .. _syntax-ref.exn:
+.. _syntax-ref.cont:
 .. _syntax-ref.host:
 .. _syntax-ref.extern:
 .. _syntax-nullref:
@@ -38,6 +39,7 @@ They either are *scalar references*, containing a 31-bit :ref:`integer <syntax-i
 *array references*, pointing to a specific :ref:`array address <syntax-arrayaddr>`,
 *function references*, pointing to a specific :ref:`function address <syntax-funcaddr>`,
 *exception references*, pointing to a specific :ref:`exception address <syntax-exnaddr>`,
+*continuation references*, pointing to a specific :ref:`continuation address <syntax-contaddr>`,
 or *host references* pointing to an uninterpreted form of :ref:`host address <syntax-hostaddr>` defined by the :ref:`embedder <embedder>`.
 Any of the aformentioned references can furthermore be wrapped up as an *external reference*.
 
@@ -93,8 +95,9 @@ It consists of the runtime representation of all *instances* of
 :ref:`data segments <syntax-datainst>`,
 and
 :ref:`structures <syntax-structinst>`,
-:ref:`arrays <syntax-arrayinst>` or
-:ref:`exceptions <syntax-exninst>`
+:ref:`arrays <syntax-arrayinst>`,
+:ref:`exceptions <syntax-exninst>` or
+:ref:`continuations <syntax-continst>`
 that have been :ref:`allocated <alloc>` during the life time of the abstract machine.
 
 It is an invariant of the semantics that no element or data instance is :ref:`addressed <syntax-addr>` from anywhere else but the owning module instances.
@@ -137,6 +140,7 @@ Convention
    pair: structure; address
    pair: array; address
    pair: exception; address
+   pair: continuation; address
    pair: host; address
 .. _syntax-funcaddr:
 .. _syntax-tableaddr:
@@ -146,6 +150,8 @@ Convention
 .. _syntax-elemaddr:
 .. _syntax-dataaddr:
 .. _syntax-structaddr:
+.. _syntax-exnaddr:
+.. _syntax-contaddr:
 .. _syntax-arrayaddr:
 .. _syntax-exnaddr:
 .. _syntax-hostaddr:
@@ -163,13 +169,14 @@ Addresses
 :ref:`data instances <syntax-datainst>`
 and
 :ref:`structure <syntax-structinst>`,
-:ref:`array <syntax-arrayinst>` or
-:ref:`exception instances <syntax-exninst>`
+:ref:`array <syntax-arrayinst>`,
+:ref:`exception instances <syntax-exninst>` or
+:ref:`continuation instances <syntax-continst>`
 in the :ref:`store <syntax-store>` are referenced with abstract *addresses*.
 These are simply indices into the respective store component.
 In addition, an :ref:`embedder <embedder>` may supply an uninterpreted set of *host addresses*.
 
-$${syntax: {addr funcaddr tableaddr memaddr globaladdr tagaddr elemaddr dataaddr structaddr arrayaddr exnaddr hostaddr}}
+$${syntax: {addr funcaddr tableaddr memaddr globaladdr tagaddr elemaddr dataaddr structaddr arrayaddr exnaddr contaddr hostaddr}}
 
 An :ref:`embedder <embedder>` may assign identity to :ref:`exported <syntax-export>` store objects corresponding to their addresses,
 even where this identity is not observable from within WebAssembly code itself
@@ -465,17 +472,57 @@ It holds the :ref:`address <syntax-tagaddr>` of the respective :ref:`tag <syntax
 $${syntax: exninst}
 
 
+.. index:: ! continuation instance
+   pair: abstract syntax; continuation instance
+   pair: continuation; instance
+.. _syntax-generalframe:
+.. _syntax-cont:
+.. _syntax-continst:
+
+Continuation Instances
+~~~~~~~~~~~~~~~~~~~~~~
+
+A *continuation instance* is the runtime representation of a :ref:`continuation <continuation>` produced by a ${:SUSPEND} or ${:SWITCH} instrucion.
+
+$${syntax: generalframe cont continst}
+
+
+.. _aux-contfill:
+.. _aux-gethandlersuspend:
+.. _aux-gethandlerswitch:
+.. _aux-hdlinst:
+
+Conventions
+...........
+
+* Filling the hole of a :ref:`continuation instance <syntax-continst>` with :ref:`values <syntax-val>` and :ref:`instructions <syntax-instr>` is defined as follows:
+
+  $${definition: contfill}
+
+* Finding a corresponding :ref:`handler <syntax-addrhdl>` of a :ref:`tag <syntax-tagaddr>` is defined as follows:
+
+  $${definition: gethandlersuspend gethandlerswitch}
+
+* Converting :ref:`syntactic handlers <syntax-hdl>` to :ref:`runtime handlers <syntax-addrhdl>` is defined as follows:
+
+  $${definition: hdlinst}
+
+
 .. index:: ! stack, ! control frame, ! call frame, ! frame, ! label, ! handler, instruction, store, activation, function, call, ! call frame, local, exception, module instance
    pair: abstract syntax; frame
    pair: abstract syntax; label
    pair: abstract syntax; handler
+   pair: abstract syntax; prompt
 .. _syntax-frame:
 .. _syntax-callframe:
 .. _syntax-label:
 .. _syntax-handler:
+.. _syntax-addrhdl:
+.. _syntax-prompt:
 .. _frame:
 .. _label:
 .. _handler:
+.. _prompt:
 .. _stack:
 
 Stack
@@ -495,6 +542,8 @@ The latter can in turn be one of the following:
 * *(Call) Frames*: the *activation records* of active :ref:`function <syntax-func>` calls.
 
 * *Handlers*: active exception handlers.
+
+* *Prompts*: active effect handlers.
 
 .. note::
    Where clear from context, *call frame* is abbreviated to just *frame*.
@@ -558,6 +607,12 @@ Exception handlers are installed by |TRYTABLE| instructions and record the corre
 
 The handlers on the stack are searched when an exception is :ref:`thrown <syntax-throw>`.
 
+Effect Handlers
+...............
+
+Effect handlers are installed by |RESUME| and |RESUMETHROW| instructions and record the corresponding list of :ref:`effect handler clauses <syntax-addrhdl>`:
+
+$${syntax: {prompt addrhdl}}
 
 .. _aux-blocktype:
 
@@ -578,7 +633,10 @@ Conventions
 .. index:: ! administrative instructions, function, function instance, function address, label, frame, instruction, trap, call, memory, memory instance, table, table instance, element, data, segment, tag, tag instance, tag address, exception, reftype, handler, caught, caught exception
    pair:: abstract syntax; administrative instruction
 .. _syntax-trap:
+.. _syntax-resumption:
 .. _syntax-instr-admin:
+.. _syntax-suspending:
+.. _syntax-resuming:
 
 Administrative Instructions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -586,14 +644,16 @@ Administrative Instructions
 .. note::
    This section is only relevant for the :ref:`formal notation <exec-notation>`.
 
-In order to express the reduction of :ref:`traps <trap>`, :ref:`calls <syntax-call>`, :ref:`exception handling <syntax-handler>`, and :ref:`control instructions <syntax-instr-control>`, the syntax of instructions is extended to include the following *administrative instructions*:
+In order to express the reduction of :ref:`traps <trap>`, :ref:`calls <syntax-call>`, :ref:`exception handling <syntax-handler>`, :ref:`effect handling<syntax-prompt>`, and :ref:`control instructions <syntax-instr-control>`, the syntax of instructions is extended to include the following *administrative instructions*:
 
-$${syntax: {instr/admin}}
+$${syntax: {instr/admin} resumption}
 
 A :ref:`reference <syntax-ref>` represents a :ref:`reference <syntax-ref>` value of respective form :ref:`"on the stack" <exec-notation>`.
 
-The ${:LABEL}, ${:FRAME}, and ${:HANDLER} instructions model :ref:`labels <syntax-label>`, :ref:`frames <syntax-frame>`, and active :ref:`exception handlers <syntax-handler>`, respectively, :ref:`"on the stack" <exec-notation>`.
+The ${:LABEL}, ${:FRAME}, ${:HANDLER} and ${:PROMPT} instructions model :ref:`labels <syntax-label>`, :ref:`frames <syntax-frame>`, active :ref:`exception handlers <syntax-handler>`, and active :ref:`effect handlers <syntax-prompt>`, respectively, :ref:`"on the stack" <exec-notation>`.
 Moreover, the administrative syntax maintains the nesting structure of the original :ref:`structured control instruction <syntax-instr-control>` or :ref:`function body <syntax-func>` and their :ref:`instruction sequences <syntax-instrs>`.
+
+TODO(lyl): The ${:SUSPENDING} and ${:RESUMING} instructions are
 
 The ${:TRAP} instruction represents the occurrence of a trap.
 Traps are bubbled up through nested instruction sequences, ultimately reducing the entire program to a single ${:TRAP} instruction, signalling abrupt termination.

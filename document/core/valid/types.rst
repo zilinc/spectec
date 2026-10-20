@@ -175,6 +175,11 @@ $${rule-prose: Comptype_ok/func}
 $${rule: Comptype_ok/func}
 
 
+$${rule-prose: Comptype_ok/cont}
+
+$${rule: Comptype_ok/cont}
+
+
 $${rule-prose: Fieldtype_ok}
 
 $${rule: Fieldtype_ok}
