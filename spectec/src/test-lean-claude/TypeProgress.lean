@@ -7243,57 +7243,57 @@ theorem Instr_ok_Instrs_ok (C : context) (be : instr) (ts1 ts2 : List valtype) :
 /-- Lean-only: Rocq's motive `P` (for `Instr_ok2`) in the `Admin_instrs_ok_ind'`
     application that proves `t_progress_e` (`type_progress.v:5529-5541`). The store `s` is a
     parameter of Lean's mutual inductive, so the recursor is used with motive `t_progress_e_P s`. -/
-def t_progress_e_P (s : store) (C : context) (e : admininstr) (tf : functype) (_ : Instr_ok2 s C e tf) : Prop :=
-  ∀ (f : frame) (C' : context) (vcs : List val) (ts1 ts2 : List valtype)
+def t_progress_e_P (s : store) (C : context) (ai : admininstr) (ft : functype) (_ : Instr_ok2 s C ai ft) : Prop :=
+  ∀ (f : frame) (framemoduleC : context) (vals : List val) (vt1 vt2 : List valtype)
     (lab : List resulttype) (ret : Option resulttype),
-    wf_config (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ [e])) →
-    Forall (fun e => wf_val e) vcs →
-    tf = mkFunctype ts1 ts2 →
-    C = upd_local_label_return C' (List.map typeof f.LOCALS) lab ret →
-    Moduleinst_ok s f.MODULE C' →
-    List.map typeof vcs = ts1 →
+    wf_config (config.mk_config (state.mk_state s f) (List.map admininstr_val vals ++ [ai])) →
+    Forall (fun e => wf_val e) vals →
+    ft = mkFunctype vt1 vt2 →
+    C = upd_local_label_return framemoduleC (List.map typeof f.LOCALS) lab ret →
+    Moduleinst_ok s f.MODULE framemoduleC →
+    List.map typeof vals = vt1 →
     Store_ok s →
-    not_lf_br [e] →
-    not_lf_return [e] →
-    terminal_form (List.map admininstr_val vcs ++ [e]) ∨
-      ∃ (s' : store) (f' : frame) (es' : List admininstr),
-        Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ [e]))
-          (config.mk_config (state.mk_state s' f') es')
+    not_lf_br [ai] →
+    not_lf_return [ai] →
+    terminal_form (List.map admininstr_val vals ++ [ai]) ∨
+      ∃ (s' : store) (f' : frame) (ais' : List admininstr),
+        Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vals ++ [ai]))
+          (config.mk_config (state.mk_state s' f') ais')
 
 /-- Lean-only: Rocq's motive `P0` (for `Instrs_ok2`) of `t_progress_e`
     (`type_progress.v:5542-5554`). -/
-def t_progress_e_P0 (s : store) (C : context) (es : List admininstr) (tf : functype) (_ : Instrs_ok2 s C es tf) : Prop :=
-  ∀ (f : frame) (C' : context) (vcs : List val) (ts1 ts2 : List valtype)
+def t_progress_e_P0 (s : store) (C : context) (ais : List admininstr) (ft : functype) (_ : Instrs_ok2 s C ais ft) : Prop :=
+  ∀ (f : frame) (framemoduleC : context) (vals : List val) (vt1 vt2 : List valtype)
     (lab : List resulttype) (ret : Option resulttype),
-    wf_config (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ es)) →
-    Forall (fun e => wf_val e) vcs →
-    tf = mkFunctype ts1 ts2 →
-    C = upd_local_label_return C' (List.map typeof f.LOCALS) lab ret →
-    Moduleinst_ok s f.MODULE C' →
-    List.map typeof vcs = ts1 →
+    wf_config (config.mk_config (state.mk_state s f) (List.map admininstr_val vals ++ ais)) →
+    Forall (fun e => wf_val e) vals →
+    ft = mkFunctype vt1 vt2 →
+    C = upd_local_label_return framemoduleC (List.map typeof f.LOCALS) lab ret →
+    Moduleinst_ok s f.MODULE framemoduleC →
+    List.map typeof vals = vt1 →
     Store_ok s →
-    not_lf_br es →
-    not_lf_return es →
-    terminal_form (List.map admininstr_val vcs ++ es) ∨
-      ∃ (s' : store) (f' : frame) (es' : List admininstr),
-        Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vcs ++ es))
-          (config.mk_config (state.mk_state s' f') es')
+    not_lf_br ais →
+    not_lf_return ais →
+    terminal_form (List.map admininstr_val vals ++ ais) ∨
+      ∃ (s' : store) (f' : frame) (ais' : List admininstr),
+        Step (config.mk_config (state.mk_state s f) (List.map admininstr_val vals ++ ais))
+          (config.mk_config (state.mk_state s' f') ais')
 
 /-- Lean-only: Rocq's motive `P1` (for `Expr_ok2`) of `t_progress_e`
     (`type_progress.v:5555-5565`). Rocq's `|es| = |ts|` (`ts : resulttype` coerced to a list) is
     `es.length = (proj_list_0 valtype ts).length`. -/
-def t_progress_e_P1 (s : store) (C : context) (es : List admininstr) (ts : resulttype) (_ : Expr_ok2 s C es ts) : Prop :=
-  ∀ (f : frame) (C' : context) (ret : Option resulttype),
-    wf_config (config.mk_config (state.mk_state s f) es) →
-    C = upd_return C' ret →
-    Frame_ok s f C' →
+def t_progress_e_P1 (s : store) (C : context) (ais : List admininstr) (rt : resulttype) (_ : Expr_ok2 s C ais rt) : Prop :=
+  ∀ (f : frame) (framemoduleC : context) (ret : Option resulttype),
+    wf_config (config.mk_config (state.mk_state s f) ais) →
+    C = upd_return framemoduleC ret →
+    Frame_ok s f framemoduleC →
     Store_ok s →
-    not_lf_br es →
-    not_lf_return es →
-    (const_list es = true ∧ es.length = (proj_list_0 valtype ts).length) ∨
-    es = [admininstr.TRAP] ∨
-    ∃ (s' : store) (f' : frame) (es' : List admininstr),
-      Step (config.mk_config (state.mk_state s f) es) (config.mk_config (state.mk_state s' f') es')
+    not_lf_br ais →
+    not_lf_return ais →
+    (const_list ais = true ∧ ais.length = (proj_list_0 valtype rt).length) ∨
+    ais = [admininstr.TRAP] ∨
+    ∃ (s' : store) (f' : frame) (ais' : List admininstr),
+      Step (config.mk_config (state.mk_state s f) ais) (config.mk_config (state.mk_state s' f') ais')
 
 /-- Lean-only: the `plain` case of Rocq's `t_progress_e` proof (bullet at `type_progress.v:5567`),
     stated as exactly the minor premise of the mutual recursor `Instrs_ok2.rec` (store `s` is a
@@ -7851,6 +7851,7 @@ theorem t_progress_e (s : store) (C framemoduleC : context) (f : frame) (vals : 
         Step (config.mk_config (state.mk_state s f) ((List.map admininstr_val vals) ++ ais))
           (config.mk_config (state.mk_state s' f') ais') := by
   intro hwf hadmin
+  #check Instrs_ok2.rec
   exact (
     Instrs_ok2.rec
       (motive_1 := t_progress_e_P s)
@@ -7890,15 +7891,22 @@ theorem t_progress (s : store) (f : frame) (ais : List admininstr) (rt : resultt
   cases expr_ok2 with
   | mk_Expr_ok2 _ _ _ instrs_ok2_empty_rt _ _ _ =>
 
-  have hloc : C.LOCALS = List.map typeof f.LOCALS := frame_t_context_local_types s f C frame_ok
-  have hlab : C.LABELS = [] := frame_t_context_label_empty s f C frame_ok
-  have hret : C.RETURN = none := frame_t_context_return_empty s f C frame_ok
+  have context_matches_frame_wrt_locals : C.LOCALS = List.map typeof f.LOCALS :=
+    frame_t_context_local_types s f C frame_ok
+
+  have context_labels_empty : C.LABELS = [] :=
+    frame_t_context_label_empty s f C frame_ok
+
+  have context_return_none : C.RETURN = none :=
+    frame_t_context_return_empty s f C frame_ok
+
   have hC : C = upd_local_label_return (upd_local_label_return C [] [] none)
       (List.map typeof f.LOCALS) [] none := by
     rcases C with ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10⟩
-    simp only at hloc hlab hret
-    subst hloc hlab hret
+    simp only at context_matches_frame_wrt_locals context_labels_empty context_return_none
+    subst context_matches_frame_wrt_locals context_labels_empty context_return_none
     rfl
+
   have hmod : Moduleinst_ok s f.MODULE (upd_local_label_return C [] [] none) := by
     cases frame_ok with
     | mk_Frame_ok val_lst v_minst t_lst0 C0 hminst _ _ _ _ _ _ =>

@@ -1,9 +1,9 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["ed69fe9d49b9e882.olean"],
+ {"o": ["a10d17596a4fd053.olean"],
   "m": false,
-  "i": "ad3f7bb7a8ba336c.ilean",
+  "i": "4f3fa4e788684ce0.ilean",
   "c": "3e5a1da5adc88044.c"},
  "log":
  [{"message":
@@ -16,9 +16,9 @@
        [["@«test-lean-claude»:extraDep", "00000000000006bb"]]],
       ["imports",
        [["«wasm2.0» transitive imports (legacy)", "042b7ef8e4b09de0"],
-        ["«wasm2.0»:importAllArts", "675ac16b856d1a66"],
-        ["HelperLemmas transitive imports (legacy)", "3151bc60dbe97170"],
-        ["HelperLemmas:importAllArts", "e8d4bff6de6bcd6c"]]]]],
+        ["«wasm2.0»:importAllArts", "b81c239dd4533cb1"],
+        ["HelperLemmas transitive imports (legacy)", "254346003f9a41a9"],
+        ["HelperLemmas:importAllArts", "992b5bc918f85aa4"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -27,10 +27,10 @@
   ["Lean 4.32.0, commit 8c9756b28d64dab099da31a4c09229a9e6a2ef35",
    "5d4a267a1ba5cafb"],
   ["/home/zhengyew/spectec/spectec/src/test-lean-claude/Subtyping.lean",
-   "6bff47de5146ecab"],
+   "ed9ecd86332cdc79"],
   ["options", "00000000000006bb"],
   ["isModule: false", "feefd2a0d3a1847e"],
   ["Module.name: Subtyping", "23e8db55f482b518"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "6ef162acac9c021b"}
+ "depHash": "412d9bbcb652ca4c"}

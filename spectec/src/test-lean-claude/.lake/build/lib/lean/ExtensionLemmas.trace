@@ -1,55 +1,53 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["0d42b514c813c3ae.olean"],
+ {"o": ["5bdc6cd79d7f9652.olean"],
   "m": false,
-  "i": "18146a34ec1914be.ilean",
+  "i": "43c48a106d938c70.ilean",
   "c": "77f9b74e5099a906.c"},
  "log":
  [{"message":
    ".> LEAN_PATH=/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/Cli/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/batteries/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/Qq/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/aesop/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/importGraph/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/plausible/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/packages/mathlib/.lake/build/lib/lean:/home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean /home/zhengyew/.elan/toolchains/leanprover--lean4---v4.32.0/bin/lean /home/zhengyew/spectec/spectec/src/test-lean-claude/ExtensionLemmas.lean -o /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/ExtensionLemmas.olean -i /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/lib/lean/ExtensionLemmas.ilean -c /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/ir/ExtensionLemmas.c --setup /home/zhengyew/spectec/spectec/src/test-lean-claude/.lake/build/ir/ExtensionLemmas.setup.json --json",
    "level": "trace"},
-  {"message": "ExtensionLemmas.lean:136:8: declaration uses `sorry`",
+  {"message":
+   "ExtensionLemmas.lean:857:63: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:930:63: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "ExtensionLemmas.lean:876:66: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:951:66: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "ExtensionLemmas.lean:920:60: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:996:60: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "ExtensionLemmas.lean:932:69: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:1010:69: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "ExtensionLemmas.lean:956:63: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:1035:63: Variable name `x` is not explicitly referenced.\n\nThe binding can be removed (if unused) or named `_` (if used implicitly).\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "ExtensionLemmas.lean:1120:2: Try this: intro hwf hwfval hidx hlookup heq a ha",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:1206:2: Try this: intro hwf hwfval hidx hlookup heq a ha",
+   "ExtensionLemmas.lean:1150:2: Try this: intro hwfnb hwf hidx hlookup heq a ha",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:1238:2: Try this: intro hwfnb hwf hidx hlookup heq a ha",
+   "ExtensionLemmas.lean:1185:2: Try this: intro hwf hwf' hidx hlookup _ heq a ha",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:1277:2: Try this: intro hwf hwf' hidx hlookup _ heq a ha",
+   "ExtensionLemmas.lean:1213:2: Try this: intro hwf hidx hlookup heq a ha",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:1305:2: Try this: intro hwf hidx hlookup heq a ha",
+   "ExtensionLemmas.lean:1262:2: Try this: intro hwf hwf' hidx hlookup heq a ha",
+   "level": "warning"},
+  {"message": "ExtensionLemmas.lean:1290:2: Try this: intro hidx heq a ha",
+   "level": "warning"},
+  {"message": "ExtensionLemmas.lean:1309:2: Try this: intro hwf hidx heq a ha",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:1355:2: Try this: intro hwf hwf' hidx hlookup heq a ha",
-   "level": "warning"},
-  {"message": "ExtensionLemmas.lean:1383:2: Try this: intro hidx heq a ha",
-   "level": "warning"},
-  {"message": "ExtensionLemmas.lean:1402:2: Try this: intro hwf hidx heq a ha",
+   "ExtensionLemmas.lean:1599:73: This simp argument is unused:\n  Forall\n\nHint: Omit it from the simp argument list.\n  simp [̵F̵o̵r̵a̵l̵l̵]̵ ̵at hr\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
    "level": "warning"},
   {"message":
-   "ExtensionLemmas.lean:1694:73: This simp argument is unused:\n  Forall\n\nHint: Omit it from the simp argument list.\n  simp [̵F̵o̵r̵a̵l̵l̵]̵ ̵at hr\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
-   "level": "warning"},
-  {"message":
-   "ExtensionLemmas.lean:1955:66: This simp argument is unused:\n  Forall\n\nHint: Omit it from the simp argument list.\n  simp [̵F̵o̵r̵a̵l̵l̵]̵ ̵at hr\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "ExtensionLemmas.lean:1858:66: This simp argument is unused:\n  Forall\n\nHint: Omit it from the simp argument list.\n  simp [̵F̵o̵r̵a̵l̵l̵]̵ ̵at hr\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
    "level": "warning"}],
  "inputs":
  [["ExtensionLemmas:deps",
@@ -58,16 +56,16 @@
        [["@«test-lean-claude»:extraDep", "00000000000006bb"]]],
       ["imports",
        [["«wasm2.0» transitive imports (legacy)", "042b7ef8e4b09de0"],
-        ["«wasm2.0»:importAllArts", "675ac16b856d1a66"],
-        ["HelperLemmas transitive imports (legacy)", "3151bc60dbe97170"],
-        ["HelperLemmas:importAllArts", "e8d4bff6de6bcd6c"],
-        ["Subtyping transitive imports (legacy)", "8a748e05090a180d"],
-        ["Subtyping:importAllArts", "6b357408975fae13"],
-        ["TypingLemmas transitive imports (legacy)", "7e432cf66470a0fd"],
-        ["TypingLemmas:importAllArts", "86cd15840a8b9b3b"],
+        ["«wasm2.0»:importAllArts", "b81c239dd4533cb1"],
+        ["HelperLemmas transitive imports (legacy)", "254346003f9a41a9"],
+        ["HelperLemmas:importAllArts", "992b5bc918f85aa4"],
+        ["Subtyping transitive imports (legacy)", "e4185c761490f2a0"],
+        ["Subtyping:importAllArts", "ec6651c1ffc9d656"],
+        ["TypingLemmas transitive imports (legacy)", "f19d24f3e5d88fcc"],
+        ["TypingLemmas:importAllArts", "d2d2e010742550a2"],
         ["TypePreservationPure transitive imports (legacy)",
-         "6ae15bd525ad8480"],
-        ["TypePreservationPure:importAllArts", "8ac69ef8e7933d7e"]]]]],
+         "367dded96426d6be"],
+        ["TypePreservationPure:importAllArts", "51ec60ffeff132ec"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -76,10 +74,10 @@
   ["Lean 4.32.0, commit 8c9756b28d64dab099da31a4c09229a9e6a2ef35",
    "5d4a267a1ba5cafb"],
   ["/home/zhengyew/spectec/spectec/src/test-lean-claude/ExtensionLemmas.lean",
-   "66a49e4de7682965"],
+   "33729372f742cd5a"],
   ["options", "00000000000006bb"],
   ["isModule: false", "feefd2a0d3a1847e"],
   ["Module.name: ExtensionLemmas", "1c8b99fa3d4be4d4"],
   ["Package.id?: (some test-lean-claude)", "d9ff6ba00dbabfb9"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "8c4b2e12b014f0d3"}
+ "depHash": "d2fb32aba59fe3f8"}

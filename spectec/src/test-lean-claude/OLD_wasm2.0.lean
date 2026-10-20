@@ -86,7 +86,7 @@ def list_ (X : Type) (var_0_opt : Option X) : List X :=
   | none => []
   | some w => [w]
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:40.1-40.100 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:40.1-40.86 -/
 def concat_ (X : Type) (var_0_lst_lst : List (List X)) : List X :=
   match var_0_lst_lst with
   | [] => []
@@ -99,25 +99,25 @@ opaque inv_concat_ (X : Type) (var_0_lst : List X) : List (List X) := by
      | intros ; assumption
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:51.1-51.60 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:51.1-51.46 -/
 def setproduct2_ (X : Type) (X_0 : X) (var_0_lst_lst : List (List X)) : List (List X) :=
   match var_0_lst_lst with
   | [] => []
   | w'_lst :: w_lst_lst => [[X_0] ++ w'_lst] ++ (setproduct2_ X X_0 w_lst_lst)
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:50.1-50.61 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:50.1-50.47 -/
 def setproduct1_ (X : Type) (var_0_lst : List X) (var_1_lst_lst : List (List X)) : List (List X) :=
   match var_0_lst with
   | [] => []
   | w_1 :: w'_lst => (setproduct2_ X w_1 var_1_lst_lst) ++ (setproduct1_ X w'_lst var_1_lst_lst)
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:49.1-49.98 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:49.1-49.84 -/
 def setproduct_ (X : Type) (var_0_lst_lst : List (List X)) : List (List X) :=
   match var_0_lst_lst with
   | [] => [[]]
   | w_1_lst :: w_lst_lst => setproduct1_ X w_1_lst (setproduct_ X w_lst_lst)
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:60.1-60.92 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/0-aux.spectec:60.1-60.78 -/
 def disjoint_ (X : Type) [BEq X] (var_0_lst : List X) : Bool :=
   match var_0_lst with
   | [] => true
@@ -771,17 +771,17 @@ inductive wf_externtype : externtype → Prop where
     wf_externtype (externtype.MEM v_memtype)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:325.1-325.60 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:332.1-332.60 -/
 inductive dim : Type where
   | mk_dim (i : Nat) : dim
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:325.1-325.60 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:332.1-332.60 -/
 def proj_dim_0 (x : dim) : Nat :=
   match x with
   | dim.mk_dim v_num_0 => (v_num_0)
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:325.8-325.11 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:332.8-332.11 -/
 inductive wf_dim : dim → Prop where
   | dim_case_0 (i : Nat) :
     ((((i = 1) ∨ (i = 2)) ∨ (i = 4)) ∨ (i = 8)) ∨ (i = 16) →
@@ -814,12 +814,12 @@ def lsize (v_lanetype : lanetype) : Nat :=
   | lanetype.I8 => psize packtype.I8
   | lanetype.I16 => psize packtype.I16
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:326.1-327.40 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:333.1-334.40 -/
 inductive shape : Type where
   | X (v_lanetype : lanetype) (v_dim : dim) : shape
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:326.8-326.13 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:333.8-333.13 -/
 inductive wf_shape : shape → Prop where
   | shape_case_0 (v_lanetype : lanetype) (v_dim : dim) :
     wf_dim v_dim →
@@ -930,13 +930,13 @@ def proj_num__1 (var_x : num_) : Option fN :=
 /- Type Alias Definition at: ../specification/wasm-2.0/1-syntax.spectec:266.1-266.36 -/
 abbrev pack_ : Type := iN
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:268.1-268.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:275.1-275.23 -/
 inductive lane_ : Type where
   | mk_lane__0 (v_Jnn : Jnn) (var_x : iN) : lane_
   | mk_lane__1 (v_Fnn : Fnn) (var_x : fN) : lane_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:268.8-268.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:275.8-275.14 -/
 inductive wf_lane_ : lanetype → lane_ → Prop where
   | lane__case_0 (v_lanetype : lanetype) (v_Jnn : Jnn) (var_x : iN) :
     wf_uN (lsize (lanetype_Jnn v_Jnn)) var_x →
@@ -948,22 +948,22 @@ inductive wf_lane_ : lanetype → lane_ → Prop where
     wf_lane_ v_lanetype (lane_.mk_lane__1 v_Fnn var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:268.1-268.23 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:275.1-275.23 -/
 def proj_lane__0 (var_x : lane_) : Option iN :=
   match var_x with
   | lane_.mk_lane__0 v_Jnn var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:268.1-268.23 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:275.1-275.23 -/
 def proj_lane__1 (var_x : lane_) : Option fN :=
   match var_x with
   | lane_.mk_lane__1 v_Fnn var_x => some var_x
   | _ => none
 
-/- Type Alias Definition at: ../specification/wasm-2.0/1-syntax.spectec:272.1-272.34 -/
+/- Type Alias Definition at: ../specification/wasm-2.0/1-syntax.spectec:279.1-279.34 -/
 abbrev vec_ : Type := vN
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:274.1-274.35 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:281.1-281.35 -/
 def fun_zero (v_numtype : numtype) : num_ :=
   match v_numtype with
   | numtype.I32 => num_.mk_num__0 Inn.I32 (uN.mk_uN 0)
@@ -971,7 +971,7 @@ def fun_zero (v_numtype : numtype) : num_ :=
   | numtype.F32 => num_.mk_num__1 Fnn.F32 (fzero (Option.get! (size (valtype_Fnn Fnn.F32))))
   | numtype.F64 => num_.mk_num__1 Fnn.F64 (fzero (Option.get! (size (valtype_Fnn Fnn.F64))))
 
-/- Well-Formedness Theorem at: ../specification/wasm-2.0/1-syntax.spectec:274.6-274.11 -/
+/- Well-Formedness Theorem at: ../specification/wasm-2.0/1-syntax.spectec:281.6-281.11 -/
 theorem zero_is_wf (v_numtype : numtype) (ret_val : num_) :
   ret_val = (fun_zero v_numtype) →
   wf_num_ v_numtype ret_val := by
@@ -982,30 +982,30 @@ theorem zero_is_wf (v_numtype : numtype) (ret_val : num_) :
   · exact wf_num_.num__case_1 _ _ _ (fzero_is_wf _ _ rfl) rfl
   · exact wf_num_.num__case_1 _ _ _ (fzero_is_wf _ _ rfl) rfl
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:281.1-281.42 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:288.1-288.42 -/
 inductive sx : Type where
   | U : sx
   | S : sx
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:282.1-282.56 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:289.1-289.56 -/
 inductive sz : Type where
   | mk_sz (i : Nat) : sz
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:282.1-282.56 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:289.1-289.56 -/
 def proj_sz_0 (x : sz) : Nat :=
   match x with
   | sz.mk_sz v_num_0 => (v_num_0)
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:282.8-282.10 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:289.8-289.10 -/
 inductive wf_sz : sz → Prop where
   | sz_case_0 (i : Nat) :
     (((i = 8) ∨ (i = 16)) ∨ (i = 32)) ∨ (i = 64) →
     wf_sz (sz.mk_sz i)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:284.1-284.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:291.1-291.22 -/
 inductive unop_Inn : Type where
   | CLZ : unop_Inn
   | CTZ : unop_Inn
@@ -1013,7 +1013,7 @@ inductive unop_Inn : Type where
   | EXTEND (v_n : n) : unop_Inn
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:284.1-284.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:291.1-291.22 -/
 inductive unop_Fnn : Type where
   | ABS : unop_Fnn
   | NEG : unop_Fnn
@@ -1024,13 +1024,13 @@ inductive unop_Fnn : Type where
   | NEAREST : unop_Fnn
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:284.1-284.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:291.1-291.22 -/
 inductive unop_ : Type where
   | mk_unop__0 (v_Inn : Inn) (var_x : unop_Inn) : unop_
   | mk_unop__1 (v_Fnn : Fnn) (var_x : unop_Fnn) : unop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:284.8-284.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:291.8-291.14 -/
 inductive wf_unop_ : numtype → unop_ → Prop where
   | unop__case_0 (v_numtype : numtype) (v_Inn : Inn) (var_x : unop_Inn) :
     v_numtype = (numtype_Inn v_Inn) →
@@ -1040,19 +1040,19 @@ inductive wf_unop_ : numtype → unop_ → Prop where
     wf_unop_ v_numtype (unop_.mk_unop__1 v_Fnn var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:284.1-284.22 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:291.1-291.22 -/
 def proj_unop__0 (var_x : unop_) : Option unop_Inn :=
   match var_x with
   | unop_.mk_unop__0 v_Inn var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:284.1-284.22 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:291.1-291.22 -/
 def proj_unop__1 (var_x : unop_) : Option unop_Fnn :=
   match var_x with
   | unop_.mk_unop__1 v_Fnn var_x => some var_x
   | _ => none
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:288.1-288.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.1-295.23 -/
 inductive binop_Inn : Type where
   | ADD : binop_Inn
   | SUB : binop_Inn
@@ -1068,7 +1068,7 @@ inductive binop_Inn : Type where
   | ROTR : binop_Inn
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:288.1-288.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.1-295.23 -/
 inductive binop_Fnn : Type where
   | ADD : binop_Fnn
   | SUB : binop_Fnn
@@ -1079,13 +1079,13 @@ inductive binop_Fnn : Type where
   | COPYSIGN : binop_Fnn
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:288.1-288.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.1-295.23 -/
 inductive binop_ : Type where
   | mk_binop__0 (v_Inn : Inn) (var_x : binop_Inn) : binop_
   | mk_binop__1 (v_Fnn : Fnn) (var_x : binop_Fnn) : binop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:288.8-288.15 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.8-295.15 -/
 inductive wf_binop_ : numtype → binop_ → Prop where
   | binop__case_0 (v_numtype : numtype) (v_Inn : Inn) (var_x : binop_Inn) :
     v_numtype = (numtype_Inn v_Inn) →
@@ -1095,41 +1095,41 @@ inductive wf_binop_ : numtype → binop_ → Prop where
     wf_binop_ v_numtype (binop_.mk_binop__1 v_Fnn var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:288.1-288.23 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.1-295.23 -/
 def proj_binop__0 (var_x : binop_) : Option binop_Inn :=
   match var_x with
   | binop_.mk_binop__0 v_Inn var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:288.1-288.23 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.1-295.23 -/
 def proj_binop__1 (var_x : binop_) : Option binop_Fnn :=
   match var_x with
   | binop_.mk_binop__1 v_Fnn var_x => some var_x
   | _ => none
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.1-295.24 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:302.1-302.24 -/
 inductive testop_Inn : Type where
   | EQZ : testop_Inn
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.1-295.24 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:302.1-302.24 -/
 inductive testop_ : Type where
   | mk_testop__0 (v_Inn : Inn) (var_x : testop_Inn) : testop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.8-295.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:302.8-302.16 -/
 inductive wf_testop_ : numtype → testop_ → Prop where
   | testop__case_0 (v_numtype : numtype) (v_Inn : Inn) (var_x : testop_Inn) :
     v_numtype = (numtype_Inn v_Inn) →
     wf_testop_ v_numtype (testop_.mk_testop__0 v_Inn var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:295.1-295.24 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:302.1-302.24 -/
 def proj_testop__0 (var_x : testop_) : testop_Inn :=
   match var_x with
   | testop_.mk_testop__0 v_Inn var_x => var_x
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:299.1-299.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:306.1-306.23 -/
 inductive relop_Inn : Type where
   | EQ : relop_Inn
   | NE : relop_Inn
@@ -1139,7 +1139,7 @@ inductive relop_Inn : Type where
   | GE (v_sx : sx) : relop_Inn
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:299.1-299.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:306.1-306.23 -/
 inductive relop_Fnn : Type where
   | EQ : relop_Fnn
   | NE : relop_Fnn
@@ -1149,13 +1149,13 @@ inductive relop_Fnn : Type where
   | GE : relop_Fnn
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:299.1-299.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:306.1-306.23 -/
 inductive relop_ : Type where
   | mk_relop__0 (v_Inn : Inn) (var_x : relop_Inn) : relop_
   | mk_relop__1 (v_Fnn : Fnn) (var_x : relop_Fnn) : relop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:299.8-299.15 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:306.8-306.15 -/
 inductive wf_relop_ : numtype → relop_ → Prop where
   | relop__case_0 (v_numtype : numtype) (v_Inn : Inn) (var_x : relop_Inn) :
     v_numtype = (numtype_Inn v_Inn) →
@@ -1165,25 +1165,25 @@ inductive wf_relop_ : numtype → relop_ → Prop where
     wf_relop_ v_numtype (relop_.mk_relop__1 v_Fnn var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:299.1-299.23 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:306.1-306.23 -/
 def proj_relop__0 (var_x : relop_) : Option relop_Inn :=
   match var_x with
   | relop_.mk_relop__0 v_Inn var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:299.1-299.23 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:306.1-306.23 -/
 def proj_relop__1 (var_x : relop_) : Option relop_Fnn :=
   match var_x with
   | relop_.mk_relop__1 v_Fnn var_x => some var_x
   | _ => none
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 inductive cvtop__Inn_1_Inn_2 : Type where
   | EXTEND (v_sx : sx) : cvtop__Inn_1_Inn_2
   | WRAP : cvtop__Inn_1_Inn_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.8-307.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.8-314.16 -/
 inductive wf_cvtop__Inn_1_Inn_2 : Inn → Inn → cvtop__Inn_1_Inn_2 → Prop where
   | cvtop__Inn_1_Inn_2_case_0 (Inn_1 : Inn) (Inn_2 : Inn) (v_sx : sx) :
     (sizenn1 (numtype_Inn Inn_1)) < (sizenn2 (numtype_Inn Inn_2)) →
@@ -1193,13 +1193,13 @@ inductive wf_cvtop__Inn_1_Inn_2 : Inn → Inn → cvtop__Inn_1_Inn_2 → Prop wh
     wf_cvtop__Inn_1_Inn_2 Inn_1 Inn_2 cvtop__Inn_1_Inn_2.WRAP
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 inductive cvtop__Inn_1_Fnn_2 : Type where
   | CONVERT (v_sx : sx) : cvtop__Inn_1_Fnn_2
   | REINTERPRET : cvtop__Inn_1_Fnn_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.8-307.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.8-314.16 -/
 inductive wf_cvtop__Inn_1_Fnn_2 : Inn → Fnn → cvtop__Inn_1_Fnn_2 → Prop where
   | cvtop__Inn_1_Fnn_2_case_0 (Inn_1 : Inn) (Fnn_2 : Fnn) (v_sx : sx) : wf_cvtop__Inn_1_Fnn_2 Inn_1 Fnn_2 (cvtop__Inn_1_Fnn_2.CONVERT v_sx)
   | cvtop__Inn_1_Fnn_2_case_1 (Inn_1 : Inn) (Fnn_2 : Fnn) :
@@ -1207,14 +1207,14 @@ inductive wf_cvtop__Inn_1_Fnn_2 : Inn → Fnn → cvtop__Inn_1_Fnn_2 → Prop wh
     wf_cvtop__Inn_1_Fnn_2 Inn_1 Fnn_2 cvtop__Inn_1_Fnn_2.REINTERPRET
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 inductive cvtop__Fnn_1_Inn_2 : Type where
   | TRUNC (v_sx : sx) : cvtop__Fnn_1_Inn_2
   | TRUNC_SAT (v_sx : sx) : cvtop__Fnn_1_Inn_2
   | REINTERPRET : cvtop__Fnn_1_Inn_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.8-307.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.8-314.16 -/
 inductive wf_cvtop__Fnn_1_Inn_2 : Fnn → Inn → cvtop__Fnn_1_Inn_2 → Prop where
   | cvtop__Fnn_1_Inn_2_case_0 (Fnn_1 : Fnn) (Inn_2 : Inn) (v_sx : sx) : wf_cvtop__Fnn_1_Inn_2 Fnn_1 Inn_2 (cvtop__Fnn_1_Inn_2.TRUNC v_sx)
   | cvtop__Fnn_1_Inn_2_case_1 (Fnn_1 : Fnn) (Inn_2 : Inn) (v_sx : sx) : wf_cvtop__Fnn_1_Inn_2 Fnn_1 Inn_2 (cvtop__Fnn_1_Inn_2.TRUNC_SAT v_sx)
@@ -1223,13 +1223,13 @@ inductive wf_cvtop__Fnn_1_Inn_2 : Fnn → Inn → cvtop__Fnn_1_Inn_2 → Prop wh
     wf_cvtop__Fnn_1_Inn_2 Fnn_1 Inn_2 cvtop__Fnn_1_Inn_2.REINTERPRET
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 inductive cvtop__Fnn_1_Fnn_2 : Type where
   | PROMOTE : cvtop__Fnn_1_Fnn_2
   | DEMOTE : cvtop__Fnn_1_Fnn_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.8-307.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.8-314.16 -/
 inductive wf_cvtop__Fnn_1_Fnn_2 : Fnn → Fnn → cvtop__Fnn_1_Fnn_2 → Prop where
   | cvtop__Fnn_1_Fnn_2_case_0 (Fnn_1 : Fnn) (Fnn_2 : Fnn) :
     (sizenn1 (numtype_Fnn Fnn_1)) < (sizenn2 (numtype_Fnn Fnn_2)) →
@@ -1239,7 +1239,7 @@ inductive wf_cvtop__Fnn_1_Fnn_2 : Fnn → Fnn → cvtop__Fnn_1_Fnn_2 → Prop wh
     wf_cvtop__Fnn_1_Fnn_2 Fnn_1 Fnn_2 cvtop__Fnn_1_Fnn_2.DEMOTE
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 inductive cvtop__ : Type where
   | mk_cvtop___0 (Inn_1 : Inn) (Inn_2 : Inn) (var_x : cvtop__Inn_1_Inn_2) : cvtop__
   | mk_cvtop___1 (Inn_1 : Inn) (Fnn_2 : Fnn) (var_x : cvtop__Inn_1_Fnn_2) : cvtop__
@@ -1247,7 +1247,7 @@ inductive cvtop__ : Type where
   | mk_cvtop___3 (Fnn_1 : Fnn) (Fnn_2 : Fnn) (var_x : cvtop__Fnn_1_Fnn_2) : cvtop__
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.8-307.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.8-314.16 -/
 inductive wf_cvtop__ : numtype → numtype → cvtop__ → Prop where
   | cvtop___case_0 (numtype_1 : numtype) (numtype_2 : numtype) (Inn_1 : Inn) (Inn_2 : Inn) (var_x : cvtop__Inn_1_Inn_2) :
     wf_cvtop__Inn_1_Inn_2 Inn_1 Inn_2 var_x →
@@ -1271,41 +1271,41 @@ inductive wf_cvtop__ : numtype → numtype → cvtop__ → Prop where
     wf_cvtop__ numtype_1 numtype_2 (cvtop__.mk_cvtop___3 Fnn_1 Fnn_2 var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 def proj_cvtop___0 (var_x : cvtop__) : Option cvtop__Inn_1_Inn_2 :=
   match var_x with
   | cvtop__.mk_cvtop___0 Inn_1 Inn_2 var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 def proj_cvtop___1 (var_x : cvtop__) : Option cvtop__Inn_1_Fnn_2 :=
   match var_x with
   | cvtop__.mk_cvtop___1 Inn_1 Fnn_2 var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 def proj_cvtop___2 (var_x : cvtop__) : Option cvtop__Fnn_1_Inn_2 :=
   match var_x with
   | cvtop__.mk_cvtop___2 Fnn_1 Inn_2 var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:307.1-307.37 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:314.1-314.37 -/
 def proj_cvtop___3 (var_x : cvtop__) : Option cvtop__Fnn_1_Fnn_2 :=
   match var_x with
   | cvtop__.mk_cvtop___3 Fnn_1 Fnn_2 var_x => some var_x
   | _ => none
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:328.1-329.31 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:335.1-336.31 -/
 inductive ishape : Type where
   | mk_ishape (v_shape : shape) : ishape
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:328.1-329.31 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:335.1-336.31 -/
 def proj_ishape_0 (x : ishape) : shape :=
   match x with
   | ishape.mk_ishape v_shape_0 => (v_shape_0)
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:328.8-328.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:335.8-335.14 -/
 inductive wf_ishape : ishape → Prop where
   | ishape_case_0 (v_Jnn : Jnn) (v_shape : shape) :
     wf_shape v_shape →
@@ -1313,12 +1313,12 @@ inductive wf_ishape : ishape → Prop where
     wf_ishape (ishape.mk_ishape v_shape)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:330.1-331.31 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:337.1-338.31 -/
 inductive fshape : Type where
   | mk_fshape (v_shape : shape) : fshape
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:330.8-330.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:337.8-337.14 -/
 inductive wf_fshape : fshape → Prop where
   | fshape_case_0 (v_Fnn : Fnn) (v_shape : shape) :
     wf_shape v_shape →
@@ -1326,12 +1326,12 @@ inductive wf_fshape : fshape → Prop where
     wf_fshape (fshape.mk_fshape v_shape)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:332.1-333.31 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:339.1-340.31 -/
 inductive pshape : Type where
   | mk_pshape (v_shape : shape) : pshape
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:332.8-332.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:339.8-339.14 -/
 inductive wf_pshape : pshape → Prop where
   | pshape_case_0 (v_Pnn : Pnn) (v_shape : shape) :
     wf_shape v_shape →
@@ -1339,12 +1339,12 @@ inductive wf_pshape : pshape → Prop where
     wf_pshape (pshape.mk_pshape v_shape)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:335.1-335.22 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:342.1-342.22 -/
 def fun_dim (v_shape : shape) : dim :=
   match v_shape with
   | shape.X v_Lnn (dim.mk_dim v_N) => dim.mk_dim v_N
 
-/- Well-Formedness Theorem at: ../specification/wasm-2.0/1-syntax.spectec:335.6-335.10 -/
+/- Well-Formedness Theorem at: ../specification/wasm-2.0/1-syntax.spectec:342.6-342.10 -/
 theorem dim_is_wf (v_shape : shape) (ret_val : dim) :
   wf_shape v_shape →
   ret_val = (fun_dim v_shape) →
@@ -1355,17 +1355,17 @@ theorem dim_is_wf (v_shape : shape) (ret_val : dim) :
     cases d
     exact hd
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:336.1-336.41 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:343.1-343.41 -/
 def shsize (v_shape : shape) : Nat :=
   match v_shape with
   | shape.X v_Lnn (dim.mk_dim v_N) => (lsize v_Lnn) * v_N
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:338.1-338.20 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:345.1-345.20 -/
 inductive vvunop : Type where
   | NOT : vvunop
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:339.1-339.41 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:346.1-346.41 -/
 inductive vvbinop : Type where
   | AND : vvbinop
   | ANDNOT : vvbinop
@@ -1373,24 +1373,24 @@ inductive vvbinop : Type where
   | XOR : vvbinop
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:340.1-340.28 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:347.1-347.28 -/
 inductive vvternop : Type where
   | BITSELECT : vvternop
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:341.1-341.27 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:348.1-348.27 -/
 inductive vvtestop : Type where
   | ANY_TRUE : vvtestop
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:343.1-343.21 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.1-350.21 -/
 inductive vunop_Jnn_N : Type where
   | ABS : vunop_Jnn_N
   | NEG : vunop_Jnn_N
   | POPCNT : vunop_Jnn_N
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:343.8-343.15 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.8-350.15 -/
 inductive wf_vunop_Jnn_N : Jnn → N → vunop_Jnn_N → Prop where
   | vunop_Jnn_N_case_0 (v_Jnn : Jnn) (v_N : N) : wf_vunop_Jnn_N v_Jnn v_N vunop_Jnn_N.ABS
   | vunop_Jnn_N_case_1 (v_Jnn : Jnn) (v_N : N) : wf_vunop_Jnn_N v_Jnn v_N vunop_Jnn_N.NEG
@@ -1399,7 +1399,7 @@ inductive wf_vunop_Jnn_N : Jnn → N → vunop_Jnn_N → Prop where
     wf_vunop_Jnn_N v_Jnn v_N vunop_Jnn_N.POPCNT
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:343.1-343.21 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.1-350.21 -/
 inductive vunop_Fnn_N : Type where
   | ABS : vunop_Fnn_N
   | NEG : vunop_Fnn_N
@@ -1410,13 +1410,13 @@ inductive vunop_Fnn_N : Type where
   | NEAREST : vunop_Fnn_N
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:343.1-343.21 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.1-350.21 -/
 inductive vunop_ : Type where
   | mk_vunop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vunop_Jnn_N) : vunop_
   | mk_vunop__1 (v_Fnn : Fnn) (v_N : N) (var_x : vunop_Fnn_N) : vunop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:343.8-343.15 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.8-350.15 -/
 inductive wf_vunop_ : shape → vunop_ → Prop where
   | vunop__case_0 (v_shape : shape) (v_Jnn : Jnn) (v_N : N) (var_x : vunop_Jnn_N) :
     wf_vunop_Jnn_N v_Jnn v_N var_x →
@@ -1427,19 +1427,19 @@ inductive wf_vunop_ : shape → vunop_ → Prop where
     wf_vunop_ v_shape (vunop_.mk_vunop__1 v_Fnn v_N var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:343.1-343.21 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.1-350.21 -/
 def proj_vunop__0 (var_x : vunop_) : Option vunop_Jnn_N :=
   match var_x with
   | vunop_.mk_vunop__0 v_Jnn v_N var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:343.1-343.21 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:350.1-350.21 -/
 def proj_vunop__1 (var_x : vunop_) : Option vunop_Fnn_N :=
   match var_x with
   | vunop_.mk_vunop__1 v_Fnn v_N var_x => some var_x
   | _ => none
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:348.1-348.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.1-355.22 -/
 inductive vbinop_Jnn_N : Type where
   | ADD : vbinop_Jnn_N
   | SUB : vbinop_Jnn_N
@@ -1452,7 +1452,7 @@ inductive vbinop_Jnn_N : Type where
   | MAX (v_sx : sx) : vbinop_Jnn_N
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:348.8-348.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.8-355.16 -/
 inductive wf_vbinop_Jnn_N : Jnn → N → vbinop_Jnn_N → Prop where
   | vbinop_Jnn_N_case_0 (v_Jnn : Jnn) (v_N : N) : wf_vbinop_Jnn_N v_Jnn v_N vbinop_Jnn_N.ADD
   | vbinop_Jnn_N_case_1 (v_Jnn : Jnn) (v_N : N) : wf_vbinop_Jnn_N v_Jnn v_N vbinop_Jnn_N.SUB
@@ -1479,7 +1479,7 @@ inductive wf_vbinop_Jnn_N : Jnn → N → vbinop_Jnn_N → Prop where
     wf_vbinop_Jnn_N v_Jnn v_N (vbinop_Jnn_N.MAX v_sx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:348.1-348.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.1-355.22 -/
 inductive vbinop_Fnn_N : Type where
   | ADD : vbinop_Fnn_N
   | SUB : vbinop_Fnn_N
@@ -1491,13 +1491,13 @@ inductive vbinop_Fnn_N : Type where
   | PMAX : vbinop_Fnn_N
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:348.1-348.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.1-355.22 -/
 inductive vbinop_ : Type where
   | mk_vbinop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vbinop_Jnn_N) : vbinop_
   | mk_vbinop__1 (v_Fnn : Fnn) (v_N : N) (var_x : vbinop_Fnn_N) : vbinop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:348.8-348.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.8-355.16 -/
 inductive wf_vbinop_ : shape → vbinop_ → Prop where
   | vbinop__case_0 (v_shape : shape) (v_Jnn : Jnn) (v_N : N) (var_x : vbinop_Jnn_N) :
     wf_vbinop_Jnn_N v_Jnn v_N var_x →
@@ -1508,41 +1508,41 @@ inductive wf_vbinop_ : shape → vbinop_ → Prop where
     wf_vbinop_ v_shape (vbinop_.mk_vbinop__1 v_Fnn v_N var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:348.1-348.22 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.1-355.22 -/
 def proj_vbinop__0 (var_x : vbinop_) : Option vbinop_Jnn_N :=
   match var_x with
   | vbinop_.mk_vbinop__0 v_Jnn v_N var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:348.1-348.22 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:355.1-355.22 -/
 def proj_vbinop__1 (var_x : vbinop_) : Option vbinop_Fnn_N :=
   match var_x with
   | vbinop_.mk_vbinop__1 v_Fnn v_N var_x => some var_x
   | _ => none
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:361.1-361.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:368.1-368.23 -/
 inductive vtestop_Jnn_N : Type where
   | ALL_TRUE : vtestop_Jnn_N
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:361.1-361.23 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:368.1-368.23 -/
 inductive vtestop_ : Type where
   | mk_vtestop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vtestop_Jnn_N) : vtestop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:361.8-361.17 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:368.8-368.17 -/
 inductive wf_vtestop_ : shape → vtestop_ → Prop where
   | vtestop__case_0 (v_shape : shape) (v_Jnn : Jnn) (v_N : N) (var_x : vtestop_Jnn_N) :
     v_shape = (shape.X (lanetype_Jnn v_Jnn) (dim.mk_dim v_N)) →
     wf_vtestop_ v_shape (vtestop_.mk_vtestop__0 v_Jnn v_N var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:361.1-361.23 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:368.1-368.23 -/
 def proj_vtestop__0 (var_x : vtestop_) : vtestop_Jnn_N :=
   match var_x with
   | vtestop_.mk_vtestop__0 v_Jnn v_N var_x => var_x
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:365.1-365.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.1-372.22 -/
 inductive vrelop_Jnn_N : Type where
   | EQ : vrelop_Jnn_N
   | NE : vrelop_Jnn_N
@@ -1552,7 +1552,7 @@ inductive vrelop_Jnn_N : Type where
   | GE (v_sx : sx) : vrelop_Jnn_N
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:365.8-365.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.8-372.16 -/
 inductive wf_vrelop_Jnn_N : Jnn → N → vrelop_Jnn_N → Prop where
   | vrelop_Jnn_N_case_0 (v_Jnn : Jnn) (v_N : N) : wf_vrelop_Jnn_N v_Jnn v_N vrelop_Jnn_N.EQ
   | vrelop_Jnn_N_case_1 (v_Jnn : Jnn) (v_N : N) : wf_vrelop_Jnn_N v_Jnn v_N vrelop_Jnn_N.NE
@@ -1570,7 +1570,7 @@ inductive wf_vrelop_Jnn_N : Jnn → N → vrelop_Jnn_N → Prop where
     wf_vrelop_Jnn_N v_Jnn v_N (vrelop_Jnn_N.GE v_sx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:365.1-365.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.1-372.22 -/
 inductive vrelop_Fnn_N : Type where
   | EQ : vrelop_Fnn_N
   | NE : vrelop_Fnn_N
@@ -1580,13 +1580,13 @@ inductive vrelop_Fnn_N : Type where
   | GE : vrelop_Fnn_N
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:365.1-365.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.1-372.22 -/
 inductive vrelop_ : Type where
   | mk_vrelop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vrelop_Jnn_N) : vrelop_
   | mk_vrelop__1 (v_Fnn : Fnn) (v_N : N) (var_x : vrelop_Fnn_N) : vrelop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:365.8-365.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.8-372.16 -/
 inductive wf_vrelop_ : shape → vrelop_ → Prop where
   | vrelop__case_0 (v_shape : shape) (v_Jnn : Jnn) (v_N : N) (var_x : vrelop_Jnn_N) :
     wf_vrelop_Jnn_N v_Jnn v_N var_x →
@@ -1597,72 +1597,72 @@ inductive wf_vrelop_ : shape → vrelop_ → Prop where
     wf_vrelop_ v_shape (vrelop_.mk_vrelop__1 v_Fnn v_N var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:365.1-365.22 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.1-372.22 -/
 def proj_vrelop__0 (var_x : vrelop_) : Option vrelop_Jnn_N :=
   match var_x with
   | vrelop_.mk_vrelop__0 v_Jnn v_N var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:365.1-365.22 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:372.1-372.22 -/
 def proj_vrelop__1 (var_x : vrelop_) : Option vrelop_Fnn_N :=
   match var_x with
   | vrelop_.mk_vrelop__1 v_Fnn v_N var_x => some var_x
   | _ => none
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:373.1-373.48 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:380.1-380.48 -/
 inductive half : Type where
   | LOW : half
   | HIGH : half
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:374.1-374.19 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:381.1-381.19 -/
 inductive zero : Type where
   | ZERO : zero
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
 inductive vcvtop__Jnn_1_M_1_Jnn_2_M_2 : Type where
   | EXTEND (v_half : half) (v_sx : sx) : vcvtop__Jnn_1_M_1_Jnn_2_M_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.8-376.17 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.8-383.17 -/
 inductive wf_vcvtop__Jnn_1_M_1_Jnn_2_M_2 : Jnn → M → Jnn → M → vcvtop__Jnn_1_M_1_Jnn_2_M_2 → Prop where
   | vcvtop__Jnn_1_M_1_Jnn_2_M_2_case_0 (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (v_half : half) (v_sx : sx) :
     (lsizenn2 (lanetype_Jnn Jnn_2)) = (2 * (lsizenn1 (lanetype_Jnn Jnn_1))) →
     wf_vcvtop__Jnn_1_M_1_Jnn_2_M_2 Jnn_1 M_1 Jnn_2 M_2 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
 inductive vcvtop__Jnn_1_M_1_Fnn_2_M_2 : Type where
   | CONVERT (half_opt : Option half) (v_sx : sx) : vcvtop__Jnn_1_M_1_Fnn_2_M_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.8-376.17 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.8-383.17 -/
 inductive wf_vcvtop__Jnn_1_M_1_Fnn_2_M_2 : Jnn → M → Fnn → M → vcvtop__Jnn_1_M_1_Fnn_2_M_2 → Prop where
   | vcvtop__Jnn_1_M_1_Fnn_2_M_2_case_0 (Jnn_1 : Jnn) (M_1 : M) (Fnn_2 : Fnn) (M_2 : M) (half_opt : Option half) (v_sx : sx) :
     ((((sizenn2 (numtype_Fnn Fnn_2)) = (lsizenn1 (lanetype_Jnn Jnn_1))) ∧ ((lsizenn1 (lanetype_Jnn Jnn_1)) = 32)) ∧ (half_opt = none)) ∨ (((sizenn2 (numtype_Fnn Fnn_2)) = (2 * (lsizenn1 (lanetype_Jnn Jnn_1)))) ∧ (half_opt = (some half.LOW))) →
     wf_vcvtop__Jnn_1_M_1_Fnn_2_M_2 Jnn_1 M_1 Fnn_2 M_2 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
-inductive vcvtop__Fnn_1_M_1_Jnn_2_M_2 : Type where
-  | TRUNC_SAT (v_sx : sx) (zero_opt : Option zero) : vcvtop__Fnn_1_M_1_Jnn_2_M_2
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
+inductive vcvtop__Fnn_1_M_1_Inn_2_M_2 : Type where
+  | TRUNC_SAT (v_sx : sx) (zero_opt : Option zero) : vcvtop__Fnn_1_M_1_Inn_2_M_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.8-376.17 -/
-inductive wf_vcvtop__Fnn_1_M_1_Jnn_2_M_2 : Fnn → M → Jnn → M → vcvtop__Fnn_1_M_1_Jnn_2_M_2 → Prop where
-  | vcvtop__Fnn_1_M_1_Jnn_2_M_2_case_0 (Fnn_1 : Fnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (v_sx : sx) (zero_opt : Option zero) :
-    ((((sizenn1 (numtype_Fnn Fnn_1)) = (lsizenn2 (lanetype_Jnn Jnn_2))) ∧ ((lsizenn2 (lanetype_Jnn Jnn_2)) = 32)) ∧ (zero_opt = none)) ∨ (((sizenn1 (numtype_Fnn Fnn_1)) = (2 * (lsizenn2 (lanetype_Jnn Jnn_2)))) ∧ (zero_opt = (some zero.ZERO))) →
-    wf_vcvtop__Fnn_1_M_1_Jnn_2_M_2 Fnn_1 M_1 Jnn_2 M_2 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.8-383.17 -/
+inductive wf_vcvtop__Fnn_1_M_1_Inn_2_M_2 : Fnn → M → Inn → M → vcvtop__Fnn_1_M_1_Inn_2_M_2 → Prop where
+  | vcvtop__Fnn_1_M_1_Inn_2_M_2_case_0 (Fnn_1 : Fnn) (M_1 : M) (Inn_2 : Inn) (M_2 : M) (v_sx : sx) (zero_opt : Option zero) :
+    ((((sizenn1 (numtype_Fnn Fnn_1)) = (lsizenn2 (lanetype_Inn Inn_2))) ∧ ((lsizenn2 (lanetype_Inn Inn_2)) = 32)) ∧ (zero_opt = none)) ∨ (((sizenn1 (numtype_Fnn Fnn_1)) = (2 * (lsizenn2 (lanetype_Inn Inn_2)))) ∧ (zero_opt = (some zero.ZERO))) →
+    wf_vcvtop__Fnn_1_M_1_Inn_2_M_2 Fnn_1 M_1 Inn_2 M_2 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
 inductive vcvtop__Fnn_1_M_1_Fnn_2_M_2 : Type where
   | DEMOTE (v_zero : zero) : vcvtop__Fnn_1_M_1_Fnn_2_M_2
   | PROMOTELOW : vcvtop__Fnn_1_M_1_Fnn_2_M_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.8-376.17 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.8-383.17 -/
 inductive wf_vcvtop__Fnn_1_M_1_Fnn_2_M_2 : Fnn → M → Fnn → M → vcvtop__Fnn_1_M_1_Fnn_2_M_2 → Prop where
   | vcvtop__Fnn_1_M_1_Fnn_2_M_2_case_0 (Fnn_1 : Fnn) (M_1 : M) (Fnn_2 : Fnn) (M_2 : M) (v_zero : zero) :
     (sizenn1 (numtype_Fnn Fnn_1)) = (2 * (sizenn2 (numtype_Fnn Fnn_2))) →
@@ -1672,15 +1672,15 @@ inductive wf_vcvtop__Fnn_1_M_1_Fnn_2_M_2 : Fnn → M → Fnn → M → vcvtop__F
     wf_vcvtop__Fnn_1_M_1_Fnn_2_M_2 Fnn_1 M_1 Fnn_2 M_2 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
 inductive vcvtop__ : Type where
   | mk_vcvtop___0 (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (var_x : vcvtop__Jnn_1_M_1_Jnn_2_M_2) : vcvtop__
   | mk_vcvtop___1 (Jnn_1 : Jnn) (M_1 : M) (Fnn_2 : Fnn) (M_2 : M) (var_x : vcvtop__Jnn_1_M_1_Fnn_2_M_2) : vcvtop__
-  | mk_vcvtop___2 (Fnn_1 : Fnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (var_x : vcvtop__Fnn_1_M_1_Jnn_2_M_2) : vcvtop__
+  | mk_vcvtop___2 (Fnn_1 : Fnn) (M_1 : M) (Inn_2 : Inn) (M_2 : M) (var_x : vcvtop__Fnn_1_M_1_Inn_2_M_2) : vcvtop__
   | mk_vcvtop___3 (Fnn_1 : Fnn) (M_1 : M) (Fnn_2 : Fnn) (M_2 : M) (var_x : vcvtop__Fnn_1_M_1_Fnn_2_M_2) : vcvtop__
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.8-376.17 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.8-383.17 -/
 inductive wf_vcvtop__ : shape → shape → vcvtop__ → Prop where
   | vcvtop___case_0 (shape_1 : shape) (shape_2 : shape) (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (var_x : vcvtop__Jnn_1_M_1_Jnn_2_M_2) :
     wf_vcvtop__Jnn_1_M_1_Jnn_2_M_2 Jnn_1 M_1 Jnn_2 M_2 var_x →
@@ -1692,11 +1692,11 @@ inductive wf_vcvtop__ : shape → shape → vcvtop__ → Prop where
     shape_1 = (shape.X (lanetype_Jnn Jnn_1) (dim.mk_dim M_1)) →
     shape_2 = (shape.X (lanetype_Fnn Fnn_2) (dim.mk_dim M_2)) →
     wf_vcvtop__ shape_1 shape_2 (vcvtop__.mk_vcvtop___1 Jnn_1 M_1 Fnn_2 M_2 var_x)
-  | vcvtop___case_2 (shape_1 : shape) (shape_2 : shape) (Fnn_1 : Fnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (var_x : vcvtop__Fnn_1_M_1_Jnn_2_M_2) :
-    wf_vcvtop__Fnn_1_M_1_Jnn_2_M_2 Fnn_1 M_1 Jnn_2 M_2 var_x →
+  | vcvtop___case_2 (shape_1 : shape) (shape_2 : shape) (Fnn_1 : Fnn) (M_1 : M) (Inn_2 : Inn) (M_2 : M) (var_x : vcvtop__Fnn_1_M_1_Inn_2_M_2) :
+    wf_vcvtop__Fnn_1_M_1_Inn_2_M_2 Fnn_1 M_1 Inn_2 M_2 var_x →
     shape_1 = (shape.X (lanetype_Fnn Fnn_1) (dim.mk_dim M_1)) →
-    shape_2 = (shape.X (lanetype_Jnn Jnn_2) (dim.mk_dim M_2)) →
-    wf_vcvtop__ shape_1 shape_2 (vcvtop__.mk_vcvtop___2 Fnn_1 M_1 Jnn_2 M_2 var_x)
+    shape_2 = (shape.X (lanetype_Inn Inn_2) (dim.mk_dim M_2)) →
+    wf_vcvtop__ shape_1 shape_2 (vcvtop__.mk_vcvtop___2 Fnn_1 M_1 Inn_2 M_2 var_x)
   | vcvtop___case_3 (shape_1 : shape) (shape_2 : shape) (Fnn_1 : Fnn) (M_1 : M) (Fnn_2 : Fnn) (M_2 : M) (var_x : vcvtop__Fnn_1_M_1_Fnn_2_M_2) :
     wf_vcvtop__Fnn_1_M_1_Fnn_2_M_2 Fnn_1 M_1 Fnn_2 M_2 var_x →
     shape_1 = (shape.X (lanetype_Fnn Fnn_1) (dim.mk_dim M_1)) →
@@ -1704,71 +1704,71 @@ inductive wf_vcvtop__ : shape → shape → vcvtop__ → Prop where
     wf_vcvtop__ shape_1 shape_2 (vcvtop__.mk_vcvtop___3 Fnn_1 M_1 Fnn_2 M_2 var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
 def proj_vcvtop___0 (var_x : vcvtop__) : Option vcvtop__Jnn_1_M_1_Jnn_2_M_2 :=
   match var_x with
   | vcvtop__.mk_vcvtop___0 Jnn_1 M_1 Jnn_2 M_2 var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
 def proj_vcvtop___1 (var_x : vcvtop__) : Option vcvtop__Jnn_1_M_1_Fnn_2_M_2 :=
   match var_x with
   | vcvtop__.mk_vcvtop___1 Jnn_1 M_1 Fnn_2 M_2 var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
-def proj_vcvtop___2 (var_x : vcvtop__) : Option vcvtop__Fnn_1_M_1_Jnn_2_M_2 :=
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
+def proj_vcvtop___2 (var_x : vcvtop__) : Option vcvtop__Fnn_1_M_1_Inn_2_M_2 :=
   match var_x with
-  | vcvtop__.mk_vcvtop___2 Fnn_1 M_1 Jnn_2 M_2 var_x => some var_x
+  | vcvtop__.mk_vcvtop___2 Fnn_1 M_1 Inn_2 M_2 var_x => some var_x
   | _ => none
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:376.1-376.55 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:383.1-383.55 -/
 def proj_vcvtop___3 (var_x : vcvtop__) : Option vcvtop__Fnn_1_M_1_Fnn_2_M_2 :=
   match var_x with
   | vcvtop__.mk_vcvtop___3 Fnn_1 M_1 Fnn_2 M_2 var_x => some var_x
   | _ => none
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:394.1-394.25 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.1-401.25 -/
 inductive vshiftop_Jnn_N : Type where
   | SHL : vshiftop_Jnn_N
   | SHR (v_sx : sx) : vshiftop_Jnn_N
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:394.1-394.25 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.1-401.25 -/
 inductive vshiftop_ : Type where
   | mk_vshiftop__0 (v_Jnn : Jnn) (v_N : N) (var_x : vshiftop_Jnn_N) : vshiftop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:394.8-394.18 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.8-401.18 -/
 inductive wf_vshiftop_ : ishape → vshiftop_ → Prop where
   | vshiftop__case_0 (v_ishape : ishape) (v_Jnn : Jnn) (v_N : N) (var_x : vshiftop_Jnn_N) :
     v_ishape = (ishape.mk_ishape (shape.X (lanetype_Jnn v_Jnn) (dim.mk_dim v_N))) →
     wf_vshiftop_ v_ishape (vshiftop_.mk_vshiftop__0 v_Jnn v_N var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:394.1-394.25 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.1-401.25 -/
 def proj_vshiftop__0 (var_x : vshiftop_) : vshiftop_Jnn_N :=
   match var_x with
   | vshiftop_.mk_vshiftop__0 v_Jnn v_N var_x => var_x
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:397.1-397.59 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:404.1-404.59 -/
 inductive vextunop__Jnn_1_M_1_Jnn_2_M_2 : Type where
   | EXTADD_PAIRWISE (v_sx : sx) : vextunop__Jnn_1_M_1_Jnn_2_M_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:397.8-397.19 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:404.8-404.19 -/
 inductive wf_vextunop__Jnn_1_M_1_Jnn_2_M_2 : Jnn → M → Jnn → M → vextunop__Jnn_1_M_1_Jnn_2_M_2 → Prop where
   | vextunop__Jnn_1_M_1_Jnn_2_M_2_case_0 (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (v_sx : sx) :
     (16 ≤ (2 * (lsizenn1 (lanetype_Jnn Jnn_1)))) ∧ (((2 * (lsizenn1 (lanetype_Jnn Jnn_1))) = (lsizenn2 (lanetype_Jnn Jnn_2))) ∧ ((lsizenn2 (lanetype_Jnn Jnn_2)) ≤ 32)) →
     wf_vextunop__Jnn_1_M_1_Jnn_2_M_2 Jnn_1 M_1 Jnn_2 M_2 (vextunop__Jnn_1_M_1_Jnn_2_M_2.EXTADD_PAIRWISE v_sx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:397.1-397.59 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:404.1-404.59 -/
 inductive vextunop__ : Type where
   | mk_vextunop___0 (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (var_x : vextunop__Jnn_1_M_1_Jnn_2_M_2) : vextunop__
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:397.8-397.19 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:404.8-404.19 -/
 inductive wf_vextunop__ : ishape → ishape → vextunop__ → Prop where
   | vextunop___case_0 (ishape_1 : ishape) (ishape_2 : ishape) (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (var_x : vextunop__Jnn_1_M_1_Jnn_2_M_2) :
     wf_vextunop__Jnn_1_M_1_Jnn_2_M_2 Jnn_1 M_1 Jnn_2 M_2 var_x →
@@ -1777,18 +1777,18 @@ inductive wf_vextunop__ : ishape → ishape → vextunop__ → Prop where
     wf_vextunop__ ishape_1 ishape_2 (vextunop__.mk_vextunop___0 Jnn_1 M_1 Jnn_2 M_2 var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:397.1-397.59 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:404.1-404.59 -/
 def proj_vextunop___0 (var_x : vextunop__) : vextunop__Jnn_1_M_1_Jnn_2_M_2 :=
   match var_x with
   | vextunop__.mk_vextunop___0 Jnn_1 M_1 Jnn_2 M_2 var_x => var_x
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.1-401.60 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:408.1-408.60 -/
 inductive vextbinop__Jnn_1_M_1_Jnn_2_M_2 : Type where
   | EXTMUL (v_half : half) (v_sx : sx) : vextbinop__Jnn_1_M_1_Jnn_2_M_2
   | DOTS : vextbinop__Jnn_1_M_1_Jnn_2_M_2
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.8-401.20 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:408.8-408.20 -/
 inductive wf_vextbinop__Jnn_1_M_1_Jnn_2_M_2 : Jnn → M → Jnn → M → vextbinop__Jnn_1_M_1_Jnn_2_M_2 → Prop where
   | vextbinop__Jnn_1_M_1_Jnn_2_M_2_case_0 (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (v_half : half) (v_sx : sx) :
     ((2 * (lsizenn1 (lanetype_Jnn Jnn_1))) = (lsizenn2 (lanetype_Jnn Jnn_2))) ∧ ((lsizenn2 (lanetype_Jnn Jnn_2)) ≥ 16) →
@@ -1798,12 +1798,12 @@ inductive wf_vextbinop__Jnn_1_M_1_Jnn_2_M_2 : Jnn → M → Jnn → M → vextbi
     wf_vextbinop__Jnn_1_M_1_Jnn_2_M_2 Jnn_1 M_1 Jnn_2 M_2 vextbinop__Jnn_1_M_1_Jnn_2_M_2.DOTS
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.1-401.60 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:408.1-408.60 -/
 inductive vextbinop__ : Type where
   | mk_vextbinop___0 (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (var_x : vextbinop__Jnn_1_M_1_Jnn_2_M_2) : vextbinop__
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.8-401.20 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:408.8-408.20 -/
 inductive wf_vextbinop__ : ishape → ishape → vextbinop__ → Prop where
   | vextbinop___case_0 (ishape_1 : ishape) (ishape_2 : ishape) (Jnn_1 : Jnn) (M_1 : M) (Jnn_2 : Jnn) (M_2 : M) (var_x : vextbinop__Jnn_1_M_1_Jnn_2_M_2) :
     wf_vextbinop__Jnn_1_M_1_Jnn_2_M_2 Jnn_1 M_1 Jnn_2 M_2 var_x →
@@ -1812,19 +1812,19 @@ inductive wf_vextbinop__ : ishape → ishape → vextbinop__ → Prop where
     wf_vextbinop__ ishape_1 ishape_2 (vextbinop__.mk_vextbinop___0 Jnn_1 M_1 Jnn_2 M_2 var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:401.1-401.60 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:408.1-408.60 -/
 def proj_vextbinop___0 (var_x : vextbinop__) : vextbinop__Jnn_1_M_1_Jnn_2_M_2 :=
   match var_x with
   | vextbinop__.mk_vextbinop___0 Jnn_1 M_1 Jnn_2 M_2 var_x => var_x
 
-/- Record Creation Definition at: ../specification/wasm-2.0/1-syntax.spectec:411.1-411.69 -/
+/- Record Creation Definition at: ../specification/wasm-2.0/1-syntax.spectec:418.1-418.69 -/
 structure memarg where
   MKmemarg ::
   ALIGN : u32
   OFFSET : u32
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:411.8-411.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:418.8-418.14 -/
 inductive wf_memarg : memarg → Prop where
   | memarg_case_ (var_0 : u32) (var_1 : u32) :
     wf_uN 32 var_0 →
@@ -1835,12 +1835,12 @@ inductive wf_memarg : memarg → Prop where
     })
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:415.1-415.24 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:422.1-422.24 -/
 inductive loadop_Inn : Type where
   | mk_loadop_Inn (v_sz : sz) (v_sx : sx) : loadop_Inn
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:415.8-415.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:422.8-422.16 -/
 inductive wf_loadop_Inn : Inn → loadop_Inn → Prop where
   | loadop_Inn_case_0 (v_Inn : Inn) (v_sz : sz) (v_sx : sx) :
     wf_sz v_sz →
@@ -1848,12 +1848,12 @@ inductive wf_loadop_Inn : Inn → loadop_Inn → Prop where
     wf_loadop_Inn v_Inn (loadop_Inn.mk_loadop_Inn v_sz v_sx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:415.1-415.24 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:422.1-422.24 -/
 inductive loadop_ : Type where
   | mk_loadop__0 (v_Inn : Inn) (var_x : loadop_Inn) : loadop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:415.8-415.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:422.8-422.16 -/
 inductive wf_loadop_ : numtype → loadop_ → Prop where
   | loadop__case_0 (v_numtype : numtype) (v_Inn : Inn) (var_x : loadop_Inn) :
     wf_loadop_Inn v_Inn var_x →
@@ -1861,23 +1861,23 @@ inductive wf_loadop_ : numtype → loadop_ → Prop where
     wf_loadop_ v_numtype (loadop_.mk_loadop__0 v_Inn var_x)
 
 
-/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:415.1-415.24 -/
+/- Auxiliary Definition at: ../specification/wasm-2.0/1-syntax.spectec:422.1-422.24 -/
 def proj_loadop__0 (var_x : loadop_) : loadop_Inn :=
   match var_x with
   | loadop_.mk_loadop__0 v_Inn var_x => var_x
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:418.1-421.61 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:425.1-428.61 -/
 inductive vloadop_ : Type where
   | SHAPEX_ (v_sz : sz) (v_M : M) (v_sx : sx) : vloadop_
   | SPLAT (v_sz : sz) : vloadop_
   | ZERO (v_sz : sz) : vloadop_
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:418.8-418.17 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:425.8-425.17 -/
 inductive wf_vloadop_ : vectype → vloadop_ → Prop where
   | vloadop__case_0 (v_vectype : vectype) (v_sz : sz) (v_M : M) (v_sx : sx) :
     wf_sz v_sz →
-    (((proj_sz_0 v_sz) * v_M) : Rat) = (((vsize v_vectype) : Rat) / (2 : Rat)) →
+    ((((proj_sz_0 v_sz) * v_M) : Rat) = (((vsize v_vectype) : Rat) / (2 : Rat))) ∧ (v_M > 1) →
     wf_vloadop_ v_vectype (vloadop_.SHAPEX_ v_sz v_M v_sx)
   | vloadop__case_1 (v_vectype : vectype) (v_sz : sz) :
     wf_sz v_sz →
@@ -1888,13 +1888,13 @@ inductive wf_vloadop_ : vectype → vloadop_ → Prop where
     wf_vloadop_ v_vectype (vloadop_.ZERO v_sz)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:428.1-430.17 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:435.1-437.17 -/
 inductive blocktype : Type where
   | _RESULT (valtype_opt : Option valtype) : blocktype
   | _IDX (v_typeidx : typeidx) : blocktype
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:428.8-428.17 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:435.8-435.17 -/
 inductive wf_blocktype : blocktype → Prop where
   | blocktype_case_0 (valtype_opt : Option valtype) : wf_blocktype (blocktype._RESULT valtype_opt)
   | blocktype_case_1 (v_typeidx : typeidx) :
@@ -1902,7 +1902,7 @@ inductive wf_blocktype : blocktype → Prop where
     wf_blocktype (blocktype._IDX v_typeidx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:545.1-546.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:552.1-553.22 -/
 inductive instr : Type where
   | NOP : instr
   | UNREACHABLE : instr
@@ -1976,7 +1976,7 @@ deriving Inhabited, BEq
 
 derive_deceq instr
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:545.8-545.13 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:552.8-552.13 -/
 inductive wf_instr : instr → Prop where
   | instr_case_0 : wf_instr instr.NOP
   | instr_case_1 : wf_instr instr.UNREACHABLE
@@ -2191,10 +2191,10 @@ inductive wf_instr : instr → Prop where
     wf_instr (instr.DATA_DROP v_dataidx)
 
 
-/- Type Alias Definition at: ../specification/wasm-2.0/1-syntax.spectec:549.1-550.9 -/
+/- Type Alias Definition at: ../specification/wasm-2.0/1-syntax.spectec:556.1-557.9 -/
 abbrev expr : Type := List instr
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:562.1-562.59 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:569.1-569.59 -/
 inductive elemmode : Type where
   | ACTIVE (v_tableidx : tableidx) (v_expr : expr) : elemmode
   | PASSIVE : elemmode
@@ -2203,7 +2203,7 @@ deriving Inhabited, BEq
 
 derive_deceq elemmode
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:562.8-562.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:569.8-569.16 -/
 inductive wf_elemmode : elemmode → Prop where
   | elemmode_case_0 (v_tableidx : tableidx) (v_expr : expr) :
     wf_uN 32 v_tableidx →
@@ -2213,7 +2213,7 @@ inductive wf_elemmode : elemmode → Prop where
   | elemmode_case_2 : wf_elemmode elemmode.DECLARE
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:563.1-563.47 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:570.1-570.47 -/
 inductive datamode : Type where
   | ACTIVE (v_memidx : memidx) (v_expr : expr) : datamode
   | PASSIVE : datamode
@@ -2221,7 +2221,7 @@ deriving Inhabited, BEq
 
 derive_deceq datamode
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:563.8-563.16 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:570.8-570.16 -/
 inductive wf_datamode : datamode → Prop where
   | datamode_case_0 (v_memidx : memidx) (v_expr : expr) :
     wf_uN 32 v_memidx →
@@ -2230,24 +2230,24 @@ inductive wf_datamode : datamode → Prop where
   | datamode_case_1 : wf_datamode datamode.PASSIVE
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:565.1-566.16 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:572.1-573.16 -/
 inductive type : Type where
   | TYPE (v_functype : functype) : type
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:567.1-568.16 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:574.1-575.16 -/
 inductive «local» : Type where
   | LOCAL (v_valtype : valtype) : «local»
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:569.1-570.27 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:576.1-577.27 -/
 inductive func : Type where
   | FUNC (v_typeidx : typeidx) (local_lst : List «local») (v_expr : expr) : func
 deriving Inhabited, BEq
 
 derive_deceq func
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:569.8-569.12 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:576.8-576.12 -/
 inductive wf_func : func → Prop where
   | func_case_0 (v_typeidx : typeidx) (local_lst : List «local») (v_expr : expr) :
     wf_uN 32 v_typeidx →
@@ -2255,52 +2255,52 @@ inductive wf_func : func → Prop where
     wf_func (func.FUNC v_typeidx local_lst v_expr)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:571.1-572.25 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:578.1-579.25 -/
 inductive global : Type where
   | GLOBAL (v_globaltype : globaltype) (v_expr : expr) : global
 deriving Inhabited, BEq
 
 derive_deceq global
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:571.8-571.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:578.8-578.14 -/
 inductive wf_global : global → Prop where
   | global_case_0 (v_globaltype : globaltype) (v_expr : expr) :
     Forall (fun (v_expr_elem : instr) => wf_instr v_expr_elem) v_expr →
     wf_global (global.GLOBAL v_globaltype v_expr)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:573.1-574.18 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:580.1-581.18 -/
 inductive table : Type where
   | TABLE (v_tabletype : tabletype) : table
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:573.8-573.13 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:580.8-580.13 -/
 inductive wf_table : table → Prop where
   | table_case_0 (v_tabletype : tabletype) :
     wf_tabletype v_tabletype →
     wf_table (table.TABLE v_tabletype)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:575.1-576.17 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:582.1-583.17 -/
 inductive mem : Type where
   | MEMORY (v_memtype : memtype) : mem
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:575.8-575.11 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:582.8-582.11 -/
 inductive wf_mem : mem → Prop where
   | mem_case_0 (v_memtype : memtype) :
     wf_memtype v_memtype →
     wf_mem (mem.MEMORY v_memtype)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:577.1-578.30 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:584.1-585.30 -/
 inductive elem : Type where
   | ELEM (v_reftype : reftype) (expr_lst : List expr) (v_elemmode : elemmode) : elem
 deriving Inhabited, BEq
 
 derive_deceq elem
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:577.8-577.12 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:584.8-584.12 -/
 inductive wf_elem : elem → Prop where
   | elem_case_0 (v_reftype : reftype) (expr_lst : List expr) (v_elemmode : elemmode) :
     Forall (fun (v_expr_elem : expr) => Forall (fun (v_expr_elem : instr) => wf_instr v_expr_elem) v_expr_elem) expr_lst →
@@ -2308,14 +2308,14 @@ inductive wf_elem : elem → Prop where
     wf_elem (elem.ELEM v_reftype expr_lst v_elemmode)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:579.1-580.22 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:586.1-587.22 -/
 inductive data : Type where
   | DATA (byte_lst : List byte) (v_datamode : datamode) : data
 deriving Inhabited, BEq
 
 derive_deceq data
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:579.8-579.12 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:586.8-586.12 -/
 inductive wf_data : data → Prop where
   | data_case_0 (byte_lst : List byte) (v_datamode : datamode) :
     Forall (fun (v_byte_elem : byte) => wf_byte v_byte_elem) byte_lst →
@@ -2323,19 +2323,19 @@ inductive wf_data : data → Prop where
     wf_data (data.DATA byte_lst v_datamode)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:581.1-582.16 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:588.1-589.16 -/
 inductive start : Type where
   | START (v_funcidx : funcidx) : start
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:581.8-581.13 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:588.8-588.13 -/
 inductive wf_start : start → Prop where
   | start_case_0 (v_funcidx : funcidx) :
     wf_uN 32 v_funcidx →
     wf_start (start.START v_funcidx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:584.1-585.66 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:591.1-592.66 -/
 inductive externidx : Type where
   | FUNC (v_funcidx : funcidx) : externidx
   | GLOBAL (v_globalidx : globalidx) : externidx
@@ -2343,7 +2343,7 @@ inductive externidx : Type where
   | MEM (v_memidx : memidx) : externidx
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:584.8-584.17 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:591.8-591.17 -/
 inductive wf_externidx : externidx → Prop where
   | externidx_case_0 (v_funcidx : funcidx) :
     wf_uN 32 v_funcidx →
@@ -2359,12 +2359,12 @@ inductive wf_externidx : externidx → Prop where
     wf_externidx (externidx.MEM v_memidx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:586.1-587.24 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:593.1-594.24 -/
 inductive «export» : Type where
   | EXPORT (v_name : name) (v_externidx : externidx) : «export»
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:586.8-586.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:593.8-593.14 -/
 inductive wf_export : «export» → Prop where
   | export_case_0 (v_name : name) (v_externidx : externidx) :
     wf_name v_name →
@@ -2372,12 +2372,12 @@ inductive wf_export : «export» → Prop where
     wf_export (export.EXPORT v_name v_externidx)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:588.1-589.30 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:595.1-596.30 -/
 inductive «import» : Type where
   | IMPORT (v_name_0 : name) (v_name_1 : name) (v_externtype : externtype) : «import»
 deriving Inhabited, BEq, DecidableEq, ReflBEq, LawfulBEq
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:588.8-588.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:595.8-595.14 -/
 inductive wf_import : «import» → Prop where
   | import_case_0 (v_name : name) (name_0 : name) (v_externtype : externtype) :
     wf_name v_name →
@@ -2386,14 +2386,14 @@ inductive wf_import : «import» → Prop where
     wf_import (import.IMPORT v_name name_0 v_externtype)
 
 
-/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:591.1-592.76 -/
+/- Inductive Type Definition at: ../specification/wasm-2.0/1-syntax.spectec:598.1-599.76 -/
 inductive module : Type where
   | MODULE (type_lst : List type) (import_lst : List «import») (func_lst : List func) (global_lst : List global) (table_lst : List table) (mem_lst : List mem) (elem_lst : List elem) (data_lst : List data) (start_opt : Option start) (export_lst : List «export») : module
 deriving Inhabited, BEq
 
 derive_deceq module
 
-/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:591.8-591.14 -/
+/- Inductive Relations Definition at: ../specification/wasm-2.0/1-syntax.spectec:598.8-598.14 -/
 inductive wf_module : module → Prop where
   | module_case_0 (type_lst : List type) (import_lst : List «import») (func_lst : List func) (global_lst : List global) (table_lst : List table) (mem_lst : List mem) (elem_lst : List elem) (data_lst : List data) (start_opt : Option start) (export_lst : List «export») :
     Forall (fun (v_import_elem : «import») => wf_import v_import_elem) import_lst →
@@ -3114,25 +3114,6 @@ inductive fun_idiv_ : N → sx → iN → iN → Option iN → Prop where
     wf_uN v_N (uN.mk_uN var_0) →
     fun_idiv_ v_N sx.S i_1 i_2 (some (uN.mk_uN var_0))
 
-example : fun_idiv_ 32 sx.U (.mk_uN 5) (.mk_uN 0) none := by
-  apply fun_idiv_.fun_idiv__case_0 32 (.mk_uN 5)
-
--- example : fun_idiv_ 32 sx.U (.mk_uN 5) (.mk_uN 0) (some (.mk_uN 5)) := by
---   apply fun_idiv_.fun_idiv__case_1 32 (.mk_uN 5) (.mk_uN 0)
---   sorry
-
-example : wf_uN 32 (.mk_uN 0) := by
-  constructor
-  simp
-
--- (B) idiv_: case_1 at divisor 0 gives the opaque `truncz 0`, given its wf side condition
-example (hwf : wf_uN 32 (.mk_uN (truncz 0).toNat)) :
-    fun_idiv_ 32 sx.U (.mk_uN 5) (.mk_uN 0) (some (.mk_uN (truncz 0).toNat)) := by
-  have e : ((proj_uN_0 (.mk_uN 5) : Nat) : Rat) / ((proj_uN_0 (.mk_uN 0) : Nat) : Rat) = 0 := by
-    simp [proj_uN_0, Rat.div_def]
-  have h := fun_idiv_.fun_idiv__case_1 32 (.mk_uN 5) (.mk_uN 0)
-  rw [e] at h
-  exact h hwf
 
 /- Auxiliary Definition at: ../specification/wasm-2.0/3-numerics.spectec:107.1-107.36 -/
 def imul_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN :=
@@ -3220,33 +3201,33 @@ theorem irotr__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
   wf_uN v_N ret_val :=
   sorry
 
-/- Axiom Definition at: ../specification/wasm-2.0/3-numerics.spectec:116.1-116.34 -/
-opaque ishl_ (v_N : N) (v_iN : iN) (v_u32 : u32) : iN := by
+/- Axiom Definition at: ../specification/wasm-2.0/3-numerics.spectec:116.1-116.36 -/
+opaque ishl_ (v_N : N) (v_iN : iN) (iN_0 : iN) : iN := by
   first
      | exact Inhabited.default
      | intros ; assumption
 
 
 /- Well-Formedness Theorem at: ../specification/wasm-2.0/3-numerics.spectec:116.6-116.12 -/
-theorem ishl__is_wf (v_N : N) (v_iN : iN) (v_u32 : u32) (ret_val : iN) :
+theorem ishl__is_wf (v_N : N) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
   wf_uN v_N v_iN →
-  wf_uN 32 v_u32 →
-  ret_val = (ishl_ v_N v_iN v_u32) →
+  wf_uN v_N iN_0 →
+  ret_val = (ishl_ v_N v_iN iN_0) →
   wf_uN v_N ret_val :=
   sorry
 
-/- Axiom Definition at: ../specification/wasm-2.0/3-numerics.spectec:117.1-117.74 -/
-opaque ishr_ (v_N : N) (v_sx : sx) (v_iN : iN) (v_u32 : u32) : iN := by
+/- Axiom Definition at: ../specification/wasm-2.0/3-numerics.spectec:117.1-117.76 -/
+opaque ishr_ (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) : iN := by
   first
      | exact Inhabited.default
      | intros ; assumption
 
 
 /- Well-Formedness Theorem at: ../specification/wasm-2.0/3-numerics.spectec:117.6-117.12 -/
-theorem ishr__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (v_u32 : u32) (ret_val : iN) :
+theorem ishr__is_wf (v_N : N) (v_sx : sx) (v_iN : iN) (iN_0 : iN) (ret_val : iN) :
   wf_uN v_N v_iN →
-  wf_uN 32 v_u32 →
-  ret_val = (ishr_ v_N v_sx v_iN v_u32) →
+  wf_uN v_N iN_0 →
+  ret_val = (ishr_ v_N v_sx v_iN iN_0) →
   wf_uN v_N ret_val :=
   sorry
 
@@ -3349,16 +3330,16 @@ inductive fun_binop__before_fun_binop__case_38 : numtype → binop_ → num_ →
     wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (irotl_ (sizenn (numtype_Inn Inn.I32)) iN_1 iN_2)) →
     fun_binop__before_fun_binop__case_38 numtype.I32 (binop_.mk_binop__0 Inn.I32 binop_Inn.ROTL) (num_.mk_num__0 Inn.I32 iN_1) (num_.mk_num__0 Inn.I32 iN_2)
   | fun_binop__case_19 (v_sx : sx) (iN_1 : uN) (iN_2 : uN) :
-    wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ishr_ (sizenn (numtype_Inn Inn.I64)) v_sx iN_1 (uN.mk_uN (proj_uN_0 iN_2)))) →
+    wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ishr_ (sizenn (numtype_Inn Inn.I64)) v_sx iN_1 iN_2)) →
     fun_binop__before_fun_binop__case_38 numtype.I64 (binop_.mk_binop__0 Inn.I64 (binop_Inn.SHR v_sx)) (num_.mk_num__0 Inn.I64 iN_1) (num_.mk_num__0 Inn.I64 iN_2)
   | fun_binop__case_18 (v_sx : sx) (iN_1 : uN) (iN_2 : uN) :
-    wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (ishr_ (sizenn (numtype_Inn Inn.I32)) v_sx iN_1 (uN.mk_uN (proj_uN_0 iN_2)))) →
+    wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (ishr_ (sizenn (numtype_Inn Inn.I32)) v_sx iN_1 iN_2)) →
     fun_binop__before_fun_binop__case_38 numtype.I32 (binop_.mk_binop__0 Inn.I32 (binop_Inn.SHR v_sx)) (num_.mk_num__0 Inn.I32 iN_1) (num_.mk_num__0 Inn.I32 iN_2)
   | fun_binop__case_17 (iN_1 : uN) (iN_2 : uN) :
-    wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ishl_ (sizenn (numtype_Inn Inn.I64)) iN_1 (uN.mk_uN (proj_uN_0 iN_2)))) →
+    wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ishl_ (sizenn (numtype_Inn Inn.I64)) iN_1 iN_2)) →
     fun_binop__before_fun_binop__case_38 numtype.I64 (binop_.mk_binop__0 Inn.I64 binop_Inn.SHL) (num_.mk_num__0 Inn.I64 iN_1) (num_.mk_num__0 Inn.I64 iN_2)
   | fun_binop__case_16 (iN_1 : uN) (iN_2 : uN) :
-    wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (ishl_ (sizenn (numtype_Inn Inn.I32)) iN_1 (uN.mk_uN (proj_uN_0 iN_2)))) →
+    wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (ishl_ (sizenn (numtype_Inn Inn.I32)) iN_1 iN_2)) →
     fun_binop__before_fun_binop__case_38 numtype.I32 (binop_.mk_binop__0 Inn.I32 binop_Inn.SHL) (num_.mk_num__0 Inn.I32 iN_1) (num_.mk_num__0 Inn.I32 iN_2)
   | fun_binop__case_15 (iN_1 : uN) (iN_2 : uN) :
     wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ixor_ (sizenn (numtype_Inn Inn.I64)) iN_1 iN_2)) →
@@ -3493,17 +3474,17 @@ inductive fun_binop_ : numtype → binop_ → num_ → num_ → Option (List num
     wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ixor_ (sizenn (numtype_Inn Inn.I64)) iN_1 iN_2)) →
     fun_binop_ numtype.I64 (binop_.mk_binop__0 Inn.I64 binop_Inn.XOR) (num_.mk_num__0 Inn.I64 iN_1) (num_.mk_num__0 Inn.I64 iN_2) (some [num_.mk_num__0 Inn.I64 (ixor_ (sizenn (numtype_Inn Inn.I64)) iN_1 iN_2)])
   | fun_binop__case_16 (iN_1 : uN) (iN_2 : uN) :
-    wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (ishl_ (sizenn (numtype_Inn Inn.I32)) iN_1 (uN.mk_uN (proj_uN_0 iN_2)))) →
-    fun_binop_ numtype.I32 (binop_.mk_binop__0 Inn.I32 binop_Inn.SHL) (num_.mk_num__0 Inn.I32 iN_1) (num_.mk_num__0 Inn.I32 iN_2) (some [num_.mk_num__0 Inn.I32 (ishl_ (sizenn (numtype_Inn Inn.I32)) iN_1 (uN.mk_uN (proj_uN_0 iN_2)))])
+    wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (ishl_ (sizenn (numtype_Inn Inn.I32)) iN_1 iN_2)) →
+    fun_binop_ numtype.I32 (binop_.mk_binop__0 Inn.I32 binop_Inn.SHL) (num_.mk_num__0 Inn.I32 iN_1) (num_.mk_num__0 Inn.I32 iN_2) (some [num_.mk_num__0 Inn.I32 (ishl_ (sizenn (numtype_Inn Inn.I32)) iN_1 iN_2)])
   | fun_binop__case_17 (iN_1 : uN) (iN_2 : uN) :
-    wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ishl_ (sizenn (numtype_Inn Inn.I64)) iN_1 (uN.mk_uN (proj_uN_0 iN_2)))) →
-    fun_binop_ numtype.I64 (binop_.mk_binop__0 Inn.I64 binop_Inn.SHL) (num_.mk_num__0 Inn.I64 iN_1) (num_.mk_num__0 Inn.I64 iN_2) (some [num_.mk_num__0 Inn.I64 (ishl_ (sizenn (numtype_Inn Inn.I64)) iN_1 (uN.mk_uN (proj_uN_0 iN_2)))])
+    wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ishl_ (sizenn (numtype_Inn Inn.I64)) iN_1 iN_2)) →
+    fun_binop_ numtype.I64 (binop_.mk_binop__0 Inn.I64 binop_Inn.SHL) (num_.mk_num__0 Inn.I64 iN_1) (num_.mk_num__0 Inn.I64 iN_2) (some [num_.mk_num__0 Inn.I64 (ishl_ (sizenn (numtype_Inn Inn.I64)) iN_1 iN_2)])
   | fun_binop__case_18 (v_sx : sx) (iN_1 : uN) (iN_2 : uN) :
-    wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (ishr_ (sizenn (numtype_Inn Inn.I32)) v_sx iN_1 (uN.mk_uN (proj_uN_0 iN_2)))) →
-    fun_binop_ numtype.I32 (binop_.mk_binop__0 Inn.I32 (binop_Inn.SHR v_sx)) (num_.mk_num__0 Inn.I32 iN_1) (num_.mk_num__0 Inn.I32 iN_2) (some [num_.mk_num__0 Inn.I32 (ishr_ (sizenn (numtype_Inn Inn.I32)) v_sx iN_1 (uN.mk_uN (proj_uN_0 iN_2)))])
+    wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (ishr_ (sizenn (numtype_Inn Inn.I32)) v_sx iN_1 iN_2)) →
+    fun_binop_ numtype.I32 (binop_.mk_binop__0 Inn.I32 (binop_Inn.SHR v_sx)) (num_.mk_num__0 Inn.I32 iN_1) (num_.mk_num__0 Inn.I32 iN_2) (some [num_.mk_num__0 Inn.I32 (ishr_ (sizenn (numtype_Inn Inn.I32)) v_sx iN_1 iN_2)])
   | fun_binop__case_19 (v_sx : sx) (iN_1 : uN) (iN_2 : uN) :
-    wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ishr_ (sizenn (numtype_Inn Inn.I64)) v_sx iN_1 (uN.mk_uN (proj_uN_0 iN_2)))) →
-    fun_binop_ numtype.I64 (binop_.mk_binop__0 Inn.I64 (binop_Inn.SHR v_sx)) (num_.mk_num__0 Inn.I64 iN_1) (num_.mk_num__0 Inn.I64 iN_2) (some [num_.mk_num__0 Inn.I64 (ishr_ (sizenn (numtype_Inn Inn.I64)) v_sx iN_1 (uN.mk_uN (proj_uN_0 iN_2)))])
+    wf_num_ (numtype_Inn Inn.I64) (num_.mk_num__0 Inn.I64 (ishr_ (sizenn (numtype_Inn Inn.I64)) v_sx iN_1 iN_2)) →
+    fun_binop_ numtype.I64 (binop_.mk_binop__0 Inn.I64 (binop_Inn.SHR v_sx)) (num_.mk_num__0 Inn.I64 iN_1) (num_.mk_num__0 Inn.I64 iN_2) (some [num_.mk_num__0 Inn.I64 (ishr_ (sizenn (numtype_Inn Inn.I64)) v_sx iN_1 iN_2)])
   | fun_binop__case_20 (iN_1 : uN) (iN_2 : uN) :
     wf_num_ (numtype_Inn Inn.I32) (num_.mk_num__0 Inn.I32 (irotl_ (sizenn (numtype_Inn Inn.I32)) iN_1 iN_2)) →
     fun_binop_ numtype.I32 (binop_.mk_binop__0 Inn.I32 binop_Inn.ROTL) (num_.mk_num__0 Inn.I32 iN_1) (num_.mk_num__0 Inn.I32 iN_2) (some [num_.mk_num__0 Inn.I32 (irotl_ (sizenn (numtype_Inn Inn.I32)) iN_1 iN_2)])
@@ -4690,167 +4671,151 @@ theorem inv_lanes__is_wf (v_shape : shape) (var_0_lst : List lane_) (ret_val : v
   sorry
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/3-numerics.spectec:345.6-345.13 -/
-inductive fun_zeroop_before_fun_zeroop_case_40 : shape → shape → vcvtop__ → Prop where
-  | fun_zeroop_case_39 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+inductive fun_zeroop_before_fun_zeroop_case_36 : shape → shape → vcvtop__ → Prop where
+  | fun_zeroop_case_35 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
-  | fun_zeroop_case_38 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
+  | fun_zeroop_case_34 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
-  | fun_zeroop_case_37 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
+  | fun_zeroop_case_33 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
-  | fun_zeroop_case_36 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
+  | fun_zeroop_case_32 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
-  | fun_zeroop_case_35 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
+  | fun_zeroop_case_31 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
-  | fun_zeroop_case_34 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
+  | fun_zeroop_case_30 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
-  | fun_zeroop_case_33 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
+  | fun_zeroop_case_29 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
-  | fun_zeroop_case_32 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
+  | fun_zeroop_case_28 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
-  | fun_zeroop_case_31 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I16 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
-  | fun_zeroop_case_30 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I16 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
-  | fun_zeroop_case_29 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I8 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
-  | fun_zeroop_case_28 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I8 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
   | fun_zeroop_case_27 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt))
   | fun_zeroop_case_26 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt))
   | fun_zeroop_case_25 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt))
   | fun_zeroop_case_24 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt))
   | fun_zeroop_case_23 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I16 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I16 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_zeroop_case_22 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I8 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I8 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_zeroop_case_21 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_zeroop_case_20 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_zeroop_case_19 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I16 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I16 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_zeroop_case_18 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I8 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I8 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_zeroop_case_17 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_zeroop_case_16 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_zeroop_case_15 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_14 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_13 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_12 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_11 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_10 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_9 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_8 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_7 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_6 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_5 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_4 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_3 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_2 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_1 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_zeroop_case_0 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop_before_fun_zeroop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_zeroop_before_fun_zeroop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
 
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/3-numerics.spectec:345.6-345.13 -/
@@ -4954,234 +4919,202 @@ inductive fun_zeroop : shape → shape → vcvtop__ → Option (Option zero) →
   | fun_zeroop_case_24 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
+    fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
   | fun_zeroop_case_25 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
+    fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
   | fun_zeroop_case_26 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
+    fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
   | fun_zeroop_case_27 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
-  | fun_zeroop_case_28 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I8 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
-  | fun_zeroop_case_29 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I8 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
-  | fun_zeroop_case_30 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I16 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
-  | fun_zeroop_case_31 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I16 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
-  | fun_zeroop_case_32 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some zero_opt)
+  | fun_zeroop_case_28 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero)) (some (some v_zero))
-  | fun_zeroop_case_33 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_zeroop_case_29 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero)) (some (some v_zero))
-  | fun_zeroop_case_34 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_zeroop_case_30 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero)) (some (some v_zero))
-  | fun_zeroop_case_35 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_zeroop_case_31 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero)) (some (some v_zero))
-  | fun_zeroop_case_36 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_zeroop_case_32 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (some none)
-  | fun_zeroop_case_37 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_zeroop_case_33 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (some none)
-  | fun_zeroop_case_38 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_zeroop_case_34 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_zeroop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (some none)
-  | fun_zeroop_case_39 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_zeroop_case_35 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_zeroop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (some none)
-  | fun_zeroop_case_40 (x0 : shape) (x1 : shape) (x2 : vcvtop__) :
-    ¬ fun_zeroop_before_fun_zeroop_case_40 x0 x1 x2 →
+  | fun_zeroop_case_36 (x0 : shape) (x1 : shape) (x2 : vcvtop__) :
+    ¬ fun_zeroop_before_fun_zeroop_case_36 x0 x1 x2 →
     fun_zeroop x0 x1 x2 none
 
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/3-numerics.spectec:352.6-352.13 -/
-inductive fun_halfop_before_fun_halfop_case_40 : shape → shape → vcvtop__ → Prop where
-  | fun_halfop_case_39 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+inductive fun_halfop_before_fun_halfop_case_36 : shape → shape → vcvtop__ → Prop where
+  | fun_halfop_case_35 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
-  | fun_halfop_case_38 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
+  | fun_halfop_case_34 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
-  | fun_halfop_case_37 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
+  | fun_halfop_case_33 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
-  | fun_halfop_case_36 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
+  | fun_halfop_case_32 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
-  | fun_halfop_case_35 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW)
+  | fun_halfop_case_31 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
-  | fun_halfop_case_34 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
+  | fun_halfop_case_30 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
-  | fun_halfop_case_33 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
+  | fun_halfop_case_29 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
-  | fun_halfop_case_32 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
+  | fun_halfop_case_28 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
-  | fun_halfop_case_31 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I16 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
-  | fun_halfop_case_30 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I16 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
-  | fun_halfop_case_29 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I8 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
-  | fun_halfop_case_28 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I8 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero))
   | fun_halfop_case_27 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt))
   | fun_halfop_case_26 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt))
   | fun_halfop_case_25 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt))
   | fun_halfop_case_24 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt))
   | fun_halfop_case_23 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I16 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I16 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_halfop_case_22 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I8 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I8 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_halfop_case_21 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_halfop_case_20 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_halfop_case_19 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I16 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I16 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_halfop_case_18 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I8 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I8 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_halfop_case_17 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_halfop_case_16 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___1 Jnn.I32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Jnn_1_M_1_Fnn_2_M_2.CONVERT half_opt v_sx))
   | fun_halfop_case_15 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_14 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_13 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_12 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I16 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_11 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_10 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_9 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_8 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I8 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_7 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_6 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_5 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_4 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_3 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I16 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I16 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_2 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I8 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I8 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_1 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
   | fun_halfop_case_0 (M_1 : Nat) (M_2 : Nat) (v_half : half) (v_sx : sx) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop_before_fun_halfop_case_40 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
+    fun_halfop_before_fun_halfop_case_36 (shape.X lanetype.I32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___0 Jnn.I32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Jnn_1_M_1_Jnn_2_M_2.EXTEND v_half v_sx))
 
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/3-numerics.spectec:352.6-352.13 -/
@@ -5285,69 +5218,53 @@ inductive fun_halfop : shape → shape → vcvtop__ → Option (Option half) →
   | fun_halfop_case_24 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
+    fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
   | fun_halfop_case_25 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
+    fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
   | fun_halfop_case_26 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
+    fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
   | fun_halfop_case_27 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
-  | fun_halfop_case_28 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I8 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
-  | fun_halfop_case_29 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I8 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I8 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
-  | fun_halfop_case_30 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I16 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
-  | fun_halfop_case_31 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (M_1_0 : Nat) (M_2_0 : Nat) :
-    M_1 = M_1_0 →
-    M_2 = M_2_0 →
-    fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I16 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I16 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
-  | fun_halfop_case_32 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+    fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (some none)
+  | fun_halfop_case_28 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero)) (some none)
-  | fun_halfop_case_33 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_halfop_case_29 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero)) (some none)
-  | fun_halfop_case_34 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_halfop_case_30 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero)) (some none)
-  | fun_halfop_case_35 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_halfop_case_31 (M_1 : Nat) (M_2 : Nat) (v_zero : zero) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 (vcvtop__Fnn_1_M_1_Fnn_2_M_2.DEMOTE v_zero)) (some none)
-  | fun_halfop_case_36 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_halfop_case_32 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (some (some half.LOW))
-  | fun_halfop_case_37 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_halfop_case_33 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F32 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (some (some half.LOW))
-  | fun_halfop_case_38 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_halfop_case_34 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_halfop (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F32 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (some (some half.LOW))
-  | fun_halfop_case_39 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
+  | fun_halfop_case_35 (M_1 : Nat) (M_2 : Nat) (M_1_0 : Nat) (M_2_0 : Nat) :
     M_1 = M_1_0 →
     M_2 = M_2_0 →
     fun_halfop (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.F64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___3 Fnn.F64 M_1_0 Fnn.F64 M_2_0 vcvtop__Fnn_1_M_1_Fnn_2_M_2.PROMOTELOW) (some (some half.LOW))
-  | fun_halfop_case_40 (x0 : shape) (x1 : shape) (x2 : vcvtop__) :
-    ¬ fun_halfop_before_fun_halfop_case_40 x0 x1 x2 →
+  | fun_halfop_case_36 (x0 : shape) (x1 : shape) (x2 : vcvtop__) :
+    ¬ fun_halfop_before_fun_halfop_case_36 x0 x1 x2 →
     fun_halfop x0 x1 x2 none
 
 
@@ -9215,22 +9132,22 @@ inductive fun_lcvtop___before_fun_lcvtop___case_36 : shape → shape → vcvtop_
     iN_2_opt = (trunc_sat__ (lsizenn1 (lanetype_Fnn Fnn.F64)) (lsizenn2 (lanetype_Inn Inn.I64)) v_sx fN_1) →
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_lcvtop___before_fun_lcvtop___case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F64 fN_1)
+    fun_lcvtop___before_fun_lcvtop___case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F64 fN_1)
   | fun_lcvtop___case_26 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (fN_1 : fN) (M_1_0 : Nat) (M_2_0 : Nat) (iN_2_opt : Option iN) :
     iN_2_opt = (trunc_sat__ (lsizenn1 (lanetype_Fnn Fnn.F32)) (lsizenn2 (lanetype_Inn Inn.I64)) v_sx fN_1) →
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_lcvtop___before_fun_lcvtop___case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F32 fN_1)
+    fun_lcvtop___before_fun_lcvtop___case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F32 fN_1)
   | fun_lcvtop___case_25 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (fN_1 : fN) (M_1_0 : Nat) (M_2_0 : Nat) (iN_2_opt : Option iN) :
     iN_2_opt = (trunc_sat__ (lsizenn1 (lanetype_Fnn Fnn.F64)) (lsizenn2 (lanetype_Inn Inn.I32)) v_sx fN_1) →
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_lcvtop___before_fun_lcvtop___case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F64 fN_1)
+    fun_lcvtop___before_fun_lcvtop___case_36 (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F64 fN_1)
   | fun_lcvtop___case_24 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (fN_1 : fN) (M_1_0 : Nat) (M_2_0 : Nat) (iN_2_opt : Option iN) :
     iN_2_opt = (trunc_sat__ (lsizenn1 (lanetype_Fnn Fnn.F32)) (lsizenn2 (lanetype_Inn Inn.I32)) v_sx fN_1) →
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_lcvtop___before_fun_lcvtop___case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F32 fN_1)
+    fun_lcvtop___before_fun_lcvtop___case_36 (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F32 fN_1)
   | fun_lcvtop___case_23 (M_1 : Nat) (M_2 : Nat) (half_opt : Option half) (v_sx : sx) (iN_1 : uN) (M_1_0 : Nat) (M_2_0 : Nat) (fN_2 : fN) :
     fN_2 = (convert__ (lsizenn1 (lanetype_Jnn Jnn.I16)) (lsizenn2 (lanetype_Fnn Fnn.F64)) v_sx iN_1) →
     M_1 = M_1_0 →
@@ -9479,22 +9396,22 @@ inductive fun_lcvtop__ : shape → shape → vcvtop__ → lane_ → Option (List
     iN_2_opt = (trunc_sat__ (lsizenn1 (lanetype_Fnn Fnn.F32)) (lsizenn2 (lanetype_Inn Inn.I32)) v_sx fN_1) →
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_lcvtop__ (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F32 fN_1) (some (list_ lane_ (OMap (fun (iN_2_2_elem : iN) => lane_.mk_lane__0 (Jnn_Inn Inn.I32) iN_2_2_elem) iN_2_opt)))
+    fun_lcvtop__ (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F32 fN_1) (some (list_ lane_ (OMap (fun (iN_2_2_elem : iN) => lane_.mk_lane__0 (Jnn_Inn Inn.I32) iN_2_2_elem) iN_2_opt)))
   | fun_lcvtop___case_25 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (fN_1 : fN) (M_1_0 : Nat) (M_2_0 : Nat) (iN_2_opt : Option iN) :
     iN_2_opt = (trunc_sat__ (lsizenn1 (lanetype_Fnn Fnn.F64)) (lsizenn2 (lanetype_Inn Inn.I32)) v_sx fN_1) →
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_lcvtop__ (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F64 fN_1) (some (list_ lane_ (OMap (fun (iN_2_4_elem : iN) => lane_.mk_lane__0 (Jnn_Inn Inn.I32) iN_2_4_elem) iN_2_opt)))
+    fun_lcvtop__ (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I32 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I32 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F64 fN_1) (some (list_ lane_ (OMap (fun (iN_2_4_elem : iN) => lane_.mk_lane__0 (Jnn_Inn Inn.I32) iN_2_4_elem) iN_2_opt)))
   | fun_lcvtop___case_26 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (fN_1 : fN) (M_1_0 : Nat) (M_2_0 : Nat) (iN_2_opt : Option iN) :
     iN_2_opt = (trunc_sat__ (lsizenn1 (lanetype_Fnn Fnn.F32)) (lsizenn2 (lanetype_Inn Inn.I64)) v_sx fN_1) →
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_lcvtop__ (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F32 fN_1) (some (list_ lane_ (OMap (fun (iN_2_6_elem : iN) => lane_.mk_lane__0 (Jnn_Inn Inn.I64) iN_2_6_elem) iN_2_opt)))
+    fun_lcvtop__ (shape.X lanetype.F32 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F32 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F32 fN_1) (some (list_ lane_ (OMap (fun (iN_2_6_elem : iN) => lane_.mk_lane__0 (Jnn_Inn Inn.I64) iN_2_6_elem) iN_2_opt)))
   | fun_lcvtop___case_27 (M_1 : Nat) (M_2 : Nat) (v_sx : sx) (zero_opt : Option zero) (fN_1 : fN) (M_1_0 : Nat) (M_2_0 : Nat) (iN_2_opt : Option iN) :
     iN_2_opt = (trunc_sat__ (lsizenn1 (lanetype_Fnn Fnn.F64)) (lsizenn2 (lanetype_Inn Inn.I64)) v_sx fN_1) →
     M_1 = M_1_0 →
     M_2 = M_2_0 →
-    fun_lcvtop__ (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Jnn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Jnn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F64 fN_1) (some (list_ lane_ (OMap (fun (iN_2_8_elem : iN) => lane_.mk_lane__0 (Jnn_Inn Inn.I64) iN_2_8_elem) iN_2_opt)))
+    fun_lcvtop__ (shape.X lanetype.F64 (dim.mk_dim M_1)) (shape.X lanetype.I64 (dim.mk_dim M_2)) (vcvtop__.mk_vcvtop___2 Fnn.F64 M_1_0 Inn.I64 M_2_0 (vcvtop__Fnn_1_M_1_Inn_2_M_2.TRUNC_SAT v_sx zero_opt)) (lane_.mk_lane__1 Fnn.F64 fN_1) (some (list_ lane_ (OMap (fun (iN_2_8_elem : iN) => lane_.mk_lane__0 (Jnn_Inn Inn.I64) iN_2_8_elem) iN_2_opt)))
   | fun_lcvtop___case_28 (M_1 : Nat) (M_2 : Nat) (fN_1 : fN) (M_1_0 : Nat) (M_2_0 : Nat) (fN_2_lst : List fN) :
     fN_2_lst = (demote__ (lsizenn1 (lanetype_Fnn Fnn.F32)) (lsizenn2 (lanetype_Fnn Fnn.F32)) fN_1) →
     M_1 = M_1_0 →
@@ -11221,28 +11138,28 @@ inductive fun_vshiftop__before_fun_vshiftop__case_8 : ishape → vshiftop_ → l
 inductive fun_vshiftop_ : ishape → vshiftop_ → lane_ → u32 → Option lane_ → Prop where
   | fun_vshiftop__case_0 (v_M : Nat) (lane : uN) (v_n : Nat) (M_0 : Nat) :
     v_M = M_0 →
-    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I32 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I32 M_0 vshiftop_Jnn_N.SHL) (lane_.mk_lane__0 Jnn.I32 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I32 (ishl_ (lsizenn (lanetype_Jnn Jnn.I32)) lane (uN.mk_uN v_n))))
+    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I32 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I32 M_0 vshiftop_Jnn_N.SHL) (lane_.mk_lane__0 Jnn.I32 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I32 (ishl_ (lsizenn (lanetype_Jnn Jnn.I32)) lane (uN.mk_uN (v_n % (lsizenn (lanetype_Jnn Jnn.I32)))))))
   | fun_vshiftop__case_1 (v_M : Nat) (lane : uN) (v_n : Nat) (M_0 : Nat) :
     v_M = M_0 →
-    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I64 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I64 M_0 vshiftop_Jnn_N.SHL) (lane_.mk_lane__0 Jnn.I64 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I64 (ishl_ (lsizenn (lanetype_Jnn Jnn.I64)) lane (uN.mk_uN v_n))))
+    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I64 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I64 M_0 vshiftop_Jnn_N.SHL) (lane_.mk_lane__0 Jnn.I64 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I64 (ishl_ (lsizenn (lanetype_Jnn Jnn.I64)) lane (uN.mk_uN (v_n % (lsizenn (lanetype_Jnn Jnn.I64)))))))
   | fun_vshiftop__case_2 (v_M : Nat) (lane : uN) (v_n : Nat) (M_0 : Nat) :
     v_M = M_0 →
-    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I8 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I8 M_0 vshiftop_Jnn_N.SHL) (lane_.mk_lane__0 Jnn.I8 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I8 (ishl_ (lsizenn (lanetype_Jnn Jnn.I8)) lane (uN.mk_uN v_n))))
+    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I8 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I8 M_0 vshiftop_Jnn_N.SHL) (lane_.mk_lane__0 Jnn.I8 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I8 (ishl_ (lsizenn (lanetype_Jnn Jnn.I8)) lane (uN.mk_uN (v_n % (lsizenn (lanetype_Jnn Jnn.I8)))))))
   | fun_vshiftop__case_3 (v_M : Nat) (lane : uN) (v_n : Nat) (M_0 : Nat) :
     v_M = M_0 →
-    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I16 M_0 vshiftop_Jnn_N.SHL) (lane_.mk_lane__0 Jnn.I16 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I16 (ishl_ (lsizenn (lanetype_Jnn Jnn.I16)) lane (uN.mk_uN v_n))))
+    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I16 M_0 vshiftop_Jnn_N.SHL) (lane_.mk_lane__0 Jnn.I16 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I16 (ishl_ (lsizenn (lanetype_Jnn Jnn.I16)) lane (uN.mk_uN (v_n % (lsizenn (lanetype_Jnn Jnn.I16)))))))
   | fun_vshiftop__case_4 (v_M : Nat) (v_sx : sx) (lane : uN) (v_n : Nat) (M_0 : Nat) :
     v_M = M_0 →
-    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I32 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I32 M_0 (vshiftop_Jnn_N.SHR v_sx)) (lane_.mk_lane__0 Jnn.I32 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I32 (ishr_ (lsizenn (lanetype_Jnn Jnn.I32)) v_sx lane (uN.mk_uN v_n))))
+    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I32 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I32 M_0 (vshiftop_Jnn_N.SHR v_sx)) (lane_.mk_lane__0 Jnn.I32 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I32 (ishr_ (lsizenn (lanetype_Jnn Jnn.I32)) v_sx lane (uN.mk_uN (v_n % (lsizenn (lanetype_Jnn Jnn.I32)))))))
   | fun_vshiftop__case_5 (v_M : Nat) (v_sx : sx) (lane : uN) (v_n : Nat) (M_0 : Nat) :
     v_M = M_0 →
-    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I64 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I64 M_0 (vshiftop_Jnn_N.SHR v_sx)) (lane_.mk_lane__0 Jnn.I64 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I64 (ishr_ (lsizenn (lanetype_Jnn Jnn.I64)) v_sx lane (uN.mk_uN v_n))))
+    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I64 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I64 M_0 (vshiftop_Jnn_N.SHR v_sx)) (lane_.mk_lane__0 Jnn.I64 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I64 (ishr_ (lsizenn (lanetype_Jnn Jnn.I64)) v_sx lane (uN.mk_uN (v_n % (lsizenn (lanetype_Jnn Jnn.I64)))))))
   | fun_vshiftop__case_6 (v_M : Nat) (v_sx : sx) (lane : uN) (v_n : Nat) (M_0 : Nat) :
     v_M = M_0 →
-    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I8 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I8 M_0 (vshiftop_Jnn_N.SHR v_sx)) (lane_.mk_lane__0 Jnn.I8 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I8 (ishr_ (lsizenn (lanetype_Jnn Jnn.I8)) v_sx lane (uN.mk_uN v_n))))
+    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I8 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I8 M_0 (vshiftop_Jnn_N.SHR v_sx)) (lane_.mk_lane__0 Jnn.I8 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I8 (ishr_ (lsizenn (lanetype_Jnn Jnn.I8)) v_sx lane (uN.mk_uN (v_n % (lsizenn (lanetype_Jnn Jnn.I8)))))))
   | fun_vshiftop__case_7 (v_M : Nat) (v_sx : sx) (lane : uN) (v_n : Nat) (M_0 : Nat) :
     v_M = M_0 →
-    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I16 M_0 (vshiftop_Jnn_N.SHR v_sx)) (lane_.mk_lane__0 Jnn.I16 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I16 (ishr_ (lsizenn (lanetype_Jnn Jnn.I16)) v_sx lane (uN.mk_uN v_n))))
+    fun_vshiftop_ (ishape.mk_ishape (shape.X lanetype.I16 (dim.mk_dim v_M))) (vshiftop_.mk_vshiftop__0 Jnn.I16 M_0 (vshiftop_Jnn_N.SHR v_sx)) (lane_.mk_lane__0 Jnn.I16 lane) (uN.mk_uN v_n) (some (lane_.mk_lane__0 Jnn.I16 (ishr_ (lsizenn (lanetype_Jnn Jnn.I16)) v_sx lane (uN.mk_uN (v_n % (lsizenn (lanetype_Jnn Jnn.I16)))))))
   | fun_vshiftop__case_8 (x0 : ishape) (x1 : vshiftop_) (x2 : lane_) (x3 : u32) :
     ¬ fun_vshiftop__before_fun_vshiftop__case_8 x0 x1 x2 x3 →
     fun_vshiftop_ x0 x1 x2 x3 none
@@ -11258,10 +11175,14 @@ theorem vshiftop__is_wf (v_ishape : ishape) (v_vshiftop_ : vshiftop_) (v_lane_ :
   var_0 ≠ none →
   ret_val = (Option.get! var_0) →
   wf_lane_ (fun_lanetype (proj_ishape_0 v_ishape)) ret_val := by
-  intro h _ _ hl hu hne heq; subst heq
+  intro h _ _ hl _ hne heq; subst heq
+  -- bundle21: `$vshiftop_` now passes the shift amount reduced modulo the lane size
+  -- (spec commit 4cf9f29c5), which is in range for `ishl__is_wf`/`ishr__is_wf`.
+  have hmod : ∀ (L k : Nat), 0 < L → wf_uN L (uN.mk_uN (k % L)) := fun L k hL =>
+    iswf_uN_of_lt (Nat.lt_of_lt_of_le (Nat.mod_lt k hL) (Nat.le_of_lt Nat.lt_two_pow_self))
   cases h <;> (try exact absurd rfl hne) <;> subst_vars <;> cases hl <;> first
-    | exact wf_lane_.lane__case_0 _ _ _ (ishl__is_wf _ _ _ _ (by assumption) hu rfl) rfl
-    | exact wf_lane_.lane__case_0 _ _ _ (ishr__is_wf _ _ _ _ _ (by assumption) hu rfl) rfl
+    | exact wf_lane_.lane__case_0 _ _ _ (ishl__is_wf _ _ _ _ (by assumption) (hmod _ _ (by decide)) rfl) rfl
+    | exact wf_lane_.lane__case_0 _ _ _ (ishr__is_wf _ _ _ _ _ (by assumption) (hmod _ _ (by decide)) rfl) rfl
 
 /- Type Alias Definition at: ../specification/wasm-2.0/4-runtime.spectec:5.1-5.39 -/
 abbrev addr : Type := Nat
@@ -14666,7 +14587,7 @@ inductive Step_read : config → List admininstr → Prop where
     (proj_num__0 i) ≠ none →
     v_n ≠ 0 →
     ((proj_uN_0 (Option.get! (proj_num__0 i))) + v_n) ≤ (List.length ((fun_mem z (uN.mk_uN 0)).BYTES)) →
-    Step_read (config.mk_config z [admininstr.CONST numtype.I32 i, admininstr_val v_val, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n)), admininstr.MEMORY_FILL]) [admininstr.CONST numtype.I32 i, admininstr_val v_val, admininstr.STORE numtype.I32 (some (sz.mk_sz 8)) memarg0, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN ((proj_uN_0 (Option.get! (proj_num__0 i))) + 1))), admininstr_val v_val, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN (Int.toNat ((v_n : Int) - (1 : Int))))), admininstr.MEMORY_FILL]
+    Step_read (config.mk_config z [admininstr.CONST numtype.I32 i, admininstr_val v_val, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n)), admininstr.MEMORY_FILL]) [admininstr.CONST numtype.I32 i, admininstr_val v_val, admininstr.STORE numtype.I32 (some (sz.mk_sz 8)) memarg0, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (iadd_ 32 (Option.get! (proj_num__0 i)) (uN.mk_uN 1))), admininstr_val v_val, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN (Int.toNat ((v_n : Int) - (1 : Int))))), admininstr.MEMORY_FILL]
   | memory_copy_trap (z : state) (j : num_) (i : num_) (v_n : n) :
     (proj_num__0 i) ≠ none →
     (proj_num__0 j) ≠ none →
@@ -14685,7 +14606,7 @@ inductive Step_read : config → List admininstr → Prop where
     v_n ≠ 0 →
     (((proj_uN_0 (Option.get! (proj_num__0 i))) + v_n) ≤ (List.length ((fun_mem z (uN.mk_uN 0)).BYTES))) ∧ (((proj_uN_0 (Option.get! (proj_num__0 j))) + v_n) ≤ (List.length ((fun_mem z (uN.mk_uN 0)).BYTES))) →
     (proj_uN_0 (Option.get! (proj_num__0 j))) ≤ (proj_uN_0 (Option.get! (proj_num__0 i))) →
-    Step_read (config.mk_config z [admininstr.CONST numtype.I32 j, admininstr.CONST numtype.I32 i, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n)), admininstr.MEMORY_COPY]) [admininstr.CONST numtype.I32 j, admininstr.CONST numtype.I32 i, admininstr.LOAD numtype.I32 (some (loadop_.mk_loadop__0 Inn.I32 (loadop_Inn.mk_loadop_Inn (sz.mk_sz 8) sx.U))) memarg0, admininstr.STORE numtype.I32 (some (sz.mk_sz 8)) memarg0, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN ((proj_uN_0 (Option.get! (proj_num__0 j))) + 1))), admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN ((proj_uN_0 (Option.get! (proj_num__0 i))) + 1))), admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN (Int.toNat ((v_n : Int) - (1 : Int))))), admininstr.MEMORY_COPY]
+    Step_read (config.mk_config z [admininstr.CONST numtype.I32 j, admininstr.CONST numtype.I32 i, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n)), admininstr.MEMORY_COPY]) [admininstr.CONST numtype.I32 j, admininstr.CONST numtype.I32 i, admininstr.LOAD numtype.I32 (some (loadop_.mk_loadop__0 Inn.I32 (loadop_Inn.mk_loadop_Inn (sz.mk_sz 8) sx.U))) memarg0, admininstr.STORE numtype.I32 (some (sz.mk_sz 8)) memarg0, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (iadd_ 32 (Option.get! (proj_num__0 j)) (uN.mk_uN 1))), admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (iadd_ 32 (Option.get! (proj_num__0 i)) (uN.mk_uN 1))), admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN (Int.toNat ((v_n : Int) - (1 : Int))))), admininstr.MEMORY_COPY]
   | memory_copy_gt (z : state) (j : num_) (i : num_) (v_n : n) :
     (proj_num__0 j) ≠ none →
     (proj_num__0 i) ≠ none →
@@ -14711,7 +14632,7 @@ inductive Step_read : config → List admininstr → Prop where
     (proj_num__0 j) ≠ none →
     v_n ≠ 0 →
     (((proj_uN_0 (Option.get! (proj_num__0 i))) + v_n) ≤ (List.length ((fun_data z x).BYTES))) ∧ (((proj_uN_0 (Option.get! (proj_num__0 j))) + v_n) ≤ (List.length ((fun_mem z (uN.mk_uN 0)).BYTES))) →
-    Step_read (config.mk_config z [admininstr.CONST numtype.I32 j, admininstr.CONST numtype.I32 i, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n)), admininstr.MEMORY_INIT x]) [admininstr.CONST numtype.I32 j, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN (proj_byte_0 (((fun_data z x).BYTES)[proj_uN_0 (Option.get! (proj_num__0 i))]!)))), admininstr.STORE numtype.I32 (some (sz.mk_sz 8)) memarg0, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN ((proj_uN_0 (Option.get! (proj_num__0 j))) + 1))), admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN ((proj_uN_0 (Option.get! (proj_num__0 i))) + 1))), admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN (Int.toNat ((v_n : Int) - (1 : Int))))), admininstr.MEMORY_INIT x]
+    Step_read (config.mk_config z [admininstr.CONST numtype.I32 j, admininstr.CONST numtype.I32 i, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n)), admininstr.MEMORY_INIT x]) [admininstr.CONST numtype.I32 j, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN (proj_byte_0 (((fun_data z x).BYTES)[proj_uN_0 (Option.get! (proj_num__0 i))]!)))), admininstr.STORE numtype.I32 (some (sz.mk_sz 8)) memarg0, admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (iadd_ 32 (Option.get! (proj_num__0 j)) (uN.mk_uN 1))), admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (iadd_ 32 (Option.get! (proj_num__0 i)) (uN.mk_uN 1))), admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN (Int.toNat ((v_n : Int) - (1 : Int))))), admininstr.MEMORY_INIT x]
 
 
 /- Inductive Relations Definition at: ../specification/wasm-2.0/8-reduction.spectec:5.1-5.109 -/
@@ -15379,16 +15300,16 @@ inductive fun_instantiate : store → module → List externaddr → config → 
     Forall₂ (fun (j_19 : Nat) (var_10_elem : Option (List instr)) => fun_rundata ((data_lst)[j_19]!) (uN.mk_uN j_19) var_10_elem) (List.range n_D) var_10_lst →
     Forall (fun (j_18 : Nat) => j_18 < (List.length data_lst)) (List.range n_D) →
     Forall₂ (fun (j_18 : Nat) (var_9_elem : Option (List instr)) => fun_rundata ((data_lst)[j_18]!) (uN.mk_uN j_18) var_9_elem) (List.range n_D) var_9_lst →
-    Forall (fun (i_90093 : Nat) => i_90093 < (List.length elem_lst)) (List.range n_E) →
-    Forall₂ (fun (i_90093 : Nat) (var_8_elem : List instr) => fun_runelem ((elem_lst)[i_90093]!) (uN.mk_uN i_90093) var_8_elem) (List.range n_E) var_8_lst →
-    Forall (fun (i_90091 : Nat) => i_90091 < (List.length elem_lst)) (List.range n_E) →
-    Forall₂ (fun (i_90091 : Nat) (var_7_elem : List instr) => fun_runelem ((elem_lst)[i_90091]!) (uN.mk_uN i_90091) var_7_elem) (List.range n_E) var_7_lst →
+    Forall (fun (i_82780 : Nat) => i_82780 < (List.length elem_lst)) (List.range n_E) →
+    Forall₂ (fun (i_82780 : Nat) (var_8_elem : List instr) => fun_runelem ((elem_lst)[i_82780]!) (uN.mk_uN i_82780) var_8_elem) (List.range n_E) var_8_lst →
+    Forall (fun (i_82778 : Nat) => i_82778 < (List.length elem_lst)) (List.range n_E) →
+    Forall₂ (fun (i_82778 : Nat) (var_7_elem : List instr) => fun_runelem ((elem_lst)[i_82778]!) (uN.mk_uN i_82778) var_7_elem) (List.range n_E) var_7_lst →
     fun_allocmodule s v_module externaddr_lst val_lst ref_lst_lst var_6 →
     fun_allocmodule s v_module externaddr_lst val_lst ref_lst_lst var_5 →
     Forall (fun (j_17 : Nat) => j_17 < (List.length data_lst)) (List.range n_D) →
     Forall₂ (fun (j_17 : Nat) (var_4_elem : Option (List instr)) => fun_rundata ((data_lst)[j_17]!) (uN.mk_uN j_17) var_4_elem) (List.range n_D) var_4_lst →
-    Forall (fun (i_90088 : Nat) => i_90088 < (List.length elem_lst)) (List.range n_E) →
-    Forall₂ (fun (i_90088 : Nat) (var_3_elem : List instr) => fun_runelem ((elem_lst)[i_90088]!) (uN.mk_uN i_90088) var_3_elem) (List.range n_E) var_3_lst →
+    Forall (fun (i_82775 : Nat) => i_82775 < (List.length elem_lst)) (List.range n_E) →
+    Forall₂ (fun (i_82775 : Nat) (var_3_elem : List instr) => fun_runelem ((elem_lst)[i_82775]!) (uN.mk_uN i_82775) var_3_elem) (List.range n_E) var_3_lst →
     fun_allocmodule s v_module externaddr_lst val_lst ref_lst_lst var_2 →
     fun_globals externaddr_lst var_1 →
     fun_funcs externaddr_lst var_0 →
@@ -15432,7 +15353,7 @@ inductive fun_instantiate : store → module → List externaddr → config → 
     wf_store (var_5.1) →
     wf_moduleinst (var_6.2) →
     Forall (fun (iter_25_elem : instr) => wf_instr iter_25_elem) (concat_ instr var_7_lst) →
-    Forall₂ (fun (i_90093 : Nat) (var_8_elem : List instr) => Forall (fun (iter_26_elem : instr) => wf_instr iter_26_elem) var_8_elem) (List.range n_E) var_8_lst →
+    Forall₂ (fun (i_82780 : Nat) (var_8_elem : List instr) => Forall (fun (iter_26_elem : instr) => wf_instr iter_26_elem) var_8_elem) (List.range n_E) var_8_lst →
     Forall (fun (iter_27_elem : instr) => wf_instr iter_27_elem) (concat_ instr (List.range n_D |>.map (fun (j_18 : Nat) (var_9_elem : Option (List instr)) => Option.get! var_9_elem) |>.ap var_9_lst)) →
     Forall₂ (fun (j_19 : Nat) (var_10_elem : Option (List instr)) => Forall (fun (iter_28_elem : instr) => wf_instr iter_28_elem) (Option.get! var_10_elem)) (List.range n_D) var_10_lst →
     wf_config (config.mk_config (state.mk_state s' f) ((Map (fun (instr_E_2_elem : instr) => admininstr_instr instr_E_2_elem) instr_E_lst) ++ ((Map (fun (instr_D_2_elem : instr) => admininstr_instr instr_D_2_elem) instr_D_lst) ++ (Option.toList (OMap (fun (x_2_elem : idx) => admininstr.CALL x_2_elem) x_opt))))) →
@@ -15462,7 +15383,7 @@ inductive fun_instantiate : store → module → List externaddr → config → 
       LOCALS := []
       MODULE := v_moduleinst : frame
     }) →
-    Forall (fun (i_90097 : Nat) => wf_uN 32 (uN.mk_uN i_90097)) (List.range n_E) →
+    Forall (fun (i_82784 : Nat) => wf_uN 32 (uN.mk_uN i_82784)) (List.range n_E) →
     Forall (fun (j_20 : Nat) => wf_uN 32 (uN.mk_uN j_20)) (List.range n_D) →
     fun_instantiate s v_module externaddr_lst (config.mk_config (state.mk_state s' f) ((Map (fun (instr_E_elem : instr) => admininstr_instr instr_E_elem) instr_E_lst) ++ ((Map (fun (instr_D_elem : instr) => admininstr_instr instr_D_elem) instr_D_lst) ++ (Option.toList (OMap (fun (x_elem : idx) => admininstr.CALL x_elem) x_opt)))))
 
@@ -16045,17 +15966,357 @@ inductive Store_ok : store → Prop where
 
 
 /- Well-Formedness Theorem at: ../specification/wasm-2.0/8-reduction.spectec:7.10-7.19 -/
+/-! Hand-written helper lemmas for `Step_read_is_wf` below (bundle21; not generated). -/
+
+theorem iswf_Forall_of_Forall₂ {α β : Type} {R : α → β → Prop} {Q : α → Prop} (l1 : List α) (l2 : List β) :
+    Forall₂ R l1 l2 → l1.length = l2.length → (∀ a b, R a b → Q a) → Forall Q l1 := by
+  intro h hlen hq x hx
+  obtain ⟨y, _, hr⟩ := iswf_Forall₂_left_mem l1 l2 h hlen x hx
+  exact hq x y hr
+
+theorem iswf_Limits_ok_le {v : uN} {o : Option uN} {k : Nat} (h : Limits_ok (limits.mk_limits v o) k) :
+    proj_uN_0 v ≤ k := by
+  cases h with
+  | mk_Limits_ok _ _ _ hle _ _ => exact hle
+
+/- Store bounds from `Store_ok` (Rocq's `Htlen`, `Hmlen`, `Helen`). An out-of-range lookup returns the
+   default instance, whose lists are empty, so the bounds hold for every index. -/
+theorem iswf_table_len_lt (z : state) (x : tableidx) :
+    Store_ok (fun_store z) → ((fun_table z x).REFS).length < 2 ^ 32 := by
+  intro hs
+  cases z with
+  | mk_state s f =>
+    change Store_ok s at hs
+    cases hs with
+    | mk_Store_ok _ _ _ _ tis tts _ _ _ _ _ _ _ _ _ _ hlen htab _ _ _ _ _ _ hseq _ _ _ _ =>
+      subst hseq
+      show (tis[(f.MODULE.TABLES)[proj_uN_0 x]!]!).REFS.length < 2 ^ 32
+      apply iswf_Forall_getElem! (P := fun ti : tableinst => ti.REFS.length < 2 ^ 32)
+      · refine iswf_Forall_of_Forall₂ tis tts htab hlen (fun a b hab => ?_)
+        cases hab with
+        | mk_Tableinst_ok v_n m_opt rt ref_lst htt _ hl _ _ _ =>
+          cases htt with
+          | mk_Tabletype_ok _ _ hlim _ =>
+            have h1 : @LE.le Nat _ v_n (Int.toNat (((2 ^ 32) : Int) - (1 : Int))) := iswf_Limits_ok_le hlim
+            have h2 : Int.toNat (((2 ^ 32) : Int) - (1 : Int)) = 4294967295 := by decide
+            have hl' : @Eq Nat ref_lst.length v_n := hl
+            show ref_lst.length < 2 ^ 32
+            omega
+      · decide
+
+theorem iswf_mem_len_le (z : state) (x : memidx) :
+    Store_ok (fun_store z) → ((fun_mem z x).BYTES).length ≤ 2 ^ 32 := by
+  intro hs
+  cases z with
+  | mk_state s f =>
+    change Store_ok s at hs
+    cases hs with
+    | mk_Store_ok _ _ mis mts _ _ _ _ _ _ _ _ _ _ hlen hmem _ _ _ _ _ _ _ _ hseq _ _ _ _ =>
+      subst hseq
+      show (mis[(f.MODULE.MEMS)[proj_uN_0 x]!]!).BYTES.length ≤ 2 ^ 32
+      apply iswf_Forall_getElem! (P := fun mi : meminst => mi.BYTES.length ≤ 2 ^ 32)
+      · refine iswf_Forall_of_Forall₂ mis mts hmem hlen (fun a b hab => ?_)
+        cases hab with
+        | mk_Meminst_ok v_n m_opt b_lst hmt hl _ _ _ =>
+          cases hmt with
+          | mk_Memtype_ok _ hlim _ =>
+            have h1 : @LE.le Nat _ v_n (2 ^ 16) := iswf_Limits_ok_le hlim
+            have hl' : @Eq Nat b_lst.length (v_n * (64 * 1024)) := hl
+            show b_lst.length ≤ 2 ^ 32
+            omega
+      · decide
+
+theorem iswf_elem_len_lt (z : state) (y : tableidx) :
+    Store_ok (fun_store z) → ((fun_elem z y).REFS).length < 2 ^ 32 := by
+  intro hs
+  cases z with
+  | mk_state s f =>
+    change Store_ok s at hs
+    cases hs with
+    | mk_Store_ok _ _ _ _ _ _ _ _ _ _ eis ets _ _ _ _ _ _ _ _ _ _ hlen hel hseq _ _ _ _ =>
+      subst hseq
+      show (eis[(f.MODULE.ELEMS)[proj_uN_0 y]!]!).REFS.length < 2 ^ 32
+      apply iswf_Forall_getElem! (P := fun ei : eleminst => ei.REFS.length < 2 ^ 32)
+      · refine iswf_Forall_of_Forall₂ eis ets hel hlen (fun a b hab => ?_)
+        cases hab with
+        | mk_Eleminst_ok rt ref_lst _ hl _ => exact hl
+      · decide
+
+/- Data bytes are `< 256` (Rocq's `Hdbyte`); this needs only `wf_state`. -/
+theorem iswf_data_byte_lt (z : state) (x : dataidx) (k : Nat) :
+    wf_state z → wf_uN 32 x → proj_byte_0 (((fun_data z x).BYTES)[k]!) < 2 ^ 32 := by
+  intro hz hx
+  have hd := data_is_wf z x _ hz hx rfl
+  generalize fun_data z x = d at hd ⊢
+  cases hd with
+  | datainst_case_ l hl =>
+    have hb := iswf_Forall_getElem! k hl (wf_byte.byte_case_0 0 ⟨Nat.le_refl 0, by decide⟩)
+    generalize l[k]! = b at hb ⊢
+    cases hb with
+    | byte_case_0 i hi =>
+      show i < 2 ^ 32
+      omega
+
+theorem iswf_globalinst_value {g : globalinst} (h : wf_globalinst g) : wf_val g.VALUE := by
+  cases h with
+  | globalinst_case_ _ _ hv => exact hv
+
+theorem iswf_I32_const_lt {k : Nat}
+    (h : wf_admininstr (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN k)))) : k < 2 ^ 32 := by
+  cases h with
+  | admininstr_case_13 _ _ h =>
+    cases h with
+    | num__case_0 _ _ _ hw _ => exact iswf_uN_lt hw
+
+/- memory.fill-succ, memory.copy-le and memory.init-succ push `$iadd_(32, i, 1)` (spec commit 4cf9f29c5). -/
+theorem iswf_I32_iadd1 {i : num_} (h : wf_admininstr (admininstr.CONST numtype.I32 i)) (hne : proj_num__0 i ≠ none) :
+    wf_admininstr (admininstr.CONST numtype.I32
+      (num_.mk_num__0 Inn.I32 (iadd_ 32 (Option.get! (proj_num__0 i)) (uN.mk_uN 1)))) := by
+  cases h with
+  | admininstr_case_13 _ _ hw =>
+    exact wf_admininstr.admininstr_case_13 _ _ (wf_num_.num__case_0 _ _ _ (by decide)
+      (iadd__is_wf 32 _ _ _ (iswf_num_Inn_proj Inn.I32 i hw hne) (iswf_uN_of_lt (by decide)) rfl) rfl)
+
+theorem iswf_store_I32_8 : wf_admininstr (admininstr.STORE numtype.I32 (some (sz.mk_sz 8)) memarg0) :=
+  wf_admininstr.admininstr_case_57 (some Inn.I32) _ _ _
+    (iswf_Forall_cons (wf_sz.sz_case_0 8 (by decide)) (iswf_Forall_nil _))
+    (memarg0_is_wf _ rfl)
+    ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
+    (by intro t ht; simp at ht; subst ht; exact ⟨rfl, by decide⟩)
+
+theorem iswf_load_I32_8_U :
+    wf_admininstr (admininstr.LOAD numtype.I32
+      (some (loadop_.mk_loadop__0 Inn.I32 (loadop_Inn.mk_loadop_Inn (sz.mk_sz 8) sx.U))) memarg0) :=
+  wf_admininstr.admininstr_case_56 _ _ _
+    (iswf_Forall_cons (wf_loadop_.loadop__case_0 _ _ _
+      (wf_loadop_Inn.loadop_Inn_case_0 _ _ _ (wf_sz.sz_case_0 8 (by decide)) (by decide)) rfl)
+      (iswf_Forall_nil _))
+    (memarg0_is_wf _ rfl)
+
 /- Hand-edited (bundle19), mirroring the hand-edited Rocq `wasm.v`: moved after `Store_ok` and given a
    `Store_ok (fun_store z)` premise ("the store bounds are needed for table.size, memory.size and the bulk
-   rules"). `Admitted` in Rocq; left `sorry`. Even with the premise it is false in one corner case
-   (memory.fill/copy/init push `CONST I32 (i+1)` with `i = 2^32 - 1` on a 2^16-page memory), pending a
-   spec-side fix. -/
+   rules"). Proved here (bundle21), as in Rocq since upstream `6582b3a39`: spec commit `4cf9f29c5` made
+   memory.fill/copy/init push `CONST I32 $iadd_(32, i, 1)` (wrapping), which removed the `2^32` corner
+   case that used to make this theorem false. -/
 theorem Step_read_is_wf (z : state) (admininstr_lst : List admininstr) (var_1 : List admininstr) :
   wf_config (config.mk_config z admininstr_lst) →
   Store_ok (fun_store z) →
   Step_read (config.mk_config z admininstr_lst) var_1 →
-  Forall (fun (var_1_elem : admininstr) => wf_admininstr var_1_elem) var_1 :=
-  sorry
+  Forall (fun (var_1_elem : admininstr) => wf_admininstr var_1_elem) var_1 := by
+  intro hcfg hsok h
+  obtain ⟨hst, hais⟩ : wf_state z ∧ Forall (fun e => wf_admininstr e) admininstr_lst := by
+    cases hcfg with | config_case_0 _ _ h1 h2 => exact ⟨h1, h2⟩
+  cases h with
+  | block z k val_lst bt instr_lst v_n t_1_lst t_2_lst h0 h1 h2 h3 =>
+    have hb := hais (admininstr.BLOCK bt instr_lst) (by simp)
+    cases hb; rename_i hinstrs
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_71 _ _ _ (iswf_Forall_nil _)
+      (iswf_Forall_append (fun x hx => hais x (by simp [hx]))
+        (iswf_Forall_map _ _ hinstrs (fun _ h => iswf_admininstr_instr h)))) (iswf_Forall_nil _)
+  | loop z k val_lst bt instr_lst t_1_lst v_n t_2_lst h0 h1 h2 h3 =>
+    have hb := hais (admininstr.LOOP bt instr_lst) (by simp)
+    cases hb; rename_i hbt hinstrs
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_71 _ _ _
+      (iswf_Forall_cons (wf_instr.instr_case_5 _ _ hbt hinstrs) (iswf_Forall_nil _))
+      (iswf_Forall_append (fun x hx => hais x (by simp [hx]))
+        (iswf_Forall_map _ _ hinstrs (fun _ h => iswf_admininstr_instr h)))) (iswf_Forall_nil _)
+  | call z x h0 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | call_indirect_call z i x y a h0 h1 h2 h3 h4 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | call_indirect_trap z i x y h0 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | call_addr z k val_lst a v_n f instr_lst t_1_lst t_2_lst mm v_func x t_lst h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 =>
+    subst h4
+    cases h6 with
+    | func_case_0 _ _ _ _ hinstrs =>
+      exact iswf_Forall_cons (wf_admininstr.admininstr_case_72 _ _ _ h7
+        (iswf_Forall_cons (wf_admininstr.admininstr_case_71 _ _ _ (iswf_Forall_nil _)
+          (iswf_Forall_map _ _ hinstrs (fun _ h => iswf_admininstr_instr h))) (iswf_Forall_nil _)))
+        (iswf_Forall_nil _)
+  | ref_func z x h0 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | local_get z x =>
+    have hx := hais (admininstr.LOCAL_GET x) (by simp)
+    cases hx; rename_i hx
+    exact iswf_Forall_cons (iswf_admininstr_val (local_is_wf z x _ hst hx rfl)) (iswf_Forall_nil _)
+  | global_get z x =>
+    have hx := hais (admininstr.GLOBAL_GET x) (by simp)
+    cases hx; rename_i hx
+    exact iswf_Forall_cons (iswf_admininstr_val (iswf_globalinst_value (global_is_wf z x _ hst hx rfl)))
+      (iswf_Forall_nil _)
+  | table_get_trap z i x h0 h1 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | table_get_val z i x h0 h1 =>
+    exact iswf_Forall_cons (iswf_admininstr_ref _) (iswf_Forall_nil _)
+  | table_size z x v_n h0 =>
+    have hL := iswf_table_len_lt z x hsok
+    exact iswf_Forall_cons (iswf_I32_const _ (by omega)) (iswf_Forall_nil _)
+  | table_fill_trap z i v_val v_n x h0 h1 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | table_fill_zero z i v_val v_n x h0 h1 h2 =>
+    exact iswf_Forall_nil _
+  | table_fill_succ z i v_val v_n x h0 h1 h2 =>
+    have hi := hais (admininstr.CONST numtype.I32 i) (by simp)
+    have hv := hais (admininstr_val v_val) (by simp)
+    have hn := iswf_I32_const_lt
+      (hais (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n))) (by simp))
+    have hx := hais (admininstr.TABLE_FILL x) (by simp)
+    cases hx; rename_i hx
+    have hL := iswf_table_len_lt z x hsok
+    have h1' : @Ne Nat v_n 0 := h1
+    exact iswf_Forall_cons hi <| iswf_Forall_cons hv <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_49 _ hx) <|
+      iswf_Forall_cons (iswf_I32_const _ (by omega)) <| iswf_Forall_cons hv <|
+      iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_52 _ hx) (iswf_Forall_nil _)
+  | table_copy_trap z j i v_n x y h0 h1 h2 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | table_copy_zero z j i v_n x y h0 h1 h2 h3 =>
+    exact iswf_Forall_nil _
+  | table_copy_le z j i v_n x y h0 h1 h2 h3 h4 =>
+    have hj := hais (admininstr.CONST numtype.I32 j) (by simp)
+    have hi := hais (admininstr.CONST numtype.I32 i) (by simp)
+    have hn := iswf_I32_const_lt
+      (hais (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n))) (by simp))
+    have hxy := hais (admininstr.TABLE_COPY x y) (by simp)
+    cases hxy; rename_i hx hy
+    have hLx := iswf_table_len_lt z x hsok
+    have hLy := iswf_table_len_lt z y hsok
+    have h2' : @Ne Nat v_n 0 := h2
+    obtain ⟨h3i, h3j⟩ := h3
+    exact iswf_Forall_cons hj <| iswf_Forall_cons hi <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_48 _ hy) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_49 _ hx) <|
+      iswf_Forall_cons (iswf_I32_const _ (by omega)) <| iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_53 _ _ hx hy) (iswf_Forall_nil _)
+  | table_copy_gt z j i v_n x y h0 h1 h2 h3 h4 =>
+    have hj := hais (admininstr.CONST numtype.I32 j) (by simp)
+    have hi := hais (admininstr.CONST numtype.I32 i) (by simp)
+    have hn := iswf_I32_const_lt
+      (hais (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n))) (by simp))
+    have hxy := hais (admininstr.TABLE_COPY x y) (by simp)
+    cases hxy; rename_i hx hy
+    have hLx := iswf_table_len_lt z x hsok
+    have hLy := iswf_table_len_lt z y hsok
+    obtain ⟨h4i, h4j⟩ := h4
+    exact iswf_Forall_cons (iswf_I32_const _ (by omega)) <| iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_48 _ hy) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_49 _ hx) <| iswf_Forall_cons hj <| iswf_Forall_cons hi <|
+      iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_53 _ _ hx hy) (iswf_Forall_nil _)
+  | table_init_trap z j i v_n x y h0 h1 h2 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | table_init_zero z j i v_n x y h0 h1 h2 h3 =>
+    exact iswf_Forall_nil _
+  | table_init_succ z j i v_n x y h0 h1 h2 h3 h4 =>
+    have hj := hais (admininstr.CONST numtype.I32 j) (by simp)
+    have hn := iswf_I32_const_lt
+      (hais (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n))) (by simp))
+    have hxy := hais (admininstr.TABLE_INIT x y) (by simp)
+    cases hxy; rename_i hx hy
+    have hLx := iswf_table_len_lt z x hsok
+    have hLy := iswf_elem_len_lt z y hsok
+    have h3' : @Ne Nat v_n 0 := h3
+    obtain ⟨h4i, h4j⟩ := h4
+    exact iswf_Forall_cons hj <| iswf_Forall_cons (iswf_admininstr_ref _) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_49 _ hx) <|
+      iswf_Forall_cons (iswf_I32_const _ (by omega)) <| iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_54 _ _ hx hy) (iswf_Forall_nil _)
+  | load_num_trap z i nt ao h0 h1 h2 h3 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | load_num_val z i nt ao c h0 h1 h2 h3 h4 =>
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_13 _ _ h3) (iswf_Forall_nil _)
+  | load_pack_trap z i v_Inn v_n v_sx ao h0 h1 h2 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | load_pack_val z i v_Inn v_n v_sx ao c h0 h1 h2 h3 h4 =>
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_13 _ _
+      (wf_num_.num__case_0 _ _ _ h0 (extend___is_wf _ _ _ _ _ h3 rfl) rfl)) (iswf_Forall_nil _)
+  | vload_oob z i ao h0 h1 h2 h3 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | vload_val z i ao c h0 h1 h2 h3 h4 =>
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_20 _ _ (by decide) h3) (iswf_Forall_nil _)
+  | vload_shape_oob z i v_M v_N v_sx ao h0 h1 h2 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | vload_shape_val z i v_M v_N v_sx ao c j_lst v_Jnn h0 h1 h2 h3 h4 h5 h6 h7 =>
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_20 _ _ (by decide)
+      (inv_lanes__is_wf _ _ _ h5 (iswf_Forall_map _ _ h6 (fun _ h => h)) h3)) (iswf_Forall_nil _)
+  | vload_splat_oob z i v_N ao h0 h1 h2 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | vload_splat_val z i v_N ao c j v_Jnn v_M h0 h1 h2 h3 h4 h5 h6 h7 =>
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_20 _ _ (by decide)
+      (inv_lanes__is_wf _ _ _ h6 (fun x hx => by rw [List.eq_of_mem_replicate hx]; exact h7) h4))
+      (iswf_Forall_nil _)
+  | vload_zero_oob z i v_N ao h0 h1 h2 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | vload_zero_val z i v_N ao c j h0 h1 h2 h3 h4 =>
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_20 _ _ (by decide) (extend___is_wf _ _ _ _ _ h3 h2))
+      (iswf_Forall_nil _)
+  | vload_lane_oob z i c_1 v_N ao j h0 h1 h2 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | vload_lane_val z i c_1 v_N ao j c k v_Jnn v_M h0 h1 h2 h3 h4 h5 h6 h7 =>
+    have hc := hais (admininstr.VCONST vectype.V128 c_1) (by simp)
+    cases hc; rename_i _ hw1
+    have hls := lanes__is_wf _ _ _ h6 hw1 rfl
+    exact iswf_Forall_cons (wf_admininstr.admininstr_case_20 _ _ (by decide)
+      (inv_lanes__is_wf _ _ _ h6 (iswf_Forall_modify _ (fun _ _ => h7) _ _ hls) h4)) (iswf_Forall_nil _)
+  | memory_size z v_n h0 h1 =>
+    have hL := iswf_mem_len_le z (uN.mk_uN 0) hsok
+    have h0' : @Eq Nat (v_n * 64 * 1024) ((fun_mem z (uN.mk_uN 0)).BYTES.length) := h0
+    exact iswf_Forall_cons (iswf_I32_const _ (by omega)) (iswf_Forall_nil _)
+  | memory_fill_trap z i v_val v_n h0 h1 h2 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | memory_fill_zero z i v_val v_n h0 h1 h2 =>
+    exact iswf_Forall_nil _
+  | memory_fill_succ z i v_val v_n h0 h1 h2 =>
+    have hi := hais (admininstr.CONST numtype.I32 i) (by simp)
+    have hv := hais (admininstr_val v_val) (by simp)
+    have hn := iswf_I32_const_lt
+      (hais (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n))) (by simp))
+    exact iswf_Forall_cons hi <| iswf_Forall_cons hv <| iswf_Forall_cons iswf_store_I32_8 <|
+      iswf_Forall_cons (iswf_I32_iadd1 hi h0) <| iswf_Forall_cons hv <|
+      iswf_Forall_cons (iswf_I32_const _ (by omega)) <| iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | memory_copy_trap z j i v_n h0 h1 h2 h3 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | memory_copy_zero z j i v_n h0 h1 h2 h3 =>
+    exact iswf_Forall_nil _
+  | memory_copy_le z j i v_n h0 h1 h2 h3 h4 =>
+    have hj := hais (admininstr.CONST numtype.I32 j) (by simp)
+    have hi := hais (admininstr.CONST numtype.I32 i) (by simp)
+    have hn := iswf_I32_const_lt
+      (hais (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n))) (by simp))
+    exact iswf_Forall_cons hj <| iswf_Forall_cons hi <| iswf_Forall_cons iswf_load_I32_8_U <|
+      iswf_Forall_cons iswf_store_I32_8 <| iswf_Forall_cons (iswf_I32_iadd1 hj h0) <|
+      iswf_Forall_cons (iswf_I32_iadd1 hi h1) <| iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | memory_copy_gt z j i v_n h0 h1 h2 h3 h4 =>
+    have hj := hais (admininstr.CONST numtype.I32 j) (by simp)
+    have hi := hais (admininstr.CONST numtype.I32 i) (by simp)
+    have hn := iswf_I32_const_lt
+      (hais (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n))) (by simp))
+    have hL := iswf_mem_len_le z (uN.mk_uN 0) hsok
+    obtain ⟨h4i, h4j⟩ := h4
+    exact iswf_Forall_cons (iswf_I32_const _ (by omega)) <| iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons iswf_load_I32_8_U <| iswf_Forall_cons iswf_store_I32_8 <| iswf_Forall_cons hj <|
+      iswf_Forall_cons hi <| iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | memory_init_trap z j i v_n x h0 h1 h2 h3 =>
+    exact iswf_Forall_cons (by constructor) (iswf_Forall_nil _)
+  | memory_init_zero z j i v_n x h0 h1 h2 h3 =>
+    exact iswf_Forall_nil _
+  | memory_init_succ z j i v_n x h0 h1 h2 h3 h4 =>
+    have hj := hais (admininstr.CONST numtype.I32 j) (by simp)
+    have hi := hais (admininstr.CONST numtype.I32 i) (by simp)
+    have hn := iswf_I32_const_lt
+      (hais (admininstr.CONST numtype.I32 (num_.mk_num__0 Inn.I32 (uN.mk_uN v_n))) (by simp))
+    have hx := hais (admininstr.MEMORY_INIT x) (by simp)
+    cases hx; rename_i hx
+    exact iswf_Forall_cons hj <| iswf_Forall_cons (iswf_I32_const _ (iswf_data_byte_lt z x _ hst hx)) <|
+      iswf_Forall_cons iswf_store_I32_8 <| iswf_Forall_cons (iswf_I32_iadd1 hj h2) <|
+      iswf_Forall_cons (iswf_I32_iadd1 hi h1) <| iswf_Forall_cons (iswf_I32_const _ (by omega)) <|
+      iswf_Forall_cons (wf_admininstr.admininstr_case_66 _ hx) (iswf_Forall_nil _)
 
 /- Well-Formedness Theorem at: ../specification/wasm-2.0/8-reduction.spectec:5.10-5.14 -/
 /- Hand-edited (bundle19), mirroring the hand-edited Rocq `wasm.v`: moved after `Store_ok` and given a
