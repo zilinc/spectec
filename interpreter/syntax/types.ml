@@ -121,7 +121,18 @@ let unpacked_storagetype = function
 let unpacked_fieldtype (FieldT (_mut, t)) = unpacked_storagetype t
 
 
+let idx_of_typeuse = function Idx x -> x | _ -> assert false
+let deftype_of_typeuse = function Def dt -> dt | _ -> assert false
 
+let reftype_of_valtype = function RefT t -> t | _ -> assert false
+
+let structtype_of_comptype = function StructT fts -> fts | _ -> assert false
+let arraytype_of_comptype = function ArrayT ft -> ft | _ -> assert false
+let functype_of_comptype = function FuncT rt2 -> rt2 | _ -> assert false
+let conttype_of_comptype = function ContT ht -> ht | _ -> assert false
+
+let externtype_of_importtype = function ImportT (_, _, xt) -> xt
+let externtype_of_exporttype = function ExportT (_, xt) -> xt
 
 
 (* Filters *)
@@ -461,16 +472,3 @@ let string_of_moduletype = function
       List.map (fun it -> "import " ^ string_of_importtype it ^ "\n") its @
       List.map (fun et -> "export " ^ string_of_exporttype et ^ "\n") ets
     )
-
-let idx_of_typeuse = function Idx x -> x | _ -> assert false
-let deftype_of_typeuse = function Def dt -> dt | _ -> assert false
-
-let reftype_of_valtype = function RefT t -> t | _ -> assert false
-
-let structtype_of_comptype = function StructT fts -> fts | _ -> assert false
-let arraytype_of_comptype = function ArrayT ft -> ft | _ -> assert false
-let functype_of_comptype = function FuncT rt2 -> rt2 | _ -> assert false
-let conttype_of_comptype = function ContT ht -> ht | x -> print_endline ("--> " ^ string_of_comptype x); assert false
-
-let externtype_of_importtype = function ImportT (_, _, xt) -> xt
-let externtype_of_exporttype = function ExportT (_, xt) -> xt

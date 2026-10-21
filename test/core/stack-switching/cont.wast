@@ -153,7 +153,7 @@
     (func
       (cont.new $ft (ref.null $ft))
       (drop)))
-  "non-continuation type 0")
+  "non-continuation type")
 
 (assert_invalid
   (module
@@ -162,7 +162,7 @@
     (func
       (resume $ft (ref.null $ct))
       (unreachable)))
-  "non-continuation type 0")
+  "non-continuation type")
 
 (assert_invalid
   (module
@@ -172,7 +172,7 @@
     (func
       (resume_throw $ft $exn (ref.null $ct))
       (unreachable)))
-  "non-continuation type 0")
+  "non-continuation type")
 
 (assert_invalid
   (module
@@ -181,7 +181,7 @@
     (func
       (cont.bind $ft $ct (ref.null $ct))
       (unreachable)))
-  "non-continuation type 0")
+  "non-continuation type")
 
 (assert_invalid
   (module
@@ -190,7 +190,7 @@
     (func
       (cont.bind $ct $ft (ref.null $ct))
       (unreachable)))
-  "non-continuation type 0")
+  "non-continuation type")
 
 (assert_invalid
   (module
@@ -203,7 +203,7 @@
         (unreachable)
       )
       (drop)))
-  "non-continuation type 0")
+  "non-continuation type")
 
 (assert_invalid
   (module
@@ -217,12 +217,12 @@
       )
       (drop)
       (drop)))
-  "non-continuation type 0")
+  "non-continuation type")
 
 (assert_invalid
   (module
     (type $ct (cont $ct)))
-  "non-function type 0")
+  "non-function type")
 
 (assert_invalid
   (module
@@ -231,7 +231,7 @@
       (type $s1 (struct (field (ref 0) (ref 1) (ref $s0) (ref $s1))))
     )
     (type $ct (cont $s0)))
-  "non-function type 0")
+  "non-function type")
 
 (module
   (rec
