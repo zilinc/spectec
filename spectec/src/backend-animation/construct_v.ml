@@ -1,10 +1,8 @@
 open Value
 open Util
-open Source
 module RI = Reference_interpreter
 module RT = RI.Types
 module BI = Backend_interpreter
-open Xl.Atom
 
 
 let error at msg = Util.Error.error at "animation/construct_v" msg
@@ -103,6 +101,7 @@ and vl_of_comptype = function
   | RT.StructT ftl      -> caseV [["STRUCT"];[]]      [vl_of_list' vl_of_fieldtype ftl]
   | RT.ArrayT  ft       -> caseV [["ARRAY"];[]]       [vl_of_fieldtype ft]
   | RT.FuncT (rt1, rt2) -> caseV [["FUNC"];["->"];[]] [vl_of_resulttype rt1; vl_of_resulttype rt2]
+  | RT.ContT   ht       -> caseV [["CONT"];[]]        [vl_of_heaptype ht]
 
 and vl_of_subtype = function
   | RT.SubT (fin, tul, st) ->
@@ -702,6 +701,11 @@ let vl_of_catch (catch: RI.Ast.catch) =
   | CatchAll    idx       -> mk_catch "CATCH_ALL"     1 [vl_of_idx idx]
   | CatchAllRef idx       -> mk_catch "CATCH_ALL_REF" 1 [vl_of_idx idx]
 
+let vl_of_hdl ((idx, hdl) : RI.Ast.idx * RI.Ast.hdl) =
+  match hdl with
+  | OnLabel labelidx -> caseV [["_LABEL"; "ON"];[];[]] [vl_of_idx idx; vl_of_idx labelidx]
+  | OnSwitch -> caseV [["_SWITCH"; "ON"];[]] [vl_of_idx idx]
+
 let rec vl_of_instr (instr: RI.Ast.instr) =
   let mk_instr0 = nullary in
   let mk_instr c n = caseV ([c] :: List.init n (Fun.const [])) in
@@ -821,6 +825,13 @@ let rec vl_of_instr (instr: RI.Ast.instr) =
   | ArrayInitElem (idx1, idx2) -> mk_instr "ARRAY.INIT_ELEM"   2 [vl_of_idx idx1; vl_of_idx idx2]
   | ExternConvert Internalize  -> mk_instr0 "ANY.CONVERT_EXTERN"
   | ExternConvert Externalize  -> mk_instr0 "EXTERN.CONVERT_ANY"
+  | ContNew idx -> mk_instr "CONT.NEW" 1 [vl_of_idx idx]
+  | ContBind (idx1, idx2) -> mk_instr "CONT.BIND" 2 [vl_of_idx idx1; vl_of_idx idx2]
+  | Suspend idx -> mk_instr "SUSPEND" 1 [vl_of_idx idx]
+  | Resume (typeidx, hdls) -> mk_instr "RESUME" 2 [vl_of_idx typeidx; vl_of_list vl_of_hdl hdls]
+  | ResumeThrow (typeidx, tagidx, hdls) -> mk_instr "RETURN_THROW" 3 [vl_of_idx typeidx; vl_of_idx tagidx; vl_of_list vl_of_hdl hdls]
+  | Switch (typeidx, tagidx) -> mk_instr "SWITCH" 2 [vl_of_idx typeidx; vl_of_idx tagidx]
+
 
 
 let vl_of_const (const: RI.Ast.const) = vl_of_list vl_of_instr const.it
@@ -1058,6 +1069,7 @@ and vl_to_comptype v : RI.Types.comptype =
   | [["STRUCT"];[]], [ftl] -> StructT (vl_to_list' vl_to_fieldtype ftl)
   | [["ARRAY"];[]], [ft] -> ArrayT (vl_to_fieldtype ft)
   | [["FUNC"];["->"];[]], [rt1; rt2] -> FuncT (vl_to_resulttype rt1, vl_to_resulttype rt2)
+  | [["CONT"];[]], [tu] -> ContT (UseHT (vl_to_typeuse tu))
   | _ -> error_value "comptype" v
 
 and vl_to_subtype v : RI.Types.subtype =
@@ -1104,6 +1116,8 @@ and vl_to_heaptype : value -> RI.Types.heaptype = function
     | [["NOEXN"]]                    -> NoExnHT
     | [["EXTERN"]] | [["EXTERNREF"]] -> ExternHT
     | [["NOEXTERN"]]                 -> NoExternHT
+    | [["CONT"]] | [["CONTREF"]]     -> ContHT
+    | [["NOCONT"]]                   -> NoContHT
     | ([["_IDX"];[]] | [["REC"];[]] | [["_DEF"];[];[]]) -> UseHT (vl_to_typeuse v)
     | _ -> error no ("Invalid heaptype: " ^ string_of_value v)
     )
@@ -1733,6 +1747,12 @@ let vl_to_catch' v : RI.Ast.catch' =
   | _ -> error_value "catch" v
 let vl_to_catch v : RI.Ast.catch = vl_to_phrase vl_to_catch' v
 
+let vl_to_hdl v : RI.Ast.idx * RI.Ast.hdl =
+  match match_caseV "hdl" v with
+  | [["_LABEL" ; "ON"];[];[]], [idx; labelidx] -> vl_to_idx idx, OnLabel (vl_to_idx labelidx)
+  | [["_SWITCH"; "ON"];[]   ], [idx] -> vl_to_idx idx, OnSwitch
+  | _ -> error_value "hdl" v
+
 let vl_to_num v : RI.Value.num =
   match match_caseV "num" v with
   | [["CONST"];[];[]], [numtype; num_] ->
@@ -1866,6 +1886,12 @@ and vl_to_instr' v : RI.Ast.instr' =
   | [["ARRAY.INIT_ELEM"];[];[]], [idx1; idx2] -> ArrayInitElem (vl_to_idx idx1, vl_to_idx idx2)
   | [["ANY.CONVERT_EXTERN"]], [] -> ExternConvert Internalize
   | [["EXTERN.CONVERT_ANY"]], [] -> ExternConvert Externalize
+  | [["CONT.NEW"];[]], [idx] -> ContNew (vl_to_idx idx)
+  | [["CONT.BIND"];[];[]], [idx1; idx2] -> ContBind (vl_to_idx idx1, vl_to_idx idx2)
+  | [["RESUME"];[];[]], [idx; hdls] -> Resume (vl_to_idx idx, vl_to_list vl_to_hdl hdls)
+  | [["RESUME_THROW"];[];[];[]], [typeidx; tagidx; hdls] -> ResumeThrow (vl_to_idx typeidx, vl_to_idx tagidx, vl_to_list vl_to_hdl hdls)
+  | [["SUSPEND"];[]], [idx] -> Suspend (vl_to_idx idx)
+  | [["SWITCH"];[];[]], [typeidx; tagidx] -> Switch (vl_to_idx typeidx, vl_to_idx tagidx)
   | _ -> error_value "instruction" v
 
 let vl_to_const : value -> RI.Ast.const = vl_to_list vl_to_instr |> vl_to_phrase

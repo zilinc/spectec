@@ -22,6 +22,7 @@ module Engine : Engine = struct
     | Exn of RI.Source.region * taginst * value list
     | Trap of error
     | Exhaustion of error
+    | Suspension of error
   let undefined = Obj.magic ""
 
   let validate m =

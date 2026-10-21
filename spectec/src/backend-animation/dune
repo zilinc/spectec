@@ -58,4 +58,5 @@
 
 (env
   (dev
-    (flags :standard -w -8-26-27-32-33-34)))
+    (flags :standard -w -27)))
+;;     (flags :standard -w -8-26-27-32-33-34)))

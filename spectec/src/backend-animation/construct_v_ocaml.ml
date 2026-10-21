@@ -1,10 +1,8 @@
 open Value
 open Util
-open Source
 module RI = Reference_interpreter
 module RT = RI.Types
 module BI = Backend_interpreter
-open Xl.Atom
 
 
 let error at msg = Util.Error.error at "animation/construct_v_ocaml" msg

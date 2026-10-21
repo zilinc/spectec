@@ -1138,6 +1138,7 @@ and al_of_comptype = function
   | StructT ftl -> CaseV ("STRUCT", [ al_of_list al_of_fieldtype ftl ])
   | ArrayT ft -> CaseV ("ARRAY", [ al_of_fieldtype ft ])
   | FuncT (rt1, rt2) -> CaseV ("->", [ al_of_resulttype rt1; al_of_resulttype rt2 ])
+  | ContT _ -> assert false
 
 and al_of_subtype = function
   | SubT (fin, tul, st) ->
@@ -1878,7 +1879,7 @@ let rec al_of_instr instr =
     CaseV ("ARRAY.INIT_ELEM", [ al_of_idx idx1; al_of_idx idx2 ])
   | ExternConvert Internalize -> nullary "ANY.CONVERT_EXTERN"
   | ExternConvert Externalize -> nullary "EXTERN.CONVERT_ANY"
-  (* | _ -> CaseV ("TODO: Unconstructed Wasm instruction (al_of_instr)", []) *)
+  | _ -> CaseV ("TODO: Unconstructed Wasm instruction (al_of_instr)", [])
 
 let al_of_const const = al_of_list al_of_instr const.it
 
