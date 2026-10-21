@@ -24,6 +24,7 @@ sig
     | Exn of Source.region * taginst * value list
     | Trap of error
     | Exhaustion of error
+    | Suspension of error
 
   val validate : module_ -> (Types.moduletype, error) result
   val validate_with_custom :

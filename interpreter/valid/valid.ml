@@ -93,21 +93,41 @@ let refer_func (c : context) x = refer "function" c.refs.Free.funcs x
 
 (* Conversions *)
 
+(*
 let conttype_of_heaptype (c : context) (ht : heaptype) at : heaptype =
   match ht with
   | UseHT (Def dt) -> conttype_of_comptype (expand_deftype dt)
   | UseHT (Idx x) -> cont_type c (x @@ at)
   | _ -> assert false
+*)
 
+let deftype_of_heaptype (c : context) (ht : heaptype) at : deftype =
+  match ht with
+  | UseHT (Def dt) -> dt
+  | UseHT (Idx x) -> type_ c (x @@ at)
+  | _ -> assert false
+
+let conttype_of_heaptype (c : context) (ht : heaptype) at : heaptype =
+  match expand_deftype (deftype_of_heaptype c ht at) with
+  | ContT ht' -> ht'
+  | _ -> error at ("non-continuation type")
+
+(*
 let functype_of_heaptype (c : context) (ht : heaptype) at : resulttype * resulttype =
   match ht with
   | UseHT (Def dt) -> functype_of_comptype (expand_deftype dt)
   | UseHT (Idx x) -> func_type c (x @@ at)
   | _ -> assert false
+*)
+
+let functype_of_heaptype (c : context) (ht : heaptype) at : resulttype * resulttype =
+  match expand_deftype (deftype_of_heaptype c ht at) with
+  | FuncT (ts1, ts2) -> ts1, ts2
+  | _ -> error at ("non-function type")
+
 
 let functype_of_tagtype (c : context) (TagT ut) at : resulttype * resulttype =
   functype_of_comptype (expand_deftype (deftype_of_typeuse ut))
-
 
 let clos (c : context) subst t =
   let dts =

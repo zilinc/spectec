@@ -10,7 +10,6 @@ open Instance
 
 module Link = Error.Make ()
 module Trap = Error.Make ()
-module Exception = Error.Make ()
 module Suspension = Error.Make ()
 module Exhaustion = Error.Make ()
 module Crash = Error.Make ()
@@ -1336,15 +1335,12 @@ let rec eval (c : config) : value stack =
   | vs, e::_ when is_jumping e ->
     (match e.it with
     | Trapping msg ->  Trap.error e.at msg
-    | Throwing _ -> Exception.error e.at "unhandled exception"
+    | Throwing (a, args) -> raise (Exception (e.at, Exn.Exn (a, args)))
     | Suspending _ -> Suspension.error e.at "unhandled tag"
     | Returning _ | ReturningInvoke _ -> Crash.error e.at "undefined frame"
     | Breaking _ -> Crash.error e.at "undefined label"
     | _ -> assert false
     )
-
-  | vs, {it = Throwing (a, args); at} :: _ ->
-    raise (Exception (at, Exn.Exn (a, args)))
 
   | vs, es ->
     eval (step c)

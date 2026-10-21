@@ -385,6 +385,7 @@ let result = function
     Exception.error at msg
   | Engine.Trap (at, msg) -> Trap.error at msg
   | Engine.Exhaustion (at, msg) -> Exhaustion.error at msg
+  | Engine.Suspension (at, msg) -> Suspension.error at msg
 
 let rec run_definition def : Ast.module_ * Custom.section list =
   match def.it with

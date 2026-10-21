@@ -8,12 +8,17 @@ struct
     | Exn of Source.region * taginst * Value.t list
     | Trap of error
     | Exhaustion of error
+    | Suspension of error
 
   let result f x y =
     try Return (f x y) with
     | Eval.Trap (at, msg) -> Trap (at, msg)
     | Eval.Exception (at, Exn.Exn (a, vs)) -> Exn (at, a, vs)
     | Eval.Exhaustion (at, msg) -> Exhaustion (at, msg)
+    | Eval.Suspension (at, msg) -> Suspension (at, msg)
+    | Eval.Crash (at, msg) as exn -> print_endline "crash! --> "; raise exn
+    | Eval.Link (at, msg) as exn -> print_endline "link! --> "; raise exn
+    | exn -> print_endline ("Hey! --> " ^ Printexc.to_string exn); Stdlib.raise exn
 
   let guard exns f x y =
     try Some (f x y) with
