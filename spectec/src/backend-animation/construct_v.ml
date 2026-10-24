@@ -704,7 +704,7 @@ let vl_of_catch (catch: RI.Ast.catch) =
 let vl_of_hdl ((idx, hdl) : RI.Ast.idx * RI.Ast.hdl) =
   match hdl with
   | OnLabel labelidx -> caseV [["_LABEL"; "ON"];[];[]] [vl_of_idx idx; vl_of_idx labelidx]
-  | OnSwitch -> caseV [["_SWITCH"; "ON"];[]] [vl_of_idx idx]
+  | OnSwitch -> caseV [["_SWITCH"; "ON"];["SWITCH"]] [vl_of_idx idx]
 
 let rec vl_of_instr (instr: RI.Ast.instr) =
   let mk_instr0 = nullary in
@@ -829,7 +829,7 @@ let rec vl_of_instr (instr: RI.Ast.instr) =
   | ContBind (idx1, idx2) -> mk_instr "CONT.BIND" 2 [vl_of_idx idx1; vl_of_idx idx2]
   | Suspend idx -> mk_instr "SUSPEND" 1 [vl_of_idx idx]
   | Resume (typeidx, hdls) -> mk_instr "RESUME" 2 [vl_of_idx typeidx; vl_of_list vl_of_hdl hdls]
-  | ResumeThrow (typeidx, tagidx, hdls) -> mk_instr "RETURN_THROW" 3 [vl_of_idx typeidx; vl_of_idx tagidx; vl_of_list vl_of_hdl hdls]
+  | ResumeThrow (typeidx, tagidx, hdls) -> mk_instr "RESUME_THROW" 3 [vl_of_idx typeidx; vl_of_idx tagidx; vl_of_list vl_of_hdl hdls]
   | Switch (typeidx, tagidx) -> mk_instr "SWITCH" 2 [vl_of_idx typeidx; vl_of_idx tagidx]
 
 
@@ -1750,7 +1750,7 @@ let vl_to_catch v : RI.Ast.catch = vl_to_phrase vl_to_catch' v
 let vl_to_hdl v : RI.Ast.idx * RI.Ast.hdl =
   match match_caseV "hdl" v with
   | [["_LABEL" ; "ON"];[];[]], [idx; labelidx] -> vl_to_idx idx, OnLabel (vl_to_idx labelidx)
-  | [["_SWITCH"; "ON"];[]   ], [idx] -> vl_to_idx idx, OnSwitch
+  | [["_SWITCH"; "ON"];["SWITCH"]], [idx] -> vl_to_idx idx, OnSwitch
   | _ -> error_value "hdl" v
 
 let vl_to_num v : RI.Value.num =
