@@ -123,6 +123,7 @@ module Store = struct
       |> Record.add "STRUCTS" (listV [||])
       |> Record.add "ARRAYS"  (listV [||])
       |> Record.add "EXNS"    (listV [||])
+      |> Record.add "CONTS"   (listV [||])
       |> Record.add "HOST"    (HostState.mk_state 0)
 
     (* Ds.Store.init () *)  (* NOTE: I don't think there's anything that depends on Ds. / zilinc *)
@@ -145,6 +146,7 @@ module Store = struct
     let structs = as_str_field "STRUCTS" s in
     let arrays  = as_str_field "ARRAYS"  s in
     let exns    = as_str_field "EXNS"    s in
+    let conts   = as_str_field "CONTS"   s in
     let hstate  = as_str_field "HOST"    s in
     update "TAGS"    (Fun.const tags   );
     update "GLOBALS" (Fun.const globals);
@@ -156,6 +158,7 @@ module Store = struct
     update "STRUCTS" (Fun.const structs);
     update "ARRAYS"  (Fun.const arrays );
     update "EXNS"    (Fun.const exns   );
+    update "CONTS"   (Fun.const conts  );
     update "HOST"    (Fun.const hstate )
 
 end
