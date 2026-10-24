@@ -639,7 +639,7 @@ rule Instr_ok/resume_throw:
   -- Expand: C.TYPES[x] ~~ CONT tu
   -- Expand_use: tu ~~_C $($(FUNC t_1* -> t_2*))
   -- Expand: $as_deftype(C.TAGS[xe]) ~~ FUNC te* -> eps
-  -- (Hdl_ok: C |- hdl : t_2*)
+  -- (Hdl_ok: C |- hdl : t_2*)*
 
 rule Hdl_ok/label:
   C |- _LABEL ON x l : t*

@@ -52,6 +52,7 @@ let step_table : (string * string) Map.t ref =
     "VNARROW"                 ;
     "VCVTOP"                  ;
     "LOCAL.TEE"               ;
+    "RESUMING"                ;
   ] |> List.map (fun op -> op, ("Step_pure", String.lowercase_ascii op))
   in
   let step_read_table = [
@@ -93,6 +94,8 @@ let step_table : (string * string) Map.t ref =
     "MEMORY.FILL"             ;
     "MEMORY.COPY"             ;
     "MEMORY.INIT"             ;
+    "SUSPEND"                 ;
+    "SWITCH"                  ;
   ] |> List.map (fun op -> op, ("Step_read", String.lowercase_ascii op))
   in
   let step_table = [
@@ -112,6 +115,11 @@ let step_table : (string * string) Map.t ref =
     "VSTORE_LANE"             ;
     "MEMORY.GROW"             ;
     "DATA.DROP"               ;
+    "CONT.NEW"                ;
+    "CONT.BIND"               ;
+    "RESUME"                  ;
+    "RESUME_THROW"            ;
+    (* "PROMPT"                  ; *)
   ] |> List.map (fun op -> op, ("Step", String.lowercase_ascii op))
   in
   (* These opcode never appears in the head position. *)

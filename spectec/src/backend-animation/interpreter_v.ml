@@ -1122,7 +1122,7 @@ and use_step_ctxt = {
     function
     | [instr] ->
       let mixop, _ = match_caseV "instr" instr in
-      List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"] |> boolV |> return
+      List.mem (List.hd (List.hd mixop)) ["LABEL_"; "FRAME_"; "HANDLER_"; "PROMPT"] |> boolV |> return
     | vs -> error_values ("Args to $use_step_ctxt") vs
 }
 
