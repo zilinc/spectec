@@ -56,14 +56,16 @@ TEST_PATHS := test-interpreter/spec-test-3/bulk-memory \
               test-interpreter/spec-test-3/exceptions \
               test-interpreter/spec-test-3/gc \
               test-interpreter/spec-test-3/memory64 \
-              test-interpreter/spec-test-3/multi-memory
+              test-interpreter/spec-test-3/multi-memory \
+							test-interpreter/spec-test-3/stack-switching
 else ifeq ($(TEST),OCAML_OLD)
 TEST_PATHS := test-interpreter/spec-test-3/ \
               test-interpreter/spec-test-3/bulk-memory \
               test-interpreter/spec-test-3/exceptions \
               test-interpreter/spec-test-3/gc \
               test-interpreter/spec-test-3/memory64 \
-              test-interpreter/spec-test-3/multi-memory
+              test-interpreter/spec-test-3/multi-memory \
+							test-interpreter/spec-test-3/stack-switching
 else ifeq ($(TEST),NON_SLOW)
 TEST_PATHS := test-interpreter/spec-test-3/ \
               test-interpreter/spec-test-3/bulk-memory \
@@ -72,7 +74,8 @@ TEST_PATHS := test-interpreter/spec-test-3/ \
               test-interpreter/spec-test-3/memory64 \
               test-interpreter/spec-test-3/multi-memory \
               test-interpreter/spec-test-3/relaxed-simd \
-              test-interpreter/spec-test-3/simd
+              test-interpreter/spec-test-3/simd \
+							test-interpreter/spec-test-3/stack-switching
 else
 TEST_PATHS := $(TEST)
 endif
