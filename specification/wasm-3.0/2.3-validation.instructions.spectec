@@ -644,7 +644,7 @@ rule Instr_ok/resume_throw:
 rule Hdl_ok/label:
   C |- _LABEL ON x l : t*
   -- Expand: $as_deftype(C.TAGS[x]) ~~ FUNC t_1* -> t_2*
-  -- if C.LABELS[l] = t'_1* (REF nul (_IDX x'))
+  -- if C.LABELS[l] = t'_1* (REF nul? (_IDX x'))
   -- Resulttype_sub: C |- t_1* <: t'_1*
   ----
   -- Expand: C.TYPES[x'] ~~ CONT tu
@@ -664,10 +664,10 @@ rule Instr_ok/switch:
   -- Expand: $as_deftype(C.TAGS[xe]) ~~ FUNC eps -> t*
   ----
   -- Expand: C.TYPES[x] ~~ CONT tu_1
-  -- Expand_use: tu_1 ~~_C $($(FUNC t_1* (REF nul (_IDX y)) -> te_1*))
+  -- Expand_use: tu_1 ~~_C $($(FUNC t_1* (REF nul? tu') -> te_1*))
   -- Resulttype_sub: C |- te_1* <: t*
   ----
-  -- Expand: C.TYPES[y] ~~ CONT tu_2
+  -- Expand_use: tu' ~~_C CONT tu_2
   -- Expand_use: tu_2 ~~_C $($(FUNC t_2* -> te_2*))
   -- Resulttype_sub: C |- t* <: te_2*
 

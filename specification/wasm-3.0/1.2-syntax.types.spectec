@@ -400,7 +400,7 @@ def $subst_fieldtype((mut? zt), tv*, tu*) = mut? $subst_storagetype(zt, tv*, tu*
 def $subst_comptype((STRUCT ft*), tv*, tu*) = STRUCT $subst_fieldtype(ft, tv*, tu*)*
 def $subst_comptype((ARRAY ft), tv*, tu*) = ARRAY $subst_fieldtype(ft, tv*, tu*)
 def $subst_comptype((FUNC t_1* -> t_2*), tv*, tu*) = FUNC $subst_valtype(t_1, tv*, tu*)* -> $subst_valtype(t_2, tv*, tu*)*
-def $subst_comptype((CONT tv'), tv*, tu*) = CONT $subst_typeuse(tv', tv*, tu*)
+def $subst_comptype((CONT tu'), tv*, tu*) = CONT $subst_typeuse(tu', tv*, tu*)
 
 def $subst_subtype((SUB final? tu'* ct), tv*, tu*) =
   SUB final? $subst_typeuse(tu', tv*, tu*)* $subst_comptype(ct, tv*, tu*)

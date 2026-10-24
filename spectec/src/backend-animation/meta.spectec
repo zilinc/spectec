@@ -622,7 +622,7 @@ def $reduce((z; instr+), stackcount) = STEP ($with_cont(z, a, eps); (SUSPENDING 
   -- if $continst(z)[a] = { CONT cont, ARITY n' }
   -- if tagaddr = $tagaddr(z)[xe]
   -- Expand: $type(z, x) ~~ CONT dt
-  -- Expand: dt ~~ FUNC t_1* (REF nul dt_1) -> te_1*
+  -- Expand: dt ~~ FUNC t_1* (REF nul? dt_1) -> te_1*
   -- Expand: dt_1 ~~ CONT dt'_1
   -- Expand: dt'_1 ~~ FUNC t_2^m -> te_2*
   -- if n = |t_1*|
