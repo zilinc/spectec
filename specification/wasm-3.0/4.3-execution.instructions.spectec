@@ -313,7 +313,7 @@ rule Step_pure/handler-vals:
 ;; Effect handlers
 
 rule Step/cont.new-null:
-  z; (REF.NULL ht) (CONT.NEW x)  ~>  z; TRAP
+  z; REF.NULL_ADDR (CONT.NEW x)  ~>  z; TRAP
 
 rule Step/cont.new-func:
   z; (REF.FUNC_ADDR a) (CONT.NEW y)  ~>  $add_continst(z, { CONT (VALS eps HOLE instr*), ARITY n }); (REF.CONT_ADDR ca)
@@ -323,7 +323,7 @@ rule Step/cont.new-func:
   -- if ca = |$continst(z)|
 
 rule Step/cont.bind-null:
-  z; (REF.NULL ht) (CONT.BIND x y)  ~>  z; TRAP
+  z; REF.NULL_ADDR (CONT.BIND x y)  ~>  z; TRAP
 
 rule Step/cont.bind-consumed:
   z; (REF.CONT_ADDR a) (CONT.BIND x y)  ~>  z; TRAP
@@ -342,7 +342,7 @@ rule Step/cont.bind-cont:
   -- if z' = $add_continst(z, { CONT $contfill(cont, val^n, eps), ARITY (|t'_1*|) })
 
 rule Step/resume-null:
-  z; (REF.NULL ht) (RESUME kx hdl*)  ~>  z; TRAP
+  z; REF.NULL_ADDR (RESUME kx hdl*)  ~>  z; TRAP
 
 rule Step/resume-consumed:
   z; (REF.CONT_ADDR a) (RESUME kx hdl*)  ~>  z; TRAP
@@ -358,7 +358,7 @@ rule Step/resume-cont:
   -- if (addrhdl = $hdlinst(z, hdl))*
 
 rule Step/resume_throw-null:
-  z; (REF.NULL ht) (RESUME_THROW kx ax hdl*)  ~>  z; TRAP
+  z; REF.NULL_ADDR (RESUME_THROW kx ax hdl*)  ~>  z; TRAP
 
 rule Step/resume_throw-consumed:
   z; (REF.CONT_ADDR a) (RESUME_THROW kx ax hdl*)  ~>  z; TRAP
@@ -403,7 +403,7 @@ rule Step_read/suspend:
   -- Expand: $as_deftype($taginst(z)[tagaddr].TYPE) ~~ FUNC t_1^n -> t_2^m
 
 rule Step/switch-null:
-  z; (REF.NULL ht) (SWITCH x xe)  ~>  z; TRAP
+  z; REF.NULL_ADDR (SWITCH x xe)  ~>  z; TRAP
 
 rule Step/switch-consumed:
   z; (REF.CONT_ADDR a) (SWITCH x xe)  ~>  z; TRAP
