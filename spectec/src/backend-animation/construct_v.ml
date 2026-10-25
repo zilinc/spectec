@@ -1,8 +1,10 @@
 open Value
 open Util
+open Source
 module RI = Reference_interpreter
 module RT = RI.Types
 module BI = Backend_interpreter
+open Xl.Atom
 
 
 let error at msg = Util.Error.error at "animation/construct_v" msg
@@ -634,15 +636,15 @@ let vl_of_vreplaceop : RI.Ast.vreplaceop -> value list = function
 
 
 let vl_of_packsize = function
-  | RI.Pack.Pack8  -> vl_of_nat 8  |> caseV1
-  | RI.Pack.Pack16 -> vl_of_nat 16 |> caseV1
-  | RI.Pack.Pack32 -> vl_of_nat 32 |> caseV1
-  | RI.Pack.Pack64 -> vl_of_nat 64 |> caseV1
+  | RI.Pack.Pack8  -> eight
+  | RI.Pack.Pack16 -> sixteen
+  | RI.Pack.Pack32 -> thirtytwo
+  | RI.Pack.Pack64 -> sixtyfour
 
 let vl_of_packshape = function
-  | RI.Pack.Pack8x8  -> [vl_of_nat 8  |> caseV1; vl_of_nat 8]
-  | RI.Pack.Pack16x4 -> [vl_of_nat 16 |> caseV1; vl_of_nat 4]
-  | RI.Pack.Pack32x2 -> [vl_of_nat 32 |> caseV1; vl_of_nat 2]
+  | RI.Pack.Pack8x8  -> [eight    ; eight]
+  | RI.Pack.Pack16x4 -> [sixteen  ; four ]
+  | RI.Pack.Pack32x2 -> [thirtytwo; two  ]
 
 let vl_of_memop f idx (memop: (RI.Types.numtype, 'p) RI.Ast.memop) =
   let str = [("ALIGN" , vl_of_uN (Z.of_int memop.align)  |> ref);
@@ -1691,9 +1693,9 @@ let vl_to_vmemop (f: value -> 'p) (g: value list -> value * (value list)) (vl: v
   let idx, vl' = g vl in vl_to_idx idx, vl_to_vmemop' f vl'
 
 let vl_to_packshape = function
-  | z1, NumV (`Nat z2) when z1 = eight     && z2 = Z.of_int 8 -> RI.Pack.Pack8x8
-  | z1, NumV (`Nat z2) when z1 = sixteen   && z2 = Z.of_int 4 -> RI.Pack.Pack16x4
-  | z1, NumV (`Nat z2) when z1 = thirtytwo && z2 = Z.of_int 2 -> RI.Pack.Pack32x2
+  | z1, z2 when z1 = eight     && z2 = eight -> RI.Pack.Pack8x8
+  | z1, z2 when z1 = sixteen   && z2 = four  -> RI.Pack.Pack16x4
+  | z1, z2 when z1 = thirtytwo && z2 = two   -> RI.Pack.Pack32x2
   | z1, z2 -> error_value "packshape" (TupV [z1; z2])
 
 let vl_to_vloadop': value -> RI.Pack.packsize * RI.Pack.vext = function

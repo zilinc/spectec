@@ -1,8 +1,11 @@
 open Il_util
 open Construct_v
 open Def
+open State_v
 open Value
 open Util
+open Lib.Time
+open Lib.Fun
 open Error
 open Il.Ast
 open Il.Print
@@ -393,7 +396,7 @@ and eval_exp ctx exp : value OptMonad.m =
     let* vn = eval_exp ctx n <&> vl_to_int in
     listV (Array.make vn v1) |> return
   | IterE (e1, ((_, xes) as iterexp)) ->
-    let* (iter', xvs) = eval_iterexp ctx iterexp in
+    let* (iter', xvs) as iterval = eval_iterexp ctx iterexp in
     let ids, vs = List.split xvs in
     if iter' <= List1 && vs = [] then
       error_eval "Iterated expression" exp (Some "Inadequate information about the iteration scheme.")
@@ -661,6 +664,7 @@ and eval_prem ctx prem : VContext.t OptMonad.m =
           let ctx = VContext.add_varid ctx i (vl_of_nat idx) in
           (* In-flow *)
           let* ctx = foldlM (fun ctx ((x, _), v) ->
+            let t = Il.Env.find_var !il_env x in
             let e' = Array.get !(as_list_value v) idx in
             VContext.add_varid ctx x e' |> return
           ) ctx (List.combine in_binds in_exps)

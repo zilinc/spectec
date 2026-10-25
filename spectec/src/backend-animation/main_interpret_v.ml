@@ -1,8 +1,14 @@
 open Def
 open Spectest_v
 open State_v
+open Il.Ast
+open Il.Print
 open Value
 open Util
+open Error
+open Lib.Time
+open Lib.Fun
+open Backend_interpreter.Construct
 module I = Backend_interpreter
 module R = Reference_interpreter
 open R.Script

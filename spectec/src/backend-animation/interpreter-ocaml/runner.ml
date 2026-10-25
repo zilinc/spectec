@@ -1,4 +1,9 @@
 module R = Reference_interpreter
+
+open Backend_interpreter.Ds
+open R.Script
+open R.Source
+
 module Register_v = State_v.Register
 
 let parser = R.Parse.Script.parse_file

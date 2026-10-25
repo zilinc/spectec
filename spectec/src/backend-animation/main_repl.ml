@@ -1,6 +1,8 @@
 open Def
 open Value
 open Interpreter_v
+open Il.Env
+open Il.Ast
 open Util.Source
 
 

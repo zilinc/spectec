@@ -858,3 +858,4 @@ relation Eval_expr                         hint(animate_manual $eval_expr: (%1, 
 
 def $NotImmutReachable                     hint(no_animate)
 def $utf8                                  hint(no_animate)
+def $ordered                               hint(no_animate)
