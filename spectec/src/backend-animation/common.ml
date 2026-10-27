@@ -95,7 +95,6 @@ let step_table : (string * string) Map.t ref =
     "MEMORY.COPY"             ;
     "MEMORY.INIT"             ;
     "SUSPEND"                 ;
-    "SWITCH"                  ;
   ] |> List.map (fun op -> op, ("Step_read", String.lowercase_ascii op))
   in
   let step_table = [
@@ -119,6 +118,7 @@ let step_table : (string * string) Map.t ref =
     "CONT.BIND"               ;
     "RESUME"                  ;
     "RESUME_THROW"            ;
+    "SWITCH"                  ;
     (* "PROMPT"                  ; *)
   ] |> List.map (fun op -> op, ("Step", String.lowercase_ascii op))
   in

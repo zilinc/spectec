@@ -244,6 +244,11 @@ let test_assertion assertion =
     | exception e -> fail_exn e
     | vs -> print_fail assertion.at "runtime" re ("Got result " ^ string_of_values ", " vs)
     )
+  | AssertSuspension (action, re) ->
+    (match run_action action |> as_list_value' with
+    | [CaseV ([["SUSPENDING"];[];[];[]], _)] -> success
+    | vs -> print_fail assertion.at "expected suspension" "" (string_of_values ", " vs)
+    )
   (* ignore other kinds of assertions *)
   | _ -> pass
 
