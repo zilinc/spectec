@@ -867,6 +867,8 @@ and call_func name args : value OptMonad.m =
       hostcall args
     else
       error no (sprintf "Builtin function `%s` is not defined in the interpreter." name)
+  (* bad temp fix for hostcalls in ocaml interpreter *)
+  | None when name = "hostcall_ocaml" -> hostcall_ocaml args
   | _ when is_builtin ->
     error no (sprintf "Function `%s` is marked as builtin but there is either no declaration or is defined in SpecTec." name)
   | None -> error no (sprintf "There is no function named `%s`." name)

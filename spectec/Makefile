@@ -4,7 +4,6 @@ NAME = spectec
 EXT = $(NAME)
 LOG = _log
 PRINT_DL ?= 0
-UNDEP ?= 0
 
 # Main targets
 
@@ -107,17 +106,9 @@ anim-test-bench: anim-test-all
 SPEC ?= ../specification/wasm-3.0/* src/backend-animation/meta.spectec
 
 ifeq ($(PRINT_DL),1)
-  ifeq ($(UNDEP),1)
-    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --remove-indexed-types --sideconditions --generate-ocaml "dl_codegen"
-  else
     SPECTEC_FLAGS = --animate --allow-partial-animation --inline --print-dl --typefamily-removal --sideconditions --generate-ocaml "dl_codegen"
-  endif
 else
-  ifeq ($(UNDEP),1)
-    SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --remove-indexed-types --sideconditions --generate-ocaml "dl_codegen"
-  else
     SPECTEC_FLAGS = --animate --allow-partial-animation --inline --typefamily-removal --sideconditions --generate-ocaml "dl_codegen"
-  endif
 endif
 
 
