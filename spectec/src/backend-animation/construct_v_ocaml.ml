@@ -105,6 +105,7 @@ and vl_of_comptype = function
       caseV
         [ [ "FUNC" ]; [ "->" ]; [] ]
         [ vl_of_resulttype rt1; vl_of_resulttype rt2 ]
+  | RT.ContT ht -> caseV [ [ "CONT" ]; [] ] [ vl_of_heaptype ht ]
 
 and vl_of_subtype = function
   | RT.SubT (fin, tul, st) ->
@@ -1653,6 +1654,12 @@ let vl_of_catch (catch : RI.Ast.catch) =
   | CatchAll idx -> mk_catch "CATCH_ALL" 1 [ vl_of_idx idx ]
   | CatchAllRef idx -> mk_catch "CATCH_ALL_REF" 1 [ vl_of_idx idx ]
 
+let vl_of_hdl ((idx, hdl) : RI.Ast.idx * RI.Ast.hdl) =
+  match hdl with
+  | OnLabel labelidx ->
+      caseV [ [ "_LABEL"; "ON" ]; []; [] ] [ vl_of_idx idx; vl_of_idx labelidx ]
+  | OnSwitch -> caseV [ [ "_SWITCH"; "ON" ]; [ "SWITCH" ] ] [ vl_of_idx idx ]
+
 let rec vl_of_instr (instr : RI.Ast.instr) =
   let mk_instr0 = nullary in
   let mk_instr c n = caseV ([ c ] :: List.init n (Fun.const [])) in
@@ -1809,6 +1816,17 @@ let rec vl_of_instr (instr : RI.Ast.instr) =
       mk_instr "ARRAY.INIT_ELEM" 2 [ vl_of_idx idx1; vl_of_idx idx2 ]
   | ExternConvert Internalize -> mk_instr0 "ANY.CONVERT_EXTERN"
   | ExternConvert Externalize -> mk_instr0 "EXTERN.CONVERT_ANY"
+  | ContNew idx -> mk_instr "CONT.NEW" 1 [ vl_of_idx idx ]
+  | ContBind (idx1, idx2) ->
+      mk_instr "CONT.BIND" 2 [ vl_of_idx idx1; vl_of_idx idx2 ]
+  | Suspend idx -> mk_instr "SUSPEND" 1 [ vl_of_idx idx ]
+  | Resume (typeidx, hdls) ->
+      mk_instr "RESUME" 2 [ vl_of_idx typeidx; vl_of_list vl_of_hdl hdls ]
+  | ResumeThrow (typeidx, tagidx, hdls) ->
+      mk_instr "RESUME_THROW" 3
+        [ vl_of_idx typeidx; vl_of_idx tagidx; vl_of_list vl_of_hdl hdls ]
+  | Switch (typeidx, tagidx) ->
+      mk_instr "SWITCH" 2 [ vl_of_idx typeidx; vl_of_idx tagidx ]
 
 let vl_of_const (const : RI.Ast.const) = vl_of_list vl_of_instr const.it
 

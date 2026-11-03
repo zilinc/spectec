@@ -14,7 +14,7 @@ let use_step_pure = function
   | VBITMASK_instr _ | VSWIZZLOP_instr _ | VSHUFFLE_instr _ | VSPLAT_instr _
   | VEXTRACT_LANE_instr _ | VREPLACE_LANE_instr _ | VEXTUNOP_instr _
   | VEXTBINOP_instr _ | VEXTTERNOP_instr _ | VNARROW_instr _ | VCVTOP_instr _
-  | LOCAL_dot_TEE_instr _ | REF_dot_I31_instr (* not sure *) ->
+  | LOCAL_dot_TEE_instr _ | REF_dot_I31_instr | RESUMING_instr _ ->
       true
   | _ -> false
 
@@ -32,7 +32,7 @@ let use_step_read = function
   | TABLE_dot_COPY_instr _ | TABLE_dot_INIT_instr _ | LOAD_instr _
   | VLOAD_instr _ | VLOAD_LANE_instr _ | MEMORY_dot_SIZE_instr _
   | MEMORY_dot_FILL_instr _ | MEMORY_dot_COPY_instr _ | MEMORY_dot_INIT_instr _
-    ->
+  | SUSPEND_instr _ ->
       true
   | _ -> false
 
@@ -42,14 +42,16 @@ let use_step = function
   | LOCAL_dot_SET_instr _ | GLOBAL_dot_SET_instr _ | TABLE_dot_SET_instr _
   | TABLE_dot_GROW_instr _ | ELEM_dot_DROP_instr _ | STORE_instr _
   | VSTORE_instr _ | VSTORE_LANE_instr _ | MEMORY_dot_GROW_instr _
-  | DATA_dot_DROP_instr _ ->
+  | DATA_dot_DROP_instr _ | CONT_dot_NEW_instr _ | CONT_dot_BIND_instr _
+  | RESUME_instr _ | RESUME_THROW_instr _ | SWITCH_instr _ ->
       true
   | _ -> false
 
 let use_step_ctxt = function
   | LABEL_Pct_lbrackcuPct_rbrackcuPct_instr _
   | FRAME_Pct_lbrackcuPct_rbrackcuPct_instr _
-  | HANDLER_Pct_lbrackcuPct_rbrackcuPct_instr _ ->
+  | HANDLER_Pct_lbrackcuPct_rbrackcuPct_instr _
+  | PROMPT_lbrackcuPct_rbrackcuPct_instr _ ->
       true
   | _ -> false
 

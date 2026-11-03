@@ -119,6 +119,7 @@ let globalstore =
       uc_structs_store = [];
       uc_arrays_store = [];
       uc_exns_store = [];
+      uc_conts_store = [];
     }
 
 let update_store s2 = compose_store !globalstore s2
@@ -358,6 +359,24 @@ let test_assertion assertion =
       match run_action action with
       | exception I.Exception.OutOfMemory -> success
       | vs -> print_fail assertion.at "runtime" re "")
+  | AssertSuspension (action, re) -> (
+      match run_action action with
+      | Config (CPct_semiPct_config (_, instrs)) -> (
+          let result = List.map vl_of_instr instrs in
+          match result with
+          | [ CaseV ([ [ "SUSPENDING" ]; []; []; [] ], _) ] -> success
+          | vs ->
+              print_fail assertion.at "expected suspension" ""
+                (string_of_values ", " vs))
+      | Values val_list -> (
+          let result =
+            List.map (fun v -> v |> instr_of_val_ |> vl_of_instr) val_list
+          in
+          match result with
+          | [ CaseV ([ [ "SUSPENDING" ]; []; []; [] ], _) ] -> success
+          | vs ->
+              print_fail assertion.at "expected suspension" ""
+                (string_of_values ", " vs)))
   | _ -> pass
 
 let run_command oc cmd =
