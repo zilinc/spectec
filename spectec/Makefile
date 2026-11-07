@@ -72,6 +72,11 @@ TEST_PATHS := test-interpreter/spec-test-3/ \
               test-interpreter/spec-test-3/multi-memory \
               test-interpreter/spec-test-3/relaxed-simd \
               test-interpreter/spec-test-3/simd
+else ifeq ($(TEST),SLOW)
+TEST_PATHS := test-interpreter/spec-test-3/slow \
+							test-interpreter/spec-test-3/bulk-memory/slow \
+							test-interpreter/spec-test-3/memory64/slow \
+							test-interpreter/spec-test-3/multi-memory/slow
 else
 TEST_PATHS := $(TEST)
 endif
@@ -89,10 +94,10 @@ anim-test: SPECTEC_FLAGS ?= --animate --inline --new-interpreter-v
 anim-test: exe
 	./spectec $(SPECTEC_EXTRA_FLAGS) $(SPEC) $(SPECTEC_FLAGS) $(TEST_PATHS)
 
-anim-test-all: exe
+anim-test-non-slow: exe
 	$(MAKE) anim-test 'TEST=NON_SLOW'
 
-anim-test-bench: anim-test-all
+anim-test-bench: anim-test-noslow
 
 
 # Wasm interpreter in OCaml
@@ -130,11 +135,18 @@ ocaml-test: ocaml-build
 	@echo "#### Running OCaml interpreter test."
 	$(MAKE) ocaml-run
 
-ocaml-test-all: ocaml-build
+ocaml-test-non-slow: ocaml-build
 	@echo "#### Running OCaml interpreter test."
 	$(MAKE) ocaml-run 'TEST=NON_SLOW'
 
-ocaml-test-bench: ocaml-test-all
+ocaml-test-slow: ocaml-build
+	@echo "#### Running OCaml interpreter test."
+	$(MAKE) ocaml-run 'TEST=SLOW'
+
+ocaml-test-bench: ocaml-test-non-slow
+
+ocaml-test-all: ocaml-test-non-slow ocaml-test-slow
+
 
 # Latex
 

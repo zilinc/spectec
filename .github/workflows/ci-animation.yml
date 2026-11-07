@@ -33,6 +33,6 @@ jobs:
       - name: Test wasm-3.0
         run: |
           cd spectec
-          opam exec make anim-test-all 'SPECTEC_FLAGS=--animate ${{ matrix.inline }} --new-interpreter-v'
+          opam exec make anim-test-bench 'SPECTEC_FLAGS=--animate ${{ matrix.inline }} --new-interpreter-v'
 
 
