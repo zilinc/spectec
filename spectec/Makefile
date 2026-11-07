@@ -97,7 +97,7 @@ anim-test: exe
 anim-test-non-slow: exe
 	$(MAKE) anim-test 'TEST=NON_SLOW'
 
-anim-test-bench: anim-test-noslow
+anim-test-bench: anim-test-non-slow
 
 
 # Wasm interpreter in OCaml
