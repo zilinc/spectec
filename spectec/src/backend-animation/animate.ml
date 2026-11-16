@@ -446,6 +446,21 @@ let rec bind_pat_exp envr occ oname exp ot : Il.Env.t ref * quant list * exp * p
       (envr, vs, ve', prems_e)
     | _ -> error exp.at ("CaseE payload is not a tuple: " ^ string_of_exp tup)
     )
+    (*
+    TODO (Keith): Work on tuple case of expanding computable fragments
+    1. Currently has no effect on output? TupE case doesn't appear to be triggered/encountered. 
+    *)
+  | TupE es ->
+    print_endline "TupeE case triggered";
+    let (envr, vs, ves, prems_e) = List.fold_left (fun acc e ->
+      let (envr, vss, ves, premss_e) = acc in
+      let (envr, vs, ve, prems_eq) = bind_pat_exp envr occ oname e None in
+      (envr, vss @ vs, ves @ [ve], premss_e @ prems_eq)
+    ) (envr, [], [], []) es in
+    let ts' = List.map (fun ve -> "_" $ ve.at, ve.note) ves in
+    let t_tup' = TupT ts' $ exp.at in
+    let ve' = TupE ves $$ exp.at % t_tup' in
+    (envr, vs, ve', prems_e)
   | _ -> bind_var_exp envr occ oname exp ot `Lhs
 
 let elim_lhs_known_vars envr at exp : ((string -> string) * exp * prem list) E.m =
@@ -924,6 +939,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       end
     end
   | TupE es ->
+    (* TODO (Keith): Look at optimizing TupE case here *)
     (* simp *)
     let prems = List.mapi (fun i e ->
       let bool_t = BoolT $ e.at in
@@ -1482,6 +1498,39 @@ let lift_otherwise_prem prems =
 
 
 (* [fid]: the full name of the function. *)
+(*
+  Notes on animation:
+  1. What makes func_cluase animated?
+    1.1 Appears to be reading premises as programs, either if checks or new vars
+    1.2 It has to be a function shape, like a DefD. All of the rule premises have been turned into if premises. Should have been done by preprocessor. 
+    1.3 
+  2. bind_var_exp and bin_pat_exp, difference is var function is more aggressive. A pattern is in a broader sense, it is not an FP pattern, a pattern is an expression, doesn't allow you to unique determine value inside pattern. 
+    2.1 E.g. list concat in pattern, you dk how to decompose the pattern, so you can't determine the value.
+    2.2 Unlike standard FP patterns, which starts with a constructor as a head, there is no head to deconstructor. E.g. a+b, it is a logical (declarative?) definition that are not computable. Another example is list concentation. E.g. as + bs = [1;2;3;4], can't figure out which belongs to which. 
+  3. Animation turns these patterns/expressions in the binding position to real patterns, real patterns are in the traditional sense of FP patterns. Once we have, we can unique determine the value of pattern variables. Because they have been turned to an algorithm. 
+  4. Animation turns the function definition/relation definition in spectec into proper functions/computable functions. If a+b=5 in spectec, we can't generate it. What it does is turn a relational definition into a function. This relational definition are mostly deterministic. 
+  5. Animation does two things: it reorders the premises, giving you a topological dependency. It also tries to identify which premise is a check and which premise is a binding. If every var in premise is already known, it is a check. In an equality, one side is unknown, one side is known, X is pattern.
+  6. To animate an if premise (See bringing SpecTec up to Speed with Animation ~page 10): 
+    6.1 If premise is -- if e and e is known, premises stays intact
+    6.2 If premise is -- if el = er, and if only one side is knonw, we move this side to the left, and turns it into a let binding. 
+  7. Proper pattern wrt unknown - an exp that contains unknowns, that exp can still fall outside the subset of the pattern language (proper patterns here, see animation paper defs Patterns e hat, note e is irrelevant here). 
+  8. The change we want TODO is instead of having that very restricted subset of patterns, we allow a much bigger of expressions to be patterns. E.g. if you have a tuple, -- if (a, b) = e, e has to be tuple to type check, to allow tuple to be valid patterns. This currently is animate to --if a = e.0 and -- if b = e.1. If you keep this thing as a pattern, you reduce the number of definitions in the pattern. This can also be nested, say if it is (a, (b1, b2)) = e, then add if b1 = b.0 and --if b2 = b.1. 
+    8.1 Core is to expand subset of possible functions then
+    8.2 Check carefully if it is still computable
+    8.3 This subset can be even more expressive than even a regular functional language, e.g. 
+      -- if a^n ++ [1 2] = e
+    This is not valid in any FP, but this is valid in spectec and it can be figured out (list concat case in animation paper). This is heursitic/non-exhaustive. 
+  9. Try to start with: non-linear pattern variables, e.g.
+    -- if (v, v) = e
+  Currently it becomes:
+    -- let v = e.0
+    -- if v = e.1
+  Which is more verbose. 
+  10. Those two bind functions drive all these, so if you want to stop, have to look there. When you want to augment the subset, I should look at changing those patterns. 
+  11. LATER TODO: Make DL to IL and prose gen/rocq gen, from subset of IL to prose gen pipeline prototype
+  TODO (Keith): 
+    1. Optimize tuple (see 8.): -- if (a, b) = e, currently is animate to --if a = e.0 and -- if b = e.1. If you keep this thing as a pattern, you reduce the number of definitions in the pattern. Can also be nested, say if it is (a, (b1, b2)) = e, then add if b1 = b.0 and --if b2 = b.1. 
+*)
 let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) result =
   let lenvr = ref !envr in
   let oid, cl = fc in

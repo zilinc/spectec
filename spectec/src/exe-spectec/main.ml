@@ -467,13 +467,12 @@ let () =
     | ProseNeo ->
       log "Translating to DL...";
       let env, pp_dl = Backend_animation.Main_animate.pp il false in
-      log "Anti-unifying DL...";
-      let au_result = Backend_animation.Antiunify.run_au pp_dl false in 
       (match !new_prose_ofile with
       | Some ofile ->
         log ("Imperative step injection");
         let dl = Backend_animation.Main_prose_v.inject_prose env pp_dl in
         let injected_s = Backend_animation.Def.string_of_dl_script dl in
+        (*let injected_s = Backend_animation.Prose_v.text_prose_script dl in*) 
         let oc = open_out ofile in
         Printf.fprintf oc "%s\n" injected_s;
         close_out oc;

@@ -190,8 +190,6 @@ let merge_compatible_quants env qs1 qs2 : quant list M.m =
             "  ▹ qs1 = " ^ string_of_quants qs1 ^ "\n" ^
             "  ▹ qs2 = " ^ string_of_quants qs2)
 
-
-
 (* ************************************************************************** *)
 (*                           Explicate Stack                                  *)
 (* ************************************************************************** *)
@@ -463,6 +461,26 @@ let gen_rel_function env fid at qs prem : (exp * dl_def) M.m =
   let* () = drop () in
   return (fncall, fndef)
 
+let rec cond_to_exp env fid at qs (cond : prem) : (exp * dl_def list) M.m =
+  match cond.it with
+  | IfPr e ->
+    return (e, [])
+  | RulePr _ ->
+    let* call, def = gen_rel_function env fid at qs cond in (* FIXME: [qs] may contain entries not mentioned in [cond]. *)
+    return (call, [def])
+  | NegPr p ->
+    let* e, defs = cond_to_exp env fid at qs p in
+    let e' = UnE (`NotOp, `BoolT, e) $$ at % boolT ~at () in
+    return (e', defs)
+  | IterPr (_p, _iterexp) ->
+    let* call, def = gen_rel_function env fid at qs cond in
+    return (call, [def])
+  | LetPr (qs', exp1', exp2') -> (* TODO: Don't use gen_rel_function, create new exp or dl_def*)
+    let* call, def = gen_rel_function env fid at qs cond in
+    return (call, [def])
+  | ElsePr ->
+    throw ("Unexpected `otherwise` in an if-condition: " ^ string_of_prem cond)
+
 (* ASSUMES: [e1] and [e2] has equivalent types. *)
 let gen_if_function env fid at (qs, conds) (qs1, ths, e1) (qs2, els, e2) : (quant list * exp * dl_def list) M.m =
   let fname = fresh_fun (Some fid) in
@@ -474,12 +492,9 @@ let gen_if_function env fid at (qs, conds) (qs1, ths, e1) (qs2, els, e2) : (quan
                   ))
   in
   let* () = push (at, "when generating if-function `" ^ primitives.if_func ^ "/" ^ fname ^ "`") in
-  let* fndefs, cond_exps = foldlM (fun (ds, es) cond -> match cond.it with
-  | IfPr e -> return (ds, es @ [e])
-  | RulePr _ ->
-    let* rel_fncall, rel_fndef = gen_rel_function env fid at qs cond in  (* FIXME: [qs] may contain entries not mentioned in [cond]. *)
-    return (ds @ [rel_fndef], es @ [rel_fncall])
-  | _ -> throw ("Unsupported type of premise as an if-condition: " ^ string_of_prem cond)
+  let* fndefs, cond_exps = foldlM (fun (ds, es) cond ->
+    let* e, defs = cond_to_exp env fid at qs cond in
+    return (ds @ defs, es @ [e])
   ) ([], []) conds
   in
   (* [qs] can't conflict with [qs1], but it may with [qs2], because the if-condition is often taken from the first clause. *)
@@ -963,10 +978,360 @@ let rec select_merge_func_clauses' env fid clauses : (func_clause list * dl_def 
   let q_rhs = ExpP (v_rhs, e1.note) $ no in
   let e_rhs = rhs_func (over_region [e1.at; e2.at]) e1.note v_rhs in
   (* Recursive call. Put the merge result back into the original position. *)
-  let* clauses'', defs' = select_merge_func_clauses' env fid (bef @ [ (None, DefD (q_rhs::qs, args1, e_rhs, k_prems e_rhs) $ at) ] @ aft) in
+  let arg3 : func_clause = None, (DefD (q_rhs::qs, args1, e_rhs, k_prems e_rhs) $ at) in 
+  let arg2 : (func_clause * layer list) list = [ (arg3, []) ] in
+  let arg1 = (bef @ arg2 @ aft) in 
+  let arg1' = List.map (fun (fc, ly) -> fc) arg1 in 
+  let* clauses'', defs' = select_merge_func_clauses' env fid arg1' in
   let* () = drop () in
   return (clauses'', defs@defs')
 
+(* ************************************************************************** *)
+(*  SIMPLE clause merge. Paste into wasm_inject.ml after `merge_quants`.      *)
+(*                                                                            *)
+(*  Idea:                                                                     *)
+(*    clause_i :  prefix ++ tail_i  ->  rhs_i                                 *)
+(*    merged   :  prefix ->  if guard_1 then rhs_1                            *)
+(*                           else if guard_2 then rhs_2 ... else rhs_n        *)
+(*                                                                            *)
+(*  LIMITATIONS (iterate on these):                                           *)
+(*   L1  Prefix = longest run of premises that are syntactically equal in ALL *)
+(*       clauses (Il.Eq.eq_prem). Generated binder names must match.          *)
+(*   L2  Tails may only contain: IfPr (a guard), ElsePr (ignored) and         *)
+(*       `let x = e` with a plain variable on the left (inlined into the      *)
+(*       guards and RHS). Anything else -> error.                             *)
+(*   L3  Decision list: first-match order, last clause has no guard (assumes  *)
+(*       the clauses are exhaustive).                                         *)
+(*   L4  Quantifiers are unioned by Il.Eq.eq_param; type clashes unhandled.   *)
+(*   L5  All clauses must have identical args.                                *)
+(* ************************************************************************** *)
+
+(* Longest common prefix of N premise lists. Returns (prefix, remaining tails). *)
+let rec common_prefix (pss : prem list list) : prem list * prem list list =
+  match pss with
+  | (p :: _) :: _
+    when List.for_all (function q :: _ -> Il.Eq.eq_prem p q | [] -> false) pss ->
+    let pre, tails = common_prefix (List.map List.tl pss) in
+    (p :: pre, tails)
+  | _ -> ([], pss)
+
+(* A tail becomes (guards, rhs). `let x = e` is inlined, so no binding survives. *)
+let guard_and_rhs (tail : prem list) (rhs : exp) : (exp list * exp) M.m =
+  let rec go guards s = function
+    | [] -> return (List.rev guards, subst_exp s rhs)
+    | { it = ElsePr; _ } :: ps -> go guards s ps                  (* implied by order *)
+    | { it = IfPr e; _ } :: ps -> go (subst_exp s e :: guards) s ps
+    | { it = LetPr (_, { it = VarE x; _ }, e2); _ } :: ps ->
+      go guards (add_varid s x (subst_exp s e2)) ps               (* inline *)
+    | p :: _ -> throw ("simple_merge: unsupported premise in tail: " ^ string_of_prem p)
+  in
+  go [] empty tail
+
+let and_all at (gs : exp list) : exp =
+  match gs with
+  | [] -> boolE ~at true
+  | g :: rest ->
+    List.fold_left (fun a b -> BinE (`AndOp, `BoolT, a, b) $$ at % boolT ~at ()) g rest
+
+let rec if_chain at (alts : (exp list * exp) list) : exp =
+  match alts with
+  | [] -> assert false
+  | [ (_, r) ] -> r
+  | (gs, r) :: rest -> IfE (and_all at gs, r, if_chain at rest) $$ at % r.note
+
+let union_quants (qss : quant list list) : quant list =
+  List.fold_left (fun acc qs ->
+    acc @ List.filter (fun q -> not (List.exists (Il.Eq.eq_param q) acc)) qs
+  ) [] qss
+
+(* Step 0: make generated binder names (__v10, __v27, ...) comparable across clauses
+   by renaming them to __c0, __c1, ... in binding order. User names (c, val_1) are kept.
+   ASSUMES subst_prems also renames the quantifiers inside LetPr. *)
+let rec binders_typed (prem : prem) : (id * typ) list =
+  match prem.it with
+  | LetPr (qs, _, _) ->
+    List.filter_map (fun q -> match q.it with ExpP (x, t) -> Some (x, t) | _ -> None) qs
+  | IterPr (p', (_, xes)) ->
+    let bs = binders_of_prem p' in
+    List.filter_map (fun (x, e) ->
+      match e.it with
+      | VarE y when List.mem x.it bs -> Some (y, e.note)
+      | _ -> None) xes
+  | _ -> []
+
+let normalise_clause (qs : quant list) (prems : prem list) (rhs : exp)
+  : quant list * prem list * exp =
+  let generated (x : id) = String.starts_with ~prefix:"__v" x.it in
+  let _, s =
+    List.fold_left (fun (n, s) (x, t) ->
+      if not (generated x) || Option.is_some (Map.find_opt x.it s.varid) then (n, s)
+      else (n + 1, add_varid s x (VarE (("__c" ^ string_of_int n) $ x.at) $$ x.at % t))
+    ) (0, empty) (List.concat_map binders_typed prems)
+  in
+  let qs', _ = subst_quants s qs in
+  (qs', subst_prems s prems, subst_exp s rhs)
+
+let simple_merge env fid (clauses : func_clause list) : (func_clause list * dl_def list) M.m =
+  match clauses with
+  | [] | [ _ ] -> return (clauses, [])
+  | _ ->
+    let parts = List.map (fun (_, cl) ->
+      let DefD (qs, args, e, ps) = cl.it in
+      let qs, ps, e = normalise_clause qs ps e in
+      (qs, args, e, ps)) clauses in
+    let at = over_region (List.map (snd >.> at) clauses) in
+    let (_, args0, _, _) = List.hd parts in
+    let* () = iterM (fun (_, args, _, _) ->
+      if Il.Eq.eq_list Il.Eq.eq_arg args args0 then return ()
+      else throw ("simple_merge: arguments differ:\n  ▹ " ^ string_of_args args0 ^
+                  "\n  ▹ " ^ string_of_args args)) parts in
+    let prefix, tails = common_prefix (List.map (fun (_, _, _, ps) -> ps) parts) in
+    info ~cat:"debug_merge" (lazy ("simple_merge: prefix has " ^ string_of_int (List.length prefix) ^
+                                   " premises; tail lengths: " ^
+                                   String.concat "," (List.map (List.length >.> string_of_int) tails)));
+    let* alts = mapM (fun ((_, _, e, _), tail) -> guard_and_rhs tail e)
+                  (List.combine parts tails) in
+    let body = if_chain at alts in
+    let qs = union_quants (List.map (fun (qs, _, _, _) -> qs) parts) in
+    let cl = None, DefD (qs, args0, body, prefix) $ at in
+    return ([ cl ], [])
+
+(* ************************************************************************** *)
+(*  Tree merge on premises.     
+    STEPS:
+      1. Given func_clause list, match common prefixes among all func_clauses and remove them. This becomes IfE of that level.
+      2. Among remaining func_clauses, group adjacent func_clauses by common prefixes. This splits it into N groups, where N is number of distinct consectutive premises.
+      3. Merge each group into N func_clauses.
+      4. Recurse on each func_clause group, and each is now a branch.
+
+    1. Similar to simple_merge, it matches first same premises.
+    2. Differ in that because tree type can nest IfE at arbritrary depths (usually 2-3), it can group and split by multiple prefixes, instead of single shared prefix among all rules like simple merge.
+    3. let for tree merge needs scrunity, it becomes a CmpE, which could be wrong for new lets in premises
+    4. PROBLEM: Tree merge also incorrectly unifies quants, need discussion about how to unify it or preserve variable subtypes optimally/specifically.
+    5. Rhs is a variable at bottom of if statement.
+*)
+(* ************************************************************************** *)
+
+(* TODO: 
+  1. It is in principle mostly working, remains to be plugged into rest of pipeline.
+  2. Quanitfer conflict, fundamental problem about how func_def cannot hold local contexts if folding into single func_clause. Currently incorrectly chooses second context.
+    2.1 Note in current run ~3 conflicts recorded, in push value in non-packed vs packed. 
+    2.2 On further thought this is *NOT* a problem of prose gen never uses type of RHS, it appears to use types for LHS as asserts.
+*)
+type tree =
+  | Rhs of id option * exp
+  | Seq of prem * tree
+  | Alt of tree list
+
+let prems_of ((_, cl) : func_clause) : prem list =
+  let DefD (_, _, _, ps) = cl.it in ps
+
+(* Removes first premise from a clause and returns that clause *)
+let drop_head ((oid, cl) : func_clause) : func_clause =
+  let DefD (qs, args, rhs, ps) = cl.it in
+  (oid, DefD (qs, args, rhs, List.tl ps) $> cl)
+
+(* Check if first premise of both clauses is the same *)
+let same_head fc1 fc2 =
+  match prems_of fc1, prems_of fc2 with
+  | p1 :: _, p2 :: _ -> Il.Eq.eq_prem p1 p2
+  | _ -> false
+
+(* Group func_clauses by continuous same head premise, preserves order *)
+let group_adjacent (cls : func_clause list) : func_clause list list =
+  List.fold_left (fun acc cl ->
+    match acc with
+    | (c0 :: _ as g) :: rest when same_head c0 cl -> (cl :: g) :: rest
+    | _ -> [cl] :: acc) [] cls
+  |> List.rev_map List.rev
+
+(* Parse func_clause to tree type *)
+let build ((oid, cl) : func_clause) : tree =
+  let DefD (_, _, rhs, ps) = cl.it in
+  List.fold_right (fun p t -> Seq (p, t)) ps (Rhs (oid, rhs))
+
+let rec merge_clause_to_tree (cls : func_clause list) : tree =
+  match group_adjacent cls with
+  | [g] -> group g
+  | gs  -> Alt (List.map group gs)
+
+and group (g : func_clause list) : tree =
+  match g with
+  | [fc] -> build fc
+  | fc :: _ ->
+    (match prems_of fc with
+     | p :: _ -> Seq (p, merge_clause_to_tree (List.map drop_head g))
+     | [] -> assert false)
+  | [] -> assert false
+
+let rec collect (t : tree) : prem list * tree =
+  match t with
+  | Seq (p, t') -> let ps, r = collect t' in (p :: ps, r)
+  | _ -> ([], t)
+
+let conj (at : region) (es : exp list) : exp option =
+  match es with
+  | [] -> None
+  | c :: cs -> Some (List.fold_left (fun a b ->
+      BinE (`AndOp, `BoolT, a, b) $$ at % boolT ~at ()) c cs)
+
+(* 
+  Converts prem to exp
+  One premise as a bool exp. A let on an already-bound var becomes an equality 
+*)
+let prem_cond env fid at qs (p : prem) : (exp option * dl_def list) M.m =
+  match p.it with
+  | ElsePr -> return (None, [])
+  | LetPr (_, l, r) ->
+    return (Some (CmpE (`EqOp, `BoolT, l, r) $$ p.at % boolT ~at:p.at ()), [])
+  | _ ->
+    (* For rest of cases use existing cond_to_exp *)
+    let* e, defs = cond_to_exp env fid at qs p in
+    return (Some e, defs)
+
+(* Ordered branches: (conds, body) where body is a bool exp (leaf eq or nested if)
+   Non-last: if conj(conds) then body else <rest>
+   Last:     conj(conds @ [body])   -- conditions are kept, nothing is dropped *)
+let rec chain (at : region) (branches : (exp list * exp) list) : exp M.m =
+  match branches with
+  | [] ->
+    throw "chain: empty Alt"
+  | [ (conds, body) ] ->
+    (* Last branch: nothing to fall through to, so conjoin everything. *)
+    return (Option.value (conj at (conds @ [body])) ~default:body)
+  | (conds, body) :: rest ->
+    (match conj at conds with
+     | None ->
+       (* Unconditional branch: always wins, [rest] is unreachable. *)
+       return body
+     | Some cond ->
+       let* else_ = chain at rest in
+       return (IfE (cond, body, else_) $$ at % boolT ~at ()))
+
+let rec to_exp env fid qs ve (t : tree) : (exp * dl_def list) M.m =
+  match t with
+  | Rhs (_, e) -> 
+    let eq = CmpE (`EqOp, `BoolT, ve, e) $$ e.at % boolT ~at:e.at () in
+    return (eq, [])
+  | Seq _ -> throw "to_exp: Seq outside an Alt branch"
+  | Alt ts ->
+    let* bs = mapM (fun t ->
+      let ps, rest = collect t in
+      let* cds = mapM (prem_cond env fid no qs) ps in
+      let conds = List.filter_map fst cds and d1 = List.concat_map snd cds in
+      let* body, d2 = to_exp env fid qs ve rest in
+      return ((conds, body), d1 @ d2)) ts in
+    let* e = chain no (List.map fst bs) in
+    return (e, List.concat_map snd bs)
+
+let merge_quants_lenient env fid qs1 qs2 : quant list =
+  let same_name x q = match q.it with
+    | ExpP (x', _) -> Il.Eq.eq_id x x'
+    | _ -> false in
+  List.fold_left (fun acc q2 ->
+    match q2.it with
+    | ExpP (x, t) ->
+      (match List.find_opt (same_name x) acc with
+       | None -> acc @ [q2]
+       | Some { it = ExpP (_, t'); _ } when Il.Eval.equiv_typ env t t' -> acc
+       | Some { it = ExpP (_, t'); _ } ->
+         print_endline (Printf.sprintf
+           "[W] quantifier conflict in %s: %s : %s vs %s : %s; keeping the second"
+           fid x.it (string_of_typ t') x.it (string_of_typ t));
+         List.map (fun q -> if same_name x q then q2 else q) acc
+       | Some _ -> acc)
+    | _ ->
+      if List.exists (Il.Eq.eq_param q2) acc then acc else acc @ [q2]
+  ) qs1 qs2
+
+let tree_merge_func_clauses env fid (clauses : func_clause list)
+  : (func_clause list * dl_def list) M.m =
+  (*let fcl' = List.map Inline.inline_func_clause clauses in *)
+  match clauses with
+  | [] -> return ([], [])
+  | [cl] -> return ([cl], [])
+  | (_, { it = DefD (qs0, args0, rhs0, _); _ }) :: rest ->
+    (* same precondition as naive_merge_func_clauses *)
+    let* () = iterM (fun (_, { it = DefD (_, args, _, _); _ }) ->
+      if Il.Eq.eq_list Il.Eq.eq_arg args0 args then return ()
+      else throw ("Arguments do not match:\n" ^
+                  "  ▹ args1: " ^ string_of_args args0 ^ "\n" ^
+                  "  ▹ args2: " ^ string_of_args args)) rest in
+    let at = over_region (List.map (fun (_, cl) -> cl.at) clauses) in
+    let qs = List.fold_left (fun acc (_, { it = DefD (qs', _, _, _); _ }) ->
+               merge_quants_lenient env fid acc qs') qs0 rest in
+    let spine, body = collect (merge_clause_to_tree clauses) in
+    let spine = List.filter (fun p -> p.it <> ElsePr) spine in
+    let v  = "rhs" $ no in
+    let ve = VarE v $$ no % rhs0.note in
+    let q  = ExpP (v, rhs0.note) $ no in
+    let* case_exp, defs = to_exp env fid qs ve body in
+    let cl = None, DefD (q :: qs, args0, ve, spine @ [IfPr case_exp $ no]) $ at in
+    return ([cl], defs)
+
+(* Tree merge print functions *)
+let pad n = String.make (2 * n) ' '
+
+let rec pp_exp ind (e : exp) : string =
+  match e.it with
+  | IfE (c, a, b) ->
+    "IfE " ^ string_of_exp c ^ "\n" ^
+    pad (ind + 1) ^ "Then " ^ pp_exp (ind + 2) a ^ "\n" ^
+    pad (ind + 1) ^ "Else " ^ pp_exp (ind + 2) b
+  | BinE (`AndOp, _, a, b) ->
+    "(" ^ pp_exp ind a ^ ")\n" ^ pad ind ^ "/\\ (" ^ pp_exp ind b ^ ")"
+  | _ -> "\n" ^ (pad ind) ^ string_of_exp e
+
+let rec pp_tree  ind (t : tree) : string =
+  let pad  = String.make (2 * ind) ' ' in
+  match t with
+  | Rhs (oid, e) ->
+    pad ^ "Rhs " ^ string_of_exp e ^
+    (match oid with Some id -> "   ;; " ^ id.it | None -> "") ^ "\n"
+  | Seq (p, t') -> pad ^ string_of_prem p ^ "\n" ^ pp_tree  (ind + 2) t'
+  | Alt ts ->
+    pad ^ "Alt\n" ^
+    String.concat "" (List.mapi (fun i t' ->
+      pad ^ "  [" ^ string_of_int i ^ "]\n" ^ pp_tree  (ind + 2) t') ts)
+
+let string_of_tree = pp_tree  0
+
+let pp_prem (p : prem) : string =
+  match p.it with
+  | IfPr e -> "IfPr " ^ pp_exp 3 e
+  | _ -> string_of_prem p
+
+let pp_func_clause show_quants fid ((_, cl) : func_clause) : string =
+  let DefD (qs, as_, e, prems) = cl.it in
+  "DefD $" ^ fid ^
+  (if show_quants then string_of_quants qs else "") ^
+  string_of_args as_ ^ " = " ^ string_of_exp e ^ "\n" ^
+  String.concat "\n" (List.map (fun p -> "  -- " ^ pp_prem p) prems)
+
+let observe_merge env (fdef : func_def) : unit =
+  let (id, osubid, _, _, _, _) = (Antiunify.au_rule_fdef fdef).it in
+  let fid = string_of_funcname id osubid in
+  let (_, _, _, _, clauses, _) = (Antiunify.au_rule_fdef fdef).it in
+  let header s = print_endline (Printf.sprintf "===== %s %s =====" s fid) in
+  header "Merging rule";
+  print_endline (string_of_tree (merge_clause_to_tree clauses));
+  header "Lowered";
+  let (r, ctx) = tree_merge_func_clauses env fid clauses |> run_logger in
+  match r with
+  | Ok (cls, defs) ->
+    List.iter (fun d -> print_endline (string_of_dl_def d)) defs;
+    List.iter (fun cl -> print_endline (pp_func_clause false fid cl)) cls
+  | Error e ->
+    print_endline "[E] lowering failed:";
+    print_endline (string_of_ctx_error ctx e)
+
+let should_observe (fdef : func_def) : bool =
+  let (id, _, _, _, _, _) = fdef.it in
+  List.mem id.it Antiunify.target_names
+  
+(* ************************************************************************** *)
+(*  Prose gen main driver                                                     *)
+(* ************************************************************************** *)
 
 let prose_gen_fdef (fdef: func_def) : (func_def * dl_def list) M.m =
   let (id, osubid, ps, t, clauses, opartial) = fdef.it in
@@ -992,13 +1357,20 @@ let prose_gen_fdef (fdef: func_def) : (func_def * dl_def list) M.m =
   let* clauses'' = mapiM (explicate_clause !il_env id osubid) clauses' in
   let* clauses''', if_defs = match fmap_prems_clauses lift_otherwises clauses'' with
   | [] -> return ([], [])
-  | _ -> (carefully_animate_func_clauses !il_env (fid $ id.at) >=> select_merge_func_clauses' !il_env fid) clauses''
+  (* TODO: 
+    1. Add flag to disable introduction of intermediate variables in animation (see bind_var_exp and bind_pat_exp in backend-animation/animate.ml), see inline in tree_merge_func_clausescc
+    2. pretty print exp in animate->merge output
+  *)
+  | _ -> (carefully_animate_func_clauses !il_env (fid $ id.at) >=> tree_merge_func_clauses !il_env fid) clauses''
   in
   return ((id, osubid, ps, t, clauses''', opartial) $ fdef.at, if_defs)
 
 let rec prose_gen_def def : dl_def list M.m = match def with
   | TypeDef _ -> return [def]
-  | FuncDef fdef -> let* fdef', if_defs = prose_gen_fdef fdef in return (if_defs @ [FuncDef fdef'])
+  | FuncDef fdef ->
+      if should_observe fdef then observe_merge !il_env fdef;
+      let* fdef', if_defs = prose_gen_fdef fdef in
+      return (if_defs @ [FuncDef fdef'])
   | RecDef defs -> let* defs' = List.concat <$> mapM prose_gen_def defs in return [RecDef defs']
 
 let prose_gen_dl (env: Il.Env.t) dl hints : dl_def list =

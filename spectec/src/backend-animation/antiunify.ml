@@ -262,6 +262,13 @@ let rec au_rule (dl : dl_def) : dl_def  =
     FuncDef { def with it = (id, _osubid, params, typ, fcs', _opartial) }
   | _ -> failwith (Printf.sprintf "au_rule: Failed, attempted to anti-unify non-FuncDef definition.")
 
+let rec au_rule_fdef (fdef : func_def) : func_def  =
+  let (id, _osubid, params, typ, fcs, _opartial) = fdef.it in 
+  let lhses = List.map lhs_of_clause fcs in 
+  let au_qs, au_exp, au_subs = anti_unify lhses in 
+  let fcs' = sub_func_clauses au_exp au_qs au_subs fcs in 
+  { fdef with it = (id, _osubid, params, typ, fcs', _opartial) }
+
 let rec au_dls (dl : dl_def list) : dl_def list =
   match dl with 
   | (FuncDef def)::dl' -> 

@@ -12,6 +12,7 @@ let space f x = " " ^ f x ^ " "
 
 let print_notes = ref false
 
+let pad n = String.make (2 * n) ' '
 
 (* Identifiers *)
 
@@ -221,12 +222,23 @@ and string_of_sym g =
 
 (* Premises *)
 
+
+and pp_exp ind (e : exp) : string =
+  match e.it with
+  | IfE (c, a, b) ->
+    "IfE " ^ pp_exp (ind + 2) c ^ "\n" ^
+    pad (ind + 1) ^ "Then " ^ pp_exp (ind + 2) a ^ "\n" ^
+    pad (ind + 1) ^ "Else " ^ pp_exp (ind + 2) b
+  | BinE (`AndOp, _, a, b) ->
+    "" ^ pp_exp ind a ^ "\n" ^ pad ind ^ "/\\ " ^ pp_exp ind b ^ ""
+  | _ -> "\n" ^ (pad ind) ^ string_of_exp e
+
 and string_of_prem prem =
   match prem.it with
   | RulePr (x, as1, mixop, e) ->
     string_of_id x ^ string_of_args as1 ^ ": " ^
     string_of_mixop mixop ^ string_of_exp_args e
-  | IfPr e -> "if " ^ string_of_exp e
+  | IfPr e -> "IfPr " ^ pp_exp 1 e
   | LetPr (qs, e1, e2) ->
     "let" ^ string_of_quants qs ^ " " ^
     string_of_exp e1 ^ " = " ^ string_of_exp e2
