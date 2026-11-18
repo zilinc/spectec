@@ -55,6 +55,7 @@ let info v at msg = if List.mem v !verbose then
 (* Configs *)
 
 let allow_partial_animation = ref false
+let disable_anf = ref false
 
 
 (* Fresh name generation *)
@@ -185,6 +186,12 @@ module S = AnimateS
 
 (* Helpers *)
 
+
+let quants_of_vars vs env : quant list =
+  List.map (fun v ->
+   let t = Il.Env.find_var env (v $ no) in
+   ExpP (v $ no, t) $ no
+  ) vs
 
 (* FIXME(zilinc): I don't think it handles dependent types correctly. The binds
    should be telescopic.
@@ -390,6 +397,8 @@ type direction = [ `Lhs | `Rhs ]
 let bind_var_exp envr occ oname exp ot dir : Il.Env.t ref * quant list * exp * prem list =
   let ( let* ) = Result.bind in
   match exp.it with
+  | _ when !disable_anf && dir == `Rhs ->
+    (envr, [], exp, [])
   | VarE v -> (
     if is_affine occ v.it || dir == `Rhs then
       (envr, [ExpP (v, exp.note) $ v.at], exp, [])
@@ -675,6 +684,11 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
   | VarE v ->
     let* () = update (add_knowns (Set.singleton v.it)) in
     E.return [ LetPr ([ExpP (v, lhs.note) $ v.at], lhs, rhs) $ at ]
+  | _ when !disable_anf && is_relaxed_pat lhs ->
+    let fvs = (free_exp lhs).varid in
+    let* () = update (add_knowns fvs) in
+    let qs = quants_of_vars (fvs |> Set.to_list) !envr in
+    E.return [ letPr ~at qs lhs rhs ]
   (* Treated as atomic. Will add to the known_info field. *)
   (*
   | LenE exp1 ->

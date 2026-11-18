@@ -2,6 +2,17 @@ open Il.Ast
 open Util.Source
 open Il.Print
 
+
+let rec is_relaxed_pat e = match e.it with
+  | VarE _ | NumE _ | BoolE _ | TextE _ -> true
+  | TupE es | ListE es -> List.for_all is_relaxed_pat es
+  | CaseE (mop, e') -> is_relaxed_pat e'
+  | OptE oe' -> Option.fold ~none:true ~some:is_relaxed_pat oe'
+  | StrE fes -> List.for_all (fun (m, e') -> is_relaxed_pat e') fes
+  | SubE (e', _t1, _t2) -> is_relaxed_pat e'
+  | _ -> false
+
+
 type type_def' = id * param list * inst list
 type type_def = type_def' phrase
 

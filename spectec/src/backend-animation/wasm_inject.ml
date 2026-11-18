@@ -1373,9 +1373,10 @@ let rec prose_gen_def def : dl_def list M.m = match def with
       return (if_defs @ [FuncDef fdef'])
   | RecDef defs -> let* defs' = List.concat <$> mapM prose_gen_def defs in return [RecDef defs']
 
-let prose_gen_dl (env: Il.Env.t) dl hints : dl_def list =
+let prose_gen_dl (env: Il.Env.t) dl hints no_anf : dl_def list =
   il_env := env;
   no_prose := hints;
+  A.disable_anf := no_anf;
   let (r, ctx) = List.concat <$> mapM prose_gen_def dl |> run_logger in
   match r with
   | Ok dl'  -> dl'

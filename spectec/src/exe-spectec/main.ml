@@ -90,6 +90,7 @@ let new_interpreter_args = ref None
 let new_prose_ofile = ref None
 let vl = ref false
 let animate_inline = ref false
+let animate_no_anf = ref false
 let repl_main = ref None
 
 let generate_ocaml = ref None
@@ -223,6 +224,7 @@ let argspec = Arg.align (
   "--prose-rst", Arg.Unit (fun () -> target := Prose false), " Generate prose";
   "--interpreter", Arg.Rest_all (fun args -> target := Interpreter args), " Generate interpreter";
   "--animate", Arg.Unit (fun () -> target := Animate), " Run animation";
+  "--no-anf", Arg.Unit (fun () -> animate_no_anf := true), " Disable ANF in animation";
   "--allow-partial-animation", Arg.Unit (fun () -> Backend_animation.Animate.allow_partial_animation := true),
     " Allow animation to success even if some definitions cannot be animated.";
   "--inline", Arg.Unit (fun () -> animate_inline := true), " Enable inlining after animation";
@@ -470,7 +472,7 @@ let () =
       (match !new_prose_ofile with
       | Some ofile ->
         log ("Imperative step injection");
-        let dl = Backend_animation.Main_prose_v.inject_prose env pp_dl in
+        let dl = Backend_animation.Main_prose_v.inject_prose env pp_dl !animate_no_anf in
         let injected_s = Backend_animation.Def.string_of_dl_script dl in
         (*let injected_s = Backend_animation.Prose_v.text_prose_script dl in*) 
         let oc = open_out ofile in
