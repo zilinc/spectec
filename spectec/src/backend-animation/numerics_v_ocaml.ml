@@ -119,24 +119,24 @@ let nbytes : numerics =
     f =
       (function
       | [
-          CaseV ([ [ "I32" ] ], []);
-          CaseV ([ [ "mk_num__0" ]; []; [] ], [ _inn; n ]);
+          CaseV ([ [ "I32" ] ], TupV []);
+          CaseV ([ [ "mk_num__0" ]; []; [] ], TupV [ _inn; n ]);
         ] ->
           ibytes.f [ vl_of_nat 32; n ]
       | [
-          CaseV ([ [ "I64" ] ], []);
-          CaseV ([ [ "mk_num__0" ]; []; [] ], [ _inn; n ]);
+          CaseV ([ [ "I64" ] ], TupV []);
+          CaseV ([ [ "mk_num__0" ]; []; [] ], TupV [ _inn; n ]);
         ] ->
           ibytes.f [ vl_of_nat 64; n ]
       | [
-          CaseV ([ [ "F32" ] ], []);
-          CaseV ([ [ "mk_num__1" ]; []; [] ], [ _fnn; f ]);
+          CaseV ([ [ "F32" ] ], TupV []);
+          CaseV ([ [ "mk_num__1" ]; []; [] ], TupV [ _fnn; f ]);
         ] ->
           ibytes.f
             [ vl_of_nat 32; vl_to_float32 f |> RI.F32.to_bits |> vl_of_uN_32 ]
       | [
-          CaseV ([ [ "F64" ] ], []);
-          CaseV ([ [ "mk_num__1" ]; []; [] ], [ _fnn; f ]);
+          CaseV ([ [ "F64" ] ], TupV []);
+          CaseV ([ [ "mk_num__1" ]; []; [] ], TupV [ _fnn; f ]);
         ] ->
           ibytes.f
             [ vl_of_nat 64; vl_to_float64 f |> RI.F64.to_bits |> vl_of_uN_64 ]
@@ -161,17 +161,17 @@ let inv_nbytes : numerics =
     name = "inv_nbytes";
     f =
       (function
-      | [ CaseV ([ [ "I32" ] ], []); l ] ->
+      | [ CaseV ([ [ "I32" ] ], TupV []); l ] ->
           let inn = nullary "I32" in
           caseV
             [ [ "mk_num__0" ]; []; [] ]
             [ inn; inv_ibytes.f [ vl_of_nat 32; l ] ]
-      | [ CaseV ([ [ "I64" ] ], []); l ] ->
+      | [ CaseV ([ [ "I64" ] ], TupV []); l ] ->
           let inn = nullary "I64" in
           caseV
             [ [ "mk_num__0" ]; []; [] ]
             [ inn; inv_ibytes.f [ vl_of_nat 64; l ] ]
-      | [ CaseV ([ [ "F32" ] ], []); l ] ->
+      | [ CaseV ([ [ "F32" ] ], TupV []); l ] ->
           let fnn = nullary "F32" in
           caseV
             [ [ "mk_num__1" ]; []; [] ]
@@ -180,7 +180,7 @@ let inv_nbytes : numerics =
               inv_ibytes.f [ vl_of_nat 32; l ]
               |> vl_to_uN_32 |> RI.F32.of_bits |> vl_of_float32;
             ]
-      | [ CaseV ([ [ "F64" ] ], []); l ] ->
+      | [ CaseV ([ [ "F64" ] ], TupV []); l ] ->
           let fnn = nullary "F64" in
           caseV
             [ [ "mk_num__1" ]; []; [] ]
@@ -197,7 +197,7 @@ let vbytes : numerics =
     name = "vbytes";
     f =
       (function
-      | [ CaseV ([ [ "V128" ] ], []); v ] ->
+      | [ CaseV ([ [ "V128" ] ], TupV []); v ] ->
           let s = vl_to_vec128 v |> RI.V128.to_bits in
           Array.init 16 (fun i -> s.[i] |> Char.code |> vl_of_nat |> caseV1)
           |> listV
@@ -209,7 +209,7 @@ let inv_vbytes : numerics =
     name = "inv_vbytes";
     f =
       (function
-      | [ CaseV ([ [ "V128" ] ], []); ListV l ] -> (
+      | [ CaseV ([ [ "V128" ] ], TupV []); ListV l ] -> (
           let v1 = inv_ibytes.f [ vl_of_nat 64; Array.sub !l 0 8 |> listV ] in
           let v2 = inv_ibytes.f [ vl_of_nat 64; Array.sub !l 8 8 |> listV ] in
           match (as_singleton_case v1, as_singleton_case v2) with
@@ -236,18 +236,18 @@ let inv_zbytes : numerics =
     name = "inv_zbytes";
     f =
       (function
-      | [ CaseV ([ [ "I8" ] ], []); l ] ->
+      | [ CaseV ([ [ "I8" ] ], TupV []); l ] ->
           let res = inv_ibytes.f [ vl_of_nat 8; l ] in
-          CaseV ([ [ "mk_lit__2" ]; []; [] ], [ nullary "I8"; res ])
-      | [ CaseV ([ [ "I16" ] ], []); l ] ->
+          CaseV ([ [ "mk_lit__2" ]; []; [] ], TupV [ nullary "I8"; res ])
+      | [ CaseV ([ [ "I16" ] ], TupV []); l ] ->
           let res = inv_ibytes.f [ vl_of_nat 16; l ] in
-          CaseV ([ [ "mk_lit__2" ]; []; [] ], [ nullary "I16"; res ])
-      | [ CaseV ([ [ "I32" ] ], []); l ] as args ->
+          CaseV ([ [ "mk_lit__2" ]; []; [] ], TupV [ nullary "I16"; res ])
+      | [ CaseV ([ [ "I32" ] ], TupV []); l ] as args ->
           let res = inv_nbytes.f args in
-          CaseV ([ [ "mk_lit__0" ]; []; [] ], [ nullary "I32"; res ])
-      | [ CaseV ([ [ "I64" ] ], []); l ] as args ->
+          CaseV ([ [ "mk_lit__0" ]; []; [] ], TupV [ nullary "I32"; res ])
+      | [ CaseV ([ [ "I64" ] ], TupV []); l ] as args ->
           let res = inv_nbytes.f args in
-          CaseV ([ [ "mk_lit__0" ]; []; [] ], [ nullary "I64"; res ])
+          CaseV ([ [ "mk_lit__0" ]; []; [] ], TupV [ nullary "I64"; res ])
       | args -> inv_nbytes.f args);
   }
 
@@ -289,7 +289,7 @@ let inv_cbytes : numerics =
     name = "inv_cbytes";
     f =
       (function
-      | [ CaseV ([ [ "V128" ] ], []); _ ] as args -> inv_vbytes.f args
+      | [ CaseV ([ [ "V128" ] ], TupV []); _ ] as args -> inv_vbytes.f args
       | args -> inv_nbytes.f args);
   }
 
@@ -301,7 +301,7 @@ let wrap : numerics =
     name = "wrap";
     f =
       (function
-      | [ NumV _m; NumV (`Nat n); CaseV ([ []; [] ], [ NumV (`Nat i) ]) ] ->
+      | [ NumV _m; NumV (`Nat n); CaseV ([ []; [] ], TupV [ NumV (`Nat i) ]) ] ->
           vl_of_iN (Z.logand i (maskN n))
       | vs -> error_values "wrap" vs);
   }
@@ -316,7 +316,7 @@ let inv_ibits : numerics =
           let na =
             Array.map
               (function
-                | CaseV ([ []; [] ], [ NumV (`Nat e) ])
+                | CaseV ([ []; [] ], TupV [ NumV (`Nat e) ])
                   when e = Z.zero || e = Z.one ->
                     e
                 | v -> error_value "bit in inv_ibits" v)
@@ -393,15 +393,15 @@ let narrow : numerics =
       | [
           (NumV _ as m);
           (NumV _ as n);
-          (CaseV ([ [ "S" ] ], []) as sx);
-          CaseV ([ []; [] ], [ (NumV _ as i) ]);
+          (CaseV ([ [ "S" ] ], TupV []) as sx);
+          CaseV ([ []; [] ], TupV [ (NumV _ as i) ]);
         ] ->
           sat_s.f [ n; signed.f [ m; i ] ] |> caseV1
       | [
           (NumV _ as m);
           (NumV _ as n);
-          (CaseV ([ [ "U" ] ], []) as sx);
-          CaseV ([ []; [] ], [ (NumV _ as i) ]);
+          (CaseV ([ [ "U" ] ], TupV []) as sx);
+          CaseV ([ []; [] ], TupV [ (NumV _ as i) ]);
         ] ->
           sat_u.f [ n; signed.f [ m; i ] ] |> caseV1
       | vs -> error_values "narrow" vs);
@@ -429,38 +429,38 @@ let narrow : numerics =
   } *)
 
 let lanes : numerics =
-  let mk_ilane t n = CaseV ([ [ "mk_lane__0" ]; []; [] ], [ nullary t; n ]) in
-  let mk_flane t n = CaseV ([ [ "mk_lane__1" ]; []; [] ], [ nullary t; n ]) in
+  let mk_ilane t n = CaseV ([ [ "mk_lane__0" ]; []; [] ], TupV [ nullary t; n ]) in
+  let mk_flane t n = CaseV ([ [ "mk_lane__1" ]; []; [] ], TupV [ nullary t; n ]) in
   {
     name = "lanes";
     f =
       (function
-      | [ CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "I8" ] ], []); z ]); v ]
+      | [ CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "I8" ] ], TupV []); z ]); v ]
         when z = sixteen ->
           v |> vl_to_vec128 |> RI.V128.I8x16.to_lanes
           |> List.map (fun i -> mk_ilane "I8" (i |> vl_of_nat8 |> caseV1))
           |> listV_of_list
-      | [ CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "I16" ] ], []); z ]); v ]
+      | [ CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "I16" ] ], TupV []); z ]); v ]
         when z = eight ->
           v |> vl_to_vec128 |> RI.V128.I16x8.to_lanes
           |> List.map (fun i -> mk_ilane "I16" (i |> vl_of_nat16 |> caseV1))
           |> listV_of_list
-      | [ CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "I32" ] ], []); z ]); v ]
+      | [ CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "I32" ] ], TupV []); z ]); v ]
         when z = four ->
           v |> vl_to_vec128 |> RI.V128.I32x4.to_lanes
           |> List.map (fun i -> mk_ilane "I32" (i |> vl_of_nat32 |> caseV1))
           |> listV_of_list
-      | [ CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "I64" ] ], []); z ]); v ]
+      | [ CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "I64" ] ], TupV []); z ]); v ]
         when z = two ->
           v |> vl_to_vec128 |> RI.V128.I64x2.to_lanes
           |> List.map (fun i -> mk_ilane "I64" (i |> vl_of_nat64 |> caseV1))
           |> listV_of_list
-      | [ CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "F32" ] ], []); z ]); v ]
+      | [ CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "F32" ] ], TupV []); z ]); v ]
         when z = four ->
           v |> vl_to_vec128 |> RI.V128.F32x4.to_lanes
           |> List.map (fun i -> mk_flane "F32" (vl_of_float32 i))
           |> listV_of_list
-      | [ CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "F64" ] ], []); z ]); v ]
+      | [ CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "F64" ] ], TupV []); z ]); v ]
         when z = two ->
           v |> vl_to_vec128 |> RI.V128.F64x2.to_lanes
           |> List.map (fun i -> mk_flane "F64" (vl_of_float64 i))
@@ -491,11 +491,11 @@ let lanes : numerics =
 
 let inv_lanes : numerics =
   let un_ilane = function
-    | CaseV ([ [ "mk_lane__0" ]; []; [] ], [ _; n ]) -> n
+    | CaseV ([ [ "mk_lane__0" ]; []; [] ], TupV [ _; n ]) -> n
     | v -> error_values "inv_lanes (int lane)" [ v ]
   in
   let un_flane = function
-    | CaseV ([ [ "mk_lane__1" ]; []; [] ], [ _; f ]) -> f
+    | CaseV ([ [ "mk_lane__1" ]; []; [] ], TupV [ _; f ]) -> f
     | v -> error_values "inv_lanes (float lane)" [ v ]
   in
   {
@@ -503,7 +503,7 @@ let inv_lanes : numerics =
     f =
       (function
       | [
-          CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "I8" ] ], []); z ]);
+          CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "I8" ] ], TupV []); z ]);
           ListV lanes;
         ]
         when z = sixteen && Array.length !lanes = 16 ->
@@ -512,7 +512,7 @@ let inv_lanes : numerics =
             (Array.to_list !lanes)
           |> RI.V128.I8x16.of_lanes |> vl_of_vec128
       | [
-          CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "I16" ] ], []); z ]);
+          CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "I16" ] ], TupV []); z ]);
           ListV lanes;
         ]
         when z = eight && Array.length !lanes = 8 ->
@@ -521,7 +521,7 @@ let inv_lanes : numerics =
             (Array.to_list !lanes)
           |> RI.V128.I16x8.of_lanes |> vl_of_vec128
       | [
-          CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "I32" ] ], []); z ]);
+          CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "I32" ] ], TupV []); z ]);
           ListV lanes;
         ]
         when z = four && Array.length !lanes = 4 ->
@@ -530,7 +530,7 @@ let inv_lanes : numerics =
             (Array.to_list !lanes)
           |> RI.V128.I32x4.of_lanes |> vl_of_vec128
       | [
-          CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "I64" ] ], []); z ]);
+          CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "I64" ] ], TupV []); z ]);
           ListV lanes;
         ]
         when z = two && Array.length !lanes = 2 ->
@@ -539,14 +539,14 @@ let inv_lanes : numerics =
             (Array.to_list !lanes)
           |> RI.V128.I64x2.of_lanes |> vl_of_vec128
       | [
-          CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "F32" ] ], []); z ]);
+          CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "F32" ] ], TupV []); z ]);
           ListV lanes;
         ]
         when z = four && Array.length !lanes = 4 ->
           List.map Lib.Fun.(un_flane >.> vl_to_float32) (Array.to_list !lanes)
           |> RI.V128.F32x4.of_lanes |> vl_of_vec128
       | [
-          CaseV ([ []; [ "X" ]; [] ], [ CaseV ([ [ "F64" ] ], []); z ]);
+          CaseV ([ []; [ "X" ]; [] ], TupV [ CaseV ([ [ "F64" ] ], TupV []); z ]);
           ListV lanes;
         ]
         when z = two && Array.length !lanes = 2 ->
@@ -560,17 +560,17 @@ let extend : numerics =
     name = "extend";
     f =
       (function
-      | [ NumV (`Nat z); _; CaseV ([ [ "U" ] ], []); v ] when z = Z.of_int 128
+      | [ NumV (`Nat z); _; CaseV ([ [ "U" ] ], TupV []); v ] when z = Z.of_int 128
         ->
           let (NumV (`Nat v')) = as_singleton_case v in
           RI.V128.I64x2.of_lanes [ z_to_int64 v'; 0L ]
           |> vl_of_vec128 (* HARDCODE *)
-      | [ _; _; CaseV ([ [ "U" ] ], []); v ] -> v
+      | [ _; _; CaseV ([ [ "U" ] ], TupV []); v ] -> v
       | [
           (NumV _ as m);
           (NumV _ as n);
-          CaseV ([ [ "S" ] ], []);
-          CaseV ([ []; [] ], [ (NumV _ as i) ]);
+          CaseV ([ [ "S" ] ], TupV []);
+          CaseV ([ []; [] ], TupV [ (NumV _ as i) ]);
         ] ->
           inv_signed.f [ n; signed.f [ m; i ] ] |> caseV1
       | vs -> error_values "extend" vs);
@@ -599,9 +599,9 @@ let reinterpret : numerics =
     f =
       (function
       | [
-          CaseV ([ [ "I32" ] ], []);
-          CaseV ([ [ "F32" ] ], []);
-          CaseV ([ [ "mk_num__0" ]; []; [] ], [ _inn; i ]);
+          CaseV ([ [ "I32" ] ], TupV []);
+          CaseV ([ [ "F32" ] ], TupV []);
+          CaseV ([ [ "mk_num__0" ]; []; [] ], TupV [ _inn; i ]);
         ] ->
           let fnn = nullary "F32" in
           caseV
@@ -612,9 +612,9 @@ let reinterpret : numerics =
               |> vl_of_float32;
             ]
       | [
-          CaseV ([ [ "I64" ] ], []);
-          CaseV ([ [ "F64" ] ], []);
-          CaseV ([ [ "mk_num__0" ]; []; [] ], [ _inn; i ]);
+          CaseV ([ [ "I64" ] ], TupV []);
+          CaseV ([ [ "F64" ] ], TupV []);
+          CaseV ([ [ "mk_num__0" ]; []; [] ], TupV [ _inn; i ]);
         ] ->
           let fnn = nullary "F64" in
           caseV
@@ -625,9 +625,9 @@ let reinterpret : numerics =
               |> vl_of_float64;
             ]
       | [
-          CaseV ([ [ "F32" ] ], []);
-          CaseV ([ [ "I32" ] ], []);
-          CaseV ([ [ "mk_num__1" ]; []; [] ], [ _fnn; f ]);
+          CaseV ([ [ "F32" ] ], TupV []);
+          CaseV ([ [ "I32" ] ], TupV []);
+          CaseV ([ [ "mk_num__1" ]; []; [] ], TupV [ _fnn; f ]);
         ] ->
           let inn = nullary "I32" in
           caseV
@@ -638,9 +638,9 @@ let reinterpret : numerics =
               |> vl_of_uN_32;
             ]
       | [
-          CaseV ([ [ "F64" ] ], []);
-          CaseV ([ [ "I64" ] ], []);
-          CaseV ([ [ "mk_num__1" ]; []; [] ], [ _fnn; f ]);
+          CaseV ([ [ "F64" ] ], TupV []);
+          CaseV ([ [ "I64" ] ], TupV []);
+          CaseV ([ [ "mk_num__1" ]; []; [] ], TupV [ _fnn; f ]);
         ] ->
           let inn = nullary "I64" in
           caseV
@@ -661,8 +661,8 @@ let convert : numerics =
       | [
           NumV (`Nat m);
           NumV (`Nat n);
-          CaseV ([ [ "U" ] ], []);
-          CaseV ([ []; [] ], [ (NumV _ as i) ]);
+          CaseV ([ [ "U" ] ], TupV []);
+          CaseV ([ []; [] ], TupV [ (NumV _ as i) ]);
         ] as vs -> (
           match () with
           | () when m = Z.of_int 32 && n = Z.of_int 32 ->
@@ -677,8 +677,8 @@ let convert : numerics =
       | [
           NumV (`Nat m);
           NumV (`Nat n);
-          CaseV ([ [ "S" ] ], []);
-          CaseV ([ []; [] ], [ (NumV _ as i) ]);
+          CaseV ([ [ "S" ] ], TupV []);
+          CaseV ([ []; [] ], TupV [ (NumV _ as i) ]);
         ] as vs -> (
           match () with
           | () when m = Z.of_int 32 && n = Z.of_int 32 ->
@@ -722,7 +722,7 @@ let trunc : numerics =
       (let open RI.Convert in
        function
        | [
-           NumV (`Nat m); NumV (`Nat n); CaseV ([ [ "U" ] ], []); (CaseV _ as i);
+           NumV (`Nat m); NumV (`Nat n); CaseV ([ [ "U" ] ], TupV []); (CaseV _ as i);
          ] as vs -> (
            match () with
            | () when m = Z.of_int 32 && n = Z.of_int 32 ->
@@ -739,7 +739,7 @@ let trunc : numerics =
                |> catch_ixx_exception
            | _ -> error_values "trunc" vs)
        | [
-           NumV (`Nat m); NumV (`Nat n); CaseV ([ [ "S" ] ], []); (CaseV _ as i);
+           NumV (`Nat m); NumV (`Nat n); CaseV ([ [ "S" ] ], TupV []); (CaseV _ as i);
          ] as vs -> (
            match () with
            | () when m = Z.of_int 32 && n = Z.of_int 32 ->
@@ -765,7 +765,7 @@ let trunc_sat : numerics =
       (let open RI.Convert in
        function
        | [
-           NumV (`Nat m); NumV (`Nat n); CaseV ([ [ "U" ] ], []); (CaseV _ as i);
+           NumV (`Nat m); NumV (`Nat n); CaseV ([ [ "U" ] ], TupV []); (CaseV _ as i);
          ] as vs -> (
            match () with
            | () when m = Z.of_int 32 && n = Z.of_int 32 ->
@@ -786,7 +786,7 @@ let trunc_sat : numerics =
                |> catch_ixx_exception
            | _ -> error_values "trunc_sat" vs)
        | [
-           NumV (`Nat m); NumV (`Nat n); CaseV ([ [ "S" ] ], []); (CaseV _ as i);
+           NumV (`Nat m); NumV (`Nat n); CaseV ([ [ "S" ] ], TupV []); (CaseV _ as i);
          ] as vs -> (
            match () with
            | () when m = Z.of_int 32 && n = Z.of_int 32 ->
@@ -1070,8 +1070,8 @@ let ilt : numerics =
       | [
           (NumV (`Nat _) as z);
           sx;
-          CaseV ([ []; [] ], [ m ]);
-          CaseV ([ []; [] ], [ n ]);
+          CaseV ([ []; [] ], TupV [ m ]);
+          CaseV ([ []; [] ], TupV [ n ]);
         ] -> (
           let (NumV (`Nat m')) = m in
           let (NumV (`Nat n')) = n in
@@ -1093,8 +1093,8 @@ let igt : numerics =
       | [
           (NumV (`Nat _) as z);
           sx;
-          CaseV ([ []; [] ], [ m ]);
-          CaseV ([ []; [] ], [ n ]);
+          CaseV ([ []; [] ], TupV [ m ]);
+          CaseV ([ []; [] ], TupV [ n ]);
         ] -> (
           let (NumV (`Nat m')) = m in
           let (NumV (`Nat n')) = n in
@@ -1185,8 +1185,8 @@ let iq15mulr_sat : numerics =
       | [
           (NumV (`Nat _) as z);
           sx;
-          CaseV ([ []; [] ], [ (NumV (`Nat _) as m) ]);
-          CaseV ([ []; [] ], [ (NumV (`Nat _) as n) ]);
+          CaseV ([ []; [] ], TupV [ (NumV (`Nat _) as m) ]);
+          CaseV ([ []; [] ], TupV [ (NumV (`Nat _) as n) ]);
         ] -> (
           let m' = signed.f [ z; m ] |> as_int_value in
           let n' = signed.f [ z; n ] |> as_int_value in
