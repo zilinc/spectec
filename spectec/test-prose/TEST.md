@@ -18715,6 +18715,8 @@ The table :math:`(\mathsf{table}~{\mathit{tabletype}}~{\mathit{expr}})` is :ref:
 The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local type :math:`({\mathit{init}}~t)` if:
 
 
+   * The value type :math:`t` is :ref:`valid <valid-val>`.
+
    * Either:
 
       * The initialization status :math:`{\mathit{init}}` is of the form :math:`\mathsf{set}`.
@@ -18733,6 +18735,8 @@ The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local 
 The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local type :math:`(\mathsf{set}~t)` if:
 
 
+   * The value type :math:`t` is :ref:`valid <valid-val>`.
+
    * A :ref:`default value <aux-default>` for :math:`t` is defined.
 
 
@@ -18740,6 +18744,8 @@ The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local 
 
 The local :math:`(\mathsf{local}~t)` is :ref:`valid <valid-val>` with the local type :math:`(\mathsf{unset}~t)` if:
 
+
+   * The value type :math:`t` is :ref:`valid <valid-val>`.
 
    * A :ref:`default value <aux-default>` for :math:`t` is not defined.
 
@@ -19162,7 +19168,7 @@ The module :math:`(\mathsf{module}~{{\mathit{type}}^\ast}~{{\mathit{import}}^\as
 
    * The context :math:`{C'}` is of the form :math:`\{ \mathsf{types}~{{\mathit{dt}'}^\ast},\;\allowbreak \mathsf{globals}~{{\mathit{gt}}_{\mathsf{i}}^\ast},\;\allowbreak \mathsf{funcs}~{{\mathit{dt}}_{\mathsf{i}}^\ast}~{{\mathit{dt}}^\ast},\;\allowbreak \mathsf{return}~\epsilon,\;\allowbreak \mathsf{refs}~{x^\ast} \}`.
 
-   * The function index sequence :math:`{x^\ast}` is of the form :math:`{\mathrm{funcidx}}({{\mathit{global}}^\ast}~{{\mathit{mem}}^\ast}~{{\mathit{table}}^\ast}~{{\mathit{elem}}^\ast}~{{\mathit{start}}^?}~{{\mathit{export}}^\ast})`.
+   * The function index sequence :math:`{x^\ast}` is of the form :math:`{\mathrm{funcidx}}({{\mathit{global}}^\ast}~{{\mathit{mem}}^\ast}~{{\mathit{table}}^\ast}~{{\mathit{elem}}^\ast}~{{\mathit{export}}^\ast})`.
 
    * The tag type sequence :math:`{{\mathit{jt}}_{\mathsf{i}}^\ast}` is of the form :math:`{\mathrm{tags}}({{\mathit{xt}}_{\mathsf{i}}^\ast})`.
 
@@ -26332,11 +26338,11 @@ The instruction sequence :math:`(\mathsf{block}~{\mathit{blocktype}}~{{\mathit{i
 1. Return :math:`{\mathit{zt}} \neq {\mathrm{unpack}}({\mathit{zt}})`.
 
 
-:math:`{\mathrm{funcidx}}({{\mathit{global}}^\ast}~{{\mathit{mem}}^\ast}~{{\mathit{table}}^\ast}~{{\mathit{elem}}^\ast}~{{\mathit{start}}^?}~{{\mathit{export}}^\ast})`
-.......................................................................................................................................................................
+:math:`{\mathrm{funcidx}}({{\mathit{global}}^\ast}~{{\mathit{mem}}^\ast}~{{\mathit{table}}^\ast}~{{\mathit{elem}}^\ast}~{{\mathit{export}}^\ast})`
+..................................................................................................................................................
 
 
-1. Return :math:`{\mathrm{funcidx}}(\mathsf{module}~{{\mathit{global}}^\ast}~{{\mathit{mem}}^\ast}~{{\mathit{table}}^\ast}~{{\mathit{elem}}^\ast}~{{\mathit{start}}^?}~{{\mathit{export}}^\ast})`.
+1. Return :math:`{\mathrm{funcidx}}(\mathsf{module}~{{\mathit{global}}^\ast}~{{\mathit{mem}}^\ast}~{{\mathit{table}}^\ast}~{{\mathit{elem}}^\ast}~{{\mathit{export}}^\ast})`.
 
 
 :math:`{{\mathrm{relaxed}}(i)}{{}[ X_1, X_2 ]}`
@@ -31135,6 +31141,7 @@ Table_ok
 
 Local_ok
 - the local (LOCAL t) is valid with the local type (init t) if:
+  - the value type t is valid.
   - Either:
     - the initialization status init is SET.
     - A :ref:`default value <aux-default>` for t is defined.
@@ -31144,10 +31151,12 @@ Local_ok
 
 Local_ok/set
 - the local (LOCAL t) is valid with the local type (SET t) if:
+  - the value type t is valid.
   - A :ref:`default value <aux-default>` for t is defined.
 
 Local_ok/unset
 - the local (LOCAL t) is valid with the local type (UNSET t) if:
+  - the value type t is valid.
   - A :ref:`default value <aux-default>` for t is not defined.
 
 Func_ok
@@ -31363,7 +31372,7 @@ Module_ok
   - $disjoint_(`name, nm*) is true.
   - the context C is C' with .TAGS appended by jt_I* :: jt* and .GLOBALS appended by gt* and .MEMS appended by mt_I* :: mt* and .TABLES appended by tt_I* :: tt* and .DATAS appended by ok* and .ELEMS appended by rt*.
   - the context C' is { TYPES: dt'*; GLOBALS: gt_I*; FUNCS: dt_I* :: dt*; RETURN: ?(); REFS: x* }.
-  - the function index sequence x* is $funcidx_nonfuncs((global* mem* table* elem* start? export*)).
+  - the function index sequence x* is $funcidx_nonfuncs((global* mem* table* elem* export*)).
   - the tag type sequence jt_I* is $tagsxt(xt_I*).
   - the global type sequence gt_I* is $globalsxt(xt_I*).
   - the memory type sequence mt_I* is $memsxt(xt_I*).
@@ -34782,8 +34791,8 @@ default_ valtype
 is_packtype zt
 1. Return (zt =/= $unpack(zt)).
 
-funcidx_nonfuncs (global* mem* table* elem* start? export*)
-1. Return $funcidx_module((MODULE [] [] [] global* mem* table* [] [] elem* start? export*)).
+funcidx_nonfuncs (global* mem* table* elem* export*)
+1. Return $funcidx_module((MODULE [] [] [] global* mem* table* [] [] elem* ?() export*)).
 
 relaxed2 i `X X_1 X_2
 1. If $ND(), then:

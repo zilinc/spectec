@@ -39,6 +39,14 @@ relation wf_foo: `%%`(t, foo)
 This pass requires the typefamilyremoval pass to be ran first, as it ensures that type families are
 transformed correctly.
 *)
+module StringSet : Set.S with type elt = string
+
+type env = {
+  mutable wf_set : StringSet.t;
+  mutable proj_set : StringSet.t;
+  mutable il_env : Il.Env.t;
+}
 
 val wf_hint_id : string
 val transform : Il.Ast.script -> Il.Ast.script
+val env : env

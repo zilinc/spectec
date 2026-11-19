@@ -1,0 +1,839 @@
+opam install zarith menhir mdx tsort
+[NOTE] Package tsort is already installed (current version is 2.2.0).
+[NOTE] Package mdx is already installed (current version is 2.5.2).
+[NOTE] Package menhir is already installed (current version is 20260209).
+[NOTE] Package zarith is already installed (current version is 1.14).
+rm -f ./spectec
+dune build src/exe-spectec/main.exe
+ln -f _build/default/src/exe-spectec/main.exe ./spectec
+mkdir -p src/backend-animation/interpreter-ocaml/build
+cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
+cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
+cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
+#### Generating OCaml interpreter.
+./spectec ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --allow-partial-animation --inline --typefamily-removal --sideconditions --generate-ocaml "dl_codegen"
+../specification/wasm-3.0/4.3-execution.instructions.spectec:977.9-977.38 IL animation warning:
+No inverse function defined for `proj_num__0`. An inverse inv_proj_num__0` will be automatically derived.
+../specification/wasm-3.0/1.3-syntax.instructions.spectec:352.19-352.24 IL animation warning:
+Some clause in definition `inv_proj_num__0` failed to animate.
+Generating OCaml code...
+#### Compiling generated OCaml interpreter.
+dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+#### Running OCaml interpreter test.
+make ocaml-run 'TEST=OCAML_ALL'
+make[1]: Entering directory '/home/zilinc/ntu/wasm/spectec/spectec'
+opam install zarith menhir mdx tsort
+[NOTE] Package tsort is already installed (current version is 2.2.0).
+[NOTE] Package mdx is already installed (current version is 2.5.2).
+[NOTE] Package menhir is already installed (current version is 20260209).
+[NOTE] Package zarith is already installed (current version is 1.14).
+rm -f ./spectec
+dune build src/exe-spectec/main.exe
+ln -f _build/default/src/exe-spectec/main.exe ./spectec
+mkdir -p src/backend-animation/interpreter-ocaml/build
+cp src/backend-animation/interpreter-ocaml/dl_runner.ml src/backend-animation/interpreter-ocaml/build/
+cp src/backend-animation/interpreter-ocaml/construct_ocaml.ml src/backend-animation/interpreter-ocaml/build/
+cp src/backend-animation/interpreter-ocaml/builtin.ml src/backend-animation/interpreter-ocaml/build/
+#### Generating OCaml interpreter.
+./spectec ../specification/wasm-3.0/* src/backend-animation/meta.spectec --animate --allow-partial-animation --inline --typefamily-removal --sideconditions --generate-ocaml "dl_codegen"
+../specification/wasm-3.0/4.3-execution.instructions.spectec:977.9-977.38 IL animation warning:
+No inverse function defined for `proj_num__0`. An inverse inv_proj_num__0` will be automatically derived.
+../specification/wasm-3.0/1.3-syntax.instructions.spectec:352.19-352.24 IL animation warning:
+Some clause in definition `inv_proj_num__0` failed to animate.
+Generating OCaml code...
+#### Compiling generated OCaml interpreter.
+dune build src/backend-animation/interpreter-ocaml/build/dl_runner.exe
+dune exec ./src/backend-animation/interpreter-ocaml/build/dl_runner.exe ../specification/wasm-3.0/* src/backend-animation/meta.spectec test-interpreter/spec-test-3/ test-interpreter/spec-test-3/bulk-memory test-interpreter/spec-test-3/exceptions test-interpreter/spec-test-3/gc test-interpreter/spec-test-3/memory64 test-interpreter/spec-test-3/multi-memory
+../specification/wasm-3.0/4.3-execution.instructions.spectec:977.9-977.38 IL animation warning:
+No inverse function defined for `proj_num__0`. An inverse inv_proj_num__0` will be automatically derived.
+../specification/wasm-3.0/1.3-syntax.instructions.spectec:352.19-352.24 IL animation warning:
+Some clause in definition `inv_proj_num__0` failed to animate.
+Parsing test file "test-interpreter/spec-test-3/address.wast"
+- 264/264 (100.00%) :D :D
+test-interpreter/spec-test-3/address.wast took 0.11495 s.
+
+Parsing test file "test-interpreter/spec-test-3/align.wast"
+- 142/142 (100.00%) :D :D
+test-interpreter/spec-test-3/align.wast took 0.03228 s.
+
+Parsing test file "test-interpreter/spec-test-3/annotations.wast"
+- 20/20 (100.00%) :D :D
+test-interpreter/spec-test-3/annotations.wast took 0.00379 s.
+
+Parsing test file "test-interpreter/spec-test-3/binary-leb128.wast"
+- 66/66 (100.00%) :D :D
+test-interpreter/spec-test-3/binary-leb128.wast took 0.01590 s.
+
+Parsing test file "test-interpreter/spec-test-3/binary.wast"
+- 40/40 (100.00%) :D :D
+test-interpreter/spec-test-3/binary.wast took 0.00119 s.
+
+Parsing test file "test-interpreter/spec-test-3/block.wast"
+- 209/209 (100.00%) :D :D
+test-interpreter/spec-test-3/block.wast took 0.01849 s.
+
+Parsing test file "test-interpreter/spec-test-3/br.wast"
+- 98/98 (100.00%) :D :D
+test-interpreter/spec-test-3/br.wast took 0.00796 s.
+
+Parsing test file "test-interpreter/spec-test-3/br_if.wast"
+- 120/120 (100.00%) :D :D
+test-interpreter/spec-test-3/br_if.wast took 0.00890 s.
+
+Parsing test file "test-interpreter/spec-test-3/br_on_non_null.wast"
+- 15/15 (100.00%) :D :D
+test-interpreter/spec-test-3/br_on_non_null.wast took 0.00119 s.
+
+Parsing test file "test-interpreter/spec-test-3/br_on_null.wast"
+- 13/13 (100.00%) :D :D
+test-interpreter/spec-test-3/br_on_null.wast took 0.00091 s.
+
+Parsing test file "test-interpreter/spec-test-3/br_table.wast"
+- 187/187 (100.00%) :D :D
+test-interpreter/spec-test-3/br_table.wast took 0.51466 s.
+
+Parsing test file "test-interpreter/spec-test-3/call.wast"
+- 92/92 (100.00%) :D :D
+test-interpreter/spec-test-3/call.wast took 2.00484 s.
+
+Parsing test file "test-interpreter/spec-test-3/call_indirect.wast"
+- 159/159 (100.00%) :D :D
+test-interpreter/spec-test-3/call_indirect.wast took 0.12377 s.
+
+Parsing test file "test-interpreter/spec-test-3/call_ref.wast"
+- 39/39 (100.00%) :D :D
+test-interpreter/spec-test-3/call_ref.wast took 1.25432 s.
+
+Parsing test file "test-interpreter/spec-test-3/comments.wast"
+- 13/13 (100.00%) :D :D
+test-interpreter/spec-test-3/comments.wast took 0.00021 s.
+
+Parsing test file "test-interpreter/spec-test-3/const.wast"
+- 1104/1104 (100.00%) :D :D
+test-interpreter/spec-test-3/const.wast took 0.01410 s.
+
+Parsing test file "test-interpreter/spec-test-3/conversions.wast"
+- 620/620 (100.00%) :D :D
+test-interpreter/spec-test-3/conversions.wast took 0.02119 s.
+
+Parsing test file "test-interpreter/spec-test-3/custom.wast"
+- 6/6 (100.00%) :D :D
+test-interpreter/spec-test-3/custom.wast took 0.00016 s.
+
+Parsing test file "test-interpreter/spec-test-3/data.wast"
+- 110/110 (100.00%) :D :D
+test-interpreter/spec-test-3/data.wast took 0.13527 s.
+
+Parsing test file "test-interpreter/spec-test-3/elem.wast"
+- 236/236 (100.00%) :D :D
+test-interpreter/spec-test-3/elem.wast took 0.02894 s.
+
+Parsing test file "test-interpreter/spec-test-3/endianness.wast"
+- 70/70 (100.00%) :D :D
+test-interpreter/spec-test-3/endianness.wast took 0.07507 s.
+
+Parsing test file "test-interpreter/spec-test-3/exports.wast"
+- 153/153 (100.00%) :D :D
+test-interpreter/spec-test-3/exports.wast took 0.00177 s.
+
+Parsing test file "test-interpreter/spec-test-3/f32.wast"
+- 2513/2513 (100.00%) :D :D
+test-interpreter/spec-test-3/f32.wast took 0.09538 s.
+
+Parsing test file "test-interpreter/spec-test-3/f32_bitwise.wast"
+- 365/365 (100.00%) :D :D
+test-interpreter/spec-test-3/f32_bitwise.wast took 0.01453 s.
+
+Parsing test file "test-interpreter/spec-test-3/f32_cmp.wast"
+- 2408/2408 (100.00%) :D :D
+test-interpreter/spec-test-3/f32_cmp.wast took 0.08905 s.
+
+Parsing test file "test-interpreter/spec-test-3/f64.wast"
+- 2513/2513 (100.00%) :D :D
+test-interpreter/spec-test-3/f64.wast took 0.09864 s.
+
+Parsing test file "test-interpreter/spec-test-3/f64_bitwise.wast"
+- 365/365 (100.00%) :D :D
+test-interpreter/spec-test-3/f64_bitwise.wast took 0.01423 s.
+
+Parsing test file "test-interpreter/spec-test-3/f64_cmp.wast"
+- 2408/2408 (100.00%) :D :D
+test-interpreter/spec-test-3/f64_cmp.wast took 0.09285 s.
+
+Parsing test file "test-interpreter/spec-test-3/fac.wast"
+- 9/9 (100.00%) :D :D
+test-interpreter/spec-test-3/fac.wast took 0.03057 s.
+
+Parsing test file "test-interpreter/spec-test-3/float_exprs.wast"
+- 1025/1025 (100.00%) :D :D
+test-interpreter/spec-test-3/float_exprs.wast took 1.31745 s.
+
+Parsing test file "test-interpreter/spec-test-3/float_literals.wast"
+- 103/103 (100.00%) :D :D
+test-interpreter/spec-test-3/float_literals.wast took 0.00659 s.
+
+Parsing test file "test-interpreter/spec-test-3/float_memory.wast"
+- 96/96 (100.00%) :D :D
+test-interpreter/spec-test-3/float_memory.wast took 0.04684 s.
+
+Parsing test file "test-interpreter/spec-test-3/float_misc.wast"
+- 472/472 (100.00%) :D :D
+test-interpreter/spec-test-3/float_misc.wast took 0.01948 s.
+
+Parsing test file "test-interpreter/spec-test-3/forward.wast"
+- 6/6 (100.00%) :D :D
+test-interpreter/spec-test-3/forward.wast took 0.00375 s.
+
+Parsing test file "test-interpreter/spec-test-3/func.wast"
+- 156/156 (100.00%) :D :D
+test-interpreter/spec-test-3/func.wast took 0.01087 s.
+
+Parsing test file "test-interpreter/spec-test-3/func_ptrs.wast"
+unexpected Failure :O
+ Unknown numerics: hostcall
+- 38/39 (97.44%) :)
+test-interpreter/spec-test-3/func_ptrs.wast took 0.02223 s.
+
+Parsing test file "test-interpreter/spec-test-3/global.wast"
+- 125/125 (100.00%) :D :D
+test-interpreter/spec-test-3/global.wast took 0.21989 s.
+
+Parsing test file "test-interpreter/spec-test-3/i32.wast"
+- 459/459 (100.00%) :D :D
+test-interpreter/spec-test-3/i32.wast took 0.01400 s.
+
+Parsing test file "test-interpreter/spec-test-3/i64.wast"
+- 415/415 (100.00%) :D :D
+test-interpreter/spec-test-3/i64.wast took 0.01458 s.
+
+Parsing test file "test-interpreter/spec-test-3/id.wast"
+- 2/2 (100.00%) :D :D
+test-interpreter/spec-test-3/id.wast took 0.00024 s.
+
+Parsing test file "test-interpreter/spec-test-3/if.wast"
+- 218/218 (100.00%) :D :D
+test-interpreter/spec-test-3/if.wast took 0.02473 s.
+
+Parsing test file "test-interpreter/spec-test-3/imports.wast"
+unexpected Failure :O
+ Unknown numerics: hostcall
+unexpected Failure :O
+ Unknown numerics: hostcall
+unexpected Failure :O
+ Unknown numerics: hostcall
+- 261/264 (98.86%) :)
+test-interpreter/spec-test-3/imports.wast took 0.19510 s.
+
+Parsing test file "test-interpreter/spec-test-3/inline-module.wast"
+- 1/1 (100.00%) :D :D
+test-interpreter/spec-test-3/inline-module.wast took 0.00000 s.
+
+Parsing test file "test-interpreter/spec-test-3/instance.wast"
+- 23/23 (100.00%) :D :D
+test-interpreter/spec-test-3/instance.wast took 0.07670 s.
+
+Parsing test file "test-interpreter/spec-test-3/int_exprs.wast"
+- 127/127 (100.00%) :D :D
+test-interpreter/spec-test-3/int_exprs.wast took 0.00489 s.
+
+Parsing test file "test-interpreter/spec-test-3/int_literals.wast"
+- 32/32 (100.00%) :D :D
+test-interpreter/spec-test-3/int_literals.wast took 0.00121 s.
+
+Parsing test file "test-interpreter/spec-test-3/labels.wast"
+- 30/30 (100.00%) :D :D
+test-interpreter/spec-test-3/labels.wast took 0.00471 s.
+
+Parsing test file "test-interpreter/spec-test-3/left-to-right.wast"
+- 97/97 (100.00%) :D :D
+test-interpreter/spec-test-3/left-to-right.wast took 0.31455 s.
+
+Parsing test file "test-interpreter/spec-test-3/linking.wast"
+- 182/182 (100.00%) :D :D
+test-interpreter/spec-test-3/linking.wast took 0.11407 s.
+
+Parsing test file "test-interpreter/spec-test-3/load.wast"
+- 85/85 (100.00%) :D :D
+test-interpreter/spec-test-3/load.wast took 0.01515 s.
+
+Parsing test file "test-interpreter/spec-test-3/local_get.wast"
+- 37/37 (100.00%) :D :D
+test-interpreter/spec-test-3/local_get.wast took 0.00353 s.
+
+Parsing test file "test-interpreter/spec-test-3/local_init.wast"
+- 12/12 (100.00%) :D :D
+test-interpreter/spec-test-3/local_init.wast took 0.00042 s.
+
+Parsing test file "test-interpreter/spec-test-3/local_set.wast"
+- 54/54 (100.00%) :D :D
+test-interpreter/spec-test-3/local_set.wast took 0.00267 s.
+
+Parsing test file "test-interpreter/spec-test-3/local_tee.wast"
+- 99/99 (100.00%) :D :D
+test-interpreter/spec-test-3/local_tee.wast took 0.08302 s.
+
+Parsing test file "test-interpreter/spec-test-3/loop.wast"
+- 107/107 (100.00%) :D :D
+test-interpreter/spec-test-3/loop.wast took 0.07357 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory.wast"
+- 98/98 (100.00%) :D :D
+test-interpreter/spec-test-3/memory.wast took 0.03654 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory_grow.wast"
+- 101/101 (100.00%) :D :D
+test-interpreter/spec-test-3/memory_grow.wast took 4.26924 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory_redundancy.wast"
+- 9/9 (100.00%) :D :D
+test-interpreter/spec-test-3/memory_redundancy.wast took 0.01094 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory_size.wast"
+- 46/46 (100.00%) :D :D
+test-interpreter/spec-test-3/memory_size.wast took 0.17556 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory_trap.wast"
+- 184/184 (100.00%) :D :D
+test-interpreter/spec-test-3/memory_trap.wast took 0.08480 s.
+
+Parsing test file "test-interpreter/spec-test-3/names.wast"
+unexpected Failure :O
+ Unknown numerics: hostcall
+- 489/490 (99.80%) :)
+test-interpreter/spec-test-3/names.wast took 0.25937 s.
+
+Parsing test file "test-interpreter/spec-test-3/nop.wast"
+- 89/89 (100.00%) :D :D
+test-interpreter/spec-test-3/nop.wast took 0.07539 s.
+
+Parsing test file "test-interpreter/spec-test-3/obsolete-keywords.wast"
+- 0/0 (100.00%) :D :D
+test-interpreter/spec-test-3/obsolete-keywords.wast took 0.00000 s.
+
+Parsing test file "test-interpreter/spec-test-3/ref.wast"
+- 14/14 (100.00%) :D :D
+test-interpreter/spec-test-3/ref.wast took 0.00013 s.
+
+Parsing test file "test-interpreter/spec-test-3/ref_as_non_null.wast"
+- 9/9 (100.00%) :D :D
+test-interpreter/spec-test-3/ref_as_non_null.wast took 0.00053 s.
+
+Parsing test file "test-interpreter/spec-test-3/ref_func.wast"
+- 22/22 (100.00%) :D :D
+test-interpreter/spec-test-3/ref_func.wast took 0.00159 s.
+
+Parsing test file "test-interpreter/spec-test-3/ref_is_null.wast"
+- 24/24 (100.00%) :D :D
+test-interpreter/spec-test-3/ref_is_null.wast took 0.00161 s.
+
+Parsing test file "test-interpreter/spec-test-3/ref_null.wast"
+- 36/36 (100.00%) :D :D
+test-interpreter/spec-test-3/ref_null.wast took 0.00159 s.
+
+Parsing test file "test-interpreter/spec-test-3/return.wast"
+- 85/85 (100.00%) :D :D
+test-interpreter/spec-test-3/return.wast took 0.00758 s.
+
+Parsing test file "test-interpreter/spec-test-3/return_call.wast"
+unexpected Failure :O
+ Unknown numerics: hostcall
+- 44/45 (97.78%) :)
+test-interpreter/spec-test-3/return_call.wast took 0.11670 s.
+
+Parsing test file "test-interpreter/spec-test-3/return_call_indirect.wast"
+unexpected Failure :O
+ Unknown numerics: hostcall
+- 66/67 (98.51%) :)
+test-interpreter/spec-test-3/return_call_indirect.wast took 0.06629 s.
+
+Parsing test file "test-interpreter/spec-test-3/return_call_ref.wast"
+- 51/51 (100.00%) :D :D
+test-interpreter/spec-test-3/return_call_ref.wast took 0.08869 s.
+
+Parsing test file "test-interpreter/spec-test-3/select.wast"
+- 160/160 (100.00%) :D :D
+test-interpreter/spec-test-3/select.wast took 0.05229 s.
+
+Parsing test file "test-interpreter/spec-test-3/skip-stack-guard-page.wast"
+- 12/12 (100.00%) :D :D
+test-interpreter/spec-test-3/skip-stack-guard-page.wast took 164.92547 s.
+
+Parsing test file "test-interpreter/spec-test-3/stack.wast"
+- 9/9 (100.00%) :D :D
+test-interpreter/spec-test-3/stack.wast took 0.00606 s.
+
+Parsing test file "test-interpreter/spec-test-3/start.wast"
+unexpected Failure :O
+ Unknown numerics: hostcall
+unexpected Failure :O
+ Unknown numerics: hostcall
+unexpected Failure :O
+ Unknown numerics: hostcall
+- 22/25 (88.00%) :(
+test-interpreter/spec-test-3/start.wast took 0.12780 s.
+
+Parsing test file "test-interpreter/spec-test-3/store.wast"
+- 62/62 (100.00%) :D :D
+test-interpreter/spec-test-3/store.wast took 0.00481 s.
+
+Parsing test file "test-interpreter/spec-test-3/switch.wast"
+- 29/29 (100.00%) :D :D
+test-interpreter/spec-test-3/switch.wast took 0.00407 s.
+
+Parsing test file "test-interpreter/spec-test-3/table.wast"
+- 59/59 (100.00%) :D :D
+test-interpreter/spec-test-3/table.wast took 0.06357 s.
+
+Parsing test file "test-interpreter/spec-test-3/table_get.wast"
+- 17/17 (100.00%) :D :D
+test-interpreter/spec-test-3/table_get.wast took 0.00080 s.
+
+Parsing test file "test-interpreter/spec-test-3/table_set.wast"
+- 27/27 (100.00%) :D :D
+test-interpreter/spec-test-3/table_set.wast took 0.00112 s.
+
+Parsing test file "test-interpreter/spec-test-3/table_size.wast"
+- 40/40 (100.00%) :D :D
+test-interpreter/spec-test-3/table_size.wast took 0.00115 s.
+
+Parsing test file "test-interpreter/spec-test-3/token.wast"
+- 70/70 (100.00%) :D :D
+test-interpreter/spec-test-3/token.wast took 0.00230 s.
+
+Parsing test file "test-interpreter/spec-test-3/traps.wast"
+- 40/40 (100.00%) :D :D
+test-interpreter/spec-test-3/traps.wast took 0.00519 s.
+
+Parsing test file "test-interpreter/spec-test-3/type-canon.wast"
+- 4/4 (100.00%) :D :D
+test-interpreter/spec-test-3/type-canon.wast took 0.00017 s.
+
+Parsing test file "test-interpreter/spec-test-3/type-equivalence.wast"
+- 47/47 (100.00%) :D :D
+test-interpreter/spec-test-3/type-equivalence.wast took 0.00621 s.
+
+Parsing test file "test-interpreter/spec-test-3/type-rec.wast"
+- 37/37 (100.00%) :D :D
+test-interpreter/spec-test-3/type-rec.wast took 0.00156 s.
+
+Parsing test file "test-interpreter/spec-test-3/type.wast"
+- 2/2 (100.00%) :D :D
+test-interpreter/spec-test-3/type.wast took 0.00045 s.
+
+Parsing test file "test-interpreter/spec-test-3/unreachable.wast"
+- 65/65 (100.00%) :D :D
+test-interpreter/spec-test-3/unreachable.wast took 0.00691 s.
+
+Parsing test file "test-interpreter/spec-test-3/unreached-invalid.wast"
+- 121/121 (100.00%) :D :D
+test-interpreter/spec-test-3/unreached-invalid.wast took 0.00035 s.
+
+Parsing test file "test-interpreter/spec-test-3/unreached-valid.wast"
+- 16/16 (100.00%) :D :D
+test-interpreter/spec-test-3/unreached-valid.wast took 0.00131 s.
+
+Parsing test file "test-interpreter/spec-test-3/unwind.wast"
+- 51/51 (100.00%) :D :D
+test-interpreter/spec-test-3/unwind.wast took 0.00557 s.
+
+Parsing test file "test-interpreter/spec-test-3/utf8-custom-section-id.wast"
+- 0/0 (100.00%) :D :D
+test-interpreter/spec-test-3/utf8-custom-section-id.wast took 0.00005 s.
+
+Parsing test file "test-interpreter/spec-test-3/utf8-import-field.wast"
+- 0/0 (100.00%) :D :D
+test-interpreter/spec-test-3/utf8-import-field.wast took 0.00005 s.
+
+Parsing test file "test-interpreter/spec-test-3/utf8-import-module.wast"
+- 0/0 (100.00%) :D :D
+test-interpreter/spec-test-3/utf8-import-module.wast took 0.00005 s.
+
+Parsing test file "test-interpreter/spec-test-3/utf8-invalid-encoding.wast"
+- 0/0 (100.00%) :D :D
+test-interpreter/spec-test-3/utf8-invalid-encoding.wast took 0.00006 s.
+
+Parsing test file "test-interpreter/spec-test-3/bulk-memory/bulk.wast"
+- 129/129 (100.00%) :D :D
+test-interpreter/spec-test-3/bulk-memory/bulk.wast took 2.31423 s.
+
+Parsing test file "test-interpreter/spec-test-3/bulk-memory/memory_copy.wast"
+- 4242/4242 (100.00%) :D :D
+test-interpreter/spec-test-3/bulk-memory/memory_copy.wast took 1.78651 s.
+
+Parsing test file "test-interpreter/spec-test-3/bulk-memory/memory_fill.wast"
+- 102/102 (100.00%) :D :D
+test-interpreter/spec-test-3/bulk-memory/memory_fill.wast took 1.15910 s.
+
+Parsing test file "test-interpreter/spec-test-3/bulk-memory/memory_init.wast"
+- 279/279 (100.00%) :D :D
+test-interpreter/spec-test-3/bulk-memory/memory_init.wast took 0.10618 s.
+
+Parsing test file "test-interpreter/spec-test-3/bulk-memory/table-sub.wast"
+- 4/4 (100.00%) :D :D
+test-interpreter/spec-test-3/bulk-memory/table-sub.wast took 0.00016 s.
+
+Parsing test file "test-interpreter/spec-test-3/bulk-memory/table_copy.wast"
+- 1779/1779 (100.00%) :D :D
+test-interpreter/spec-test-3/bulk-memory/table_copy.wast took 0.10693 s.
+
+Parsing test file "test-interpreter/spec-test-3/bulk-memory/table_fill.wast"
+- 46/46 (100.00%) :D :D
+test-interpreter/spec-test-3/bulk-memory/table_fill.wast took 0.00143 s.
+
+Parsing test file "test-interpreter/spec-test-3/bulk-memory/table_init.wast"
+- 832/832 (100.00%) :D :D
+test-interpreter/spec-test-3/bulk-memory/table_init.wast took 0.05215 s.
+
+Parsing test file "test-interpreter/spec-test-3/exceptions/tag.wast"
+- 12/12 (100.00%) :D :D
+test-interpreter/spec-test-3/exceptions/tag.wast took 0.00016 s.
+
+Parsing test file "test-interpreter/spec-test-3/exceptions/throw.wast"
+- 14/14 (100.00%) :D :D
+test-interpreter/spec-test-3/exceptions/throw.wast took 0.00108 s.
+
+Parsing test file "test-interpreter/spec-test-3/exceptions/throw_ref.wast"
+- 16/16 (100.00%) :D :D
+test-interpreter/spec-test-3/exceptions/throw_ref.wast took 0.00201 s.
+
+Parsing test file "test-interpreter/spec-test-3/exceptions/try_table.wast"
+- 70/70 (100.00%) :D :D
+test-interpreter/spec-test-3/exceptions/try_table.wast took 0.05955 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/array.wast"
+- 61/61 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/array.wast took 0.15064 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/array_copy.wast"
+- 36/36 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/array_copy.wast took 0.00295 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/array_fill.wast"
+- 31/31 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/array_fill.wast took 0.00166 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/array_init_data.wast"
+- 48/48 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/array_init_data.wast took 0.00275 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/array_init_elem.wast"
+- 39/39 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/array_init_elem.wast took 0.00291 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/array_new_data.wast"
+- 33/33 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/array_new_data.wast took 0.06821 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/array_new_elem.wast"
+- 29/29 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/array_new_elem.wast took 0.15246 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/binary-gc.wast"
+- 0/0 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/binary-gc.wast took 0.00000 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/br_on_cast.wast"
+- 40/40 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/br_on_cast.wast took 0.00805 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/br_on_cast_fail.wast"
+- 40/40 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/br_on_cast_fail.wast took 0.03160 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/extern.wast"
+- 19/19 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/extern.wast took 0.06219 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/i31.wast"
+- 79/79 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/i31.wast took 0.00465 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/ref_cast.wast"
+- 47/47 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/ref_cast.wast took 0.00725 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/ref_eq.wast"
+- 90/90 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/ref_eq.wast took 0.00407 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/ref_test.wast"
+- 73/73 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/ref_test.wast took 0.04065 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/struct.wast"
+- 35/35 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/struct.wast took 0.01863 s.
+
+Parsing test file "test-interpreter/spec-test-3/gc/type-subtyping.wast"
+- 165/165 (100.00%) :D :D
+test-interpreter/spec-test-3/gc/type-subtyping.wast took 0.01654 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/address64.wast"
+- 246/246 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/address64.wast took 0.09124 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/align64.wast"
+- 137/137 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/align64.wast took 0.03805 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/binary_leb128_64.wast"
+- 2/2 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/binary_leb128_64.wast took 0.00011 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/bulk64.wast"
+- 74/74 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/bulk64.wast took 2.37751 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/call_indirect64.wast"
+- 3/3 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/call_indirect64.wast took 0.00023 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/endianness64.wast"
+- 70/70 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/endianness64.wast took 0.07263 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/float_memory64.wast"
+- 96/96 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/float_memory64.wast took 0.04179 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/load64.wast"
+- 85/85 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/load64.wast took 0.01322 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/memory64-imports.wast"
+- 110/110 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/memory64-imports.wast took 0.01296 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/memory64.wast"
+- 78/78 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/memory64.wast took 0.02710 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/memory_copy64.wast"
+- 4233/4233 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/memory_copy64.wast took 1.75483 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/memory_fill64.wast"
+- 102/102 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/memory_fill64.wast took 1.14495 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/memory_grow64.wast"
+- 42/42 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/memory_grow64.wast took 3.30794 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/memory_init64.wast"
+- 279/279 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/memory_init64.wast took 0.13373 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/memory_redundancy64.wast"
+- 9/9 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/memory_redundancy64.wast took 0.00822 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/memory_trap64.wast"
+- 174/174 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/memory_trap64.wast took 0.07211 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table64.wast"
+- 25/25 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table64.wast took 0.00036 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table_copy64.wast"
+- 1779/1779 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table_copy64.wast took 0.11704 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table_copy_mixed.wast"
+- 5/5 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table_copy_mixed.wast took 0.00019 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table_fill64.wast"
+- 81/81 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table_fill64.wast took 0.00297 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table_get64.wast"
+- 12/12 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table_get64.wast took 0.00067 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table_grow64.wast"
+- 23/23 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table_grow64.wast took 0.00088 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table_init64.wast"
+- 931/931 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table_init64.wast took 0.06330 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table_set64.wast"
+- 20/20 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table_set64.wast took 0.00103 s.
+
+Parsing test file "test-interpreter/spec-test-3/memory64/table_size64.wast"
+- 38/38 (100.00%) :D :D
+test-interpreter/spec-test-3/memory64/table_size64.wast took 0.00108 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/address0.wast"
+- 93/93 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/address0.wast took 0.02932 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/address1.wast"
+- 128/128 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/address1.wast took 0.03917 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/align0.wast"
+- 6/6 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/align0.wast took 0.00425 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/binary0.wast"
+- 10/10 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/binary0.wast took 0.04197 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/data0.wast"
+- 14/14 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/data0.wast took 0.03593 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/data1.wast"
+- 28/28 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/data1.wast took 0.10405 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/data_drop0.wast"
+- 12/12 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/data_drop0.wast took 0.00623 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/exports0.wast"
+- 16/16 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/exports0.wast took 0.01943 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/float_exprs0.wast"
+- 15/15 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/float_exprs0.wast took 0.00911 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/float_exprs1.wast"
+- 4/4 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/float_exprs1.wast took 0.42338 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/float_memory0.wast"
+- 32/32 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/float_memory0.wast took 0.01611 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/imports0.wast"
+- 8/8 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/imports0.wast took 0.00838 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/imports1.wast"
+- 6/6 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/imports1.wast took 0.00176 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/imports2.wast"
+- 24/24 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/imports2.wast took 0.01304 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/imports3.wast"
+- 10/10 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/imports3.wast took 0.00813 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/imports4.wast"
+- 18/18 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/imports4.wast took 0.04003 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/linking0.wast"
+- 7/7 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/linking0.wast took 0.00184 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/linking1.wast"
+- 19/19 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/linking1.wast took 0.01545 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/linking2.wast"
+- 12/12 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/linking2.wast took 0.04999 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/linking3.wast"
+- 17/17 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/linking3.wast took 0.05245 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/load0.wast"
+- 4/4 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/load0.wast took 0.00537 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/load1.wast"
+- 19/19 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/load1.wast took 0.02664 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/load2.wast"
+- 39/39 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/load2.wast took 0.01323 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory-multi.wast"
+- 8/8 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory-multi.wast took 0.01263 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_copy0.wast"
+- 30/30 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_copy0.wast took 2.06319 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_copy1.wast"
+- 15/15 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_copy1.wast took 2.15084 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_fill0.wast"
+- 16/16 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_fill0.wast took 0.00668 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_grow.wast"
+- 53/53 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_grow.wast took 0.14460 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_init0.wast"
+- 14/14 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_init0.wast took 0.01962 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_size0.wast"
+- 9/9 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_size0.wast took 0.01968 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_size1.wast"
+- 16/16 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_size1.wast took 0.02369 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_size2.wast"
+- 22/22 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_size2.wast took 0.00731 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_size3.wast"
+- 2/2 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_size3.wast took 0.00002 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_size_import.wast"
+- 8/8 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_size_import.wast took 0.01461 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_trap0.wast"
+- 15/15 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_trap0.wast took 0.00957 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/memory_trap1.wast"
+- 169/169 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/memory_trap1.wast took 0.05297 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/start0.wast"
+- 10/10 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/start0.wast took 0.00695 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/store0.wast"
+- 6/6 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/store0.wast took 0.00319 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/store1.wast"
+- 14/14 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/store1.wast took 0.00496 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/store2.wast"
+- 26/26 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/store2.wast took 0.03446 s.
+
+Parsing test file "test-interpreter/spec-test-3/multi-memory/traps0.wast"
+- 16/16 (100.00%) :D :D
+test-interpreter/spec-test-3/multi-memory/traps0.wast took 0.00646 s.
+
+Warning: 0 AssertInvalids were skipped.
+Total [38910/38920] (99.97%) :)
+Total took 198.81481 s.
+
+make[1]: Leaving directory '/home/zilinc/ntu/wasm/spectec/spectec'
