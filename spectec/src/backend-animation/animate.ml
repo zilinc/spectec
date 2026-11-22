@@ -757,7 +757,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       | _ -> error q.at ("Invalid quantifier")
       ) vqs in
       let v_quests, xes' = Lib.List.unzip blob in
-      let prem_opt = LetPr (v_quests, IterE (ve, (iter, xes')) $$ lhs.at % lhs'.note, rhs) $ at in
+      let prem_opt = LetPr (v_quests, IterE (ve, (iter, xes')) $$ lhs.at % lhs.note, rhs) $ at in
       let* () = update (add_knowns (varset_of_quants v_quests)) in
       (* [xes'] contains only the bindings in the new inner LHS, i.e. [ve], but when the new LHS is
          different from the old LHS, the bindings of the old LHS, which are stored in [xes], need to be included.
