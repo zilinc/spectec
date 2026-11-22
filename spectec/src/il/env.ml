@@ -27,6 +27,7 @@ type t =
     rels : rel_def Map.t;
     grams : gram_def Map.t;
     hints : hintdef list;
+    eqs : (exp * exp) list;
   }
 
 
@@ -39,6 +40,7 @@ let empty =
     rels = Map.empty;
     grams = Map.empty;
     hints = [];
+    eqs = [];
   }
 
 let mem map id = Map.mem id.it map
@@ -56,6 +58,7 @@ let env_diff env1 env2 =
     rels = diff env1.rels env2.rels;
     grams = diff env1.grams env2.grams;
     hints = List.filter (fun h -> List.mem h env2.hints |> not) env1.hints;
+    eqs = List.filter (fun eq -> List.mem eq env2.eqs |> not) env1.eqs;
   }
 
 (* Right-biased merge. *)
@@ -66,6 +69,7 @@ let env_merge env1 env2 =
     rels = merge env1.rels env2.rels;
     grams = merge env1.grams env2.grams;
     hints = env1.hints @ env2.hints;
+    eqs = env1.eqs @ env2.eqs;
   }
 
 let find_opt map id =
@@ -151,8 +155,32 @@ let find_rule_hint env relid ruleid hintid =
     | _ -> None
   ) env.hints
 
+let record_eq env e1 e2 =
+  match Eq.compare_exp e1 e2 with
+  | +1 -> {env with eqs = (e1, e2)::env.eqs}
+  | -1 -> {env with eqs = (e2, e1)::env.eqs}
+  | _ -> env
+
+let recall_eq env e1 e2 =
+  List.exists (fun (x, y) ->
+    Eq.eq_exp x e1 && Eq.eq_exp y e2 ||
+    Eq.eq_exp x e2 && Eq.eq_exp y e1
+  ) env.eqs
+
+let recall_eq_simp env e =
+  Option.map snd (List.find_opt (fun (x, _) -> Eq.eq_exp e x) env.eqs)
+
 
 (* Extraction *)
+
+let env_of_param env p =
+  match p.it with
+  | ExpP (id, t) -> bind_var env id t
+  | TypP id -> bind_typ env id ([], [])
+  | DefP (id, ps, t) -> bind_def env id (ps, t, [])
+  | GramP (id, ps, t) -> bind_gram env id (ps, t, [])
+
+let env_of_params env ps = List.fold_left env_of_param env ps
 
 let rec env_of_def env d =
   match d.it with

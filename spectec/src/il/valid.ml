@@ -33,7 +33,7 @@ let find_case cases op at =
 
 
 let typ_string env t =
-  let t' = Eval.reduce_typ env t in
+  let Ok t' | Error t' = Eval.reduce_typ env t in
   if Eq.eq_typ t t' then
     "`" ^ string_of_typ t ^ "`"
   else
@@ -42,8 +42,14 @@ let typ_string env t =
 
 (* Type Accessors *)
 
-let expand_typ (env : Env.t) t = (Eval.reduce_typ env t).it
-let expand_typdef (env : Env.t) t = (Eval.reduce_typdef env t).it
+let expand' reduce env t at =
+  match reduce env t with
+  | Ok x -> x.it
+  | Error _ ->
+    error at ("expression's type `" ^ string_of_typ t ^ "` is not defined")
+
+let expand_typ env t at = expand' Eval.reduce_typ env t at
+let expand_typdef env t at = expand' Eval.reduce_typdef env t at
 
 type direction = Infer | Check
 
@@ -59,33 +65,33 @@ let as_error at phrase dir t t' expected =
   )
 
 let as_iter_typ iter phrase env dir t at : typ =
-  match expand_typ env t with
+  match expand_typ env t at with
   | IterT (t1, iter2) when iter = iter2 -> t1
   | t' -> as_error at phrase dir t (Left (t' $> t)) ("(_)" ^ string_of_iter iter)
 
 let as_list_typ phrase env dir t at : typ =
-  match expand_typ env t with
+  match expand_typ env t at with
   | IterT (t1, (List | List1 | ListN _)) -> t1
   | t' -> as_error at phrase dir t (Left (t' $> t)) "(_)*"
 
 let as_tup_typ phrase env dir t at : (id * typ) list =
-  match expand_typ env t with
+  match expand_typ env t at with
   | TupT xts -> xts
   | t' -> as_error at phrase dir t (Left (t' $> t)) "(_,...,_)"
 
 
 let as_struct_typ phrase env dir t at : typfield list =
-  match expand_typdef env t with
+  match expand_typdef env t at with
   | StructT tfs -> tfs
   | t' -> as_error at phrase dir t (Right (t' $ t.at)) "{...}"
 
 let as_variant_typ phrase env dir t at : typcase list =
-  match expand_typdef env t with
+  match expand_typdef env t at with
   | VariantT tcs -> tcs
   | t' -> as_error at phrase dir t (Right (t' $ t.at)) "| ..."
 
 let rec as_comp_typ phrase env dir t at =
-  match expand_typdef env t with
+  match expand_typdef env t at with
   | AliasT {it = IterT _; _} -> ()
   | StructT tfs ->
     List.iter (fun (_, (t, _, _), _) -> as_comp_typ phrase env dir t at) tfs
@@ -428,7 +434,7 @@ and valid_exp ?(side = `Rhs) env e t =
     let t2 = valid_path env p t in
     let _typ21 = as_list_typ "path" env Check t2 p.at in
     valid_exp env e2 t2
-  | StrE efs ->
+  | StrE (efs, _ch) ->
     let tfs = as_struct_typ "record" env Check t e.at in
     valid_list (valid_expfield ~side) env efs tfs e.at
   | DotE (e1, atom) ->
@@ -510,7 +516,7 @@ and valid_exp ?(side = `Rhs) env e t =
     let _typ1 = as_iter_typ List "list" env Check t e.at in
     valid_exp env e1 t;
     valid_exp env e2 t
-  | CaseE (op, e1) ->
+  | CaseE (op, e1, _ch) ->
     let cases = as_variant_typ "case" env Check t e.at in
     let t1, _qs, _prems = find_case cases op e1.at in
     valid_mixop env op;
@@ -621,7 +627,10 @@ and valid_sym env g : typ =
 (* Premises *)
 
 and valid_prem env prem =
-  Debug.(log_in_at "il.valid_prem" prem.at (fun _ -> il_prem prem));
+  Debug.(log_at "il.valid_prem" prem.at
+    (fun _ -> il_prem prem)
+    (fun _ -> "")
+  ) @@ fun _ ->
   match prem.it with
   | RulePr (x, as_, mixop, e) ->
     let ps, mixop', t, _rules = Env.find_rel env x in
@@ -629,6 +638,11 @@ and valid_prem env prem =
     let s = valid_args env as_ ps Subst.empty prem.at in
     valid_expmix env mixop e (mixop, Subst.subst_typ s t) e.at;
     env
+  | IfPr ({it = CmpE (`EqOp, _t, e1, e2); _} as e) ->
+    valid_exp env e (BoolT $ e.at);
+    let Ok e1' | Error e1' = Eval.reduce_exp env e1 in
+    let Ok e2' | Error e2' = Eval.reduce_exp env e2 in
+    Env.record_eq env e1' e2'
   | IfPr e ->
     valid_exp env e (BoolT $ e.at);
     env
@@ -645,7 +659,9 @@ and valid_prem env prem =
           List.map (fun x -> "`" ^ x ^ "`") |>
           String.concat ", " ) ^
         " do not occur in left-hand side expression");
-    env'
+    let Ok e1' | Error e1' = Eval.reduce_exp env e1 in
+    let Ok e2' | Error e2' = Eval.reduce_exp env e2 in
+    Env.record_eq env' e1' e2'
   | ElsePr ->
     env
   | IterPr (prem', ite) ->
