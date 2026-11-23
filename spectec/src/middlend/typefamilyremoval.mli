@@ -49,4 +49,3 @@ Names were specifically chosen here for simplicity.
 
 val projection_hint_id : string
 val transform : Il.Ast.script -> Il.Ast.script
-val proj_prefix : string

@@ -87,13 +87,13 @@ let rec text_prose_exp (exp: exp) : string =
   | TupE [] -> "unit"
   | TupE exps -> "a tuple of " ^ hcat_f ", " text_prose_exp exps
   | ProjE (exp', n) -> "the " ^ text_prose_nth n ^ " projection of " ^ text_prose_exp exp'
-  | CaseE (mixop, { it = TupE []; _ }) -> string_of_mixop mixop
-  | CaseE (mixop, { it = TupE es; _ }) -> string_of_mixop mixop ^ "(" ^ hcat_f ", " text_prose_exp es ^ ")"
+  | CaseE (mixop, { it = TupE []; _ }, _) -> string_of_mixop mixop
+  | CaseE (mixop, { it = TupE es; _ }, _) -> string_of_mixop mixop ^ "(" ^ hcat_f ", " text_prose_exp es ^ ")"
   | UncaseE (exp', mixop) -> "the payload of " ^ text_prose_exp exp'
   | OptE None -> "none"
   | OptE (Some exp') -> "some " ^ text_prose_exp exp'
   | TheE exp' -> "the " ^ text_prose_exp exp'
-  | StrE expfields -> "a record consisting of " ^ String.concat ", " (List.map string_of_expfield expfields)
+  | StrE (expfields, _) -> "a record consisting of " ^ String.concat ", " (List.map string_of_expfield expfields)
   | DotE (exp', atom) -> "the " ^ string_of_atom atom ^ " field of struct " ^ text_prose_exp exp'
   | CompE (exp1, exp2) -> "composition of " ^ text_prose_exp exp1 ^ " and " ^ text_prose_exp exp2
   | ListE [] -> "an empty sequence"

@@ -212,7 +212,7 @@ let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
     ) ctx' xes
   | TupE lhs_s, TupV rhs_s when List.length lhs_s = List.length rhs_s ->
     foldlM (fun c (p, e) -> assign c p e) ctx (List.combine lhs_s rhs_s)
-  | CaseE (lhs_tag, lhs'), CaseV (rhs_tag, rhs') ->
+  | CaseE (lhs_tag, lhs', _), CaseV (rhs_tag, rhs') ->
       if vl_of_mixop lhs_tag = rhs_tag then
         assign ctx lhs' rhs'
       else
@@ -237,9 +237,6 @@ let rec assign ctx (lhs: exp) (rhs: value) : VContext.t OptMonad.m =
 
 and assign_fid ctx pid aid : VContext.t OptMonad.m =
   VContext.add_defid ctx pid aid |> return
-
-and is_value : exp -> bool = Il.Eval.is_normal_exp
-and is_hnf   : exp -> bool = Il.Eval.is_head_normal_exp
 
 and eval_exp ctx exp : value OptMonad.m =
   let open Xl in
@@ -275,9 +272,9 @@ and eval_exp ctx exp : value OptMonad.m =
       )
     | #Xl.Num.binop as op' ->
       (match Num.bin_partial op' v1 v2 of_num_value numV with
-      | Some v -> return v
-      | None -> error_eval "Numeric binary expression" exp
-                  (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; e2 ⤳ " ^ string_of_value v2))
+      | Some (Some v) -> return v
+      | _ -> error_eval "Numeric binary expression" exp
+               (Some ("e1 ⤳ " ^ string_of_value v1 ^ "; e2 ⤳ " ^ string_of_value v2))
       )
     )
   | CmpE (op, ot, e1, e2) ->
@@ -346,7 +343,7 @@ and eval_exp ctx exp : value OptMonad.m =
           listV (Array.append !vs !vs2) |> return
         | _ -> error_eval "Sequence extension expression" exp None
       )
-  | StrE vfs -> let* vfs' = mapM (eval_expfield ctx) vfs in StrV vfs' |> return
+  | StrE (vfs, _) -> let* vfs' = mapM (eval_expfield ctx) vfs in StrV vfs' |> return
   | DotE (e1, atom) ->
     let* v1 = eval_exp ctx e1 in
     (match v1 with
@@ -483,7 +480,7 @@ and eval_exp ctx exp : value OptMonad.m =
     | OptV _, OptV None -> v1
     | _ -> error_eval "Sequence concatenation expression" exp None
     ) |> return
-  | CaseE (op, e1) ->
+  | CaseE (op, e1, _) ->
     let* v = eval_exp ctx e1 in
     CaseV (vl_of_mixop op, v) |> return
   | CvtE (e1, _nt1, nt2) ->

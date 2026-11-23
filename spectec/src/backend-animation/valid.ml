@@ -35,7 +35,7 @@ let rec valid_pattern lhs (vars: string list) prem : unit =
      in
      if var_question.it <> var then
        error_pr lhs.at ("Variable `" ^ var_question.it ^ "` on the LHS of this -- where premise doesn't match binder `" ^ var ^ "`.") prem
-  | CaseE (_, { it = VarE lhs_var; _ }) ->
+  | CaseE (_, { it = VarE lhs_var; _ }, _) ->
     if List.length vars <> 1 then
        error_pr prem.at ("Only one binder is allowed on this -- where premise but got " ^ string_of_varset vars_set) prem;
     let var = List.hd vars in

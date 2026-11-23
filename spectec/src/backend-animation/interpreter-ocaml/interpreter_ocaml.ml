@@ -540,7 +540,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
            ^ freshvarname ^ " in")
         in
         return (Printf.sprintf "(%s : %s)" freshvarname typ2str)
-    | CaseE (mixop, e1) ->
+    | CaseE (mixop, e1, _) ->
         let* e1_str = ocaml_of_exp ~funcdef:true e1 in
         let argstr = if e1_str = "" then "" else "(" ^ e1_str ^ ")" in
         let* mixopstr = ocaml_of_mixop mixop e.note in
@@ -598,7 +598,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         let full_args = append_sep typevar_str args'' " " in
         let full_args' = if full_args = "" then "()" else full_args in
         return ("(" ^ fname' ^ " " ^ full_args' ^ ")")
-    | CaseE (mixop, e1) ->
+    | CaseE (mixop, e1, _) ->
         let* mixopstr = ocaml_of_mixop mixop e.note in
         if mixopstr = "STACK_OVERFLOW_stepresult" && retval then
           return "raise Backend_interpreter.Exception.OutOfMemory"
@@ -815,7 +815,7 @@ let rec ocaml_of_exp ?(typearg = false) ?(funcdef = false) ?(funccall = false)
         let* e1str = ocaml_of_exp e1 in
         let* e2str = ocaml_of_exp e2 in
         return ("List.mem " ^ e1str ^ " " ^ e2str)
-    | StrE strlist ->
+    | StrE (strlist, _) ->
         let* recname = ocaml_of_typ ~consannot:true e.note in
         let* recordstr =
           concat_mapM ";\n  " (ocaml_of_expfield recname) strlist
@@ -1281,7 +1281,7 @@ let rec ocaml_of_prems (prems : prem list) : string t =
               match lhs.it with
               | VarE id ->
                   return (Printf.sprintf "  let %s = %s in" lhs_str rhs_str)
-              | CaseE (mixop, e) ->
+              | CaseE (mixop, e, _) ->
                   (* this can fail and raise a Match Failure exception, which will be caught by the try_clauses function *)
                   let let_lhs =
                     String.concat ", "

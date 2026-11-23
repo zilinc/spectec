@@ -279,7 +279,7 @@ let is_known knowns exp =
       (match exp.it with
       | VarE _ | BoolE _ | NumE _ | TextE _ | OptE None -> false
       | CvtE (e1, _, _) | UnE (_, _, e1) | LiftE e1 | LenE e1 | TheE e1 | SubE (e1, _, _)
-      | ProjE (e1, _) | DotE (e1, _) | CaseE (_, e1) | UncaseE (e1, _) | OptE (Some e1) ->
+      | ProjE (e1, _) | DotE (e1, _) | CaseE (_, e1, _) | UncaseE (e1, _) | OptE (Some e1) ->
         go e1
       | BinE (_, _, e1, e2) | CmpE (_, _, e1, e2) | IdxE (e1, e2) | CompE (e1, e2) | MemE (e1, e2) | CatE (e1, e2) ->
         go e1 || go e2
@@ -287,7 +287,7 @@ let is_known knowns exp =
       | TupE es | ListE es -> List.exists go es
       | UpdE (e1, p, e2) | ExtE (e1, p, e2) ->
         go e1 || go e2 || go_path p
-      | StrE efs -> List.map snd efs |> List.exists go
+      | StrE (efs, _) -> List.map snd efs |> List.exists go
       | CallE (_, args) -> List.exists go_arg args
       | IterE (e1, iterexp) -> go e1 || unknown_iter_iter iterexp
       )
@@ -434,9 +434,9 @@ let bind_pat_exp envr occ oname exp ot : Il.Env.t ref * quant list * exp * prem 
     let (envr, qs, ve, prems_eq) = bind_var_exp envr occ oname exp' None `Lhs in
     let ve' = CvtE (ve, t1, t2) $> exp in
     (envr, qs, ve', prems_eq)
-  | CaseE (mixop, exp') ->
+  | CaseE (mixop, exp', ch) ->
     let (envr, qs, ve, prems_eq) = bind_var_exp envr occ oname exp' None `Lhs in
-    let ve' = CaseE (mixop, ve) $> exp in
+    let ve' = CaseE (mixop, ve, ch) $> exp in
     (envr, qs, ve', prems_eq)
   | _ -> bind_var_exp envr occ oname exp ot `Lhs
 
@@ -828,7 +828,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       E.return (prems_len_v @ prems_len @ prems')
     end
   (* AST nodes that can be inverted. *)
-  | StrE expfields ->
+  | StrE (expfields, _) ->
     let prems = List.map (fun (atom, exp) ->
       let lhs' = exp in
       let rhs' = DotE (rhs, atom) $$ rhs.at % exp.note in
@@ -878,7 +878,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
     let* prems', s_new' = run_inner s_new (animate_prems' envr at) in
     let* () = update (put_knowns (get_knowns s_new')) in
     E.return ([prem_len] @ prems')
-  | CaseE (mixop, lhs') ->
+  | CaseE (mixop, lhs', ch) ->
     (match as_variant_typ !envr rhs.note with
     | [] -> assert false
     | [(mixop', (_t, _, _), _)] when Il.Eq.eq_mixop mixop mixop' ->
@@ -892,7 +892,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       let occ = occ_exp (Fun.const true) `Once empty_occ lhs' in
       let (envr, qs, ve, prems_eq) = bind_var_exp envr occ None lhs' None `Lhs in
       let fv_ve = (free_exp ve).varid in
-      let prem' = LetPr (qs, CaseE (mixop, ve) $> lhs, rhs) $ at in
+      let prem' = LetPr (qs, CaseE (mixop, ve, ch) $> lhs, rhs) $ at in
       let* () = update (add_knowns fv_ve >>> push_prems prems_eq) in
       E.return [prem']
     )
@@ -955,7 +955,7 @@ and animate_exp_eq' envr at lhs rhs : prem list E.m =
       (* FIXME(zilinc): Here it relies on the fact that the elaboration only generates
          UncaseE for alias types.
        *)
-      animate_exp_eq envr at e1 (CaseE (mixop, rhs) $$ rhs.at % e1.note)
+      animate_exp_eq envr at e1 (CaseE (mixop, rhs, Unchecked) $$ rhs.at % e1.note)
       (*
       (* TODO(zilinc): The side-condition from the type definition.
          For now, we don't check it. But the check can be added in a separate
@@ -1422,7 +1422,7 @@ and animate_prems' envr at : prem list E.m =
     subset of all the variables that are known at the end of animating
     all the premises.
 *)
-and animate_prems envr at ins ous prems : (prem list, region * string) result =
+and animate_prems envr at ins ous prems : (prem list, region * string) Stdlib.result =
   animate_prems' envr at
   |> E.run_exceptT
   |> Fun.flip S.run_state ({ (AnimState.init ()) with prems; knowns = ins })
@@ -1444,7 +1444,7 @@ let lift_otherwise_prem prems =
 
 
 (* [fid]: the full name of the function. *)
-let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) result =
+let animate_clause0 envr fid (fc: func_clause) : (func_clause, region * string) Stdlib.result =
   let lenvr = ref !envr in
   let oid, cl = fc in
   let DefD (quants, args, exp, prems) = cl.it in
@@ -1494,38 +1494,38 @@ let transform_step_vals envr in_stack out_stack prems : quant list * exp * exp *
   let out_stack' = CatE (rest_star_e, out_stack) $> out_stack in
   [ExpP (rest_star, t_star "val") $ rest_star_e.at], in_stack', out_stack', prems
 
-let transform_step_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
+let transform_step_clause envr fid (fc: func_clause) : (func_clause, region * string) Stdlib.result =
   let oid, cl = fc in
   let DefD (quants, [ {it = ExpA lhs; _} ], rhs, prems) = cl.it in
-  let CaseE (in_mixop, in_tup) = lhs.it in
+  let CaseE (in_mixop, in_tup, in_ch) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
-  let CaseE (out_mixop, out_tup) = rhs.it in
+  let CaseE (out_mixop, out_tup, out_ch) = rhs.it in
   let TupE [out_z; out_stack] = out_tup.it in
   let quants', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
-  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
+  let lhs' = CaseE (in_mixop, in_tup', in_ch) $> lhs in
   let out_tup' = TupE [out_z; out_stack'] $> out_tup in
-  let rhs' = CaseE (out_mixop, out_tup') $> rhs in
+  let rhs' = CaseE (out_mixop, out_tup', out_ch) $> rhs in
   animate_clause0 envr fid (oid, DefD (quants @ quants', [ ExpA lhs' $ lhs'.at ], rhs', prems') $> cl)
 
-let transform_step_pure_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
+let transform_step_pure_clause envr fid (fc: func_clause) : (func_clause, region * string) Stdlib.result =
   let oid, cl = fc in
   let DefD (quants, [ {it = ExpA in_stack; _} ], out_stack, prems) = cl.it in
   let quants', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   animate_clause0 envr fid (oid, DefD (quants @ quants', [ ExpA in_stack' $ in_stack.at ], out_stack', prems') $> cl)
 
-let transform_step_read_clause envr fid (fc: func_clause) : (func_clause, region * string) result =
+let transform_step_read_clause envr fid (fc: func_clause) : (func_clause, region * string) Stdlib.result =
   let oid, cl = fc in
   let DefD (quants, [ {it = ExpA lhs; _} ], out_stack, prems) = cl.it in
-  let CaseE (in_mixop, in_tup) = lhs.it in
+  let CaseE (in_mixop, in_tup, in_ch) = lhs.it in
   let TupE [in_z; in_stack] = in_tup.it in
   let quants', in_stack', out_stack', prems' = transform_step_vals envr in_stack out_stack prems in
   let in_tup' = TupE [in_z; in_stack'] $> in_tup in
-  let lhs' = CaseE (in_mixop, in_tup') $> lhs in
+  let lhs' = CaseE (in_mixop, in_tup', in_ch) $> lhs in
   animate_clause0 envr fid (oid, DefD (quants @ quants', [ ExpA lhs' $ lhs'.at ], out_stack', prems') $> cl)
 
 
-let animate_clause envr id osubid (fc: func_clause) : (func_clause option, region * string) result =
+let animate_clause envr id osubid (fc: func_clause) : (func_clause option, region * string) Stdlib.result =
   let orule_id, cl = fc in
   let fid = string_of_funcname id osubid $> id in
   let DefD (_, _, _, _) = cl.it in

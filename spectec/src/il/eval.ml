@@ -1364,4 +1364,5 @@ let reduce_arg = reduce_arg false
 
 let match_iter = match_iter false
 let match_exp = match_exp false
+let match_arg_static = match_arg true
 let match_arg = match_arg false

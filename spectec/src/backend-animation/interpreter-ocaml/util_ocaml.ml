@@ -645,7 +645,7 @@ let rec exp_calls (e : exp) : Set.t =
   | CallE (id, args) ->
       Set.add id.it
         (List.fold_left Set.union Set.empty (List.map arg_calls args))
-  | CaseE (_, e1)
+  | CaseE (_, e1, _)
   | UnE (_, _, e1)
   | UncaseE (e1, _)
   | ProjE (e1, _)
@@ -668,7 +668,7 @@ let rec exp_calls (e : exp) : Set.t =
   | ExtE (e1, _, e2)
   | CompE (e1, e2) ->
       Set.union (exp_calls e1) (exp_calls e2)
-  | StrE expfieldlst ->
+  | StrE (expfieldlst, _) ->
       List.fold_left Set.union Set.empty
         (List.map (fun (_, e) -> exp_calls e) expfieldlst)
 

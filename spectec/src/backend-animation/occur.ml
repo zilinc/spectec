@@ -48,7 +48,7 @@ let rec occ_exp pred m occ exp : occ =
       match m with | `Once -> inc_occ occ v | `Many -> many_occ occ v
     else occ
   | BoolE _ | NumE _ | TextE _ | OptE None -> occ
-  | UnE (_, _, e) | ProjE (e, _) | CaseE (_, e) | UncaseE (e, _) | TheE e
+  | UnE (_, _, e) | ProjE (e, _) | CaseE (_, e, _) | UncaseE (e, _) | TheE e
   | DotE (e, _) | LiftE e | OptE (Some e) | LenE e | CvtE (e, _, _) | SubE (e, _, _)
   -> occ_exp pred m occ e
   | BinE (_, _, e1, e2) | CmpE (_, _, e1, e2) | CompE (e1, e2)
@@ -57,7 +57,7 @@ let rec occ_exp pred m occ exp : occ =
   | SliceE (e1, e2, e3) -> List.fold_left (occ_exp pred m) occ [e1; e2; e3]
   | TupE es | ListE es
   -> List.fold_left (occ_exp pred m) occ es
-  | StrE efs -> List.fold_left (occ_expfield pred m) occ efs
+  | StrE (efs, _) -> List.fold_left (occ_expfield pred m) occ efs
   | UpdE (e1, p, e2) | ExtE (e1, p, e2)
   -> let occ1 = occ_exp pred m occ e1 in
      let occ2 = occ_path pred m occ1 p in

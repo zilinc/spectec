@@ -1,12 +1,20 @@
 open Il
 open Ast
-open Eval
 open Print
 open Util
 open Source
 
 let error at msg = Error.error at "Il_util" msg
 
+let reduce_typ env t =
+  match Il.Eval.reduce_typ env t with
+  | Ok t' -> t'
+  | _ -> t
+
+let reduce_typdef env t =
+  match Il.Eval.reduce_typdef env t with
+  | Ok tdef -> tdef
+  | Error _ -> error t.at ("Cannot reduce to typedef: " ^ string_of_typ t)
 
 (* Predicate *)
 
@@ -27,7 +35,7 @@ let is_unary_variantT : deftyp -> bool = fun deft ->
 
 let is_list_typ env t : bool =
   match (reduce_typ env t).it with
-  | IterT (_, (List | List1 | ListN _)) -> true
+  | (IterT (_, (List | List1 | ListN _))) -> true
   | _ -> false
 
 
@@ -65,12 +73,12 @@ let as_tup_typ env t : (id * typ) list =
 
 let has_str_field atom str : bool =
   match str.it with
-  | StrE fes -> List.exists (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes
+  | StrE (fes, _) -> List.exists (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes
   | _ -> error str.at ("Input expression is not a struct: " ^ string_of_exp str)
 
 let find_str_field atom str : exp =
   match str.it with
-  | StrE fes -> List.find (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes |> snd
+  | StrE (fes, _) -> List.find (fun (atom', e) -> Xl.Atom.to_string atom' = atom) fes |> snd
   | _ -> error str.at ("Input expression is not a struct: " ^ string_of_exp str)
 
 let find_list_elem p lst : exp =
@@ -101,7 +109,7 @@ let unwrap_opt e =
 
 let args_of_case case : exp list =
   match case.it with
-  | CaseE (_, tup) ->
+  | CaseE (_, tup, _) ->
     (match tup.it with
     | TupE es -> es
     | _ -> [tup]
@@ -110,12 +118,12 @@ let args_of_case case : exp list =
 
 let unwrap_case case : exp =
   match case.it with
-  | CaseE (Arg _, { it = TupE [e]; _ }) -> e
+  | CaseE (Arg _, { it = TupE [e]; _ }, _) -> e
   | _ -> error case.at ("Input expression is not a singleton variant: " ^ string_of_exp case)
 
 let case_mixop case : mixop =
   match case.it with
-  | CaseE (mixop, _) -> mixop
+  | CaseE (mixop, _, _) -> mixop
   | _ -> error case.at ("Input expression is not a case: " ^ string_of_exp case)
 
 let unwrap_num num : num =
@@ -183,7 +191,7 @@ and natE ?(at = no) i = NumE (`Nat i) |> mk_expr at (natT ())
 and intE ?(at = no) i = NumE (`Int i) |> mk_expr at (NumT `IntT $ at)
 and textE ?(at = no) s = TextE s |> mk_expr at (TextT $ at)
 and cvtE ?(at = no) (e, nt1, nt2) = CvtE (e, nt1, nt2) |> mk_expr at (NumT nt2 $ at)
-and caseE ?(at = no) ~note (mixop, e) = CaseE (mixop, e) |> mk_expr at note
+and caseE ?(at = no) ~note (mixop, e) = CaseE (mixop, e, Unchecked) |> mk_expr at note
 and tupE ?(at = no) ~note el = TupE el |> mk_expr at note
 and listE ?(at = no) t es : exp = mk_expr at t (ListE es)
 and listE' ?(at = no) es : exp = match es with
@@ -193,7 +201,7 @@ and optE ?(at = no) t oe : exp = mk_expr at t (OptE oe)
 and optE' ?(at = no) oe : exp = match oe with
   | None   -> error at "optE: can't infer type when None"
   | Some e -> let t = iterT (e.note) in optE t oe
-and strE ?(at = no) ~note r = StrE r |> mk_expr at note
+and strE ?(at = no) ~note r = StrE (r, Unchecked) |> mk_expr at note
 and dotE ?(at = no) ~note e atom = DotE (e, atom) |> mk_expr at note
 (* [subE] is for subtyping, not subtraction, which is [subtrE] *)
 and subE ?(at = no) id t1 t2 = SubE (id, t1, t2) |> mk_expr at t2
